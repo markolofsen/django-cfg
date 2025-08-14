@@ -310,7 +310,7 @@ class DatabaseConfig(BaseConfig):
         
         # Add database routing if multiple databases
         if self.has_multiple_databases:
-            settings['DATABASE_ROUTERS'] = ['django_config_toolkit.routers.DatabaseRouter']
+            settings['DATABASE_ROUTERS'] = ['django_cfg.routers.DatabaseRouter']
             settings['DATABASE_ROUTING_RULES'] = self.get_database_routing_rules()
         
         return settings

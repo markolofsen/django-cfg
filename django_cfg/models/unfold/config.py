@@ -81,12 +81,12 @@ class UnfoldConfig(BaseConfig):
     )
     
     dashboard_callback: Optional[str] = Field(
-        default="django_config_toolkit.callbacks.dashboard_callback",
+        default="django_cfg.callbacks.dashboard_callback",
         description="Dashboard callback function path"
     )
     
     environment_callback: Optional[str] = Field(
-        default="django_config_toolkit.callbacks.environment_callback",
+        default="django_cfg.callbacks.environment_callback",
         description="Environment callback function path"
     )
     

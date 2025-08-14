@@ -210,7 +210,7 @@ class HealthCheckView(View):
     def _check_configuration(self) -> Dict[str, Any]:
         """Check Django Config Toolkit configuration."""
         try:
-            from django_config_toolkit import ConfigToolkit
+            from django_cfg import ConfigToolkit
             
             toolkit = ConfigToolkit()
             

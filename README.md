@@ -486,14 +486,14 @@ ConfigToolkit.get_django_settings() -> Dict[str, Any]
 
 We love contributions! Here's how to get started:
 
-1. Fork the repository
+1. Fork the [repository](https://github.com/markolofsen/django-cfg)
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes
 4. Add tests for your changes
 5. Run tests: `pytest`
 6. Commit your changes: `git commit -m 'Add amazing feature'`
 7. Push to the branch: `git push origin feature/amazing-feature`
-8. Open a Pull Request
+8. Open a Pull Request on [GitHub](https://github.com/markolofsen/django-cfg/pulls)
 
 ## 📄 License
 
@@ -501,9 +501,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- 📖 [Documentation](https://github.com/your-org/django-config-toolkit)
-- 🐛 [Issue Tracker](https://github.com/your-org/django-config-toolkit/issues)
-- 💬 [Discussions](https://github.com/your-org/django-config-toolkit/discussions)
+- 📖 [Documentation](https://github.com/markolofsen/django-cfg)
+- 🐛 [Issue Tracker](https://github.com/markolofsen/django-cfg/issues)
+- 💬 [Discussions](https://github.com/markolofsen/django-cfg/discussions)
 
 ## 🏆 Credits
 

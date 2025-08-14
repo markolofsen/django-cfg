@@ -103,9 +103,6 @@ class VersionManager:
         # Update all version files
         self.update_version_in_all_files(new_version)
 
-        # Update Django Config version
-        self.update_django_config_version(new_version)
-
         # Regenerate requirements files
         self.regenerate_requirements()
 
@@ -161,35 +158,6 @@ class VersionManager:
                 print("⚠️  generate_requirements.py script not found")
         except Exception as e:
             print(f"⚠️  Failed to regenerate requirements: {e}")
-
-    def update_django_config_version(self, version: str):
-        """
-        Update version in Django Config config.
-
-        Args:
-            version: New version string
-        """
-        config_file = self.base_path / "django_cfg" / "config.py"
-        
-        if not config_file.exists():
-            print(f"⚠️  Django Config config not found: {config_file}")
-            return
-
-        try:
-            content = config_file.read_text(encoding="utf-8")
-            pattern = r'version:\s*str\s*=\s*Field\("([^"]+)"'
-            replacement = f'version: str = Field("{version}"'
-            
-            new_content = re.sub(pattern, replacement, content)
-            
-            if new_content != content:
-                config_file.write_text(new_content, encoding="utf-8")
-                print(f"✅ Updated version in Django Config config: {version}")
-            else:
-                print(f"⚠️  No version found in Django Config config")
-                
-        except Exception as e:
-            print(f"❌ Failed to update Django Config config: {e}")
 
     def validate_version_consistency(self) -> bool:
         """

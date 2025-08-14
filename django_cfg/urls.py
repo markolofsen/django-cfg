@@ -8,7 +8,7 @@ from django.urls import path, include
 from .health import HealthCheckView, SimpleHealthView
 
 
-app_name = 'django_config_toolkit'
+app_name = 'django_cfg'
 
 urlpatterns = [
     # Health check endpoints
@@ -23,7 +23,7 @@ def get_toolkit_urls():
     
     Include in your main urls.py:
     
-        from django_config_toolkit.urls import get_toolkit_urls
+        from django_cfg.urls import get_toolkit_urls
         
         urlpatterns = [
             path('admin/', admin.site.urls),

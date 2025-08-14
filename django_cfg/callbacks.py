@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.conf import settings
-from django_config_toolkit import ConfigToolkit
+from django_cfg import ConfigToolkit
 
 
 def dashboard_callback(request: HttpRequest, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -188,9 +188,9 @@ def get_unfold_callbacks() -> Dict[str, str]:
     Returns dictionary mapping callback types to function paths.
     """
     return {
-        "dashboard_callback": "django_config_toolkit.callbacks.dashboard_callback",
-        "environment_callback": "django_config_toolkit.callbacks.environment_callback", 
-        "permission_callback": "django_config_toolkit.callbacks.permission_callback",
-        "search_callback": "django_config_toolkit.callbacks.search_callback",
-        "badge_callback": "django_config_toolkit.callbacks.badge_callback",
+        "dashboard_callback": "django_cfg.callbacks.dashboard_callback",
+        "environment_callback": "django_cfg.callbacks.environment_callback", 
+        "permission_callback": "django_cfg.callbacks.permission_callback",
+        "search_callback": "django_cfg.callbacks.search_callback",
+        "badge_callback": "django_cfg.callbacks.badge_callback",
     }

@@ -7,7 +7,7 @@ Usage:
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
-from django_config_toolkit import ConfigToolkit
+from django_cfg import ConfigToolkit
 
 
 class Command(BaseCommand):

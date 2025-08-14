@@ -7,6 +7,6 @@
   "scripts": {
     "commit": "npx openrouter-commit -run",
     "commit2": "git add . && git commit -m 'fixes' && git push",
-    "cli": "cd django_revolution && poetry run python scripts/dev_cli.py"
+    "cli": "poetry run python scripts/dev_cli.py"
   }
 }

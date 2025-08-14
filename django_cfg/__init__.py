@@ -12,7 +12,7 @@ Features:
 
 Quick Start:
     ```python
-    from django_config_toolkit import ConfigToolkit
+    from django_cfg import ConfigToolkit
     
     # One line Django settings
     globals().update(ConfigToolkit.get_django_settings())
@@ -43,7 +43,7 @@ from .models import (
     FormatterConfig,
 )
 
-__version__ = "1.0.1"
+__version__ = "1.0.3"
 __author__ = "Unrealos Team"
 
 __all__ = [

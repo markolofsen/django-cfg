@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.0.1"
+version = "1.0.3"
 description = "🚀 Amazing Django configuration with type safety and developer experience"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -47,6 +47,11 @@ dev = [
     "isort>=5.12.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+    "rich>=14.1.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+    "toml>=0.10.0",
+    "questionary (>=2.1.0,<3.0.0)",
 ]
 docs = [
     "mkdocs>=1.5.0",
@@ -56,7 +61,7 @@ docs = [
 
 [project.urls]
 Homepage = "https://github.com/markolofsen/django-cfg"
-Documentation = "https://django-cfg.readthedocs.io/"
+Documentation = "https://github.com/markolofsen/django-cfg"
 Repository = "https://github.com/markolofsen/django-cfg.git"
 Issues = "https://github.com/markolofsen/django-cfg/issues"
 
@@ -72,7 +77,7 @@ profile = "black"
 line_length = 88
 
 [tool.mypy]
-python_version = "1.0.1"
+python_version = "1.0.3"
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true
@@ -83,10 +88,10 @@ warn_unused_ignores = true
 
 [tool.ruff]
 line-length = 88
-target-version = "1.0.1"
+target-version = "1.0.3"
 select = ["E", "F", "I", "N", "W"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
 python_files = ["test_*.py", "*_test.py"]
-addopts = "--cov=django_config_toolkit --cov-report=term-missing"
+addopts = "--cov=django_cfg --cov-report=term-missing"

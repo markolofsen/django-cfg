@@ -11,7 +11,7 @@ class DjangoConfigToolkitConfig(AppConfig):
     """Configuration for Django Config Toolkit app."""
     
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'django_config_toolkit'
+    name = 'django_cfg'
     verbose_name = 'Django Config Toolkit'
     
     def ready(self):

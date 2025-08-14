@@ -39,7 +39,7 @@ class ConfigToolkit:
     
     Usage:
         # Django settings.py
-        from django_config_toolkit import ConfigToolkit
+        from django_cfg import ConfigToolkit
         globals().update(ConfigToolkit.get_django_settings())
         
         # Anywhere in your code
@@ -211,7 +211,7 @@ class ConfigToolkit:
         This is the main method for Django integration.
         Use in settings.py like this:
         
-            from django_config_toolkit import ConfigToolkit
+            from django_cfg import ConfigToolkit
             globals().update(ConfigToolkit.get_django_settings())
         """
         instance = cls()
