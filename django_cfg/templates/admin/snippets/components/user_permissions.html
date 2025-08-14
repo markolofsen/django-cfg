@@ -1,0 +1,57 @@
+{% load unfold %}
+
+<!-- User Permissions Summary -->
+{% if user_permissions %}
+    <div class="mt-8 w-full">
+        <div class="flex items-center mb-6">
+            <div class="flex items-center justify-center w-8 h-8 bg-warning/10 rounded-lg mr-3">
+                <span class="material-icons text-warning text-lg">security</span>
+            </div>
+            <h2 class="text-xl font-semibold text-foreground">
+                Your Permissions
+            </h2>
+            <span class="ml-auto text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                {{ user_permissions|length }} permissions
+            </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+            {% for permission, has_perm in user_permissions.items %}
+                <div class="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow duration-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex items-center justify-center w-8 h-8 rounded-lg mr-3"                                        {% if has_perm %}bg-success/10{% else %}bg-muted{% endif %}">
+                                <span class="material-icons text-sm"                                            {% if has_perm %}text-success{% else %}text-muted-foreground{% endif %}">
+                                    {% if permission == "is_superuser" %}admin_panel_settings
+                                    {% elif "add" in permission %}add_circle
+                                    {% elif "change" in permission %}edit
+                                    {% elif "delete" in permission %}delete
+                                    {% elif "view" in permission %}visibility
+                                    {% else %}key{% endif %}
+                                </span>
+                            </div>
+                            <span class="text-sm font-medium text-foreground">
+                                {% if permission == "can_add_user" %}Add Users
+                                {% elif permission == "can_change_user" %}Edit Users
+                                {% elif permission == "can_delete_user" %}Delete Users
+                                {% elif permission == "can_view_user" %}View Users
+                                {% elif permission == "is_superuser" %}Super Admin
+                                {% else %}{{ permission|title|cut:"Can_"|cut:"_" }}{% endif %}
+                            </span>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full"                                   {% if has_perm %}bg-success/10 text-success
+                                   {% else %}bg-muted text-muted-foreground{% endif %}">
+                            {% if has_perm %}
+                                <span class="material-icons text-xs mr-1">check_circle</span>
+                                Granted
+                            {% else %}
+                                <span class="material-icons text-xs mr-1">cancel</span>
+                                Denied
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %} 

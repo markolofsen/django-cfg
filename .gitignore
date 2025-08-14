@@ -1,0 +1,41 @@
+
+vercel
+*.log
+*.pyc
+__pycache__
+
+# Ignore SQLite database files
+db.sqlite3
+
+.DS_Store
+cache
+
+# Environments
+.env*
+.env.openrouter
+.venv
+env
+.env.openrouter
+venv
+ENV
+env.bak/
+venv.bak/
+
+node_modules
+yarn-error.log
+yarn.lock
+package-lock.json
+
+.pytest_cache
+
+# For pypi package
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+*.egg-info/
+

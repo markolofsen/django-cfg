@@ -1,0 +1,23 @@
+{% load unfold unfold_list i18n %}
+
+<div class="flex flex-row grow items-center lg:h-[64px] {% if not cl.model_admin.list_fullwidth %}container mx-auto{% endif %}">
+    {% if cl.paginator.template_name %}
+        {% include cl.paginator.template_name %}
+    {% else %}
+        {% include "unfold/helpers/pagination_default.html" %}
+    {% endif %}
+
+    {% if show_all_url %}
+        <a href="{{ show_all_url }}" class="showall ml-4 text-primary-600 dark:text-primary-500">
+            {% translate 'Show all' %}
+        </a>
+    {% endif %}
+
+    {% if cl.formset and cl.result_count %}
+        <div class="ml-auto">
+            <button type="submit" name="_save" form="changelist-form" class="bg-primary-600 block border border-transparent cursor-pointer font-medium px-3 py-2 rounded-default text-white w-full">
+                {% translate 'Save' %}
+            </button>
+        </div>
+    {% endif %}
+</div>

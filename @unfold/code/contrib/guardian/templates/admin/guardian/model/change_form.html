@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+    {% url opts|admin_urlname:'permissions' original.pk|admin_urlquote as history_url %}
+
+    {% trans "Object permissions" as title %}
+    {% add_preserved_filters history_url as link %}
+    {% include "unfold/helpers/tab_action.html" with title=title link=link %}
+
+    {{ block.super }}
+{% endblock %}

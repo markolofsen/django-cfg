@@ -1,0 +1,24 @@
+{% load i18n %}
+
+{% block import_form %}
+    <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% include "admin/import_export/resource_fields_list.html" with import_or_export="import" %}
+
+        <fieldset class="border border-base-200 mb-8 rounded-default pt-2.5 px-3 shadow-xs dark:border-base-800">
+            {% for field in form %}
+                {% if field.field.widget.attrs.readonly %}
+                    {% include "unfold/helpers/field_readonly.html" with title=field.label value=field.field.value %}
+                    {{ field.as_hidden }}
+                {% else %}
+                    {% include "unfold/helpers/field.html" with field=field %}
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        <button type="submit" class="bg-primary-600 border border-transparent font-medium px-3 py-2 rounded-default text-sm text-white">
+            {% translate 'Submit' %}
+        </button>
+    </form>
+{% endblock %}

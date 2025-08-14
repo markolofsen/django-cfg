@@ -1,0 +1,72 @@
+{% load i18n %}
+
+<form method="post">
+    {% csrf_token %}
+
+    <h2 class="font-semibold mb-3 text-font-important-light dark:text-font-important-dark">
+        {% trans "Group permissions" %}
+    </h2>
+
+    {% if groups_perms.items %}
+        <table id="group-permissions" class="border-base-200 border-spacing-none border-separate mb-6 w-full lg:border lg:rounded-default lg:shadow-xs lg:dark:border-base-800">
+            <thead class="hidden lg:table-header-group text-font-important-light dark:text-font-important-dark">
+                <tr>
+                    <th class="align-middle font-semibold px-3 py-2 text-left">
+                        {% trans "Group" %}
+                    </th>
+
+                    {% for perm in model_perms %}
+                        <th class="align-middle font-semibold px-3 py-2 text-left">
+                            {{ perm.name }}
+                        </th>
+                    {% endfor %}
+
+                    <th class="align-middle font-semibold px-3 py-2 text-right">
+                        {% trans "Action" %}
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for group, group_perms in groups_perms.items %}
+                    <tr class="block border mb-3 rounded-default shadow-xs lg:table-row lg:border-none lg:mb-0 lg:shadow-none dark:border-base-800">
+                        <th class="align-middle flex border-t border-base-200 font-normal px-3 py-2 text-left  before:flex before:capitalize before:content-[attr(data-label)] before:items-center before:mr-auto first:border-t-0  lg:before:hidden lg:first:border-t lg:py-3 lg:table-cell dark:border-base-800" data-label="{% trans "User" %}">
+                            <span>
+                                {{ group }}
+                            </span>
+                        </th>
+
+                        {% for perm in model_perms %}
+                            <td class="align-middle flex border-t border-base-200 font-normal px-3 py-2 text-left  before:flex before:capitalize before:content-[attr(data-label)] before:items-center before:mr-auto first:border-t-0  lg:before:hidden lg:first:border-t lg:py-3 lg:table-cell dark:border-base-800" data-label="{{ perm.name }}">
+                                {% if perm.codename in group_perms %}
+                                    {% include "unfold/helpers/boolean.html" with value=True %}
+                                {% else %}
+                                    {% include "unfold/helpers/boolean.html" with value=False %}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+
+                        <td class="align-middle flex border-t border-base-200 font-normal px-3 py-2 text-right  before:flex before:capitalize before:content-[attr(data-label)] before:items-center before:mr-auto first:border-t-0  lg:before:hidden lg:first:border-t lg:py-3 lg:table-cell dark:border-base-800" data-label="{% trans "Action" %}">
+                            <a href="group-manage/{{ group.id|safe }}/" class="hover:text-base-700 dark:hover:text-white">
+                                {% trans "Edit" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <div class="border border-base-200 overflow-hidden rounded-default p-3 shadow-xs dark:border-base-800">
+        {% for field in group_form %}
+            {% include "admin/guardian/model/field.html" %}
+        {% endfor %}
+
+        <div class="bg-base-50 border-t border-base-200 flex flex-row -m-3 p-3 dark:bg-white/[.02] dark:border-base-800">
+            <div class="ml-auto">
+                {% trans "Manage group" as title %}
+                {% include "unfold/helpers/submit.html" with title=title name="submit_manage_group" %}
+            </div>
+        </div>
+    </div>
+</form>

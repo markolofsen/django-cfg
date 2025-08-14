@@ -1,0 +1,82 @@
+{% extends "admin/import_export/base.html" %}
+
+{% load admin_urls i18n import_export_tags %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+
+    {{ form.media }}
+{% endblock %}
+
+{% block breadcrumbs %}
+    <div class="px-4">
+        <div class="container mb-6 mx-auto -my-3 lg:mb-12">
+            <ul class="flex flex-wrap">
+                {% url 'admin:index' as link %}
+                {% trans 'Home' as name %}
+                {% include 'unfold/helpers/breadcrumb_item.html' with link=link name=name %}
+
+                {% url 'admin:app_list' app_label=opts.app_label as link %}
+                {% include 'unfold/helpers/breadcrumb_item.html' with link=link name=opts.app_config.verbose_name %}
+
+                {% url opts|admin_urlname:'changelist' as link %}
+                {% include 'unfold/helpers/breadcrumb_item.html' with link=link name=opts.verbose_name_plural|capfirst %}
+
+                {% include 'unfold/helpers/breadcrumb_item.html' with link='' name=cl.opts.verbose_name_plural|capfirst %}
+
+                {% trans 'Export' as name %}
+                {% include 'unfold/helpers/breadcrumb_item.html' with link='' name=name %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <form action="{{ export_url }}" method="POST">
+        {% csrf_token %}
+
+        {% if form.initial.export_items %}
+            <p class="bg-blue-50 mb-4 text-blue-500 px-3 py-3 rounded-default text-sm dark:bg-blue-500/20 dark:border-blue-500/10">
+                {% blocktranslate count len=form.initial.export_items|length %}
+                    Export {{ len }} selected item.
+                {% plural %}
+                    Export {{ len }} selected items.
+                {% endblocktranslate %}
+            </p>
+        {% endif %}
+
+        {% if not form.is_selectable_fields_form %}
+            {% include "admin/import_export/resource_fields_list.html" with import_or_export="export" %}
+        {% endif %}
+
+        {{ form.non_field_errors }}
+
+        <fieldset class="border border-base-200 mb-4 rounded-default pt-3 px-3 shadow-xs dark:border-base-800">
+            {% for field in form.visible_fields %}
+                <div {% if field.field.is_selectable_field %}class="selectable-field-export-row" resource-index="{{ field.field.resource_index }}"{% endif %}>
+                    {% if field.field.initial_field %}
+                        <p class="block font-medium mb-2 text-base-900 text-sm dark:text-base-200">
+                            {% trans "This exporter will export the following fields" %}
+                        </p>
+                    {% endif %}
+
+                    {% if field.field.widget.attrs.readonly %}
+                        {% include "unfold/helpers/field_readonly.html" with title=field.label value=field.field.value %}
+                        {{ field.as_hidden }}
+                    {% else %}
+                        {% include "unfold/helpers/field.html" with field=field %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            {% for field in form.hidden_fields %}
+                {{ field }}
+            {% endfor %}
+        </fieldset>
+
+        <button type="submit" class="bg-primary-600 border border-transparent font-medium px-3 py-2 rounded-default text-sm text-white">
+            {% translate 'Submit' %}
+        </button>
+    </form>
+{% endblock %}

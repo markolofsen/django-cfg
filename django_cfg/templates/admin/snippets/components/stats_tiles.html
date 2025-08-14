@@ -1,0 +1,130 @@
+{% load unfold %}
+
+<!-- Statistics Tiles Grid -->
+{% if stats_groups %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {% for group in stats_groups %}
+            <div class="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div class="flex items-center mb-4 pb-3 border-b border-border border-border">
+                    {% if group.icon %}
+                        <div class="flex items-center justify-center w-10 h-10 rounded-lg mr-3"                                    {% if group.color == 'success' %}bg-success/10
+                                    {% elif group.color == 'primary' %}bg-primary/10
+                                    {% elif group.color == 'danger' %}bg-destructive/10
+                                    {% elif group.color == 'warning' %}bg-warning/10
+                                    {% elif group.color == 'info' %}bg-info/10
+                                    {% else %}bg-muted{% endif %}">
+                            <span class="material-icons text-lg"                                        {% if group.color == 'success' %}text-success
+                                        {% elif group.color == 'primary' %}text-primary
+                                        {% elif group.color == 'danger' %}text-destructive
+                                        {% elif group.color == 'warning' %}text-warning
+                                        {% elif group.color == 'info' %}text-info
+                                        {% else %}text-muted-foreground{% endif %}">
+                                {{ group.icon }}
+                            </span>
+                        </div>
+                    {% endif %}
+                    <h3 class="text-lg font-semibold text-foreground">{{ group.title }}</h3>
+                </div>
+                
+                {% for section in group.sections %}
+                    <div class="mb-4 last:mb-0">
+                        <h4 class="text-sm font-medium text-foreground mb-3 flex items-center">
+                            <span class="material-icons mr-2 text-sm"                                        {% if group.color == 'success' %}text-success
+                                        {% elif group.color == 'primary' %}text-primary
+                                        {% elif group.color == 'danger' %}text-destructive
+                                        {% elif group.color == 'warning' %}text-warning
+                                        {% elif group.color == 'info' %}text-info
+                                        {% else %}text-muted-foreground{% endif %}">
+                                bar_chart
+                            </span>
+                            {{ section.title }}
+                        </h4>
+                        
+                        <div class="space-y-3">
+                            {% for card in section.cards %}
+                                <div class="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors duration-150 group">
+                                    <div class="flex items-center">
+                                        {% if card.icon %}
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3"                                                        {% if group.color == 'success' %}bg-success
+                                                        {% elif group.color == 'primary' %}bg-primary-500
+                                                        {% elif group.color == 'danger' %}bg-destructive
+                                                        {% elif group.color == 'warning' %}bg-warning
+                                                        {% elif group.color == 'info' %}bg-info
+                                                        {% else %}bg-muted{% endif %}">
+                                                <span class="material-icons text-xs text-primary-foreground">{{ card.icon }}</span>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="text-sm font-medium text-foreground">{{ card.title }}</div>
+                                            {% if card.description %}
+                                                <div class="text-xs text-muted-foreground">{{ card.description }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"                                                    {% if group.color == 'success' %}bg-success text-primary-foreground
+                                                    {% elif group.color == 'primary' %}bg-primary-500 text-primary-foreground
+                                                    {% elif group.color == 'danger' %}bg-destructive text-primary-foreground
+                                                    {% elif group.color == 'warning' %}bg-warning text-primary-foreground
+                                                    {% elif group.color == 'info' %}bg-info text-primary-foreground
+                                                    {% else %}bg-muted text-primary-foreground{% endif %}">
+                                            {{ card.count|default:0 }}
+                                        </span>
+                                        <a href="{% url card.url_name %}" 
+                                           class="inline-flex items-center gap-1 px-3 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-medium transition-colors duration-150 group-hover:shadow-sm">
+                                            <span class="material-icons text-xs">visibility</span>
+                                            <span>View</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <!-- Fallback for old format -->
+    {% if group.sections %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {% for section in group.sections %}
+                <div class="bg-card rounded-xl border border-border p-6 shadow-sm">
+                    <div class="flex items-center mb-4 pb-3 border-b border-border border-border">
+                        <h3 class="text-lg font-semibold text-foreground">{{ section.title }}</h3>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        {% for card in section.cards %}
+                            <div class="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors duration-150">
+                                <div class="flex items-center">
+                                    {% if card.icon %}
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 bg-primary-500 text-primary-foreground">
+                                            <span class="material-icons text-xs">{{ card.icon }}</span>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="text-sm font-medium text-foreground">{{ card.title }}</div>
+                                        {% if card.description %}
+                                            <div class="text-xs text-muted-foreground">{{ card.description }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-500 text-primary-foreground">
+                                        {{ card.count|default:0 }}
+                                    </span>
+                                    <a href="{% url card.url_name %}" 
+                                       class="inline-flex items-center gap-1 px-3 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-medium transition-colors duration-150">
+                                        <span class="material-icons text-xs">visibility</span>
+                                        <span>View</span>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %} 

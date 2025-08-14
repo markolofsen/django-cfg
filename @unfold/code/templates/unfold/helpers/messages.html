@@ -1,0 +1,19 @@
+{% if messages %}
+    <ul class="flex flex-col gap-4 mb-8">
+        {% for message in messages %}
+            <li class="*:mb-0!">
+                {% if message.level == DEFAULT_MESSAGE_LEVELS.INFO %}
+                    {% include "unfold/helpers/messages/info.html" with message=message %}
+                {% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}
+                    {% include "unfold/helpers/messages/success.html" with message=message %}
+                {% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
+                    {% include "unfold/helpers/messages/warning.html" with message=message %}
+                {% elif message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+                    {% include "unfold/helpers/messages/error.html" with message=message %}
+                {% else %}
+                    {% include "unfold/helpers/messages/debug.html" with message=message %}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}

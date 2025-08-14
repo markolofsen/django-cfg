@@ -1,0 +1,266 @@
+{% extends 'admin/base.html' %}
+
+{% load unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+
+    
+    <script>
+    // Dashboard tabs functionality with semantic colors
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Dashboard tabs script loaded');
+        
+        const tabs = document.querySelectorAll('#dashboard-tabs button');
+        const contents = document.querySelectorAll('.tab-content');
+        
+        console.log('Found tabs:', tabs.length);
+        console.log('Found contents:', contents.length);
+        
+        if (!tabs.length || !contents.length) {
+            console.warn('Dashboard tabs not found');
+            return;
+        }
+        
+        // Global function for tab switching with semantic colors
+        window.switchTab = function(idx) {
+            console.log('switchTab called with:', idx);
+            
+            // Update tab styles with semantic colors
+            tabs.forEach((t, i) => {
+                if (i === idx) {
+                    // Active tab - primary style
+                    t.classList.add('font-semibold');
+                    t.classList.remove('bg-muted', 'text-foreground', 'border-border');
+                    t.style.backgroundColor = 'rgb(var(--color-primary-600))';
+                    t.style.color = 'white';
+                    t.style.borderBottomColor = 'rgb(var(--color-primary-600))';
+                } else {
+                    // Inactive tab - muted style
+                    t.classList.remove('font-semibold');
+                    t.classList.add('bg-muted', 'text-foreground', 'border-border');
+                    t.style.backgroundColor = '';
+                    t.style.color = '';
+                    t.style.borderBottomColor = '';
+                }
+            });
+            
+            // Update content visibility
+            contents.forEach((content, i) => {
+                if (i === idx) {
+                    content.style.display = 'block';
+                    content.classList.add('active');
+                } else {
+                    content.style.display = 'none';
+                    content.classList.remove('active');
+                }
+            });
+        };
+        
+        // Add click handlers
+        tabs.forEach((tab, idx) => {
+            console.log('Setting up tab:', idx);
+            tab.onclick = function(e) {
+                e.preventDefault();
+                console.log('Tab clicked:', idx);
+                switchTab(idx);
+            };
+        });
+        
+        // Activate first tab
+        if (tabs.length > 0) {
+            switchTab(0);
+        }
+        
+        console.log('Tabs initialized');
+    });
+    </script>
+    
+    <style>
+    /* Dashboard tab styles with semantic colors */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    #dashboard-tabs button {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* True semantic color classes - auto theme switching */
+    .btn-primary {
+        background-color: rgb(var(--color-primary-600));
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: rgb(var(--color-primary-700));
+    }
+    .btn-secondary {
+        background-color: rgb(var(--color-base-100));
+        color: rgb(var(--color-base-700));
+    }
+    .btn-secondary:hover {
+        background-color: rgb(var(--color-base-200));
+    }
+    .btn-success {
+        background-color: rgb(var(--color-success-600));
+        color: white;
+    }
+    .btn-success:hover {
+        background-color: rgb(var(--color-success-700));
+    }
+    .btn-warning {
+        background-color: rgb(var(--color-warning-500));
+        color: white;
+    }
+    .btn-warning:hover {
+        background-color: rgb(var(--color-warning-600));
+    }
+    .btn-danger {
+        background-color: rgb(var(--color-danger-600));
+        color: white;
+    }
+    .btn-danger:hover {
+        background-color: rgb(var(--color-danger-700));
+    }
+    </style>
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    {% if subtitle %}
+        {{ subtitle }} |
+    {% endif %}
+    {{ title }} | {{ site_title|default:'Django site admin' }}
+{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <!-- Dashboard Header with semantic colors -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold" style="color: rgb(var(--color-base-900));">
+            {{ dashboard_title|default:"Dashboard" }}
+        </h1>
+        <p class="mt-2" style="color: rgb(var(--color-base-600));">
+            Welcome to the administration dashboard
+        </p>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    {% component "unfold/components/container.html" %}
+        <!-- Navigation and Filters Row -->
+        <div class="flex flex-col gap-4 mb-8">
+            {% component "unfold/components/navigation.html" with items=navigation %}
+            {% endcomponent %}
+
+            {% component "unfold/components/navigation.html" with class="ml-auto" items=filters %}
+            {% endcomponent %}
+        </div>
+
+        <!-- Tabs Navigation with true semantic colors -->
+        <div class="flex gap-1 mb-6" id="dashboard-tabs" style="border-bottom: 1px solid rgb(var(--color-base-300));">
+            <button 
+                type="button" 
+                data-tab="0"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none font-semibold border-b-2"
+                style="background-color: rgb(var(--color-primary-600)); color: white; border-bottom-color: rgb(var(--color-primary-600));"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">dashboard</span>
+                Overview
+            </button>
+            <button 
+                type="button" 
+                data-tab="1"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-muted text-foreground border-b-2 border-border"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">public</span>
+                API Zones
+            </button>
+            <button 
+                type="button" 
+                data-tab="2"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-muted text-foreground border-b-2 border-border"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">people</span>
+                Users
+            </button>
+            <button 
+                type="button" 
+                data-tab="3"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-muted text-foreground border-b-2 border-border"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">settings</span>
+                System
+            </button>
+            <button 
+                type="button" 
+                data-tab="4"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-muted text-foreground border-b-2 border-border"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">analytics</span>
+                Statistics
+            </button>
+            <button 
+                type="button" 
+                data-tab="5"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-muted text-foreground border-b-2 border-border"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">apps</span>
+                App Stats
+            </button>
+        </div>
+
+        <!-- Tab Content with improved spacing -->
+        <div class="tab-content active" data-tab="0">
+            {% block overview_tab %}{% endblock %}
+        </div>
+
+        <div class="tab-content" data-tab="1">
+            {% block zones_tab %}{% endblock %}
+        </div>
+
+        <div class="tab-content" data-tab="2">
+            {% block users_tab %}{% endblock %}
+        </div>
+
+        <div class="tab-content" data-tab="3">
+            {% block system_tab %}{% endblock %}
+        </div>
+
+        <div class="tab-content" data-tab="4">
+            {% block stats_tab %}{% endblock %}
+        </div>
+
+        <div class="tab-content" data-tab="5">
+            {% block app_stats_tab %}{% endblock %}
+        </div>
+
+        <!-- Footer with semantic colors -->
+        <div class="mt-8 pt-6 border-t border-border">
+            <div class="flex items-center justify-between text-sm text-muted-foreground">
+                <span class="flex items-center">
+                    <span class="material-icons text-xs mr-1">schedule</span>
+                    Last updated: {{ last_updated|date:"F j, Y, g:i a" }}
+                </span>
+                <span class="flex items-center">
+                    <span class="material-icons text-xs mr-1">info</span>
+                    Admin v1.0
+                </span>
+            </div>
+        </div>
+    {% endcomponent %}
+{% endblock %}

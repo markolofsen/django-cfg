@@ -1,0 +1,72 @@
+{% load unfold %}
+
+<!-- System Health Grid with semantic colors -->
+<div class="mt-8 w-full">
+    <div class="flex items-center mb-6">
+        <div class="flex items-center justify-center w-8 h-8 bg-success/10 rounded-lg mr-3">
+            <span class="material-icons text-success text-lg">health_and_safety</span>
+        </div>
+        <h2 class="text-xl font-semibold text-foreground">
+            System Health
+        </h2>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        {% for key, value in system_health.items %}
+            <div class="bg-card rounded-lg p-5 border border-border hover:shadow-md transition-shadow duration-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            {% if key == "database_status" %}
+                                <span class="material-icons text-success">storage</span>
+                            {% elif key == "cache_status" %}
+                                <span class="material-icons text-primary">memory</span>
+                            {% elif key == "queue_status" %}
+                                <span class="material-icons text-warning">queue</span>
+                            {% elif key == "storage_status" %}
+                                <span class="material-icons text-info">folder</span>
+                            {% else %}
+                                <span class="material-icons text-muted-foreground">info</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-foreground">
+                                {% if key == "database_status" %}Database
+                                {% elif key == "cache_status" %}Cache
+                                {% elif key == "queue_status" %}Queue
+                                {% elif key == "storage_status" %}Storage
+                                {% else %}{{ key|title }}{% endif %}
+                            </div>
+                            <div class="text-xs text-muted-foreground mt-1">
+                                {% if key == "database_status" %}Connection & queries
+                                {% elif key == "cache_status" %}Redis & memory
+                                {% elif key == "queue_status" %}Background jobs
+                                {% elif key == "storage_status" %}Disk & files
+                                {% else %}System component{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-shrink-0">
+                        {% if value == 'healthy' or value == 'ok' or value == 'connected' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-success/10 text-success">
+                                <span class="material-icons text-xs mr-1">check_circle</span>
+                                {{ value|title }}
+                            </span>
+                        {% elif value == 'warning' or value == 'degraded' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-warning/10 text-warning">
+                                <span class="material-icons text-xs mr-1">warning</span>
+                                {{ value|title }}
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-destructive/10 text-destructive">
+                                <span class="material-icons text-xs mr-1">error</span>
+                                {{ value|title }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div> 

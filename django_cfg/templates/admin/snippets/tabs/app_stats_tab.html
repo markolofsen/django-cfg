@@ -1,0 +1,174 @@
+{% load unfold %}
+
+<!-- App Statistics Tab -->
+<div class="space-y-6">
+    <h2 class="text-xl font-semibold text-foreground mb-4">
+        Application Statistics
+    </h2>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-card rounded-lg border border-border p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-blue-500 mr-2">apps</span>
+                <div>
+                    <div class="text-2xl font-bold text-foreground">{{ app_statistics.total_apps|default:0 }}</div>
+                    <div class="text-xs text-muted-foreground">Total Apps</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-card rounded-lg border border-border p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-green-500 mr-2">table_chart</span>
+                <div>
+                    <div class="text-2xl font-bold text-foreground">{{ app_statistics.total_models|default:0 }}</div>
+                    <div class="text-xs text-muted-foreground">Total Models</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-card rounded-lg border border-border p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-purple-500 mr-2">storage</span>
+                <div>
+                    <div class="text-2xl font-bold text-foreground">{{ app_statistics.total_records|default:0 }}</div>
+                    <div class="text-xs text-muted-foreground">Total Records</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-card rounded-lg border border-border p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-orange-500 mr-2">public</span>
+                <div>
+                    <div class="text-2xl font-bold text-foreground">{{ app_statistics.zones|length|default:0 }}</div>
+                    <div class="text-xs text-muted-foreground">API Zones</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Groups (Block Layout) -->
+    {% if stats_groups %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {% for group in stats_groups %}
+                <div class="bg-card rounded-lg border border-border p-4">
+                    
+                    <!-- Group Header -->
+                    <div class="flex items-center mb-3 pb-2 border-b border-border border-border">
+                        {% if group.icon %}
+                            <span class="material-icons mr-2 text-lg" 
+                                  style="color: {% if group.color == 'success' %}#10b981{% endif %}{% if group.color == 'primary' %}#3b82f6{% endif %}{% if group.color == 'danger' %}#ef4444{% endif %}{% if group.color == 'warning' %}#f59e0b{% endif %}{% if group.color == 'info' %}#06b6d4{% endif %}{% if group.color == 'secondary' %}#6b7280{% endif %};">
+                                {{ group.icon }}
+                            </span>
+                        {% endif %}
+                        <h3 class="text-md font-semibold text-foreground">{{ group.title }}</h3>
+                    </div>
+                    
+                    <!-- Group Sections -->
+                    {% for section in group.sections %}
+                        <div class="mb-3 last:mb-0">
+                            <h4 class="text-sm font-medium text-foreground  mb-2 flex items-center">
+                                <span class="material-icons mr-1 text-xs" 
+                                      style="color: {% if group.color == 'success' %}#10b981{% endif %}{% if group.color == 'primary' %}#3b82f6{% endif %}{% if group.color == 'danger' %}#ef4444{% endif %}{% if group.color == 'warning' %}#f59e0b{% endif %}{% if group.color == 'info' %}#06b6d4{% endif %}{% if group.color == 'secondary' %}#6b7280{% endif %};">
+                                    bar_chart
+                                </span>
+                                {{ section.title }}
+                            </h4>
+                            
+                            <!-- Statistics Cards Grid -->
+                            <div class="grid grid-cols-1 gap-2">
+                                {% for card in section.cards %}
+                                    <div class="flex items-center justify-between p-2 bg-muted rounded-lg hover:bg-muted/80 transition">
+                                        <div class="flex items-center">
+                                            {% if card.icon %}
+                                                <div class="w-6 h-6 rounded flex items-center justify-center mr-2"
+                                                     style="background: linear-gradient(135deg, {% if group.color == 'success' %}#10b981 0%, #059669 100%{% endif %}{% if group.color == 'primary' %}#3b82f6 0%, #1d4ed8 100%{% endif %}{% if group.color == 'danger' %}#ef4444 0%, #dc2626 100%{% endif %}{% if group.color == 'warning' %}#f59e0b 0%, #d97706 100%{% endif %}{% if group.color == 'info' %}#06b6d4 0%, #0891b2 100%{% endif %}{% if group.color == 'secondary' %}#6b7280 0%, #4b5563 100%{% endif %}); color: white;">
+                                                    <span class="material-icons text-xs">{{ card.icon }}</span>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="text-sm font-medium text-foreground">{{ card.title }}</div>
+                                                {% if card.description %}
+                                                    <div class="text-xs text-muted-foreground">{{ card.description }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                                  style="background: linear-gradient(135deg, {% if group.color == 'success' %}#10b981 0%, #059669 100%{% endif %}{% if group.color == 'primary' %}#3b82f6 0%, #1d4ed8 100%{% endif %}{% if group.color == 'danger' %}#ef4444 0%, #dc2626 100%{% endif %}{% if group.color == 'warning' %}#f59e0b 0%, #d97706 100%{% endif %}{% if group.color == 'info' %}#06b6d4 0%, #0891b2 100%{% endif %}{% if group.color == 'secondary' %}#6b7280 0%, #4b5563 100%{% endif %}); color: white;">
+                                                {{ card.count|default:0 }}
+                                            </span>
+                                            <a href="{% url card.url_name %}" 
+                                               class="inline-flex items-center gap-1 px-2 py-1 bg-orange-600 hover:bg-orange-700 text-primary-foreground rounded text-xs font-medium transition">
+                                                <span class="material-icons text-xs" style="font-size: 12px;">visibility</span>
+                                                <span class="text-xs">View</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Fallback to zones display if no stats_groups -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {% for zone_name, zone_data in app_statistics.zones.items %}
+                <div class="bg-card rounded-lg border border-border p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-md font-semibold text-foreground">
+                            <span class="material-icons mr-2 text-sm">public</span>
+                            {{ zone_data.name }}
+                        </h3>
+                        <div class="text-xs text-muted-foreground">
+                            {{ zone_data.app_count }} apps, {{ zone_data.total_records }} records
+                        </div>
+                    </div>
+                    
+                    <!-- Apps in this zone -->
+                    <div class="space-y-2">
+                        {% for app_name, app_data in zone_data.apps.items %}
+                            <div class="bg-muted rounded p-2">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-medium text-foreground">{{ app_data.name }}</h4>
+                                    <span class="text-xs text-muted-foreground">{{ app_data.model_count }} models</span>
+                                </div>
+                                
+                                <!-- Models in this app -->
+                                <div class="space-y-1">
+                                    {% for model_name, model_data in app_data.models.items %}
+                                        <div class="flex items-center justify-between text-xs">
+                                            <span class="text-muted-foreground">{{ model_data.name }}</span>
+                                            <div class="flex items-center gap-1">
+                                                <span class="font-medium text-foreground">{{ model_data.count }}</span>
+                                                <a href="{% url model_data.admin_url %}" 
+                                                   class="text-info hover:text-blue-800">                                                    <span class="material-icons text-xs">visibility</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="mt-2 pt-2 border-t border-border">
+                                    <div class="flex justify-between text-xs text-muted-foreground">
+                                        <span>Total: {{ app_data.total_records }} records</span>
+                                        <span>{{ app_data.model_count }} models</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-span-full text-center py-8 text-muted-foreground">
+                    <span class="material-icons text-4xl mb-2 block">apps</span>
+                    <p>No application statistics available</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div> 

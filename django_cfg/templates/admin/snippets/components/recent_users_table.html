@@ -1,0 +1,118 @@
+{% load unfold %}
+
+<!-- Recent Users Table with semantic colors -->
+<div class="bg-card rounded-lg border border-border overflow-hidden">
+    <!-- Card Header -->
+    <div class="px-6 py-4 border-b border-border border-border bg-muted/50/50">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="material-icons text-primary-600 mr-2">people</span>
+                <h3 class="text-lg font-semibold text-foreground">Recent Users</h3>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-xs text-muted-foreground">Last 24 hours</span>
+                <a href="#" class="text-sm text-primary hover:text-primary/80 flex items-center">
+                    View all
+                    <span class="material-icons text-xs ml-1">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table Content -->
+    <div class="overflow-x-auto">
+        {% if tables.recent_users %}
+            {% component "unfold/components/table.html" with table=tables.recent_users card_included=1 striped=1 class="w-full" %}
+            {% endcomponent %}
+        {% else %}
+            <!-- Custom table if data is different -->
+            <table class="w-full">
+                <thead class="bg-muted">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">User</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Active</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-card divide-y divide-border">
+                    {% for user in recent_users %}
+                        <tr class="hover:bg-muted/50 transition-colors duration-150">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-sm font-medium text-primary">
+                                            {{ user.username|default:user.email|slice:":1"|upper }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-foreground">
+                                            {{ user.username|default:user.email|truncatechars:20 }}
+                                        </div>
+                                        {% if user.email and user.username %}
+                                            <div class="text-xs text-muted-foreground">
+                                                {{ user.email|truncatechars:30 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if user.is_active %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
+                                        <span class="material-icons text-xs mr-1">check_circle</span>
+                                        Active
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+                                        <span class="material-icons text-xs mr-1">cancel</span>
+                                        Inactive
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if user.is_superuser %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+                                        <span class="material-icons text-xs mr-1">admin_panel_settings</span>
+                                        Admin
+                                    </span>
+                                {% elif user.is_staff %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/10 text-info">
+                                        <span class="material-icons text-xs mr-1">manage_accounts</span>
+                                        Staff
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+                                        <span class="material-icons text-xs mr-1">person</span>
+                                        User
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                                {{ user.last_login|timesince|default:"Never" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    <a href="#" class="text-primary-600 hover:text-primary-900">                                        <span class="material-icons text-sm">edit</span>
+                                    </a>
+                                    <a href="#" class="text-slate-400 hover:text-slate-600">                                        <span class="material-icons text-sm">visibility</span>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center">
+                                <div class="flex flex-col items-center">
+                                    <span class="material-icons text-4xl text-slate-300  mb-2">people_outline</span>
+                                    <p class="text-muted-foreground">No recent users found</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div> 

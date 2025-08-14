@@ -1,0 +1,7 @@
+# Main dependencies for django-revolution
+# Generated automatically from pyproject.toml
+# Do not edit manually!
+
+django>=4.0
+pydantic-settings>=2.0.0
+pydantic>=2.0.0

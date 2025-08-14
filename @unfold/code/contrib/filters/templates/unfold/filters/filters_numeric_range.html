@@ -1,0 +1,17 @@
+{% load i18n %}
+
+{% with choices.0 as choice %}
+    <div class="flex flex-col">
+        <h3 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">{% blocktranslate with filter_title=title %} By {{ filter_title }} {% endblocktranslate %}</h3>
+
+        <div class="flex flex-row gap-4">
+            {% for field in choice.form %}
+                <div class="group relative w-1/2{% if field.errors %} errors{% endif %}">
+                    {{ field }}
+
+                    {% include "unfold/helpers/form_errors.html" with errors=field.errors %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endwith %}

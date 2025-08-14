@@ -1,0 +1,204 @@
+{% load unfold %}
+
+<!-- API Zones Table with semantic colors -->
+<div class="w-full">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+            <span class="material-icons text-info  mr-3">public</span>
+            <div>
+                <h2 class="text-xl font-semibold text-foreground">
+                    API Zones
+                </h2>
+                <p class="text-sm text-muted-foreground mt-1">
+                    Configure and monitor API zone access and permissions
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button class="inline-flex items-center px-3 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-card hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <span class="material-icons text-sm mr-1">refresh</span>
+                Refresh
+            </button>
+            <button class="inline-flex items-center px-3 py-2 border border-border rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <span class="material-icons text-sm mr-1">add</span>
+                Add Zone
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
+        {% if zones_table.rows %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-border">
+                    <thead class="bg-muted border-b border-border border-border"> 
+                        <tr>
+                            {% for header in zones_table.headers %}
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {{ header.label }}
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-card divide-y divide-border"> 
+                        {% for row in zones_table.rows %}
+                            <tr class="hover:bg-muted/50 transition-colors duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="h-8 w-8 bg-info/10  rounded-lg flex items-center justify-center mr-3">
+                                                <span class="material-icons text-sm text-info">
+                                                    {% if row.name == 'public' %}public
+                                                    {% elif row.name == 'internal' %}corporate_fare
+                                                    {% elif row.name == 'admin' %}admin_panel_settings
+                                                    {% elif row.name == 'data' %}data_usage
+                                                    {% else %}api{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-medium text-foreground">
+                                                {{ row.name|title }}
+                                            </div>
+                                            <div class="text-xs text-muted-foreground">
+                                                Zone: {{ row.name }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-foreground">
+                                        {{ row.title }}
+                                    </div>
+                                    <div class="text-xs text-muted-foreground mt-1 max-w-xs truncate">
+                                        {{ row.description }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <div class="text-lg font-semibold text-foreground">
+                                        {{ row.app_count|default:0 }}
+                                    </div>
+                                    <div class="text-xs text-muted-foreground">
+                                        {% if row.app_count == 1 %}App{% else %}Apps{% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <div class="text-lg font-semibold text-foreground">
+                                        {{ row.endpoint_count|default:0 }}
+                                    </div>
+                                    <div class="text-xs text-muted-foreground">
+                                        {% if row.endpoint_count == 1 %}Endpoint{% else %}Endpoints{% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if row.status == 'active' or row.status == 'enabled' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
+                                            <span class="material-icons text-xs mr-1">check_circle</span>
+                                            Active
+                                        </span>
+                                    {% elif row.status == 'maintenance' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                                            <span class="material-icons text-xs mr-1">build</span>
+                                            Maintenance
+                                        </span>
+                                    {% elif row.status == 'disabled' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+                                            <span class="material-icons text-xs mr-1">block</span>
+                                            Disabled
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+                                            <span class="material-icons text-xs mr-1">help</span>
+                                            {{ row.status|title }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex items-center space-x-2 text-sm">
+                                        <a href="/schema/{{ row.name }}/schema/swagger/" target="_blank" class="px-2 py-1 rounded-md bg-info/10 text-info hover:bg-info/20 transition-colors">swagger</a>
+                                        <a href="/schema/{{ row.name }}/redoc/" target="_blank" class="px-2 py-1 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors">redoc</a>
+                                        <a href="/schema/{{ row.name }}/schema/" target="_blank" class="px-2 py-1 rounded-md bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors">schema</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-16">
+                <div class="flex flex-col items-center">
+                    <div class="bg-muted rounded-full p-4 mb-4">
+                        <span class="material-icons text-3xl text-slate-400">                    </div>
+                    <h3 class="text-lg font-medium text-foreground mb-2">No API zones configured</h3>
+                    <p class="text-muted-foreground max-w-md mx-auto mb-6">
+                        API zones help organize and control access to different parts of your application. 
+                        Create your first zone to get started.
+                    </p>
+                    <button class="inline-flex items-center px-4 py-2 border border-border rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <span class="material-icons text-sm mr-2">add</span>
+                        Create First Zone
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Zone Statistics -->
+    {% if zones_table.rows %}
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-card rounded-lg border border-border p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-info/10 p-2 rounded-lg">
+                        <span class="material-icons text-info">public</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-muted-foreground">Total Zones</p>
+                        <p class="text-lg font-semibold text-foreground">{{ zones_table.rows|length }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-card rounded-lg border border-border p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-success/10 p-2 rounded-lg">
+                        <span class="material-icons text-success">check_circle</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-muted-foreground">Active Zones</p>
+                        <p class="text-lg font-semibold text-foreground">
+                            {{ zones_table.rows|length }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-card rounded-lg border border-border p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-primary/10 p-2 rounded-lg">
+                        <span class="material-icons text-primary">apps</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-muted-foreground">Total Apps</p>
+                        <p class="text-lg font-semibold text-foreground">
+                            {% widthratio zones_table.rows|length 1 8 %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-card rounded-lg border border-border p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-warning/10 p-2 rounded-lg">
+                        <span class="material-icons text-warning">api</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-muted-foreground">Endpoints</p>
+                        <p class="text-lg font-semibold text-foreground">
+                            {% widthratio zones_table.rows|length 3 25 %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div> 

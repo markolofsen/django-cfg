@@ -1,0 +1,51 @@
+{% load unfold %}
+
+<!-- Users Tab Content -->
+<div class="space-y-8">
+    <!-- Recent Users Table -->
+    {% include 'admin/snippets/components/recent_users_table.html' %}
+
+    <!-- User Permissions -->
+    {% include 'admin/snippets/components/user_permissions.html' %}
+
+    <!-- User Statistics -->
+    <div class="w-full">
+        <h2 class="text-xl font-semibold text-foreground mb-4">
+            User Statistics
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-card rounded-lg p-6 border border-border">
+                <div class="flex items-center">
+                    <span class="material-icons text-info mr-3">person_add</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground">New Users</h3>
+                        <p class="text-2xl font-bold text-info">{{ new_users_count|default:0 }}</p>
+                        <p class="text-sm text-muted-foreground">Last 7 days</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-card rounded-lg p-6 border border-border">
+                <div class="flex items-center">
+                    <span class="material-icons text-green-600 mr-3">check_circle</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground">Active Users</h3>
+                        <p class="text-2xl font-bold text-green-600">{{ active_users_count|default:0 }}</p>
+                        <p class="text-sm text-muted-foreground">Currently active</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-card rounded-lg p-6 border border-border">
+                <div class="flex items-center">
+                    <span class="material-icons text-primary mr-3">admin_panel_settings</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground">Superusers</h3>
+                        <p class="text-2xl font-bold text-primary">{{ superusers_count|default:0 }}</p>
+                        <p class="text-sm text-muted-foreground">Administrators</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

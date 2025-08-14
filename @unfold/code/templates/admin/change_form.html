@@ -1,0 +1,141 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n admin_urls static admin_modify unfold %}
+
+{% block extrahead %}{{ block.super }}
+    <script src="{% url 'admin:jsi18n' %}"></script>
+    {{ media }}
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-form{% endblock %}
+
+{% if not is_popup %}
+    {% block breadcrumbs %}
+        <div class="px-4">
+            <div class="container mb-6 mx-auto -my-3 lg:mb-12">
+                <ul class="flex flex-wrap">
+                    {% url 'admin:index' as link %}
+                    {% trans 'Home' as name %}
+                    {% include 'unfold/helpers/breadcrumb_item.html' with link=link name=name %}
+
+                    {% url 'admin:app_list' app_label=opts.app_label as link %}
+                    {% include 'unfold/helpers/breadcrumb_item.html' with link=link name=opts.app_config.verbose_name %}
+
+                    {% if has_view_permission %}
+                        {% url opts|admin_urlname:'changelist' as link %}
+                        {% include 'unfold/helpers/breadcrumb_item.html' with link=link  name=opts.verbose_name_plural|capfirst %}
+                    {% else %}
+                        {% include 'unfold/helpers/breadcrumb_item.html' with link='' name=opts.verbose_name_plural|capfirst %}
+                    {% endif %}
+
+                    {% if add %}
+                        {% blocktranslate trimmed with name=opts.verbose_name asvar breadcrumb_name %}
+                            Add {{ name }}
+                        {% endblocktranslate %}
+
+                        {% include 'unfold/helpers/breadcrumb_item.html' with link='' name=breadcrumb_name %}
+                    {% else %}
+                        {% include 'unfold/helpers/breadcrumb_item.html' with link='' name=original|truncatewords:'18' %}
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    {% endblock %}
+{% endif %}
+
+{% block nav-global %}{% spaceless %}
+    {% if change and not is_popup %}
+        {% block object-tools-items %}
+            {% change_form_object_tools %}
+        {% endblock %}
+    {% endif %}
+{% endspaceless %}{% endblock %}
+
+{% block nav-global-side %}
+    {% if has_add_permission %}
+        {% include "unfold/helpers/add_link.html" %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <div id="content-main">
+        {% include "unfold/helpers/popup_header.html" %}
+
+        {% block form_before %}{% endblock %}
+
+        {% if adminform.model_admin.change_form_outer_before_template %}
+            {% include adminform.model_admin.change_form_outer_before_template %}
+        {% endif %}
+
+        <form {% if adminform.model_admin.conditional_fields %}x-data='{{ adminform|changeform_data }}'{% endif %} {% if has_file_field %}enctype="multipart/form-data" {% endif %}{% if form_url %}action="{{ form_url }}"{% else %}x-bind:value="activeTab && activeTab !== 'general' ? '#' + activeTab : ''" {% endif %}method="post" id="{{ opts.model_name }}_form" {% if adminform.model_admin.warn_unsaved_form %}class="warn-unsaved-form"{% endif %} novalidate>
+            {% csrf_token %}
+
+            {% if adminform.model_admin.change_form_before_template %}
+                {% include adminform.model_admin.change_form_before_template %}
+            {% endif %}
+
+            {% block form_top %}{% endblock %}
+
+            <div class="flex flex-col gap-8">
+                {% if is_popup %}
+                    <input type="hidden" name="{{ is_popup_var }}" value="1">
+                {% endif %}
+
+                {% if to_field %}
+                    <input type="hidden" name="{{ to_field_var }}" value="{{ to_field }}">
+                {% endif %}
+
+                {% include "unfold/helpers/messages/errornote.html" with errors=errors %}
+                {% include "unfold/helpers/messages/error.html" with errors=adminform.form.non_field_errors %}
+
+                {% block field_sets %}
+                    {% with has_conditional_display=adminform.model_admin.conditional_fields %}
+                        {% for fieldset in adminform %}
+                            {% if "tab" not in fieldset.classes %}
+                                {% include 'admin/includes/fieldset.html' %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% include "unfold/helpers/fieldsets_tabs.html" %}
+                    {% endwith %}
+                {% endblock %}
+
+                {% block after_field_sets %}{% endblock %}
+
+                {% block inline_field_sets %}
+                    {% for inline_admin_formset in inline_admin_formsets %}
+                        {% if request.headers.hx_request  %}
+                            {% if inline_admin_formset.formset.get_pagination_key in request.GET %}
+                                {% include inline_admin_formset.opts.template %}
+                            {% endif %}
+                        {% else %}
+                            {% include inline_admin_formset.opts.template %}
+                        {% endif %}
+                    {% endfor %}
+                {% endblock %}
+
+                {% block after_related_objects %}{% endblock %}
+
+                {% block admin_change_form_document_ready %}
+                    <script id="django-admin-form-add-constants" src="{% static 'admin/js/change_form.js' %}"{% if adminform and add %} data-model-name="{{ opts.model_name }}"{% endif %} async></script>
+                {% endblock %}
+
+                {% prepopulated_fields_js %}
+            </div>
+
+            {% if adminform.model_admin.change_form_after_template %}
+                {% include adminform.model_admin.change_form_after_template %}
+            {% endif %}
+        </form>
+
+        {% if adminform.model_admin.change_form_outer_after_template %}
+            {% include adminform.model_admin.change_form_outer_after_template %}
+        {% endif %}
+
+        {% block form_after %}{% endblock %}
+    </div>
+{% endblock %}
+
+{% block footer %}
+    {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+{% endblock %}

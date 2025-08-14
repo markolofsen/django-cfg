@@ -1,0 +1,45 @@
+{% load unfold %}
+
+<!-- Recent Activity Section -->
+{% if recent_activity.recent_users %}
+    <div class="mt-8 w-full">
+        <h2 class="text-xl font-semibold text-foreground mb-4">
+            Recent Activity
+        </h2>
+        <div class="bg-card rounded-lg border border-border w-full">
+            <div class="p-4">
+                <h3 class="text-lg font-medium text-foreground mb-3">
+                    Recent User Registrations
+                </h3>
+                <div class="space-y-3">
+                    {% for user in recent_activity.recent_users %}
+                        <div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-info/10  rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-medium text-info">                                        {{ user.username|first|upper }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-foreground">
+                                        {{ user.username }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ user.email }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full "                                           {% if user.is_active %}bg-success/10 text-success{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                                <span class="text-xs text-muted-foreground">
+                                    {{ user.date_joined|date:"M d, Y" }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %} 

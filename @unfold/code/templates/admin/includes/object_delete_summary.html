@@ -1,0 +1,15 @@
+{% load i18n %}
+
+<div class="border-base-200 border-t p-4 dark:border-base-800">
+    <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+        {% translate "Summary" %}
+    </h2>
+
+    <ul class="leading-relaxed">
+        {% for model_name, object_count in model_count %}
+            <li>
+                {{ model_name|capfirst }}: {{ object_count }}
+            </li>
+        {% endfor %}
+    </ul>
+</div>

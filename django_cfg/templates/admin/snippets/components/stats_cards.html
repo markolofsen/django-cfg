@@ -1,0 +1,40 @@
+{% load unfold %}
+
+<!-- Statistics Cards Grid with semantic colors -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 w-full">
+    {% for card in cards %}
+        {% component "unfold/components/card.html" with class="hover:shadow-lg transition-shadow duration-200 border border-border" %}
+            <div class="flex items-center justify-between p-6">
+                <div class="flex-1">
+                    {% component "unfold/components/text.html" with class="text-sm font-medium text-muted-foreground uppercase tracking-wide" %}
+                        {{ card.title }}
+                    {% endcomponent %}
+                    
+                    {% component "unfold/components/title.html" with class="text-3xl font-bold text-foreground mt-2" %}
+                        {{ card.value }}
+                    {% endcomponent %}
+                    
+                    {% if card.change %}
+                        <div class="flex items-center mt-2">
+                            <span class="material-icons text-sm mr-1 {% if card.change_type == 'positive' %}text-success{% elif card.change_type == 'negative' %}text-destructive{% else %}text-muted-foreground{% endif %}">
+                                {% if card.change_type == 'positive' %}trending_up{% elif card.change_type == 'negative' %}trending_down{% else %}trending_flat{% endif %}
+                            </span>
+                            <span class="text-sm font-medium {% if card.change_type == 'positive' %}text-success{% elif card.change_type == 'negative' %}text-destructive{% else %}text-muted-foreground{% endif %}">
+                                {{ card.change }}
+                            </span>
+                            <span class="text-xs text-muted-foreground ml-1">vs last period</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="flex-shrink-0 ml-4">
+                    <div class="p-3 rounded-full {% if card.change_type == 'positive' %}bg-success/10{% elif card.change_type == 'negative' %}bg-destructive/10{% else %}bg-muted{% endif %}">
+                        <span class="material-icons text-2xl {% if card.change_type == 'positive' %}text-success{% elif card.change_type == 'negative' %}text-destructive{% else %}text-muted-foreground{% endif %}">
+                            {{ card.icon }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        {% endcomponent %}
+    {% endfor %}
+</div> 
