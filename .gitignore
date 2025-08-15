@@ -1,41 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 
-vercel
-*.log
-*.pyc
-__pycache__
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+MANIFEST
+.eggs/
+wheels/
+share/python-wheels/
+develop-eggs/
 
-# Ignore SQLite database files
-db.sqlite3
-
-.DS_Store
-cache
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
 
 # Environments
-.env*
-.env.openrouter
+.env
 .venv
-env
-.env.openrouter
-venv
-ENV
+env/
+venv/
+ENV/
 env.bak/
 venv.bak/
+.env.*
+.python-version
 
-node_modules
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# System
+.DS_Store
+Thumbs.db
+
+# Poetry
+poetry.lock
+dist/
+
+# Documentation
+docs/_build/
+_build/
+.docusaurus
+
+# Node (since package has package.json)
+node_modules/
 yarn-error.log
 yarn.lock
 package-lock.json
 
-.pytest_cache
-
-# For pypi package
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.pyw
-*.pyz
-*.pywz
-*.pyzw
-*.egg-info/
-
+# Project specific
+*.bak
+*.tmp
+*.temp

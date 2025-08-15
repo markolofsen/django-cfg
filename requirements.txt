@@ -2,6 +2,7 @@
 # Generated automatically from pyproject.toml
 # Do not edit manually!
 
+django-unfold>=0.64.2
 django>=4.0
 pydantic-settings>=2.0.0
 pydantic>=2.0.0

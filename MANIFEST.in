@@ -2,5 +2,33 @@ include README.md
 include LICENSE
 include MANIFEST.in
 recursive-include django_cfg *.py
+
+# Exclude cache files
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
+
+# Exclude development files and directories
+recursive-exclude @ *
+recursive-exclude scripts *
+exclude package.json
+exclude .env.openrouter
+exclude .env*
+
+# Exclude development and test files
+recursive-exclude tests *
+recursive-exclude docs *
+exclude pytest.ini
+exclude tox.ini
+exclude .coveragerc
+exclude .editorconfig
+exclude .pre-commit-config.yaml
+
+# Exclude version control
+recursive-exclude .git *
+recursive-exclude .github *
+exclude .gitignore
+
+# Exclude Node.js files
+exclude package*.json
+exclude yarn*.lock
+recursive-exclude node_modules *
