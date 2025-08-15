@@ -94,20 +94,20 @@ def main():
         return 0
 
     # Cleanup old build artifacts
-    for folder in ["build", "dist", "django_cfg.egg-info"]:
-        if os.path.exists(folder):
-            console.print(f"[blue]Removing old {folder}/...[/blue]")
-            if os.path.isdir(folder):
-                import shutil
-
-                shutil.rmtree(folder)
-            else:
-                os.remove(folder)
+    for pattern in ["build", "dist", "*.egg-info"]:
+        for path in Path().glob(pattern):
+            if path.exists():
+                console.print(f"[blue]Removing old {path}...[/blue]")
+                if path.is_dir():
+                    import shutil
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
 
     # Build step
-    console.print("[yellow]Building the package (python -m build)...[/yellow]")
+    console.print("[yellow]Building the package with poetry...[/yellow]")
     build_result = subprocess.run(
-        [sys.executable, "-m", "build"], capture_output=True, text=True
+        ["poetry", "build"], capture_output=True, text=True
     )
     console.print(build_result.stdout)
     if build_result.returncode != 0:
@@ -115,29 +115,25 @@ def main():
         return build_result.returncode
 
     # Check dist/ folder
-    if not os.path.isdir("dist"):
-        console.print(
-            "[red]dist/ folder not found! Please build the package first.[/red]"
-        )
+    if not Path("dist").is_dir():
+        console.print("[red]dist/ folder not found! Please build the package first.[/red]")
         return 1
 
-    # Twine command
-    twine_cmd = (
-        [sys.executable, "-m", "twine", "upload", "--repository", repo, "dist/*"]
+    # Poetry publish command
+    publish_cmd = (
+        ["poetry", "publish", "--repository", repo]
         if repo == "testpypi"
-        else [sys.executable, "-m", "twine", "upload", "dist/*"]
+        else ["poetry", "publish"]
     )
 
     # Run publishing
-    console.print("[yellow]Running twine upload...[/yellow]")
+    console.print("[yellow]Publishing with poetry...[/yellow]")
     try:
-        result = subprocess.run(twine_cmd, check=False)
+        result = subprocess.run(publish_cmd, check=False)
         if result.returncode == 0:
             console.print("[green]✅ Package published successfully![/green]")
         else:
-            console.print(
-                f"[red]❌ Publishing failed. Return code: {result.returncode}[/red]"
-            )
+            console.print(f"[red]❌ Publishing failed. Return code: {result.returncode}[/red]")
         return result.returncode
     except Exception as e:
         console.print(f"[red]❌ Error: {e}[/red]")

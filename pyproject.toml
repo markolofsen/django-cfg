@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.0.6"
+version = "1.0.7"
 description = "🚀 Amazing Django configuration with type safety and developer experience"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -101,7 +101,7 @@ profile = "black"
 line_length = 88
 
 [tool.mypy]
-python_version = "1.0.6"
+python_version = "1.0.7"
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true
@@ -112,7 +112,7 @@ warn_unused_ignores = true
 
 [tool.ruff]
 line-length = 88
-target-version = "1.0.6"
+target-version = "1.0.7"
 select = ["E", "F", "I", "N", "W"]
 
 [tool.pytest.ini_options]
