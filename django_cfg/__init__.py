@@ -43,7 +43,7 @@ from .models import (
     FormatterConfig,
 )
 
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 __author__ = "Unrealos Team"
 
 __all__ = [

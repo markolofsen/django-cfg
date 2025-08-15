@@ -300,6 +300,47 @@ logging_config.custom_loggers.append(LoggerConfig(
 ))
 ```
 
+## 🛠️ Management Commands
+
+Django Config Toolkit includes powerful management commands for enhanced Django project management:
+
+### Available Commands
+
+```bash
+# Smart database migration with ConfigToolkit integration
+python manage.py migrator
+
+# Auto-generate configuration files and models
+python manage.py auto_generate
+
+# Create tokens and secret keys
+python manage.py create_token
+
+# Enhanced superuser creation
+python manage.py superuser
+
+# Test email configuration
+python manage.py test_email
+
+# Script management and project utilities
+python manage.py script
+
+# Comprehensive settings validation
+python manage.py check_settings
+```
+
+### Key Features
+
+- 🔄 **Smart Migration Tool** - Multi-database migration with ConfigToolkit integration
+- ⚙️ **Auto-Generation** - Generate configuration files, models, and templates
+- 🔑 **Token Management** - Create API tokens, auth tokens, and secret keys
+- 👤 **Enhanced Superuser** - Interactive superuser creation with validation
+- 📧 **Email Testing** - Test email configuration and send test emails
+- 📜 **Script Management** - Run custom scripts and manage Django applications
+- 🔍 **Settings Validation** - Comprehensive validation of Django settings
+
+For detailed documentation, see [Management Commands Guide](README_MANAGEMENT_COMMANDS.md).
+
 ## 🛠️ Advanced Usage
 
 ### Production Optimization

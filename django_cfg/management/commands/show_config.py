@@ -56,7 +56,8 @@ class Command(BaseCommand):
             ('Environment', toolkit.environment),
             ('Debug Mode', toolkit.debug),
             ('Is Production', toolkit.is_production),
-            ('Base Directory', toolkit.base_dir),
+            ('Is Development', toolkit.is_development),
+            ('Is Docker', toolkit.is_docker),
         ]
         
         if include_secrets:
@@ -72,8 +73,10 @@ class Command(BaseCommand):
         self.stdout.write('-' * 40)
         db_data = [
             ('Engine', toolkit.database_engine),
-            ('Name', toolkit.database_name),
             ('URL', toolkit.database_url[:50] + '...' if not include_secrets else toolkit.database_url),
+            ('Max Connections', toolkit.database_max_connections),
+            ('Is SQLite', toolkit.is_sqlite),
+            ('Is PostgreSQL', toolkit.is_postgresql),
         ]
         
         for key, value in db_data:
@@ -120,6 +123,8 @@ class Command(BaseCommand):
         self.stdout.write('-' * 40)
         email_data = [
             ('Backend', toolkit.email_backend),
+            ('Host', toolkit.email_host),
+            ('From Email', toolkit.email_from),
         ]
         
         for key, value in email_data:
@@ -170,12 +175,15 @@ class Command(BaseCommand):
                 'environment': toolkit.environment,
                 'debug': toolkit.debug,
                 'is_production': toolkit.is_production,
-                'base_dir': toolkit.base_dir,
+                'is_development': toolkit.is_development,
+                'is_docker': toolkit.is_docker,
             },
             'database': {
                 'engine': toolkit.database_engine,
-                'name': toolkit.database_name,
                 'url': toolkit.database_url if include_secrets else '[HIDDEN]',
+                'max_connections': toolkit.database_max_connections,
+                'is_sqlite': toolkit.is_sqlite,
+                'is_postgresql': toolkit.is_postgresql,
             },
             'security': {
                 'cors_enabled': toolkit.cors_enabled,
@@ -194,6 +202,8 @@ class Command(BaseCommand):
             },
             'email': {
                 'backend': toolkit.email_backend,
+                'host': toolkit.email_host,
+                'from_email': toolkit.email_from,
             },
             'extended_features': {
                 'unfold': {
