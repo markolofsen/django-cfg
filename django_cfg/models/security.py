@@ -41,7 +41,7 @@ class SecurityConfig(BaseConfig):
     production_domains: List[str] = Field(
         default_factory=lambda: [
             "https://carapis.com",
-            "https://api2.carapis.com",
+            "https://api.carapis.com",
             "https://unrealos.com",
         ],
         description="Production domains for security configuration"
