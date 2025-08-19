@@ -1,0 +1,17 @@
+{% load unfold %}
+
+<!-- Activity Tracker -->
+<div class="mt-8 w-full">
+    <div class="flex items-center mb-6">
+        <div class="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg mr-3">
+            <span class="material-icons text-primary-600 dark:text-primary-500 text-lg">timeline</span>
+        </div>
+        <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark">
+            Activity Tracker
+        </h2>
+    </div>
+    {% component "unfold/components/card.html" %}
+        {% component "unfold/components/tracker.html" with data=activity_tracker %}
+        {% endcomponent %}
+    {% endcomponent %}
+</div> 

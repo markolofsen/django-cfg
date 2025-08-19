@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ email_title }} - {{ site_name }}</title>
+    <style>
+      /* Basic styles inspired by the notification template */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+          "Segoe UI Symbol";
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f7;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 0;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        /* Ensures border-radius clips content */
+      }
+
+      .header {
+        text-align: center;
+        padding: 25px 20px;
+        background-color: #222;
+        /* Dark header */
+        border-bottom: 1px solid #333;
+      }
+
+      .logo {
+        max-width: 60px;
+        /* Adjusted size */
+        margin-bottom: 10px;
+        height: auto;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .site-name {
+        font-size: 24px;
+        font-weight: bold;
+        color: #ffffff;
+        /* White text on dark header */
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: 10px;
+      }
+
+      .content {
+        padding: 30px 30px;
+      }
+
+      .footer {
+        text-align: center;
+        padding: 20px 30px;
+        color: #888;
+        font-size: 12px;
+        background-color: #f9f9f9;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      h1 {
+        color: #333;
+        font-size: 22px;
+        margin-bottom: 20px;
+        margin-top: 0;
+      }
+
+      p {
+        margin: 0 0 1em 0;
+        color: #555;
+      }
+
+      .button-container {
+        text-align: center;
+        margin: 30px 0;
+      }
+
+      .btn {
+        display: inline-block;
+        background-color: #222222;
+        /* Black background */
+        color: #ffffff !important;
+        /* White text, important to override potential browser/client defaults */
+        text-decoration: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .btn:hover {
+        background-color: #444444;
+        /* Slightly lighter black for hover */
+      }
+
+      .secondary-text {
+        font-size: 0.9em;
+        color: #777;
+        margin-top: 25px;
+      }
+
+      a {
+        color: #007bff;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        {% comment %} <img src="{{ logo_url }}" alt="{{ site_name }} Logo" class="logo" /> {% endcomment %}
+        <span class="site-name">{{ site_name }}</span>
+      </div>
+
+      <div class="content">
+        <h1>{{ email_title }}</h1>
+        <p>{{ greeting }},</p>
+
+        <p>{{ main_text | safe }}</p>
+
+        {% if main_html_content %} {{ main_html_content | safe }} {% endif %}
+        {%if button_url and button_text %}
+        <div class="button-container">
+          <a href="{{ button_url }}" class="btn">{{ button_text }}</a>
+        </div>
+        {% endif %} {% if secondary_text %}
+        <p class="secondary-text">{{ secondary_text | safe }}</p>
+        {% endif %}
+
+        <p>If you need further assistance, please contact our support team.</p>
+
+        <p>Thanks,<br />The {{ site_name }} Team</p>
+      </div>
+
+      <div class="footer">
+        &copy; {% now "Y" %} {{ site_name }}. All rights reserved.<br />
+        You are receiving this email because it relates to your account
+        activity.<br />
+        {% if site_url != '#' %}
+        <a href="{{ site_url }}">{{ site_url }}</a>
+        {%endif %}
+      </div>
+    </div>
+  </body>
+</html>

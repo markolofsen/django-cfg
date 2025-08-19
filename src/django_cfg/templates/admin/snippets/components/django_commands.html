@@ -1,0 +1,372 @@
+{% load unfold %}
+
+<!-- Django Commands Section -->
+<div class="mt-8 w-full">
+    <!-- Header -->
+    <div class="flex items-center mb-6">
+        <div class="flex items-center justify-center w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg mr-3">
+            <span class="material-icons text-purple-600 dark:text-purple-400 text-lg">terminal</span>
+        </div>
+        <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark">
+            Django Commands
+        </h2>
+        <span class="ml-auto text-xs text-font-subtle-light dark:text-font-subtle-dark bg-base-100 dark:bg-base-800 px-2 py-1 rounded-full">
+            {{ django_commands.total_commands }} commands
+        </span>
+    </div>
+    
+    {% if django_commands.categorized %}
+        <!-- Commands by Category -->
+        <div class="space-y-4">
+            {% for category, commands in django_commands.categorized.items %}
+                <div class="bg-white dark:bg-base-900 rounded-default border border-base-200 dark:border-base-700 overflow-hidden shadow-sm mb-4">
+                    <!-- Category Header -->
+                    <button 
+                        onclick="toggleCategory('{{ category }}')"
+                        class="w-full p-4 flex items-center justify-between hover:bg-base-100 dark:hover:bg-base-700 transition-colors"
+                    >
+                        <div class="flex items-center">
+                            <span class="material-icons text-primary-600 dark:text-primary-400 mr-2">apps</span>
+                            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark capitalize">
+                                {{ category|title }}
+                            </h3>
+                            <span class="ml-3 text-sm text-font-subtle-light dark:text-font-subtle-dark bg-base-100 dark:bg-base-700 px-2 py-1 rounded-default">
+                                {{ commands|length }} commands
+                            </span>
+                        </div>
+                            <span class="material-icons text-font-subtle-light dark:text-font-subtle-dark transition-transform" id="icon-{{ category }}" style="transform: rotate(-90deg);">
+                             expand_less
+                         </span>
+                    </button>
+                    
+                                         <!-- Collapsible Content -->
+                     <div id="content-{{ category }}" class="border-t border-base-200 dark:border-base-700" style="display: none;">
+                        <div class="p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for command in commands %}
+                                    <div class="bg-white dark:bg-base-900 rounded-default border border-base-200 dark:border-base-700 hover:shadow-lg dark:hover:shadow-base-900/50 transition-all duration-200 overflow-hidden">
+                                        <!-- Card Header -->
+                                        <div class="p-4 border-b border-base-100 dark:border-base-700">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <code class="text-sm font-mono bg-base-100 dark:bg-base-700 px-2 py-1 rounded-default text-font-default-light dark:text-font-default-dark">
+                                                    {{ command.name }}
+                                                </code>
+                                                <div class="flex items-center space-x-1">
+                                                    {% if command.is_core %}
+                                                        <span class="text-xs bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 px-2 py-1 rounded-default">
+                                                            Core
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if command.is_custom %}
+                                                        <span class="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-default">
+                                                            Custom
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                                <span class="material-icons text-xs mr-1">apps</span>
+                                                {{ command.app_label }}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Card Body -->
+                                        <div class="p-4">
+                                            <!-- Description -->
+                                            {% if command.description %}
+                                                <p class="text-sm text-font-default-light dark:text-font-default-dark mb-3 line-clamp-2">
+                                                    {{ command.description }}
+                                                </p>
+                                            {% endif %}
+                                            
+                                            <!-- Usage -->
+                                            {% if command.usage %}
+                                                <div class="mb-3">
+                                                    <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark font-medium">Usage:</span>
+                                                    <code class="block text-xs font-mono bg-base-50 dark:bg-base-700 px-2 py-1 rounded-default mt-1 text-font-default-light dark:text-font-default-dark">
+                                                        {{ command.usage }}
+                                                    </code>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Arguments & Options Summary -->
+                                            <div class="flex items-center justify-between text-xs text-font-subtle-light dark:text-font-subtle-dark mb-3">
+                                                {% if command.arguments %}
+                                                    <span>{{ command.arguments|length }} arg{{ command.arguments|length|pluralize }}</span>
+                                                {% endif %}
+                                                {% if command.options %}
+                                                    <span>{{ command.options|length }} option{{ command.options|length|pluralize }}</span>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <!-- Action Buttons -->
+                                            <div class="flex gap-2">
+                                                <button 
+                                                    onclick="copyToClipboard('python manage.py {{ command.name }}')"
+                                                    class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-base-100 dark:bg-base-700 hover:bg-base-200 dark:hover:bg-base-600 text-font-default-light dark:text-font-default-dark rounded-default text-xs font-medium transition-colors"
+                                                    title="Copy command to clipboard">
+                                                    <span class="material-icons text-xs mr-1">content_copy</span>
+                                                    Copy
+                                                </button>
+                                                <button 
+                                                    onclick="executeCommand('{{ command.name }}')"
+                                                    class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-default text-xs font-medium transition-colors"
+                                                    title="Execute command">
+                                                    <span class="material-icons text-xs mr-1">play_arrow</span>
+                                                    Run
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-base-900 rounded-lg p-4 border border-base-200 dark:border-base-700">
+                <div class="flex items-center">
+                    <span class="material-icons text-blue-600 dark:text-blue-400 mr-3">terminal</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">{{ django_commands.total_commands }}</h3>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Total Commands</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg p-4 border border-base-200 dark:border-base-700">
+                <div class="flex items-center">
+                    <span class="material-icons text-green-600 dark:text-green-400 mr-3">settings</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">{{ django_commands.core_commands }}</h3>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Core Commands</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg p-4 border border-base-200 dark:border-base-700">
+                <div class="flex items-center">
+                    <span class="material-icons text-indigo-600 dark:text-indigo-400 mr-3">apps</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">{{ django_commands.custom_commands }}</h3>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Custom Commands</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg p-4 border border-base-200 dark:border-base-700">
+                <div class="flex items-center">
+                    <span class="material-icons text-purple-600 dark:text-purple-400 mr-3">category</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">{{ django_commands.categories|length }}</h3>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Categories</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    {% else %}
+        <!-- No Commands -->
+        <div class="text-center py-12">
+            <div class="flex flex-col items-center">
+                <span class="material-icons text-4xl text-base-400 dark:text-base-500 mb-4">terminal</span>
+                <h3 class="text-lg font-medium text-font-important-light dark:text-font-important-dark mb-2">
+                    No Django Commands Found
+                </h3>
+                <p class="text-font-subtle-light dark:text-font-subtle-dark max-w-md mx-auto">
+                    Django management commands will appear here once they are discovered.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Command Execution Modal -->
+<div id="commandModal" class="fixed inset-0 bg-base-900/80 backdrop-blur-sm hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-base-900 rounded-default shadow-2xl max-w-5xl w-full max-h-[85vh] flex flex-col border border-base-200 dark:border-base-700">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800">
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center justify-center w-10 h-10 bg-primary-100 dark:bg-primary-900/20 rounded-default">
+                        <span class="material-icons text-primary-600 dark:text-primary-400">terminal</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">
+                            Command Execution
+                        </h3>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                            Running: <span id="commandName" class="font-mono text-primary-600 dark:text-primary-400"></span>
+                        </p>
+                    </div>
+                </div>
+                <button onclick="closeCommandModal()" class="p-2 text-font-subtle-light dark:text-font-subtle-dark hover:text-font-default-light dark:hover:text-font-default-dark hover:bg-base-100 dark:hover:bg-base-700 rounded-default transition-colors">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="flex-1 p-6 overflow-hidden">
+                <div class="bg-base-100 dark:bg-base-800 rounded-default p-4 h-full overflow-auto border border-base-200 dark:border-base-700">
+                    <div id="commandOutput" class="text-sm font-mono text-font-default-light dark:text-font-default-dark whitespace-pre-wrap leading-relaxed"></div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between p-6 border-t border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800">
+                <div class="flex items-center space-x-3">
+                    <div id="commandStatus" class="flex items-center">
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
+                        <span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">Executing...</span>
+                    </div>
+                </div>
+                <button onclick="closeCommandModal()" class="px-4 py-2 bg-base-100 dark:bg-base-700 hover:bg-base-200 dark:hover:bg-base-600 text-font-default-light dark:text-font-default-dark rounded-default transition-colors font-medium">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="material-icons text-xs mr-1">check</span>Copied';
+        button.classList.remove('bg-base-100', 'dark:bg-base-700', 'hover:bg-base-200', 'dark:hover:bg-base-600');
+        button.classList.add('bg-green-600', 'hover:bg-green-700', 'dark:bg-green-500', 'dark:hover:bg-green-600', 'text-white');
+        
+        setTimeout(function() {
+            button.innerHTML = originalText;
+            button.classList.remove('bg-green-600', 'hover:bg-green-700', 'dark:bg-green-500', 'dark:hover:bg-green-600', 'text-white');
+            button.classList.add('bg-base-100', 'dark:bg-base-700', 'hover:bg-base-200', 'dark:hover:bg-base-600');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+    });
+}
+
+function executeCommand(commandName) {
+    document.getElementById('commandName').textContent = commandName;
+    document.getElementById('commandOutput').textContent = '';
+    document.getElementById('commandStatus').innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">Executing...</span>';
+    document.getElementById('commandModal').classList.remove('hidden');
+    
+    fetch('/cfg/commands/execute/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            command: commandName,
+            args: [],
+            options: {}
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        function readStream() {
+            return reader.read().then(({done, value}) => {
+                if (done) {
+                    return;
+                }
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                lines.forEach(line => {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            handleCommandData(data);
+                        } catch (e) {
+                            console.error('Error parsing command data:', e);
+                        }
+                    }
+                });
+                
+                return readStream();
+            });
+        }
+        
+        return readStream();
+    })
+    .catch(error => {
+        console.error('Error executing command:', error);
+        document.getElementById('commandOutput').textContent += `\n❌ Error: ${error.message}`;
+        document.getElementById('commandStatus').innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-sm font-medium text-red-600 dark:text-red-400">Error</span>';
+    });
+}
+
+function handleCommandData(data) {
+    const output = document.getElementById('commandOutput');
+    const status = document.getElementById('commandStatus');
+    
+    switch (data.type) {
+        case 'start':
+            output.textContent = `🚀 Starting command: ${data.command}\n📝 Arguments: ${data.args.join(' ')}\n\n`;
+            break;
+        case 'output':
+            output.textContent += data.line + '\n';
+            output.scrollTop = output.scrollHeight;
+            break;
+        case 'complete':
+            const success = data.return_code === 0;
+            status.innerHTML = success 
+                ? '<div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div><span class="text-sm font-medium text-green-600 dark:text-green-400">Completed</span>'
+                : '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-sm font-medium text-red-600 dark:text-red-400">Failed</span>';
+            output.textContent += `\n✅ Command completed with exit code: ${data.return_code}`;
+            break;
+        case 'error':
+            output.textContent += `\n❌ Error: ${data.error}`;
+            status.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-sm font-medium text-red-600 dark:text-red-400">Error</span>';
+            break;
+    }
+}
+
+function closeCommandModal() {
+    document.getElementById('commandModal').classList.add('hidden');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function toggleCategory(category) {
+    const content = document.getElementById(`content-${category}`);
+    const icon = document.getElementById(`icon-${category}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(0deg)';
+        icon.textContent = 'expand_more';
+    } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(-90deg)';
+        icon.textContent = 'expand_less';
+    }
+}
+</script>

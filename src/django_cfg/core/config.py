@@ -1,0 +1,550 @@
+"""
+Core DjangoConfig class for django_cfg.
+
+Following CRITICAL_REQUIREMENTS.md:
+- No raw Dict/Any usage - everything through Pydantic models
+- Proper type annotations for all fields
+- No mutable default arguments
+- Comprehensive validation and error handling
+"""
+
+from typing import Dict, List, Optional, Any, Union
+from pathlib import Path
+from pydantic import BaseModel, Field, field_validator, model_validator, PrivateAttr
+import os
+from pathlib import Path
+from urllib.parse import urlparse
+
+from django_cfg.exceptions import ConfigurationError, ValidationError, EnvironmentError
+from django_cfg.models.database import DatabaseConnection, DatabaseRoutingRule
+from django_cfg.models.cache import CacheBackend
+from django_cfg.models.services import EmailConfig, TelegramConfig
+from django_cfg.models.unfold import UnfoldConfig
+from django_cfg.models.drf import DRFConfig, SpectacularConfig
+
+
+class DjangoConfig(BaseModel):
+    """
+    Base configuration class for Django projects.
+
+    This is the core class that all Django project configurations inherit from.
+    It provides type-safe configuration management with intelligent defaults
+    and automatic Django settings generation.
+
+    Key Features:
+    - 100% type safety through Pydantic v2
+    - Environment-aware smart defaults
+    - Automatic Django settings generation
+    - Zero raw dictionary usage
+    - Comprehensive validation
+
+    Example:
+        ```python
+        class MyProjectConfig(DjangoConfig):
+            project_name: str = "My Project"
+            databases: Dict[str, DatabaseConnection] = {
+                "default": DatabaseConnection(
+                    engine="django.db.backends.postgresql",
+                    name="${DATABASE_URL:mydb}",
+                )
+            }
+
+        config = MyProjectConfig()
+        ```
+    """
+
+    model_config = {
+        "validate_assignment": True,
+        "extra": "allow",  # Allow additional fields for extensibility
+        "env_prefix": "DJANGO_",
+        "populate_by_name": True,
+        "validate_default": True,
+        "str_strip_whitespace": True,
+    }
+
+    # === Project Information ===
+    project_name: str = Field(
+        ...,
+        description="Human-readable project name",
+        min_length=1,
+        max_length=100,
+    )
+
+    project_version: str = Field(
+        default="1.0.0",
+        description="Project version",
+        pattern=r"^\d+\.\d+\.\d+.*$",
+    )
+
+    project_description: str = Field(
+        default="",
+        description="Project description",
+        max_length=500,
+    )
+
+    # === URLs ===
+    site_url: str = Field(default="http://localhost:3000", description="Frontend site URL")
+    api_url: str = Field(default="http://localhost:8000", description="Backend API URL")
+
+    # === Core Django Settings ===
+    secret_key: str = Field(
+        ...,
+        description="Django SECRET_KEY",
+        min_length=50,
+        repr=False,  # Don't show in repr for security
+    )
+
+    debug: bool = Field(
+        default=False,
+        description="Django DEBUG setting",
+    )
+
+    # allowed_hosts removed - now auto-generated from security_domains
+
+    # === URL Configuration ===
+    root_urlconf: Optional[str] = Field(
+        default=None,
+        description="Django ROOT_URLCONF setting",
+    )
+
+    wsgi_application: Optional[str] = Field(
+        default=None,
+        description="Django WSGI_APPLICATION setting",
+    )
+
+    # === Custom User Model ===
+    auth_user_model: Optional[str] = Field(
+        default=None,
+        description="Custom user model (AUTH_USER_MODEL)",
+        pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$",
+    )
+
+    # === Project Applications ===
+    project_apps: List[str] = Field(
+        default_factory=list,
+        description="List of project-specific Django apps",
+    )
+
+    # === Database Configuration ===
+    databases: Dict[str, DatabaseConnection] = Field(
+        default_factory=dict,
+        description="Database connections",
+    )
+
+    database_routing: List[DatabaseRoutingRule] = Field(
+        default_factory=list,
+        description="Database routing rules for multi-database setups",
+    )
+
+    # === Cache Configuration ===
+    cache_default: Optional[CacheBackend] = Field(
+        default=None,
+        description="Default cache backend",
+    )
+
+    cache_sessions: Optional[CacheBackend] = Field(
+        default=None,
+        description="Sessions cache backend",
+    )
+
+    # === Security Configuration ===
+    security_domains: List[str] = Field(
+        default_factory=list,
+        description="Domains for automatic security configuration (CORS, SSL, etc.)",
+    )
+
+    # === Services Configuration ===
+    email: Optional[EmailConfig] = Field(
+        default=None,
+        description="Email service configuration",
+    )
+
+    telegram: Optional[TelegramConfig] = Field(
+        default=None,
+        description="Telegram service configuration",
+    )
+
+    # === Admin Interface Configuration ===
+    unfold: Optional[UnfoldConfig] = Field(
+        default=None,
+        description="Unfold admin interface configuration",
+    )
+
+    # === API Configuration ===
+    drf: Optional[DRFConfig] = Field(
+        default=None,
+        description="Django REST Framework configuration",
+    )
+
+    spectacular: Optional[SpectacularConfig] = Field(
+        default=None,
+        description="DRF Spectacular OpenAPI/Swagger configuration",
+    )
+
+    # === Middleware Configuration ===
+    custom_middleware: List[str] = Field(
+        default_factory=list,
+        description="Custom middleware classes (standard middleware added automatically)",
+    )
+
+    # === Internal State ===
+    _environment: Optional[str] = PrivateAttr(default=None)
+    _base_dir: Optional[Path] = PrivateAttr(default=None)
+    _django_settings: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+
+    def __init__(self, **data):
+        """
+        Initialize configuration with automatic setup.
+
+        Performs the following setup steps:
+        1. Environment detection
+        2. Path resolution
+        3. Smart defaults application
+        4. Environment-specific configuration loading
+        """
+        super().__init__(**data)
+
+        # Initialize internal state
+        self._detect_environment()
+        self._resolve_paths()
+        self._apply_smart_defaults()
+        self._load_environment_config()
+        self._validate_configuration()
+
+    @field_validator("project_name")
+    @classmethod
+    def validate_project_name(cls, v: str) -> str:
+        """Validate project name format."""
+        if not v.replace(" ", "").replace("-", "").replace("_", "").isalnum():
+            raise ValueError("Project name must contain only alphanumeric characters, " "spaces, hyphens, and underscores")
+
+        return v
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """Validate Django SECRET_KEY."""
+        if len(v) < 50:
+            raise ValueError("SECRET_KEY must be at least 50 characters long")
+
+        # Check for common insecure patterns
+        insecure_patterns = [
+            "django-insecure",
+            "change-me",
+            "your-secret-key",
+            "dev-key",
+            "test-key",
+        ]
+
+        v_lower = v.lower()
+        for pattern in insecure_patterns:
+            if pattern in v_lower:
+                # This is a warning, not an error - allow for development
+                break
+
+        return v
+
+    # validate_allowed_hosts removed - allowed_hosts now auto-generated from security_domains
+
+    @field_validator("project_apps")
+    @classmethod
+    def validate_project_apps(cls, v: List[str]) -> List[str]:
+        """Validate project apps list."""
+        for app in v:
+            if not app:
+                raise ValueError("Empty app name in project_apps")
+
+            # Basic app name validation
+            if not app.replace(".", "").replace("_", "").isalnum():
+                raise ValueError(f"Invalid app name '{app}': must contain only letters, numbers, dots, and underscores")
+
+        return v
+
+    @model_validator(mode="after")
+    def validate_configuration_consistency(self) -> "DjangoConfig":
+        """Validate overall configuration consistency."""
+        # Ensure at least one database is configured
+        if not self.databases:
+            raise ConfigurationError("At least one database must be configured", suggestions=["Add a 'default' database to the databases field"])
+
+        # Ensure 'default' database exists
+        if "default" not in self.databases:
+            raise ConfigurationError("'default' database is required", context={"available_databases": list(self.databases.keys())}, suggestions=["Add a database with alias 'default'"])
+
+        # Validate database routing consistency
+        if self.database_routing:
+            referenced_databases = {rule.database for rule in self.database_routing}
+            for rule in self.database_routing:
+                if rule.migrate_to:
+                    referenced_databases.add(rule.migrate_to)
+
+            missing_databases = referenced_databases - set(self.databases.keys())
+            if missing_databases:
+                raise ConfigurationError(f"Database routing references non-existent databases: {missing_databases}", context={"available_databases": list(self.databases.keys())}, suggestions=[f"Add database configurations for: {', '.join(missing_databases)}"])
+
+        return self
+
+    def _detect_environment(self) -> None:
+        """Detect current environment from various sources."""
+        from django_cfg.core.environment import EnvironmentDetector
+
+        try:
+            self._environment = EnvironmentDetector.detect_environment()
+        except Exception as e:
+            raise EnvironmentError(f"Failed to detect environment: {e}", suggestions=["Set DJANGO_ENV environment variable explicitly"]) from e
+
+    @property
+    def base_dir(self) -> Path:
+        """Get the base directory of the project."""
+        if self._base_dir is None:
+
+            # Start from current working directory
+            current_path = Path(os.path.dirname(os.path.abspath(__file__)))
+
+            # Look for manage.py in current directory and parents
+            for path in [current_path] + list(current_path.parents):
+                manage_py = path / "manage.py"
+                if manage_py.exists() and manage_py.is_file():
+                    self._base_dir = path
+                    break
+
+            # If still not found, use current directory
+            if self._base_dir is None:
+                self._base_dir = Path.cwd()
+
+        return self._base_dir
+
+    def _resolve_paths(self) -> None:
+        """Resolve project paths and auto-detect missing configuration."""
+        from django_cfg.utils.path_resolution import PathResolver
+
+        try:
+            # Find project root if not already set
+            if self._base_dir is None:
+                self._base_dir = PathResolver.find_project_root()
+
+            # Auto-detect URL configuration if not set
+            if not self.root_urlconf:
+                detected_urlconf = PathResolver.detect_root_urlconf(self._base_dir)
+                if detected_urlconf:
+                    self.root_urlconf = detected_urlconf
+
+            # Auto-detect WSGI application if not set
+            if not self.wsgi_application:
+                detected_wsgi = PathResolver.detect_wsgi_application(self._base_dir)
+                if detected_wsgi:
+                    self.wsgi_application = detected_wsgi
+
+        except Exception as e:
+            raise ConfigurationError(f"Failed to resolve project paths: {e}", suggestions=["Ensure manage.py exists in your project root", "Set root_urlconf and wsgi_application explicitly"]) from e
+
+    def _apply_smart_defaults(self) -> None:
+        """Apply environment-aware smart defaults."""
+        from django_cfg.utils.smart_defaults import SmartDefaults
+
+        try:
+            # Apply cache defaults
+            if self.cache_default:
+                self.cache_default = SmartDefaults.configure_cache_backend(self.cache_default, self._environment, self.debug)
+
+            if self.cache_sessions:
+                self.cache_sessions = SmartDefaults.configure_cache_backend(self.cache_sessions, self._environment, self.debug)
+
+            # Apply email defaults
+            if self.email:
+                self.email = SmartDefaults.configure_email_backend(self.email, self._environment, self.debug)
+
+        except Exception as e:
+            raise ConfigurationError(f"Failed to apply smart defaults: {e}", context={"environment": self._environment, "debug": self.debug}) from e
+
+    def _load_environment_config(self) -> None:
+        """Load environment-specific configuration from YAML files."""
+        # TODO: Implement environment-specific configuration loading
+        # This will be implemented when EnvironmentConfig model is created
+        pass
+
+    def _validate_configuration(self) -> None:
+        """Perform final configuration validation."""
+        from django_cfg.core.validation import ConfigurationValidator
+
+        try:
+            errors = ConfigurationValidator.validate(self)
+            if errors:
+                raise ValidationError(f"Configuration validation failed: {len(errors)} errors found", context={"errors": errors}, suggestions=["Fix the validation errors listed in context"])
+        except Exception as e:
+            if isinstance(e, ValidationError):
+                raise
+            raise ConfigurationError(f"Configuration validation failed: {e}") from e
+
+    def get_all_settings(self) -> Dict[str, Any]:
+        """
+        Generate complete Django settings dictionary.
+
+        Returns:
+            Complete Django settings ready for use
+
+        Raises:
+            ConfigurationError: If settings generation fails
+        """
+        if self._django_settings is None:
+            from django_cfg.core.generation import SettingsGenerator
+
+            try:
+                self._django_settings = SettingsGenerator.generate(self)
+            except Exception as e:
+                raise ConfigurationError(f"Failed to generate Django settings: {e}", context={"config": self.model_dump(exclude={"_django_settings"})}) from e
+
+        return self._django_settings
+
+    def get_installed_apps(self) -> List[str]:
+        """
+        Get complete list of installed Django apps.
+
+        Returns:
+            List of Django app names
+        """
+        # Standard Django apps (always included)
+        apps = [
+            "django.contrib.admin",
+            "django.contrib.auth",
+            "django.contrib.contenttypes",
+            "django.contrib.sessions",
+            "django.contrib.messages",
+            "django.contrib.staticfiles",
+            "django.contrib.humanize",
+            "corsheaders",
+            "rest_framework",
+            "rest_framework.authtoken",
+            "rest_framework_simplejwt",
+            "rest_framework_simplejwt.token_blacklist",
+            "rest_framework_nested",
+            "django_filters",
+            "drf_spectacular",
+            "drf_spectacular_sidecar",
+            "django_json_widget",
+            "django_extensions",
+            "constance",
+            "constance.backends.database",
+        ]
+
+        # Add django_cfg itself (for management commands)
+        apps.append("django_cfg")
+        apps.append("django_revolution")
+
+        # Add third-party apps based on configuration
+        if self.unfold:
+            # Unfold must be added before django.contrib.admin
+            unfold_apps = self.unfold.get_installed_apps()
+            # Insert before admin (which is at index 0)
+            for i, app in enumerate(unfold_apps):
+                apps.insert(i, app)
+
+        # Add project-specific apps
+        apps.extend(self.project_apps)
+
+        return apps
+
+    def get_middleware(self) -> List[str]:
+        """
+        Get complete middleware stack.
+
+        Returns:
+            List of middleware class paths
+        """
+        # Standard Django middleware (always included)
+        middleware = [
+            "django.middleware.security.SecurityMiddleware",
+            "whitenoise.middleware.WhiteNoiseMiddleware",  # Add WhiteNoise for static files
+            "django.contrib.sessions.middleware.SessionMiddleware",
+            "django.middleware.common.CommonMiddleware",
+            "django.middleware.csrf.CsrfViewMiddleware",
+            "django.contrib.auth.middleware.AuthenticationMiddleware",
+            "django.contrib.messages.middleware.MessageMiddleware",
+            "django.middleware.clickjacking.XFrameOptionsMiddleware",
+        ]
+
+        # Add CORS middleware if security domains are configured
+        if self.security_domains:
+            middleware.insert(1, "corsheaders.middleware.CorsMiddleware")
+
+        # Add custom middleware
+        middleware.extend(self.custom_middleware)
+
+        return middleware
+
+    def get_allowed_hosts(self) -> List[str]:
+        """
+        Generate ALLOWED_HOSTS from security_domains.
+
+        Returns:
+            List of allowed hosts including localhost for development
+        """
+        allowed_hosts = []
+
+        # Add security domains if configured
+        if self.security_domains:
+
+            for domain in self.security_domains:
+                # Parse URL properly
+                if "://" in domain:
+                    # Use urlparse to extract hostname correctly
+                    parsed_url = urlparse(domain)
+                    hostname = parsed_url.netloc.split(":")[0]  # Remove port if present
+                else:
+                    hostname = domain
+
+                # Add hostname itself
+                if hostname not in allowed_hosts:
+                    allowed_hosts.append(hostname)
+
+                # Add www subdomain if not already a subdomain and not localhost
+                if not hostname.startswith("www.") and not hostname.startswith("*.") and not hostname.startswith("localhost") and not hostname.startswith("127.0.0.1"):
+                    www_hostname = f"www.{hostname}"
+                    if www_hostname not in allowed_hosts:
+                        allowed_hosts.append(www_hostname)
+
+        # Always allow localhost and 127.0.0.1 for development
+        localhost_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+        for host in localhost_hosts:
+            if host not in allowed_hosts:
+                allowed_hosts.append(host)
+
+        # If no domains configured, allow all (development mode)
+        if not self.security_domains:
+            allowed_hosts = ["*"]
+
+        return allowed_hosts
+
+    def get_site_url(self, path: str = "") -> str:
+        """
+        Get the site URL with optional path.
+
+        Args:
+            path: Optional path to append to site URL
+
+        Returns:
+            Complete URL with path
+        """
+        if path:
+            path = path.lstrip("/")
+            return f"{self.site_url.rstrip('/')}/{path}"
+        return self.site_url
+
+    def invalidate_cache(self) -> None:
+        """Invalidate cached Django settings to force regeneration."""
+        self._django_settings = None
+
+    def model_dump_for_django(self) -> Dict[str, Any]:
+        """
+        Dump model data in format suitable for Django settings.
+
+        Returns:
+            Model data with internal fields excluded
+        """
+        return self.model_dump(exclude={"_environment", "_base_dir", "_django_settings"}, exclude_none=True)
+
+
+# Export the main class
+__all__ = [
+    "DjangoConfig",
+]

@@ -30,6 +30,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+/.benchmarks*
 
 # Environments
 .env

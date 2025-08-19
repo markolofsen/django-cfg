@@ -1,0 +1,214 @@
+{% extends 'admin/base.html' %}
+
+{% load unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <script>
+    // Dashboard tabs functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('#dashboard-tabs button');
+        const contents = document.querySelectorAll('.tab-content');
+        
+        if (!tabs.length || !contents.length) return;
+        
+        // Global function for tab switching
+        window.switchTab = function(idx) {
+            tabs.forEach((t, i) => {
+                if (i === idx) {
+                    // Active tab
+                    t.classList.add('bg-primary-600', 'text-white', 'border-primary-600');
+                    t.classList.remove('bg-base-100', 'text-font-default-light', 'border-base-200', 'dark:bg-base-800', 'dark:text-font-default-dark', 'dark:border-base-700');
+                } else {
+                    // Inactive tab
+                    t.classList.remove('bg-primary-600', 'text-white', 'border-primary-600');
+                    t.classList.add('bg-base-100', 'text-font-default-light', 'border-base-200', 'dark:bg-base-800', 'dark:text-font-default-dark', 'dark:border-base-700');
+                }
+            });
+            
+            contents.forEach((content, i) => {
+                content.style.display = i === idx ? 'block' : 'none';
+                content.classList.toggle('active', i === idx);
+            });
+        };
+        
+        // Add click handlers
+        tabs.forEach((tab, idx) => {
+            tab.onclick = function(e) {
+                e.preventDefault();
+                switchTab(idx);
+            };
+        });
+        
+        // Activate first tab
+        if (tabs.length > 0) switchTab(0);
+    });
+    </script>
+    
+    <style>
+    /* Dashboard tab styles */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    #dashboard-tabs button {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    </style>
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    {% if subtitle %}
+        {{ subtitle }} |
+    {% endif %}
+    {{ title }} | {{ site_title|default:'Django site admin' }}
+{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <!-- Dashboard Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-font-important-light dark:text-font-important-dark">
+            {{ dashboard_title|default:"Dashboard" }}
+        </h1>
+        <p class="mt-2 text-font-default-light dark:text-font-default-dark">
+            Welcome to the administration dashboard
+        </p>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    {% component "unfold/components/container.html" %}
+        <!-- Navigation and Filters Row -->
+        <div class="flex flex-col gap-4 mb-8">
+            {% component "unfold/components/navigation.html" with items=navigation %}
+            {% endcomponent %}
+
+            {% component "unfold/components/navigation.html" with class="ml-auto" items=filters %}
+            {% endcomponent %}
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="flex gap-1 mb-6 border-b border-base-200 dark:border-base-700" id="dashboard-tabs">
+            <button 
+                type="button" 
+                data-tab="0"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none font-semibold border-b-2 bg-primary-600 text-white border-primary-600"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">dashboard</span>
+                Overview
+            </button>
+            <button 
+                type="button" 
+                data-tab="1"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">public</span>
+                API Zones
+            </button>
+            <button 
+                type="button" 
+                data-tab="2"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">people</span>
+                Users
+            </button>
+            <button 
+                type="button" 
+                data-tab="3"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">settings</span>
+                System
+            </button>
+            <button 
+                type="button" 
+                data-tab="4"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">analytics</span>
+                Statistics
+            </button>
+            <button 
+                type="button" 
+                data-tab="5"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">apps</span>
+                App Stats
+            </button>
+            <button 
+                type="button" 
+                data-tab="6"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">terminal</span>
+                Commands
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-5">
+
+            <!-- Tab Content with improved spacing -->
+            <div class="tab-content active" data-tab="0">
+                {% block overview_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="1">
+                {% block zones_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="2">
+                {% block users_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="3">
+                {% block system_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="4">
+                {% block stats_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="5">
+                {% block app_stats_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="6">
+                {% block commands_tab %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="text-center py-8 border-t border-base-200 dark:border-base-700 mt-5">
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+            Django Config Toolkit
+            <span class="mx-2">•</span>
+            <a href="/health/" class="text-primary-600 hover:text-primary-700">
+                System Health
+            </a>
+            <span class="mx-2">•</span>
+            <a href="/admin/" class="text-primary-600 hover:text-primary-700">
+                Administration
+            </a>
+            </p>
+        </div>
+
+    {% endcomponent %}
+{% endblock %}

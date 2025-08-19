@@ -1,0 +1,42 @@
+# Test dependencies for django-cfg (includes main deps)
+# Generated automatically from pyproject.toml
+# Do not edit manually!
+
+PyYAML>=6.0
+cachetools>=6.1.0
+click>=8.2.0
+colorlog>=6.9.0
+dj-database-url>=3.0.0
+django-constance>=4.3.2
+django-cors-headers>=4.7.0
+django-extensions>=4.1
+django-filter>=25.0
+django-json-widget>=2.0.3
+django-redis>=6.0.0
+django-revolution>=1.0.30
+django-unfold>=0.64.0
+django>=4.2,<6.0
+django>=5.2,<6.0
+djangorestframework-simplejwt>=5.5.0
+djangorestframework-simplejwt[token-blacklist]>=5.5.0
+djangorestframework>=3.16.0
+drf-nested-routers>=0.94.2
+drf-spectacular-sidecar>=2025.8.1
+drf-spectacular>=0.28.0
+factory-boy>=3.2.0
+hiredis>=2.0.0
+loguru>=0.7.0
+psycopg2-binary>=2.9.0
+pyTelegramBotAPI>=4.28.0
+pydantic-yaml>=1.6.0
+pydantic>=2.11,<3.0
+pydantic[email]>=2.11,<3.0
+pytest-cov>=4.0.0
+pytest-django>=4.5.0
+pytest-mock>=3.10.0
+pytest-xdist>=3.0.0
+pytest>=7.0
+questionary>=2.1.0
+redis>=5.0.0
+rich>=14.1.0
+whitenoise>=6.8.0

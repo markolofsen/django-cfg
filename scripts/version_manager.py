@@ -1,72 +1,48 @@
 #!/usr/bin/env python3
 """
-Version Manager for Django Config
-
-Centralized version management for all package files.
+Version Manager for Django-CFG
+Manages versions in pyproject.toml and other files using tomlkit
 """
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Tuple
+import tomlkit
 
 
 class VersionManager:
-    """Manages version across all package files."""
+    """Manages version across package files."""
 
     def __init__(self, base_path: Path = None):
-        """
-        Initialize version manager.
-
-        Args:
-            base_path: Base path for the package (defaults to current directory)
-        """
         self.base_path = base_path or Path.cwd()
 
-        # Files that contain version information
-        self.version_files = {
-            "pyproject.toml": {
-                "pattern": r'version\s*=\s*["\']([^"\']+)["\']',
-                "replacement": 'version = "{version}"',
-            },
-            "django_cfg/__init__.py": {
-                "pattern": r'__version__\s*=\s*["\']([^"\']+)["\']',
-                "replacement": '__version__ = "{version}"',
-            },
-            # Note: Templates now use {{ version }} variable, so they don't need manual updates
-        }
-
     def get_current_version(self) -> str:
-        """
-        Get current version from pyproject.toml.
-
-        Returns:
-            Current version string
-        """
+        """Get current version from pyproject.toml."""
         pyproject_path = self.base_path / "pyproject.toml"
 
         if not pyproject_path.exists():
             raise FileNotFoundError(f"pyproject.toml not found at {pyproject_path}")
 
-        content = pyproject_path.read_text(encoding="utf-8")
-        match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
+        with open(pyproject_path, "r") as f:
+            pyproject = tomlkit.parse(f.read())
 
-        if not match:
+        # Try PEP 621 format first
+        if "project" in pyproject:
+            version = pyproject["project"]["version"]
+        # Fallback to Poetry format
+        elif "tool" in pyproject and "poetry" in pyproject["tool"]:
+            version = pyproject["tool"]["poetry"]["version"]
+        else:
             raise ValueError("Version not found in pyproject.toml")
 
-        return match.group(1)
+        if not version:
+            raise ValueError("Version not found in pyproject.toml")
+
+        return str(version)
 
     def parse_version(self, version: str) -> Tuple[int, int, int]:
-        """
-        Parse version string into components.
-
-        Args:
-            version: Version string (e.g., "1.0.1")
-
-        Returns:
-            Tuple of (major, minor, patch)
-        """
+        """Parse version string into components."""
         parts = version.split(".")
         if len(parts) != 3:
             raise ValueError(f"Invalid version format: {version}")
@@ -74,15 +50,7 @@ class VersionManager:
         return tuple(int(part) for part in parts)
 
     def bump_version(self, bump_type: str = "patch") -> str:
-        """
-        Bump version and update all files.
-
-        Args:
-            bump_type: Type of version bump ('major', 'minor', 'patch')
-
-        Returns:
-            New version string
-        """
+        """Bump version and update all files."""
         current_version = self.get_current_version()
         major, minor, patch = self.parse_version(current_version)
 
@@ -100,105 +68,109 @@ class VersionManager:
 
         new_version = f"{major}.{minor}.{patch}"
 
-        # Update all version files
-        self.update_version_in_all_files(new_version)
+        # Update pyproject.toml
+        self.update_pyproject_version(new_version)
 
-        # Regenerate requirements files
-        self.regenerate_requirements()
+        # Update __init__.py
+        self.update_init_version(new_version)
+
+        # Generate requirements files
+        self.generate_requirements()
 
         return new_version
 
-    def update_version_in_all_files(self, version: str):
-        """
-        Update version in all configured files.
-
-        Args:
-            version: New version string
-        """
-        for filename, config in self.version_files.items():
-            file_path = self.base_path / filename
-
-            if not file_path.exists():
-                print(f"Warning: {filename} not found, skipping...")
-                continue
-
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                pattern = config["pattern"]
-                replacement = config["replacement"].format(version=version)
-
-                # Replace version
-                new_content = re.sub(pattern, replacement, content)
-
-                if new_content != content:
-                    file_path.write_text(new_content, encoding="utf-8")
-                    print(f"✅ Updated version in {filename}")
-                else:
-                    print(f"⚠️  No version found in {filename}")
-
-            except Exception as e:
-                print(f"❌ Failed to update {filename}: {e}")
-
-    def regenerate_requirements(self):
-        """Regenerate requirements.txt files."""
+    def update_pyproject_version(self, version: str):
+        """Update version in pyproject.toml using tomlkit."""
+        file_path = self.base_path / "pyproject.toml"
         try:
-            script_path = self.base_path / "scripts" / "generate_requirements.py"
-            if script_path.exists():
-                result = subprocess.run(
-                    [sys.executable, str(script_path)],
-                    cwd=self.base_path,
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode == 0:
-                    print("✅ Regenerated requirements files")
-                else:
-                    print(f"⚠️  Failed to regenerate requirements: {result.stderr}")
+            with open(file_path, "r") as f:
+                pyproject = tomlkit.parse(f.read())
+            
+            # Update in PEP 621 format
+            if "project" in pyproject:
+                pyproject["project"]["version"] = version
+            # Fallback to Poetry format
+            elif "tool" in pyproject and "poetry" in pyproject["tool"]:
+                pyproject["tool"]["poetry"]["version"] = version
             else:
-                print("⚠️  generate_requirements.py script not found")
+                raise ValueError("Neither PEP 621 nor Poetry format found in pyproject.toml")
+            
+            with open(file_path, "w") as f:
+                tomlkit.dump(pyproject, f)
+            
+            print(f"✅ Updated version in pyproject.toml to {version}")
         except Exception as e:
-            print(f"⚠️  Failed to regenerate requirements: {e}")
+            print(f"❌ Failed to update pyproject.toml: {e}")
+
+    def update_init_version(self, version: str):
+        """Update __version__ in src/django_cfg/__init__.py."""
+        file_path = self.base_path / "src" / "django_cfg" / "__init__.py"
+        try:
+            if not file_path.exists():
+                print(f"⚠️ {file_path} not found, skipping...")
+                return
+
+            content = file_path.read_text(encoding="utf-8")
+            
+            # Update __version__ constant
+            content = re.sub(
+                r'__version__\s*=\s*["\']([^"\']+)["\']',
+                f'__version__ = "{version}"',
+                content,
+                count=1
+            )
+
+            file_path.write_text(content, encoding="utf-8")
+            print(f"✅ Updated __version__ in src/django_cfg/__init__.py to {version}")
+        except Exception as e:
+            print(f"❌ Failed to update src/django_cfg/__init__.py: {e}")
+
+    def generate_requirements(self):
+        """Generate requirements.txt files from pyproject.toml."""
+        try:
+            import subprocess
+            
+            # Use our custom requirements generator
+            result = subprocess.run([
+                sys.executable, "scripts/generate_requirements.py"
+            ], cwd=self.base_path, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print("✅ Generated requirements files from pyproject.toml")
+                print(result.stdout)
+            else:
+                print(f"⚠️ Failed to generate requirements: {result.stderr}")
+
+        except Exception as e:
+            print(f"⚠️ Failed to generate requirements: {e}")
 
     def validate_version_consistency(self) -> bool:
-        """
-        Validate that all files have the same version.
-
-        Returns:
-            True if all versions are consistent
-        """
+        """Validate that all files have the same version."""
         reference_version = self.get_current_version()
-        inconsistent_files = []
+        inconsistent = []
 
-        for filename, config in self.version_files.items():
-            if filename == "pyproject.toml":
-                continue  # This is our reference
-
-            file_path = self.base_path / filename
-
-            if not file_path.exists():
-                continue
-
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                match = re.search(config["pattern"], content)
-
+        # Check __init__.py version
+        try:
+            init_path = self.base_path / "src" / "django_cfg" / "__init__.py"
+            if init_path.exists():
+                content = init_path.read_text(encoding="utf-8")
+                match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
                 if not match:
-                    inconsistent_files.append(f"{filename}: no version found")
+                    inconsistent.append("src/django_cfg/__init__.py: __version__ not found")
                 elif match.group(1) != reference_version:
-                    inconsistent_files.append(
-                        f"{filename}: {match.group(1)} != {reference_version}"
+                    inconsistent.append(
+                        f"src/django_cfg/__init__.py: __version__ = {match.group(1)} != {reference_version}"
                     )
+        except Exception as e:
+            inconsistent.append(f"Error reading src/django_cfg/__init__.py: {e}")
 
-            except Exception as e:
-                inconsistent_files.append(f"{filename}: error - {e}")
-
-        if inconsistent_files:
+        if inconsistent:
             print("❌ Version inconsistencies found:")
-            for file_info in inconsistent_files:
-                print(f"  - {file_info}")
+            for error in inconsistent:
+                print(f"  - {error}")
             return False
 
-        print(f"✅ All files have consistent version: {reference_version}")
+        print(f"✅ All versions are consistent: {reference_version}")
         return True
 
 
@@ -206,10 +178,10 @@ def main():
     """CLI for version management."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Django Config Version Manager")
+    parser = argparse.ArgumentParser(description="Django-CFG Version Manager")
     parser.add_argument(
         "action",
-        choices=["get", "bump", "validate", "requirements"],
+        choices=["get", "bump", "validate"],
         help="Action to perform",
     )
     parser.add_argument(
@@ -220,7 +192,6 @@ def main():
     )
 
     args = parser.parse_args()
-
     config = VersionManager()
 
     if args.action == "get":
@@ -233,9 +204,6 @@ def main():
 
     elif args.action == "validate":
         config.validate_version_consistency()
-
-    elif args.action == "requirements":
-        config.regenerate_requirements()
 
 
 if __name__ == "__main__":

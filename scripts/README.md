@@ -1,4 +1,4 @@
-# Django Config Scripts
+# Django-CFG Scripts
 
 Collection of utility scripts for development, testing, and publishing.
 
@@ -7,10 +7,10 @@ Collection of utility scripts for development, testing, and publishing.
 ### Core Scripts
 
 - **`dev_cli.py`** - Main development CLI with interactive menu
-- **`version_manager.py`** - Version management and bumping
+- **`version_manager.py`** - Version management and bumping using tomlkit
 - **`publisher.py`** - Interactive PyPI publishing
-- **`generate_requirements.py`** - Generate requirements.txt files
-- **`test_generation.sh`** - Test generation in django_sample
+- **`generate_requirements.py`** - Generate requirements.txt files using Poetry
+- **`sync_versions.py`** - Synchronize versions across all files
 
 ## 🚀 Quick Start
 
@@ -24,15 +24,16 @@ python scripts/dev_cli.py
 # Version management
 python scripts/version_manager.py get
 python scripts/version_manager.py bump --bump-type patch
+python scripts/version_manager.py validate
+
+# Sync versions
+python scripts/sync_versions.py
 
 # Generate requirements
 python scripts/generate_requirements.py
 
 # Publish package
 python scripts/publisher.py
-
-# Test generation
-./scripts/test_generation.sh
 ```
 
 ## 📦 Package Scripts
@@ -41,83 +42,95 @@ python scripts/publisher.py
 - **Get current version**: `python scripts/version_manager.py get`
 - **Bump version**: `python scripts/version_manager.py bump --bump-type [major|minor|patch]`
 - **Validate versions**: `python scripts/version_manager.py validate`
-- **Regenerate requirements**: `python scripts/version_manager.py requirements`
+- **Sync all versions**: `python scripts/sync_versions.py`
 
 ### Publishing
 - **Interactive publishing**: `python scripts/publisher.py`
 - Supports PyPI and TestPyPI
 - Automatic version bumping
 - Build artifact cleanup
+- Uses `twine` for secure uploads
 
 ### Requirements Generation
 - **Main dependencies**: `requirements.txt`
 - **Development dependencies**: `requirements-dev.txt`
-- **Minimal dependencies**: `requirements-minimal.txt`
+- Generated using Poetry export for accuracy
 
 ## 🔧 Development Workflow
 
 1. **Start development**: `python scripts/dev_cli.py`
 2. **Make changes** to your code
-3. **Test generation**: Use the test option in dev CLI
-4. **Bump version**: Use version management
-5. **Generate requirements**: Update dependency files
+3. **Run tests**: Use the test option in dev CLI
+4. **Bump version**: Use version management (updates pyproject.toml and __init__.py)
+5. **Generate requirements**: Update dependency files using Poetry
 6. **Build package**: Create distribution files
 7. **Publish**: Upload to PyPI
 
 ## 📋 Requirements Files
 
-The `generate_requirements.py` script creates three files:
+The `generate_requirements.py` script creates two files using Poetry:
 
 - **`requirements.txt`** - Main runtime dependencies
 - **`requirements-dev.txt`** - Development dependencies (includes main)
-- **`requirements-minimal.txt`** - Core dependencies only
 
-## 🛠️ Installation
+Both files are generated with:
+- Proper headers indicating auto-generation
+- No version hashes for better readability
+- Sorted dependencies
 
-All scripts are automatically available when the package is installed:
+## 🛠️ Version Management
 
-```bash
-# Install in development mode
-pip install -e .
+The version manager uses `tomlkit` for safe TOML manipulation:
 
-# Use package scripts
-django-cfg --help
-version-manager --help
-publisher --help
-dev-cli --help
-```
+1. **Reads version** from `pyproject.toml` (supports both PEP 621 and Poetry formats)
+2. **Updates version** in:
+   - `pyproject.toml` 
+   - `src/django_cfg/__init__.py`
+3. **Generates requirements** automatically after version bump
+4. **Validates consistency** across all files
 
 ## 🔍 Troubleshooting
 
 ### Import Errors
 If you get import errors when running scripts directly:
 1. Make sure you're in the correct directory
-2. Activate the virtual environment: `source .venv/bin/activate`
-3. Install dependencies: `pip install -r requirements-dev.txt`
+2. Activate the virtual environment: `poetry shell`
+3. Install dependencies: `poetry install`
 
-### TOML Parsing Issues
-If you get TOML parsing errors:
-1. Install toml: `pip install toml`
-2. The script automatically handles both `tomllib` (Python 3.11+) and `toml` package
+### Poetry Issues
+If Poetry commands fail:
+1. Install Poetry: `pip install poetry`
+2. Update Poetry: `poetry self update`
+3. Install project dependencies: `poetry install`
 
 ### Permission Issues
 Make scripts executable:
 ```bash
-chmod +x scripts/*.py scripts/*.sh
+chmod +x scripts/*.py
 ```
 
 ## 📚 Integration
 
 These scripts integrate with:
-- **Django management commands**: `python manage.py cfg`
-- **Package installation**: Entry points in `pyproject.toml`
-- **CI/CD**: Can be used in automated workflows
-- **Development tools**: Rich CLI interface with questionary
+- **Poetry**: For dependency management and building
+- **tomlkit**: For safe TOML file manipulation
+- **Rich**: For beautiful CLI output
+- **Questionary**: For interactive prompts
+- **Twine**: For secure PyPI uploads
 
 ## 🎯 Best Practices
 
-1. **Always use virtual environments**
-2. **Test before publishing**
-3. **Validate versions before release**
-4. **Use interactive CLI for complex operations**
-5. **Keep requirements files up to date** 
+1. **Always use Poetry** for dependency management
+2. **Test before publishing** using TestPyPI
+3. **Validate versions** before release
+4. **Use interactive CLI** for complex operations
+5. **Keep requirements files up to date** with Poetry export
+6. **Use semantic versioning** (major.minor.patch)
+
+## 🔄 Automation
+
+These scripts support automation:
+- **CI/CD integration**: All scripts can run non-interactively
+- **Automatic requirements generation**: Triggered by version bumps  
+- **Version synchronization**: Ensures consistency across files
+- **Build and publish**: Streamlined release process

@@ -1,0 +1,39 @@
+{% load unfold %}
+
+<!-- Charts Section -->
+<div class="mb-8 w-full">
+    <div class="flex items-center mb-6">
+        <div class="flex items-center justify-center w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg mr-3">
+            <span class="material-icons text-blue-600 dark:text-blue-400 text-lg">analytics</span>
+        </div>
+        <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark">
+            Analytics Overview
+        </h2>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- User Registration Chart -->
+        <div class="group">
+            {% component "unfold/components/card.html" with title="User Registrations" subtitle="Last 7 days activity" %}
+                <div class="flex items-center mb-2">
+                    <span class="material-icons text-primary-600 dark:text-primary-500 mr-2">trending_up</span>
+                    <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Growth Trends</span>
+                </div>
+                {% component "unfold/components/chart/line.html" with data=charts.user_registrations height=300 %}
+                {% endcomponent %}
+            {% endcomponent %}
+        </div>
+
+        <!-- User Activity Chart -->
+        <div class="group">
+            {% component "unfold/components/card.html" with title="User Activity" subtitle="Weekly engagement metrics" %}
+                <div class="flex items-center mb-2">
+                    <span class="material-icons text-green-600 dark:text-green-400 mr-2">bar_chart</span>
+                    <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Activity Levels</span>
+                </div>
+                {% component "unfold/components/chart/bar.html" with data=charts.user_activity height=300 %}
+                {% endcomponent %}
+            {% endcomponent %}
+        </div>
+    </div>
+</div> 

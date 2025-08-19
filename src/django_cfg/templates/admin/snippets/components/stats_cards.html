@@ -1,0 +1,40 @@
+{% load unfold %}
+
+<!-- Statistics Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 w-full">
+    {% for card in cards %}
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 shadow-xs hover:shadow-lg transition-shadow duration-200">
+            <div class="flex items-center justify-between p-6">
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wide">
+                        {{ card.title }}
+                    </div>
+                    
+                    <div class="text-3xl font-bold text-font-important-light dark:text-font-important-dark mt-2">
+                        {{ card.value }}
+                    </div>
+                    
+                    {% if card.change %}
+                        <div class="flex items-center mt-2">
+                            <span class="material-icons text-sm mr-1 {% if card.change_type == 'positive' %}text-green-500{% elif card.change_type == 'negative' %}text-red-500{% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}">
+                                {% if card.change_type == 'positive' %}trending_up{% elif card.change_type == 'negative' %}trending_down{% else %}trending_flat{% endif %}
+                            </span>
+                            <span class="text-sm font-medium {% if card.change_type == 'positive' %}text-green-600 dark:text-green-400{% elif card.change_type == 'negative' %}text-red-600 dark:text-red-400{% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}">
+                                {{ card.change }}
+                            </span>
+                            <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark ml-1">vs last period</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="flex-shrink-0 ml-4">
+                    <div class="p-3 rounded-full {% if card.change_type == 'positive' %}bg-green-100 dark:bg-green-900/20{% elif card.change_type == 'negative' %}bg-red-100 dark:bg-red-900/20{% else %}bg-primary-100 dark:bg-primary-900/20{% endif %}">
+                        <span class="material-icons text-2xl {% if card.change_type == 'positive' %}text-green-600 dark:text-green-400{% elif card.change_type == 'negative' %}text-red-600 dark:text-red-400{% else %}text-primary-600 dark:text-primary-400{% endif %}">
+                            {{ card.icon }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div> 

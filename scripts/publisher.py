@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Django Config Publisher
+Django-CFG Publisher
 
 Interactive CLI for publishing the package to PyPI or TestPyPI.
 """
@@ -24,7 +24,7 @@ console = Console()
 def main():
     console.print(
         Panel(
-            "[bold blue]Django Config Publisher[/bold blue]\nInteractive package publishing to PyPI",
+            "[bold blue]Django-CFG Publisher[/bold blue]\nInteractive package publishing to PyPI",
             title="🚀 PyPI Publisher",
             border_style="blue",
         )
@@ -105,9 +105,9 @@ def main():
                     path.unlink()
 
     # Build step
-    console.print("[yellow]Building the package with poetry...[/yellow]")
+    console.print("[yellow]Building the package...[/yellow]")
     build_result = subprocess.run(
-        ["poetry", "build"], capture_output=True, text=True
+        [sys.executable, "-m", "build"], capture_output=True, text=True
     )
     console.print(build_result.stdout)
     if build_result.returncode != 0:
@@ -119,17 +119,15 @@ def main():
         console.print("[red]dist/ folder not found! Please build the package first.[/red]")
         return 1
 
-    # Poetry publish command
-    publish_cmd = (
-        ["poetry", "publish", "--repository", repo]
-        if repo == "testpypi"
-        else ["poetry", "publish"]
-    )
-
-    # Run publishing
-    console.print("[yellow]Publishing with poetry...[/yellow]")
+    # Run publishing with twine
+    console.print("[yellow]Publishing with twine...[/yellow]")
     try:
-        result = subprocess.run(publish_cmd, check=False)
+        twine_cmd = (
+            ["twine", "upload", "--repository", repo, "dist/*"]
+            if repo == "testpypi"
+            else ["twine", "upload", "dist/*"]
+        )
+        result = subprocess.run(twine_cmd, check=False)
         if result.returncode == 0:
             console.print("[green]✅ Package published successfully![/green]")
         else:
