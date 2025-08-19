@@ -333,13 +333,20 @@ class TestBasicConfiguration:
         class PerfTestConfig(DjangoConfig):
             project_name: str = "Performance Test"
             secret_key: str = "performance-test-secret-key-that-is-definitely-long-enough-for-validation"
+            security_domains: list = ["https://example.com", "http://localhost:8000"]
             
             databases: Dict[str, DatabaseConnection] = {
-                f"db_{i}": DatabaseConnection(
+                "default": DatabaseConnection(
                     engine="django.db.backends.sqlite3",
-                    name=f"test_{i}.db",
-                )
-                for i in range(10)  # Multiple databases
+                    name="default.db",
+                ),
+                **{
+                    f"db_{i}": DatabaseConnection(
+                        engine="django.db.backends.sqlite3",
+                        name=f"test_{i}.db",
+                    )
+                    for i in range(10)  # Multiple databases
+                }
             }
             
             project_apps: list = [f"app_{i}" for i in range(20)]  # Many apps
@@ -362,7 +369,7 @@ class TestBasicConfiguration:
         
         # Verify settings completeness
         assert len(settings1) > 15  # Should have many Django settings
-        assert len(settings1["DATABASES"]) == 10  # All databases
+        assert len(settings1["DATABASES"]) == 11  # All databases (default + 10 test dbs)
         assert len([app for app in settings1["INSTALLED_APPS"] if app.startswith("app_")]) == 20  # All project apps
     
     def test_model_dump_for_django(self):
@@ -371,6 +378,7 @@ class TestBasicConfiguration:
         class DumpTestConfig(DjangoConfig):
             project_name: str = "Dump Test"
             secret_key: str = "dump-test-secret-key-that-is-definitely-long-enough-for-validation"
+            security_domains: list = ["https://example.com", "http://localhost:8000"]
             
             databases: Dict[str, DatabaseConnection] = {
                 "default": DatabaseConnection(
