@@ -11,6 +11,7 @@ Following TESTING_STANDARDS.md:
 import pytest
 import os
 import tempfile
+import pydantic
 from pathlib import Path
 from typing import Dict, Any
 
@@ -144,7 +145,7 @@ class TestBasicConfiguration:
         """Test configuration validation errors."""
         
         # Test missing secret key
-        with pytest.raises((ValidationError, ConfigurationError)):
+        with pytest.raises((ValidationError, ConfigurationError, pydantic.ValidationError)):
             class NoSecretConfig(DjangoConfig):
                 project_name: str = "No Secret"
                 # secret_key missing
@@ -159,7 +160,7 @@ class TestBasicConfiguration:
             NoSecretConfig()
         
         # Test short secret key
-        with pytest.raises((ValidationError, ConfigurationError)):
+        with pytest.raises((ValidationError, ConfigurationError, pydantic.ValidationError)):
             class ShortSecretConfig(DjangoConfig):
                 project_name: str = "Short Secret"
                 secret_key: str = "short"  # Too short
@@ -174,7 +175,7 @@ class TestBasicConfiguration:
             ShortSecretConfig()
         
         # Test missing default database
-        with pytest.raises((ValidationError, ConfigurationError)):
+        with pytest.raises((ValidationError, ConfigurationError, pydantic.ValidationError)):
             class NoDefaultDBConfig(DjangoConfig):
                 project_name: str = "No Default DB"
                 secret_key: str = "no-default-db-secret-key-that-is-definitely-long-enough-for-validation"
@@ -194,6 +195,7 @@ class TestBasicConfiguration:
         class EnvTestConfig(DjangoConfig):
             project_name: str = "Env Test"
             secret_key: str = "env-test-secret-key-that-is-definitely-long-enough-for-validation"
+            security_domains: list = ["https://example.com", "http://localhost:8000"]
             
             databases: Dict[str, DatabaseConnection] = {
                 "default": DatabaseConnection(
@@ -222,6 +224,7 @@ class TestBasicConfiguration:
         class AppsTestConfig(DjangoConfig):
             project_name: str = "Apps Test"
             secret_key: str = "apps-test-secret-key-that-is-definitely-long-enough-for-validation"
+            security_domains: list = ["https://example.com", "http://localhost:8000"]
             
             databases: Dict[str, DatabaseConnection] = {
                 "default": DatabaseConnection(
@@ -258,6 +261,7 @@ class TestBasicConfiguration:
         class MiddlewareTestConfig(DjangoConfig):
             project_name: str = "Middleware Test"
             secret_key: str = "middleware-test-secret-key-that-is-definitely-long-enough-for-validation"
+            security_domains: list = ["https://example.com", "http://localhost:8000"]
             
             databases: Dict[str, DatabaseConnection] = {
                 "default": DatabaseConnection(
@@ -295,6 +299,7 @@ class TestBasicConfiguration:
         class CacheTestConfig(DjangoConfig):
             project_name: str = "Cache Test"
             secret_key: str = "cache-test-secret-key-that-is-definitely-long-enough-for-validation"
+            security_domains: list = ["https://example.com", "http://localhost:8000"]
             
             databases: Dict[str, DatabaseConnection] = {
                 "default": DatabaseConnection(

@@ -31,7 +31,7 @@ Example:
 from typing import TYPE_CHECKING
 
 # Version information
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 __author__ = "Unrealos Team"
 __email__ = "info@unrealos.com"
 __license__ = "MIT"

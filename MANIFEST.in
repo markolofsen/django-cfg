@@ -2,6 +2,7 @@ include README.md
 include LICENSE
 include CHANGELOG.md
 include MANIFEST.in
+include requirements*.txt
 recursive-include src/django_cfg *.py
 recursive-include src/django_cfg *.json
 recursive-include src/django_cfg *.yaml
@@ -12,14 +13,14 @@ recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 
 # Exclude development files and directories
-recursive-exclude @ *
+recursive-exclude @* *
 recursive-exclude scripts *
+recursive-exclude tests *
+recursive-exclude htmlcov *
 exclude package.json
 exclude .env*
 
 # Exclude development and test files
-recursive-exclude tests *
-recursive-exclude htmlcov *
 exclude pytest.ini
 exclude tox.ini
 exclude .coveragerc

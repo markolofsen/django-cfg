@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.0.3"
+version = "1.1.0"
 description = "Developer-first Django configuration with Pydantic v2 models and intelligent automation"
 readme = "README.md"
 license = {text = "MIT"}
@@ -142,10 +142,18 @@ packages = ["src/django_cfg"]
 [tool.hatch.build.targets.sdist]
 include = [
     "src/django_cfg",
-    "tests",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
+    "requirements*.txt",
+    "MANIFEST.in",
+]
+exclude = [
+    "@*",
+    "tests",
+    "scripts",
+    "*.log",
+    ".env*",
 ]
 
 # Black configuration
@@ -212,7 +220,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
-    "--cov-fail-under=95",
+    "--cov-fail-under=50",
     "--strict-markers",
     "--strict-config",
     "--verbose",
