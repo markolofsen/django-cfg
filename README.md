@@ -1,462 +1,376 @@
-# 🚀 Django-CFG: Developer-First Django Configuration
+# 🚀 Django-CFG: The Configuration Revolution
 
 [![Python Version](https://img.shields.io/pypi/pyversions/django-cfg.svg)](https://pypi.org/project/django-cfg/)
 [![Django Version](https://img.shields.io/pypi/djversions/django-cfg.svg)](https://pypi.org/project/django-cfg/)
 [![License](https://img.shields.io/pypi/l/django-cfg.svg)](https://github.com/markolofsen/django-cfg/blob/main/LICENSE)
 [![PyPI Version](https://img.shields.io/pypi/v/django-cfg.svg)](https://pypi.org/project/django-cfg/)
 
-**Transform your Django configuration from 100+ lines of boilerplate to clean, type-safe YAML + Python configuration.**
+> **Transform your Django development from chaos to zen in minutes, not months.**
 
-Django-CFG is a revolutionary Django configuration system that provides developer-first experience through Pydantic v2 models, YAML configuration files, intelligent automation, and zero boilerplate.
+Django-CFG is the production-ready configuration framework that eliminates Django's biggest pain points. Say goodbye to 500-line `settings.py` files and hello to type-safe, YAML-powered, intelligent configuration that just works.
 
-## ✨ Key Features
+**🎯 [See it in action →](https://github.com/markolofsen/django-cfg/tree/main/django_sample)** Complete sample project with blog, shop, multi-database routing, and beautiful admin interface.
 
-- 🎯 **90% Less Boilerplate** - Replace massive `settings.py` with clean config classes
-- 🔒 **100% Type Safety** - All configuration through Pydantic v2 models  
-- 📄 **YAML Configuration** - Environment-specific settings in readable YAML files
-- 🚫 **Zero Raw Dicts** - No more error-prone dictionary configurations
-- 🧠 **Smart Defaults** - Environment-aware defaults (Redis for prod, Memory for dev)
-- 💡 **IDE Support** - Full autocomplete and validation in your IDE
-- 🎨 **Beautiful Admin** - Pre-configured Django Unfold with Tailwind CSS
-- 🔄 **API Generation** - Automatic OpenAPI/Swagger with Django Revolution
-- 📦 **Easy Migration** - Gradual migration from existing Django projects
+---
 
-## 🚀 Quick Start
+## 🔥 Why Django-CFG Changes Everything
+
+### The Problem with Traditional Django
+- **500+ line settings files** that nobody wants to touch
+- **Zero type safety** - typos break production
+- **Manual everything** - databases, caching, admin, APIs
+- **Environment hell** - different configs everywhere
+- **Ugly admin interface** stuck in 2010
+- **No API documentation** without hours of setup
+
+### The Django-CFG Solution
+- **3-line configuration** that handles everything
+- **100% type-safe** with full IDE support
+- **Smart automation** that knows what you need
+- **Environment detection** that just works
+- **Beautiful modern admin** with Tailwind CSS
+- **Auto-generated API docs** and client libraries
+
+---
+
+## ⚡ Quick Start
 
 ### Installation
 
 ```bash
+# Using Poetry (recommended)
+poetry add django-cfg
+
+# Using pip
 pip install django-cfg
+
+# Using pipenv
+pipenv install django-cfg
 ```
 
-### Before (Traditional Django - 100+ lines)
+### Your First Django-CFG Project
 
+**1. Create `config.py`:**
 ```python
-# settings.py - Traditional Django configuration 😢
-import os
-from pathlib import Path
+from django_cfg import DjangoConfig
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+class MyConfig(DjangoConfig):
+    project_name: str = "MyAwesomeApp"
+    secret_key: str = "your-secret-key"
+    debug: bool = True
+    project_apps: list[str] = ["accounts", "blog", "shop"]
 
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'drf_spectacular',
-    'corsheaders',
-    'myapp',
-]
-
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DATABASE_NAME', 'mydb'),
-        'USER': os.environ.get('DATABASE_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
-        'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
-        'PORT': os.environ.get('DATABASE_PORT', '5432'),
-    }
-}
-
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
-    }
-}
-
-REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
-}
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'My API',
-    'DESCRIPTION': 'My API description',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-}
-
-# ... 50+ more lines of configuration
+config = MyConfig()
 ```
 
-### After (Django-CFG - Clean & Simple)
-
-#### 1. Environment Configuration (`config.dev.yaml`)
-
-```yaml
-# Development Environment Configuration
-secret_key: "django-insecure-550e8400-e29b-41d4-a716-446655440000-dev-key"
-debug: true
-
-# Database
-database:
-  url: "postgresql://postgres:postgres@localhost:5432/myapp"
-  url_analytics: "postgresql://postgres:postgres@localhost:5432/analytics"
-
-# Application URLs
-app:
-  name: "MyApp"
-  domain: "localhost"
-  api_url: "http://localhost:8000"
-  site_url: "http://localhost:3000"
-
-# Email
-email:
-  backend: "smtp"
-  host: "smtp.gmail.com"
-  port: 587
-  username: "hello@myapp.com"
-  password: "app-password"
-  use_tls: true
-  default_from: "MyApp <hello@myapp.com>"
-
-# Telegram Bot
-telegram:
-  bot_token: "your-bot-token"
-  group_id: -123456789
-
-# Cache
-redis_url: "redis://localhost:6379/1"
-```
-
-#### 2. Application Configuration (`config.py`)
-
+**2. Update `settings.py`:**
 ```python
-from typing import List, Dict
-from django_cfg import (
-    DjangoConfig,
-    DatabaseConnection,
-    DatabaseRoutingRule,
-    CacheBackend,
-    UnfoldConfig,
-    UnfoldTheme,
-    RevolutionConfig,
-    ZoneConfig,
-    EmailConfig,
-    TelegramConfig,
-)
-from .environment import env
-
-
-class MyAppConfig(DjangoConfig):
-    """🚀 Complete production-ready configuration using django_cfg"""
-
-    # === Project Information ===
-    project_name: str = "MyApp"
-    project_version: str = "1.0.0"
-    site_url: str = env.app.site_url
-    api_url: str = env.app.api_url
-
-    # === Core Settings (from YAML) ===
-    secret_key: str = env.secret_key
-    debug: bool = env.debug
-
-    # === Security ===
-    security_domains: List[str] = [
-        "https://myapp.com",
-        "https://api.myapp.com",
-        "http://localhost:3000",  # Development
-        "http://localhost:8000",
-    ]
-
-    # === Custom User Model ===
-    auth_user_model: str = "accounts.CustomUser"
-
-    # === Project Apps ===
-    project_apps: List[str] = [
-        "accounts",
-        "products",
-        "orders",
-        "analytics",
-    ]
-
-    # === Multi-Database Setup ===
-    databases: Dict[str, DatabaseConnection] = {
-        "default": DatabaseConnection(
-            engine="django.db.backends.postgresql",
-            **env.database.parse_url(env.database.url),
-            connect_timeout=10,
-            sslmode="prefer",
-        ),
-        "analytics": DatabaseConnection(
-            engine="django.db.backends.postgresql",
-            **env.database.parse_url(env.database.url_analytics),
-            connect_timeout=10,
-            sslmode="prefer",
-        ),
-    }
-
-    # === Database Routing ===
-    database_routing: List[DatabaseRoutingRule] = [
-        DatabaseRoutingRule(
-            apps=["analytics"],
-            database="analytics",
-            operations=["read", "write"],
-        ),
-    ]
-
-    # === Redis Cache ===
-    cache_default: CacheBackend = CacheBackend(
-        redis_url=env.redis_url,
-        timeout=300,
-    )
-
-    cache_sessions: CacheBackend = CacheBackend(
-        redis_url=env.redis_url.replace("/1", "/2"),
-        timeout=1800,  # 30 minutes
-    )
-
-    # === Email Configuration ===
-    email: EmailConfig = EmailConfig(
-        host=env.email.host,
-        port=env.email.port,
-        username=env.email.username,
-        password=env.email.password,
-        use_tls=env.email.use_tls,
-        default_from_email=env.email.default_from,
-    )
-
-    # === Telegram Notifications ===
-    telegram: TelegramConfig = TelegramConfig(
-        bot_token=env.telegram.bot_token,
-        chat_id=env.telegram.group_id,
-        parse_mode="HTML",
-    )
-
-    # === Beautiful Admin Interface ===
-    unfold: UnfoldConfig = UnfoldConfig(
-        theme=UnfoldTheme(
-            site_title="MyApp Admin",
-            site_header="MyApp",
-            site_subheader="Management Dashboard",
-            theme="auto",  # Auto light/dark theme
-            dashboard_callback="myapp.dashboard.main_callback",
-        ),
-    )
-
-    # === API Configuration with Revolution ===
-    revolution: RevolutionConfig = RevolutionConfig(
-        api_prefix="api",
-        drf_title="MyApp API",
-        drf_description="RESTful API with automatic OpenAPI generation",
-        drf_version="1.0.0",
-        zones={
-            "public": ZoneConfig(
-                apps=["products"],
-                title="Public API",
-                description="Public product catalog",
-                public=True,
-                auth_required=False,
-            ),
-            "client": ZoneConfig(
-                apps=["accounts", "orders"],
-                title="Client API",
-                description="User accounts and orders",
-                public=True,
-                auth_required=True,
-            ),
-            "admin": ZoneConfig(
-                apps=["analytics"],
-                title="Admin API",
-                description="Analytics and reporting",
-                public=False,
-                auth_required=True,
-            ),
-        },
-    )
-
-
-# Initialize configuration
-config = MyAppConfig()
-```
-
-#### 3. Django Settings (`settings.py`) - Just 3 Lines!
-
-```python
-"""Ultra-minimal settings powered by django_cfg"""
-
 from .config import config
-
-# Apply ALL Django settings from django_cfg
 globals().update(config.get_all_settings())
 ```
 
-## 💡 What You Get Automatically
-
-✅ **All Django core apps and middleware configured**  
-✅ **Environment detection (dev/prod/test/staging)**  
-✅ **Smart cache backend selection (Redis/Memory)**  
-✅ **Security settings based on your domains**  
-✅ **Complete type safety and validation**  
-✅ **Beautiful Django Unfold admin with Tailwind CSS**  
-✅ **Automatic OpenAPI/Swagger documentation**  
-✅ **Multi-database routing**  
-✅ **Session management**  
-✅ **CORS configuration**  
-✅ **Static files with WhiteNoise**  
-✅ **Email and Telegram notifications**
-
-## 🏗️ Real-World Production Example
-
-Here's a complete configuration from CarAPIS - a production automotive platform:
-
-```python
-class CarAPISConfig(DjangoConfig):
-    """🚀 CarAPIS Production Configuration"""
-
-    project_name: str = "CarAPIS"
-    project_version: str = "2.0.0"
-    
-    # === 4 Production Databases ===
-    databases: Dict[str, DatabaseConnection] = {
-        "default": DatabaseConnection(
-            engine="django.db.backends.postgresql",
-            **env.database.parse_url(env.database.url),
-            connect_timeout=10,
-            sslmode="prefer",
-        ),
-        "cars": DatabaseConnection(
-            **env.database.parse_url(env.database.url_cars),
-        ),
-        "cars_new": DatabaseConnection(
-            **env.database.parse_url(env.database.url_cars_new),
-        ),
-        "cars_server": DatabaseConnection(
-            **env.database.parse_url(env.database.url_cars_server),
-        ),
-    }
-
-    # === Smart Database Routing ===
-    database_routing: List[DatabaseRoutingRule] = [
-        DatabaseRoutingRule(
-            apps=["parsers"],
-            database="cars",
-            operations=["read", "write"],
-        ),
-        DatabaseRoutingRule(
-            apps=["customs"],
-            database="cars_new",
-            operations=["read", "write"],
-        ),
-    ]
-
-    # === Multi-Zone API ===
-    revolution: RevolutionConfig = RevolutionConfig(
-        api_prefix="apix",
-        drf_title="CarAPIS",
-        drf_description="Advanced Car Import/Export Platform API",
-        zones={
-            "client": ZoneConfig(
-                apps=["accounts", "billing", "payments"],
-                title="Client API",
-                public=True,
-                auth_required=False,
-            ),
-            "internal": ZoneConfig(
-                apps=["mailer", "services"],
-                title="Internal API",
-                public=False,
-                auth_required=True,
-            ),
-            "customs": ZoneConfig(
-                apps=["data_customs"],
-                title="Customs API",
-                description="Customs calculations",
-                public=True,
-            ),
-        },
-    )
-
-    # === Beautiful Admin Dashboard ===
-    unfold: UnfoldConfig = UnfoldConfig(
-        theme=UnfoldTheme(
-            site_title="CarAPIS Admin",
-            site_header="CarAPIS",
-            site_subheader="Automotive Data Platform",
-            theme="auto",
-            dashboard_callback="api.dashboard.callbacks.main_dashboard_callback",
-        ),
-    )
-
-config = CarAPISConfig()
+**3. Run your project:**
+```bash
+python manage.py runserver
 ```
 
-## 🔧 Environment Intelligence
+**That's it!** 🎉 You now have:
+- ✅ Beautiful admin interface with Unfold + Tailwind CSS
+- ✅ Auto-generated API documentation
+- ✅ Environment-aware configuration
+- ✅ Type-safe settings with full IDE support
+- ✅ Production-ready security defaults
+
+---
+
+## 🏆 Feature Comparison
+
+| Feature | Traditional Django | Django-CFG |
+|---------|-------------------|-------------|
+| **📝 Configuration** | 500+ lines of settings hell | **3 lines. Done.** |
+| **🔒 Type Safety** | Pray and hope | **100% validated** |
+| **🎨 Admin Interface** | Ugly 2010 design | **Modern Unfold + Tailwind** |
+| **📊 Dashboard** | Basic admin index | **Real-time metrics & widgets** |
+| **🗄️ Multi-Database** | Manual routing nightmare | **Smart auto-routing** |
+| **⚡ Commands** | Terminal only | **Beautiful web interface** |
+| **📚 API Docs** | Hours of manual setup | **Auto-generated OpenAPI** |
+| **📦 Client Generation** | Write clients manually | **Auto TS/Python clients** |
+| **🏢 Monorepo** | Complex setup | **Built-in support** |
+| **📧 Notifications** | Manual SMTP/webhooks | **Email & Telegram modules** |
+| **🚀 Deployment** | Cross fingers | **Production-ready defaults** |
+| **💡 IDE Support** | Basic syntax highlighting | **Full IntelliSense paradise** |
+| **🐛 Config Errors** | Runtime surprises | **Compile-time validation** |
+| **😊 Developer Joy** | Constant frustration | **Pure coding bliss** |
+
+---
+
+## 🎯 Core Features
+
+### 🔒 **Type-Safe Configuration**
+Full Pydantic validation with IDE autocomplete and compile-time error checking.
+
+### 🎨 **Beautiful Admin Interface**
+Modern Django Unfold admin with Tailwind CSS, dark mode, and custom dashboards.
+
+### 📊 **Real-Time Dashboard**
+Live metrics, system health, and custom widgets that update automatically.
+
+### 🗄️ **Smart Multi-Database**
+Automatic database routing based on app labels with connection pooling.
+
+### ⚡ **Web Command Interface**
+Run Django management commands from a beautiful web interface with real-time logs.
+
+### 📚 **Auto API Documentation**
+OpenAPI/Swagger docs generated automatically with zone-based architecture.
+
+### 📦 **Client Generation**
+TypeScript and Python API clients generated per zone automatically.
+
+### 🏢 **Monorepo Ready**
+Smart integration with modern monorepo architectures and build systems.
+
+### 📧 **Built-in Modules**
+Email, Telegram, and SMS notification modules ready out of the box.
+
+### 🌍 **Environment Detection**
+Automatic dev/staging/production detection with appropriate defaults.
+
+---
+
+## 🛠️ Management Commands (CLI Tools)
+
+Django-CFG includes powerful management commands for development and operations:
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| **`check_settings`** | Validate configuration and settings | `python manage.py check_settings` |
+| **`create_token`** | Generate API tokens and keys | `python manage.py create_token --user admin` |
+| **`generate`** | Generate API clients and documentation | `python manage.py generate --zone client` |
+| **`migrator`** | Smart database migrations with routing | `python manage.py migrator --apps blog,shop` |
+| **`script`** | Run custom scripts with Django context | `python manage.py script my_script.py` |
+| **`show_config`** | Display current configuration | `python manage.py show_config --format yaml` |
+| **`show_urls`** | Display all URL patterns | `python manage.py show_urls --zone client` |
+| **`superuser`** | Create superuser with smart defaults | `python manage.py superuser --email admin@example.com` |
+| **`test_email`** | Test email configuration | `python manage.py test_email --to test@example.com` |
+| **`test_telegram`** | Test Telegram bot integration | `python manage.py test_telegram --chat_id 123` |
+| **`validate_config`** | Deep validation of all settings | `python manage.py validate_config --strict` |
+
+---
+
+## 🌍 Environment Detection
 
 Django-CFG automatically detects your environment and applies appropriate settings:
 
-| Environment | Cache Backend | Email Backend | Database SSL | Debug Mode | Static Files |
-|-------------|---------------|---------------|--------------|------------|--------------|
-| **Development** | Memory/Redis | Console | Optional | True | Django Dev Server |
-| **Testing** | Dummy Cache | In-Memory | Disabled | False | Static Files |
-| **Staging** | Redis | SMTP | Required | False | WhiteNoise |
-| **Production** | Redis | SMTP | Required | False | WhiteNoise |
+| Environment | Detection Method | Cache Backend | Email Backend | Database SSL | Debug Mode |
+|-------------|------------------|---------------|---------------|--------------|------------|
+| **Development** | `DEBUG=True` or local domains | Memory/Redis | Console | Optional | `True` |
+| **Testing** | `pytest` or `test` in command | Dummy Cache | In-Memory | Disabled | `False` |
+| **Staging** | `STAGING=True` or staging domains | Redis | SMTP | Required | `False` |
+| **Production** | `PRODUCTION=True` or prod domains | Redis | SMTP | Required | `False` |
 
-## 📊 Built-in Integrations
+---
 
-### 🎨 Django Unfold Admin
-Beautiful, modern admin interface with Tailwind CSS, dark mode, and dashboard widgets.
+## 📝 Logging System
 
-### 🔄 Django Revolution API
-Automatic API generation with OpenAPI/Swagger documentation and zone-based architecture.
+Comprehensive logging with environment-aware configuration:
 
-### 📧 Email & Notifications
-SMTP, Telegram bot integration with environment-specific backends.
-
-### 🗄️ Multi-Database Support
-Smart database routing with connection pooling and SSL configuration.
-
-### ⚡ Redis Caching
-Production-ready caching with separate cache backends for different use cases.
-
-## 🔄 Migration Guide
-
-### Step 1: Install django-cfg
-```bash
-pip install django-cfg
+```python
+# Automatic log configuration based on environment
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'django.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+}
 ```
 
-### Step 2: Create YAML configuration
+**Features:**
+- Environment-specific log levels
+- Automatic file rotation
+- Structured logging with JSON support
+- Integration with monitoring systems
+- Custom formatters for different outputs
+
+---
+
+## 📚 API Documentation
+
+Django-CFG provides ready-made Redoc/Swagger solutions for each API zone:
+
+### Zone-Based API Architecture
+```python
+revolution: RevolutionConfig = RevolutionConfig(
+    zones={
+        "client": ZoneConfig(
+            apps=["accounts", "billing"],
+            title="Client API",
+            public=True,
+        ),
+        "admin": ZoneConfig(
+            apps=["management", "reports"],
+            title="Admin API", 
+            auth_required=True,
+        ),
+    }
+)
+```
+
+### Automatic Documentation URLs
+- **`/api/client/docs/`** - Interactive Swagger UI for client zone
+- **`/api/client/redoc/`** - Beautiful ReDoc documentation
+- **`/api/admin/docs/`** - Admin zone Swagger UI
+- **`/api/admin/redoc/`** - Admin zone ReDoc
+
+### Client Generation
+```bash
+# Generate TypeScript client for client zone
+python manage.py generate --zone client --format typescript
+
+# Generate Python client for admin zone  
+python manage.py generate --zone admin --format python
+```
+
+---
+
+## 🏗️ Real-World Example
+
+Here's a complete production configuration:
+
+```python
+from django_cfg import DjangoConfig, DatabaseConnection, UnfoldConfig, RevolutionConfig
+
+class ProductionConfig(DjangoConfig):
+    """🚀 Production-ready configuration"""
+    
+    # === Project Settings ===
+    project_name: str = "CarAPIS"
+    project_version: str = "2.0.0"
+    secret_key: str = env.secret_key
+    debug: bool = False
+    
+    # === Multi-Database Setup ===
+    databases: dict[str, DatabaseConnection] = {
+        "default": DatabaseConnection(
+            engine="django.db.backends.postgresql",
+            name="carapis_main",
+            user=env.db_user,
+            password=env.db_password,
+            host=env.db_host,
+            port=5432,
+            sslmode="require",
+        ),
+        "analytics": DatabaseConnection(
+            engine="django.db.backends.postgresql",
+            name="carapis_analytics", 
+            user=env.db_user,
+            password=env.db_password,
+            host=env.db_host,
+            routing_apps=["analytics", "reports"],
+        ),
+    }
+    
+    # === Beautiful Admin ===
+    unfold: UnfoldConfig = UnfoldConfig(
+        site_title="CarAPIS Admin",
+        site_header="CarAPIS Control Center",
+        theme="auto",
+        dashboard_callback="api.dashboard.main_callback",
+    )
+    
+    # === Multi-Zone API ===
+    revolution: RevolutionConfig = RevolutionConfig(
+        api_prefix="api/v2",
+        zones={
+            "public": ZoneConfig(
+                apps=["cars", "search"],
+                title="Public API",
+                description="Car data and search",
+                public=True,
+            ),
+            "partner": ZoneConfig(
+                apps=["integrations", "webhooks"],
+                title="Partner API",
+                auth_required=True,
+                rate_limit="1000/hour",
+            ),
+        }
+    )
+
+config = ProductionConfig()
+```
+
+---
+
+## 🧪 Testing
+
+Django-CFG includes comprehensive testing utilities:
+
+```python
+def test_configuration():
+    """Test your configuration is valid"""
+    config = MyConfig()
+    settings = config.get_all_settings()
+    
+    # Validate required settings
+    assert "SECRET_KEY" in settings
+    assert settings["DEBUG"] is False
+    assert "myapp" in settings["INSTALLED_APPS"]
+    
+    # Test database connections
+    assert "default" in settings["DATABASES"]
+    assert settings["DATABASES"]["default"]["ENGINE"] == "django.db.backends.postgresql"
+    
+    # Validate API configuration
+    assert "SPECTACULAR_SETTINGS" in settings
+    assert settings["SPECTACULAR_SETTINGS"]["TITLE"] == "My API"
+```
+
+---
+
+## 🚀 Migration from Traditional Django
+
+### Step 1: Install Django-CFG
+```bash
+poetry add django-cfg
+```
+
+### Step 2: Create Environment Configuration
 ```yaml
-# config.dev.yaml
-secret_key: "your-secret-key"
+# environment/config.dev.yaml
+secret_key: "your-development-secret-key"
 debug: true
 database:
   url: "postgresql://user:pass@localhost:5432/mydb"
+redis_url: "redis://localhost:6379/0"
 ```
 
-### Step 3: Create configuration class
+### Step 3: Create Configuration Class
 ```python
 # config.py
 from django_cfg import DjangoConfig
@@ -466,85 +380,31 @@ class MyConfig(DjangoConfig):
     project_name: str = "My Project"
     secret_key: str = env.secret_key
     debug: bool = env.debug
+    project_apps: list[str] = ["accounts", "blog"]
 
 config = MyConfig()
 ```
 
-### Step 4: Update settings.py
+### Step 4: Replace settings.py
 ```python
-# settings.py
+# settings.py - Replace everything with this
 from .config import config
 globals().update(config.get_all_settings())
 ```
 
-### Step 5: Test
+### Step 5: Test & Deploy
 ```bash
 python manage.py check
 python manage.py runserver
 ```
 
-## 🧪 Testing
+**Result:** Your 500-line `settings.py` is now 3 lines, fully type-safe, and production-ready! 🎉
 
-Django-CFG includes comprehensive testing utilities:
-
-```python
-def test_my_config():
-    config = MyConfig()
-    settings = config.get_all_settings()
-    
-    assert "SECRET_KEY" in settings
-    assert settings["DEBUG"] is False
-    assert "myapp" in settings["INSTALLED_APPS"]
-    assert "SPECTACULAR_SETTINGS" in settings
-```
-
-## 📚 Advanced Features
-
-### Environment-Specific Configuration
-```yaml
-# config.prod.yaml
-debug: false
-database:
-  url: "${DATABASE_URL}"
-redis_url: "${REDIS_URL}"
-
-# config.dev.yaml  
-debug: true
-database:
-  url: "postgresql://postgres:postgres@localhost:5432/myapp"
-```
-
-### Multi-Environment Support
-```python
-# Automatic environment detection
-IS_DEV = os.environ.get("IS_DEV", "").lower() in ("true", "1", "yes")
-IS_PROD = os.environ.get("IS_PROD", "").lower() in ("true", "1", "yes")
-IS_TEST = "test" in sys.argv
-```
-
-### Custom Dashboard Callbacks
-```python
-def main_dashboard_callback(request, context):
-    """Custom admin dashboard with real-time data"""
-    return [
-        {
-            "title": "System Status",
-            "metric": "98.5%",
-            "footer": "Uptime last 30 days",
-        },
-        {
-            "title": "Active Users", 
-            "metric": "1,234",
-            "footer": "Online now",
-        },
-    ]
-```
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
-
-### Development Setup
+We welcome contributions! Here's how to get started:
 
 ```bash
 git clone https://github.com/markolofsen/django-cfg.git
@@ -553,19 +413,40 @@ poetry install
 poetry run pytest
 ```
 
+### Development Commands
+```bash
+# Run tests
+poetry run pytest
+
+# Format code
+poetry run black .
+
+# Type checking
+poetry run mypy .
+
+# Build package
+poetry build
+```
+
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
+---
+
 ## 🙏 Acknowledgments
 
 - **Django** - The web framework for perfectionists with deadlines
-- **Pydantic** - Data validation using Python type hints  
-- **Django Unfold** - Beautiful admin interface
-- **Django Revolution** - API generation and management
+- **Pydantic** - Data validation using Python type hints
+- **Django Unfold** - Beautiful modern admin interface
+- **Django Revolution** - API generation and zone management
 
 ---
 
 **Made with ❤️ by the UnrealOS Team**
 
 *Django-CFG: Because configuration should be simple, safe, and powerful.*
+
+**🚀 Ready to transform your Django experience? [Get started now!](https://github.com/markolofsen/django-cfg/tree/main/django_sample)**
