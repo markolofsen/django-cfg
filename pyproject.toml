@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.1.0"
-description = "Developer-first Django configuration with Pydantic v2 models and intelligent automation"
+version = "1.1.1"
+description = "Developer-first Django configuration with Pydantic v2 models and intelligent automation (Django 4.2+ required)"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -25,17 +25,16 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: Django",
-    "Framework :: Django :: 4.2",
-    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.2",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -45,26 +44,32 @@ classifiers = [
 requires-python = ">=3.10,<4.0"
 
 # Core dependencies - minimal and essential only
+# Note: Django is a peer dependency - users should install it themselves
 dependencies = [
-    "django>=5.2,<6.0",
+    # Core configuration
     "pydantic>=2.11,<3.0",
     "pydantic[email]>=2.11,<3.0",
     "PyYAML>=6.0",
     "pydantic-yaml>=1.6.0",
-    "pyTelegramBotAPI>=4.28.0",
+    
+    # CLI and utilities
     "click>=8.2.0",
     "questionary>=2.1.0",
     "rich>=14.1.0",
     "loguru>=0.7.0",
     "colorlog>=6.9.0",
     "cachetools>=6.1.0",
+    
+    # Database utilities
     "psycopg2-binary>=2.9.0",
     "dj-database-url>=3.0.0",
-    "djangorestframework-simplejwt[token-blacklist]>=5.5.0",
+    
+    # Django packages (require Django as peer dependency)
     "whitenoise>=6.8.0",
     "django-cors-headers>=4.7.0",
     "djangorestframework>=3.16.0",
     "djangorestframework-simplejwt>=5.5.0",
+    "djangorestframework-simplejwt[token-blacklist]>=5.5.0",
     "drf-nested-routers>=0.94.2",
     "django-filter>=25.0",
     "drf-spectacular>=0.28.0",
@@ -77,12 +82,20 @@ dependencies = [
     "django-redis>=6.0.0",
     "redis>=5.0.0",
     "hiredis>=2.0.0",
+    
+    # Optional services
+    "pyTelegramBotAPI>=4.28.0",
 ]
 
 [project.optional-dependencies]
 
+# Django compatibility - users should install one of these (minimum 5.2)
+django52 = ["django>=5.2,<6.0"]
+
 # Development dependencies
 dev = [
+    # Django for development
+    "django>=5.2,<6.0",
     # Testing
     "pytest>=7.0",
     "pytest-django>=4.5.0",
@@ -109,13 +122,13 @@ dev = [
 
 # Testing dependencies
 test = [
+    "django>=5.2,<6.0",
     "pytest>=7.0",
     "pytest-django>=4.5.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pytest-xdist>=3.0.0",
     "factory-boy>=3.2.0",
-    "django>=4.2,<6.0",
 ]
 
 # Documentation dependencies
@@ -150,6 +163,7 @@ include = [
 ]
 exclude = [
     "@*",
+    "django_sample",
     "tests",
     "scripts",
     "*.log",
@@ -296,3 +310,10 @@ ignore = [
 [tool.bandit]
 exclude_dirs = ["tests", "migrations"]
 skips = ["B101", "B601"]  # Skip assert_used and shell injection (handled by other tools)
+
+[tool.poetry.group.dev.dependencies]
+tomlkit = "^0.13.3"
+build = "^1.3.0"
+rich = "^14.1.0"
+questionary = "^2.1.0"
+

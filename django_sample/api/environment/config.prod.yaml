@@ -1,0 +1,45 @@
+# Production Environment Configuration
+# This file is for production deployment
+
+# === Core Django Settings ===
+secret_key: "django-cfg-sample-prod-key-CHANGE-THIS-IN-PRODUCTION-make-it-long-enough"
+debug: false
+
+# === Database ===
+database:
+  url: "postgresql://user:password@localhost:5432/django_cfg_sample"
+  url_blog: "postgresql://user:password@localhost:5432/django_cfg_sample_blog"
+  url_shop: "postgresql://user:password@localhost:5432/django_cfg_sample_shop"
+
+# === Application URLs ===
+app:
+  name: "Django CFG Sample"
+  domain: "sample.example.com"
+  api_url: "https://api.sample.example.com"
+  site_url: "https://sample.example.com"
+
+# === Email ===
+email:
+  backend: "smtp"
+  host: "smtp.example.com"
+  port: 587
+  username: "noreply@sample.example.com"
+  password: "your-email-password"
+  use_tls: true
+  use_ssl: false
+  default_from: "Django CFG Sample <noreply@sample.example.com>"
+
+# === Telegram Bot ===
+telegram:
+  bot_token: ""
+  chat_id: 0
+
+# === Cache ===
+redis_url: "redis://localhost:6379/1"
+
+# === Environment Flags ===
+env:
+  is_docker: true
+  is_dev: false
+  is_prod: true
+  debug: false

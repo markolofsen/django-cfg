@@ -28,10 +28,13 @@ Example:
     ```
 """
 
+# Configure Django app
+default_app_config = "django_cfg.apps.DjangoCfgConfig"
+
 from typing import TYPE_CHECKING
 
 # Version information
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __author__ = "Unrealos Team"
 __email__ = "info@unrealos.com"
 __license__ = "MIT"
@@ -46,6 +49,7 @@ if TYPE_CHECKING:
     from django_cfg.models.logging import LoggingConfig
     from django_cfg.models.third_party.revolution import RevolutionConfig, APIZone
     from django_cfg.models.unfold import UnfoldConfig, UnfoldColors, UnfoldSidebar
+    from django_cfg.models.constance import ConstanceConfig, ConstanceField
 
     # Dashboard models are now part of unfold module
     from django_cfg.models.environment import EnvironmentConfig
@@ -67,10 +71,6 @@ def __getattr__(name: str):
         from django_cfg.models.database import DatabaseConnection
 
         return DatabaseConnection
-    elif name == "DatabaseRoutingRule":
-        from django_cfg.models.database import DatabaseRoutingRule
-
-        return DatabaseRoutingRule
 
     # Cache models
     elif name == "CacheBackend":
@@ -266,6 +266,26 @@ def __getattr__(name: str):
 
         return RedocUISettings
 
+    # Constance models
+    elif name == "ConstanceConfig":
+        from django_cfg.models.constance import ConstanceConfig
+
+        return ConstanceConfig
+    elif name == "ConstanceField":
+        from django_cfg.models.constance import ConstanceField
+
+        return ConstanceField
+
+    # URL integration
+    elif name == "add_django_cfg_urls":
+        from django_cfg.integration import add_django_cfg_urls
+
+        return add_django_cfg_urls
+    elif name == "get_django_cfg_urls_info":
+        from django_cfg.integration import get_django_cfg_urls_info
+
+        return get_django_cfg_urls_info
+
     # Unknown attribute
     else:
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
@@ -277,7 +297,6 @@ __all__ = [
     "DjangoConfig",
     # Database
     "DatabaseConnection",
-    "DatabaseRoutingRule",
     # Cache
     "CacheBackend",
     # Security
@@ -327,4 +346,10 @@ __all__ = [
     "SpectacularConfig",
     "SwaggerUISettings",
     "RedocUISettings",
+    # Constance
+    "ConstanceConfig",
+    "ConstanceField",
+    # URL integration
+    "add_django_cfg_urls",
+    "get_django_cfg_urls_info",
 ]

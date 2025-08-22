@@ -1,0 +1,25 @@
+{
+  "zone_name": "users",
+  "timestamp": "20250822_052234",
+  "archive_date": "2025-08-22T05:22:35.023071",
+  "generator_version": "2.0.0",
+  "clients": {
+    "typescript": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/backend/django/packages/django-cfg/django_sample/openapi/clients/typescript/users",
+      "file_count": 14,
+      "size_bytes": 67224,
+      "size_mb": 0.06
+    },
+    "python": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/backend/django/packages/django-cfg/django_sample/openapi/clients/python/users",
+      "file_count": 25,
+      "size_bytes": 52813,
+      "size_mb": 0.05
+    }
+  },
+  "total_files": 39,
+  "total_size_bytes": 120037,
+  "total_size_mb": 0.11
+}

@@ -39,6 +39,7 @@ def show_main_menu():
             questionary.Choice("📦 Version Management", value="version"),
             questionary.Choice("🚀 Publish Package", value="publish"),
             questionary.Choice("🔧 Build Package", value="build"),
+            questionary.Choice("📄 Generate Requirements", value="requirements"),
             questionary.Choice("🧪 Run Tests", value="test"),
             questionary.Choice("❌ Exit", value="exit"),
         ],
@@ -153,6 +154,22 @@ def handle_build():
             console.print(f"❌ Build failed: {e}")
 
 
+def handle_requirements():
+    """Handle requirements generation."""
+    console.print(Panel("Generate Requirements Files", title="📄 Requirements", border_style="magenta"))
+
+    confirm = questionary.confirm(
+        "Generate requirements.txt files from pyproject.toml?", default=True
+    ).ask()
+
+    if confirm:
+        try:
+            subprocess.run([sys.executable, "scripts/generate_requirements.py"], check=True)
+            console.print("✅ Requirements files generated successfully")
+        except subprocess.CalledProcessError as e:
+            console.print(f"❌ Requirements generation failed: {e}")
+
+
 def handle_tests():
     """Handle running tests."""
     console.print(Panel("Running Tests", title="🧪 Tests", border_style="cyan"))
@@ -202,6 +219,8 @@ def main():
                 handle_publishing()
             elif choice == "build":
                 handle_build()
+            elif choice == "requirements":
+                handle_requirements()
             elif choice == "test":
                 handle_tests()
 

@@ -84,7 +84,7 @@ def list_commands_view(request):
 @user_passes_test(is_superuser)
 def execute_command_view(request):
     """
-    Execute a Django management command and return output.
+    Execute a Django management command and stream output in real-time.
     
     Expected JSON payload:
     {
@@ -92,6 +92,9 @@ def execute_command_view(request):
         "args": ["arg1", "arg2"],
         "options": {"--option": "value"}
     }
+    
+    Returns:
+        StreamingHttpResponse with Server-Sent Events format
     """
     try:
         # Parse request data
@@ -128,66 +131,102 @@ def execute_command_view(request):
                 "suggestion": "Use django_cfg management commands instead: show_config, test_email",
             }, status=403)
         
-        # Execute command safely
-        start_time = time.time()
-        
-        try:
-            # Capture command output
-            import io
-            import sys
-            from contextlib import redirect_stdout, redirect_stderr
+        # Create streaming response generator
+        def stream_command_execution():
+            """Generator that yields command output in SSE format."""
+            start_time = time.time()
             
-            stdout_buffer = io.StringIO()
-            stderr_buffer = io.StringIO()
+            # Send start event
+            yield f"data: {json.dumps({'type': 'start', 'command': command_name, 'args': args})}\n\n"
             
-            with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                # Convert options dict to proper format
-                formatted_options = {}
-                for key, value in options.items():
-                    clean_key = key.lstrip('-').replace('-', '_')
-                    formatted_options[clean_key] = value
+            try:
+                # Execute command with subprocess for real-time output
+                import subprocess
+                import sys
+                import os
                 
-                call_command(command_name, *args, **formatted_options)
-            
-            stdout_content = stdout_buffer.getvalue()
-            stderr_content = stderr_buffer.getvalue()
-            
-            execution_time = time.time() - start_time
-            
-            # Log command execution
-            logger.info(
-                f"Command executed: {command_name} {' '.join(args)} "
-                f"by user {request.user.username} in {execution_time:.2f}s"
-            )
-            
-            return JsonResponse({
-                "status": "success",
-                "command": command_name,
-                "args": args,
-                "options": options,
-                "stdout": stdout_content,
-                "stderr": stderr_content,
-                "execution_time": round(execution_time, 2),
-                "timestamp": timezone.now().isoformat(),
-            })
-            
-        except Exception as cmd_error:
-            execution_time = time.time() - start_time
-            
-            logger.error(
-                f"Command failed: {command_name} {' '.join(args)} "
-                f"by user {request.user.username}: {cmd_error}"
-            )
-            
-            return JsonResponse({
-                "status": "error",
-                "command": command_name,
-                "args": args,
-                "options": options,
-                "error": str(cmd_error),
-                "execution_time": round(execution_time, 2),
-                "timestamp": timezone.now().isoformat(),
-            }, status=500)
+                # Find Django project root and manage.py
+                from django.conf import settings
+                
+                # Try to find manage.py in project root
+                if hasattr(settings, 'BASE_DIR'):
+                    project_root = settings.BASE_DIR
+                    manage_py_path = os.path.join(project_root, 'manage.py')
+                else:
+                    # Fallback: search for manage.py
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    while current_dir != '/':
+                        manage_py_path = os.path.join(current_dir, 'manage.py')
+                        if os.path.exists(manage_py_path):
+                            project_root = current_dir
+                            break
+                        current_dir = os.path.dirname(current_dir)
+                    else:
+                        raise Exception("Could not find manage.py")
+                
+                # Build command
+                cmd = [sys.executable, manage_py_path, command_name] + args
+                
+                # Add options to command
+                for key, value in options.items():
+                    if key.startswith('--'):
+                        cmd.append(key)
+                        if value is not True:  # Boolean flags don't need values
+                            cmd.append(str(value))
+                    else:
+                        cmd.append(f"--{key}")
+                        if value is not True:
+                            cmd.append(str(value))
+                
+                # Start process
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                    bufsize=1,
+                    cwd=project_root
+                )
+                
+                # Stream output line by line
+                for line in iter(process.stdout.readline, ''):
+                    if line:
+                        line = line.rstrip('\n\r')
+                        yield f"data: {json.dumps({'type': 'output', 'line': line})}\n\n"
+                
+                # Wait for process to complete
+                return_code = process.wait()
+                execution_time = time.time() - start_time
+                
+                # Send completion event
+                yield f"data: {json.dumps({'type': 'complete', 'return_code': return_code, 'execution_time': round(execution_time, 2)})}\n\n"
+                
+                # Log command execution
+                logger.info(
+                    f"Command executed: {command_name} {' '.join(args)} "
+                    f"by user {request.user.username} in {execution_time:.2f}s with exit code {return_code}"
+                )
+                
+            except Exception as cmd_error:
+                execution_time = time.time() - start_time
+                
+                logger.error(
+                    f"Command failed: {command_name} {' '.join(args)} "
+                    f"by user {request.user.username}: {cmd_error}"
+                )
+                
+                # Send error event
+                yield f"data: {json.dumps({'type': 'error', 'error': str(cmd_error), 'execution_time': round(execution_time, 2)})}\n\n"
+        
+        # Return streaming response
+        response = StreamingHttpResponse(
+            stream_command_execution(),
+            content_type='text/event-stream'
+        )
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        
+        return response
         
     except json.JSONDecodeError:
         return JsonResponse({

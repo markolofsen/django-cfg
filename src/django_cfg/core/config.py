@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from django_cfg.exceptions import ConfigurationError, ValidationError, EnvironmentError
-from django_cfg.models.database import DatabaseConnection, DatabaseRoutingRule
+from django_cfg.models.database import DatabaseConnection
 from django_cfg.models.cache import CacheBackend
 from django_cfg.models.services import EmailConfig, TelegramConfig
 from django_cfg.models.unfold import UnfoldConfig
@@ -129,11 +129,6 @@ class DjangoConfig(BaseModel):
     databases: Dict[str, DatabaseConnection] = Field(
         default_factory=dict,
         description="Database connections",
-    )
-
-    database_routing: List[DatabaseRoutingRule] = Field(
-        default_factory=list,
-        description="Database routing rules for multi-database setups",
     )
 
     # === Cache Configuration ===
@@ -271,16 +266,15 @@ class DjangoConfig(BaseModel):
         if "default" not in self.databases:
             raise ConfigurationError("'default' database is required", context={"available_databases": list(self.databases.keys())}, suggestions=["Add a database with alias 'default'"])
 
-        # Validate database routing consistency
-        if self.database_routing:
-            referenced_databases = {rule.database for rule in self.database_routing}
-            for rule in self.database_routing:
-                if rule.migrate_to:
-                    referenced_databases.add(rule.migrate_to)
+        # Validate database routing consistency - check migrate_to references
+        referenced_databases = set()
+        for alias, db_config in self.databases.items():
+            if db_config.migrate_to:
+                referenced_databases.add(db_config.migrate_to)
 
-            missing_databases = referenced_databases - set(self.databases.keys())
-            if missing_databases:
-                raise ConfigurationError(f"Database routing references non-existent databases: {missing_databases}", context={"available_databases": list(self.databases.keys())}, suggestions=[f"Add database configurations for: {', '.join(missing_databases)}"])
+        missing_databases = referenced_databases - set(self.databases.keys())
+        if missing_databases:
+            raise ConfigurationError(f"Database routing references non-existent databases: {missing_databases}", context={"available_databases": list(self.databases.keys())}, suggestions=[f"Add database configurations for: {', '.join(missing_databases)}"])
 
         return self
 
@@ -439,10 +433,63 @@ class DjangoConfig(BaseModel):
             for i, app in enumerate(unfold_apps):
                 apps.insert(i, app)
 
+        # Auto-detect dashboard apps from Unfold callback
+        dashboard_apps = self._get_dashboard_apps_from_callback()
+        apps.extend(dashboard_apps)
+
         # Add project-specific apps
         apps.extend(self.project_apps)
 
         return apps
+
+    def _get_dashboard_apps_from_callback(self) -> List[str]:
+        """
+        Auto-detect dashboard apps from Unfold dashboard_callback setting.
+
+        Extracts app names from callback paths like:
+        - "api.dashboard.callbacks.main_dashboard_callback" -> ["api.dashboard"]
+        - "myproject.admin.callbacks.dashboard" -> ["myproject.admin"]
+
+        Returns:
+            List of dashboard app names to add to INSTALLED_APPS
+        """
+        dashboard_apps = []
+
+        if not self.unfold or not self.unfold.theme:
+            return dashboard_apps
+
+        callback_path = getattr(self.unfold.theme, "dashboard_callback", None)
+        if not callback_path:
+            return dashboard_apps
+
+        try:
+            # Parse callback path: "api.dashboard.callbacks.main_dashboard_callback"
+            # Extract app part: "api.dashboard"
+            parts = callback_path.split(".")
+
+            # Look for common callback patterns
+            callback_indicators = ["callbacks", "views", "handlers"]
+
+            # Find the callback indicator and extract app path before it
+            app_parts = []
+            for i, part in enumerate(parts):
+                if part in callback_indicators:
+                    app_parts = parts[:i]  # Everything before the callback indicator
+                    break
+
+            # If no callback indicator found, assume last part is function name
+            if not app_parts and len(parts) > 1:
+                app_parts = parts[:-1]  # Everything except the last part
+
+            if app_parts:
+                app_name = ".".join(app_parts)
+                dashboard_apps.append(app_name)
+
+        except Exception:
+            # If parsing fails, silently continue - dashboard callback is optional
+            pass
+
+        return dashboard_apps
 
     def get_middleware(self) -> List[str]:
         """

@@ -1,0 +1,15 @@
+{
+  "name": "django-cfg-sample",
+  "version": "1.0.0",
+  "description": "Django CFG Sample Project",
+  "license": "ISC",
+  "author": "Unrealos",
+  "scripts": {
+    "env": "poetry env activate",
+    "cli": "poetry run cli",
+    "dev": "poetry run cli runserver"
+  },
+  "dependencies": {
+    "@hey-api/openapi-ts": "^0.80.18"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@unrealosshop",
+  "version": "1.0.30",
+  "description": "E-commerce products, orders and categories",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "api",
+    "typescript"
+  ],
+  "author": "Unrealos",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {},
+  "files": [
+    "*.ts",
+    "*.d.ts"
+  ]
+} 

@@ -308,34 +308,50 @@ class UnfoldCallbacks(BaseModule):
 
     def get_quick_actions(self) -> List[QuickAction]:
         """Get quick action buttons as Pydantic models."""
+        # Get user admin URLs dynamically based on AUTH_USER_MODEL
+        user_admin_urls = get_user_admin_urls()
+        
         actions = [
             QuickAction(
                 title="Add User",
                 description="Create new user account",
                 icon="person_add",
-                link="/admin/auth/user/add/",
+                link=user_admin_urls["add"],
                 color="primary",
-                category="admin",
-            ),
-            QuickAction(
-                title="System Settings",
-                description="Configure system settings",
-                icon="settings",
-                link="/admin/",
-                color="warning",
                 category="admin",
             ),
             QuickAction(
                 title="Health Check",
                 description="System health status",
                 icon="health_and_safety",
-                link="/admin/",
+                link="django_cfg_health",
                 color="success",
                 category="system",
             ),
-        ]
+        ] 
+        
+        # Automatically add Constance settings if configured
+        if self._is_constance_configured():
+            actions.append(
+                QuickAction(
+                    title="System Settings",
+                    description="Configure dynamic settings",
+                    icon="settings",
+                    link="/admin/constance/config/",
+                    color="warning",
+                    category="admin",
+                )
+            )
 
         return actions
+
+    def _is_constance_configured(self) -> bool:
+        """Check if Constance is configured."""
+        try:
+            from django.conf import settings
+            return bool(getattr(settings, 'CONSTANCE_CONFIG', {}))
+        except Exception:
+            return False
 
     def get_django_commands(self) -> Dict[str, Any]:
         """Get Django management commands information."""
@@ -593,22 +609,10 @@ class UnfoldCallbacks(BaseModule):
         Returns all dashboard data as Pydantic models for type safety.
         """
         try:
-            logger.info("=== DJANGO_CFG DASHBOARD CALLBACK STARTED ===")
-            logger.info(f"Request user: {request.user}")
-            logger.info(f"Initial context keys: {list(context.keys())}")
-
             # Get dashboard data using Pydantic models
-            logger.info("Getting user statistics...")
             user_stats = self.get_user_statistics()
-            logger.info(f"User stats count: {len(user_stats)}")
-
-            logger.info("Getting system health...")
             system_health = self.get_system_health()
-            logger.info(f"System health items: {len(system_health)}")
-
-            logger.info("Getting quick actions...")
             quick_actions = self.get_quick_actions()
-            logger.info(f"Quick actions count: {len(quick_actions)}")
 
             dashboard_data = DashboardData(
                 stat_cards=user_stats,
@@ -618,12 +622,8 @@ class UnfoldCallbacks(BaseModule):
                 environment=getattr(settings, "ENVIRONMENT", "development"),
             )
 
-            logger.info(f"Dashboard data created: {len(dashboard_data.stat_cards)} cards")
-
             # Convert to template context (keeping Pydantic validation)
-            logger.info("Converting to template context...")
             cards_data = [card.model_dump() for card in dashboard_data.stat_cards]
-            logger.info(f"Cards data: {cards_data}")
 
             context.update({
                 # Statistics cards
@@ -675,9 +675,9 @@ class UnfoldCallbacks(BaseModule):
                 "dashboard_title": "Django CFG Dashboard",
             })
 
-            logger.info(f"Final context keys: {list(context.keys())}")
-            logger.info(f"Cards in context: {len(context.get('cards', []))}")
-            logger.info("=== DJANGO_CFG DASHBOARD CALLBACK COMPLETED ===")
+            # logger.info(f"Final context keys: {list(context.keys())}")
+            # logger.info(f"Cards in context: {len(context.get('cards', []))}")
+            # logger.info("=== DJANGO_CFG DASHBOARD CALLBACK COMPLETED ===")
 
             return context
 

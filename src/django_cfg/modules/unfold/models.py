@@ -8,10 +8,12 @@ Following CRITICAL_REQUIREMENTS.md - NO raw dicts, ALL type-safe.
 from typing import List, Optional, Any, Dict
 from datetime import datetime
 from pydantic import BaseModel, Field
+from django.urls import reverse
 
 
 class StatCard(BaseModel):
     """Statistics card model for dashboard."""
+
     title: str = Field(..., description="Card title")
     value: str = Field(..., description="Main value to display")
     icon: str = Field(..., description="Material icon name")
@@ -23,6 +25,7 @@ class StatCard(BaseModel):
 
 class SystemHealthItem(BaseModel):
     """System health status item."""
+
     component: str = Field(..., description="Component name (database, cache, etc.)")
     status: str = Field(..., description="Status: healthy, warning, error, unknown")
     description: str = Field(..., description="Status description")
@@ -32,16 +35,46 @@ class SystemHealthItem(BaseModel):
 
 class QuickAction(BaseModel):
     """Quick action button for dashboard."""
+
     title: str = Field(..., description="Action title")
     description: str = Field(..., description="Action description")
     icon: str = Field(..., description="Material icon name")
-    link: str = Field(..., description="Action URL")
+    link: str = Field(..., description="Action URL or URL name")
     color: str = Field("primary", description="Button color")
     category: str = Field("general", description="Action category")
+
+    def get_resolved_url(self) -> str:
+        """
+        Resolve URL name to full URL if needed.
+
+        Returns:
+            Full URL string - either the original link if it's already a URL,
+            or the resolved URL if it's a URL name.
+        """
+        # If link starts with '/' or 'http', it's already a full URL
+        if self.link.startswith(("/", "http")):
+            return self.link
+
+        # Try to resolve as URL name
+        try:
+            from django.urls import reverse
+            from django.urls.exceptions import NoReverseMatch
+            return reverse(self.link)
+        except (NoReverseMatch, ImportError, Exception):
+            # If reverse fails, return the original link
+            return self.link
+
+    def model_dump(self, **kwargs) -> dict:
+        """Override model_dump to include resolved URL."""
+        data = super().model_dump(**kwargs)
+        # Replace link with resolved URL
+        data["link"] = self.get_resolved_url()
+        return data
 
 
 class DashboardData(BaseModel):
     """Main dashboard data container."""
+
     stat_cards: List[StatCard] = Field(default_factory=list, description="Statistics cards")
     system_health: List[SystemHealthItem] = Field(default_factory=list, description="System health items")
     quick_actions: List[QuickAction] = Field(default_factory=list, description="Quick action buttons")
@@ -51,6 +84,7 @@ class DashboardData(BaseModel):
 
 class ChartDataset(BaseModel):
     """Chart dataset for dashboard charts."""
+
     label: str = Field(..., description="Dataset label")
     data: List[int] = Field(default_factory=list, description="Data points")
     backgroundColor: str = Field(..., description="Background color")
@@ -60,5 +94,6 @@ class ChartDataset(BaseModel):
 
 class ChartData(BaseModel):
     """Chart data structure."""
+
     labels: List[str] = Field(default_factory=list, description="Chart labels")
     datasets: List[ChartDataset] = Field(default_factory=list, description="Chart datasets")

@@ -238,14 +238,16 @@ class SmartDefaults:
     def get_database_defaults(
         cls,
         environment: Optional[str] = None,
-        debug: bool = False
+        debug: bool = False,
+        engine: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Get database defaults based on environment.
+        Get database defaults based on environment and engine.
         
         Args:
             environment: Current environment
             debug: Django DEBUG setting
+            engine: Database engine (to determine which options to apply)
             
         Returns:
             Database settings dictionary
@@ -264,24 +266,36 @@ class SmartDefaults:
                 }
                 
             elif environment == "development" or debug:
-                # Development: Use local SQLite or PostgreSQL
-                defaults = {
-                    'OPTIONS': {
-                        'connect_timeout': 5,  # Short timeout for dev
-                        'sslmode': 'prefer',
+                # Development: Only add PostgreSQL/MySQL specific options
+                if engine and engine in ("django.db.backends.postgresql", "django.db.backends.mysql"):
+                    defaults = {
+                        'OPTIONS': {
+                            'connect_timeout': 5,  # Short timeout for dev
+                        }
                     }
-                }
+                    # Add sslmode only for PostgreSQL
+                    if engine == "django.db.backends.postgresql":
+                        defaults['OPTIONS']['sslmode'] = 'prefer'
+                else:
+                    # For SQLite, no special options needed
+                    defaults = {}
                 
             elif environment in ("production", "staging"):
-                # Production: Use PostgreSQL with connection pooling
-                defaults = {
-                    'OPTIONS': {
-                        'connect_timeout': 10,
-                        'sslmode': 'require',  # Require SSL in production
-                        'pool_size': 20,
-                        'max_overflow': 30,
+                # Production: Only add PostgreSQL/MySQL specific options
+                if engine and engine in ("django.db.backends.postgresql", "django.db.backends.mysql"):
+                    defaults = {
+                        'OPTIONS': {
+                            'connect_timeout': 10,
+                            'pool_size': 20,
+                            'max_overflow': 30,
+                        }
                     }
-                }
+                    # Add sslmode only for PostgreSQL
+                    if engine == "django.db.backends.postgresql":
+                        defaults['OPTIONS']['sslmode'] = 'require'  # Require SSL in production
+                else:
+                    # For SQLite, no special options needed
+                    defaults = {}
             
             return defaults
             

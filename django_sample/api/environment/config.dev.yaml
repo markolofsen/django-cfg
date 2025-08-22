@@ -1,0 +1,43 @@
+# Development Environment Configuration
+# This file is for local development
+
+# === Core Django Settings ===
+secret_key: "django-cfg-sample-dev-key-change-in-production-this-is-long-enough-now"
+debug: true
+
+# === Database ===
+database:
+  url: "sqlite:///db/db.sqlite3"
+  url_blog: "sqlite:///db/blog.sqlite3"
+  url_shop: "sqlite:///db/shop.sqlite3"
+
+# === Application URLs ===
+app:
+  name: "Django CFG Sample"
+  domain: "localhost"
+  api_url: "http://localhost:8000"
+  site_url: "http://localhost:3000"
+
+# === Email ===
+email:
+  backend: "console"
+  host: "localhost"
+  port: 587
+  use_tls: true
+  use_ssl: false
+  default_from: "Django CFG Sample <noreply@sample.local>"
+
+# === Telegram Bot ===
+telegram:
+  bot_token: ""
+  chat_id: 0
+
+# === Cache ===
+# redis_url: "redis://localhost:6379/1"
+
+# === Environment Flags ===
+env:
+  is_docker: false
+  is_dev: true
+  is_prod: false
+  debug: true

@@ -104,6 +104,21 @@ def main():
                 else:
                     path.unlink()
 
+    # Generate requirements files before building
+    console.print("[yellow]Generating requirements files...[/yellow]")
+    try:
+        requirements_result = subprocess.run([
+            sys.executable, "scripts/generate_requirements.py"
+        ], check=True, capture_output=True, text=True)
+        console.print("✅ Requirements files generated from pyproject.toml")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]❌ Requirements generation failed: {e}[/red]")
+        if e.stdout:
+            console.print(f"[red]stdout: {e.stdout}[/red]")
+        if e.stderr:
+            console.print(f"[red]stderr: {e.stderr}[/red]")
+        return 1
+
     # Build step
     console.print("[yellow]Building the package...[/yellow]")
     build_result = subprocess.run(

@@ -1,12 +1,16 @@
 {
   "name": "django-cfg",
   "version": "1.0.0",
-  "description": "**Django Config Toolkit**",
+  "description": "Django CFG",
   "license": "ISC",
   "author": "Unrealos",
   "scripts": {
     "commit": "npx openrouter-commit -run",
     "commit2": "git add . && git commit -m 'fixes' && git push",
+    "env": "poetry env activate",
     "cli": "poetry run python scripts/dev_cli.py"
+  },
+  "dependencies": {
+    "@hey-api/openapi-ts": "^0.80.18"
   }
 }
