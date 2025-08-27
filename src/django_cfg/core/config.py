@@ -23,6 +23,46 @@ from django_cfg.models.unfold import UnfoldConfig
 from django_cfg.models.drf import DRFConfig, SpectacularConfig
 
 
+# Default apps
+DEFAULT_APPS = [
+    # Unfold
+    "unfold",
+    "unfold.contrib.filters",  # optional, if special filters are needed
+    "unfold.contrib.forms",  # optional, if special form elements are needed
+    "unfold.contrib.inlines",  # optional, if special inlines are needed
+    "unfold.contrib.import_export",  # optional, if django-import-export package is used
+    "unfold.contrib.guardian",  # optional, if django-guardian package is used
+    "unfold.contrib.simple_history",  # optional, if django-simple-history package is used
+    "unfold.contrib.location_field",  # optional, if django-location-field package is used
+    "unfold.contrib.constance",  # optional, if django-constance package is used
+    # Django
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.humanize",
+    # Third-party
+    "corsheaders",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "rest_framework_nested",
+    "django_filters",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    "django_json_widget",
+    "django_extensions",
+    "constance",
+    "constance.backends.database",
+    # Django CFG
+    "django_cfg",
+    "django_revolution",
+]
+
+
 class DjangoConfig(BaseModel):
     """
     Base configuration class for Django projects.
@@ -398,40 +438,7 @@ class DjangoConfig(BaseModel):
             List of Django app names
         """
         # Standard Django apps (always included)
-        apps = [
-            "django.contrib.admin",
-            "django.contrib.auth",
-            "django.contrib.contenttypes",
-            "django.contrib.sessions",
-            "django.contrib.messages",
-            "django.contrib.staticfiles",
-            "django.contrib.humanize",
-            "corsheaders",
-            "rest_framework",
-            "rest_framework.authtoken",
-            "rest_framework_simplejwt",
-            "rest_framework_simplejwt.token_blacklist",
-            "rest_framework_nested",
-            "django_filters",
-            "drf_spectacular",
-            "drf_spectacular_sidecar",
-            "django_json_widget",
-            "django_extensions",
-            "constance",
-            "constance.backends.database",
-        ]
-
-        # Add django_cfg itself (for management commands)
-        apps.append("django_cfg")
-        apps.append("django_revolution")
-
-        # Add third-party apps based on configuration
-        if self.unfold:
-            # Unfold must be added before django.contrib.admin
-            unfold_apps = self.unfold.get_installed_apps()
-            # Insert before admin (which is at index 0)
-            for i, app in enumerate(unfold_apps):
-                apps.insert(i, app)
+        apps = DEFAULT_APPS.copy()
 
         # Auto-detect dashboard apps from Unfold callback
         dashboard_apps = self._get_dashboard_apps_from_callback()
@@ -439,6 +446,10 @@ class DjangoConfig(BaseModel):
 
         # Add project-specific apps
         apps.extend(self.project_apps)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        apps = [app for app in apps if not (app in seen or seen.add(app))]
 
         return apps
 

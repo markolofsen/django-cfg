@@ -13,6 +13,7 @@ from django.db.migrations.recorder import MigrationRecorder
 from django.conf import settings
 import questionary
 from datetime import datetime
+from django_cfg.core.config import DEFAULT_APPS
 
 
 class Command(BaseCommand):
@@ -101,7 +102,19 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("📝 Creating migrations..."))
 
         try:
+            # First try global makemigrations
             call_command("makemigrations", verbosity=1)
+            
+            # Then try for each app that has models but no migrations
+            all_apps = self.get_all_installed_apps()
+            for app in all_apps:
+                if self.app_has_models(app) and not self.app_has_migrations(app):
+                    try:
+                        self.stdout.write(f"  📝 Creating migrations for {app}...")
+                        call_command("makemigrations", app, verbosity=1)
+                    except Exception as e:
+                        self.stdout.write(self.style.WARNING(f"  ⚠️  Could not create migrations for {app}: {e}"))
+            
             self.stdout.write(self.style.SUCCESS("✅ Migrations created"))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f"⚠️  Warning creating migrations: {e}"))
@@ -121,12 +134,15 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"  ⚠️  No apps configured for {db_name}"))
                 return
 
+            # make migrations for all apps
+            self.create_migrations()
+
             # Migrate each app
             for app in apps:
                 try:
                     # Skip apps without migrations
                     if not self.app_has_migrations(app):
-                        self.stdout.write(f"  ⚠️  Skipping {app} - no migrations")
+                        # self.stdout.write(f"  ⚠️  Skipping {app} - no migrations")
                         continue
 
                     self.stdout.write(f"  📦 Migrating {app}...")
@@ -254,7 +270,8 @@ class Command(BaseCommand):
             # Check if apps.py exists in the app directory
             apps_py_path = app_path / "apps.py"
             if apps_py_path.exists():
-                apps_list.append(app_label)
+                if app_label not in DEFAULT_APPS:
+                    apps_list.append(app_label)
                 continue
 
             # Fallback: check if it's a standard Django app (has models.py or admin.py)
@@ -320,6 +337,31 @@ class Command(BaseCommand):
 
             # If no applied migrations found, check if there are migration files
             return len(migration_files) > 0
+
+        except Exception:
+            # Silently return False for apps that don't exist or have issues
+            return False
+
+    def app_has_models(self, app_label: str) -> bool:
+        """Check if an app has models defined."""
+        try:
+            # Get the app config
+            app_config = apps.get_app_config(app_label)
+            if not app_config:
+                return False
+
+            # Check if models.py exists and has content
+            models_file = Path(app_config.path) / "models.py"
+            if models_file.exists():
+                # Read the file and check if it has model definitions
+                content = models_file.read_text()
+                # Simple check for model definitions
+                if "class " in content and "models.Model" in content:
+                    return True
+
+            # Also check if the app has any registered models
+            models = app_config.get_models()
+            return len(models) > 0
 
         except Exception:
             # Silently return False for apps that don't exist or have issues
