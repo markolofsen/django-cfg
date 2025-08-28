@@ -11,7 +11,7 @@ from enum import Enum
 import yaml
 from django_cfg.modules import BaseModule
 from django_cfg.exceptions import ConfigurationError
-
+import telebot
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,6 @@ class DjangoTelegram(BaseModule):
 
         if self._bot is None:
             try:
-                import telebot
 
                 telegram_config = self.config.telegram
                 self._bot = telebot.TeleBot(telegram_config.bot_token)

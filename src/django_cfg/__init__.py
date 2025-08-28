@@ -34,7 +34,7 @@ default_app_config = "django_cfg.apps.DjangoCfgConfig"
 from typing import TYPE_CHECKING
 
 # Version information
-__version__ = "1.1.7"
+__version__ = "1.1.8"
 __author__ = "Unrealos Team"
 __email__ = "info@unrealos.com"
 __license__ = "MIT"
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from django_cfg.models.cache import CacheBackend
     from django_cfg.models.security import SecuritySettings
     from django_cfg.models.services import EmailConfig, TelegramConfig
+    from django_cfg.models.jwt import JWTConfig
     from django_cfg.models.logging import LoggingConfig
     from django_cfg.models.third_party.revolution import RevolutionConfig, APIZone
     from django_cfg.models.unfold import UnfoldConfig, UnfoldColors, UnfoldSidebar
@@ -93,6 +94,10 @@ def __getattr__(name: str):
         from django_cfg.models.services import TelegramConfig
 
         return TelegramConfig
+    elif name == "JWTConfig":
+        from django_cfg.models.jwt import JWTConfig
+
+        return JWTConfig
 
     # Logging models
     elif name == "LoggingConfig":
@@ -304,6 +309,7 @@ __all__ = [
     # Services
     "EmailConfig",
     "TelegramConfig",
+    "JWTConfig",
     # Logging
     "LoggingConfig",
     # Third-party integrations

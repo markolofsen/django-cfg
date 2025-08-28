@@ -124,14 +124,14 @@ class SmartDefaults:
                 config.backend_override = "django.core.mail.backends.locmem.EmailBackend"
                 config.timeout = min(config.timeout, 5)  # Very short timeout
                 
-            elif environment == "development" or debug:
-                # Development: Use console or file backend
+            elif environment == "development":
+                # Development: Use SMTP if configured, otherwise console
                 if not config.username or not config.password:
                     # No SMTP credentials - use console backend
                     config.backend_override = "django.core.mail.backends.console.EmailBackend"
                 else:
-                    # SMTP configured but in dev - still use console for safety
-                    config.backend_override = "django.core.mail.backends.console.EmailBackend"
+                    # SMTP configured - use SMTP backend
+                    config.backend_override = "django.core.mail.backends.smtp.EmailBackend"
                     
             elif environment in ("production", "staging"):
                 # Production: Use SMTP if properly configured

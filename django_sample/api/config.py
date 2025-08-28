@@ -7,6 +7,7 @@ This is a complete example showing all django_cfg features:
 - Multiple databases with routing
 - Cache configuration
 - Email and Telegram services
+- JWT authentication configuration
 - Unfold admin interface
 - Constance dynamic settings
 - DRF API configuration
@@ -21,6 +22,7 @@ from django_cfg import (
     CacheBackend,
     EmailConfig,
     TelegramConfig,
+    JWTConfig,
     UnfoldConfig,
     UnfoldTheme,
     UnfoldColors,
@@ -138,6 +140,22 @@ class SampleProjectConfig(DjangoConfig):
         )
         if env.telegram.bot_token and env.telegram.chat_id != 0
         else None
+    )
+
+    # === JWT Configuration ===
+    jwt: Optional[JWTConfig] = JWTConfig(
+        # Environment-aware token lifetimes
+        access_token_lifetime_hours=1 if debug else 24,
+        refresh_token_lifetime_days=7 if debug else 30,
+        
+        # Security settings
+        rotate_refresh_tokens=True,
+        blacklist_after_rotation=True,
+        update_last_login=True,
+        
+        # Optional: Custom claims for sample project
+        audience="django-cfg-sample",
+        issuer="django-cfg",
     )
 
     # === Unfold Admin Configuration ===

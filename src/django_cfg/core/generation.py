@@ -381,6 +381,12 @@ class SettingsGenerator:
                 settings.update(constance_settings)
                 integrations.append("constance")
 
+            # Check for JWT configuration
+            if hasattr(config, "jwt") and config.jwt:
+                jwt_settings = config.jwt.to_django_settings(config.secret_key)
+                settings.update(jwt_settings)
+                integrations.append("jwt")
+
             # Check for Django Revolution configuration
             if hasattr(config, "revolution") and config.revolution:
                 revolution_settings = {
