@@ -8,7 +8,8 @@
     "commit": "npx openrouter-commit -run",
     "commit2": "git add . && git commit -m 'fixes' && git push",
     "env": "poetry env activate",
-    "cli": "poetry run python scripts/dev_cli.py"
+    "cli": "poetry run python scripts/dev_cli.py",
+    "install-local": "poetry install --extras local-dev"
   },
   "dependencies": {
     "@hey-api/openapi-ts": "^0.80.18"
