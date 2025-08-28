@@ -27,6 +27,10 @@ def cli():
 @click.option('--host', default='127.0.0.1', help='Host to bind to')
 def runserver(port, host):
     """Run Django development server."""
+
+    # kill all django processes
+    os.system('pkill -f "manage.py runserver"')
+
     setup_django()
     execute_from_command_line(['manage.py', 'runserver', f'{host}:{port}'])
 

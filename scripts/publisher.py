@@ -9,6 +9,8 @@ import os
 import sys
 import subprocess
 import questionary
+import tomlkit
+import shutil
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
@@ -19,6 +21,41 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.version_manager import VersionManager
 
 console = Console()
+
+
+def clean_pyproject_for_publishing():
+    """Temporarily remove local-dev dependencies for PyPI publishing."""
+    pyproject_path = Path("pyproject.toml")
+    backup_path = Path("pyproject.toml.backup")
+    
+    # Create backup
+    shutil.copy2(pyproject_path, backup_path)
+    console.print("[yellow]📝 Created backup of pyproject.toml[/yellow]")
+    
+    # Load and modify pyproject.toml
+    with open(pyproject_path, 'r', encoding='utf-8') as f:
+        content = tomlkit.load(f)
+    
+    # Remove local-dev from optional-dependencies
+    if 'project' in content and 'optional-dependencies' in content['project']:
+        optional_deps = content['project']['optional-dependencies']
+        if 'local-dev' in optional_deps:
+            del optional_deps['local-dev']
+            console.print("[yellow]🗑️  Removed local-dev dependencies for PyPI compatibility[/yellow]")
+    
+    # Write cleaned version
+    with open(pyproject_path, 'w', encoding='utf-8') as f:
+        tomlkit.dump(content, f)
+    
+    return backup_path
+
+
+def restore_pyproject(backup_path):
+    """Restore original pyproject.toml from backup."""
+    pyproject_path = Path("pyproject.toml")
+    if backup_path.exists():
+        shutil.move(backup_path, pyproject_path)
+        console.print("[green]✅ Restored original pyproject.toml[/green]")
 
 
 def main():
@@ -99,7 +136,6 @@ def main():
             if path.exists():
                 console.print(f"[blue]Removing old {path}...[/blue]")
                 if path.is_dir():
-                    import shutil
                     shutil.rmtree(path)
                 else:
                     path.unlink()
@@ -119,24 +155,27 @@ def main():
             console.print(f"[red]stderr: {e.stderr}[/red]")
         return 1
 
-    # Build step
-    console.print("[yellow]Building the package...[/yellow]")
-    build_result = subprocess.run(
-        [sys.executable, "-m", "build"], capture_output=True, text=True
-    )
-    console.print(build_result.stdout)
-    if build_result.returncode != 0:
-        console.print(f"[red]❌ Build failed![/red]\n{build_result.stderr}")
-        return build_result.returncode
-
-    # Check dist/ folder
-    if not Path("dist").is_dir():
-        console.print("[red]dist/ folder not found! Please build the package first.[/red]")
-        return 1
-
-    # Run publishing with twine
-    console.print("[yellow]Publishing with twine...[/yellow]")
+    # Clean pyproject.toml for PyPI publishing
+    backup_path = clean_pyproject_for_publishing()
+    
     try:
+        # Build step
+        console.print("[yellow]Building the package...[/yellow]")
+        build_result = subprocess.run(
+            [sys.executable, "-m", "build"], capture_output=True, text=True
+        )
+        console.print(build_result.stdout)
+        if build_result.returncode != 0:
+            console.print(f"[red]❌ Build failed![/red]\n{build_result.stderr}")
+            return build_result.returncode
+
+        # Check dist/ folder
+        if not Path("dist").is_dir():
+            console.print("[red]dist/ folder not found! Please build the package first.[/red]")
+            return 1
+
+        # Run publishing with twine
+        console.print("[yellow]Publishing with twine...[/yellow]")
         twine_cmd = (
             ["twine", "upload", "--repository", repo, "dist/*"]
             if repo == "testpypi"
@@ -151,6 +190,9 @@ def main():
     except Exception as e:
         console.print(f"[red]❌ Error: {e}[/red]")
         return 1
+    finally:
+        # Always restore the original pyproject.toml
+        restore_pyproject(backup_path)
 
 
 if __name__ == "__main__":
