@@ -283,13 +283,26 @@ class SmartDefaults:
             elif environment in ("production", "staging"):
                 # Production: Only add PostgreSQL/MySQL specific options
                 if engine and engine in ("django.db.backends.postgresql", "django.db.backends.mysql"):
-                    defaults = {
-                        'OPTIONS': {
-                            'connect_timeout': 10,
-                            'pool_size': 20,
-                            'max_overflow': 30,
+                    if engine == "django.db.backends.postgresql":
+                        # psycopg3 supports connection pooling with proper parameters
+                        defaults = {
+                            'OPTIONS': {
+                                'connect_timeout': 10,
+                                # psycopg3 connection pool parameters
+                                'pool': {
+                                    'min_size': 1,
+                                    'max_size': 20,
+                                    'timeout': 30.0,
+                                }
+                            }
                         }
-                    }
+                    else:
+                        # MySQL
+                        defaults = {
+                            'OPTIONS': {
+                                'connect_timeout': 10,
+                            }
+                        }
                     # Add sslmode only for PostgreSQL
                     if engine == "django.db.backends.postgresql":
                         defaults['OPTIONS']['sslmode'] = 'require'  # Require SSL in production

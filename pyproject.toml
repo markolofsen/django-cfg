@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.1.10"
+version = "1.1.11"
 description = "🚀 Production-ready Django configuration framework with type-safe settings, smart automation, and modern developer experience"
 readme = "README.md"
 license = {text = "MIT"}
@@ -60,8 +60,8 @@ dependencies = [
     "colorlog>=6.9.0",
     "cachetools>=6.1.0",
     
-    # Database utilities
-    "psycopg2-binary>=2.9.0",
+    # Database utilities - using psycopg3 with connection pooling support
+    "psycopg[binary,pool]>=3.2.0",
     "dj-database-url>=3.0.0",
     
     # Django packages (require Django as peer dependency)
