@@ -394,7 +394,7 @@ class SettingsGenerator:
                         "api_prefix": config.revolution.api_prefix,
                         "debug": getattr(config.revolution, "debug", config.debug),
                         "auto_install_deps": getattr(config.revolution, "auto_install_deps", True),
-                        "monorepo": config.revolution.monorepo.model_dump() if hasattr(config.revolution, "monorepo") else {},
+
                         "zones": {zone_name: zone_config.model_dump() for zone_name, zone_config in config.revolution.zones.items()} if hasattr(config.revolution, "zones") else {},
                     }
                 }

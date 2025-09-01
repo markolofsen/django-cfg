@@ -8,7 +8,7 @@ integration with django_revolution's create_drf_config.
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from django_revolution.app_config import DjangoRevolutionConfig as BaseDjangoRevolutionConfig
-from django_revolution.app_config import ZoneConfig, MonorepoSettings
+from django_revolution.app_config import ZoneConfig
 
 
 class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):

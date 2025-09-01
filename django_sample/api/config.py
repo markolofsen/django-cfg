@@ -40,8 +40,7 @@ from django_cfg import (
 # Import environment configuration
 from .environment import env
 
-# Import Django Revolution components
-from django_revolution.config import MonorepoSettings
+
 
 
 class SampleProjectConfig(DjangoConfig):
@@ -80,25 +79,20 @@ class SampleProjectConfig(DjangoConfig):
 
     # === Database Configuration with Routing ===
     databases: Dict[str, DatabaseConnection] = {
-        # Main application database
-        "default": DatabaseConnection(
-            engine="django.db.backends.sqlite3",
-            **env.database.parse_url(env.database.url),
-        ),
-        # Blog database with routing
-        "blog_db": DatabaseConnection(
-            engine="django.db.backends.sqlite3",
-            **env.database.parse_url(env.database.url_blog),
-            # Route blog app to this database
+        # Main application database - engine auto-detected from URL
+        "default": DatabaseConnection.from_url(url=env.database.url),
+        
+        # Blog database with routing - engine auto-detected
+        "blog_db": DatabaseConnection.from_url(
+            url=env.database.url_blog,
             apps=["apps.blog"],
             operations=["read", "write", "migrate"],  # Allow migrations
             routing_description="Blog posts and comments",
         ),
-        # Shop database with routing
-        "shop_db": DatabaseConnection(
-            engine="django.db.backends.sqlite3",
-            **env.database.parse_url(env.database.url_shop),
-            # Route shop app to this database
+        
+        # Shop database with routing - engine auto-detected
+        "shop_db": DatabaseConnection.from_url(
+            url=env.database.url_shop,
             apps=["apps.shop"],
             operations=["read", "write", "migrate"],  # Allow migrations
             routing_description="Products, orders, and inventory",
@@ -287,8 +281,7 @@ class SampleProjectConfig(DjangoConfig):
         drf_schema_path_prefix="/apix/",  # Match api_prefix
         drf_enable_browsable_api=True,
         drf_enable_throttling=False,  # Disable for sample
-        # Monorepo settings (required field) - disabled for sample
-        monorepo=MonorepoSettings(enabled=False, configurations=[]),
+
         zones={
             "blog": ZoneConfig(
                 apps=["apps.blog"],

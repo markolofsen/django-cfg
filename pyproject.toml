@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.1.8"
+version = "1.1.10"
 description = "🚀 Production-ready Django configuration framework with type-safe settings, smart automation, and modern developer experience"
 readme = "README.md"
 license = {text = "MIT"}
@@ -77,7 +77,7 @@ dependencies = [
     "django-json-widget>=2.0.3",
     "django-extensions>=4.1",
     "django-constance>=4.3.2",
-    "django-revolution>=1.0.32",  # Temporarily commented for local dev
+    "django-revolution>=1.0.34",  # Temporarily commented for local dev
     "django-unfold>=0.64.0",
     "django-redis>=6.0.0",
     "redis>=5.0.0",

@@ -28,25 +28,6 @@ class DatabaseConfig(BaseModel):
     url: str = "sqlite:///db.sqlite3"
     url_blog: str = "sqlite:///blog.sqlite3"
     url_shop: str = "sqlite:///shop.sqlite3"
-    
-    def parse_url(self, url: str) -> dict:
-        """Parse database URL into connection parameters."""
-        if url.startswith("sqlite:///"):
-            # For SQLite, only return the name parameter
-            return {"name": url.replace("sqlite:///", "")}
-        
-        # For PostgreSQL URLs
-        import re
-        pattern = r"postgresql://(?P<user>[^:]+)(?::(?P<password>[^@]+))?@(?P<host>[^:]+)(?::(?P<port>\d+))?/(?P<name>.+)"
-        match = re.match(pattern, url)
-        if not match:
-            return {"name": url}
-        
-        result = match.groupdict()
-        # Convert port to int if present
-        if result.get("port"):
-            result["port"] = int(result["port"])
-        return {k: v for k, v in result.items() if v is not None}
 
 
 class EmailConfig(BaseModel):

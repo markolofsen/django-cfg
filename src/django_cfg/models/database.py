@@ -31,9 +31,9 @@ class DatabaseConnection(BaseModel):
     }
 
     # Core connection parameters
-    engine: str = Field(
-        ...,
-        description="Django database engine (e.g., 'django.db.backends.postgresql')",
+    engine: Optional[str] = Field(
+        default=None,
+        description="Django database engine (e.g., 'django.db.backends.postgresql'). If not provided, will be auto-detected from database URL scheme.",
         min_length=1,
     )
 
@@ -114,8 +114,11 @@ class DatabaseConnection(BaseModel):
 
     @field_validator("engine")
     @classmethod
-    def validate_engine(cls, v: str) -> str:
+    def validate_engine(cls, v: Optional[str]) -> Optional[str]:
         """Validate Django database engine format."""
+        if v is None:
+            return v
+            
         if not v.startswith("django.db.backends."):
             raise ValueError(f"Invalid database engine '{v}'. " "Must start with 'django.db.backends.'")
 
@@ -179,9 +182,19 @@ class DatabaseConnection(BaseModel):
 
         return v
 
+    @model_validator(mode="before")
+    @classmethod
+    def validate_connection_consistency(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate connection parameter consistency and auto-detect engine."""
+        # Auto-detect engine if not provided
+        if values.get("engine") is None and values.get("name"):
+            values["engine"] = cls._detect_engine_from_url(values["name"])
+        
+        return values
+
     @model_validator(mode="after")
-    def validate_connection_consistency(self) -> "DatabaseConnection":
-        """Validate connection parameter consistency."""
+    def validate_connection_after(self) -> "DatabaseConnection":
+        """Validate connection after model creation."""
         # Parse connection string if present
         if "://" in self.name:
             self._is_connection_string = True
@@ -190,13 +203,13 @@ class DatabaseConnection(BaseModel):
             # Override individual parameters with parsed values if not explicitly set
             parsed = self._parsed_components
             if parsed and not self.user and parsed.get("user"):
-                self.user = parsed["user"]
+                object.__setattr__(self, 'user', parsed["user"])
             if parsed and not self.password and parsed.get("password"):
-                self.password = parsed["password"]
+                object.__setattr__(self, 'password', parsed["password"])
             if parsed and self.host == "localhost" and parsed.get("host"):
-                self.host = parsed["host"]
+                object.__setattr__(self, 'host', parsed["host"])
             if parsed and self.port == 5432 and parsed.get("port"):
-                self.port = parsed["port"]
+                object.__setattr__(self, 'port', parsed["port"])
 
         # Validate SQLite-specific constraints
         if self.engine == "django.db.backends.sqlite3":
@@ -209,6 +222,44 @@ class DatabaseConnection(BaseModel):
                 raise ValueError("PostgreSQL database name is required")
 
         return self
+
+    @staticmethod
+    def _detect_engine_from_url(url: str) -> str:
+        """
+        Automatically detect Django database engine from URL scheme.
+        
+        Args:
+            url: Database URL (e.g., 'postgresql://...', 'sqlite:///...')
+            
+        Returns:
+            Django database engine string
+            
+        Raises:
+            ValueError: If URL scheme is not supported
+        """
+        if "://" not in url:
+            # Assume SQLite for file paths without scheme
+            return "django.db.backends.sqlite3"
+            
+        scheme = url.split("://")[0].lower()
+        
+        # Map URL schemes to Django engines
+        scheme_to_engine = {
+            "postgresql": "django.db.backends.postgresql",
+            "postgres": "django.db.backends.postgresql",
+            "mysql": "django.db.backends.mysql",
+            "sqlite": "django.db.backends.sqlite3",
+            "sqlite3": "django.db.backends.sqlite3",
+            "oracle": "django.db.backends.oracle",
+        }
+        
+        if scheme in scheme_to_engine:
+            return scheme_to_engine[scheme]
+            
+        raise ValueError(
+            f"Unsupported database scheme '{scheme}'. "
+            f"Supported schemes: {', '.join(scheme_to_engine.keys())}"
+        )
 
     @staticmethod
     def _parse_connection_string(connection_string: str) -> Dict[str, Any]:
@@ -379,6 +430,48 @@ class DatabaseConnection(BaseModel):
         # TODO: Implement actual connection testing
         # This would require Django to be available and configured
         return True
+
+    @classmethod
+    def from_url(
+        cls,
+        url: str,
+        *,
+        apps: Optional[List[str]] = None,
+        operations: Optional[List[Literal["read", "write", "migrate"]]] = None,
+        routing_description: str = "",
+        **kwargs
+    ) -> "DatabaseConnection":
+        """
+        Create DatabaseConnection from URL with automatic engine detection.
+        
+        Args:
+            url: Database URL (e.g., 'postgresql://user:pass@host:port/db')
+            apps: Django app labels that should use this database
+            operations: Allowed operations for this database
+            routing_description: Human-readable description of the routing rule
+            **kwargs: Additional parameters to override defaults
+            
+        Returns:
+            DatabaseConnection instance with auto-detected engine
+            
+        Example:
+            # Simple SQLite database
+            db = DatabaseConnection.from_url("sqlite:///db.sqlite3")
+            
+            # PostgreSQL with routing
+            blog_db = DatabaseConnection.from_url(
+                "postgresql://user:pass@localhost:5432/blog",
+                apps=["apps.blog"],
+                routing_description="Blog posts and comments"
+            )
+        """
+        return cls(
+            name=url,
+            apps=apps or [],
+            operations=operations or ["read", "write", "migrate"],
+            routing_description=routing_description,
+            **kwargs
+        )
 
 
 # Export all models
