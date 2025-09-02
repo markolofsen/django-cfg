@@ -50,7 +50,7 @@ class SmartDefaults:
         """
         try:
             # Create a copy to avoid modifying the original
-            config = cache_config.model_copy()
+            config: CacheBackend = cache_config.model_copy()
             
             # Environment-specific adjustments
             if environment == "testing":
@@ -193,17 +193,50 @@ class SmartDefaults:
                     # Development: Allow all origins for convenience
                     settings['CORS_ALLOW_ALL_ORIGINS'] = True
                     settings['CORS_ALLOW_CREDENTIALS'] = True
+                    
+                    # For development, also add local domains to CSRF trusted origins
+                    csrf_trusted_origins = []
+                    for domain in domains:
+                        if domain.startswith(('localhost', '127.0.0.1', '0.0.0.0')):
+                            csrf_trusted_origins.extend([
+                                f"http://{domain}",
+                                f"http://{domain}:8000",
+                                f"http://{domain}:3000",
+                            ])
+                        elif domain.endswith('.local'):
+                            csrf_trusted_origins.extend([
+                                f"http://{domain}",
+                                f"https://{domain}",
+                            ])
+                    
+                    if csrf_trusted_origins:
+                        settings['CSRF_TRUSTED_ORIGINS'] = csrf_trusted_origins
                 else:
                     # Production: Restrict to specified domains
                     allowed_origins = []
+                    csrf_trusted_origins = []
+                    
                     for domain in domains:
-                        allowed_origins.extend([
-                            f"https://{domain}",
-                            f"https://www.{domain}",
-                        ])
+                        # CORS origins - only add www for root domains
+                        allowed_origins.append(f"https://{domain}")
+                        
+                        # Only add www. for root domains (no subdomains)
+                        if '.' in domain and domain.count('.') == 1:
+                            allowed_origins.append(f"https://www.{domain}")
+                        
+                        # CSRF trusted origins (critical for HTTPS)
+                        csrf_trusted_origins.append(f"https://{domain}")
+                        
+                        # Only add www. for root domains (no subdomains)
+                        if '.' in domain and domain.count('.') == 1:
+                            csrf_trusted_origins.append(f"https://www.{domain}")
                     
                     settings['CORS_ALLOWED_ORIGINS'] = allowed_origins
                     settings['CORS_ALLOW_CREDENTIALS'] = True
+                    
+                    # Set CSRF trusted origins for HTTPS domains
+                    if csrf_trusted_origins:
+                        settings['CSRF_TRUSTED_ORIGINS'] = csrf_trusted_origins
             
             # Security headers for production
             if environment == "production":
