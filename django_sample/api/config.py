@@ -65,7 +65,7 @@ class SampleProjectConfig(DjangoConfig):
     api_url: str = env.app.api_url
 
     # === Security Domains ===
-    security_domains: list[str] = env.allowed_hosts or []
+    security_domains: list[str] = env.security_domains or []
 
     # === Custom User Model ===
     auth_user_model: str = "users.User"
