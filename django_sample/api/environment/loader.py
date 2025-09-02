@@ -84,6 +84,9 @@ class EnvironmentConfig(BaseModel):
     
     # Cache
     redis_url: Optional[str] = None
+    
+    # Security
+    ssl_redirect: Optional[bool] = None
 
 
 def get_environment_config() -> EnvironmentConfig:
