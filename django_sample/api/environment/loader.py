@@ -87,6 +87,7 @@ class EnvironmentConfig(BaseModel):
     
     # Security
     ssl_redirect: Optional[bool] = None
+    allowed_hosts: Optional[list[str]] = None
 
 
 def get_environment_config() -> EnvironmentConfig:

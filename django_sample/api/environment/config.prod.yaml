@@ -14,9 +14,15 @@ database:
 # === Application URLs ===
 app:
   name: "Django CFG Sample"
-  domain: "sample.example.com"
-  api_url: "https://api.sample.example.com"
-  site_url: "https://sample.example.com"
+  domain: "example.com"
+  api_url: "https://api.example.com"
+  site_url: "https://example.com"
+
+# === Security Domains ===
+security_domains:
+  - "localhost"
+  - "127.0.0.1"
+  - "example.com"
 
 # === Email ===
 email:
