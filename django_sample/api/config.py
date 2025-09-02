@@ -58,7 +58,7 @@ class SampleProjectConfig(DjangoConfig):
     # === Security ===
     secret_key: str = env.secret_key
     debug: bool = env.debug
-    ssl_redirect: bool = env.ssl_redirect
+    ssl_redirect: Optional[bool] = env.ssl_redirect
 
     # === URLs ===
     site_url: str = env.app.site_url
