@@ -169,7 +169,8 @@ class SmartDefaults:
         cls,
         domains: List[str],
         environment: Optional[str] = None,
-        debug: bool = False
+        debug: bool = False,
+        ssl_redirect: Optional[bool] = None
     ) -> Dict[str, Any]:
         """
         Get security defaults based on environment and domains.
@@ -178,6 +179,7 @@ class SmartDefaults:
             domains: List of domains for CORS/security configuration
             environment: Current environment
             debug: Django DEBUG setting
+            ssl_redirect: Force SSL redirect on/off (None = auto based on domains)
             
         Returns:
             Security settings dictionary
@@ -214,12 +216,20 @@ class SmartDefaults:
                     'X_FRAME_OPTIONS': 'DENY',
                 })
                 
-                # SSL settings if domains are HTTPS
-                if domains:
+                # SSL settings - configurable or auto-detect based on domains
+                should_use_ssl = ssl_redirect if ssl_redirect is not None else bool(domains)
+                if should_use_ssl:
                     settings.update({
                         'SECURE_SSL_REDIRECT': True,
                         'SESSION_COOKIE_SECURE': True,
                         'CSRF_COOKIE_SECURE': True,
+                    })
+                elif ssl_redirect is False:
+                    # Explicitly disable SSL redirect
+                    settings.update({
+                        'SECURE_SSL_REDIRECT': False,
+                        'SESSION_COOKIE_SECURE': False,
+                        'CSRF_COOKIE_SECURE': False,
                     })
             
             return settings

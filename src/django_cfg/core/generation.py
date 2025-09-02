@@ -230,9 +230,14 @@ class SettingsGenerator:
         try:
             settings = {}
 
-            # Generate security defaults based on domains
-            if config.security_domains:
-                security_defaults = SmartDefaults.get_security_defaults(config.security_domains, config._environment, config.debug)
+            # Generate security defaults based on domains and ssl_redirect
+            if config.security_domains or config.ssl_redirect is not None:
+                security_defaults = SmartDefaults.get_security_defaults(
+                    config.security_domains, 
+                    config._environment, 
+                    config.debug,
+                    config.ssl_redirect
+                )
                 settings.update(security_defaults)
 
                 # Add CORS to installed apps if domains are configured

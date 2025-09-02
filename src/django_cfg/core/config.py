@@ -187,6 +187,11 @@ class DjangoConfig(BaseModel):
         default_factory=list,
         description="Domains for automatic security configuration (CORS, SSL, etc.)",
     )
+    
+    ssl_redirect: Optional[bool] = Field(
+        default=None,
+        description="Force SSL redirect on/off (None = auto based on domains and environment)",
+    )
 
     # === Services Configuration ===
     email: Optional[EmailConfig] = Field(
