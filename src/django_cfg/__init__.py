@@ -34,7 +34,7 @@ default_app_config = "django_cfg.apps.DjangoCfgConfig"
 from typing import TYPE_CHECKING
 
 # Version information
-__version__ = "1.1.14"
+__version__ = "1.1.15"
 __author__ = "Unrealos Team"
 __email__ = "info@unrealos.com"
 __license__ = "MIT"

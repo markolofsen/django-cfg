@@ -164,7 +164,16 @@ class DjangoTelegram(BaseModule):
 
             # Use provided parse_mode or fall back to config
             target_parse_mode = parse_mode or telegram_config.parse_mode
-            parse_mode_str = target_parse_mode.value if target_parse_mode else None
+            
+            # Handle both enum and string parse modes
+            if target_parse_mode:
+                if isinstance(target_parse_mode, TelegramParseMode):
+                    parse_mode_str = target_parse_mode.value
+                else:
+                    # If it's already a string from config, use it directly
+                    parse_mode_str = target_parse_mode
+            else:
+                parse_mode_str = None
 
             # Send message
             self.bot.send_message(
@@ -225,7 +234,16 @@ class DjangoTelegram(BaseModule):
                 return False
 
             target_parse_mode = parse_mode or telegram_config.parse_mode
-            parse_mode_str = target_parse_mode.value if target_parse_mode else None
+            
+            # Handle both enum and string parse modes
+            if target_parse_mode:
+                if isinstance(target_parse_mode, TelegramParseMode):
+                    parse_mode_str = target_parse_mode.value
+                else:
+                    # If it's already a string from config, use it directly
+                    parse_mode_str = target_parse_mode
+            else:
+                parse_mode_str = None
 
             self.bot.send_photo(
                 chat_id=target_chat_id,
@@ -284,7 +302,16 @@ class DjangoTelegram(BaseModule):
                 return False
 
             target_parse_mode = parse_mode or telegram_config.parse_mode
-            parse_mode_str = target_parse_mode.value if target_parse_mode else None
+            
+            # Handle both enum and string parse modes
+            if target_parse_mode:
+                if isinstance(target_parse_mode, TelegramParseMode):
+                    parse_mode_str = target_parse_mode.value
+                else:
+                    # If it's already a string from config, use it directly
+                    parse_mode_str = target_parse_mode
+            else:
+                parse_mode_str = None
 
             self.bot.send_document(
                 chat_id=target_chat_id,
@@ -360,7 +387,7 @@ class DjangoTelegram(BaseModule):
         text = f"{cls.EMOJI_MAP['error']} <b>Error</b>\n\n{error}"
         if context:
             text += "\n\n<pre>" + cls._format_to_yaml(context) + "</pre>"
-        telegram.send_message(text, parse_mode="HTML")
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
 
     @classmethod
     def send_success(cls, message: str, details: Optional[Dict[str, Any]] = None) -> None:
@@ -374,7 +401,7 @@ class DjangoTelegram(BaseModule):
         text = f"{cls.EMOJI_MAP['success']} <b>Success</b>\n\n{message}"
         if details:
             text += "\n\n<pre>" + cls._format_to_yaml(details) + "</pre>"
-        telegram.send_message(text, parse_mode="HTML")
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
 
     @classmethod
     def send_warning(cls, warning: str, context: Optional[Dict[str, Any]] = None) -> None:
@@ -388,7 +415,7 @@ class DjangoTelegram(BaseModule):
         text = f"{cls.EMOJI_MAP['warning']} <b>Warning</b>\n\n{warning}"
         if context:
             text += "\n\n<pre>" + cls._format_to_yaml(context) + "</pre>"
-        telegram.send_message(text, parse_mode="HTML")
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
 
     @classmethod
     def send_info(cls, message: str, data: Optional[Dict[str, Any]] = None) -> None:
@@ -402,7 +429,7 @@ class DjangoTelegram(BaseModule):
         text = f"{cls.EMOJI_MAP['info']} <b>Info</b>\n\n{message}"
         if data:
             text += "\n\n<pre>" + cls._format_to_yaml(data) + "</pre>"
-        telegram.send_message(text, parse_mode="HTML")
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
 
     @classmethod
     def send_stats(cls, title: str, stats: Dict[str, Any]) -> None:
@@ -415,7 +442,7 @@ class DjangoTelegram(BaseModule):
         telegram = cls()
         text = f"{cls.EMOJI_MAP['stats']} <b>{title}</b>"
         text += "\n\n<pre>" + cls._format_to_yaml(stats) + "</pre>"
-        telegram.send_message(text, parse_mode="HTML")
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
 
 
 # Convenience functions for direct usage
