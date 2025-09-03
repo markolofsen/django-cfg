@@ -70,6 +70,9 @@ class SettingsGenerator:
             # Generate internationalization settings
             settings.update(cls._generate_i18n_settings(config))
 
+            # Generate limits settings
+            settings.update(cls._generate_limits_settings(config))
+
             # Generate third-party integration settings
             settings.update(cls._generate_integration_settings(config))
 
@@ -349,6 +352,22 @@ class SettingsGenerator:
 
         except Exception as e:
             raise ConfigurationError(f"Failed to generate i18n settings: {e}") from e
+
+    @classmethod
+    def _generate_limits_settings(cls, config: "DjangoConfig") -> Dict[str, Any]:
+        """Generate application limits settings."""
+        try:
+            settings = {}
+
+            if config.limits:
+                # Get Django settings from limits configuration
+                limits_settings = config.limits.to_django_settings()
+                settings.update(limits_settings)
+
+            return settings
+
+        except Exception as e:
+            raise ConfigurationError(f"Failed to generate limits settings: {e}") from e
 
     @classmethod
     def _generate_integration_settings(cls, config: "DjangoConfig") -> Dict[str, Any]:

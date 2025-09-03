@@ -21,6 +21,7 @@ from django_cfg.models.cache import CacheBackend
 from django_cfg.models.services import EmailConfig, TelegramConfig
 from django_cfg.models.unfold import UnfoldConfig
 from django_cfg.models.drf import DRFConfig, SpectacularConfig
+from django_cfg.models.limits import LimitsConfig
 
 
 # Default apps
@@ -219,6 +220,12 @@ class DjangoConfig(BaseModel):
     spectacular: Optional[SpectacularConfig] = Field(
         default=None,
         description="DRF Spectacular OpenAPI/Swagger configuration",
+    )
+
+    # === Limits Configuration ===
+    limits: Optional[LimitsConfig] = Field(
+        default=None,
+        description="Application limits configuration (file uploads, requests, etc.)",
     )
 
     # === Middleware Configuration ===

@@ -36,6 +36,7 @@ from django_cfg import (
     RevolutionConfig,
     ZoneConfig,
 )
+from django_cfg.models.limits import LimitsConfig
 
 # Import environment configuration
 from .environment import env
@@ -228,6 +229,18 @@ class SampleProjectConfig(DjangoConfig):
     #         serve_include_schema=False,
     #     ),
     # )
+
+    # === Application Limits Configuration ===
+    limits: LimitsConfig = LimitsConfig(
+        max_upload_mb=20.0,  # 20MB for sample project
+        max_memory_mb=5.0,   # 5MB in memory
+        max_request_mb=25.0, # 25MB total request
+        allowed_extensions=["jpg", "jpeg", "png", "gif", "pdf", "txt", "docx"],
+        blocked_extensions=["exe", "bat", "cmd", "php", "js", "py"],
+        request_timeout=60,  # 60 seconds timeout for sample
+        enabled=True,
+        strict_mode=debug,  # Strict mode only in development
+    )
 
     # === Constance Dynamic Settings ===
     constance: ConstanceConfig = ConstanceConfig(
