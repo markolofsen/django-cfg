@@ -45,6 +45,42 @@ class BaseModule(ABC):
             config: The DjangoConfig instance
         """
         self._config = config
+    
+    def is_support_enabled(self) -> bool:
+        """
+        Check if django-cfg Support is enabled.
+        
+        Returns:
+            True if Support is enabled, False otherwise
+        """
+        try:
+            config = self.get_config()
+            return getattr(config, 'enable_support', True)
+        except Exception:
+            # Fallback to checking INSTALLED_APPS
+            try:
+                from django.conf import settings
+                return 'django_cfg.apps.support' in getattr(settings, 'INSTALLED_APPS', [])
+            except Exception:
+                return False
+    
+    def is_accounts_enabled(self) -> bool:
+        """
+        Check if django-cfg Accounts is enabled.
+        
+        Returns:
+            True if Accounts is enabled, False otherwise
+        """
+        try:
+            config = self.get_config()
+            return getattr(config, 'enable_accounts', False)
+        except Exception:
+            # Fallback to checking INSTALLED_APPS
+            try:
+                from django.conf import settings
+                return 'django_cfg.apps.accounts' in getattr(settings, 'INSTALLED_APPS', [])
+            except Exception:
+                return False
 
 
 # Export the base class

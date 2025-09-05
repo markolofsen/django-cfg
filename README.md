@@ -76,6 +76,7 @@ python manage.py runserver
 
 **That's it!** 🎉 You now have:
 - ✅ Beautiful admin interface with Unfold + Tailwind CSS
+- ✅ Built-in support ticket system with chat interface
 - ✅ Auto-generated API documentation
 - ✅ Environment-aware configuration
 - ✅ Type-safe settings with full IDE support
@@ -95,7 +96,8 @@ python manage.py runserver
 | **⚡ Commands** | Terminal only | **Beautiful web interface** |
 | **📚 API Docs** | Hours of manual setup | **Auto-generated OpenAPI** |
 | **📦 Client Generation** | Write clients manually | **Auto TS/Python clients** |
-| **🏢 Monorepo** | Complex setup | **Built-in support** |
+| **🎫 Support System** | Build from scratch | **Built-in tickets & chat** |
+| **👤 User Management** | Basic User model | **OTP auth & profiles** |
 | **📧 Notifications** | Manual SMTP/webhooks | **Email & Telegram modules** |
 | **🚀 Deployment** | Cross fingers | **Production-ready defaults** |
 | **💡 IDE Support** | Basic syntax highlighting | **Full IntelliSense paradise** |
@@ -127,11 +129,14 @@ OpenAPI/Swagger docs generated automatically with zone-based architecture.
 ### 📦 **Client Generation**
 TypeScript and Python API clients generated per zone automatically.
 
-### 🏢 **Monorepo Ready**
-Smart integration with modern monorepo architectures and build systems.
+### 🎫 **Built-in Support System**
+Complete ticket management with modern chat interface, email notifications, and admin integration.
+
+### 👤 **Advanced User Management**
+Built-in accounts system with OTP authentication, user profiles, activity tracking, and registration sources.
 
 ### 📧 **Built-in Modules**
-Email, Telegram, and SMS notification modules ready out of the box.
+Email, Telegram, Support ticket system, and advanced User management ready out of the box.
 
 ### 🌍 **Environment Detection**
 Automatic dev/staging/production detection with appropriate defaults.
@@ -154,6 +159,7 @@ Django-CFG includes powerful management commands for development and operations:
 | **`superuser`** | Create superuser with smart defaults | `python manage.py superuser --email admin@example.com` |
 | **`test_email`** | Test email configuration | `python manage.py test_email --to test@example.com` |
 | **`test_telegram`** | Test Telegram bot integration | `python manage.py test_telegram --chat_id 123` |
+| **`support_stats`** | Display support ticket statistics | `python manage.py support_stats --format json` |
 | **`validate_config`** | Deep validation of all settings | `python manage.py validate_config --strict` |
 
 ---
@@ -258,6 +264,100 @@ python manage.py generate --zone admin --format python
 
 ---
 
+## 🎫 Built-in Support System
+
+Django-CFG includes a complete support ticket system with modern chat interface:
+
+### Features
+- **🎯 Ticket Management** - Create, assign, and track support tickets
+- **💬 Chat Interface** - Beautiful Tailwind CSS chat UI for conversations  
+- **📧 Email Integration** - Automatic notifications for ticket updates
+- **👥 User Management** - Support for both staff and customer interactions
+- **📊 Dashboard Integration** - Real-time metrics in Unfold admin
+- **🔗 API Ready** - RESTful API endpoints for all support operations
+
+### Quick Setup
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My App"
+    enable_support: bool = True  # That's it!
+
+config = MyConfig()
+```
+
+### Automatic Integration
+- ✅ **Admin Interface** - Support section in sidebar with tickets & messages
+- ✅ **Dashboard Cards** - Live ticket statistics and quick actions  
+- ✅ **API Endpoints** - `/api/support/` zone with full CRUD operations
+- ✅ **Email Templates** - Beautiful HTML emails with your branding
+- ✅ **Chat Interface** - Modern `/support/chat/{ticket_uuid}/` pages
+
+### Disable Support (Optional)
+```python
+enable_support: bool = False  # Removes from admin, API, and dashboard
+```
+
+---
+
+## 👤 Built-in User Management System
+
+Django-CFG includes a comprehensive user management system with OTP authentication, profiles, and activity tracking:
+
+### Features
+- **🔐 OTP Authentication** - Secure one-time password authentication via email
+- **👥 Custom User Model** - Extended user model with profiles and metadata
+- **📊 Activity Tracking** - Complete audit trail of user actions and logins
+- **🔗 Registration Sources** - Track where users came from (web, mobile, API, etc.)
+- **📧 Email Integration** - Beautiful welcome emails and OTP notifications
+- **🛡️ Security Features** - Failed attempt tracking, account lockouts, and audit logs
+- **📱 API Ready** - RESTful API endpoints for all user operations
+
+### Quick Setup
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My App"
+    enable_accounts: bool = True  # That's it!
+    # auth_user_model is automatically set to django_cfg_accounts.CustomUser
+
+config = MyConfig()
+```
+
+### Automatic Integration
+- ✅ **Custom User Model** - Automatically sets `AUTH_USER_MODEL` to `django_cfg_accounts.CustomUser`
+- ✅ **Admin Interface** - "Users & Access" section with users, groups, and registration sources
+- ✅ **Dashboard Integration** - User statistics and recent activity widgets
+- ✅ **API Endpoints** - `/api/accounts/` zone with authentication, profiles, and OTP
+- ✅ **Email Templates** - Welcome emails and OTP verification with your branding
+- ✅ **Migration Safety** - Smart migration ordering to avoid conflicts
+
+### OTP Authentication Flow
+```python
+from django_cfg.apps.accounts.services.otp_service import OTPService
+
+# Request OTP for user
+success, error = OTPService.request_otp("user@example.com")
+
+# Verify OTP code
+user = OTPService.verify_otp("user@example.com", "123456")
+```
+
+### Custom User Model Features
+- **Extended Profile** - Additional fields for user metadata
+- **Activity Tracking** - Automatic logging of user actions
+- **Registration Sources** - Track user acquisition channels
+- **Security Audit** - Failed login attempts and security events
+
+### Disable Accounts (Optional)
+```python
+enable_accounts: bool = False  # Uses Django's default User model
+```
+
+---
+
 ## 🏗️ Real-World Example
 
 Here's a complete production configuration:
@@ -302,6 +402,10 @@ class ProductionConfig(DjangoConfig):
         theme="auto",
         dashboard_callback="api.dashboard.main_callback",
     )
+    
+    # === Built-in Modules ===
+    enable_support: bool = True   # Automatic tickets, chat interface, email notifications
+    enable_accounts: bool = True  # Advanced user management with OTP authentication
     
     # === Multi-Zone API ===
     revolution: RevolutionConfig = RevolutionConfig(

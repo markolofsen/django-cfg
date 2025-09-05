@@ -109,12 +109,13 @@ def get_user_admin_urls():
             'view': f'admin:{app_label}_{model_name}_view/{{id}}/',
         }
     except Exception:
+        # Universal fallback - return admin index for all actions
         return {
-            'changelist': 'admin:auth_user_changelist',
-            'add': 'admin:auth_user_add',
-            'change': 'admin:auth_user_change/{id}/',
-            'delete': 'admin:auth_user_delete/{id}/',
-            'view': 'admin:auth_user_view/{id}/',
+            'changelist': 'admin:index',
+            'add': 'admin:index',
+            'change': 'admin:index',
+            'delete': 'admin:index',
+            'view': 'admin:index',
         }
 
 
@@ -321,6 +322,14 @@ class UnfoldCallbacks(BaseModule):
                 category="admin",
             ),
             QuickAction(
+                title="Support Tickets",
+                description="Manage support tickets",
+                icon="support_agent",
+                link="admin:django_cfg_support_ticket_changelist",
+                color="info",
+                category="support",
+            ),
+            QuickAction(
                 title="Health Check",
                 description="System health status",
                 icon="health_and_safety",
@@ -330,28 +339,100 @@ class UnfoldCallbacks(BaseModule):
             ),
         ] 
         
-        # Automatically add Constance settings if configured
-        if self._is_constance_configured():
-            actions.append(
-                QuickAction(
-                    title="System Settings",
-                    description="Configure dynamic settings",
-                    icon="settings",
-                    link="/admin/constance/config/",
-                    color="warning",
-                    category="admin",
-                )
-            )
+        # # Automatically add Constance settings if configured
+        # if self._is_constance_configured():
+        #     actions.append(
+        #         QuickAction(
+        #             title="System Settings",
+        #             description="Configure dynamic settings",
+        #             icon="settings",
+        #             link="/admin/constance/config/",
+        #             color="warning",
+        #             category="admin",
+        #         )
+        #     )
 
         return actions
 
-    def _is_constance_configured(self) -> bool:
-        """Check if Constance is configured."""
+    # def _is_constance_configured(self) -> bool:
+    #     """Check if Constance is configured."""
+    #     try:
+    #         from django.conf import settings
+    #         return bool(getattr(settings, 'CONSTANCE_CONFIG', {}))
+    #     except Exception:
+    #         return False
+
+    def get_support_statistics(self) -> List[StatCard]:
+        """Get support ticket statistics as Pydantic models."""
         try:
-            from django.conf import settings
-            return bool(getattr(settings, 'CONSTANCE_CONFIG', {}))
-        except Exception:
-            return False
+            # Check if support is enabled
+            if not self.is_support_enabled():
+                return []
+                
+            from django_cfg.apps.support.models import Ticket, Message
+            
+            total_tickets = Ticket.objects.count()
+            open_tickets = Ticket.objects.filter(status='open').count()
+            resolved_tickets = Ticket.objects.filter(status='resolved').count()
+            new_tickets_7d = Ticket.objects.filter(
+                created_at__gte=timezone.now() - timedelta(days=7)
+            ).count()
+            
+            return [
+                StatCard(
+                    title="Total Tickets",
+                    value=f"{total_tickets:,}",
+                    icon="support_agent",
+                    change=f"+{new_tickets_7d}" if new_tickets_7d > 0 else None,
+                    change_type="positive" if new_tickets_7d > 0 else "neutral",
+                    description="All support tickets",
+                ),
+                StatCard(
+                    title="Open Tickets",
+                    value=f"{open_tickets:,}",
+                    icon="pending",
+                    change=(
+                        f"{(open_tickets/total_tickets*100):.1f}%"
+                        if total_tickets > 0
+                        else "0%"
+                    ),
+                    change_type=(
+                        "negative" if open_tickets > total_tickets * 0.3 
+                        else "positive" if open_tickets == 0 
+                        else "neutral"
+                    ),
+                    description="Awaiting response",
+                ),
+                StatCard(
+                    title="Resolved",
+                    value=f"{resolved_tickets:,}",
+                    icon="check_circle",
+                    change=(
+                        f"{(resolved_tickets/total_tickets*100):.1f}%"
+                        if total_tickets > 0
+                        else "0%"
+                    ),
+                    change_type="positive",
+                    description="Successfully resolved",
+                ),
+                StatCard(
+                    title="New This Week",
+                    value=f"{new_tickets_7d:,}",
+                    icon="new_releases",
+                    change_type="positive" if new_tickets_7d > 0 else "neutral",
+                    description="Last 7 days",
+                ),
+            ]
+        except Exception as e:
+            logger.error(f"Error getting support statistics: {e}")
+            return [
+                StatCard(
+                    title="Support",
+                    value="N/A",
+                    icon="support_agent",
+                    description="Data unavailable",
+                )
+            ]
 
     def get_django_commands(self) -> Dict[str, Any]:
         """Get Django management commands information."""
@@ -611,11 +692,15 @@ class UnfoldCallbacks(BaseModule):
         try:
             # Get dashboard data using Pydantic models
             user_stats = self.get_user_statistics()
+            support_stats = self.get_support_statistics()
             system_health = self.get_system_health()
             quick_actions = self.get_quick_actions()
+            
+            # Combine all stat cards
+            all_stats = user_stats + support_stats
 
             dashboard_data = DashboardData(
-                stat_cards=user_stats,
+                stat_cards=all_stats,
                 system_health=system_health,
                 quick_actions=quick_actions,
                 last_updated=timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -628,6 +713,8 @@ class UnfoldCallbacks(BaseModule):
             context.update({
                 # Statistics cards
                 "cards": cards_data,
+                "user_stats": [card.model_dump() for card in user_stats],
+                "support_stats": [card.model_dump() for card in support_stats],
                 # System health (convert to dict for template)
                 "system_health": {
                     item.component + "_status": item.status
@@ -644,6 +731,11 @@ class UnfoldCallbacks(BaseModule):
                     action.model_dump()
                     for action in dashboard_data.quick_actions
                     if action.category == "admin"
+                ],
+                "support_actions": [
+                    action.model_dump()
+                    for action in dashboard_data.quick_actions
+                    if action.category == "support"
                 ],
                 "system_actions": [
                     action.model_dump()

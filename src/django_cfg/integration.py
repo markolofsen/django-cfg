@@ -6,6 +6,8 @@ Provides automatic URL registration for django_cfg endpoints and integrations.
 
 from typing import List
 from django.urls import path, include, URLPattern
+from django_cfg.core.environment import EnvironmentDetector
+from django.conf import settings
 
 
 def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/") -> List[URLPattern]:
@@ -34,14 +36,14 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/")
         ]
         
         # Automatically adds:
-        # - path("cfg/", include("django_cfg.api.urls"))
+        # - path("cfg/", include("django_cfg.apps.urls"))
         # - Django Revolution URLs (if available)
         # - Debug output (if development environment)
         urlpatterns = add_django_cfg_urls(urlpatterns)
     """
     # Add django_cfg API URLs
     new_patterns = urlpatterns + [
-        path(cfg_prefix, include("django_cfg.api.urls")),
+        path(cfg_prefix, include("django_cfg.apps.urls")),
     ]
     
     # Try to add Django Revolution URLs if available
@@ -54,13 +56,11 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/")
     
     # Show debug output if in development environment
     try:
-        from django_cfg.core.environment import EnvironmentDetector
         if EnvironmentDetector.is_development():
             _print_url_integration_info()
     except ImportError:
         # Fallback to Django DEBUG setting
         try:
-            from django.conf import settings
             if getattr(settings, 'DEBUG', False):
                 _print_url_integration_info()
         except ImportError:
@@ -88,8 +88,9 @@ def get_django_cfg_urls_info() -> dict:
             "prefix": "cfg/",
             "endpoints": [
                 "cfg/commands/",
-                "cfg/dashboard/",
                 "cfg/status/",
+                "cfg/support/",
+                "cfg/accounts/",
             ],
             "description": "Django CFG management endpoints",
         }

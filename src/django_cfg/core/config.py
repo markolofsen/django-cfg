@@ -128,9 +128,21 @@ class DjangoConfig(BaseModel):
         max_length=500,
     )
 
+    # === Django CFG Features ===
+    enable_support: bool = Field(
+        default=True,
+        description="Enable django-cfg Support application (tickets, messages, chat interface)",
+    )
+    enable_accounts: bool = Field(
+        default=False,
+        description="Enable django-cfg Accounts application (advanced user management, OTP, profiles, activity tracking)",
+    )
+
     # === URLs ===
     site_url: str = Field(default="http://localhost:3000", description="Frontend site URL")
     api_url: str = Field(default="http://localhost:8000", description="Backend API URL")
+    ticket_url: str = Field(default="{site_url}/support/ticket/{uuid}", description="Support ticket URL template. Use {site_url} and {uuid} placeholders")
+    otp_url: str = Field(default="{site_url}/auth/otp/{code}", description="OTP verification URL template. Use {site_url} and {code} placeholders")
 
     # === Core Django Settings ===
     secret_key: str = Field(
@@ -161,7 +173,7 @@ class DjangoConfig(BaseModel):
     # === Custom User Model ===
     auth_user_model: Optional[str] = Field(
         default=None,
-        description="Custom user model (AUTH_USER_MODEL)",
+        description="Custom user model (AUTH_USER_MODEL). If None and enable_accounts=True, uses 'django_cfg.apps.accounts.CustomUser'",
         pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$",
     )
 
@@ -447,6 +459,36 @@ class DjangoConfig(BaseModel):
 
         return self._django_settings
 
+    def get_ticket_url(self, ticket_uuid: str) -> str:
+        """
+        Generate ticket URL using the configured template.
+        
+        Args:
+            ticket_uuid: UUID of the support ticket
+            
+        Returns:
+            Complete URL to the ticket
+        """
+        return self.ticket_url.format(
+            site_url=self.site_url,
+            uuid=ticket_uuid
+        )
+    
+    def get_otp_url(self, otp_code: str) -> str:
+        """
+        Generate OTP verification URL using the configured template.
+        
+        Args:
+            otp_code: OTP verification code
+            
+        Returns:
+            Complete URL to the OTP verification page
+        """
+        return self.otp_url.format(
+            site_url=self.site_url,
+            code=otp_code
+        )
+
     def get_installed_apps(self) -> List[str]:
         """
         Get complete list of installed Django apps.
@@ -454,8 +496,20 @@ class DjangoConfig(BaseModel):
         Returns:
             List of Django app names
         """
-        # Standard Django apps (always included)
-        apps = DEFAULT_APPS.copy()
+        # Start with DEFAULT_APPS but handle accounts specially
+        apps = []
+        
+        # Add apps before admin
+        for app in DEFAULT_APPS:
+            if app == "django.contrib.admin":
+                # Insert accounts before admin if enabled (for proper migration order)
+                if self.enable_accounts:
+                    apps.append("django_cfg.apps.accounts")
+            apps.append(app)
+
+        # Add other django-cfg built-in apps after standard apps
+        if self.enable_support:
+            apps.append("django_cfg.apps.support")
 
         # Auto-detect dashboard apps from Unfold callback
         dashboard_apps = self._get_dashboard_apps_from_callback()
@@ -619,7 +673,32 @@ class DjangoConfig(BaseModel):
         return self.model_dump(exclude={"_environment", "_base_dir", "_django_settings"}, exclude_none=True)
 
 
+# Global config instance for access from other modules
+_current_config = None
+
+def get_current_config():
+    """
+    Get the current DjangoConfig instance.
+    
+    Returns:
+        The current DjangoConfig instance or None if not set
+    """
+    global _current_config
+    return _current_config
+
+def set_current_config(config):
+    """
+    Set the current DjangoConfig instance.
+    
+    Args:
+        config: The DjangoConfig instance to set as current
+    """
+    global _current_config
+    _current_config = config
+
 # Export the main class
 __all__ = [
     "DjangoConfig",
+    "get_current_config",
+    "set_current_config",
 ]

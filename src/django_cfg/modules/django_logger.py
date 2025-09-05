@@ -43,7 +43,11 @@ class DjangoLogger(BaseModule):
     @classmethod
     def _create_logger(cls, name: str) -> logging.Logger:
         """Create and configure a logger based on DjangoConfig."""
-        config = cls.get_config()
+        try:
+            from django_cfg.core.config import get_current_config
+            config = get_current_config()
+        except Exception:
+            config = None
         
         # Create logger
         logger = logging.getLogger(name)
@@ -120,7 +124,11 @@ class DjangoLogger(BaseModule):
         Returns:
             Django LOGGING configuration dict
         """
-        config = cls.get_config()
+        try:
+            from django_cfg.core.config import get_current_config
+            config = get_current_config()
+        except Exception:
+            config = None
         
         logging_config = {
             'version': 1,

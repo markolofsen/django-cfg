@@ -71,6 +71,62 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             "enable_throttling": self.drf_enable_throttling,
             "serve_include_schema": self.drf_serve_include_schema,
         }
+    
+    def get_zones_with_defaults(self) -> Dict[str, Any]:
+        """
+        Get zones with django-cfg default zones automatically added.
+        
+        Returns:
+            Dict of zones including default django-cfg zones
+        """
+        zones = dict(self.zones) if hasattr(self, 'zones') and self.zones else {}
+        
+        # Add default django-cfg zones if enabled
+        try:
+            # Check if zones should be added based on current config
+            from django_cfg.core.config import get_current_config
+            try:
+                current_config = get_current_config()
+                support_enabled = getattr(current_config, 'enable_support', True)
+                accounts_enabled = getattr(current_config, 'enable_accounts', False)
+            except Exception:
+                # Fallback to checking INSTALLED_APPS
+                try:
+                    from django.conf import settings
+                    installed_apps = getattr(settings, 'INSTALLED_APPS', [])
+                    support_enabled = 'django_cfg.apps.support' in installed_apps
+                    accounts_enabled = 'django_cfg.apps.accounts' in installed_apps
+                except Exception:
+                    support_enabled = True  # Default for support
+                    accounts_enabled = False  # Default for accounts
+            
+            # Add Support zone if enabled
+            default_support_zone = 'cfg_support'
+            if support_enabled and default_support_zone not in zones:
+                zones[default_support_zone] = ZoneConfig(
+                    apps=["django_cfg.apps.support"],
+                    title="Support API",
+                    description="Support tickets and messages API",
+                    public=False,
+                    auth_required=True,
+                    version="v1",
+                )
+            
+            # Add Accounts zone if enabled
+            default_accounts_zone = 'cfg_accounts'
+            if accounts_enabled and default_accounts_zone not in zones:
+                zones[default_accounts_zone] = ZoneConfig(
+                    apps=["django_cfg.apps.accounts"],
+                    title="Accounts API",
+                    description="User management, OTP, profiles, and activity tracking API",
+                    public=False,
+                    auth_required=True,
+                    version="v1",
+                )
+        except Exception:
+            pass
+            
+        return zones
 
 
 # Alias for easier import

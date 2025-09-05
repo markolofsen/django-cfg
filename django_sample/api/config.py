@@ -62,20 +62,26 @@ class SampleProjectConfig(DjangoConfig):
     debug: bool = env.debug
     ssl_redirect: Optional[bool] = env.ssl_redirect
 
+    # === Django CFG Features ===
+    enable_support: bool = True
+    enable_accounts: bool = True
+
     # === URLs ===
     site_url: str = env.app.site_url
     api_url: str = env.app.api_url
-
+    ticket_url: str = env.app.ticket_url
+    otp_url: str = env.app.otp_url
+    
     # === Security Domains ===
     security_domains: list[str] = env.security_domains or []
 
     # === Custom User Model ===
-    auth_user_model: str = "users.User"
+    # auth_user_model: str = "users.User"
 
     # === Project Applications ===
     project_apps: list[str] = [
         "apps.core",
-        "apps.users",
+        # "apps.users",
         "apps.blog",
         "apps.shop",
     ]
@@ -195,15 +201,15 @@ class SampleProjectConfig(DjangoConfig):
                         NavigationItem(title="Categories", icon="category", link="admin:shop_category_changelist"),
                     ],
                 ),
-                NavigationGroup(
-                    title="Users",
-                    items=[
-                        NavigationItem(title="Users", icon="people", link="admin:users_user_changelist"),
-                        NavigationItem(title="User Profiles", icon="person", link="admin:users_userprofile_changelist"),
-                        NavigationItem(title="User Activity", icon="history", link="admin:users_useractivity_changelist"),
-                        NavigationItem(title="Groups", icon="group", link="admin:auth_group_changelist"),
-                    ],
-                ),
+                # NavigationGroup(
+                #     title="Users",
+                #     items=[
+                #         NavigationItem(title="Users", icon="people", link="admin:users_user_changelist"),
+                #         NavigationItem(title="User Profiles", icon="person", link="admin:users_userprofile_changelist"),
+                #         NavigationItem(title="User Activity", icon="history", link="admin:users_useractivity_changelist"),
+                #         NavigationItem(title="Groups", icon="group", link="admin:auth_group_changelist"),
+                #     ],
+                # ),
             ],
             # Dashboard callback for custom metrics
             dashboard_callback="api.config.dashboard_callback",
@@ -316,14 +322,14 @@ class SampleProjectConfig(DjangoConfig):
                 auth_required=False,
                 version="v1",
             ),
-            "users": ZoneConfig(
-                apps=["apps.users"],
-                title="Users API",
-                description="User management and authentication",
-                public=False,
-                auth_required=True,
-                version="v1",
-            ),
+            # "users": ZoneConfig(
+            #     apps=["apps.users"],
+            #     title="Users API",
+            #     description="User management and authentication",
+            #     public=False,
+            #     auth_required=True,
+            #     version="v1",
+            # ),
         },
     )
 

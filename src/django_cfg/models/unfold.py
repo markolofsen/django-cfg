@@ -143,10 +143,17 @@ class UnfoldTheme(BaseModel):
             "show_all_applications": self.sidebar.show_all_applications,
         }
 
-        # Add navigation to sidebar - take from navigation field, not from sidebar.navigation
+        # Navigation logic: custom + default sections
+        nav_items = []
+        
+        # Get default navigation from dashboard manager
+        from django_cfg.modules.unfold.dashboard import DashboardManager
+        dashboard = DashboardManager()
+        default_nav = dashboard.get_navigation_config()
+        
+        # 1. Add custom navigation from project (if defined)
         if self.navigation:
-            # Convert NavigationGroup models to dictionaries with reverse_lazy
-            nav_items = []
+            # Project has custom navigation - add it first
             for group in self.navigation:
                 group_dict = {
                     "title": group.title,
@@ -162,7 +169,14 @@ class UnfoldTheme(BaseModel):
                     ],
                 }
                 nav_items.append(group_dict)
-            sidebar_config["navigation"] = nav_items
+            
+            # Add default navigation after custom
+            nav_items.extend(default_nav)
+        else:
+            # No custom navigation - use only default navigation
+            nav_items.extend(default_nav)
+        
+        sidebar_config["navigation"] = nav_items
 
         settings["SIDEBAR"] = sidebar_config
 
@@ -195,6 +209,7 @@ class UnfoldTheme(BaseModel):
             settings["ENVIRONMENT_CALLBACK"] = self.environment_callback
 
         return settings
+
 
 
 class UnfoldConfig(BaseModel):

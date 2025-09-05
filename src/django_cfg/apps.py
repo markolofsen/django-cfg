@@ -5,7 +5,8 @@ Handles automatic registration of integrations like Constance admin.
 """
 
 from django.apps import AppConfig
-
+from django.conf import settings
+from django.contrib import admin
 
 class DjangoCfgConfig(AppConfig):
     """Configuration for django_cfg app."""
@@ -21,17 +22,15 @@ class DjangoCfgConfig(AppConfig):
     def _register_constance_admin(self):
         """Register Constance admin with Unfold integration."""
         try:
-            from django.conf import settings
             
             # Check if Constance is configured
             if not (hasattr(settings, 'CONSTANCE_CONFIG') and settings.CONSTANCE_CONFIG):
                 return
             
             # Import required modules
-            from django.contrib import admin
             from constance.admin import Config, ConstanceAdmin
             from unfold.admin import ModelAdmin
-            
+
             # Create custom admin class that inherits from both ConstanceAdmin and Unfold ModelAdmin
             class ConstanceConfigAdmin(ConstanceAdmin, ModelAdmin):
                 """Constance admin with Unfold integration."""

@@ -24,8 +24,8 @@ class DashboardManager(BaseModule):
         self.config = self.get_config()
     
     def get_navigation_config(self) -> List[Dict[str, Any]]:
-        """Get navigation configuration for Unfold sidebar."""
-        return [
+        """Get complete default navigation configuration for Unfold sidebar."""
+        navigation = [
             {
                 "title": "Dashboard",
                 "separator": True,
@@ -34,17 +34,7 @@ class DashboardManager(BaseModule):
                     {
                         "title": "Overview",
                         "icon": "dashboard",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": "Analytics",
-                        "icon": "analytics",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": "Reports",
-                        "icon": "assessment",
-                        "link": reverse_lazy("admin:index"),
+                        "link": "/admin/",
                     },
                 ],
             },
@@ -56,38 +46,109 @@ class DashboardManager(BaseModule):
                     {
                         "title": "Users",
                         "icon": "people",
-                        "link": reverse_lazy("admin:auth_user_changelist"),
+                        "link": self._get_user_admin_url(),
                     },
                     {
                         "title": "Groups",
                         "icon": "group",
-                        "link": reverse_lazy("admin:auth_group_changelist"),
-                    },
-                ],
-            },
-            {
-                "title": "System",
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": "Settings",
-                        "icon": "settings",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": "Logs",
-                        "icon": "list_alt",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": "Backups",
-                        "icon": "backup",
-                        "link": reverse_lazy("admin:index"),
+                        "link": self._get_reverse_lazy("admin:auth_group_changelist"),
                     },
                 ],
             },
         ]
+        
+        # Add Accounts section if enabled
+        if self.is_accounts_enabled():
+            navigation.append({
+                "title": "Users & Access",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Users",
+                        "icon": "people",
+                        "link": "/admin/django_cfg_accounts/customuser/",
+                    },
+                    {
+                        "title": "Registration Sources",
+                        "icon": "link",
+                        "link": "/admin/django_cfg_accounts/registrationsource/",
+                    },
+                    {
+                        "title": "User Registration Sources",
+                        "icon": "person",
+                        "link": "/admin/django_cfg_accounts/userregistrationsource/",
+                    },
+                    {
+                        "title": "Groups",
+                        "icon": "group",
+                        "link": "/admin/auth/group/",
+                    },
+                ]
+            })
+        
+        # Add Support section if enabled
+        if self.is_support_enabled():
+            navigation.append({
+                "title": "Support",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Tickets",
+                        "icon": "support_agent",
+                        "link": "/admin/django_cfg_support/ticket/",
+                    },
+                    {
+                        "title": "Messages",
+                        "icon": "chat",
+                        "link": "/admin/django_cfg_support/message/",
+                    },
+                ]
+            })
+
+        # Add System section
+        navigation.append({
+            "title": "System",
+            "separator": True,
+            "collapsible": True,
+            "items": [
+                {
+                    "title": "Settings",
+                    "icon": "settings",
+                    "link": '/admin/constance/config/',
+                },
+                {
+                    "title": "Health Check",
+                    "icon": "health_and_safety",
+                    "link": "/cfg/health/",
+                },
+            ],
+        })
+        
+        return navigation
+    
+    def _get_reverse_lazy(self, link: str) -> str:
+        """Safe reverse with fallback."""
+        try:
+            from django.urls import reverse
+            return reverse(link)
+        except Exception:
+            return link
+    
+    
+    def _get_user_admin_url(self) -> str:
+        """Get admin changelist URL for the current AUTH_USER_MODEL."""
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            app_label = User._meta.app_label
+            model_name = User._meta.model_name
+            # Return string URL, not reverse_lazy object
+            return f'/admin/{app_label}/{model_name}/'
+        except Exception:
+            # Universal fallback - return admin index instead of hardcoded model
+            return '/admin/'
     
     def get_unfold_config(self) -> Dict[str, Any]:
         """Get complete Unfold configuration based on working old version."""
@@ -112,7 +173,7 @@ class DashboardManager(BaseModule):
             
             # Login page customization
             "LOGIN": {
-                "redirect_after": lambda request: reverse_lazy("admin:index"),
+                "redirect_after": lambda request: "/admin/",
             },
             
             # Design system

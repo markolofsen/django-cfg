@@ -58,7 +58,8 @@ class AppConfig(BaseModel):
     domain: str = "localhost"
     api_url: str = "http://localhost:8000"
     site_url: str = "http://localhost:3000"
-
+    ticket_url: str = "http://localhost:3000/support/ticket/{uuid}"
+    otp_url: str = "http://localhost:3000/auth/otp/{code}"
 
 class EnvironmentFlags(BaseModel):
     """Environment flags."""

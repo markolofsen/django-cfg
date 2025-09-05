@@ -104,6 +104,9 @@ class SettingsGenerator:
             # Add custom user model
             if config.auth_user_model:
                 settings["AUTH_USER_MODEL"] = config.auth_user_model
+            elif config.enable_accounts:
+                # Auto-use django-cfg accounts CustomUser if accounts is enabled
+                settings["AUTH_USER_MODEL"] = "django_cfg_accounts.CustomUser"
 
             # Add base directory
             if config._base_dir:
@@ -419,7 +422,7 @@ class SettingsGenerator:
                         "debug": getattr(config.revolution, "debug", config.debug),
                         "auto_install_deps": getattr(config.revolution, "auto_install_deps", True),
 
-                        "zones": {zone_name: zone_config.model_dump() for zone_name, zone_config in config.revolution.zones.items()} if hasattr(config.revolution, "zones") else {},
+                        "zones": {zone_name: zone_config.model_dump() for zone_name, zone_config in config.revolution.get_zones_with_defaults().items()},
                     }
                 }
                 settings.update(revolution_settings)
