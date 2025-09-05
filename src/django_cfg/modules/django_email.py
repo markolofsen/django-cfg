@@ -51,8 +51,7 @@ class DjangoEmailService(BaseModule):
         Returns:
             Number of emails sent successfully
         """
-        if from_email is None:
-            from_email = self._get_default_from_email()
+        from_email = self._get_formatted_from_email(from_email)
         
         return send_mail(
             subject=subject,
@@ -85,8 +84,7 @@ class DjangoEmailService(BaseModule):
         Returns:
             Number of emails sent successfully
         """
-        if from_email is None:
-            from_email = self._get_default_from_email()
+        from_email = self._get_formatted_from_email(from_email)
         
         if text_message is None:
             text_message = strip_tags(html_message)
@@ -123,8 +121,19 @@ class DjangoEmailService(BaseModule):
         Returns:
             Number of emails sent successfully
         """
-        if from_email is None:
-            from_email = self._get_default_from_email()
+        from_email = self._get_formatted_from_email(from_email)
+        
+        # Auto-add project_name from config if not provided
+        if 'project_name' not in context:
+            context['project_name'] = self.config.project_name
+        
+        # Auto-add logo_url from config if not provided
+        if 'logo_url' not in context and self.config.project_logo:
+            context['logo_url'] = self.config.project_logo
+        
+        # Auto-add site_url from config if not provided
+        if 'site_url' not in context:
+            context['site_url'] = self.config.site_url
         
         # Render HTML template
         html_message = render_to_string(f"{template_name}.html", context)
@@ -169,8 +178,7 @@ class DjangoEmailService(BaseModule):
         Returns:
             True if email was sent successfully, False otherwise
         """
-        if from_email is None:
-            from_email = self._get_default_from_email()
+        from_email = self._get_formatted_from_email(from_email)
         
         if not html_content and not text_content:
             raise ValueError("Either html_content or text_content must be provided")
@@ -205,6 +213,27 @@ class DjangoEmailService(BaseModule):
         
         # Fallback to Django settings
         return getattr(settings, 'DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+    
+    def _get_formatted_from_email(self, from_email: Optional[str] = None) -> str:
+        """
+        Get formatted from email with project name.
+        
+        Args:
+            from_email: Optional custom from email
+            
+        Returns:
+            Formatted email in format: "Project Name <email@example.com>"
+        """
+        if from_email is None:
+            from_email = self._get_default_from_email()
+        
+        # If email already contains name (has < and >), return as is
+        if '<' in from_email and '>' in from_email:
+            return from_email
+        
+        # Format with project name
+        project_name = self.config.project_name
+        return f'"{project_name}" <{from_email}>'
     
     def is_configured(self) -> bool:
         """Check if email is properly configured."""

@@ -111,6 +111,11 @@ class DjangoConfig(BaseModel):
         max_length=100,
     )
 
+    project_logo: str = Field(
+        default="",
+        description="Project logo URL",
+    )
+
     project_version: str = Field(
         default="1.0.0",
         description="Project version",

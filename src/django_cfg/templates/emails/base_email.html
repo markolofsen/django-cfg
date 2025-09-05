@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ email_title }} - {{ site_name }}</title>
+    <title>{{ email_title }} - {{ project_name }}</title>
     <style>
       /* Basic styles inspired by the notification template */
       body {
@@ -36,10 +36,21 @@
         border-bottom: 1px solid #333;
       }
 
+      .header a {
+        text-decoration: none;
+        color: inherit;
+        display: inline-block;
+        transition: opacity 0.2s ease;
+      }
+
+      .header a:hover {
+        opacity: 0.8;
+      }
+
       .logo {
-        max-width: 60px;
+        width: 40px;
         /* Adjusted size */
-        margin-bottom: 10px;
+        margin-bottom: 5px;
         height: auto;
         display: inline-block;
         vertical-align: middle;
@@ -125,8 +136,12 @@
   <body>
     <div class="container">
       <div class="header">
-        {% comment %} <img src="{{ logo_url }}" alt="{{ site_name }} Logo" class="logo" /> {% endcomment %}
-        <span class="site-name">{{ site_name }}</span>
+        <a href="{{ site_url }}">
+          {% if logo_url %}
+          <img src="{{ logo_url }}" alt="{{ project_name }}" class="logo" />
+          {% endif %}
+          <span class="site-name">{{ project_name }}</span>
+        </a>
       </div>
 
       <div class="content">
@@ -146,11 +161,11 @@
 
         <p>If you need further assistance, please contact our support team.</p>
 
-        <p>Thanks,<br />The {{ site_name }} Team</p>
+        <p>Thanks,<br />The {{ project_name }} Team</p>
       </div>
 
       <div class="footer">
-        &copy; {% now "Y" %} {{ site_name }}. All rights reserved.<br />
+        &copy; {% now "Y" %} {{ project_name }}. All rights reserved.<br />
         You are receiving this email because it relates to your account
         activity.<br />
         {% if site_url != '#' %}

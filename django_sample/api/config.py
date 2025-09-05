@@ -53,6 +53,7 @@ class SampleProjectConfig(DjangoConfig):
 
     # === Project Information ===
     project_name: str = env.app.name
+    project_logo: str = env.app.logo_url
     project_version: str = "1.0.0"
     project_description: str = "Complete demonstration of django_cfg features"
 

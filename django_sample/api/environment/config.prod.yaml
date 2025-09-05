@@ -14,6 +14,7 @@ database:
 # === Application URLs ===
 app:
   name: "Django CFG Sample"
+  logo_url: "https://unrealos.com/favicon.png"
   domain: "example.com"
   api_url: "https://api.example.com"
   site_url: "https://example.com"

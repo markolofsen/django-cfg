@@ -54,6 +54,7 @@ class AppConfig(BaseModel):
     """Application configuration."""
     
     name: str = "Django CFG Sample"
+    logo_url: str = ""
     domain: str = "localhost"
     api_url: str = "http://localhost:8000"
     site_url: str = "http://localhost:3000"
