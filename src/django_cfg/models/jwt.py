@@ -22,18 +22,18 @@ class JWTConfig(BaseModel):
     )
     
     # === Token Lifetimes ===
-    access_token_lifetime_hours: int = Field(
-        default=24,
+    access_token_lifetime_hours: Optional[int] = Field(
+        default=None,
         ge=1,
         le=8760,  # 1 year max
-        description="Access token lifetime in hours"
+        description="Access token lifetime in hours (None = maximum: 8760 hours/1 year)"
     )
     
-    refresh_token_lifetime_days: int = Field(
-        default=30,
+    refresh_token_lifetime_days: Optional[int] = Field(
+        default=None,
         ge=1,
         le=365,  # 1 year max
-        description="Refresh token lifetime in days"
+        description="Refresh token lifetime in days (None = maximum: 365 days/1 year)"
     )
     
     # === Token Rotation ===
@@ -167,6 +167,24 @@ class JWTConfig(BaseModel):
         
         return self.__class__(**config_data)
     
+    def get_effective_access_token_hours(self) -> int:
+        """
+        Get effective access token lifetime in hours.
+        
+        Returns:
+            Access token lifetime (8760 hours if None = maximum)
+        """
+        return self.access_token_lifetime_hours if self.access_token_lifetime_hours is not None else 8760
+    
+    def get_effective_refresh_token_days(self) -> int:
+        """
+        Get effective refresh token lifetime in days.
+        
+        Returns:
+            Refresh token lifetime (365 days if None = maximum)
+        """
+        return self.refresh_token_lifetime_days if self.refresh_token_lifetime_days is not None else 365
+    
     def to_django_settings(self, secret_key: str) -> Dict[str, Any]:
         """
         Convert to Django SIMPLE_JWT settings.
@@ -180,8 +198,8 @@ class JWTConfig(BaseModel):
         return {
             "SIMPLE_JWT": {
                 # Token lifetimes
-                "ACCESS_TOKEN_LIFETIME": timedelta(hours=self.access_token_lifetime_hours),
-                "REFRESH_TOKEN_LIFETIME": timedelta(days=self.refresh_token_lifetime_days),
+                "ACCESS_TOKEN_LIFETIME": timedelta(hours=self.get_effective_access_token_hours()),
+                "REFRESH_TOKEN_LIFETIME": timedelta(days=self.get_effective_refresh_token_days()),
                 
                 # Token rotation
                 "ROTATE_REFRESH_TOKENS": self.rotate_refresh_tokens,
@@ -214,8 +232,8 @@ class JWTConfig(BaseModel):
                 "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
                 "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
                 "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-                "SLIDING_TOKEN_LIFETIME": timedelta(hours=self.access_token_lifetime_hours),
-                "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=self.refresh_token_lifetime_days),
+                "SLIDING_TOKEN_LIFETIME": timedelta(hours=self.get_effective_access_token_hours()),
+                "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=self.get_effective_refresh_token_days()),
             }
         }
     
@@ -226,9 +244,20 @@ class JWTConfig(BaseModel):
         Returns:
             Dictionary with token lifetime descriptions
         """
+        access_hours = self.get_effective_access_token_hours()
+        refresh_days = self.get_effective_refresh_token_days()
+        
+        access_desc = f"{access_hours} hour{'s' if access_hours != 1 else ''}"
+        if self.access_token_lifetime_hours is None:
+            access_desc += " (maximum)"
+            
+        refresh_desc = f"{refresh_days} day{'s' if refresh_days != 1 else ''}"
+        if self.refresh_token_lifetime_days is None:
+            refresh_desc += " (maximum)"
+        
         return {
-            "access_token": f"{self.access_token_lifetime_hours} hour{'s' if self.access_token_lifetime_hours != 1 else ''}",
-            "refresh_token": f"{self.refresh_token_lifetime_days} day{'s' if self.refresh_token_lifetime_days != 1 else ''}",
+            "access_token": access_desc,
+            "refresh_token": refresh_desc,
             "algorithm": self.algorithm,
             "rotation": "enabled" if self.rotate_refresh_tokens else "disabled",
         }

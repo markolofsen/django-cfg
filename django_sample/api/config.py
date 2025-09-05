@@ -142,8 +142,10 @@ class SampleProjectConfig(DjangoConfig):
     # === JWT Configuration ===
     jwt: Optional[JWTConfig] = JWTConfig(
         # Environment-aware token lifetimes
-        access_token_lifetime_hours=1 if debug else 24,
-        refresh_token_lifetime_days=7 if debug else 30,
+        # access_token_lifetime_hours=1 if debug else 24,
+        # refresh_token_lifetime_days=7 if debug else 30,
+        access_token_lifetime_hours=None, # If None = maximum: 8760 hours/1 year
+        refresh_token_lifetime_days=None, # If None = maximum: 365 days/1 year
         
         # Security settings
         rotate_refresh_tokens=True,
