@@ -11,7 +11,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 
 from ..models import CustomUser
 from .filters import UserStatusFilter
-from .inlines import UserRegistrationSourceInline, UserProfileInline, UserActivityInline
+from .inlines import UserRegistrationSourceInline, UserActivityInline
 
 
 @admin.register(CustomUser)
@@ -36,7 +36,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
     list_filter = [UserStatusFilter, "is_staff", "is_active", "date_joined"]
     ordering = ["-date_joined"]
     readonly_fields = ["date_joined", "last_login"]
-    inlines = [UserRegistrationSourceInline, UserProfileInline, UserActivityInline]
+    inlines = [UserRegistrationSourceInline, UserActivityInline]
 
     fieldsets = (
         (

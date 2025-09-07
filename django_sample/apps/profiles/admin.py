@@ -1,13 +1,12 @@
 """
-User Profile admin configuration.
+Admin configuration for Profiles app.
 """
 
 from django.contrib import admin
 from django.utils.html import format_html
 from django.contrib.humanize.templatetags.humanize import naturalday
 from unfold.admin import ModelAdmin
-
-from ..models import UserProfile
+from .models import UserProfile
 
 
 @admin.register(UserProfile)

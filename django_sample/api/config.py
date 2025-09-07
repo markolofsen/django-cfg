@@ -81,7 +81,7 @@ class SampleProjectConfig(DjangoConfig):
     # === Project Applications ===
     project_apps: list[str] = [
         "apps.core",
-        # "apps.users",
+        "apps.profiles",
         "apps.blog",
         "apps.shop",
     ]
@@ -201,15 +201,12 @@ class SampleProjectConfig(DjangoConfig):
                         NavigationItem(title="Categories", icon="category", link="admin:shop_category_changelist"),
                     ],
                 ),
-                # NavigationGroup(
-                #     title="Users",
-                #     items=[
-                #         NavigationItem(title="Users", icon="people", link="admin:users_user_changelist"),
-                #         NavigationItem(title="User Profiles", icon="person", link="admin:users_userprofile_changelist"),
-                #         NavigationItem(title="User Activity", icon="history", link="admin:users_useractivity_changelist"),
-                #         NavigationItem(title="Groups", icon="group", link="admin:auth_group_changelist"),
-                #     ],
-                # ),
+                NavigationGroup(
+                    title="Profiles",
+                    items=[
+                        NavigationItem(title="User Profiles", icon="person", link="admin:profiles_userprofile_changelist"),
+                    ],
+                ),
             ],
             # Dashboard callback for custom metrics
             dashboard_callback="api.config.dashboard_callback",
@@ -322,14 +319,6 @@ class SampleProjectConfig(DjangoConfig):
                 auth_required=False,
                 version="v1",
             ),
-            # "users": ZoneConfig(
-            #     apps=["apps.users"],
-            #     title="Users API",
-            #     description="User management and authentication",
-            #     public=False,
-            #     auth_required=True,
-            #     version="v1",
-            # ),
         },
     )
 
@@ -355,12 +344,14 @@ def dashboard_callback(request, context):
         # Get real data from models
         from apps.blog.models import Post, Comment
         from apps.shop.models import Product, Order, Category
-        from apps.users.models import User
+        from apps.profiles.models import UserProfile
+        from django_cfg.apps.accounts.models import CustomUser
         from django.utils import timezone
         from datetime import timedelta
 
         # Calculate real metrics
-        total_users = User.objects.count()
+        total_users = CustomUser.objects.count()
+        total_profiles = UserProfile.objects.count()
         total_posts = Post.objects.filter(status='published').count()
         total_comments = Comment.objects.count()
         total_products = Product.objects.filter(status='active').count()
@@ -373,7 +364,7 @@ def dashboard_callback(request, context):
         
         # Recent activity (last 7 days for comparison)
         week_ago = timezone.now() - timedelta(days=7)
-        recent_users = User.objects.filter(created_at__gte=week_ago).count()
+        recent_users = CustomUser.objects.filter(date_joined__gte=week_ago).count()
         recent_posts = Post.objects.filter(created_at__gte=week_ago, status='published').count()
         recent_orders = Order.objects.filter(created_at__gte=week_ago).count()
 
@@ -386,6 +377,15 @@ def dashboard_callback(request, context):
                 change=f"+{recent_users}" if recent_users > 0 else "0", 
                 change_type="positive" if recent_users > 0 else "neutral", 
                 description="Registered users", 
+                color="primary"
+            ),
+            StatCard(
+                title="User Profiles", 
+                value=str(total_profiles), 
+                icon="person", 
+                change="", 
+                change_type="neutral", 
+                description="Active profiles", 
                 color="primary"
             ),
             StatCard(

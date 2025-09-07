@@ -17,7 +17,7 @@ urlpatterns = [
     # Sample app URLs
     path("blog/", include("apps.blog.urls")),
     path("shop/", include("apps.shop.urls")),
-    # path("users/", include("apps.users.urls")),  # Commented out - not in project_apps
+    path("profiles/", include("apps.profiles.urls")),
     
     # Home page
     path("", TemplateView.as_view(template_name="home.html"), name="home"),

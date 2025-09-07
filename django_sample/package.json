@@ -9,6 +9,7 @@
     "env": "poetry env activate",
     "cli": "poetry run cli",
     "dev": "poetry run cli runserver",
+    "manage.py": "poetry run python manage.py",
     "migrate": "poetry run cli migrator",
     "generate": "poetry run cli generate",
     "install-local": "poetry lock && poetry install --extras local-dev"

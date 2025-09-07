@@ -11,7 +11,6 @@ from faker import Faker
 
 from apps.blog.models import Category as BlogCategory, Post, Comment, Tag, PostLike
 from apps.shop.models import Category as ShopCategory, Product, Order, OrderItem
-from apps.users.models import UserProfile
 
 User = get_user_model()
 fake = Faker()
@@ -121,7 +120,7 @@ class Command(BaseCommand):
         Product.objects.all().delete()
         ShopCategory.objects.all().delete()
         
-        UserProfile.objects.all().delete()
+        # Profiles will be deleted automatically via CASCADE when users are deleted
         User.objects.filter(is_superuser=False).delete()
 
     def create_users(self, count):
@@ -135,17 +134,6 @@ class Command(BaseCommand):
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
                 is_active=True
-            )
-            
-            # Create user profile
-            UserProfile.objects.create(
-                user=user,
-                website=fake.url() if random.choice([True, False]) else '',
-                github=fake.user_name() if random.choice([True, False]) else '',
-                twitter=fake.user_name() if random.choice([True, False]) else '',
-                linkedin=fake.user_name() if random.choice([True, False]) else '',
-                company=fake.company() if random.choice([True, False]) else '',
-                job_title=fake.job() if random.choice([True, False]) else ''
             )
             
             users.append(user)

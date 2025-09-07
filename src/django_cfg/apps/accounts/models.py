@@ -164,40 +164,6 @@ class OTPSecret(models.Model):
         ]
 
 
-class UserProfile(models.Model):
-    """
-    Extended user profile information.
-    """
-    
-    user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='profile')
-    
-    # Social links
-    website = models.URLField(blank=True)
-    github = models.CharField(max_length=100, blank=True)
-    twitter = models.CharField(max_length=100, blank=True)
-    linkedin = models.CharField(max_length=100, blank=True)
-    
-    # Professional info
-    company = models.CharField(max_length=100, blank=True)
-    job_title = models.CharField(max_length=100, blank=True)
-    
-    # Statistics
-    posts_count = models.PositiveIntegerField(default=0)
-    comments_count = models.PositiveIntegerField(default=0)
-    orders_count = models.PositiveIntegerField(default=0)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        app_label = 'django_cfg_accounts'
-        verbose_name = 'User Profile'
-        verbose_name_plural = 'User Profiles'
-    
-    def __str__(self):
-        return f"{self.user.username}'s Profile"
-
-
 class UserActivity(models.Model):
     """
     User activity log.

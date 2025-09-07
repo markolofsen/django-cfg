@@ -3,7 +3,7 @@ Inline admin classes for Accounts app.
 """
 
 from unfold.admin import TabularInline
-from ..models import UserRegistrationSource, UserProfile, UserActivity
+from ..models import UserRegistrationSource, UserActivity
 
 
 class UserRegistrationSourceInline(TabularInline):
@@ -30,19 +30,6 @@ class RegistrationSourceInline(TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return True
-
-
-class UserProfileInline(TabularInline):
-    model = UserProfile
-    extra = 0
-    readonly_fields = ["posts_count", "comments_count", "orders_count", "created_at", "updated_at"]
-    fields = ["website", "github", "twitter", "linkedin", "company", "job_title"]
-
-    def has_add_permission(self, request, obj=None):
-        return True
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 class UserActivityInline(TabularInline):
