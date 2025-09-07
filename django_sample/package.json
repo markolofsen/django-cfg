@@ -5,9 +5,13 @@
   "license": "ISC",
   "author": "Unrealos",
   "scripts": {
+    "preinstall": "poetry lock && poetry install",
     "env": "poetry env activate",
     "cli": "poetry run cli",
-    "dev": "poetry run cli runserver"
+    "dev": "poetry run cli runserver",
+    "migrate": "poetry run cli migrator",
+    "generate": "poetry run cli generate",
+    "install-local": "poetry lock && poetry install --extras local-dev"
   },
   "dependencies": {
     "@hey-api/openapi-ts": "^0.80.18"

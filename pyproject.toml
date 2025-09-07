@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.1.19"
+version = "1.1.20"
 description = "🚀 Production-ready Django configuration framework with type-safe settings, smart automation, and modern developer experience"
 readme = "README.md"
 license = {text = "MIT"}
@@ -85,6 +85,7 @@ dependencies = [
     
     # Optional services
     "pyTelegramBotAPI>=4.28.0",
+    "coolname (>=2.2.0,<3.0.0)",
 ]
 
 [project.optional-dependencies]
