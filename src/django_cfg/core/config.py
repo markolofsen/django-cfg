@@ -50,6 +50,7 @@ DEFAULT_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "rest_framework_nested",
+    "rangefilter",
     "django_filters",
     "drf_spectacular",
     "drf_spectacular_sidecar",

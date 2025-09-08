@@ -8,6 +8,7 @@ click>=8.2.0
 colorlog>=6.9.0
 coolname (>=2.2.0,<3.0.0)
 dj-database-url>=3.0.0
+django-admin-rangefilter (>=0.13.3,<0.14.0)
 django-constance>=4.3.2
 django-cors-headers>=4.7.0
 django-extensions>=4.1
