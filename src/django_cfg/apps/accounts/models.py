@@ -1,3 +1,4 @@
+from typing import Optional, List
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -109,13 +110,14 @@ class CustomUser(AbstractUser):
         """Get count of unanswered messages for the user."""
         return self.__class__.objects.get_unanswered_messages_count(self)
 
-    def get_sources(self):
+    def get_sources(self) -> List[RegistrationSource]:
         """Get all sources associated with this user."""
         return RegistrationSource.objects.filter(user_registration_sources__user=self)
 
-    def get_primary_source(self):
+    @property
+    def primary_source(self) -> Optional[RegistrationSource]:
         """Get the first source where user registered."""
-        user_source = self.user_registration_sources.filter(first_registration=True).first()
+        user_source = self.get_sources().filter(first_registration=True).first()
         return user_source.source if user_source else None
 
     class Meta:

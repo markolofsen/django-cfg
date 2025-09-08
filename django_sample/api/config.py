@@ -35,6 +35,7 @@ from django_cfg import (
     ConstanceField,
     RevolutionConfig,
     ZoneConfig,
+    DropdownItem,
 )
 from django_cfg.models.limits import LimitsConfig
 
@@ -169,7 +170,8 @@ class SampleProjectConfig(DjangoConfig):
             site_title=f"{env.app.name} Admin",
             site_header=env.app.name,
             site_url="/",
-            theme="auto",  # auto, light, dark, or None for switcher
+            site_symbol="rocket_launch",
+            theme=None,  # None enables theme switcher, "light"/"dark" forces theme
             colors=UnfoldColors(
                 primary="#3b82f6",
             ),
@@ -178,14 +180,17 @@ class SampleProjectConfig(DjangoConfig):
                 show_search=True,
                 show_all_applications=True,
             ),
+
+            # Site dropdown menu
+            site_dropdown=[
+                DropdownItem(
+                    icon="developer_board",
+                    title="Developer",
+                    link="https://unrealos.com",
+                ),
+            ],
             # Navigation
             navigation=[
-                NavigationGroup(
-                    title="Dashboard",
-                    items=[
-                        NavigationItem(title="Overview", icon="dashboard", link="admin:index"),
-                    ],
-                ),
                 NavigationGroup(
                     title="Content",
                     items=[

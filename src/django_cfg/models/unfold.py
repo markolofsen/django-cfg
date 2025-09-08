@@ -35,14 +35,12 @@ class NavigationItem(BaseModel):
     icon: Optional[str] = Field(None, description="Material icon name")
     link: Optional[str] = Field(None, description="Navigation link")
     badge: Optional[str] = Field(None, description="Badge text")
-    separator: bool = Field(False, description="Is separator item")
-
 
 class NavigationGroup(BaseModel):
     """Navigation group configuration."""
 
     title: str = Field(..., description="Group title")
-    separator: bool = Field(False, description="Add separator before group")
+    separator: bool = Field(True, description="Add separator before group")
     collapsible: bool = Field(True, description="Group is collapsible")
     items: List[NavigationItem] = Field(default_factory=list, description="Group items")
 
@@ -89,7 +87,7 @@ class UnfoldTheme(BaseModel):
     site_title: str = Field("Django Admin", description="Site title")
     site_header: str = Field("Django Administration", description="Site header")
     site_url: str = Field("/", description="Site URL")
-    site_symbol: str = Field("speed", description="Material icon for site")
+    site_symbol: str = Field("rocket_launch", description="Material icon for site")
 
     # UI settings
     show_history: bool = Field(True, description="Show history in admin")
@@ -142,14 +140,11 @@ class UnfoldTheme(BaseModel):
             "command_search": True,
             "show_all_applications": self.sidebar.show_all_applications,
         }
-
-        # Navigation logic: custom + default sections
-        nav_items = []
         
         # Get default navigation from dashboard manager
         from django_cfg.modules.unfold.dashboard import DashboardManager
         dashboard = DashboardManager()
-        default_nav = dashboard.get_navigation_config()
+        nav_items = dashboard.get_navigation_config()
         
         # 1. Add custom navigation from project (if defined)
         if self.navigation:
@@ -169,12 +164,6 @@ class UnfoldTheme(BaseModel):
                     ],
                 }
                 nav_items.append(group_dict)
-            
-            # Add default navigation after custom
-            nav_items.extend(default_nav)
-        else:
-            # No custom navigation - use only default navigation
-            nav_items.extend(default_nav)
         
         sidebar_config["navigation"] = nav_items
 

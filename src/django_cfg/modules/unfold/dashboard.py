@@ -36,22 +36,15 @@ class DashboardManager(BaseModule):
                         "icon": "dashboard",
                         "link": "/admin/",
                     },
-                ],
-            },
-            {
-                "title": "Data Management",
-                "separator": True,
-                "collapsible": True,
-                "items": [
                     {
-                        "title": "Users",
-                        "icon": "people",
-                        "link": self._get_user_admin_url(),
+                        "title": "Settings",
+                        "icon": "settings",
+                        "link": '/admin/constance/config/',
                     },
                     {
-                        "title": "Groups",
-                        "icon": "group",
-                        "link": self._get_reverse_lazy("admin:auth_group_changelist"),
+                        "title": "Health Check",
+                        "icon": "health_and_safety",
+                        "link": "/cfg/health/",
                     },
                 ],
             },
@@ -69,6 +62,12 @@ class DashboardManager(BaseModule):
                         "icon": "people",
                         "link": "/admin/django_cfg_accounts/customuser/",
                     },
+
+                    {
+                        "title": "User Groups",
+                        "icon": "group",
+                        "link": "/admin/auth/group/",
+                    },
                     {
                         "title": "Registration Sources",
                         "icon": "link",
@@ -78,11 +77,6 @@ class DashboardManager(BaseModule):
                         "title": "User Registration Sources",
                         "icon": "person",
                         "link": "/admin/django_cfg_accounts/userregistrationsource/",
-                    },
-                    {
-                        "title": "Groups",
-                        "icon": "group",
-                        "link": "/admin/auth/group/",
                     },
                 ]
             })
@@ -106,25 +100,6 @@ class DashboardManager(BaseModule):
                     },
                 ]
             })
-
-        # Add System section
-        navigation.append({
-            "title": "System",
-            "separator": True,
-            "collapsible": True,
-            "items": [
-                {
-                    "title": "Settings",
-                    "icon": "settings",
-                    "link": '/admin/constance/config/',
-                },
-                {
-                    "title": "Health Check",
-                    "icon": "health_and_safety",
-                    "link": "/cfg/health/",
-                },
-            ],
-        })
         
         return navigation
     
@@ -154,11 +129,11 @@ class DashboardManager(BaseModule):
         """Get complete Unfold configuration based on working old version."""
         return {
             # Site branding and appearance
-            "SITE_TITLE": "CarAPIS Admin",
-            "SITE_HEADER": "CarAPIS",
-            "SITE_SUBHEADER": "Automotive Data Platform",
+            "SITE_TITLE": "Admin",
+            "SITE_HEADER": "Admin",
+            "SITE_SUBHEADER": "",
             "SITE_URL": "/",
-            "SITE_SYMBOL": "directions_car",
+            "SITE_SYMBOL": "dashboard",
             
             # UI visibility controls
             "SHOW_HISTORY": True,
@@ -215,7 +190,7 @@ class DashboardManager(BaseModule):
                 },
             },
             
-            # Sidebar navigation - КЛЮЧЕВАЯ СТРУКТУРА!
+            # Sidebar navigation - KEY STRUCTURE!
             "SIDEBAR": {
                 "show_search": True,
                 "command_search": True,
@@ -223,28 +198,13 @@ class DashboardManager(BaseModule):
                 "navigation": self.get_navigation_config(),
             },
             
-            # Site dropdown menu
+            # Site dropdown menu - moved to top level
             "SITE_DROPDOWN": [
-                {
-                    "icon": "language",
-                    "title": "Documentation",
-                    "link": "https://docs.carapis.com",
-                },
-                {
-                    "icon": "support_agent",
-                    "title": "Support",
-                    "link": "https://support.carapis.com",
-                },
-                {
-                    "icon": "code",
-                    "title": "API Docs",
-                    "link": "https://api.carapis.com/docs",
-                },
-                {
-                    "icon": "bug_report",
-                    "title": "Report Issue",
-                    "link": "https://github.com/carapis/issues",
-                },
+                # {
+                #     "icon": "language",
+                #     "title": "Documentation",
+                #     "link": "https://docs.carapis.com",
+                # },
             ],
             
             # Command interface

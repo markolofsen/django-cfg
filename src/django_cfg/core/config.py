@@ -23,7 +23,6 @@ from django_cfg.models.unfold import UnfoldConfig
 from django_cfg.models.drf import DRFConfig, SpectacularConfig
 from django_cfg.models.limits import LimitsConfig
 
-
 # Default apps
 DEFAULT_APPS = [
     # Unfold
@@ -449,6 +448,9 @@ class DjangoConfig(BaseModel):
         Raises:
             ConfigurationError: If settings generation fails
         """
+        # Automatically set this config as the current global config
+        set_current_config(self)
+        
         if self._django_settings is None:
             from django_cfg.core.generation import SettingsGenerator
 
@@ -686,7 +688,7 @@ def get_current_config():
     global _current_config
     return _current_config
 
-def set_current_config(config):
+def set_current_config(config: DjangoConfig):
     """
     Set the current DjangoConfig instance.
     

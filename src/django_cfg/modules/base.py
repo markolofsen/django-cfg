@@ -46,6 +46,31 @@ class BaseModule(ABC):
         """
         self._config = config
     
+    def _get_config_key(self, key: str, default: Any) -> bool:
+        """
+        Get a key from the configuration instance.
+        
+        Args:
+            key: The key to get
+            default: The default value to return if the key is not found
+        """
+        try:
+            # Try to get config if not already set
+            if self._config is None:
+                self._config = self.get_config()
+            
+            # If config is available, get the key
+            if self._config is not None:
+                result = getattr(self._config, key, default)
+                return bool(result)
+            
+            # Fallback to default if no config available
+            return bool(default)
+            
+        except Exception:
+            # Return default on any error
+            return bool(default)
+
     def is_support_enabled(self) -> bool:
         """
         Check if django-cfg Support is enabled.
@@ -53,16 +78,7 @@ class BaseModule(ABC):
         Returns:
             True if Support is enabled, False otherwise
         """
-        try:
-            config = self.get_config()
-            return getattr(config, 'enable_support', True)
-        except Exception:
-            # Fallback to checking INSTALLED_APPS
-            try:
-                from django.conf import settings
-                return 'django_cfg.apps.support' in getattr(settings, 'INSTALLED_APPS', [])
-            except Exception:
-                return False
+        return self._get_config_key('enable_support', True)
     
     def is_accounts_enabled(self) -> bool:
         """
@@ -71,16 +87,7 @@ class BaseModule(ABC):
         Returns:
             True if Accounts is enabled, False otherwise
         """
-        try:
-            config = self.get_config()
-            return getattr(config, 'enable_accounts', False)
-        except Exception:
-            # Fallback to checking INSTALLED_APPS
-            try:
-                from django.conf import settings
-                return 'django_cfg.apps.accounts' in getattr(settings, 'INSTALLED_APPS', [])
-            except Exception:
-                return False
+        return self._get_config_key('enable_accounts', False)
 
 
 # Export the base class
