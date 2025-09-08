@@ -194,19 +194,28 @@ class SmartDefaults:
                     settings['CORS_ALLOW_ALL_ORIGINS'] = True
                     settings['CORS_ALLOW_CREDENTIALS'] = True
                     
-                    # For development, also add local domains to CSRF trusted origins
+                    # For development, add ALL domains to CSRF trusted origins
+                    # This allows testing with production domains in dev environment
                     csrf_trusted_origins = []
                     for domain in domains:
                         if domain.startswith(('localhost', '127.0.0.1', '0.0.0.0')):
+                            # Local domains: add HTTP with common ports
                             csrf_trusted_origins.extend([
                                 f"http://{domain}",
                                 f"http://{domain}:8000",
                                 f"http://{domain}:3000",
                             ])
                         elif domain.endswith('.local'):
+                            # .local domains: add both HTTP and HTTPS
                             csrf_trusted_origins.extend([
                                 f"http://{domain}",
                                 f"https://{domain}",
+                            ])
+                        else:
+                            # External domains: add HTTPS for dev testing with production domains
+                            csrf_trusted_origins.extend([
+                                f"https://{domain}",
+                                f"http://{domain}",  # Also HTTP for flexibility
                             ])
                     
                     if csrf_trusted_origins:
