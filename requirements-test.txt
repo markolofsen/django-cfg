@@ -37,6 +37,7 @@ pytest-django>=4.5.0
 pytest-mock>=3.10.0
 pytest-xdist>=3.0.0
 pytest>=7.0
+python-json-logger (>=3.3.0,<4.0.0)
 questionary>=2.1.0
 redis>=5.0.0
 rich>=14.1.0
