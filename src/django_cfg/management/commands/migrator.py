@@ -96,6 +96,9 @@ class Command(BaseCommand):
 
         # Run full migration
         self.run_full_migration()
+        
+        # Always migrate constance (required for django-cfg)
+        self.migrate_constance_if_needed()
 
     def create_migrations(self):
         """Create migrations for all apps"""
@@ -154,6 +157,25 @@ class Command(BaseCommand):
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"❌ Error migrating {db_name}: {e}"))
+
+    def migrate_constance_if_needed(self):
+        """Always migrate constance app if it's installed"""
+        try:
+            # Check if constance is in INSTALLED_APPS
+            if 'constance' in settings.INSTALLED_APPS:
+                self.stdout.write(self.style.SUCCESS("🔧 Migrating constance (django-cfg requirement)..."))
+                
+                # Try to migrate constance on default database
+                try:
+                    call_command("migrate", "constance", database="default", verbosity=1)
+                    self.stdout.write(self.style.SUCCESS("✅ Constance migration completed!"))
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(f"⚠️  Constance migration warning: {e}"))
+            else:
+                self.stdout.write(self.style.WARNING("⚠️  Constance not found in INSTALLED_APPS"))
+                
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"⚠️  Could not migrate constance: {e}"))
 
     def migrate_app(self, app_name):
         """Migrate specific app across all databases"""
