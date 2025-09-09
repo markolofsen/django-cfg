@@ -101,6 +101,51 @@ class DashboardManager(BaseModule):
                 ]
             })
         
+        # Add Newsletter section if enabled
+        if self.is_newsletter_enabled():
+            navigation.append({
+                "title": "Newsletter",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Newsletters",
+                        "icon": "email",
+                        "link": "/admin/django_cfg_newsletter/newsletter/",
+                    },
+                    {
+                        "title": "Subscriptions",
+                        "icon": "person_add",
+                        "link": "/admin/django_cfg_newsletter/newslettersubscription/",
+                    },
+                    {
+                        "title": "Campaigns",
+                        "icon": "campaign",
+                        "link": "/admin/django_cfg_newsletter/newslettercampaign/",
+                    },
+                    {
+                        "title": "Email Logs",
+                        "icon": "mail_outline",
+                        "link": "/admin/django_cfg_newsletter/emaillog/",
+                    },
+                ]
+            })
+        
+        # Add Leads section if enabled
+        if self.is_leads_enabled():
+            navigation.append({
+                "title": "Leads",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Leads",
+                        "icon": "contact_page",
+                        "link": "/admin/django_cfg_leads/lead/",
+                    },
+                ]
+            })
+        
         return navigation
     
     def _get_reverse_lazy(self, link: str) -> str:

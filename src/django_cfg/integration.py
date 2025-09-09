@@ -82,16 +82,40 @@ def get_django_cfg_urls_info() -> dict:
     except ImportError:
         version = "unknown"
     
+    # Get enabled endpoints based on configuration
+    endpoints = [
+        "cfg/commands/",
+        "cfg/health/",
+    ]
+    
+    try:
+        from django_cfg.modules.base import BaseModule
+        base_module = BaseModule()
+        
+        # All business logic apps are handled by Django Revolution zones
+        # if base_module.is_support_enabled():
+        #     endpoints.append("cfg/support/")
+        # if base_module.is_accounts_enabled():
+        #     endpoints.append("cfg/accounts/")
+        # Newsletter and Leads are handled by Django Revolution zones
+        # if base_module.is_newsletter_enabled():
+        #     endpoints.append("cfg/newsletter/")
+        # if base_module.is_leads_enabled():
+        #     endpoints.append("cfg/leads/")
+    except Exception:
+        # Fallback: show all possible endpoints
+        endpoints.extend([
+            "cfg/support/",
+            "cfg/accounts/",
+            "cfg/newsletter/",
+            "cfg/leads/",
+        ])
+    
     info = {
         "django_cfg": {
             "version": version,
             "prefix": "cfg/",
-            "endpoints": [
-                "cfg/commands/",
-                "cfg/status/",
-                "cfg/support/",
-                "cfg/accounts/",
-            ],
+            "endpoints": endpoints,
             "description": "Django CFG management endpoints",
         }
     }

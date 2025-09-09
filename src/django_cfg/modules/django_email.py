@@ -123,17 +123,8 @@ class DjangoEmailService(BaseModule):
         """
         from_email = self._get_formatted_from_email(from_email)
         
-        # Auto-add project_name from config if not provided
-        if 'project_name' not in context:
-            context['project_name'] = self.config.project_name
-        
-        # Auto-add logo_url from config if not provided
-        if 'logo_url' not in context and self.config.project_logo:
-            context['logo_url'] = self.config.project_logo
-        
-        # Auto-add site_url from config if not provided
-        if 'site_url' not in context:
-            context['site_url'] = self.config.site_url
+        # Prepare context with auto-added values
+        context = self._prepare_template_context(context)
         
         # Render HTML template
         html_message = render_to_string(f"{template_name}.html", context)
@@ -206,6 +197,109 @@ class DjangoEmailService(BaseModule):
                 raise e
             return False
     
+    def send_with_attachments(
+        self,
+        subject: str,
+        recipient_list: List[str],
+        attachments: List[tuple],
+        message: Optional[str] = None,
+        html_message: Optional[str] = None,
+        template_name: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        from_email: Optional[str] = None,
+        fail_silently: bool = False,
+    ) -> bool:
+        """
+        Universal method to send emails with attachments.
+        
+        Args:
+            subject: Email subject
+            recipient_list: List of recipient email addresses
+            attachments: List of (filename, content, mimetype) tuples
+            message: Plain text message (for simple emails)
+            html_message: HTML message (for HTML emails)
+            template_name: Template name without .html extension (for template emails)
+            context: Template context variables (required if template_name provided)
+            from_email: Sender email (auto-detected if not provided)
+            fail_silently: Whether to fail silently on errors
+            
+        Returns:
+            True if email was sent successfully, False otherwise
+        """
+        html_content = None
+        text_content = None
+        
+        if template_name:
+            # Template-based email
+            if not context:
+                context = {}
+            
+            # Prepare context with auto-added values
+            context = self._prepare_template_context(context)
+            
+            # Render templates
+            html_content = render_to_string(f"{template_name}.html", context)
+            try:
+                text_content = render_to_string(f"{template_name}.txt", context)
+            except:
+                text_content = strip_tags(html_content)
+                
+        elif html_message:
+            # HTML email
+            html_content = html_message
+            text_content = message or strip_tags(html_message)
+            
+        elif message:
+            # Simple text email
+            text_content = message
+            
+        else:
+            raise ValueError("Must provide either message, html_message, or template_name")
+        
+        return self.send_multipart(
+            subject=subject,
+            recipient_list=recipient_list,
+            html_content=html_content,
+            text_content=text_content,
+            from_email=from_email,
+            attachments=attachments,
+            fail_silently=fail_silently,
+        )
+    
+    def _prepare_template_context(self, context: Dict[str, Any], email_log_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Prepare template context with auto-added values from config.
+        
+        Args:
+            context: Original context dictionary
+            email_log_id: Optional email log ID for tracking
+            
+        Returns:
+            Updated context with auto-added values
+        """
+        # Create a copy to avoid modifying the original
+        updated_context = context.copy()
+        
+        # Auto-add project_name from config if not provided
+        if 'project_name' not in updated_context:
+            updated_context['project_name'] = self.config.project_name
+        
+        # Auto-add logo_url from config if not provided
+        if 'logo_url' not in updated_context and self.config.project_logo:
+            updated_context['logo_url'] = self.config.project_logo
+        
+        # Auto-add site_url from config if not provided
+        if 'site_url' not in updated_context:
+            updated_context['site_url'] = self.config.site_url
+        
+        # Add tracking URLs if email_log_id is provided
+        if email_log_id:
+            base_url = self.config.api_url.rstrip('/')
+            updated_context['tracking_pixel_url'] = f"{base_url}/cfg/newsletter/track/open/{email_log_id}/"
+            updated_context['tracking_click_url'] = f"{base_url}/cfg/newsletter/track/click/{email_log_id}"
+            
+        return updated_context
+    
     def _get_default_from_email(self) -> str:
         """Get the default from email address."""
         if self.email_config and self.email_config.default_from_email:
@@ -259,6 +353,73 @@ class DjangoEmailService(BaseModule):
             })
         
         return info
+    
+    # Backward compatibility aliases
+    def send_html_with_attachments(self, subject: str, html_message: str, recipient_list: List[str], 
+                                 attachments: List[tuple], text_message: Optional[str] = None, 
+                                 from_email: Optional[str] = None, fail_silently: bool = False) -> bool:
+        """Alias for send_with_attachments with HTML message."""
+        return self.send_with_attachments(
+            subject=subject, recipient_list=recipient_list, attachments=attachments,
+            html_message=html_message, message=text_message, from_email=from_email, fail_silently=fail_silently
+        )
+    
+    def send_template_with_attachments(self, subject: str, template_name: str, context: Dict[str, Any],
+                                     recipient_list: List[str], attachments: List[tuple],
+                                     from_email: Optional[str] = None, fail_silently: bool = False) -> bool:
+        """Alias for send_with_attachments with template."""
+        return self.send_with_attachments(
+            subject=subject, recipient_list=recipient_list, attachments=attachments,
+            template_name=template_name, context=context, from_email=from_email, fail_silently=fail_silently
+        )
+    
+    def send_template_with_tracking(
+        self,
+        subject: str,
+        template_name: str,
+        context: Dict[str, Any],
+        recipient_list: List[str],
+        email_log_id: str,
+        from_email: Optional[str] = None,
+        fail_silently: bool = False,
+    ) -> int:
+        """
+        Send an email using a Django template with tracking support.
+        
+        Args:
+            subject: Email subject
+            template_name: Template name (without .html extension)
+            context: Template context variables
+            recipient_list: List of recipient email addresses
+            email_log_id: Email log ID for tracking
+            from_email: Sender email (auto-detected if not provided)
+            fail_silently: Whether to fail silently on errors
+            
+        Returns:
+            Number of emails sent successfully
+        """
+        from_email = self._get_formatted_from_email(from_email)
+        
+        # Prepare context with auto-added values and tracking
+        context = self._prepare_template_context(context, email_log_id)
+        
+        # Render HTML template
+        html_message = render_to_string(f"{template_name}.html", context)
+        
+        # Try to render plain text template
+        try:
+            text_message = render_to_string(f"{template_name}.txt", context)
+        except:
+            text_message = strip_tags(html_message)
+        
+        return self.send_html(
+            subject=subject,
+            html_message=html_message,
+            recipient_list=recipient_list,
+            text_message=text_message,
+            from_email=from_email,
+            fail_silently=fail_silently,
+        )
 
 
 # Convenience function for quick access
@@ -293,4 +454,7 @@ def send_email(
 
 
 # Export public API
-__all__ = ['DjangoEmailService', 'send_email']
+__all__ = [
+    'DjangoEmailService', 
+    'send_email'
+]

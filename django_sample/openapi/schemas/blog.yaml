@@ -1119,10 +1119,10 @@ components:
           maxLength: 150
         first_name:
           type: string
-          maxLength: 150
+          maxLength: 50
         last_name:
           type: string
-          maxLength: 150
+          maxLength: 50
         full_name:
           type: string
           readOnly: true
@@ -1147,10 +1147,10 @@ components:
           maxLength: 150
         first_name:
           type: string
-          maxLength: 150
+          maxLength: 50
         last_name:
           type: string
-          maxLength: 150
+          maxLength: 50
         avatar:
           type: string
           format: binary

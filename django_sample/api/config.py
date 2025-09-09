@@ -66,6 +66,8 @@ class SampleProjectConfig(DjangoConfig):
     # === Django CFG Features ===
     enable_support: bool = True
     enable_accounts: bool = True
+    enable_newsletter: bool = True
+    enable_leads: bool = True
 
     # === URLs ===
     site_url: str = env.app.site_url
@@ -81,7 +83,7 @@ class SampleProjectConfig(DjangoConfig):
 
     # === Project Applications ===
     project_apps: list[str] = [
-        "apps.core",
+        "core",
         "apps.profiles",
         "apps.blog",
         "apps.shop",
@@ -132,8 +134,8 @@ class SampleProjectConfig(DjangoConfig):
             default_from_email=env.email.default_from,
             default_from_name=env.app.name,
         )
-        if env.email.backend != "console"
-        else None
+        # if env.env.is_prod
+        # else None
     )
 
     # === Telegram Configuration ===

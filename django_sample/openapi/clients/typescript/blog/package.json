@@ -1,6 +1,6 @@
 {
   "name": "@unrealosblog",
-  "version": "1.0.30",
+  "version": "1.0.33",
   "description": "Blog posts and comments management",
   "main": "index.ts",
   "types": "index.ts",

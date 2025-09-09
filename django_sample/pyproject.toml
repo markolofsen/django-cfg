@@ -20,6 +20,7 @@ psutil = "^5.9.0"
 # Enhanced CLI with Click
 click = "^8.1.0"
 faker = "^37.5.3"
+django-admin-rangefilter = "^0.13.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

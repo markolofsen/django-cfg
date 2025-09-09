@@ -1,6 +1,6 @@
 {
   "name": "@unrealosshop",
-  "version": "1.0.30",
+  "version": "1.0.33",
   "description": "E-commerce products, orders and categories",
   "main": "index.ts",
   "types": "index.ts",

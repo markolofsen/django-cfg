@@ -5,14 +5,17 @@
   "license": "ISC",
   "author": "Unrealos",
   "scripts": {
+    "setup": "./devops/setup.sh",
     "preinstall": "poetry lock && poetry install",
     "env": "poetry env activate",
     "cli": "poetry run cli",
+    "docker": "git pull & python3 devops/manage.py",
+    "commit": "npx openrouter-commit -run",
+    "commit2": "git add . && git commit -m 'fixes' && git push",
     "dev": "poetry run cli runserver",
     "manage.py": "poetry run python manage.py",
     "migrate": "poetry run cli migrator",
-    "generate": "poetry run cli generate",
-    "install-local": "poetry lock && poetry install --extras local-dev"
+    "generate": "poetry run cli generate"
   },
   "dependencies": {
     "@hey-api/openapi-ts": "^0.80.18"

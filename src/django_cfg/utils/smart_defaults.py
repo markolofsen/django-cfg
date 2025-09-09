@@ -125,13 +125,11 @@ class SmartDefaults:
                 config.timeout = min(config.timeout, 5)  # Very short timeout
                 
             elif environment == "development":
-                # Development: Use SMTP if configured, otherwise console
-                if not config.username or not config.password:
-                    # No SMTP credentials - use console backend
-                    config.backend_override = "django.core.mail.backends.console.EmailBackend"
-                else:
+                # Development: Use SMTP if configured (allow real email sending in dev)
+                if config.username and config.password:
                     # SMTP configured - use SMTP backend
                     config.backend_override = "django.core.mail.backends.smtp.EmailBackend"
+                # Note: No fallback to console - let user decide via backend setting
                     
             elif environment in ("production", "staging"):
                 # Production: Use SMTP if properly configured

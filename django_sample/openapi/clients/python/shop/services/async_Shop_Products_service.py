@@ -21,11 +21,18 @@ async def api_shop_products_list(
 
     base_path = api_config.base_path
     path = f"/api/shop/products/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {
         "category": category,
         "is_digital": is_digital,
@@ -57,11 +64,18 @@ async def api_shop_products_retrieve(slug: str, api_config_override: Optional[AP
 
     base_path = api_config.base_path
     path = f"/api/shop/products/{slug}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -85,11 +99,18 @@ async def api_shop_products_featured_retrieve(api_config_override: Optional[APIC
 
     base_path = api_config.base_path
     path = f"/api/shop/products/featured/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -113,11 +134,18 @@ async def api_shop_products_stats_retrieve(api_config_override: Optional[APIConf
 
     base_path = api_config.base_path
     path = f"/api/shop/products/stats/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}

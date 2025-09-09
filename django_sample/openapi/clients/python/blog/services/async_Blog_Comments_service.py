@@ -20,11 +20,18 @@ async def api_blog_comments_list(
 
     base_path = api_config.base_path
     path = f"/api/blog/comments/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {
         "author": author,
         "is_approved": is_approved,
@@ -55,11 +62,18 @@ async def api_blog_comments_create(data: CommentRequest, api_config_override: Op
 
     base_path = api_config.base_path
     path = f"/api/blog/comments/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -78,11 +92,18 @@ async def api_blog_comments_retrieve(id: int, api_config_override: Optional[APIC
 
     base_path = api_config.base_path
     path = f"/api/blog/comments/{id}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -108,11 +129,18 @@ async def api_blog_comments_update(
 
     base_path = api_config.base_path
     path = f"/api/blog/comments/{id}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -131,11 +159,18 @@ async def api_blog_comments_destroy(id: int, api_config_override: Optional[APICo
 
     base_path = api_config.base_path
     path = f"/api/blog/comments/{id}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -168,11 +203,18 @@ async def api_blog_posts_comments_list(
 
     base_path = api_config.base_path
     path = f"/api/blog/posts/{post_slug}/comments/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {
         "author": author,
         "is_approved": is_approved,
@@ -205,11 +247,18 @@ async def api_blog_posts_comments_create(
 
     base_path = api_config.base_path
     path = f"/api/blog/posts/{post_slug}/comments/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -230,11 +279,18 @@ async def api_blog_posts_comments_retrieve(
 
     base_path = api_config.base_path
     path = f"/api/blog/posts/{post_slug}/comments/{id}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -260,11 +316,18 @@ async def api_blog_posts_comments_update(
 
     base_path = api_config.base_path
     path = f"/api/blog/posts/{post_slug}/comments/{id}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -285,11 +348,18 @@ async def api_blog_posts_comments_destroy(
 
     base_path = api_config.base_path
     path = f"/api/blog/posts/{post_slug}/comments/{id}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}

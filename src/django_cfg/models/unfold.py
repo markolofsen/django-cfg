@@ -6,7 +6,7 @@ Provides type-safe configuration for Django Unfold admin interface.
 
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from django_cfg.tailwind.config import get_unfold_colors
+from django_cfg.utils.tailwind.config import get_unfold_colors
 from django.urls import reverse_lazy, NoReverseMatch
 
 

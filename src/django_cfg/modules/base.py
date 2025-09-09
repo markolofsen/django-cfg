@@ -88,6 +88,24 @@ class BaseModule(ABC):
             True if Accounts is enabled, False otherwise
         """
         return self._get_config_key('enable_accounts', False)
+    
+    def is_newsletter_enabled(self) -> bool:
+        """
+        Check if django-cfg Newsletter is enabled.
+        
+        Returns:
+            True if Newsletter is enabled, False otherwise
+        """
+        return self._get_config_key('enable_newsletter', False)
+    
+    def is_leads_enabled(self) -> bool:
+        """
+        Check if django-cfg Leads is enabled.
+        
+        Returns:
+            True if Leads is enabled, False otherwise
+        """
+        return self._get_config_key('enable_leads', False)
 
 
 # Export the base class

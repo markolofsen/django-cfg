@@ -6,6 +6,8 @@ from drf_spectacular.utils import extend_schema
 from .views import OTPViewSet
 from .views.profile import UserProfileView, UserProfileUpdateView, UserProfilePartialUpdateView, upload_avatar
 
+app_name = 'cfg_accounts'
+
 # Create router for ViewSets
 router = DefaultRouter()
 router.register(r'otp', OTPViewSet, basename='otp')

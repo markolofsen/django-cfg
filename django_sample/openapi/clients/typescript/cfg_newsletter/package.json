@@ -1,0 +1,28 @@
+{
+  "name": "@unrealoscfg_newsletter",
+  "version": "1.0.33",
+  "description": "Email campaigns, subscriptions, and newsletter management API",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "api",
+    "typescript"
+  ],
+  "author": "Unrealos",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {},
+  "files": [
+    "*.ts",
+    "*.d.ts"
+  ]
+} 

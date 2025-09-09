@@ -9,7 +9,7 @@
 
 Django-CFG is the production-ready configuration framework that eliminates Django's biggest pain points. Say goodbye to 500-line `settings.py` files and hello to type-safe, YAML-powered, intelligent configuration that just works.
 
-**🎯 [See it in action →](https://github.com/markolofsen/django-cfg/tree/main/django_sample)** Complete sample project with blog, shop, multi-database routing, and beautiful admin interface.
+**🎯 [See it in action →](https://github.com/markolofsen/django-cfg/tree/main/django_sample)** Complete sample project with blog, shop, newsletter campaigns, lead management, multi-database routing, and beautiful admin interface.
 
 ---
 
@@ -24,7 +24,7 @@ Django-CFG is the production-ready configuration framework that eliminates Djang
 - **No API documentation** without hours of setup
 
 ### The Django-CFG Solution
-- **3-line configuration** that handles everything
+- **Type-safe configuration** with Pydantic validation
 - **100% type-safe** with full IDE support
 - **Smart automation** that knows what you need
 - **Environment detection** that just works
@@ -77,6 +77,8 @@ python manage.py runserver
 **That's it!** 🎉 You now have:
 - ✅ Beautiful admin interface with Unfold + Tailwind CSS
 - ✅ Built-in support ticket system with chat interface
+- ✅ Newsletter campaigns with email tracking & analytics
+- ✅ Lead management system with CRM integration
 - ✅ Auto-generated API documentation
 - ✅ Environment-aware configuration
 - ✅ Type-safe settings with full IDE support
@@ -88,7 +90,7 @@ python manage.py runserver
 
 | Feature | Traditional Django | Django-CFG |
 |---------|-------------------|-------------|
-| **📝 Configuration** | 500+ lines of settings hell | **3 lines. Done.** |
+| **📝 Configuration** | 500+ lines of settings hell | **Type-safe & organized** |
 | **🔒 Type Safety** | Pray and hope | **100% validated** |
 | **🎨 Admin Interface** | Ugly 2010 design | **Modern Unfold + Tailwind** |
 | **📊 Dashboard** | Basic admin index | **Real-time metrics & widgets** |
@@ -136,7 +138,7 @@ Complete ticket management with modern chat interface, email notifications, and 
 Built-in accounts system with OTP authentication, user profiles, activity tracking, and registration sources.
 
 ### 📧 **Built-in Modules**
-Email, Telegram, Support ticket system, and advanced User management ready out of the box.
+Email, Telegram, Support ticket system, Newsletter campaigns, Lead management, and advanced User management ready out of the box.
 
 ### 🌍 **Environment Detection**
 Automatic dev/staging/production detection with appropriate defaults.
@@ -160,6 +162,9 @@ Django-CFG includes powerful management commands for development and operations:
 | **`test_email`** | Test email configuration | `python manage.py test_email --to test@example.com` |
 | **`test_telegram`** | Test Telegram bot integration | `python manage.py test_telegram --chat_id 123` |
 | **`support_stats`** | Display support ticket statistics | `python manage.py support_stats --format json` |
+| **`test_newsletter`** | Test newsletter sending functionality | `python manage.py test_newsletter --email test@example.com` |
+| **`newsletter_stats`** | Display newsletter campaign statistics | `python manage.py newsletter_stats --format json` |
+| **`leads_stats`** | Display lead conversion statistics | `python manage.py leads_stats --format json` |
 | **`validate_config`** | Deep validation of all settings | `python manage.py validate_config --strict` |
 
 ---
@@ -301,6 +306,116 @@ enable_support: bool = False  # Removes from admin, API, and dashboard
 
 ---
 
+## 📧 Built-in Newsletter System
+
+Django-CFG includes a complete newsletter and email marketing system with tracking and analytics:
+
+### Features
+- **📬 Newsletter Management** - Create, schedule, and manage email newsletters
+- **👥 Subscription Management** - User subscriptions with double opt-in and unsubscribe
+- **📊 Email Tracking** - Open rates, click tracking, and engagement analytics
+- **🎯 Campaign System** - Organize newsletters into campaigns with templates
+- **📈 Bulk Email** - Send to thousands of subscribers with delivery tracking
+- **🔗 API Ready** - RESTful API endpoints for all newsletter operations
+- **📱 Email Templates** - Beautiful responsive HTML templates with tracking pixels
+
+### Quick Setup
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My App"
+    enable_newsletter: bool = True  # That's it!
+
+config = MyConfig()
+```
+
+### Automatic Integration
+- ✅ **Admin Interface** - Newsletter section with campaigns, subscriptions & email logs
+- ✅ **Dashboard Cards** - Live newsletter statistics and recent campaigns
+- ✅ **API Endpoints** - `/api/newsletter/` zone with full CRUD operations
+- ✅ **Email Templates** - Responsive HTML emails with your branding and tracking
+- ✅ **Tracking System** - Automatic open/click tracking with UUID-based security
+- ✅ **Subscription Forms** - Ready-to-use subscription and unsubscribe endpoints
+
+### Email Tracking Features
+```python
+from django_cfg.apps.newsletter.services.email_service import NewsletterEmailService
+
+# Send newsletter with tracking
+service = NewsletterEmailService()
+result = service.send_newsletter_email(
+    newsletter=newsletter,
+    subject="Monthly Update",
+    email_title="Our Latest News",
+    main_text="Check out what's new this month!",
+    button_text="Read More",
+    button_url="https://example.com/news",
+    send_to_all=True  # Send to all subscribers
+)
+```
+
+### Disable Newsletter (Optional)
+```python
+enable_newsletter: bool = False  # Removes from admin, API, and dashboard
+```
+
+---
+
+## 🎯 Built-in Lead Management System
+
+Django-CFG includes a comprehensive lead collection and CRM system for capturing and managing potential customers:
+
+### Features
+- **📝 Lead Capture** - Collect leads from contact forms, landing pages, and API
+- **🏷️ Lead Sources** - Track where leads came from (web, mobile, ads, referrals)
+- **📊 Lead Scoring** - Automatic scoring based on engagement and profile data
+- **🔄 Status Management** - Lead lifecycle from new to converted or closed
+- **📧 Email Integration** - Automatic notifications for new leads and status changes
+- **📱 API Ready** - RESTful API endpoints for all lead operations
+- **🎯 CRM Integration** - Ready for integration with external CRM systems
+
+### Quick Setup
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My App"
+    enable_leads: bool = True  # That's it!
+
+config = MyConfig()
+```
+
+### Automatic Integration
+- ✅ **Admin Interface** - Leads section with lead management and source tracking
+- ✅ **Dashboard Cards** - Live lead statistics and conversion metrics
+- ✅ **API Endpoints** - `/api/leads/` zone with full CRUD operations
+- ✅ **Contact Forms** - Ready-to-use lead capture forms and endpoints
+- ✅ **Email Notifications** - Automatic alerts for new leads and status changes
+- ✅ **Source Tracking** - Automatic detection of lead sources and campaigns
+
+### Lead Capture Example
+```python
+from django_cfg.apps.leads.models import Lead, LeadSource
+
+# Create lead from contact form
+lead = Lead.objects.create(
+    name="John Doe",
+    email="john@example.com",
+    phone="+1234567890",
+    message="Interested in your services",
+    source=LeadSource.objects.get(name="Website Contact Form"),
+    status=Lead.LeadStatus.NEW
+)
+```
+
+### Disable Leads (Optional)
+```python
+enable_leads: bool = False  # Removes from admin, API, and dashboard
+```
+
+---
+
 ## 👤 Built-in User Management System
 
 Django-CFG includes a comprehensive user management system with OTP authentication, profiles, and activity tracking:
@@ -404,8 +519,10 @@ class ProductionConfig(DjangoConfig):
     )
     
     # === Built-in Modules ===
-    enable_support: bool = True   # Automatic tickets, chat interface, email notifications
-    enable_accounts: bool = True  # Advanced user management with OTP authentication
+    enable_support: bool = True     # Automatic tickets, chat interface, email notifications
+    enable_accounts: bool = True    # Advanced user management with OTP authentication
+    enable_newsletter: bool = True  # Email marketing, campaigns, tracking & analytics
+    enable_leads: bool = True       # Lead capture, CRM integration, source tracking
     
     # === Multi-Zone API ===
     revolution: RevolutionConfig = RevolutionConfig(
@@ -502,7 +619,7 @@ python manage.py check
 python manage.py runserver
 ```
 
-**Result:** Your 500-line `settings.py` is now 3 lines, fully type-safe, and production-ready! 🎉
+**Result:** Your 500-line `settings.py` is now organized, fully type-safe, and production-ready! 🎉
 
 ---
 

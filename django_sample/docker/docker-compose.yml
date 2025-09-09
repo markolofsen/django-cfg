@@ -1,0 +1,33 @@
+# 🐳 UnrealOS Django - Production Environment
+# Modular Docker Compose setup with includes for better organization
+
+# --------------------------------------------------------------------------
+# Include Configurations
+# --------------------------------------------------------------------------
+include:
+  # Core services: PostgreSQL and Django
+  - docker-compose.services.yml
+  
+  # Nginx reverse proxy
+  - docker-compose.nginx.yml
+
+# --------------------------------------------------------------------------
+# Global Configuration
+# --------------------------------------------------------------------------
+# Environment variables can be set in .env file
+# Override configurations can be added in docker-compose.override.yml
+
+# --------------------------------------------------------------------------
+# Usage Commands
+# --------------------------------------------------------------------------
+# Start all services:           docker compose up -d
+# Start only core services:     docker compose -f docker-compose.services.yml up -d
+# Start only nginx:             docker compose -f docker-compose.nginx.yml up -d
+# View logs:                    docker compose logs -f [service_name]
+# Stop all services:           docker compose down
+# Rebuild and start:           docker compose up -d --build
+
+# --------------------------------------------------------------------------
+# Volumes
+# --------------------------------------------------------------------------
+# Using bind mounts - data stored in ./volumes/ directory

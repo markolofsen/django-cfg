@@ -83,22 +83,13 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
         
         # Add default django-cfg zones if enabled
         try:
-            # Check if zones should be added based on current config
-            from django_cfg.core.config import get_current_config
-            try:
-                current_config = get_current_config()
-                support_enabled = getattr(current_config, 'enable_support', True)
-                accounts_enabled = getattr(current_config, 'enable_accounts', False)
-            except Exception:
-                # Fallback to checking INSTALLED_APPS
-                try:
-                    from django.conf import settings
-                    installed_apps = getattr(settings, 'INSTALLED_APPS', [])
-                    support_enabled = 'django_cfg.apps.support' in installed_apps
-                    accounts_enabled = 'django_cfg.apps.accounts' in installed_apps
-                except Exception:
-                    support_enabled = True  # Default for support
-                    accounts_enabled = False  # Default for accounts
+            from django_cfg.modules.base import BaseModule
+            base_module = BaseModule()
+            
+            support_enabled = base_module.is_support_enabled()
+            accounts_enabled = base_module.is_accounts_enabled()
+            newsletter_enabled = base_module.is_newsletter_enabled()
+            leads_enabled = base_module.is_leads_enabled()
             
             # Add Support zone if enabled
             default_support_zone = 'cfg_support'
@@ -121,6 +112,30 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="User management, OTP, profiles, and activity tracking API",
                     public=False,
                     auth_required=True,
+                    version="v1",
+                )
+            
+            # Add Newsletter zone if enabled
+            default_newsletter_zone = 'cfg_newsletter'
+            if newsletter_enabled and default_newsletter_zone not in zones:
+                zones[default_newsletter_zone] = ZoneConfig(
+                    apps=["django_cfg.apps.newsletter"],
+                    title="Newsletter API",
+                    description="Email campaigns, subscriptions, and newsletter management API",
+                    public=False,
+                    auth_required=True,
+                    version="v1",
+                )
+            
+            # Add Leads zone if enabled
+            default_leads_zone = 'cfg_leads'
+            if leads_enabled and default_leads_zone not in zones:
+                zones[default_leads_zone] = ZoneConfig(
+                    apps=["django_cfg.apps.leads"],
+                    title="Leads API",
+                    description="Lead collection, contact forms, and CRM integration API",
+                    public=True,  # Leads can be public for contact forms
+                    auth_required=False,
                     version="v1",
                 )
         except Exception:

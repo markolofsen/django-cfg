@@ -17,11 +17,18 @@ def api_blog_categories_list(
 
     base_path = api_config.base_path
     path = f"/api/blog/categories/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {"ordering": ordering, "page": page, "search": search}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -45,11 +52,18 @@ def api_blog_categories_create(data: CategoryRequest, api_config_override: Optio
 
     base_path = api_config.base_path
     path = f"/api/blog/categories/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -68,11 +82,18 @@ def api_blog_categories_retrieve(slug: str, api_config_override: Optional[APICon
 
     base_path = api_config.base_path
     path = f"/api/blog/categories/{slug}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -98,11 +119,18 @@ def api_blog_categories_update(
 
     base_path = api_config.base_path
     path = f"/api/blog/categories/{slug}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}
@@ -121,11 +149,18 @@ def api_blog_categories_destroy(slug: str, api_config_override: Optional[APIConf
 
     base_path = api_config.base_path
     path = f"/api/blog/categories/{slug}/"
+
+    # Build headers - only add Authorization if token is available
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer { api_config.get_access_token() }",
     }
+
+    # Only add Authorization header if token is available
+    access_token = api_config.get_access_token()
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
     query_params: Dict[str, Any] = {}
 
     query_params = {key: value for (key, value) in query_params.items() if value is not None}

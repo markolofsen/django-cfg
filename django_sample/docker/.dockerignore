@@ -1,0 +1,58 @@
+# 🐳 Docker Build Context Ignore
+# Exclude unnecessary files from build context
+
+# Volume data directories (now relative to docker/ context)
+volumes/
+*/volumes/
+**/volumes/**
+../docker/volumes/
+volumes/postgres/data/
+*/volumes/postgres/data/
+**/volumes/postgres/data/**
+
+# Logs
+logs/
+*.log
+**/*.log
+
+# Cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node modules (if any)
+node_modules/
+
+# Documentation
+*.md
+docs/
+
+# Development files
+docker-compose.override.yml
+docker-compose.dev.yml

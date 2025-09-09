@@ -1,0 +1,49 @@
+# Test Environment Configuration
+# This file is for running tests
+
+# === Core Django Settings ===
+secret_key: "django-cfg-test-key-for-testing-only-this-is-long-enough-now-with-more-characters"
+debug: true
+
+# === Database ===
+database:
+  url: "sqlite:///:memory:"
+  url_blog: "sqlite:///:memory:"
+  url_shop: "sqlite:///:memory:"
+
+# === Application URLs ===
+app:
+  name: "Django CFG Test"
+  logo_url: "https://unrealos.com/favicon.png"
+  domain: "testserver"
+  api_url: "http://testserver"
+  site_url: "http://testserver"
+
+# === Email ===
+email:
+  backend: "locmem"
+  host: "localhost"
+  port: 587
+  username: ""
+  password: ""
+  use_tls: false
+  use_ssl: false
+  default_from: "Test <test@example.com>"
+
+# === Telegram Bot ===
+telegram:
+  bot_token: ""
+  chat_id: 0
+
+# === Cache ===
+# redis_url: ""
+
+# === Security ===
+ssl_redirect: false
+
+# === Environment Flags ===
+env:
+  is_docker: false
+  is_dev: false
+  is_prod: false
+  debug: true

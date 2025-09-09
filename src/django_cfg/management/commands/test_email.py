@@ -59,12 +59,23 @@ class Command(BaseCommand):
             self.stdout.write(f"\n📧 Backend: {backend_info['backend']}")
             self.stdout.write(f"📧 Configured: {backend_info['configured']}")
             
-            self.stdout.write("\n📧 Sending test email...")
+            self.stdout.write("\n📧 Sending test email with HTML template...")
             
-            # Отправить простое письмо (модуль сам знает настройки!)
-            result = email_service.send_simple(
+            # Отправить письмо с HTML шаблоном
+            result = email_service.send_template(
                 subject=subject,
-                message=f"Hello!\n\n{message}\n\nBest regards,\nUnrealON Team",
+                template_name="emails/base_email",
+                context={
+                    'email_title': subject,
+                    'greeting': 'Hello',
+                    'main_text': message,
+                    'project_name': 'Django CFG Sample',
+                    'site_url': 'http://localhost:8000',
+                    'logo_url': 'https://unrealos.com/favicon.png',
+                    'button_text': 'Visit Website',
+                    'button_url': 'http://localhost:8000',
+                    'secondary_text': 'This is a test email sent from django-cfg management command.',
+                },
                 recipient_list=[email]
             )
             

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.1.27"
+version = "1.1.30"
 description = "🚀 Production-ready Django configuration framework with type-safe settings, smart automation, and modern developer experience"
 readme = "README.md"
 license = {text = "MIT"}
@@ -85,9 +85,9 @@ dependencies = [
     
     # Optional services
     "pyTelegramBotAPI>=4.28.0",
-    "coolname (>=2.2.0,<3.0.0)",
-    "django-admin-rangefilter (>=0.13.3,<0.14.0)",
-    "python-json-logger (>=3.3.0,<4.0.0)",
+    "coolname>=2.2.0,<3.0.0",
+    "django-admin-rangefilter>=0.13.3,<0.14.0",
+    "python-json-logger>=3.3.0,<4.0.0",
 ]
 
 [project.optional-dependencies]

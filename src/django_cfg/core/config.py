@@ -137,6 +137,14 @@ class DjangoConfig(BaseModel):
         default=False,
         description="Enable django-cfg Accounts application (advanced user management, OTP, profiles, activity tracking)",
     )
+    enable_newsletter: bool = Field(
+        default=False,
+        description="Enable django-cfg Newsletter application (email campaigns, subscriptions, bulk emails)",
+    )
+    enable_leads: bool = Field(
+        default=False,
+        description="Enable django-cfg Leads application (lead collection, contact forms, CRM integration)",
+    )
 
     # === URLs ===
     site_url: str = Field(default="http://localhost:3000", description="Frontend site URL")
@@ -513,6 +521,10 @@ class DjangoConfig(BaseModel):
         # Add other django-cfg built-in apps after standard apps
         if self.enable_support:
             apps.append("django_cfg.apps.support")
+        if self.enable_newsletter:
+            apps.append("django_cfg.apps.newsletter")
+        if self.enable_leads:
+            apps.append("django_cfg.apps.leads")
 
         # Auto-detect dashboard apps from Unfold callback
         dashboard_apps = self._get_dashboard_apps_from_callback()
@@ -598,6 +610,10 @@ class DjangoConfig(BaseModel):
         # Add CORS middleware if security domains are configured
         if self.security_domains:
             middleware.insert(1, "corsheaders.middleware.CorsMiddleware")
+
+        # Add Django CFG middleware based on enabled features
+        if self.enable_accounts:
+            middleware.append("django_cfg.middleware.UserActivityMiddleware")
 
         # Add custom middleware
         middleware.extend(self.custom_middleware)

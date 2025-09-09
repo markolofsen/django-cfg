@@ -6,12 +6,16 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.contrib.humanize.templatetags.humanize import naturaltime, naturalday
+from django.shortcuts import redirect
+from django.urls import reverse
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
+from unfold.decorators import action
+from unfold.enums import ActionVariant
 
 from ..models import CustomUser
 from .filters import UserStatusFilter
-from .inlines import UserRegistrationSourceInline, UserActivityInline
+from .inlines import UserRegistrationSourceInline, UserActivityInline, UserEmailLogInline, UserSupportTicketsInline
 
 
 @admin.register(CustomUser)
@@ -28,6 +32,8 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
         "status",
         "sources_count",
         "activity_count",
+        "emails_count",
+        "tickets_count",
         "last_login_display",
         "date_joined_display",
     ]
@@ -36,7 +42,25 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
     list_filter = [UserStatusFilter, "is_staff", "is_active", "date_joined"]
     ordering = ["-date_joined"]
     readonly_fields = ["date_joined", "last_login"]
-    inlines = [UserRegistrationSourceInline, UserActivityInline]
+    def get_inlines(self, request, obj):
+        """Get inlines based on enabled apps."""
+        inlines = [UserRegistrationSourceInline, UserActivityInline]
+        
+        # Add email log inline if newsletter app is enabled
+        try:
+            from django_cfg.modules.base import BaseModule
+            base_module = BaseModule()
+            if base_module.is_newsletter_enabled():
+                inlines.append(UserEmailLogInline)
+            if base_module.is_support_enabled():
+                inlines.append(UserSupportTicketsInline)
+        except Exception:
+            pass
+            
+        return inlines
+    
+    # Static actions for Unfold - always show, but check inside methods
+    actions_detail = ["view_user_emails", "view_user_tickets"]
 
     fieldsets = (
         (
@@ -124,6 +148,44 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
 
     activity_count.short_description = "Activities"
 
+    def emails_count(self, obj):
+        """Show count of emails sent to user (if newsletter app is enabled)."""
+        try:
+            from django_cfg.modules.base import BaseModule
+            base_module = BaseModule()
+            
+            if not base_module.is_newsletter_enabled():
+                return "—"
+            
+            from django_cfg.apps.newsletter.models import EmailLog
+            count = EmailLog.objects.filter(user=obj).count()
+            if count == 0:
+                return "—"
+            return f"{count} email{'s' if count != 1 else ''}"
+        except (ImportError, Exception):
+            return "—"
+
+    emails_count.short_description = "Emails"
+
+    def tickets_count(self, obj):
+        """Show count of support tickets for user (if support app is enabled)."""
+        try:
+            from django_cfg.modules.base import BaseModule
+            base_module = BaseModule()
+            
+            if not base_module.is_support_enabled():
+                return "—"
+            
+            from django_cfg.apps.support.models import Ticket
+            count = Ticket.objects.filter(user=obj).count()
+            if count == 0:
+                return "—"
+            return f"{count} ticket{'s' if count != 1 else ''}"
+        except (ImportError, Exception):
+            return "—"
+
+    tickets_count.short_description = "Tickets"
+
     def last_login_display(self, obj):
         """Last login with natural time."""
         if obj.last_login:
@@ -155,3 +217,79 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
             )
 
     avatar.short_description = "Avatar"
+    
+    @action(
+        description="📧 View Email History",
+        icon="mail_outline",
+        variant=ActionVariant.INFO
+    )
+    def view_user_emails(self, request, object_id):
+        """View all emails sent to this user."""
+        try:
+            # Get the user object
+            user = self.get_object(request, object_id)
+            if not user:
+                self.message_user(request, "User not found.", level='error')
+                return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+            
+            # Check if newsletter app is enabled
+            from django_cfg.modules.base import BaseModule
+            base_module = BaseModule()
+            
+            if not base_module.is_newsletter_enabled():
+                self.message_user(
+                    request, 
+                    "Newsletter app is not enabled.", 
+                    level='warning'
+                )
+                return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+            
+            # Redirect to EmailLog changelist filtered by this user
+            url = reverse('admin:django_cfg_newsletter_emaillog_changelist')
+            return redirect(f"{url}?user__id__exact={user.id}")
+            
+        except Exception as e:
+            self.message_user(
+                request, 
+                f"Error accessing email history: {e}", 
+                level='error'
+            )
+            return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+    
+    @action(
+        description="🎫 View Support Tickets",
+        icon="support_agent",
+        variant=ActionVariant.SUCCESS
+    )
+    def view_user_tickets(self, request, object_id):
+        """View all support tickets for this user."""
+        try:
+            # Get the user object
+            user = self.get_object(request, object_id)
+            if not user:
+                self.message_user(request, "User not found.", level='error')
+                return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+            
+            # Check if support app is enabled
+            from django_cfg.modules.base import BaseModule
+            base_module = BaseModule()
+            
+            if not base_module.is_support_enabled():
+                self.message_user(
+                    request, 
+                    "Support app is not enabled.", 
+                    level='warning'
+                )
+                return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+            
+            # Redirect to Ticket changelist filtered by this user
+            url = reverse('admin:django_cfg_support_ticket_changelist')
+            return redirect(f"{url}?user__id__exact={user.id}")
+            
+        except Exception as e:
+            self.message_user(
+                request, 
+                f"Error accessing support tickets: {e}", 
+                level='error'
+            )
+            return redirect(request.META.get('HTTP_REFERER', '/admin/'))

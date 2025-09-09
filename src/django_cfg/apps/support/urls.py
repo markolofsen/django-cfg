@@ -4,6 +4,8 @@ from .views import TicketViewSet, MessageViewSet
 from .views.chat import ticket_chat_view, send_message_ajax
 from .views.admin import ticket_admin_chat_view
 
+app_name = 'cfg_support'
+
 # API Routes
 router = routers.SimpleRouter()
 router.register(r'tickets', TicketViewSet, basename='ticket')

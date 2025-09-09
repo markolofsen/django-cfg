@@ -151,8 +151,10 @@ class EmailConfig(BaseModel):
             return "django.core.mail.backends.locmem.EmailBackend"
         
         elif environment == "development" or debug:
-            # Use console backend for development
-            if self.file_path:
+            # Development: Use SMTP if configured, otherwise console
+            if self.username and self.password:
+                return "django.core.mail.backends.smtp.EmailBackend"
+            elif self.file_path:
                 return "django.core.mail.backends.filebased.EmailBackend"
             else:
                 return "django.core.mail.backends.console.EmailBackend"

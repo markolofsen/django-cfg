@@ -8,6 +8,7 @@ from django.shortcuts import redirect
 from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 from .models import Ticket, Message
+from .admin_filters import TicketUserEmailFilter, TicketUserNameFilter, MessageSenderEmailFilter
 from django import forms
 
 class MessageInline(TabularInline):
@@ -54,21 +55,36 @@ class TicketAdmin(ModelAdmin):
     list_display_links = ("subject",)
     list_editable = ("status",)
     search_fields = ("uuid", "user__username", "user__email", "subject")
-    list_filter = ("status", "created_at")
+    list_filter = ("status", "created_at", TicketUserEmailFilter, TicketUserNameFilter)
     ordering = ("-created_at",)
     inlines = [MessageInline]
-    readonly_fields = ("uuid", "user", "created_at")
+    def get_readonly_fields(self, request, obj=None):
+        """Different readonly fields for add/change forms."""
+        if obj is None:  # Adding new ticket
+            return ("uuid", "created_at")
+        else:  # Editing existing ticket
+            return ("uuid", "user", "created_at")
     actions_detail = ["open_chat"]
-    fieldsets = (
-        (None, {
-            "fields": (("uuid", "user"), "subject", "status", "created_at")
-        }),
-        ("💬 Chat Interface", {
-            "description": "Use the beautiful Chat interface to reply to this ticket. Click the '💬 Chat' button above.",
-            "fields": (),
-            "classes": ("collapse",)
-        }),
-    )
+    autocomplete_fields = ["user"]
+    def get_fieldsets(self, request, obj=None):
+        """Different fieldsets for add/change forms."""
+        if obj is None:  # Adding new ticket
+            return (
+                (None, {
+                    "fields": ("user", "subject", "status")
+                }),
+            )
+        else:  # Editing existing ticket
+            return (
+                (None, {
+                    "fields": (("uuid", "user"), "subject", "status", "created_at")
+                }),
+                ("💬 Chat Interface", {
+                    "description": "Use the beautiful Chat interface to reply to this ticket. Click the '💬 Chat' button above.",
+                    "fields": (),
+                    "classes": ("collapse",)
+                }),
+            )
 
 
     def user_avatar(self, obj):
@@ -146,7 +162,7 @@ class MessageAdmin(ModelAdmin):
     list_display = ("sender_avatar", "uuid", "ticket", "text_short", "created_at")
     list_display_links = ("uuid", "ticket")
     search_fields = ("uuid", "ticket__subject", "sender__username", "sender__email", "text")
-    list_filter = ("created_at",)
+    list_filter = ("created_at", MessageSenderEmailFilter)
     ordering = ("-created_at",)
     readonly_fields = ("uuid", "ticket", "sender", "created_at")
     fieldsets = (

@@ -1,0 +1,25 @@
+"""
+{{ title }} - Python Client Package
+{{ description }}
+
+Zone: {{ zone_name }}
+Apps: {{ apps | join(', ') }}
+"""
+
+from .{{ zone_name }}_client.client import (
+    {{ zone_name | title }}Client,
+    {{ zone_name | title }}Config,
+    {{ zone_name | title }}Response,
+    {{ zone_name }}_client
+)
+
+__version__ = "{{ version }}"
+__author__ = "Unrealos"
+__description__ = "{{ description }}"
+
+__all__ = [
+    "{{ zone_name | title }}Client",
+    "{{ zone_name | title }}Config", 
+    "{{ zone_name | title }}Response",
+    "{{ zone_name }}_client"
+] 
