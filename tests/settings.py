@@ -39,8 +39,8 @@ class TestDjangoConfig(DjangoConfig):
     project_apps: list = []
     
     # Disable integrations for testing
-    unfold = None
-    revolution = None
+    unfold: dict | None = None
+    revolution: dict | None = None
 
 # Initialize configuration
 config = TestDjangoConfig()

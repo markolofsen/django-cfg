@@ -26,7 +26,14 @@ class SystemMonitor(BaseModule):
     def __init__(self):
         """Initialize system monitor."""
         super().__init__()
-        self.config = self.get_config()
+        self._config = None
+    
+    @property
+    def config(self):
+        """Get config lazily to avoid circular imports."""
+        if self._config is None:
+            self._config = self.get_config()
+        return self._config
     
     def get_cpu_metrics(self) -> Dict[str, Any]:
         """Get CPU metrics."""
