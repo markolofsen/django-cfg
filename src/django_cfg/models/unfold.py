@@ -7,8 +7,9 @@ Provides type-safe configuration for Django Unfold admin interface.
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from django.urls import reverse_lazy, NoReverseMatch
+import base64
 
-from django_cfg.modules.unfold.tailwind import get_unfold_colors
+from django_cfg.modules.unfold.tailwind import get_unfold_colors, get_css_variables
 
 class UnfoldColors(BaseModel):
     """Unfold color theme configuration."""
@@ -227,6 +228,17 @@ class UnfoldConfig(BaseModel):
 
         # Get base settings from theme
         unfold_settings = self.theme.to_django_settings()
+
+        # Inject universal CSS variables (includes object-tools flex)
+        if "STYLES" not in unfold_settings:
+            unfold_settings["STYLES"] = []
+        
+        # Add our CSS as inline data URI
+        css_content = get_css_variables()
+        css_b64 = base64.b64encode(css_content.encode('utf-8')).decode('utf-8')
+        data_uri = f"data:text/css;base64,{css_b64}"
+        
+        unfold_settings["STYLES"].append(lambda request: data_uri)
 
         # Merge additional settings
         unfold_settings.update(self.additional_settings)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.1.31"
+version = "1.1.32"
 description = "🚀 Production-ready Django configuration framework with type-safe settings, smart automation, and modern developer experience"
 readme = "README.md"
 license = {text = "MIT"}
