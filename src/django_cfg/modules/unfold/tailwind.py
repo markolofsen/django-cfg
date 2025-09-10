@@ -195,19 +195,6 @@ def get_css_variables() -> str:
   --color-font-important-dark: var(--color-base-100);
 }
 
-/* Universal admin styles */
-.object-tools {
-  display: flex !important;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.rounded-md {
-  border-radius: 6px !important;
-}
-
-
 """
 
 

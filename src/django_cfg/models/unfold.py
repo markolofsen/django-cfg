@@ -239,6 +239,14 @@ class UnfoldConfig(BaseModel):
         data_uri = f"data:text/css;base64,{css_b64}"
         
         unfold_settings["STYLES"].append(lambda request: data_uri)
+        
+        # Add Tailwind CSS CDN
+        if "SCRIPTS" not in unfold_settings:
+            unfold_settings["SCRIPTS"] = []
+        
+        # unfold_settings["SCRIPTS"].append(
+        #     lambda request: "https://cdn.tailwindcss.com/4.1.11"
+        # )
 
         # Merge additional settings
         unfold_settings.update(self.additional_settings)
