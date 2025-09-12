@@ -161,6 +161,7 @@ Django-CFG includes powerful management commands for development and operations:
 | **`superuser`** | Create superuser with smart defaults | `python manage.py superuser --email admin@example.com` |
 | **`test_email`** | Test email configuration | `python manage.py test_email --to test@example.com` |
 | **`test_telegram`** | Test Telegram bot integration | `python manage.py test_telegram --chat_id 123` |
+| **`translate_content`** | Translate JSON with LLM and smart caching | `python manage.py translate_content --target-lang es` |
 | **`support_stats`** | Display support ticket statistics | `python manage.py support_stats --format json` |
 | **`test_newsletter`** | Test newsletter sending functionality | `python manage.py test_newsletter --email test@example.com` |
 | **`newsletter_stats`** | Display newsletter campaign statistics | `python manage.py newsletter_stats --format json` |
@@ -470,6 +471,49 @@ user = OTPService.verify_otp("user@example.com", "123456")
 ```python
 enable_accounts: bool = False  # Uses Django's default User model
 ```
+
+---
+
+## 🤖 Built-in LLM Integration
+
+Django-CFG includes a powerful LLM module for AI-powered features like translation, content generation, and smart automation:
+
+### Features
+- **🌍 Smart Translation** - JSON translation with intelligent caching by language pairs
+- **💬 LLM Client** - OpenAI/OpenRouter integration with dynamic pricing and cost tracking
+- **⚡ Smart Caching** - Text-level caching that sends only uncached content to LLM
+- **🔧 Direct Injection** - No configuration needed, just inject `LLMClient` where needed
+- **📊 Cost Tracking** - Real-time cost calculation with dynamic model pricing
+- **🛡️ Production Ready** - Built-in error handling, retries, and fallbacks
+
+### Quick Usage
+```python
+from django_cfg.modules.django_llm import LLMClient, DjangoTranslator
+
+# Direct LLM usage
+client = LLMClient(provider="openrouter", api_key="your-key")
+response = client.chat_completion([{"role": "user", "content": "Hello!"}])
+
+# Smart JSON translation with caching
+translator = DjangoTranslator(client=client)
+translated = translator.translate_json(
+    data={"greeting": "Hello", "message": "Welcome to our app"},
+    target_language="es"
+)
+# Result: {"greeting": "Hola", "message": "Bienvenido a nuestra aplicación"}
+```
+
+### Management Command
+```bash
+# Translate JSON content with smart caching
+python manage.py translate_content --target-lang es --json '{"title": "Hello World"}'
+```
+
+### Key Benefits
+- **Zero Configuration** - Works out of the box with environment variables
+- **Smart Caching** - Dramatically reduces LLM costs with intelligent text-level caching
+- **Language Detection** - Automatic source language detection for better translations
+- **Cost Optimization** - Only sends uncached texts to LLM, reuses cached translations
 
 ---
 
