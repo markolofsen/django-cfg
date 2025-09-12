@@ -35,6 +35,11 @@ telegram:
   bot_token: ""
   chat_id: 0
 
+# === LLM API Keys ===
+api_keys:
+  openrouter_api_key: ""  # Set via OPENROUTER_API_KEY env var
+  openai_api_key: ""      # Set via OPENAI_API_KEY env var
+
 # === Cache ===
 # redis_url: ""
 

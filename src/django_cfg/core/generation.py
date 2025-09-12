@@ -200,11 +200,12 @@ class SettingsGenerator:
             if config.cache_default:
                 caches["default"] = config.cache_default.to_django_config(config._environment, config.debug, "default")
             else:
-                # Create default cache backend
-                from django_cfg.models.cache import CacheBackend
+                # # Create default cache backend
+                # from django_cfg.models.cache import CacheBackend
 
-                default_cache = CacheBackend()
-                caches["default"] = default_cache.to_django_config(config._environment, config.debug, "default")
+                # default_cache = CacheBackend()
+                # caches["default"] = default_cache.to_django_config(config._environment, config.debug, "default")
+                pass
 
             # Sessions cache
             if config.cache_sessions:

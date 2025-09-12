@@ -100,7 +100,7 @@ python manage.py runserver
 | **📦 Client Generation** | Write clients manually | **Auto TS/Python clients** |
 | **🎫 Support System** | Build from scratch | **Built-in tickets & chat** |
 | **👤 User Management** | Basic User model | **OTP auth & profiles** |
-| **📧 Notifications** | Manual SMTP/webhooks | **Email & Telegram modules** |
+| **📧 Notifications** | Manual SMTP/webhooks | **Email & Telegram & LLM** |
 | **🚀 Deployment** | Cross fingers | **Production-ready defaults** |
 | **💡 IDE Support** | Basic syntax highlighting | **Full IntelliSense paradise** |
 | **🐛 Config Errors** | Runtime surprises | **Compile-time validation** |
@@ -138,7 +138,7 @@ Complete ticket management with modern chat interface, email notifications, and 
 Built-in accounts system with OTP authentication, user profiles, activity tracking, and registration sources.
 
 ### 📧 **Built-in Modules**
-Email, Telegram, Support ticket system, Newsletter campaigns, Lead management, and advanced User management ready out of the box.
+Email, Telegram, LLM integration, Support ticket system, Newsletter campaigns, Lead management, and advanced User management ready out of the box.
 
 ### 🌍 **Environment Detection**
 Automatic dev/staging/production detection with appropriate defaults.

@@ -27,12 +27,17 @@ email:
   port: 587
   use_tls: true
   use_ssl: false
-  default_from: "Django CFG Sample <noreply@sample.local>"
+  default_from: "Django CFG Sample <noreply@localhost.dev>"
 
 # === Telegram Bot ===
 telegram:
   bot_token: ""
   chat_id: 0
+
+# === LLM API Keys ===
+api_keys:
+  openrouter_api_key: ""  # Set via OPENROUTER_API_KEY env var
+  openai_api_key: ""      # Set via OPENAI_API_KEY env var
 
 # === Cache ===
 # redis_url: "redis://localhost:6379/1"

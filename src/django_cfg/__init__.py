@@ -34,7 +34,7 @@ default_app_config = "django_cfg.apps.DjangoCfgConfig"
 from typing import TYPE_CHECKING
 
 # Version information
-__version__ = "1.1.33"
+__version__ = "1.1.35"
 __author__ = "Unrealos Team"
 __email__ = "info@unrealos.com"
 __license__ = "MIT"
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from django_cfg.models.third_party.revolution import RevolutionConfig, APIZone
     from django_cfg.models.unfold import UnfoldConfig, UnfoldColors, UnfoldSidebar
     from django_cfg.models.constance import ConstanceConfig, ConstanceField
+    # LLM models are deprecated - use direct LLMClient injection instead
 
     # Dashboard models are now part of unfold module
     from django_cfg.models.environment import EnvironmentConfig
@@ -214,6 +215,26 @@ def __getattr__(name: str):
         from django_cfg.modules.django_telegram import send_telegram_photo
 
         return send_telegram_photo
+    elif name == "DjangoLLM":
+        from django_cfg.modules.django_llm import DjangoLLM
+
+        return DjangoLLM
+    elif name == "DjangoTranslator":
+        from django_cfg.modules.django_llm import DjangoTranslator
+
+        return DjangoTranslator
+    elif name == "chat_completion":
+        from django_cfg.modules.django_llm import chat_completion
+
+        return chat_completion
+    elif name == "translate_text":
+        from django_cfg.modules.django_llm import translate_text
+
+        return translate_text
+    elif name == "translate_json":
+        from django_cfg.modules.django_llm import translate_json
+
+        return translate_json
 
     # Unfold models
     elif name == "UnfoldConfig":
@@ -327,6 +348,8 @@ __all__ = [
     "NavigationGroup",
     # Environment
     "EnvironmentConfig",
+    # LLM Configuration
+    # LLM configs deprecated
     # Exceptions
     "DjangoCfgException",
     "ConfigurationError",
@@ -339,6 +362,11 @@ __all__ = [
     "DjangoTelegram",
     "send_telegram_message",
     "send_telegram_photo",
+    "DjangoLLM",
+    "DjangoTranslator",
+    "chat_completion",
+    "translate_text",
+    "translate_json",
     # Unfold admin interface
     "UnfoldConfig",
     "UnfoldTheme",
@@ -357,6 +385,8 @@ __all__ = [
     # Constance
     "ConstanceConfig",
     "ConstanceField",
+    # LLM
+    # LLM configs deprecated
     # URL integration
     "add_django_cfg_urls",
     "get_django_cfg_urls_info",

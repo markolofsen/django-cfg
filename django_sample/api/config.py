@@ -112,17 +112,17 @@ class SampleProjectConfig(DjangoConfig):
     }
 
     # === Cache Configuration ===
-    cache_default: Optional[CacheBackend] = CacheBackend(
-        redis_url=env.redis_url if env.redis_url else None,
-        timeout=300,
-        key_prefix="sample_default",
-    )
+    # cache_default: Optional[CacheBackend] = CacheBackend(
+    #     redis_url=env.redis_url if env.redis_url else None,
+    #     timeout=300,
+    #     key_prefix="sample_default",
+    # )
 
-    cache_sessions: Optional[CacheBackend] = CacheBackend(
-        redis_url=env.redis_url if env.redis_url else None,
-        timeout=3600,
-        key_prefix="sample_sessions",
-    )
+    # cache_sessions: Optional[CacheBackend] = CacheBackend(
+    #     redis_url=env.redis_url if env.redis_url else None,
+    #     timeout=3600,
+    #     key_prefix="sample_sessions",
+    # )
 
     # === Email Configuration ===
     email: Optional[EmailConfig] = (
@@ -147,6 +147,7 @@ class SampleProjectConfig(DjangoConfig):
         if env.telegram.bot_token and env.telegram.chat_id != 0
         else None
     )
+
 
     # === JWT Configuration ===
     jwt: Optional[JWTConfig] = JWTConfig(

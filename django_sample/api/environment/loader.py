@@ -49,6 +49,11 @@ class TelegramConfig(BaseModel):
     bot_token: str = ""
     chat_id: int = 0
 
+class ApiKeysConfig(BaseModel):
+    """API keys configuration."""
+    
+    openrouter_api_key: str = ""
+    openai_api_key: str = ""
 
 class AppConfig(BaseModel):
     """Application configuration."""
@@ -82,6 +87,7 @@ class EnvironmentConfig(BaseModel):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     email: EmailConfig = Field(default_factory=EmailConfig)
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
+    api_keys: ApiKeysConfig = Field(default_factory=ApiKeysConfig)
     app: AppConfig = Field(default_factory=AppConfig)
     env: EnvironmentFlags = Field(default_factory=EnvironmentFlags)
     
