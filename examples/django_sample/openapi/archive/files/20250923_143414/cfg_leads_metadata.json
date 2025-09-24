@@ -1,0 +1,25 @@
+{
+  "zone_name": "cfg_leads",
+  "timestamp": "20250923_143414",
+  "archive_date": "2025-09-23T14:34:14.453387",
+  "generator_version": "2.0.0",
+  "clients": {
+    "typescript": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/typescript/cfg_leads",
+      "file_count": 14,
+      "size_bytes": 48973,
+      "size_mb": 0.05
+    },
+    "python": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/python/cfg_leads",
+      "file_count": 34,
+      "size_bytes": 99454,
+      "size_mb": 0.09
+    }
+  },
+  "total_files": 48,
+  "total_size_bytes": 148427,
+  "total_size_mb": 0.14
+}

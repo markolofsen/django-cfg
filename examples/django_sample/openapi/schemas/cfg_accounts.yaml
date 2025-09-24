@@ -1,0 +1,623 @@
+openapi: 3.0.3
+info:
+  title: Django CFG Sample API
+  version: 1.0.0 (v1)
+  description: RESTful API with modern architecture
+paths:
+  /api/accounts/otp/request/:
+    post:
+      operationId: accounts_otp_request_create
+      description: Request OTP code to email or phone.
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPRequestResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPErrorResponse'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPErrorResponse'
+          description: ''
+  /api/accounts/otp/verify/:
+    post:
+      operationId: accounts_otp_verify_create
+      description: Verify OTP code and return JWT tokens.
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPVerifyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPVerifyResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPErrorResponse'
+          description: ''
+        '410':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPErrorResponse'
+          description: ''
+  /api/accounts/profile/:
+    get:
+      operationId: accounts_profile_retrieve
+      description: Retrieve the current authenticated user's profile information.
+      summary: Get current user profile
+      tags:
+      - User Profile
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided.
+          description: ''
+  /api/accounts/profile/avatar/:
+    post:
+      operationId: accounts_profile_avatar_create
+      description: Upload avatar image for the current authenticated user. Accepts
+        multipart/form-data with 'avatar' field.
+      summary: Upload user avatar
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Avatar image file (JPEG, PNG, GIF, WebP, max 5MB)
+              required:
+              - avatar
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid file or validation error.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided.
+          description: ''
+  /api/accounts/profile/partial/:
+    put:
+      operationId: accounts_profile_partial_update
+      description: Partially update the current authenticated user's profile information.
+        Supports avatar upload.
+      summary: Partial update user profile
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+            examples:
+              ProfileUpdateWithAvatar:
+                value:
+                  first_name: John
+                  last_name: Doe
+                  company: Tech Corp
+                  phone: +1 (555) 123-4567
+                  position: Software Engineer
+                summary: Profile Update with Avatar
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid data provided.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided.
+          description: ''
+    patch:
+      operationId: accounts_profile_partial_partial_update
+      description: Partially update the current authenticated user's profile information.
+        Supports avatar upload.
+      summary: Partial update user profile
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
+            examples:
+              ProfileUpdateWithAvatar:
+                value:
+                  first_name: John
+                  last_name: Doe
+                  company: Tech Corp
+                  phone: +1 (555) 123-4567
+                  position: Software Engineer
+                summary: Profile Update with Avatar
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid data provided.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided.
+          description: ''
+  /api/accounts/profile/update/:
+    put:
+      operationId: accounts_profile_update_update
+      description: Update the current authenticated user's profile information.
+      summary: Update user profile
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+            examples:
+              ValidProfileUpdate:
+                value:
+                  first_name: John
+                  last_name: Doe
+                  company: Tech Corp
+                  phone: +1 (555) 123-4567
+                  position: Software Engineer
+                summary: Valid Profile Update
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid data provided.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided.
+          description: ''
+    patch:
+      operationId: accounts_profile_update_partial_update
+      description: Update the current authenticated user's profile information.
+      summary: Update user profile
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
+            examples:
+              ValidProfileUpdate:
+                value:
+                  first_name: John
+                  last_name: Doe
+                  company: Tech Corp
+                  phone: +1 (555) 123-4567
+                  position: Software Engineer
+                summary: Valid Profile Update
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid data provided.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided.
+          description: ''
+  /api/accounts/token/refresh/:
+    post:
+      operationId: accounts_token_refresh_create
+      description: Refresh JWT token.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+components:
+  schemas:
+    OTPErrorResponse:
+      type: object
+      description: Error response for OTP operations.
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+      - error
+    OTPRequestRequest:
+      type: object
+      description: Serializer for OTP request.
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+          description: Email address or phone number for OTP delivery
+        channel:
+          enum:
+          - email
+          - phone
+          type: string
+          x-spec-enum-id: 17f11a3a6a4008ba
+          description: |-
+            Delivery channel: 'email' or 'phone'. Auto-detected if not provided.
+
+            * `email` - Email
+            * `phone` - Phone
+        source_url:
+          type: string
+          format: uri
+          description: Source URL for tracking registration (e.g., https://dashboard.unrealon.com)
+      required:
+      - identifier
+    OTPRequestResponse:
+      type: object
+      description: OTP request response.
+      properties:
+        message:
+          type: string
+          description: Success message
+      required:
+      - message
+    OTPVerifyRequest:
+      type: object
+      description: Serializer for OTP verification.
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+          description: Email address or phone number used for OTP request
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+        channel:
+          enum:
+          - email
+          - phone
+          type: string
+          x-spec-enum-id: 17f11a3a6a4008ba
+          description: |-
+            Delivery channel: 'email' or 'phone'. Auto-detected if not provided.
+
+            * `email` - Email
+            * `phone` - Phone
+        source_url:
+          type: string
+          format: uri
+          description: Source URL for tracking login (e.g., https://dashboard.unrealon.com)
+      required:
+      - identifier
+      - otp
+    OTPVerifyResponse:
+      type: object
+      description: OTP verification response.
+      properties:
+        refresh:
+          type: string
+          description: JWT refresh token
+        access:
+          type: string
+          description: JWT access token
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          description: User information
+      required:
+      - access
+      - refresh
+      - user
+    PatchedUserProfileUpdateRequest:
+      type: object
+      description: Serializer for updating user profile.
+      properties:
+        first_name:
+          type: string
+          maxLength: 50
+        last_name:
+          type: string
+          maxLength: 50
+        company:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 20
+        position:
+          type: string
+          maxLength: 100
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    User:
+      type: object
+      description: Serializer for user details.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 50
+        last_name:
+          type: string
+          maxLength: 50
+        full_name:
+          type: string
+          description: Get user's full name.
+          readOnly: true
+        initials:
+          type: string
+          description: Get user's initials for avatar fallback.
+          readOnly: true
+        display_username:
+          type: string
+          description: Get formatted username for display.
+          readOnly: true
+        company:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 20
+        position:
+          type: string
+          maxLength: 100
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        unanswered_messages_count:
+          type: integer
+          description: Get count of unanswered messages for the user.
+          readOnly: true
+      required:
+      - date_joined
+      - display_username
+      - email
+      - full_name
+      - id
+      - initials
+      - is_staff
+      - is_superuser
+      - last_login
+      - unanswered_messages_count
+    UserProfileUpdateRequest:
+      type: object
+      description: Serializer for updating user profile.
+      properties:
+        first_name:
+          type: string
+          maxLength: 50
+        last_name:
+          type: string
+          maxLength: 50
+        company:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 20
+        position:
+          type: string
+          maxLength: 100
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

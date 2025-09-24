@@ -1,0 +1,28 @@
+{
+  "name": "@unrealoscfg_leads",
+  "version": "1.0.43",
+  "description": "Lead collection, contact forms, and CRM integration API",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "api",
+    "typescript"
+  ],
+  "author": "ReformsAI",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {},
+  "files": [
+    "*.ts",
+    "*.d.ts"
+  ]
+} 

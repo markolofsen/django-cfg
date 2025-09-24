@@ -1,0 +1,25 @@
+{
+  "zone_name": "cfg_payments",
+  "timestamp": "20250923_143414",
+  "archive_date": "2025-09-23T14:34:15.044457",
+  "generator_version": "2.0.0",
+  "clients": {
+    "typescript": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/typescript/cfg_payments",
+      "file_count": 14,
+      "size_bytes": 172401,
+      "size_mb": 0.16
+    },
+    "python": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/python/cfg_payments",
+      "file_count": 156,
+      "size_bytes": 586856,
+      "size_mb": 0.56
+    }
+  },
+  "total_files": 170,
+  "total_size_bytes": 759257,
+  "total_size_mb": 0.72
+}

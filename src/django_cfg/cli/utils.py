@@ -48,15 +48,15 @@ def find_template_archive() -> Optional[Path]:
         import django_cfg
         package_path = Path(django_cfg.__file__).parent
         
-        # Method 1: Package archive directory
-        search_paths.append(package_path / "archive" / "django_sample.zip")
+        # Method 1: Package template_archive directory
+        search_paths.append(package_path / "template_archive" / "django_sample.zip")
         
         # Method 2: Site-packages shared data
         site_packages = Path(sysconfig.get_paths()["purelib"])
-        search_paths.append(site_packages / "django_cfg" / "archive" / "django_sample.zip")
+        search_paths.append(site_packages / "django_cfg" / "template_archive" / "django_sample.zip")
         
         # Method 3: Development installation - src directory
-        dev_path = package_path.parent.parent / "src" / "django_cfg" / "archive" / "django_sample.zip"
+        dev_path = package_path.parent.parent / "src" / "django_cfg" / "template_archive" / "django_sample.zip"
         search_paths.append(dev_path)
         
     except ImportError:
@@ -64,7 +64,7 @@ def find_template_archive() -> Optional[Path]:
     
     # Method 4: Relative to CLI files (development)
     cli_path = Path(__file__).parent.parent.parent.parent
-    search_paths.append(cli_path / "src" / "django_cfg" / "archive" / "django_sample.zip")
+    search_paths.append(cli_path / "src" / "django_cfg" / "template_archive" / "django_sample.zip")
     
     # Return first existing path
     for path in search_paths:

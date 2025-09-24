@@ -60,6 +60,7 @@ python manage.py runserver
 | **🎫 Support System** | ❌ Build from scratch | ❌ Build from scratch | ❌ Build from scratch | ✅ **Enterprise ticketing** |
 | **👤 User Management** | 🟡 Basic User model | 🟡 Basic auth | ❌ Manual auth | ✅ **OTP + SMS + Profiles** |
 | **📧 Communication** | 🟡 Basic email | ❌ Manual setup | ❌ Manual setup | ✅ **Email + SMS + Telegram** |
+| **💱 Currency Conversion** | ❌ Manual API integration | ❌ Manual API integration | ❌ Manual API integration | ✅ **Multi-threading 14K+ currencies** |
 | **🔄 Background Tasks** | 🟡 Manual Celery | 🟡 Manual Celery | ❌ Manual setup | ✅ **Built-in Dramatiq** |
 | **🌐 Webhook Testing** | 🟡 Manual ngrok | 🟡 Manual ngrok | 🟡 Manual ngrok | ✅ **Integrated ngrok** |
 | **🚀 Production Deploy** | 🟡 Manual config | 🟡 Manual config | 🟡 Manual config | ✅ **Zero-config Docker** |
@@ -416,7 +417,7 @@ docker-compose up -d
 ### **🚀 Enterprise Features**
 - [**Built-in Applications**](https://docs.djangocfg.com/features/built-in-apps/accounts) - User management, support, CRM
 - [**Maintenance Management**](https://docs.djangocfg.com/features/built-in-apps/maintenance) - Multi-site Cloudflare maintenance
-- [**Modular System**](https://docs.djangocfg.com/features/modules/overview) - Email, SMS, LLM, currency modules
+- [**Modular System**](https://docs.djangocfg.com/features/modules/overview) - Email, SMS, LLM, **currency conversion** modules
 - [**Third-party Integrations**](https://docs.djangocfg.com/features/integrations/patterns) - Dramatiq, Twilio, ngrok
 
 ### **🤖 AI & Automation**
@@ -877,4 +878,4 @@ Django-CFG is built on the shoulders of giants:
 
 ## 🔍 SEO Keywords
 
-**Django configuration**, **Django type safety**, **Django enterprise**, **Pydantic Django**, **Django AI agents**, **Django background tasks**, **Django multi-database**, **Django production deployment**, **Django REST API**, **Django admin interface**, **Django authentication**, **Django CRM**, **Django support system**, **Django newsletter**, **Django CLI tools**, **Django Docker**, **Django ngrok**, **Django Twilio**, **Django SMS**, **Django OTP**, **Django Dramatiq**, **Django Redis**, **Django PostgreSQL**, **Django testing**, **Django migration**, **Django security**, **Django performance**, **Django scalability**, **Django monitoring**, **Django logging**, **Django webhooks**, **Django OpenAPI**, **Django Swagger**, **Django documentation**, **Django framework**, **Python Django**, **Django development**, **Django best practices**
+**Django configuration**, **Django type safety**, **Django enterprise**, **Pydantic Django**, **Django AI agents**, **Django background tasks**, **Django multi-database**, **Django production deployment**, **Django REST API**, **Django admin interface**, **Django authentication**, **Django CRM**, **Django support system**, **Django newsletter**, **Django CLI tools**, **Django Docker**, **Django ngrok**, **Django Twilio**, **Django SMS**, **Django OTP**, **Django Dramatiq**, **Django Redis**, **Django PostgreSQL**, **Django currency conversion**, **Django cryptocurrency**, **Django YFinance**, **Django CoinGecko**, **Django multi-threading**, **Django testing**, **Django migration**, **Django security**, **Django performance**, **Django scalability**, **Django monitoring**, **Django logging**, **Django webhooks**, **Django OpenAPI**, **Django Swagger**, **Django documentation**, **Django framework**, **Python Django**, **Django development**, **Django best practices**

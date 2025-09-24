@@ -15,12 +15,13 @@ recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 
 # Include template archive
-include src/django_cfg/archive/django_sample.zip
+recursive-include src/django_cfg/template_archive *
 
 # Exclude development files and directories
 recursive-exclude @* *
 recursive-exclude devops *
 recursive-exclude opensource *
+recursive-exclude examples *
 recursive-exclude tests *
 recursive-exclude htmlcov *
 exclude package.json

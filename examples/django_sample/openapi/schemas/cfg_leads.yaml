@@ -1,0 +1,534 @@
+openapi: 3.0.3
+info:
+  title: Django CFG Sample API
+  version: 1.0.0 (v1)
+  description: RESTful API with modern architecture
+paths:
+  /api/leads/leads/:
+    get:
+      operationId: leads_leads_list
+      description: |-
+        ViewSet for Lead model.
+
+        Provides only submission functionality for leads from frontend forms.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - leads
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLeadSubmissionList'
+          description: ''
+    post:
+      operationId: leads_leads_create
+      description: |-
+        ViewSet for Lead model.
+
+        Provides only submission functionality for leads from frontend forms.
+      tags:
+      - leads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubmission'
+          description: ''
+  /api/leads/leads/{id}/:
+    get:
+      operationId: leads_leads_retrieve
+      description: |-
+        ViewSet for Lead model.
+
+        Provides only submission functionality for leads from frontend forms.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lead.
+        required: true
+      tags:
+      - leads
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubmission'
+          description: ''
+    put:
+      operationId: leads_leads_update
+      description: |-
+        ViewSet for Lead model.
+
+        Provides only submission functionality for leads from frontend forms.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lead.
+        required: true
+      tags:
+      - leads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubmission'
+          description: ''
+    patch:
+      operationId: leads_leads_partial_update
+      description: |-
+        ViewSet for Lead model.
+
+        Provides only submission functionality for leads from frontend forms.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lead.
+        required: true
+      tags:
+      - leads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLeadSubmissionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLeadSubmissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLeadSubmissionRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubmission'
+          description: ''
+    delete:
+      operationId: leads_leads_destroy
+      description: |-
+        ViewSet for Lead model.
+
+        Provides only submission functionality for leads from frontend forms.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lead.
+        required: true
+      tags:
+      - leads
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/leads/leads/submit/:
+    post:
+      operationId: leads_leads_submit_create
+      description: Submit a new lead from frontend contact form with automatic Telegram
+        notifications.
+      summary: Submit Lead Form
+      tags:
+      - Lead Submission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+            examples:
+              ContactFormSubmission:
+                value:
+                  name: John Doe
+                  email: john@example.com
+                  company: Tech Corp
+                  company_site: https://techcorp.com
+                  contact_type: email
+                  contact_value: john@example.com
+                  subject: Partnership Inquiry
+                  message: I'm interested in discussing a potential partnership.
+                  site_url: https://mysite.com/contact
+                summary: Contact Form Submission
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeadSubmissionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubmissionResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubmissionError'
+          description: ''
+components:
+  schemas:
+    LeadSubmission:
+      type: object
+      description: Serializer for lead form submission from frontend.
+      properties:
+        name:
+          type: string
+          title: Full Name
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        company:
+          type: string
+          nullable: true
+          maxLength: 200
+        company_site:
+          type: string
+          nullable: true
+          maxLength: 200
+        contact_type:
+          enum:
+          - email
+          - whatsapp
+          - telegram
+          - phone
+          - other
+          type: string
+          description: |-
+            * `email` - Email
+            * `whatsapp` - WhatsApp
+            * `telegram` - Telegram
+            * `phone` - Phone
+            * `other` - Other
+          x-spec-enum-id: 2d58a06dc3d54732
+        contact_value:
+          type: string
+          nullable: true
+          maxLength: 200
+        subject:
+          type: string
+          nullable: true
+          maxLength: 200
+        message:
+          type: string
+        extra:
+          nullable: true
+          title: Extra Data
+        site_url:
+          type: string
+          format: uri
+          description: Frontend URL where form was submitted
+          maxLength: 200
+      required:
+      - email
+      - message
+      - name
+      - site_url
+    LeadSubmissionError:
+      type: object
+      description: Response serializer for lead submission errors.
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: {}
+      required:
+      - error
+      - success
+    LeadSubmissionRequest:
+      type: object
+      description: Serializer for lead form submission from frontend.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Full Name
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        company:
+          type: string
+          nullable: true
+          maxLength: 200
+        company_site:
+          type: string
+          nullable: true
+          maxLength: 200
+        contact_type:
+          enum:
+          - email
+          - whatsapp
+          - telegram
+          - phone
+          - other
+          type: string
+          description: |-
+            * `email` - Email
+            * `whatsapp` - WhatsApp
+            * `telegram` - Telegram
+            * `phone` - Phone
+            * `other` - Other
+          x-spec-enum-id: 2d58a06dc3d54732
+        contact_value:
+          type: string
+          nullable: true
+          maxLength: 200
+        subject:
+          type: string
+          nullable: true
+          maxLength: 200
+        message:
+          type: string
+          minLength: 1
+        extra:
+          nullable: true
+          title: Extra Data
+        site_url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Frontend URL where form was submitted
+          maxLength: 200
+      required:
+      - email
+      - message
+      - name
+      - site_url
+    LeadSubmissionResponse:
+      type: object
+      description: Response serializer for successful lead submission.
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        lead_id:
+          type: integer
+      required:
+      - lead_id
+      - message
+      - success
+    PaginatedLeadSubmissionList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeadSubmission'
+          description: Array of items for current page
+    PatchedLeadSubmissionRequest:
+      type: object
+      description: Serializer for lead form submission from frontend.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Full Name
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        company:
+          type: string
+          nullable: true
+          maxLength: 200
+        company_site:
+          type: string
+          nullable: true
+          maxLength: 200
+        contact_type:
+          enum:
+          - email
+          - whatsapp
+          - telegram
+          - phone
+          - other
+          type: string
+          description: |-
+            * `email` - Email
+            * `whatsapp` - WhatsApp
+            * `telegram` - Telegram
+            * `phone` - Phone
+            * `other` - Other
+          x-spec-enum-id: 2d58a06dc3d54732
+        contact_value:
+          type: string
+          nullable: true
+          maxLength: 200
+        subject:
+          type: string
+          nullable: true
+          maxLength: 200
+        message:
+          type: string
+          minLength: 1
+        extra:
+          nullable: true
+          title: Extra Data
+        site_url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Frontend URL where form was submitted
+          maxLength: 200
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

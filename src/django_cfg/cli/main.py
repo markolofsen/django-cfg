@@ -11,7 +11,7 @@ from typing import Optional
 from .commands.create_project import create_project
 from .commands.info import info
 from .utils import get_package_info
-from ..version_check import check_python_version
+from ..utils.version_check import check_python_version
 
 
 @click.group(name="django-cfg")

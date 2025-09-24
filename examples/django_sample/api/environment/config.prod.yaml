@@ -1,0 +1,77 @@
+# Production Environment Configuration
+# This file is for production deployment
+
+# === Core Django Settings ===
+secret_key: "django-cfg-sample-prod-key-CHANGE-THIS-IN-PRODUCTION-make-it-long-enough"
+debug: false
+
+# === Database ===
+database:
+  url: "postgresql://user:password@localhost:5432/django_cfg_sample"
+  url_blog: "postgresql://user:password@localhost:5432/django_cfg_sample_blog"
+  url_shop: "postgresql://user:password@localhost:5432/django_cfg_sample_shop"
+
+# === Application URLs ===
+app:
+  name: "Django CFG Sample"
+  logo_url: "https://reforms.ai/favicon.png"
+  domain: "example.com"
+  api_url: "https://api.example.com"
+  site_url: "https://example.com"
+
+# === Security Domains ===
+security_domains:
+  - "localhost"
+  - "127.0.0.1"
+  - "example.com"
+
+# === Email ===
+email:
+  backend: "smtp"
+  host: "smtp.example.com"
+  port: 587
+  username: "noreply@sample.example.com"
+  password: "your-email-password"
+  use_tls: true
+  use_ssl: false
+  default_from: "Django CFG Sample <noreply@sample.example.com>"
+
+# === Telegram Bot ===
+telegram:
+  bot_token: ""
+  chat_id: 0
+
+# === API Keys ===
+api_keys:
+  ngrok: ""
+  openrouter_api_key: ""  # Set via OPENROUTER_API_KEY env var
+  openai_api_key: ""      # Set via OPENAI_API_KEY env var
+  sendgrid_api_key: ""    # Set via SENDGRID_API_KEY env var for email OTP
+
+# === Admin Configuration ===
+admin_emails:
+  - "admin@example.com"
+  - "support@example.com"
+
+twilio:
+  account_sid: ""  # Main Account SID
+  auth_token: ""   # Main Auth Token
+  whatsapp_from: ""  # WhatsApp sandbox number
+  sms_from: ""       # Your SMS number
+  sendgrid_api_key: ""    # SendGrid API key for email OTP
+  verify_service_sid: ""  # Verify Service for OTP
+  otp_template_id: "d-******"
+  otp_from_email: ""  # SendGrid verified sender email
+
+# === Cache ===
+redis_url: "redis://localhost:6379/1"
+
+# === Security ===
+ssl_redirect: false
+
+# === Environment Flags ===
+env:
+  is_docker: true
+  is_dev: false
+  is_prod: true
+  debug: false

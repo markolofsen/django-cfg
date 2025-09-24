@@ -1,0 +1,21 @@
+# 🐳 ReformsAI Django - Nginx Reverse Proxy
+# Nginx configuration for production deployment
+
+services:
+  
+  # --------------------------------------------------------------------------
+  # Nginx Reverse Proxy
+  # --------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: unrealos_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../static:/var/www/static:ro
+      - ../media:/var/www/media:ro
+    depends_on:
+      - django

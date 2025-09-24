@@ -1,0 +1,4269 @@
+openapi: 3.0.3
+info:
+  title: Django CFG Sample API
+  version: 1.0.0 (v1)
+  description: RESTful API with modern architecture
+paths:
+  /api/payments/api-key/create/:
+    post:
+      operationId: payments_api_key_create_create
+      description: Generic view to create API key.
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyCreate'
+          description: ''
+  /api/payments/api-key/validate/:
+    post:
+      operationId: payments_api_key_validate_create
+      description: Validate API key.
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+  /api/payments/api-keys/:
+    get:
+      operationId: payments_api_keys_list
+      description: 'Global API keys ViewSet: /api-keys/'
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAPIKeyListList'
+          description: ''
+  /api/payments/api-keys/{id}/:
+    get:
+      operationId: payments_api_keys_retrieve
+      description: 'Global API keys ViewSet: /api-keys/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+  /api/payments/balances/:
+    get:
+      operationId: payments_balances_list
+      description: User balance ViewSet - read only.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserBalanceList'
+          description: ''
+  /api/payments/balances/{id}/:
+    get:
+      operationId: payments_balances_retrieve
+      description: User balance ViewSet - read only.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this User Balance.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBalance'
+          description: ''
+  /api/payments/balances/current/:
+    get:
+      operationId: payments_balances_current_retrieve
+      description: Get current user balance.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBalance'
+          description: ''
+  /api/payments/currencies/:
+    get:
+      operationId: payments_currencies_list
+      description: 'Currency ViewSet: /currencies/'
+      parameters:
+      - in: query
+        name: currency_type
+        schema:
+          type: string
+          x-spec-enum-id: 1fd14ececc7d641f
+          enum:
+          - crypto
+          - fiat
+        description: |-
+          Type of currency
+
+          * `fiat` - Fiat Currency
+          * `crypto` - Cryptocurrency
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCurrencyListList'
+          description: ''
+  /api/payments/currencies/{id}/:
+    get:
+      operationId: payments_currencies_retrieve
+      description: 'Currency ViewSet: /currencies/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Currency.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+          description: ''
+  /api/payments/currencies/{id}/networks/:
+    get:
+      operationId: payments_currencies_networks_retrieve
+      description: Get networks for specific currency.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Currency.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+          description: ''
+  /api/payments/currencies/crypto/:
+    get:
+      operationId: payments_currencies_crypto_retrieve
+      description: Get only cryptocurrencies.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+          description: ''
+  /api/payments/currencies/fiat/:
+    get:
+      operationId: payments_currencies_fiat_retrieve
+      description: Get only fiat currencies.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+          description: ''
+  /api/payments/currencies/rates/:
+    get:
+      operationId: payments_currencies_rates_retrieve
+      description: Get current exchange rates.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+          description: ''
+  /api/payments/currencies/supported/:
+    get:
+      operationId: payments_currencies_supported_list
+      description: Generic view to list supported currencies.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCurrencyListList'
+          description: ''
+  /api/payments/currency-networks/:
+    get:
+      operationId: payments_currency_networks_list
+      description: 'Currency Network ViewSet: /currency-networks/'
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: integer
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: network_code
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCurrencyNetworkList'
+          description: ''
+  /api/payments/currency-networks/{id}/:
+    get:
+      operationId: payments_currency_networks_retrieve
+      description: 'Currency Network ViewSet: /currency-networks/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Currency Network.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrencyNetwork'
+          description: ''
+  /api/payments/currency-networks/by_currency/:
+    get:
+      operationId: payments_currency_networks_by_currency_retrieve
+      description: Get networks grouped by currency.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrencyNetwork'
+          description: ''
+  /api/payments/endpoint-groups/:
+    get:
+      operationId: payments_endpoint_groups_list
+      description: 'Endpoint groups ViewSet: /endpoint-groups/'
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEndpointGroupList'
+          description: ''
+  /api/payments/endpoint-groups/{id}/:
+    get:
+      operationId: payments_endpoint_groups_retrieve
+      description: 'Endpoint groups ViewSet: /endpoint-groups/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Endpoint Group.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndpointGroup'
+          description: ''
+  /api/payments/endpoint-groups/{id}/pricing/:
+    get:
+      operationId: payments_endpoint_groups_pricing_retrieve
+      description: Get pricing for endpoint group.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Endpoint Group.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndpointGroup'
+          description: ''
+  /api/payments/payment/create/:
+    post:
+      operationId: payments_payment_create_create
+      description: Generic view to create payment.
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCreate'
+          description: ''
+  /api/payments/payment/status/{internal_payment_id}/:
+    get:
+      operationId: payments_payment_status_retrieve
+      description: Generic view to check payment status.
+      parameters:
+      - in: path
+        name: internal_payment_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+  /api/payments/payments/:
+    get:
+      operationId: payments_payments_list
+      description: 'Global payment ViewSet: /payments/'
+      parameters:
+      - in: query
+        name: currency_code
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: provider
+        schema:
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          enum:
+          - internal
+          - nowpayments
+          - stripe
+        description: |-
+          Payment provider
+
+          * `nowpayments` - NowPayments
+          * `stripe` - Stripe
+          * `internal` - Internal
+      - in: query
+        name: status
+        schema:
+          type: string
+          x-spec-enum-id: 59d07a8608d1bdb9
+          enum:
+          - cancelled
+          - completed
+          - confirmed
+          - confirming
+          - expired
+          - failed
+          - pending
+          - refunded
+        description: |-
+          Payment status
+
+          * `pending` - Pending
+          * `confirming` - Confirming
+          * `confirmed` - Confirmed
+          * `completed` - Completed
+          * `failed` - Failed
+          * `expired` - Expired
+          * `cancelled` - Cancelled
+          * `refunded` - Refunded
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentListList'
+          description: ''
+  /api/payments/payments/{id}/:
+    get:
+      operationId: payments_payments_retrieve
+      description: 'Global payment ViewSet: /payments/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+  /api/payments/subscription/create/:
+    post:
+      operationId: payments_subscription_create_create
+      description: Generic view to create subscription.
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionCreate'
+          description: ''
+  /api/payments/subscriptions/:
+    get:
+      operationId: payments_subscriptions_list
+      description: 'Global subscription ViewSet: /subscriptions/'
+      parameters:
+      - in: query
+        name: endpoint_group
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          x-spec-enum-id: f23c54e855df5ae8
+          enum:
+          - active
+          - cancelled
+          - expired
+          - inactive
+          - suspended
+        description: |-
+          Subscription status
+
+          * `active` - Active
+          * `inactive` - Inactive
+          * `expired` - Expired
+          * `cancelled` - Cancelled
+          * `suspended` - Suspended
+      - in: query
+        name: tier
+        schema:
+          type: string
+          x-spec-enum-id: 6b69310096c6fdd7
+          enum:
+          - basic
+          - enterprise
+          - premium
+        description: |-
+          Subscription tier
+
+          * `basic` - Basic
+          * `premium` - Premium
+          * `enterprise` - Enterprise
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionListList'
+          description: ''
+  /api/payments/subscriptions/{id}/:
+    get:
+      operationId: payments_subscriptions_retrieve
+      description: 'Global subscription ViewSet: /subscriptions/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/payments/subscriptions/active/:
+    get:
+      operationId: payments_subscriptions_active_list
+      description: Generic view to list active subscriptions.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionListList'
+          description: ''
+  /api/payments/tariff-endpoint-groups/:
+    get:
+      operationId: payments_tariff_endpoint_groups_list
+      description: 'Tariff Endpoint Group ViewSet: /tariff-endpoint-groups/'
+      parameters:
+      - in: query
+        name: endpoint_group
+        schema:
+          type: integer
+      - in: query
+        name: is_enabled
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: tariff
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTariffEndpointGroupList'
+          description: ''
+  /api/payments/tariff-endpoint-groups/{id}/:
+    get:
+      operationId: payments_tariff_endpoint_groups_retrieve
+      description: 'Tariff Endpoint Group ViewSet: /tariff-endpoint-groups/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tariff Endpoint Group.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TariffEndpointGroup'
+          description: ''
+  /api/payments/tariff-endpoint-groups/by_endpoint_group/:
+    get:
+      operationId: payments_tariff_endpoint_groups_by_endpoint_group_retrieve
+      description: Get tariffs by endpoint group.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TariffEndpointGroup'
+          description: ''
+  /api/payments/tariff-endpoint-groups/by_tariff/:
+    get:
+      operationId: payments_tariff_endpoint_groups_by_tariff_retrieve
+      description: Get endpoint groups by tariff.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TariffEndpointGroup'
+          description: ''
+  /api/payments/tariffs/:
+    get:
+      operationId: payments_tariffs_list
+      description: 'Tariff ViewSet: /tariffs/'
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTariffListList'
+          description: ''
+  /api/payments/tariffs/{id}/:
+    get:
+      operationId: payments_tariffs_retrieve
+      description: 'Tariff ViewSet: /tariffs/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tariff.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tariff'
+          description: ''
+  /api/payments/tariffs/{id}/endpoint_groups/:
+    get:
+      operationId: payments_tariffs_endpoint_groups_retrieve
+      description: Get endpoint groups for tariff.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tariff.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tariff'
+          description: ''
+  /api/payments/tariffs/available/:
+    get:
+      operationId: payments_tariffs_available_list
+      description: Generic view to list available tariffs.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTariffListList'
+          description: ''
+  /api/payments/tariffs/comparison/:
+    get:
+      operationId: payments_tariffs_comparison_retrieve
+      description: Get tariff comparison data.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tariff'
+          description: ''
+  /api/payments/tariffs/free/:
+    get:
+      operationId: payments_tariffs_free_retrieve
+      description: Get free tariffs.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tariff'
+          description: ''
+  /api/payments/tariffs/paid/:
+    get:
+      operationId: payments_tariffs_paid_retrieve
+      description: Get paid tariffs.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tariff'
+          description: ''
+  /api/payments/transactions/:
+    get:
+      operationId: payments_transactions_list
+      description: Transaction ViewSet - read only.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: payment
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier
+      - in: query
+        name: subscription
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier
+      - in: query
+        name: transaction_type
+        schema:
+          type: string
+          x-spec-enum-id: b9e707225712f9b5
+          enum:
+          - adjustment
+          - credit
+          - debit
+          - fee
+          - hold
+          - payment
+          - refund
+          - release
+          - subscription
+        description: |-
+          Type of transaction
+
+          * `payment` - Payment
+          * `subscription` - Subscription
+          * `refund` - Refund
+          * `credit` - Credit
+          * `debit` - Debit
+          * `hold` - Hold
+          * `release` - Release
+          * `fee` - Fee
+          * `adjustment` - Adjustment
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactionListList'
+          description: ''
+  /api/payments/transactions/{id}/:
+    get:
+      operationId: payments_transactions_retrieve
+      description: Transaction ViewSet - read only.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+  /api/payments/transactions/summary/:
+    get:
+      operationId: payments_transactions_summary_retrieve
+      description: Get transaction summary.
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+  /api/payments/users/{user_id}/api-keys/:
+    get:
+      operationId: payments_users_api_keys_list
+      description: 'Nested ViewSet for user API keys: /users/{user_id}/api-keys/'
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAPIKeyListList'
+          description: ''
+    post:
+      operationId: payments_users_api_keys_create
+      description: 'Nested ViewSet for user API keys: /users/{user_id}/api-keys/'
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyCreate'
+          description: ''
+  /api/payments/users/{user_id}/api-keys/{id}/:
+    get:
+      operationId: payments_users_api_keys_retrieve
+      description: 'Nested ViewSet for user API keys: /users/{user_id}/api-keys/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+    put:
+      operationId: payments_users_api_keys_update
+      description: 'Nested ViewSet for user API keys: /users/{user_id}/api-keys/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+    patch:
+      operationId: payments_users_api_keys_partial_update
+      description: 'Nested ViewSet for user API keys: /users/{user_id}/api-keys/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAPIKeyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAPIKeyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAPIKeyRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+    delete:
+      operationId: payments_users_api_keys_destroy
+      description: 'Nested ViewSet for user API keys: /users/{user_id}/api-keys/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/payments/users/{user_id}/api-keys/{id}/deactivate/:
+    post:
+      operationId: payments_users_api_keys_deactivate_create
+      description: Deactivate API key.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+  /api/payments/users/{user_id}/api-keys/{id}/regenerate/:
+    post:
+      operationId: payments_users_api_keys_regenerate_create
+      description: Regenerate API key.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APIKeyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+  /api/payments/users/{user_id}/api-keys/{id}/usage_stats/:
+    get:
+      operationId: payments_users_api_keys_usage_stats_retrieve
+      description: Get usage statistics for API key.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: API key owner
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+          description: ''
+  /api/payments/users/{user_id}/payments/:
+    get:
+      operationId: payments_users_payments_list
+      description: 'Nested ViewSet for user payments: /users/{user_id}/payments/'
+      parameters:
+      - in: query
+        name: currency_code
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: provider
+        schema:
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          enum:
+          - internal
+          - nowpayments
+          - stripe
+        description: |-
+          Payment provider
+
+          * `nowpayments` - NowPayments
+          * `stripe` - Stripe
+          * `internal` - Internal
+      - in: query
+        name: status
+        schema:
+          type: string
+          x-spec-enum-id: 59d07a8608d1bdb9
+          enum:
+          - cancelled
+          - completed
+          - confirmed
+          - confirming
+          - expired
+          - failed
+          - pending
+          - refunded
+        description: |-
+          Payment status
+
+          * `pending` - Pending
+          * `confirming` - Confirming
+          * `confirmed` - Confirmed
+          * `completed` - Completed
+          * `failed` - Failed
+          * `expired` - Expired
+          * `cancelled` - Cancelled
+          * `refunded` - Refunded
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentListList'
+          description: ''
+    post:
+      operationId: payments_users_payments_create
+      description: 'Nested ViewSet for user payments: /users/{user_id}/payments/'
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCreate'
+          description: ''
+  /api/payments/users/{user_id}/payments/{id}/:
+    get:
+      operationId: payments_users_payments_retrieve
+      description: 'Nested ViewSet for user payments: /users/{user_id}/payments/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+    put:
+      operationId: payments_users_payments_update
+      description: 'Nested ViewSet for user payments: /users/{user_id}/payments/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UniversalPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UniversalPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UniversalPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+    patch:
+      operationId: payments_users_payments_partial_update
+      description: 'Nested ViewSet for user payments: /users/{user_id}/payments/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUniversalPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUniversalPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUniversalPaymentRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+    delete:
+      operationId: payments_users_payments_destroy
+      description: 'Nested ViewSet for user payments: /users/{user_id}/payments/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/payments/users/{user_id}/payments/{id}/check_status/:
+    post:
+      operationId: payments_users_payments_check_status_create
+      description: Check payment status via provider API.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UniversalPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UniversalPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UniversalPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+  /api/payments/users/{user_id}/payments/summary/:
+    get:
+      operationId: payments_users_payments_summary_retrieve
+      description: Get payment summary for user.
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: User who initiated this payment
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversalPayment'
+          description: ''
+  /api/payments/users/{user_id}/subscriptions/:
+    get:
+      operationId: payments_users_subscriptions_list
+      description: 'Nested ViewSet for user subscriptions: /users/{user_id}/subscriptions/'
+      parameters:
+      - in: query
+        name: endpoint_group
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          x-spec-enum-id: f23c54e855df5ae8
+          enum:
+          - active
+          - cancelled
+          - expired
+          - inactive
+          - suspended
+        description: |-
+          Subscription status
+
+          * `active` - Active
+          * `inactive` - Inactive
+          * `expired` - Expired
+          * `cancelled` - Cancelled
+          * `suspended` - Suspended
+      - in: query
+        name: tier
+        schema:
+          type: string
+          x-spec-enum-id: 6b69310096c6fdd7
+          enum:
+          - basic
+          - enterprise
+          - premium
+        description: |-
+          Subscription tier
+
+          * `basic` - Basic
+          * `premium` - Premium
+          * `enterprise` - Enterprise
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionListList'
+          description: ''
+    post:
+      operationId: payments_users_subscriptions_create
+      description: 'Nested ViewSet for user subscriptions: /users/{user_id}/subscriptions/'
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionCreate'
+          description: ''
+  /api/payments/users/{user_id}/subscriptions/{id}/:
+    get:
+      operationId: payments_users_subscriptions_retrieve
+      description: 'Nested ViewSet for user subscriptions: /users/{user_id}/subscriptions/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+    put:
+      operationId: payments_users_subscriptions_update
+      description: 'Nested ViewSet for user subscriptions: /users/{user_id}/subscriptions/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+    patch:
+      operationId: payments_users_subscriptions_partial_update
+      description: 'Nested ViewSet for user subscriptions: /users/{user_id}/subscriptions/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriptionRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+    delete:
+      operationId: payments_users_subscriptions_destroy
+      description: 'Nested ViewSet for user subscriptions: /users/{user_id}/subscriptions/'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/payments/users/{user_id}/subscriptions/{id}/cancel/:
+    post:
+      operationId: payments_users_subscriptions_cancel_create
+      description: Cancel subscription.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/payments/users/{user_id}/subscriptions/{id}/renew/:
+    post:
+      operationId: payments_users_subscriptions_renew_create
+      description: Renew subscription.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+          description: Unique identifier
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/payments/users/{user_id}/subscriptions/active/:
+    get:
+      operationId: payments_users_subscriptions_active_retrieve
+      description: Get active subscriptions for user.
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+          description: Subscriber
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+components:
+  schemas:
+    APIKey:
+      type: object
+      description: API key with usage stats.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        name:
+          type: string
+          description: Human-readable key name
+          maxLength: 100
+        key_value:
+          type: string
+          readOnly: true
+          description: API key value (plain text)
+        key_prefix:
+          type: string
+          readOnly: true
+          description: Key prefix for identification
+        usage_count:
+          type: integer
+          readOnly: true
+          description: Total usage count
+        is_active:
+          type: boolean
+          description: Is key active
+        is_valid:
+          type: string
+          readOnly: true
+        last_used:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Last usage timestamp
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Key expiration
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_valid
+      - key_prefix
+      - key_value
+      - last_used
+      - name
+      - usage_count
+    APIKeyCreate:
+      type: object
+      description: Create API key.
+      properties:
+        name:
+          type: string
+          description: Human-readable key name
+          maxLength: 100
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Key expiration
+      required:
+      - name
+    APIKeyCreateRequest:
+      type: object
+      description: Create API key.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable key name
+          maxLength: 100
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Key expiration
+      required:
+      - name
+    APIKeyList:
+      type: object
+      description: Simplified API key for lists.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        name:
+          type: string
+          description: Human-readable key name
+          maxLength: 100
+        key_prefix:
+          type: string
+          readOnly: true
+          description: Key prefix for identification
+        usage_count:
+          type: integer
+          readOnly: true
+          description: Total usage count
+        is_active:
+          type: boolean
+          description: Is key active
+        is_valid:
+          type: string
+          readOnly: true
+        last_used:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Last usage timestamp
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Key expiration
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_valid
+      - key_prefix
+      - last_used
+      - name
+      - usage_count
+    APIKeyRequest:
+      type: object
+      description: API key with usage stats.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable key name
+          maxLength: 100
+        is_active:
+          type: boolean
+          description: Is key active
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Key expiration
+      required:
+      - name
+    Currency:
+      type: object
+      description: Currency with type info.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          description: Currency code (e.g., USD, BTC, ETH)
+          maxLength: 10
+        name:
+          type: string
+          description: Full currency name
+          maxLength: 100
+        symbol:
+          type: string
+          description: Currency symbol (e.g., $, ₿, Ξ)
+          maxLength: 10
+        currency_type:
+          enum:
+          - fiat
+          - crypto
+          type: string
+          x-spec-enum-id: 1fd14ececc7d641f
+          description: |-
+            Type of currency
+
+            * `fiat` - Fiat Currency
+            * `crypto` - Cryptocurrency
+        currency_type_display:
+          type: string
+          readOnly: true
+        is_crypto:
+          type: string
+          readOnly: true
+        is_fiat:
+          type: string
+          readOnly: true
+        decimal_places:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Number of decimal places for this currency
+        usd_rate:
+          type: number
+          format: double
+          description: Exchange rate to USD (1 unit of this currency = X USD)
+        rate_updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When the exchange rate was last updated
+        is_active:
+          type: boolean
+          description: Whether this currency is active for payments
+        min_payment_amount:
+          type: number
+          format: double
+          description: Minimum payment amount for this currency
+      required:
+      - code
+      - currency_type
+      - currency_type_display
+      - id
+      - is_crypto
+      - is_fiat
+      - name
+      - rate_updated_at
+      - symbol
+    CurrencyList:
+      type: object
+      description: Simplified currency for lists.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          description: Currency code (e.g., USD, BTC, ETH)
+          maxLength: 10
+        name:
+          type: string
+          description: Full currency name
+          maxLength: 100
+        currency_type:
+          enum:
+          - fiat
+          - crypto
+          type: string
+          x-spec-enum-id: 1fd14ececc7d641f
+          description: |-
+            Type of currency
+
+            * `fiat` - Fiat Currency
+            * `crypto` - Cryptocurrency
+        currency_type_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          description: Whether this currency is active for payments
+      required:
+      - code
+      - currency_type
+      - currency_type_display
+      - id
+      - name
+    CurrencyNetwork:
+      type: object
+      description: Currency network with status.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        currency:
+          type: integer
+          description: Currency this network supports
+        currency_code:
+          type: string
+          readOnly: true
+        currency_name:
+          type: string
+          readOnly: true
+        network_code:
+          type: string
+          description: Network code for API integration
+          maxLength: 20
+        network_name:
+          type: string
+          description: Network name (e.g., mainnet, polygon, bsc)
+          maxLength: 50
+        is_active:
+          type: boolean
+          description: Whether this network is active
+        confirmation_blocks:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Number of confirmations required
+      required:
+      - currency
+      - currency_code
+      - currency_name
+      - id
+      - network_code
+      - network_name
+    EndpointGroup:
+      type: object
+      description: Endpoint group with pricing tiers.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Endpoint group name
+          maxLength: 100
+        display_name:
+          type: string
+          description: Human-readable name
+          maxLength: 200
+        description:
+          type: string
+          description: Group description
+        basic_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Basic tier monthly price
+        premium_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Premium tier monthly price
+        enterprise_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Enterprise tier monthly price
+        basic_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Basic tier monthly usage limit
+        premium_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Premium tier monthly usage limit
+        enterprise_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Enterprise tier monthly usage limit (0 = unlimited)
+        is_active:
+          type: boolean
+          description: Is this endpoint group active
+        require_api_key:
+          type: boolean
+          description: Require API key for access
+      required:
+      - display_name
+      - id
+      - name
+    PaginatedAPIKeyListList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/APIKeyList'
+          description: Array of items for current page
+    PaginatedCurrencyListList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrencyList'
+          description: Array of items for current page
+    PaginatedCurrencyNetworkList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrencyNetwork'
+          description: Array of items for current page
+    PaginatedEndpointGroupList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EndpointGroup'
+          description: Array of items for current page
+    PaginatedPaymentListList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentList'
+          description: Array of items for current page
+    PaginatedSubscriptionListList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionList'
+          description: Array of items for current page
+    PaginatedTariffEndpointGroupList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TariffEndpointGroup'
+          description: Array of items for current page
+    PaginatedTariffListList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TariffList'
+          description: Array of items for current page
+    PaginatedTransactionListList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionList'
+          description: Array of items for current page
+    PaginatedUserBalanceList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBalance'
+          description: Array of items for current page
+    PatchedAPIKeyRequest:
+      type: object
+      description: API key with usage stats.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable key name
+          maxLength: 100
+        is_active:
+          type: boolean
+          description: Is key active
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Key expiration
+    PatchedSubscriptionRequest:
+      type: object
+      description: Subscription with computed fields.
+      properties:
+        endpoint_group:
+          type: integer
+          description: Endpoint group
+        tier:
+          enum:
+          - basic
+          - premium
+          - enterprise
+          type: string
+          x-spec-enum-id: 6b69310096c6fdd7
+          description: |-
+            Subscription tier
+
+            * `basic` - Basic
+            * `premium` - Premium
+            * `enterprise` - Enterprise
+        status:
+          enum:
+          - active
+          - inactive
+          - expired
+          - cancelled
+          - suspended
+          type: string
+          x-spec-enum-id: f23c54e855df5ae8
+          description: |-
+            Subscription status
+
+            * `active` - Active
+            * `inactive` - Inactive
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `suspended` - Suspended
+        monthly_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Monthly subscription price
+        usage_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Monthly usage limit (0 = unlimited)
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Subscription expiration
+    PatchedUniversalPaymentRequest:
+      type: object
+      description: Universal payment with status info.
+      properties:
+        order_id:
+          type: string
+          nullable: true
+          description: Order reference ID
+          maxLength: 255
+        amount_usd:
+          type: number
+          format: double
+          minimum: 1.0
+          description: Payment amount in USD
+        currency_code:
+          type: string
+          minLength: 1
+          description: Currency used for payment
+          maxLength: 10
+        provider:
+          enum:
+          - nowpayments
+          - stripe
+          - internal
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          description: |-
+            Payment provider
+
+            * `nowpayments` - NowPayments
+            * `stripe` - Stripe
+            * `internal` - Internal
+        status:
+          enum:
+          - pending
+          - confirming
+          - confirmed
+          - completed
+          - failed
+          - expired
+          - cancelled
+          - refunded
+          type: string
+          x-spec-enum-id: 59d07a8608d1bdb9
+          description: |-
+            Payment status
+
+            * `pending` - Pending
+            * `confirming` - Confirming
+            * `confirmed` - Confirmed
+            * `completed` - Completed
+            * `failed` - Failed
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `refunded` - Refunded
+        network:
+          type: string
+          nullable: true
+          description: Blockchain network (mainnet, testnet, etc.)
+          maxLength: 50
+        description:
+          type: string
+          description: Payment description
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Payment expiration time
+    PaymentCreate:
+      type: object
+      description: Create payment request.
+      properties:
+        amount_usd:
+          type: number
+          format: double
+          minimum: 1.0
+          description: Payment amount in USD
+        currency_code:
+          type: string
+          description: Currency used for payment
+          maxLength: 10
+        provider:
+          enum:
+          - nowpayments
+          - stripe
+          - internal
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          description: |-
+            Payment provider
+
+            * `nowpayments` - NowPayments
+            * `stripe` - Stripe
+            * `internal` - Internal
+        description:
+          type: string
+          description: Payment description
+        order_id:
+          type: string
+          nullable: true
+          description: Order reference ID
+          maxLength: 255
+      required:
+      - amount_usd
+      - currency_code
+      - provider
+    PaymentCreateRequest:
+      type: object
+      description: Create payment request.
+      properties:
+        amount_usd:
+          type: number
+          format: double
+          minimum: 1.0
+          description: Payment amount in USD
+        currency_code:
+          type: string
+          minLength: 1
+          description: Currency used for payment
+          maxLength: 10
+        provider:
+          enum:
+          - nowpayments
+          - stripe
+          - internal
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          description: |-
+            Payment provider
+
+            * `nowpayments` - NowPayments
+            * `stripe` - Stripe
+            * `internal` - Internal
+        description:
+          type: string
+          description: Payment description
+        order_id:
+          type: string
+          nullable: true
+          description: Order reference ID
+          maxLength: 255
+      required:
+      - amount_usd
+      - currency_code
+      - provider
+    PaymentList:
+      type: object
+      description: Simplified payment for lists.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        internal_payment_id:
+          type: string
+          description: Internal payment identifier
+          maxLength: 100
+        amount_usd:
+          type: number
+          format: double
+          minimum: 1.0
+          description: Payment amount in USD
+        currency_code:
+          type: string
+          description: Currency used for payment
+          maxLength: 10
+        provider:
+          enum:
+          - nowpayments
+          - stripe
+          - internal
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          description: |-
+            Payment provider
+
+            * `nowpayments` - NowPayments
+            * `stripe` - Stripe
+            * `internal` - Internal
+        status:
+          enum:
+          - pending
+          - confirming
+          - confirmed
+          - completed
+          - failed
+          - expired
+          - cancelled
+          - refunded
+          type: string
+          x-spec-enum-id: 59d07a8608d1bdb9
+          description: |-
+            Payment status
+
+            * `pending` - Pending
+            * `confirming` - Confirming
+            * `confirmed` - Confirmed
+            * `completed` - Completed
+            * `failed` - Failed
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `refunded` - Refunded
+        status_display:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          description: Payment description
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_usd
+      - created_at
+      - currency_code
+      - id
+      - internal_payment_id
+      - provider
+      - status_display
+    Subscription:
+      type: object
+      description: Subscription with computed fields.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        endpoint_group:
+          type: integer
+          description: Endpoint group
+        endpoint_group_name:
+          type: string
+          readOnly: true
+        endpoint_group_display:
+          type: string
+          readOnly: true
+        tier:
+          enum:
+          - basic
+          - premium
+          - enterprise
+          type: string
+          x-spec-enum-id: 6b69310096c6fdd7
+          description: |-
+            Subscription tier
+
+            * `basic` - Basic
+            * `premium` - Premium
+            * `enterprise` - Enterprise
+        tier_display:
+          type: string
+          readOnly: true
+        status:
+          enum:
+          - active
+          - inactive
+          - expired
+          - cancelled
+          - suspended
+          type: string
+          x-spec-enum-id: f23c54e855df5ae8
+          description: |-
+            Subscription status
+
+            * `active` - Active
+            * `inactive` - Inactive
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `suspended` - Suspended
+        status_display:
+          type: string
+          readOnly: true
+        monthly_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Monthly subscription price
+        usage_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Monthly usage limit (0 = unlimited)
+        usage_current:
+          type: integer
+          readOnly: true
+          description: Current month usage
+        is_active_subscription:
+          type: boolean
+          description: Check if subscription is currently active.
+          readOnly: true
+        is_usage_exceeded:
+          type: boolean
+          description: Check if usage limit is exceeded.
+          readOnly: true
+        last_billed:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Last billing date
+        next_billing:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Next billing date
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Subscription expiration
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - endpoint_group
+      - endpoint_group_display
+      - endpoint_group_name
+      - id
+      - is_active_subscription
+      - is_usage_exceeded
+      - last_billed
+      - monthly_price
+      - next_billing
+      - status_display
+      - tier_display
+      - usage_current
+    SubscriptionCreate:
+      type: object
+      description: Create subscription request.
+      properties:
+        endpoint_group_id:
+          type: integer
+        tier:
+          enum:
+          - basic
+          - premium
+          - enterprise
+          type: string
+          description: |-
+            * `basic` - Basic
+            * `premium` - Premium
+            * `enterprise` - Enterprise
+          x-spec-enum-id: 6b69310096c6fdd7
+      required:
+      - endpoint_group_id
+      - tier
+    SubscriptionCreateRequest:
+      type: object
+      description: Create subscription request.
+      properties:
+        endpoint_group_id:
+          type: integer
+        tier:
+          enum:
+          - basic
+          - premium
+          - enterprise
+          type: string
+          description: |-
+            * `basic` - Basic
+            * `premium` - Premium
+            * `enterprise` - Enterprise
+          x-spec-enum-id: 6b69310096c6fdd7
+      required:
+      - endpoint_group_id
+      - tier
+    SubscriptionList:
+      type: object
+      description: Simplified subscription for lists.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        endpoint_group_name:
+          type: string
+          readOnly: true
+        tier:
+          enum:
+          - basic
+          - premium
+          - enterprise
+          type: string
+          x-spec-enum-id: 6b69310096c6fdd7
+          description: |-
+            Subscription tier
+
+            * `basic` - Basic
+            * `premium` - Premium
+            * `enterprise` - Enterprise
+        status:
+          enum:
+          - active
+          - inactive
+          - expired
+          - cancelled
+          - suspended
+          type: string
+          x-spec-enum-id: f23c54e855df5ae8
+          description: |-
+            Subscription status
+
+            * `active` - Active
+            * `inactive` - Inactive
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `suspended` - Suspended
+        status_display:
+          type: string
+          readOnly: true
+        monthly_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Monthly subscription price
+        usage_current:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Current month usage
+        usage_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Monthly usage limit (0 = unlimited)
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Subscription expiration
+      required:
+      - endpoint_group_name
+      - id
+      - monthly_price
+      - status_display
+    SubscriptionRequest:
+      type: object
+      description: Subscription with computed fields.
+      properties:
+        endpoint_group:
+          type: integer
+          description: Endpoint group
+        tier:
+          enum:
+          - basic
+          - premium
+          - enterprise
+          type: string
+          x-spec-enum-id: 6b69310096c6fdd7
+          description: |-
+            Subscription tier
+
+            * `basic` - Basic
+            * `premium` - Premium
+            * `enterprise` - Enterprise
+        status:
+          enum:
+          - active
+          - inactive
+          - expired
+          - cancelled
+          - suspended
+          type: string
+          x-spec-enum-id: f23c54e855df5ae8
+          description: |-
+            Subscription status
+
+            * `active` - Active
+            * `inactive` - Inactive
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `suspended` - Suspended
+        monthly_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Monthly subscription price
+        usage_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Monthly usage limit (0 = unlimited)
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Subscription expiration
+      required:
+      - endpoint_group
+      - monthly_price
+    Tariff:
+      type: object
+      description: Tariff with pricing info.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Tariff name
+          maxLength: 100
+        display_name:
+          type: string
+          description: Human-readable tariff name
+          maxLength: 200
+        description:
+          type: string
+          description: Tariff description
+        monthly_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Monthly price in USD
+        request_limit:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Monthly request limit (0 = unlimited)
+        is_free:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          description: Is this tariff active
+        endpoint_groups_count:
+          type: string
+          readOnly: true
+      required:
+      - display_name
+      - endpoint_groups_count
+      - id
+      - is_free
+      - name
+    TariffEndpointGroup:
+      type: object
+      description: Tariff endpoint group association.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        tariff:
+          type: integer
+          description: Tariff plan
+        tariff_name:
+          type: string
+          readOnly: true
+        endpoint_group:
+          type: integer
+          description: Endpoint group
+        endpoint_group_name:
+          type: string
+          readOnly: true
+        is_enabled:
+          type: boolean
+          description: Is this endpoint group enabled for this tariff
+      required:
+      - endpoint_group
+      - endpoint_group_name
+      - id
+      - tariff
+      - tariff_name
+    TariffList:
+      type: object
+      description: Simplified tariff for lists.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Tariff name
+          maxLength: 100
+        display_name:
+          type: string
+          description: Human-readable tariff name
+          maxLength: 200
+        monthly_price:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Monthly price in USD
+        is_free:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          description: Is this tariff active
+      required:
+      - display_name
+      - id
+      - is_free
+      - name
+    Transaction:
+      type: object
+      description: Transaction with details.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        amount_usd:
+          type: number
+          format: double
+          description: Transaction amount in USD (positive for credits, negative for
+            debits)
+        transaction_type:
+          enum:
+          - payment
+          - subscription
+          - refund
+          - credit
+          - debit
+          - hold
+          - release
+          - fee
+          - adjustment
+          type: string
+          x-spec-enum-id: b9e707225712f9b5
+          description: |-
+            Type of transaction
+
+            * `payment` - Payment
+            * `subscription` - Subscription
+            * `refund` - Refund
+            * `credit` - Credit
+            * `debit` - Debit
+            * `hold` - Hold
+            * `release` - Release
+            * `fee` - Fee
+            * `adjustment` - Adjustment
+        transaction_type_display:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          description: Human-readable description of the transaction
+        balance_before:
+          type: number
+          format: double
+          readOnly: true
+          description: User balance before this transaction
+        balance_after:
+          type: number
+          format: double
+          readOnly: true
+          description: User balance after this transaction
+        is_credit:
+          type: boolean
+          description: Check if this is a credit transaction.
+          readOnly: true
+        is_debit:
+          type: boolean
+          description: Check if this is a debit transaction.
+          readOnly: true
+        reference_id:
+          type: string
+          nullable: true
+          description: External reference ID
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_usd
+      - balance_after
+      - balance_before
+      - created_at
+      - description
+      - id
+      - is_credit
+      - is_debit
+      - transaction_type
+      - transaction_type_display
+    TransactionList:
+      type: object
+      description: Simplified transaction for lists.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        amount_usd:
+          type: number
+          format: double
+          description: Transaction amount in USD (positive for credits, negative for
+            debits)
+        transaction_type:
+          enum:
+          - payment
+          - subscription
+          - refund
+          - credit
+          - debit
+          - hold
+          - release
+          - fee
+          - adjustment
+          type: string
+          x-spec-enum-id: b9e707225712f9b5
+          description: |-
+            Type of transaction
+
+            * `payment` - Payment
+            * `subscription` - Subscription
+            * `refund` - Refund
+            * `credit` - Credit
+            * `debit` - Debit
+            * `hold` - Hold
+            * `release` - Release
+            * `fee` - Fee
+            * `adjustment` - Adjustment
+        transaction_type_display:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          description: Human-readable description of the transaction
+        balance_after:
+          type: number
+          format: double
+          description: User balance after this transaction
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_usd
+      - balance_after
+      - created_at
+      - description
+      - id
+      - transaction_type
+      - transaction_type_display
+    UniversalPayment:
+      type: object
+      description: Universal payment with status info.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier
+        internal_payment_id:
+          type: string
+          readOnly: true
+          description: Internal payment identifier
+        provider_payment_id:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Provider's payment ID
+        order_id:
+          type: string
+          nullable: true
+          description: Order reference ID
+          maxLength: 255
+        amount_usd:
+          type: number
+          format: double
+          minimum: 1.0
+          description: Payment amount in USD
+        currency_code:
+          type: string
+          description: Currency used for payment
+          maxLength: 10
+        actual_amount_usd:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Actual received amount in USD
+        actual_currency_code:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Actual received currency
+        fee_amount_usd:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Fee amount in USD
+        provider:
+          enum:
+          - nowpayments
+          - stripe
+          - internal
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          description: |-
+            Payment provider
+
+            * `nowpayments` - NowPayments
+            * `stripe` - Stripe
+            * `internal` - Internal
+        provider_display:
+          type: string
+          readOnly: true
+        status:
+          enum:
+          - pending
+          - confirming
+          - confirmed
+          - completed
+          - failed
+          - expired
+          - cancelled
+          - refunded
+          type: string
+          x-spec-enum-id: 59d07a8608d1bdb9
+          description: |-
+            Payment status
+
+            * `pending` - Pending
+            * `confirming` - Confirming
+            * `confirmed` - Confirmed
+            * `completed` - Completed
+            * `failed` - Failed
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `refunded` - Refunded
+        status_display:
+          type: string
+          readOnly: true
+        pay_address:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Cryptocurrency payment address
+        pay_amount:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Amount to pay in cryptocurrency
+        network:
+          type: string
+          nullable: true
+          description: Blockchain network (mainnet, testnet, etc.)
+          maxLength: 50
+        description:
+          type: string
+          description: Payment description
+        is_pending:
+          type: boolean
+          description: Check if payment is still pending.
+          readOnly: true
+        is_completed:
+          type: boolean
+          description: Check if payment is completed.
+          readOnly: true
+        is_failed:
+          type: boolean
+          description: Check if payment failed.
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Payment expiration time
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Payment completion time
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actual_amount_usd
+      - actual_currency_code
+      - amount_usd
+      - completed_at
+      - created_at
+      - currency_code
+      - fee_amount_usd
+      - id
+      - internal_payment_id
+      - is_completed
+      - is_failed
+      - is_pending
+      - pay_address
+      - pay_amount
+      - provider
+      - provider_display
+      - provider_payment_id
+      - status_display
+      - updated_at
+    UniversalPaymentRequest:
+      type: object
+      description: Universal payment with status info.
+      properties:
+        order_id:
+          type: string
+          nullable: true
+          description: Order reference ID
+          maxLength: 255
+        amount_usd:
+          type: number
+          format: double
+          minimum: 1.0
+          description: Payment amount in USD
+        currency_code:
+          type: string
+          minLength: 1
+          description: Currency used for payment
+          maxLength: 10
+        provider:
+          enum:
+          - nowpayments
+          - stripe
+          - internal
+          type: string
+          x-spec-enum-id: ce60bbdf221eb136
+          description: |-
+            Payment provider
+
+            * `nowpayments` - NowPayments
+            * `stripe` - Stripe
+            * `internal` - Internal
+        status:
+          enum:
+          - pending
+          - confirming
+          - confirmed
+          - completed
+          - failed
+          - expired
+          - cancelled
+          - refunded
+          type: string
+          x-spec-enum-id: 59d07a8608d1bdb9
+          description: |-
+            Payment status
+
+            * `pending` - Pending
+            * `confirming` - Confirming
+            * `confirmed` - Confirmed
+            * `completed` - Completed
+            * `failed` - Failed
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+            * `refunded` - Refunded
+        network:
+          type: string
+          nullable: true
+          description: Blockchain network (mainnet, testnet, etc.)
+          maxLength: 50
+        description:
+          type: string
+          description: Payment description
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Payment expiration time
+      required:
+      - amount_usd
+      - currency_code
+      - provider
+    UserBalance:
+      type: object
+      description: User balance with computed fields.
+      properties:
+        amount_usd:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Current balance in USD
+        reserved_usd:
+          type: number
+          format: double
+          minimum: 0.0
+          description: Reserved balance in USD (for pending transactions)
+        total_balance:
+          type: number
+          format: double
+          description: Get total balance (available + reserved).
+          readOnly: true
+        total_earned:
+          type: number
+          format: double
+          readOnly: true
+          description: Total amount earned (lifetime)
+        total_spent:
+          type: number
+          format: double
+          readOnly: true
+          description: Total amount spent (lifetime)
+        last_transaction_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When the last transaction occurred
+        pending_payments_count:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - last_transaction_at
+      - pending_payments_count
+      - total_balance
+      - total_earned
+      - total_spent
+      - updated_at
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

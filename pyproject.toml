@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.2.23"
+version = "1.2.25"
 description = "🚀 Next-gen Django configuration: type-safety, AI features, blazing-fast setup, and automated best practices — all in one."
 readme = "README.md"
 license = {text = "MIT"}
@@ -237,10 +237,10 @@ django-cfg = "django_cfg.cli.main:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/django_cfg"]
 exclude = [
-    "django_sample",        # Exclude django_sample directory (use archive instead)
-    "scripts/",  # Exclude scripts from wheel package
-    "opensource/",  # Exclude opensource from wheel package
-    "devops/",  # Exclude devops from wheel package
+    "examples/",            # Exclude examples directory (use archive instead)
+    "scripts/",             # Exclude scripts from wheel package
+    "opensource/",          # Exclude opensource from wheel package
+    "devops/",              # Exclude devops from wheel package
 ]
 
 [tool.hatch.metadata]
@@ -249,19 +249,22 @@ allow-direct-references = true
 [tool.hatch.build.targets.sdist]
 include = [
     "src/django_cfg",
+    "src/django_cfg/template_archive/*",  # Include template archive files
     "README.md",
-    "LICENSE",
+    "LICENSE", 
     "CHANGELOG.md",
     "requirements*.txt",
     "MANIFEST.in",
 ]
 exclude = [
     "@*",
+    "devops",              # Exclude devops directory
+    "opensource",          # Exclude opensource directory  
+    "examples",            # Exclude examples (use archive instead)
     "tests",
     "scripts",             # Exclude development scripts
     "*.log",
     ".env*",
-    "django_sample",        # Exclude django_sample directory (use archive instead)
 ]
 
 # Black configuration

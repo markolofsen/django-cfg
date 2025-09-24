@@ -1,0 +1,1220 @@
+openapi: 3.0.3
+info:
+  title: Django CFG Sample API
+  version: 1.0.0 (v1)
+  description: RESTful API with modern architecture
+paths:
+  /api/newsletter/bulk/:
+    post:
+      operationId: newsletter_bulk_create
+      description: Send bulk emails to multiple recipients using base email template.
+      summary: Send Bulk Email
+      tags:
+      - Bulk Email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkEmailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/newsletter/campaigns/:
+    get:
+      operationId: newsletter_campaigns_list
+      description: Get a list of all newsletter campaigns.
+      summary: List Newsletter Campaigns
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Campaigns
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNewsletterCampaignList'
+          description: ''
+    post:
+      operationId: newsletter_campaigns_create
+      description: Create a new newsletter campaign.
+      summary: Create Newsletter Campaign
+      tags:
+      - Campaigns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterCampaignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NewsletterCampaignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewsletterCampaignRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterCampaign'
+          description: ''
+  /api/newsletter/campaigns/{id}/:
+    get:
+      operationId: newsletter_campaigns_retrieve
+      description: Retrieve details of a specific newsletter campaign.
+      summary: Get Campaign Details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Campaigns
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterCampaign'
+          description: ''
+    put:
+      operationId: newsletter_campaigns_update
+      description: Update a newsletter campaign.
+      summary: Update Campaign
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Campaigns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterCampaignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NewsletterCampaignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewsletterCampaignRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterCampaign'
+          description: ''
+    patch:
+      operationId: newsletter_campaigns_partial_update
+      description: Retrieve, update, or delete a newsletter campaign.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - newsletter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNewsletterCampaignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNewsletterCampaignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNewsletterCampaignRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterCampaign'
+          description: ''
+    delete:
+      operationId: newsletter_campaigns_destroy
+      description: Delete a newsletter campaign.
+      summary: Delete Campaign
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Campaigns
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/newsletter/campaigns/send/:
+    post:
+      operationId: newsletter_campaigns_send_create
+      description: Send a newsletter campaign to all subscribers.
+      summary: Send Newsletter Campaign
+      tags:
+      - Campaigns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCampaignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendCampaignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendCampaignRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/newsletter/logs/:
+    get:
+      operationId: newsletter_logs_list
+      description: Get a list of email sending logs.
+      summary: List Email Logs
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Logs
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmailLogList'
+          description: ''
+  /api/newsletter/newsletters/:
+    get:
+      operationId: newsletter_newsletters_list
+      description: Get a list of all active newsletters available for subscription.
+      summary: List Active Newsletters
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Newsletters
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNewsletterList'
+          description: ''
+  /api/newsletter/newsletters/{id}/:
+    get:
+      operationId: newsletter_newsletters_retrieve
+      description: Retrieve details of a specific newsletter.
+      summary: Get Newsletter Details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Newsletters
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Newsletter'
+          description: ''
+  /api/newsletter/subscribe/:
+    post:
+      operationId: newsletter_subscribe_create
+      description: Subscribe an email address to a newsletter.
+      summary: Subscribe to Newsletter
+      tags:
+      - Subscriptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/newsletter/subscriptions/:
+    get:
+      operationId: newsletter_subscriptions_list
+      description: Get a list of current user's active newsletter subscriptions.
+      summary: List User Subscriptions
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Subscriptions
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNewsletterSubscriptionList'
+          description: ''
+  /api/newsletter/test/:
+    post:
+      operationId: newsletter_test_create
+      description: Send a test email to verify mailer configuration.
+      summary: Test Email Sending
+      tags:
+      - Testing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TestEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TestEmailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/newsletter/unsubscribe/:
+    post:
+      operationId: newsletter_unsubscribe_create
+      description: Unsubscribe from a newsletter using subscription ID.
+      summary: Unsubscribe from Newsletter
+      tags:
+      - Subscriptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+    put:
+      operationId: newsletter_unsubscribe_update
+      description: Handle newsletter unsubscriptions.
+      tags:
+      - newsletter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unsubscribe'
+          description: ''
+    patch:
+      operationId: newsletter_unsubscribe_partial_update
+      description: Handle newsletter unsubscriptions.
+      tags:
+      - newsletter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUnsubscribeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUnsubscribeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUnsubscribeRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unsubscribe'
+          description: ''
+components:
+  schemas:
+    BulkEmailRequest:
+      type: object
+      description: Simple serializer for bulk email.
+      properties:
+        recipients:
+          type: array
+          items:
+            type: string
+            format: email
+            minLength: 1
+          maxItems: 100
+          minItems: 1
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        main_text:
+          type: string
+          minLength: 1
+        main_html_content:
+          type: string
+        button_text:
+          type: string
+          maxLength: 100
+        button_url:
+          type: string
+          format: uri
+        secondary_text:
+          type: string
+      required:
+      - email_title
+      - main_text
+      - recipients
+      - subject
+    EmailLog:
+      type: object
+      description: Serializer for EmailLog model.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: User Account
+        user_email:
+          type: string
+          readOnly: true
+        newsletter:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Related Newsletter
+        newsletter_title:
+          type: string
+          readOnly: true
+        recipient:
+          type: string
+          readOnly: true
+          title: Recipient(s)
+          description: Comma-separated email addresses
+        subject:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+          title: Body (HTML)
+        status:
+          enum:
+          - pending
+          - sent
+          - failed
+          type: string
+          description: |-
+            * `pending` - Pending
+            * `sent` - Sent
+            * `failed` - Failed
+          x-spec-enum-id: 6c875617d5f34e96
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        error_message:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - body
+      - created_at
+      - error_message
+      - id
+      - newsletter
+      - newsletter_title
+      - recipient
+      - sent_at
+      - status
+      - subject
+      - user
+      - user_email
+    Newsletter:
+      type: object
+      description: Serializer for Newsletter model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          title: Newsletter Title
+          maxLength: 255
+        description:
+          type: string
+        is_active:
+          type: boolean
+          title: Active
+        auto_subscribe:
+          type: boolean
+          title: Auto Subscribe New Users
+          description: Automatically subscribe new users to this newsletter
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        subscribers_count:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - subscribers_count
+      - title
+      - updated_at
+    NewsletterCampaign:
+      type: object
+      description: Serializer for NewsletterCampaign model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        newsletter:
+          type: integer
+        newsletter_title:
+          type: string
+          readOnly: true
+        subject:
+          type: string
+          maxLength: 255
+        email_title:
+          type: string
+          maxLength: 255
+        main_text:
+          type: string
+        main_html_content:
+          type: string
+          title: HTML Content
+        button_text:
+          type: string
+          maxLength: 100
+        button_url:
+          type: string
+          format: uri
+          maxLength: 200
+        secondary_text:
+          type: string
+        status:
+          enum:
+          - draft
+          - sending
+          - sent
+          - failed
+          type: string
+          description: |-
+            * `draft` - Draft
+            * `sending` - Sending
+            * `sent` - Sent
+            * `failed` - Failed
+          x-spec-enum-id: a459055d142d5a82
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recipient_count:
+          type: integer
+          readOnly: true
+      required:
+      - created_at
+      - email_title
+      - id
+      - main_text
+      - newsletter
+      - newsletter_title
+      - recipient_count
+      - sent_at
+      - status
+      - subject
+    NewsletterCampaignRequest:
+      type: object
+      description: Serializer for NewsletterCampaign model.
+      properties:
+        newsletter:
+          type: integer
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        main_text:
+          type: string
+          minLength: 1
+        main_html_content:
+          type: string
+          title: HTML Content
+        button_text:
+          type: string
+          maxLength: 100
+        button_url:
+          type: string
+          format: uri
+          maxLength: 200
+        secondary_text:
+          type: string
+      required:
+      - email_title
+      - main_text
+      - newsletter
+      - subject
+    NewsletterSubscription:
+      type: object
+      description: Serializer for NewsletterSubscription model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        newsletter:
+          type: integer
+        newsletter_title:
+          type: string
+          readOnly: true
+        user:
+          type: integer
+          nullable: true
+        user_email:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          title: Email Address
+          maxLength: 254
+        is_active:
+          type: boolean
+          title: Active
+        subscribed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        unsubscribed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - email
+      - id
+      - newsletter
+      - newsletter_title
+      - subscribed_at
+      - unsubscribed_at
+      - user_email
+    PaginatedEmailLogList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailLog'
+          description: Array of items for current page
+    PaginatedNewsletterCampaignList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewsletterCampaign'
+          description: Array of items for current page
+    PaginatedNewsletterList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Newsletter'
+          description: Array of items for current page
+    PaginatedNewsletterSubscriptionList:
+      type: object
+      required:
+      - count
+      - page
+      - pages
+      - page_size
+      - has_next
+      - has_previous
+      - results
+      properties:
+        count:
+          type: integer
+          description: Total number of items across all pages
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 2
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        page_size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_previous:
+          type: boolean
+          description: Whether there is a previous page
+          example: true
+        next_page:
+          type: integer
+          nullable: true
+          description: Next page number (null if no next page)
+          example: 3
+        previous_page:
+          type: integer
+          nullable: true
+          description: Previous page number (null if no previous page)
+          example: 1
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewsletterSubscription'
+          description: Array of items for current page
+    PatchedNewsletterCampaignRequest:
+      type: object
+      description: Serializer for NewsletterCampaign model.
+      properties:
+        newsletter:
+          type: integer
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        main_text:
+          type: string
+          minLength: 1
+        main_html_content:
+          type: string
+          title: HTML Content
+        button_text:
+          type: string
+          maxLength: 100
+        button_url:
+          type: string
+          format: uri
+          maxLength: 200
+        secondary_text:
+          type: string
+    PatchedUnsubscribeRequest:
+      type: object
+      description: Simple serializer for unsubscribe.
+      properties:
+        subscription_id:
+          type: integer
+    SendCampaignRequest:
+      type: object
+      description: Simple serializer for sending campaign.
+      properties:
+        campaign_id:
+          type: integer
+      required:
+      - campaign_id
+    SubscribeRequest:
+      type: object
+      description: Simple serializer for newsletter subscription.
+      properties:
+        newsletter_id:
+          type: integer
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+      - newsletter_id
+    TestEmailRequest:
+      type: object
+      description: Simple serializer for test email.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        subject:
+          type: string
+          minLength: 1
+          default: Django CFG Newsletter Test
+          maxLength: 255
+        message:
+          type: string
+          minLength: 1
+          default: This is a test email from Django CFG Newsletter.
+      required:
+      - email
+    Unsubscribe:
+      type: object
+      description: Simple serializer for unsubscribe.
+      properties:
+        subscription_id:
+          type: integer
+      required:
+      - subscription_id
+    UnsubscribeRequest:
+      type: object
+      description: Simple serializer for unsubscribe.
+      properties:
+        subscription_id:
+          type: integer
+      required:
+      - subscription_id
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

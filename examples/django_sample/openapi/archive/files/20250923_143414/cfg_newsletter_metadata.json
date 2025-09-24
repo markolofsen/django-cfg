@@ -1,0 +1,25 @@
+{
+  "zone_name": "cfg_newsletter",
+  "timestamp": "20250923_143414",
+  "archive_date": "2025-09-23T14:34:14.741245",
+  "generator_version": "2.0.0",
+  "clients": {
+    "typescript": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/typescript/cfg_newsletter",
+      "file_count": 14,
+      "size_bytes": 71613,
+      "size_mb": 0.07
+    },
+    "python": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/python/cfg_newsletter",
+      "file_count": 70,
+      "size_bytes": 216556,
+      "size_mb": 0.21
+    }
+  },
+  "total_files": 84,
+  "total_size_bytes": 288169,
+  "total_size_mb": 0.27
+}

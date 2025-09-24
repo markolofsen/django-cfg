@@ -1,0 +1,28 @@
+{
+  "name": "django-cfg-sample",
+  "version": "1.0.0",
+  "description": "Django CFG Sample Project",
+  "license": "ISC",
+  "author": "ReformsAI",
+  "scripts": {
+    "setup": "./devops/setup.sh",
+    "install-local": "poetry lock && poetry install --with local",
+    "env": "poetry env activate",
+    "cli": "poetry run cli",
+    "docker": "git pull & python3 devops/manage.py",
+    "commit": "npx openrouter-commit -run",
+    "commit2": "git add . && git commit -m 'fixes' && git push",
+    "dev": "poetry run cli runserver",
+    "dev:ngrok": "poetry run cli runserver-ngrok",
+    "manage.py": "poetry run python manage.py",
+    "migrate": "poetry run cli migrator",
+    "generate": "poetry run cli generate",
+    "tree": "clear && npm run manage.py tree",
+    "tasks:worker": "poetry run cli rundramatiq",
+    "tasks:status": "poetry run cli task-status",
+    "tasks:clear": "poetry run cli task-clear"
+  },
+  "dependencies": {
+    "@hey-api/openapi-ts": "^0.80.18"
+  }
+}

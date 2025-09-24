@@ -1,0 +1,611 @@
+openapi: 3.0.3
+info:
+  title: Django CFG Sample API
+  version: 1.0.0 (v1)
+  description: RESTful API with modern architecture
+paths:
+  /api/support/tickets/:
+    get:
+      operationId: support_tickets_list
+      description: ViewSet for managing support tickets.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - support
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ticket'
+          description: ''
+    post:
+      operationId: support_tickets_create
+      description: ViewSet for managing support tickets.
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+  /api/support/tickets/{ticket_uuid}/messages/:
+    get:
+      operationId: support_tickets_messages_list
+      description: ViewSet for managing support messages.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: ticket_uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the ticket
+        required: true
+      tags:
+      - support
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+          description: ''
+    post:
+      operationId: support_tickets_messages_create
+      description: ViewSet for managing support messages.
+      parameters:
+      - in: path
+        name: ticket_uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the ticket
+        required: true
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageCreate'
+          description: ''
+  /api/support/tickets/{ticket_uuid}/messages/{uuid}/:
+    get:
+      operationId: support_tickets_messages_retrieve
+      description: ViewSet for managing support messages.
+      parameters:
+      - in: path
+        name: ticket_uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the ticket
+        required: true
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the message
+        required: true
+      tags:
+      - support
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+    put:
+      operationId: support_tickets_messages_update
+      description: ViewSet for managing support messages.
+      parameters:
+      - in: path
+        name: ticket_uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the ticket
+        required: true
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the message
+        required: true
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+    patch:
+      operationId: support_tickets_messages_partial_update
+      description: ViewSet for managing support messages.
+      parameters:
+      - in: path
+        name: ticket_uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the ticket
+        required: true
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the message
+        required: true
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMessageRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+    delete:
+      operationId: support_tickets_messages_destroy
+      description: ViewSet for managing support messages.
+      parameters:
+      - in: path
+        name: ticket_uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the ticket
+        required: true
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the message
+        required: true
+      tags:
+      - support
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/support/tickets/{uuid}/:
+    get:
+      operationId: support_tickets_retrieve
+      description: ViewSet for managing support tickets.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ticket.
+        required: true
+      tags:
+      - support
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+    put:
+      operationId: support_tickets_update
+      description: ViewSet for managing support tickets.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ticket.
+        required: true
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+    patch:
+      operationId: support_tickets_partial_update
+      description: ViewSet for managing support tickets.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ticket.
+        required: true
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTicketRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTicketRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTicketRequest'
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+    delete:
+      operationId: support_tickets_destroy
+      description: ViewSet for managing support tickets.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ticket.
+        required: true
+      tags:
+      - support
+      security:
+      - jwtAuth: []
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    Message:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        ticket:
+          type: string
+          format: uuid
+          readOnly: true
+        sender:
+          allOf:
+          - $ref: '#/components/schemas/Sender'
+          readOnly: true
+        is_from_author:
+          type: boolean
+          description: Check if this message is from the ticket author.
+          readOnly: true
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - is_from_author
+      - sender
+      - text
+      - ticket
+      - uuid
+    MessageCreate:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+      - text
+    MessageCreateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+      required:
+      - text
+    MessageRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+      required:
+      - text
+    PatchedMessageRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+    PatchedTicketRequest:
+      type: object
+      properties:
+        user:
+          type: integer
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          enum:
+          - open
+          - waiting_for_user
+          - waiting_for_admin
+          - resolved
+          - closed
+          type: string
+          description: |-
+            * `open` - Open
+            * `waiting_for_user` - Waiting for User
+            * `waiting_for_admin` - Waiting for Admin
+            * `resolved` - Resolved
+            * `closed` - Closed
+          x-spec-enum-id: c21b48fabf2398aa
+    Sender:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        display_username:
+          type: string
+          description: Get formatted username for display.
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        avatar:
+          type: string
+          nullable: true
+          readOnly: true
+        initials:
+          type: string
+          description: Get user's initials for avatar fallback.
+          readOnly: true
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+      required:
+      - avatar
+      - display_username
+      - email
+      - id
+      - initials
+      - is_staff
+      - is_superuser
+    Ticket:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: integer
+        subject:
+          type: string
+          maxLength: 255
+        status:
+          enum:
+          - open
+          - waiting_for_user
+          - waiting_for_admin
+          - resolved
+          - closed
+          type: string
+          description: |-
+            * `open` - Open
+            * `waiting_for_user` - Waiting for User
+            * `waiting_for_admin` - Waiting for Admin
+            * `resolved` - Resolved
+            * `closed` - Closed
+          x-spec-enum-id: c21b48fabf2398aa
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        unanswered_messages_count:
+          type: integer
+          description: Get count of unanswered messages for this specific ticket.
+          readOnly: true
+      required:
+      - created_at
+      - subject
+      - unanswered_messages_count
+      - user
+      - uuid
+    TicketRequest:
+      type: object
+      properties:
+        user:
+          type: integer
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          enum:
+          - open
+          - waiting_for_user
+          - waiting_for_admin
+          - resolved
+          - closed
+          type: string
+          description: |-
+            * `open` - Open
+            * `waiting_for_user` - Waiting for User
+            * `waiting_for_admin` - Waiting for Admin
+            * `resolved` - Resolved
+            * `closed` - Closed
+          x-spec-enum-id: c21b48fabf2398aa
+      required:
+      - subject
+      - user
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

@@ -1,0 +1,25 @@
+{
+  "zone_name": "shop",
+  "timestamp": "20250923_143414",
+  "archive_date": "2025-09-23T14:34:14.188360",
+  "generator_version": "2.0.0",
+  "clients": {
+    "typescript": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/typescript/shop",
+      "file_count": 14,
+      "size_bytes": 59205,
+      "size_mb": 0.06
+    },
+    "python": {
+      "available": true,
+      "path": "/Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@pypi/django-cfg/django_sample/openapi/clients/python/shop",
+      "file_count": 42,
+      "size_bytes": 129529,
+      "size_mb": 0.12
+    }
+  },
+  "total_files": 56,
+  "total_size_bytes": 188734,
+  "total_size_mb": 0.18
+}
