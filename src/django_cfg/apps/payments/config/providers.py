@@ -7,23 +7,13 @@ Defines configuration classes for different payment providers.
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field, SecretStr
 
+# Import the base PaymentProviderConfig from models.payments
+from django_cfg.models.payments import PaymentProviderConfig as BasePaymentProviderConfig
 
-class PaymentProviderConfig(BaseModel):
-    """Base configuration for payment providers."""
-    enabled: bool = True
-    sandbox: bool = Field(default=True, description="Use sandbox mode")
-    api_key: SecretStr = Field(description="Provider API key")
-    timeout: int = Field(default=30, description="Request timeout in seconds")
-    max_retries: int = Field(default=3, description="Maximum retry attempts")
-    
-    def get_config_dict(self) -> Dict[str, Any]:
-        """Get configuration as dictionary for provider initialization."""
-        return {
-            'api_key': self.api_key.get_secret_value(),
-            'sandbox': self.sandbox,
-            'timeout': self.timeout,
-            'max_retries': self.max_retries
-        }
+
+class PaymentProviderConfig(BasePaymentProviderConfig):
+    """Extended base configuration for payment providers."""
+    pass
 
 
 class NowPaymentsConfig(PaymentProviderConfig):

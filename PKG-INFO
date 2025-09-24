@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: django-cfg
-Version: 1.2.25
+Version: 1.2.27
 Summary: 🚀 Next-gen Django configuration: type-safety, AI features, blazing-fast setup, and automated best practices — all in one.
 Project-URL: Homepage, https://djangocfg.com
 Project-URL: Documentation, https://docs.djangocfg.com

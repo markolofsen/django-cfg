@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.2.25"
+version = "1.2.27"
 description = "🚀 Next-gen Django configuration: type-safety, AI features, blazing-fast setup, and automated best practices — all in one."
 readme = "README.md"
 license = {text = "MIT"}
@@ -253,6 +253,7 @@ include = [
     "README.md",
     "LICENSE", 
     "CHANGELOG.md",
+    "CONTRIBUTING.md",
     "requirements*.txt",
     "MANIFEST.in",
 ]

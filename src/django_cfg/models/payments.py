@@ -517,6 +517,7 @@ def create_cryptomus_config(
     from django_cfg.apps.payments.config.providers import CryptomusConfig
     
     return CryptomusConfig(
+        name="cryptomus",
         api_key=SecretStr(api_key),
         merchant_uuid=merchant_uuid,
         sandbox=sandbox,
