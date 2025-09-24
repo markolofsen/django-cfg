@@ -1,0 +1,72 @@
+{% load unfold %}
+
+<!-- Statistics Grid Component -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ cols|default:'4' }} gap-{{ gap|default:'4' }} {% if class %}{{ class }}{% endif %}">
+    {% for stat in stats %}
+    <div class="bg-white dark:bg-base-900 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-base-200 dark:border-base-700 overflow-hidden group">
+        <div class="p-5">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <!-- Title -->
+                    <div class="text-xs font-semibold text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider mb-2">
+                        {{ stat.title }}
+                    </div>
+                    
+                    <!-- Value -->
+                    <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark mb-1">
+                        {{ stat.value }}
+                    </div>
+                    
+                    <!-- Change indicator -->
+                    {% if stat.change %}
+                    <div class="flex items-center">
+                        <div class="flex items-center px-2 py-1 rounded-full text-xs font-medium
+                            {% if stat.change_type == 'positive' %}bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400
+                            {% elif stat.change_type == 'negative' %}bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400
+                            {% else %}bg-base-100 dark:bg-base-800 text-font-default-light dark:text-font-default-dark{% endif %}">
+                            
+                            <span class="material-icons text-xs mr-1">
+                                {% if stat.change_type == 'positive' %}arrow_upward
+                                {% elif stat.change_type == 'negative' %}arrow_downward
+                                {% else %}remove{% endif %}
+                            </span>
+                            {{ stat.change }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Description -->
+                    {% if stat.description %}
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        {{ stat.description }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Icon -->
+                {% if stat.icon %}
+                <div class="flex-shrink-0 ml-3">
+                    <div class="w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-2xl
+                            {% if stat.change_type == 'positive' %}text-green-600 dark:text-green-400
+                            {% elif stat.change_type == 'negative' %}text-red-600 dark:text-red-400
+                            {% else %}text-primary-600 dark:text-primary-400{% endif %}">
+                            {{ stat.icon }}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Accent bar -->
+        {% if stat.show_accent %}
+        <div class="h-1 w-full
+            {% if stat.change_type == 'positive' %}bg-gradient-to-r from-green-400 to-green-600
+            {% elif stat.change_type == 'negative' %}bg-gradient-to-r from-red-400 to-red-600
+            {% else %}bg-gradient-to-r from-primary-400 to-primary-600{% endif %}">
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>

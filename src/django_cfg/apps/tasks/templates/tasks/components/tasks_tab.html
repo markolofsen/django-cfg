@@ -1,0 +1,32 @@
+<!-- Tasks Tab -->
+<div id="tasks-tab" class="tab-panel hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons text-purple-600 dark:text-purple-400 mr-2">list</span>
+                Task History
+            </h2>
+            <div class="flex space-x-2">
+                <select id="task-status-filter" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="running">Running</option>
+                    <option value="done">Completed</option>
+                    <option value="failed">Failed</option>
+                </select>
+                <button id="refresh-tasks-btn" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                    <span class="material-icons text-sm">refresh</span>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div id="tasks-container">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

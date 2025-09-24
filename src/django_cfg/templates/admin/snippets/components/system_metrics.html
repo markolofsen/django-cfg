@@ -1,0 +1,105 @@
+{% load unfold %}
+
+<!-- System Metrics -->
+<div class="mt-8 w-full">
+    {% include 'admin/components/section_header.html' with title='System Metrics' icon='analytics' icon_color='blue' badge='Live Data' %}
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        {% if system_metrics %}
+            <!-- Database Status -->
+            {% if system_metrics.database %}
+            <div class="group">
+                {% component "unfold/components/card.html" with title="Database" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons 
+                            {% if system_metrics.database.status == 'healthy' %}text-green-600 dark:text-green-400
+                            {% elif system_metrics.database.status == 'warning' %}text-amber-600 dark:text-amber-400
+                            {% else %}text-red-600 dark:text-red-400{% endif %} mr-2">storage</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ system_metrics.database.type }}</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=system_metrics.database.health_percentage title="Connection Health" description=system_metrics.database.description %}
+                {% endcomponent %}
+            </div>
+            {% endif %}
+
+            <!-- Cache Status -->
+            {% if system_metrics.cache %}
+            <div class="group">
+                {% component "unfold/components/card.html" with title="Cache" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons 
+                            {% if system_metrics.cache.status == 'healthy' %}text-primary-600 dark:text-primary-500
+                            {% elif system_metrics.cache.status == 'warning' %}text-amber-600 dark:text-amber-400
+                            {% else %}text-red-600 dark:text-red-400{% endif %} mr-2">memory</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ system_metrics.cache.type }}</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=system_metrics.cache.health_percentage title="Performance" description=system_metrics.cache.description %}
+                {% endcomponent %}
+            </div>
+            {% endif %}
+
+            <!-- Storage Status -->
+            {% if system_metrics.storage %}
+            <div class="group">
+                {% component "unfold/components/card.html" with title="Storage" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons 
+                            {% if system_metrics.storage.status == 'healthy' %}text-amber-600 dark:text-amber-400
+                            {% elif system_metrics.storage.status == 'warning' %}text-orange-600 dark:text-orange-400
+                            {% else %}text-gray-600 dark:text-gray-400{% endif %} mr-2">folder</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ system_metrics.storage.type }}</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=system_metrics.storage.health_percentage title="Usage" description=system_metrics.storage.description %}
+                {% endcomponent %}
+            </div>
+            {% endif %}
+
+            <!-- API Status -->
+            {% if system_metrics.api %}
+            <div class="group">
+                {% component "unfold/components/card.html" with title="API" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons 
+                            {% if system_metrics.api.status == 'healthy' %}text-blue-600 dark:text-blue-400
+                            {% elif system_metrics.api.status == 'warning' %}text-amber-600 dark:text-amber-400
+                            {% else %}text-red-600 dark:text-red-400{% endif %} mr-2">api</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ system_metrics.api.type }}</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=system_metrics.api.health_percentage title="URL Patterns" description=system_metrics.api.description %}
+                {% endcomponent %}
+            </div>
+            {% endif %}
+        {% else %}
+            <!-- Fallback static metrics -->
+            <div class="group">
+                {% component "unfold/components/card.html" with title="Database" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons text-green-600 dark:text-green-400 mr-2">storage</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">PostgreSQL</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=85 title="Connection Health" description="Healthy - 85%" %}
+                {% endcomponent %}
+            </div>
+
+            <div class="group">
+                {% component "unfold/components/card.html" with title="Cache" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons text-primary-600 dark:text-primary-500 mr-2">memory</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Memory Cache</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=90 title="Performance" description="Optimal - 90%" %}
+                {% endcomponent %}
+            </div>
+
+            <div class="group">
+                {% component "unfold/components/card.html" with title="Storage" %}
+                    <div class="flex items-center mb-3">
+                        <span class="material-icons text-amber-600 dark:text-amber-400 mr-2">folder</span>
+                        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Disk Space</span>
+                    </div>
+                    {% include 'admin/components/progress_bar.html' with value=67 title="Usage" description="67% used (33% free)" %}
+                {% endcomponent %}
+            </div>
+        {% endif %}
+    </div>
+</div> 

@@ -1,0 +1,44 @@
+{% extends 'admin/layouts/dashboard_with_tabs.html' %}
+
+{% load unfold %}
+
+{% block overview_tab %}
+    {% include 'admin/snippets/tabs/overview_tab.html' %}
+{% endblock %}
+
+{% block zones_tab %}
+    {% include 'admin/snippets/zones/zones_table.html' %}
+{% endblock %}
+
+{% block users_tab %}
+    {% include 'admin/snippets/tabs/users_tab.html' %}
+{% endblock %}
+
+{% block system_tab %}
+    <div class="space-y-8">
+        <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+            System Management
+        </h2>
+        
+        <!-- System Health -->
+        {% include 'admin/snippets/components/system_health.html' %}
+        
+        <!-- System Metrics -->
+        {% include 'admin/snippets/components/system_metrics.html' %}
+        
+        <!-- Activity Tracker -->
+        {% include 'admin/snippets/components/activity_tracker.html' %}
+    </div>
+{% endblock %}
+
+{% block stats_tab %}
+    {% include 'admin/snippets/tabs/stats_tab.html' %}
+{% endblock %}
+
+{% block app_stats_tab %}
+    {% include 'admin/snippets/tabs/app_stats_tab.html' with stats_groups=stats_groups %}
+{% endblock %}
+
+{% block commands_tab %}
+    {% include 'admin/snippets/tabs/commands_tab.html' %}
+{% endblock %} 

@@ -1,0 +1,103 @@
+<!-- Task Details Modal -->
+<div id="task-details-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons text-blue-600 dark:text-blue-400 mr-2">analytics</span>
+                Task Monitor
+                <span id="task-count-badge" class="ml-3 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-full">0 tasks</span>
+            </h2>
+            <div class="flex items-center space-x-2">
+                <button id="auto-refresh-toggle" class="px-3 py-1 text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors">
+                    <span class="material-icons text-sm mr-1">refresh</span>
+                    Auto: ON
+                </button>
+                <button id="refresh-tasks-modal" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                    <span class="material-icons">refresh</span>
+                </button>
+                <button id="close-task-modal" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Filters -->
+        <div class="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-wrap items-center gap-3">
+                <select id="modal-status-filter" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="running">Running</option>
+                    <option value="done">Completed</option>
+                    <option value="failed">Failed</option>
+                </select>
+                <select id="modal-queue-filter" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="">All Queues</option>
+                    <option value="default">Default</option>
+                    <option value="high">High Priority</option>
+                    <option value="low">Low Priority</option>
+                    <option value="vehicles">Vehicles</option>
+                </select>
+                <input id="modal-search-input" type="text" placeholder="Search tasks..." class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <span class="material-icons text-sm mr-1">schedule</span>
+                    Last updated: <span id="last-update-time">--:--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="flex-1 overflow-hidden">
+            <div id="task-details-content" class="h-[60vh] overflow-y-auto p-6">
+                <!-- Loading State -->
+                <div id="tasks-loading" class="flex items-center justify-center h-32">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span class="ml-3 text-gray-600 dark:text-gray-400">Loading tasks...</span>
+                </div>
+
+                <!-- Empty State -->
+                <div id="tasks-empty" class="hidden text-center py-12">
+                    <span class="material-icons text-6xl text-gray-400 dark:text-gray-600 mb-4">inbox</span>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No tasks found</h3>
+                    <p class="text-gray-500 dark:text-gray-400">No tasks match your current filters.</p>
+                </div>
+
+                <!-- Tasks List -->
+                <div id="tasks-list" class="space-y-3">
+                    <!-- Tasks will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span>Completed</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    <span>Running</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                    <span>Pending</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    <span>Failed</span>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button id="clear-completed-tasks" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Clear Completed
+                </button>
+                <button id="export-tasks" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

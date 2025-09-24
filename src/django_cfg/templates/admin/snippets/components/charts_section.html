@@ -1,0 +1,89 @@
+{% load unfold %}
+
+<!-- Charts Section using reusable components -->
+<div class="mb-8 w-full">
+    {% include 'admin/components/section_header.html' with title='Analytics Overview' icon='analytics' icon_color='blue' %}
+    
+    
+    {% if charts %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- User Registration Chart -->
+        <div class="group">
+            {% component "unfold/components/card.html" with title="User Registrations" subtitle="Last 7 days activity" %}
+                <div class="flex items-center mb-2">
+                    <span class="material-icons text-primary-600 dark:text-primary-500 mr-2">trending_up</span>
+                    <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Growth Trends</span>
+                </div>
+                {% if charts.user_registrations %}
+                    {% component "unfold/components/chart/line.html" with data=charts.user_registrations_json height=300 %}
+                    {% endcomponent %}
+                    
+                    <!-- Fallback data table if chart doesn't render -->
+                    <div class="mt-4 text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium">Data Preview:</span>
+                            <span>{{ charts.user_registrations.datasets.0.label }}</span>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center">
+                            {% for label in charts.user_registrations.labels %}
+                                <div class="bg-base-100 dark:bg-base-700 p-1 rounded text-xs">{{ label }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center mt-1">
+                            {% for value in charts.user_registrations.datasets.0.data %}
+                                <div class="bg-primary-50 dark:bg-primary-900/20 p-1 rounded text-xs font-medium">{{ value }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="h-[300px] flex items-center justify-center bg-base-50 dark:bg-base-800 rounded-lg border border-base-200 dark:border-base-700">
+                        <p class="text-font-subtle-light dark:text-font-subtle-dark">No registration data available</p>
+                    </div>
+                {% endif %}
+            {% endcomponent %}
+        </div>
+
+        <!-- User Activity Chart -->
+        <div class="group">
+            {% component "unfold/components/card.html" with title="User Activity" subtitle="Weekly engagement metrics" %}
+                <div class="flex items-center mb-2">
+                    <span class="material-icons text-green-600 dark:text-green-400 mr-2">bar_chart</span>
+                    <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Activity Levels</span>
+                </div>
+                {% if charts.user_activity %}
+                    {% component "unfold/components/chart/bar.html" with data=charts.user_activity_json height=300 %}
+                    {% endcomponent %}
+                    
+                    <!-- Fallback data table if chart doesn't render -->
+                    <div class="mt-4 text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium">Data Preview:</span>
+                            <span>{{ charts.user_activity.datasets.0.label }}</span>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center">
+                            {% for label in charts.user_activity.labels %}
+                                <div class="bg-base-100 dark:bg-base-700 p-1 rounded text-xs">{{ label }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center mt-1">
+                            {% for value in charts.user_activity.datasets.0.data %}
+                                <div class="bg-green-50 dark:bg-green-900/20 p-1 rounded text-xs font-medium">{{ value }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="h-[300px] flex items-center justify-center bg-base-50 dark:bg-base-800 rounded-lg border border-base-200 dark:border-base-700">
+                        <p class="text-font-subtle-light dark:text-font-subtle-dark">No activity data available</p>
+                    </div>
+                {% endif %}
+            {% endcomponent %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-base-50 dark:bg-base-800 rounded-lg border border-base-200 dark:border-base-700 p-8 text-center">
+        <span class="material-icons text-4xl text-base-400 dark:text-base-500 mb-4">analytics</span>
+        <h3 class="text-lg font-medium text-font-default-light dark:text-font-default-dark mb-2">No Chart Data</h3>
+        <p class="text-font-subtle-light dark:text-font-subtle-dark">Charts data is not available in the context</p>
+    </div>
+    {% endif %}
+</div> 

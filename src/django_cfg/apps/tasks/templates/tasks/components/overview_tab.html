@@ -1,0 +1,22 @@
+<!-- Overview Tab -->
+<div id="overview-tab" class="tab-panel active">
+    {% include 'tasks/components/status_cards.html' %}
+
+    <!-- Real-time Status -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons text-primary-600 dark:text-primary-400 mr-2">monitor_heart</span>
+                System Status
+            </h2>
+        </div>
+        <div class="p-6">
+            <div id="system-status-container">
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <span class="ml-3 text-gray-600 dark:text-gray-400">Loading status...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

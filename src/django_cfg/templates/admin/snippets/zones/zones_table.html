@@ -1,0 +1,175 @@
+{% load unfold %}
+
+<!-- API Zones Table using reusable components -->
+<div class="w-full">
+    {% capture as zone_subtitle silent %}
+        Configure and monitor API zone access and permissions
+    {% endcapture %}
+    
+    {% include 'admin/components/section_header.html' with title='API Zones' icon='public' icon_color='blue' %}
+
+    <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 overflow-hidden shadow-sm max-w-full">
+        {% if zones_table.rows %}
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-base-200 dark:divide-base-700">
+                    <thead class="bg-base-50 dark:bg-base-800 border-b border-base-200 dark:border-base-700"> 
+                        <tr>
+                            {% for header in zones_table.headers %}
+                                <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                                    {{ header.label }}
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-base-900 divide-y divide-base-200 dark:divide-base-700"> 
+                        {% for row in zones_table.rows %}
+                            <tr class="hover:bg-base-100 dark:hover:bg-base-800 transition-colors duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 mr-3">
+                                            <div class="h-8 w-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
+                                                <span class="material-icons text-sm text-primary-600 dark:text-primary-400">
+                                                    {% if row.name == 'public' %}public
+                                                    {% elif row.name == 'internal' %}corporate_fare
+                                                    {% elif row.name == 'admin' %}admin_panel_settings
+                                                    {% elif row.name == 'data' %}data_usage
+                                                    {% else %}api{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-medium text-font-default-light dark:text-font-default-dark">
+                                                {{ row.name|title }}
+                                            </div>
+                                            <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                                Zone: {{ row.name }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-font-default-light dark:text-font-default-dark">
+                                        {{ row.title }}
+                                    </div>
+                                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1 max-w-xs truncate">
+                                        {{ row.description }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <div class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">
+                                        {{ row.apps_count|default:row.app_count|default:0 }}
+                                    </div>
+                                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                        {% if row.apps_count|default:row.app_count|default:0 == 1 %}App{% else %}Apps{% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <div class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">
+                                        {{ row.endpoints_count|default:row.endpoint_count|default:0 }}
+                                    </div>
+                                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                        {% if row.endpoints_count|default:row.endpoint_count|default:0 == 1 %}Endpoint{% else %}Endpoints{% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if row.status == 'active' or row.status == 'enabled' %}
+                                        {% include 'admin/components/status_badge.html' with status='active' text='Active' %}
+                                    {% elif row.status == 'maintenance' %}
+                                        {% include 'admin/components/status_badge.html' with status='warning' text='Maintenance' icon='build' %}
+                                    {% elif row.status == 'disabled' %}
+                                        {% include 'admin/components/status_badge.html' with status='error' text='Disabled' icon='block' %}
+                                    {% else %}
+                                        {% include 'admin/components/status_badge.html' with status='' text=row.status|title icon='help' %}
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex items-center space-x-2 text-sm">
+                                        <a href="/schema/{{ row.name }}/schema/swagger/" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800/30 transition-colors text-xs font-medium">swagger</a>
+                                        <a href="/schema/{{ row.name }}/redoc/" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800/30 transition-colors text-xs font-medium">redoc</a>
+                                        <a href="/schema/{{ row.name }}/schema/" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-base-100 dark:bg-base-800 text-font-default-light dark:text-font-default-dark hover:bg-base-200 dark:hover:bg-base-700 transition-colors text-xs font-medium">schema</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-16">
+                <div class="flex flex-col items-center">
+                    <div class="bg-base-100 dark:bg-base-800 rounded-full p-4 mb-4">
+                        <span class="material-icons text-3xl text-base-300 dark:text-base-600">public</span>
+                    </div>
+                    <h3 class="text-lg font-medium text-font-important-light dark:text-font-important-dark mb-2">No API zones configured</h3>
+                    <p class="text-font-subtle-light dark:text-font-subtle-dark max-w-md mx-auto mb-6">
+                        API zones help organize and control access to different parts of your application. 
+                        Create your first zone to get started.
+                    </p>
+                    <button class="inline-flex items-center px-4 py-2 border border-primary-600 dark:border-primary-500 rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                        <span class="material-icons text-sm mr-2">add</span>
+                        Create First Zone
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Zone Statistics -->
+    {% if zones_table.rows %}
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4 shadow-xs">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-primary-100 dark:bg-primary-900/20 p-2 rounded-lg">
+                        <span class="material-icons text-primary-600 dark:text-primary-400">public</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Total Zones</p>
+                        <p class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">{{ zones_table.rows|length }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4 shadow-xs">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-success-100 dark:bg-success-900/20 p-2 rounded-lg">
+                        <span class="material-icons text-success-600 dark:text-success-400">check_circle</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Active Zones</p>
+                        <p class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">
+                            {{ zones_table.rows|length }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4 shadow-xs">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-primary-100 dark:bg-primary-900/20 p-2 rounded-lg">
+                        <span class="material-icons text-primary-600 dark:text-primary-500">apps</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Total Apps</p>
+                        <p class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">
+                            {% widthratio zones_table.rows|length 1 8 %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4 shadow-xs">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-warning-100 dark:bg-warning-900/20 p-2 rounded-lg">
+                        <span class="material-icons text-warning-600 dark:text-warning-400">api</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Endpoints</p>
+                        <p class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">
+                            {% widthratio zones_table.rows|length 3 25 %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div> 

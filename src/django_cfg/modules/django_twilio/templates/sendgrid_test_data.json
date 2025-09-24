@@ -1,0 +1,14 @@
+{
+  "site_name": "Reforms",
+  "project_name": "Reforms",
+  "user_name": "Reforms",
+  "user_email": "reforms@example.com",
+  "user": {
+    "get_full_name": "Reforms",
+    "username": "reforms",
+    "email": "reforms@example.com"
+  },
+  "otp_code": "847291",
+  "otp_link": "http://localhost:3000/auth/?otp=847291",
+  "expires_minutes": 10
+}

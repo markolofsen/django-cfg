@@ -1,0 +1,53 @@
+<!-- Management Actions -->
+<div class="mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center">
+                <span class="material-icons text-lg mr-2 text-gray-600 dark:text-gray-400">settings</span>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Management Actions</h3>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Task Monitor -->
+                <button onclick="showTaskMonitor()" 
+                        class="flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                    <span class="material-icons text-lg mr-2">analytics</span>
+                    <span class="font-medium">Task Monitor</span>
+                </button>
+                
+                <!-- Clear All Queues -->
+                <button id="clear-all-queues-btn" 
+                        class="flex items-center justify-center px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                    <span class="material-icons text-lg mr-2">delete_sweep</span>
+                    <span class="font-medium">Clear All Queues</span>
+                </button>
+                
+                <!-- Purge Failed Tasks -->
+                <button id="purge-failed-tasks-btn" 
+                        class="flex items-center justify-center px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                    <span class="material-icons text-lg mr-2">cleaning_services</span>
+                    <span class="font-medium">Purge Failed Tasks</span>
+                </button>
+                
+                <!-- Admin Settings -->
+                <a href="/admin/constance/config/" 
+                   class="flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 text-decoration-none">
+                    <span class="material-icons text-lg mr-2">admin_panel_settings</span>
+                    <span class="font-medium">Admin Settings</span>
+                </a>
+            </div>
+            
+            <!-- Action Status -->
+            <div id="management-action-status" class="mt-4 hidden">
+                <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                    <div class="flex items-center">
+                        <span class="material-icons text-blue-600 dark:text-blue-400 mr-2">info</span>
+                        <span id="management-action-message" class="text-sm text-blue-800 dark:text-blue-200"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+{% load unfold %}
+
+<!-- Progress Bar Component -->
+<div class="w-full">
+    {% if title %}
+    <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">{{ title }}</span>
+        <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ value }}%</span>
+    </div>
+    {% endif %}
+    
+    <div class="w-full bg-base-200 dark:bg-base-700 rounded-full h-2">
+        <div class="h-2 rounded-full transition-all duration-300
+            {% if value >= 80 %}bg-green-500
+            {% elif value >= 60 %}bg-amber-500
+            {% elif value >= 40 %}bg-orange-500
+            {% else %}bg-red-500{% endif %}"
+            style="width: {{ value|default:0 }}%">
+        </div>
+    </div>
+    
+    {% if description %}
+    <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">{{ description }}</p>
+    {% endif %}
+</div>

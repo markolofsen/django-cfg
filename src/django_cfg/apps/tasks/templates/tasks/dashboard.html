@@ -1,0 +1,29 @@
+{% extends 'tasks/base.html' %}
+{% load static %}
+
+{% block extra_js %}
+<script src="{% static 'tasks/js/api.js' %}"></script>
+<script src="{% static 'tasks/js/dashboard.js' %}"></script>
+<script src="{% static 'tasks/js/modals.js' %}"></script>
+<script src="{% static 'tasks/js/task-monitor.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+{% include 'tasks/components/management_actions.html' %}
+{% include 'tasks/components/tab_navigation.html' %}
+
+<!-- Tab Content -->
+<div class="tab-content">
+    {% include 'tasks/components/overview_tab.html' %}
+    {% include 'tasks/components/queues_tab.html' %}
+    {% include 'tasks/components/workers_tab.html' %}
+    {% include 'tasks/components/tasks_tab.html' %}
+                    </div>
+                    
+{% include 'tasks/components/info_cards.html' %}
+
+<!-- Modals -->
+{% include 'tasks/components/task_details_modal.html' %}
+{% endblock %}

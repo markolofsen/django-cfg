@@ -1,0 +1,85 @@
+<!-- Info Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+    <!-- Quick Info Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons text-primary-600 dark:text-primary-400 mr-2">info</span>
+                Quick Info
+            </h3>
+        </div>
+        <div class="p-6">
+            <ul class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3"></span>
+                    <span>Workers process tasks from queues</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3"></span>
+                    <span>Failed tasks can be retried or cleared</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3"></span>
+                    <span>Monitor Redis connection status</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3"></span>
+                    <span>Auto-refresh every 30 seconds</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Best Practices Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons text-green-600 dark:text-green-400 mr-2">tips_and_updates</span>
+                Best Practices
+            </h3>
+        </div>
+        <div class="p-6">
+            <ul class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></span>
+                    <span>Start 1-4 worker processes</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></span>
+                    <span>Use 4-16 threads per process</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></span>
+                    <span>Monitor failed task counts</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></span>
+                    <span>Clear failed tasks regularly</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- CLI Commands Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons text-amber-600 dark:text-amber-400 mr-2">terminal</span>
+                CLI Commands
+            </h3>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 font-mono text-xs text-gray-700 dark:text-gray-300">
+                    python manage.py rundramatiq
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 font-mono text-xs text-gray-700 dark:text-gray-300">
+                    python manage.py task_status
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 font-mono text-xs text-gray-700 dark:text-gray-300">
+                    python manage.py task_clear
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

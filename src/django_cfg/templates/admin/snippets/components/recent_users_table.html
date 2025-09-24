@@ -1,0 +1,102 @@
+{% load unfold %}
+
+<!-- Recent Users Table using reusable components -->
+{% capture as table_actions silent %}
+    <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">Last 24 hours</span>
+    {% if user_admin_urls %}
+        <a href="{{ user_admin_urls.list }}" class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400 flex items-center">
+            View all
+            <span class="material-icons text-xs ml-1">arrow_forward</span>
+        </a>
+    {% else %}
+        <a href="/admin/accounts/customuser/" class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400 flex items-center">
+            View all
+            <span class="material-icons text-xs ml-1">arrow_forward</span>
+        </a>
+    {% endif %}
+{% endcapture %}
+
+<div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 overflow-hidden shadow-xs">
+    <!-- Card Header -->
+    <div class="px-6 py-4 border-b border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="material-icons text-primary-600 mr-2">people</span>
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Recent Users</h3>
+            </div>
+            <div class="flex items-center space-x-2">
+                {{ table_actions }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table Content -->
+    <div class="overflow-x-auto">
+        {% if tables.recent_users %}
+            {% component "unfold/components/table.html" with table=tables.recent_users card_included=1 striped=1 class="w-full" %}
+            {% endcomponent %}
+        {% else %}
+            <!-- Custom table if data is different -->
+            <table class="w-full">
+                <thead class="bg-base-50 dark:bg-base-800">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">User</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">Last Active</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-base-900 divide-y divide-base-200 dark:divide-base-700">
+                    {% for user in recent_users %}
+                        <tr class="hover:bg-base-100 dark:hover:bg-base-800 transition-colors duration-150">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% include 'admin/components/user_avatar.html' with name=user.username email=user.email show_details=True %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% include 'admin/components/status_badge.html' with status=user.is_active|yesno:'active,inactive' %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if user.is_superuser %}
+                                    {% include 'admin/components/status_badge.html' with status='error' text='Admin' icon='admin_panel_settings' %}
+                                {% elif user.is_staff %}
+                                    {% include 'admin/components/status_badge.html' with status='info' text='Staff' icon='manage_accounts' %}
+                                {% else %}
+                                    {% include 'admin/components/status_badge.html' with status='' text='User' icon='person' %}
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                                {{ user.last_login|timesince|default:"Never" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    {% if user.admin_urls %}
+                                        <a href="{{ user.admin_urls.change }}" class="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400">
+                                            <span class="material-icons text-sm">edit</span>
+                                        </a>
+                                        <a href="{{ user.admin_urls.view }}" class="text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300">
+                                            <span class="material-icons text-sm">visibility</span>
+                                        </a>
+                                    {% else %}
+                                        <span class="text-base-400 dark:text-base-500">
+                                            <span class="material-icons text-sm">block</span>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center">
+                                <div class="flex flex-col items-center">
+                                    <span class="material-icons text-4xl text-base-400 dark:text-base-500 mb-2">people_outline</span>
+                                    <p class="text-font-subtle-light dark:text-font-subtle-dark">No recent users found</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div> 

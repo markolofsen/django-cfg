@@ -1,0 +1,50 @@
+<!-- Status Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-blue-600 dark:text-blue-400 text-3xl">queue</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Queues</p>
+                <p id="active-queues-count" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-green-600 dark:text-green-400 text-3xl">engineering</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Workers</p>
+                <p id="active-workers-count" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-yellow-600 dark:text-yellow-400 text-3xl">pending</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Tasks</p>
+                <p id="pending-tasks-count" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-red-600 dark:text-red-400 text-3xl">error</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Failed Tasks</p>
+                <p id="failed-tasks-count" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+MANIFEST
+.eggs/
+wheels/
+share/python-wheels/
+develop-eggs/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+.ruff_cache
+cover/
+.benchmarks*
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env.*
+.python-version
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Django
+*.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Poetry
+poetry.lock
+dist/
+
+# Documentation
+docs/_build/
+_build/
+.docusaurus
+
+# Node (since package has package.json)
+node_modules/
+yarn-error.log
+yarn.lock
+package-lock.json
+
+# Project specific
+*.bak
+*.tmp
+*.temp
+
+# Custom
+/cache
+/src/django_cfg/archive/

@@ -1,0 +1,49 @@
+{% load unfold %}
+
+<!-- Action Grid Component -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ cols|default:'3' }} xl:grid-cols-{{ xl_cols|default:'4' }} gap-4">
+    {% for action in actions %}
+        <a href="{{ action.link }}" 
+           class="group flex items-center p-4 bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 hover:border-primary-600 dark:hover:border-primary-500 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            
+            <!-- Icon -->
+            <div class="flex-shrink-0 mr-4">
+                <div class="p-2 rounded-lg transition-colors duration-200
+                    {% if action.color == 'primary' %}bg-primary-100 dark:bg-primary-900/20 group-hover:bg-primary-200 dark:group-hover:bg-primary-800/30
+                    {% elif action.color == 'success' %}bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-800/30
+                    {% elif action.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20 group-hover:bg-amber-200 dark:group-hover:bg-amber-800/30
+                    {% elif action.color == 'danger' %}bg-red-100 dark:bg-red-900/20 group-hover:bg-red-200 dark:group-hover:bg-red-800/30
+                    {% else %}bg-base-100 dark:bg-base-800 group-hover:bg-base-200 dark:group-hover:bg-base-700{% endif %}">
+                    
+                    <span class="material-icons text-lg
+                        {% if action.color == 'primary' %}text-primary-600 dark:text-primary-400
+                        {% elif action.color == 'success' %}text-green-600 dark:text-green-400
+                        {% elif action.color == 'warning' %}text-amber-600 dark:text-amber-400
+                        {% elif action.color == 'danger' %}text-red-600 dark:text-red-400
+                        {% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}">
+                        {{ action.icon }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-medium text-font-default-light dark:text-font-default-dark group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors duration-200">
+                    {{ action.title }}
+                </h3>
+                {% if action.description %}
+                    <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1 line-clamp-2">
+                        {{ action.description }}
+                    </p>
+                {% endif %}
+            </div>
+            
+            <!-- Arrow -->
+            <div class="flex-shrink-0 ml-2">
+                <span class="material-icons text-base-400 dark:text-base-500 group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors duration-200">
+                    arrow_forward
+                </span>
+            </div>
+        </a>
+    {% endfor %}
+</div>

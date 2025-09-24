@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Chat - {{ ticket.subject }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <!-- Main Header Row -->
+            <div class="flex items-start justify-between mb-3">
+                <!-- Left: Ticket Title & Status -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-3 mb-1">
+                        <!-- Status Badge -->
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full {% if ticket.status == 'open' %}bg-green-500{% elif ticket.status == 'in_progress' %}bg-yellow-500{% else %}bg-gray-500{% endif %}"></div>
+                            <span class="text-sm font-medium text-gray-600">{{ ticket.get_status_display }}</span>
+                        </div>
+                        
+                        <!-- Ticket ID -->
+                        <span class="text-sm text-gray-500">Ticket #{{ ticket.uuid|slice:":8" }}</span>
+                    </div>
+                    
+                    <!-- Ticket Subject -->
+                    <h1 class="text-xl font-semibold text-gray-900 truncate pr-4">{{ ticket.subject }}</h1>
+                </div>
+
+                <!-- Right: Admin Actions -->
+                {% if is_staff %}
+                <div class="flex-shrink-0">
+                    <a href="{% url 'admin:django_cfg_support_ticket_change' ticket.pk %}" 
+                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Admin Panel
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- User Info Row -->
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                <!-- Customer Info -->
+                <div class="flex items-center space-x-3">
+                    <!-- Avatar -->
+                    <div class="flex-shrink-0">
+                        {% if ticket.user.avatar %}
+                        <img src="{{ ticket.user.avatar.url }}" 
+                             alt="{{ ticket.user.get_full_name }}"
+                             class="w-8 h-8 rounded-full object-cover">
+                        {% else %}
+                        <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-sm font-medium">
+                            {{ ticket.user.get_full_name|default:ticket.user.username|slice:":2"|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- User Details -->
+                    <div class="flex flex-col">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-medium text-gray-900">{{ ticket.user.get_full_name|default:ticket.user.username }}</span>
+                            {% if ticket.user.is_staff %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Staff</span>
+                            {% endif %}
+                        </div>
+                        <span class="text-xs text-gray-500">{{ ticket.user.email }}</span>
+                    </div>
+                </div>
+
+                <!-- Ticket Meta -->
+                <div class="flex items-center space-x-4 text-xs text-gray-500">
+                    <span>Created {{ ticket.created_at|date:"M d, Y H:i" }}</span>
+                    {% if ticket.updated_at != ticket.created_at %}
+                    <span>•</span>
+                    <span>Updated {{ ticket.updated_at|date:"M d, Y H:i" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="bg-white rounded-lg shadow-sm border h-[600px] flex flex-col">
+            
+            <!-- Messages Area -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-4">
+                {% for message in messages %}
+                <div class="flex {% if message.sender == user %}justify-end{% else %}justify-start{% endif %} mb-4">
+                    <div class="flex {% if message.sender == user %}flex-row-reverse{% else %}flex-row{% endif %} items-end space-x-2 max-w-xs lg:max-w-md">
+                        
+                        <!-- Avatar -->
+                        <div class="flex-shrink-0">
+                            {% if message.sender.avatar %}
+                            <img src="{{ message.sender.avatar.url }}" 
+                                 alt="{{ message.sender.get_full_name }}"
+                                 class="w-8 h-8 rounded-full object-cover">
+                            {% else %}
+                            <div class="w-8 h-8 rounded-full {% if message.sender == user %}bg-primary-500{% else %}bg-gray-500{% endif %} flex items-center justify-center text-white text-sm font-medium">
+                                {{ message.sender.get_full_name|default:message.sender.username|slice:":2"|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Message Bubble -->
+                        <div class="flex flex-col {% if message.sender == user %}items-end{% else %}items-start{% endif %}">
+                            <div class="px-4 py-2 rounded-lg {% if message.sender == user %}bg-primary-500 text-white{% else %}bg-gray-100 text-gray-900{% endif %}">
+                                <p class="text-sm whitespace-pre-wrap">{{ message.text }}</p>
+                            </div>
+                            <div class="flex items-center mt-1 space-x-1 text-xs text-gray-500">
+                                <span>{{ message.sender.get_full_name|default:message.sender.username }}</span>
+                                <span class="text-gray-400">({{ message.sender.email }})</span>
+                                <span>•</span>
+                                <span>{{ message.created_at|date:"M d, H:i" }}</span>
+                                {% if message.sender.is_staff %}
+                                <span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium">Staff</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12">
+                    <div class="text-gray-400 text-lg mb-2">💬</div>
+                    <p class="text-gray-500">No messages yet. Start the conversation!</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Message Input -->
+            <div class="border-t p-4">
+                <form id="message-form" class="flex space-x-3">
+                    <div class="flex-1">
+                        <textarea id="message-input" 
+                                  placeholder="Type your message..." 
+                                  rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                                  required></textarea>
+                    </div>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors font-medium">
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const messagesContainer = document.getElementById('messages-container');
+
+        // Auto-scroll to bottom
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Initial scroll
+        scrollToBottom();
+
+        // Handle form submission
+        messageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            // Disable form
+            messageInput.disabled = true;
+            const submitBtn = messageForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Sending...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`{% url 'cfg_support:send-message-ajax' ticket_uuid=ticket.uuid %}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Clear input
+                    messageInput.value = '';
+                    
+                    // Add message to chat
+                    addMessageToChat(data.message);
+                    
+                    // Scroll to bottom
+                    scrollToBottom();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message. Please try again.');
+            } finally {
+                // Re-enable form
+                messageInput.disabled = false;
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                messageInput.focus();
+            }
+        });
+
+        // Add message to chat UI
+        function addMessageToChat(message) {
+            const isCurrentUser = message.sender.id === {{ user.id }};
+            const messageHtml = `
+                <div class="flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4">
+                    <div class="flex ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'} items-end space-x-2 max-w-xs lg:max-w-md">
+                        
+                        <!-- Avatar -->
+                        <div class="flex-shrink-0">
+                            ${message.sender.avatar ? 
+                                `<img src="${message.sender.avatar}" alt="${message.sender.full_name}" class="w-8 h-8 rounded-full object-cover">` :
+                                `<div class="w-8 h-8 rounded-full ${isCurrentUser ? 'bg-primary-500' : 'bg-gray-500'} flex items-center justify-center text-white text-sm font-medium">
+                                    ${message.sender.initials}
+                                </div>`
+                            }
+                        </div>
+
+                        <!-- Message Bubble -->
+                        <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
+                            <div class="px-4 py-2 rounded-lg ${isCurrentUser ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-900'}">
+                                <p class="text-sm whitespace-pre-wrap">${message.text}</p>
+                            </div>
+                            <div class="flex items-center mt-1 space-x-1 text-xs text-gray-500">
+                                <span>${message.sender.full_name}</span>
+                                <span class="text-gray-400">(${message.sender.email})</span>
+                                <span>•</span>
+                                <span>Just now</span>
+                                ${message.sender.is_staff ? '<span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium">Staff</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
+        }
+
+        // Handle Enter key (Shift+Enter for new line)
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

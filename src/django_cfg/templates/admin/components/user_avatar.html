@@ -1,0 +1,27 @@
+{% load unfold %}
+
+<!-- User Avatar Component -->
+<div class="flex items-center">
+    <div class="h-{{ size|default:'8' }} w-{{ size|default:'8' }} bg-{{ color|default:'primary' }}-100 dark:bg-{{ color|default:'primary' }}-900/20 rounded-full flex items-center justify-center mr-3">
+        {% if image %}
+            <img src="{{ image }}" alt="{{ name }}" class="h-{{ size|default:'8' }} w-{{ size|default:'8' }} rounded-full object-cover">
+        {% else %}
+            <span class="text-sm font-medium text-{{ color|default:'primary' }}-600 dark:text-{{ color|default:'primary' }}-400">
+                {% if name %}{{ name|slice:":1"|upper }}{% elif email %}{{ email|slice:":1"|upper }}{% else %}?{% endif %}
+            </span>
+        {% endif %}
+    </div>
+    
+    {% if show_details %}
+    <div>
+        <div class="text-sm font-medium text-font-default-light dark:text-font-default-dark">
+            {% if name %}{{ name|truncatechars:20 }}{% elif email %}{{ email|truncatechars:20 }}{% else %}Unknown User{% endif %}
+        </div>
+        {% if email and name %}
+            <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                {{ email|truncatechars:30 }}
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,444 @@
+{% extends 'admin/base.html' %}
+
+{% load unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <script>
+    // Dashboard tabs functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('#dashboard-tabs button');
+        const contents = document.querySelectorAll('.tab-content');
+        
+        if (!tabs.length || !contents.length) return;
+        
+        // Tab names for URL hash
+        const tabNames = ['overview', 'zones', 'users', 'system', 'stats', 'app-stats', 'commands'];
+        
+        // Global function for tab switching
+        window.switchTab = function(idx, updateHash = true) {
+            tabs.forEach((t, i) => {
+                if (i === idx) {
+                    // Active tab
+                    t.classList.add('bg-primary-600', 'text-white', 'border-primary-600');
+                    t.classList.remove('bg-base-100', 'text-font-default-light', 'border-base-200', 'dark:bg-base-800', 'dark:text-font-default-dark', 'dark:border-base-700');
+                } else {
+                    // Inactive tab
+                    t.classList.remove('bg-primary-600', 'text-white', 'border-primary-600');
+                    t.classList.add('bg-base-100', 'text-font-default-light', 'border-base-200', 'dark:bg-base-800', 'dark:text-font-default-dark', 'dark:border-base-700');
+                }
+            });
+            
+            contents.forEach((content, i) => {
+                content.style.display = i === idx ? 'block' : 'none';
+                content.classList.toggle('active', i === idx);
+            });
+            
+            // Update URL hash
+            if (updateHash && tabNames[idx]) {
+                history.replaceState(null, null, '#' + tabNames[idx]);
+            }
+        };
+        
+        // Function to get tab index from hash
+        function getTabFromHash() {
+            const hash = window.location.hash.substring(1); // Remove #
+            const tabIndex = tabNames.indexOf(hash);
+            return tabIndex >= 0 ? tabIndex : 0; // Default to first tab
+        }
+        
+        // Add click handlers
+        tabs.forEach((tab, idx) => {
+            tab.onclick = function(e) {
+                e.preventDefault();
+                switchTab(idx, true);
+            };
+        });
+        
+        // Handle browser back/forward buttons
+        window.addEventListener('hashchange', function() {
+            const tabIndex = getTabFromHash();
+            switchTab(tabIndex, false); // Don't update hash to avoid loop
+        });
+        
+        // Activate tab based on URL hash or default to first tab
+        const initialTab = getTabFromHash();
+        switchTab(initialTab, false);
+    });
+    
+    // Global functions for components
+    window.toggleCategory = function(category) {
+        const content = document.getElementById(`content-${category}`);
+        const icon = document.getElementById(`icon-${category}`);
+        
+        if (!content || !icon) return;
+        
+        if (content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+            icon.style.transform = 'rotate(0deg)';
+            icon.textContent = 'expand_more';
+        } else {
+            content.style.display = 'none';
+            icon.style.transform = 'rotate(-90deg)';
+            icon.textContent = 'expand_less';
+        }
+    };
+
+    // Command execution functions
+    window.copyToClipboard = function(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="material-icons text-xs mr-1">check</span>Copied';
+            button.classList.remove('bg-base-100', 'dark:bg-base-700', 'hover:bg-base-200', 'dark:hover:bg-base-600');
+            button.classList.add('bg-green-600', 'hover:bg-green-700', 'dark:bg-green-500', 'dark:hover:bg-green-600', 'text-white');
+            
+            setTimeout(function() {
+                button.innerHTML = originalText;
+                button.classList.remove('bg-green-600', 'hover:bg-green-700', 'dark:bg-green-500', 'dark:hover:bg-green-600', 'text-white');
+                button.classList.add('bg-base-100', 'dark:bg-base-700', 'hover:bg-base-200', 'dark:hover:bg-base-600');
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Could not copy text: ', err);
+        });
+    };
+
+    window.executeCommand = function(commandName) {
+        const modal = document.getElementById('commandModal');
+        const commandNameEl = document.getElementById('commandName');
+        const commandOutput = document.getElementById('commandOutput');
+        const commandStatus = document.getElementById('commandStatus');
+        
+        if (!modal || !commandNameEl || !commandOutput || !commandStatus) {
+            console.error('Command modal elements not found');
+            return;
+        }
+
+        commandNameEl.textContent = commandName;
+        commandOutput.textContent = '';
+        commandStatus.innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">Executing...</span>';
+        modal.classList.remove('hidden');
+        
+        fetch('/cfg/commands/execute/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                command: commandName,
+                args: [],
+                options: {}
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            function readStream() {
+                return reader.read().then(({done, value}) => {
+                    if (done) return;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                handleCommandData(data);
+                            } catch (e) {
+                                console.error('Error parsing command data:', e);
+                            }
+                        }
+                    });
+                    
+                    return readStream();
+                });
+            }
+            
+            return readStream();
+        })
+        .catch(error => {
+            console.error('Error executing command:', error);
+            commandOutput.textContent += `\n❌ Error: ${error.message}`;
+            commandStatus.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-sm font-medium text-red-600 dark:text-red-400">Error</span>';
+        });
+    };
+
+    function handleCommandData(data) {
+        const output = document.getElementById('commandOutput');
+        const status = document.getElementById('commandStatus');
+        
+        if (!output || !status) return;
+        
+        switch (data.type) {
+            case 'start':
+                // Clear previous content and add header
+                output.innerHTML = '';
+                addLogLine(output, `🚀 Starting command: ${data.command}`, 'info');
+                addLogLine(output, `📝 Arguments: ${data.args.join(' ')}`, 'info');
+                addLogLine(output, '', 'spacer');
+                status.innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">Executing...</span>';
+                break;
+            case 'output':
+                addLogLine(output, data.line, 'output');
+                scrollToBottom(output);
+                break;
+            case 'complete':
+                const success = data.return_code === 0;
+                status.innerHTML = success 
+                    ? '<div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div><span class="text-sm font-medium text-green-600 dark:text-green-400">Completed</span>'
+                    : '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-sm font-medium text-red-600 dark:text-red-400">Failed</span>';
+                
+                addLogLine(output, '', 'spacer');
+                let completionMessage = `${success ? '✅' : '❌'} Command completed with exit code: ${data.return_code}`;
+                if (data.execution_time) {
+                    completionMessage += ` (${data.execution_time}s)`;
+                }
+                addLogLine(output, completionMessage, success ? 'success' : 'error');
+                scrollToBottom(output);
+                break;
+            case 'error':
+                addLogLine(output, `❌ Error: ${data.error}`, 'error');
+                status.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-sm font-medium text-red-600 dark:text-red-400">Error</span>';
+                scrollToBottom(output);
+                break;
+        }
+    }
+
+    function addLogLine(container, text, type = 'output') {
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        
+        // Add type-specific styling
+        switch (type) {
+            case 'info':
+                line.className += ' text-blue-600 dark:text-blue-400 font-medium';
+                break;
+            case 'success':
+                line.className += ' text-green-600 dark:text-green-400 font-medium';
+                break;
+            case 'error':
+                line.className += ' text-red-600 dark:text-red-400 font-medium';
+                break;
+            case 'spacer':
+                line.className += ' h-2';
+                break;
+            default:
+                line.className += ' text-font-default-light dark:text-font-default-dark';
+        }
+        
+        // Set content
+        if (type === 'spacer') {
+            line.innerHTML = '&nbsp;';
+        } else {
+            line.textContent = text;
+        }
+        
+        container.appendChild(line);
+    }
+
+    function scrollToBottom(element) {
+        if (!element) return;
+        
+        // Принудительно скроллим элемент
+        setTimeout(() => {
+            element.scrollTop = element.scrollHeight;
+            console.log('Scrolled to bottom:', element.scrollTop, element.scrollHeight);
+        }, 50);
+    }
+
+    window.closeCommandModal = function() {
+        const modal = document.getElementById('commandModal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    };
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    </script>
+    
+    <style>
+    /* Dashboard tab styles */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    #dashboard-tabs button {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    </style>
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    {% if subtitle %}
+        {{ subtitle }} |
+    {% endif %}
+    {{ title }} | {{ site_title|default:'Django site admin' }}
+{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <!-- Dashboard Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-font-important-light dark:text-font-important-dark">
+            {{ dashboard_title|default:"Dashboard" }}
+        </h1>
+        <p class="mt-2 text-font-default-light dark:text-font-default-dark">
+            Welcome to the administration dashboard
+        </p>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    {% component "unfold/components/container.html" %}
+        <!-- Navigation and Filters Row -->
+        <div class="flex flex-col gap-4 mb-8">
+            {% component "unfold/components/navigation.html" with items=navigation %}
+            {% endcomponent %}
+
+            {% component "unfold/components/navigation.html" with class="ml-auto" items=filters %}
+            {% endcomponent %}
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="flex gap-1 mb-6 border-b border-base-200 dark:border-base-700" id="dashboard-tabs">
+            <button 
+                type="button" 
+                data-tab="0"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none font-semibold border-b-2 bg-primary-600 text-white border-primary-600"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">dashboard</span>
+                Overview
+            </button>
+            <button 
+                type="button" 
+                data-tab="1"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">public</span>
+                API Zones
+            </button>
+            <button 
+                type="button" 
+                data-tab="2"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">people</span>
+                Users
+            </button>
+            <button 
+                type="button" 
+                data-tab="3"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">settings</span>
+                System
+            </button>
+            <button 
+                type="button" 
+                data-tab="4"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">analytics</span>
+                Statistics
+            </button>
+            <button 
+                type="button" 
+                data-tab="5"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">apps</span>
+                App Stats
+            </button>
+            <button 
+                type="button" 
+                data-tab="6"
+                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">terminal</span>
+                Commands
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-5">
+
+            <!-- Tab Content with improved spacing -->
+            <div class="tab-content active" data-tab="0">
+                {% block overview_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="1">
+                {% block zones_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="2">
+                {% block users_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="3">
+                {% block system_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="4">
+                {% block stats_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="5">
+                {% block app_stats_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="6">
+                {% block commands_tab %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="text-center py-8 border-t border-base-200 dark:border-base-700 mt-5">
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                {% load django_cfg %}
+                <a href="{% lib_site_url %}" class="text-primary-600 hover:text-primary-700 font-medium">
+                    {% lib_name %}
+                </a>
+                <span class="mx-2">•</span>
+                <a href="{% lib_health_url %}" class="text-primary-600 hover:text-primary-700">
+                    System Health
+                </a>
+            </p>
+        </div>
+
+    {% endcomponent %}
+{% endblock %}
