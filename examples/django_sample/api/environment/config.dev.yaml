@@ -47,15 +47,15 @@ api_keys:
   openai_api_key: ""      # Set via OPENAI_API_KEY env var
   sendgrid_api_key: ""    # Set via SENDGRID_API_KEY env var for email OTP
   
-  # Payment provider API keys (set these to enable providers)
-  nowpayments_api_key: "test_nowpayments_key"           # NowPayments API key
-  nowpayments_ipn_secret: "test_ipn_secret"             # NowPayments IPN secret for webhooks
-  cryptapi_btc_address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"    # Your BTC wallet address for CryptAPI
-  stripe_secret_key: ""             # Stripe secret key (sk_test_... or sk_live_...)
-  stripe_publishable_key: ""        # Stripe publishable key (pk_test_... or pk_live_...)
-  stripe_webhook_secret: ""         # Stripe webhook endpoint secret
-  cryptomus_api_key: ""             # Cryptomus API key
-  cryptomus_merchant_uuid: ""       # Cryptomus merchant UUID
+  payments:
+    nowpayments_api_key: "test_nowpayments_key"           # NowPayments API key
+    nowpayments_ipn_secret: "test_ipn_secret"             # NowPayments IPN secret for webhooks
+    cryptapi_btc_address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"    # Your BTC wallet address for CryptAPI
+    stripe_secret_key: ""             # Stripe secret key (sk_test_... or sk_live_...)
+    stripe_publishable_key: ""        # Stripe publishable key (pk_test_... or pk_live_...)
+    stripe_webhook_secret: ""         # Stripe webhook endpoint secret
+    cryptomus_api_key: ""             # Cryptomus API key
+    cryptomus_merchant_uuid: ""       # Cryptomus merchant UUID
 
 # === Admin Configuration ===
 admin_emails:

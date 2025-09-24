@@ -1,0 +1,44 @@
+# Docker volumes and data
+volumes/*/
+!volumes/.gitkeep
+
+# Docker build cache
+.docker/
+
+!.env
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Docker Compose override files
+docker-compose.override.yml
+docker-compose.*.override.yml
+
+# Backup files
+*.backup
+*.bak
+*.sql.gz
+*.tar.gz
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -51,6 +51,9 @@ def get_django_cfg_urlpatterns() -> List[URLPattern]:
         # Maintenance app - multi-site maintenance mode with Cloudflare
         if base_module.is_maintenance_enabled():
             patterns.append(path('maintenance/', include('django_cfg.apps.maintenance.urls')))
+
+        if base_module.is_payments_enabled():
+            patterns.append(path('payments/admin/', include('django_cfg.apps.payments.urls_templates')))
             
     except Exception:
         # Fallback: include all URLs if config is not available

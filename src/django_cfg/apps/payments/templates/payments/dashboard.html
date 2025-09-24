@@ -1,0 +1,346 @@
+{% extends 'payments/base.html' %}
+{% load payments_tags %}
+{% load static %}
+
+{% block title %}Payment Dashboard - Django CFG{% endblock %}
+
+{% block header_title %}Payment Dashboard{% endblock %}
+{% block header_subtitle %}Monitor and manage payment transactions in real-time{% endblock %}
+
+{% block extra_head %}
+<!-- Dashboard-specific styles -->
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    @media (min-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 2fr 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-dashboard">
+    <!-- Status Overview -->
+    {% include 'payments/components/status_overview.html' %}
+    
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Column: Recent Payments -->
+        <div class="space-y-6">
+            <!-- Filter Controls -->
+            <div class="payment-filters">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Payments</h3>
+                    <div class="flex items-center space-x-2">
+                        <select class="filter-select" id="status-filter" onchange="filterPayments()">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirming">Confirming</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                        <select class="filter-select" id="provider-filter" onchange="filterPayments()">
+                            <option value="">All Providers</option>
+                            <option value="nowpayments">NowPayments</option>
+                            <option value="cryptapi">CryptAPI</option>
+                            <option value="cryptomus">Cryptomus</option>
+                            <option value="stripe">Stripe</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <input type="text" 
+                           class="filter-input" 
+                           placeholder="Search by payment ID or amount..." 
+                           id="search-input"
+                           onkeyup="searchPayments(event)">
+                    <input type="date" 
+                           class="filter-input" 
+                           id="date-filter"
+                           onchange="filterPayments()">
+                    <button class="btn btn-outline btn-sm" onclick="clearFilters()">
+                        <span class="material-icons text-sm mr-1">clear</span>
+                        Clear
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Payment Cards Grid -->
+            <div id="payments-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {% if payments %}
+                    {% for payment in payments %}
+                        {% payment_card payment %}
+                    {% endfor %}
+                {% else %}
+                    <!-- Empty State -->
+                    <div class="col-span-full">
+                        <div class="text-center py-12">
+                            <span class="material-icons text-gray-400 text-6xl mb-4">payment</span>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No payments found</h3>
+                            <p class="text-gray-500 dark:text-gray-400 mb-4">Get started by creating your first payment.</p>
+                            <button class="btn btn-primary" onclick="createNewPayment()">
+                                <span class="material-icons text-sm mr-2">add</span>
+                                Create Payment
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Load More Button -->
+            {% if has_more_payments %}
+            <div class="text-center">
+                <button class="btn btn-outline" id="load-more-btn" onclick="loadMorePayments()">
+                    <span class="material-icons text-sm mr-2">expand_more</span>
+                    Load More Payments
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Right Column: Analytics & Quick Info -->
+        <div class="space-y-6">
+            <!-- Provider Statistics -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Provider Performance</h3>
+                {% provider_statistics %}
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Recent Activity</h3>
+                <div class="space-y-3">
+                    {% for event in recent_events|slice:":5" %}
+                    <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <div class="flex-shrink-0">
+                            {% if event.event_type == 'created' %}
+                                <span class="material-icons text-blue-500">add_circle</span>
+                            {% elif event.event_type == 'completed' %}
+                                <span class="material-icons text-green-500">check_circle</span>
+                            {% elif event.event_type == 'failed' %}
+                                <span class="material-icons text-red-500">error</span>
+                            {% else %}
+                                <span class="material-icons text-gray-500">circle</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                Payment {{ event.event_type }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                #{{ event.payment.internal_payment_id|default:event.payment.id|truncatechars:8 }} 
+                                • {{ event.created_at|timesince }} ago
+                            </p>
+                        </div>
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                            ${{ event.payment.amount_usd|floatformat:2 }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                        No recent activity
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- System Status -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">System Status</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">API Status</span>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                            Online
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">Webhook Queue</span>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Processing
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">Database</span>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Connected
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">Redis Cache</span>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Active
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dashboard JavaScript functionality
+let currentFilters = {
+    status: '',
+    provider: '',
+    search: '',
+    date: ''
+};
+
+let currentPage = 1;
+const PAYMENTS_PER_PAGE = 10;
+
+// Filter functions
+function filterPayments() {
+    currentFilters.status = document.getElementById('status-filter').value;
+    currentFilters.provider = document.getElementById('provider-filter').value;
+    currentFilters.date = document.getElementById('date-filter').value;
+    
+    currentPage = 1;
+    loadPayments();
+}
+
+function searchPayments(event) {
+    // Debounce search input
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+        currentFilters.search = event.target.value;
+        currentPage = 1;
+        loadPayments();
+    }, 500);
+}
+
+function clearFilters() {
+    document.getElementById('status-filter').value = '';
+    document.getElementById('provider-filter').value = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('date-filter').value = '';
+    
+    currentFilters = { status: '', provider: '', search: '', date: '' };
+    currentPage = 1;
+    loadPayments();
+}
+
+function loadPayments() {
+    const grid = document.getElementById('payments-grid');
+    
+    // Show loading state
+    if (currentPage === 1) {
+        grid.innerHTML = '<div class="col-span-full text-center py-8"><div class="skeleton h-32 w-full"></div></div>';
+    }
+    
+    // Build query parameters
+    const params = new URLSearchParams({
+        page: currentPage,
+        page_size: PAYMENTS_PER_PAGE,
+        ...currentFilters
+    });
+    
+    // Remove empty parameters
+    for (const [key, value] of params.entries()) {
+        if (!value) {
+            params.delete(key);
+        }
+    }
+    
+    fetch(`/api/payments/list/?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            if (currentPage === 1) {
+                grid.innerHTML = '';
+            }
+            
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(payment => {
+                    const cardHtml = renderPaymentCard(payment);
+                    grid.insertAdjacentHTML('beforeend', cardHtml);
+                });
+                
+                // Update load more button
+                const loadMoreBtn = document.getElementById('load-more-btn');
+                if (loadMoreBtn) {
+                    loadMoreBtn.style.display = data.has_next ? 'block' : 'none';
+                }
+            } else if (currentPage === 1) {
+                // Show empty state
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <span class="material-icons text-gray-400 text-6xl mb-4">search_off</span>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No payments found</h3>
+                        <p class="text-gray-500 dark:text-gray-400">Try adjusting your filters.</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load payments:', error);
+            if (window.notificationManager) {
+                window.notificationManager.error('Failed to load payments');
+            }
+        });
+}
+
+function loadMorePayments() {
+    currentPage++;
+    loadPayments();
+}
+
+function renderPaymentCard(payment) {
+    // This would be a simplified version of the payment card template
+    // In a real implementation, you'd want to render this server-side or use a template engine
+    return `
+        <div class="payment-card" data-payment-id="${payment.id}">
+            <!-- Simplified payment card HTML -->
+            <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium">#${payment.internal_payment_id || payment.id.substring(0, 8)}</span>
+                    <span class="px-2 py-1 text-xs rounded-full payment-status-${payment.status}">
+                        ${payment.status}
+                    </span>
+                </div>
+                <div class="text-xl font-bold mb-2">$${parseFloat(payment.amount_usd).toFixed(2)}</div>
+                <div class="text-sm text-gray-500">${payment.provider} • ${new Date(payment.created_at).toLocaleDateString()}</div>
+            </div>
+        </div>
+    `;
+}
+
+// Auto-refresh dashboard every 30 seconds
+setInterval(() => {
+    if (document.visibilityState === 'visible') {
+        loadPayments();
+    }
+}, 30000);
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', () => {
+    // Update URL parameters on filter change
+    window.addEventListener('popstate', () => {
+        // Handle browser back/forward
+        const urlParams = new URLSearchParams(window.location.search);
+        currentFilters.status = urlParams.get('status') || '';
+        currentFilters.provider = urlParams.get('provider') || '';
+        currentFilters.search = urlParams.get('search') || '';
+        currentFilters.date = urlParams.get('date') || '';
+        
+        // Update form values
+        document.getElementById('status-filter').value = currentFilters.status;
+        document.getElementById('provider-filter').value = currentFilters.provider;
+        document.getElementById('search-input').value = currentFilters.search;
+        document.getElementById('date-filter').value = currentFilters.date;
+        
+        loadPayments();
+    });
+});
+</script>
+{% endblock %}

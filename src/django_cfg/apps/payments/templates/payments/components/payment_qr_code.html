@@ -1,0 +1,109 @@
+{% load payments_tags %}
+
+<!-- Payment QR Code Component -->
+<div class="qr-code-container">
+    {% if qr_data %}
+        <div class="qr-code" id="qr-code-{{ payment.id }}">
+            <!-- QR code will be generated here by JavaScript -->
+            <span class="material-icons text-gray-400 text-4xl">qr_code</span>
+        </div>
+        
+        <div class="text-center space-y-2">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                Payment Address
+            </p>
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">
+                {{ payment.pay_address }}
+            </p>
+            {% if payment.pay_amount %}
+            <p class="text-xs text-gray-500 dark:text-gray-500">
+                Amount: {{ payment.pay_amount|format_crypto_amount:payment.currency_code }} {{ payment.currency_code }}
+            </p>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="flex space-x-2 pt-2">
+                <button class="btn btn-outline btn-sm flex-1" 
+                        onclick="copyToClipboard('{{ payment.pay_address }}', 'Address copied!')">
+                    <span class="material-icons text-sm mr-1">content_copy</span>
+                    Copy Address
+                </button>
+                {% if payment.pay_amount %}
+                <button class="btn btn-outline btn-sm flex-1" 
+                        onclick="copyToClipboard('{{ payment.pay_amount }}', 'Amount copied!')">
+                    <span class="material-icons text-sm mr-1">content_copy</span>
+                    Copy Amount
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-8">
+            <span class="material-icons text-gray-400 text-4xl mb-2">qr_code_off</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                QR code not available for this payment
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// QR Code generation (placeholder implementation)
+document.addEventListener('DOMContentLoaded', function() {
+    const qrContainer = document.getElementById('qr-code-{{ payment.id }}');
+    if (qrContainer && '{{ qr_data }}') {
+        // This would integrate with a QR code library like qrcode.js
+        // For now, we'll show a placeholder
+        qrContainer.innerHTML = `
+            <div class="w-32 h-32 bg-white border-2 border-gray-300 rounded flex items-center justify-center">
+                <div class="text-center">
+                    <span class="material-icons text-gray-400 text-2xl">qr_code</span>
+                    <p class="text-xs text-gray-500 mt-1">QR Code</p>
+                </div>
+            </div>
+        `;
+        
+        // Example of how to integrate a real QR code library:
+        /*
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrContainer, {
+                text: '{{ qr_data }}',
+                width: 128,
+                height: 128,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+        */
+    }
+});
+
+function copyToClipboard(text, message) {
+    if (window.paymentUtils) {
+        window.paymentUtils.copyToClipboard(text).then(success => {
+            if (success && window.notificationManager) {
+                window.notificationManager.success(message || 'Copied to clipboard');
+            }
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            if (window.notificationManager) {
+                window.notificationManager.success(message || 'Copied to clipboard');
+            }
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
+            if (window.notificationManager) {
+                window.notificationManager.error('Failed to copy to clipboard');
+            }
+        }
+        document.body.removeChild(textArea);
+    }
+}
+</script>

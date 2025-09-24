@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Payment Dashboard{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        success: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                        },
+                        warning: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'payments/css/payments.css' %}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-full">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <span class="material-icons text-primary-600 dark:text-primary-400 text-3xl">payments</span>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                                {% block header_title %}Payment Dashboard{% endblock %}
+                            </h1>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                {% block header_subtitle %}Monitor and manage payment transactions{% endblock %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        {% block header_actions %}
+                        <a href="{% url 'payments_dashboard:list' %}" 
+                           class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+                            <span class="material-icons text-sm mr-2">history</span>
+                            Payment History
+                        </a>
+                        <a href="{% url 'payments_dashboard:create' %}" 
+                           class="inline-flex items-center px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md text-sm font-medium transition-colors duration-200">
+                            <span class="material-icons text-sm mr-2">add</span>
+                            New Payment
+                        </a>
+                        <button id="theme-toggle" 
+                                class="group inline-flex items-center justify-center px-3 py-2 rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                            <span class="material-icons text-gray-600 dark:text-yellow-400 group-hover:text-primary-600 dark:group-hover:text-yellow-300 transition-colors duration-200">light_mode</span>
+                        </button>
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Live Status Indicator -->
+        <div id="live-status" class="bg-success-50 border-b border-success-200 px-4 py-2 hidden">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-center">
+                    <div class="flex items-center">
+                        <div class="w-2 h-2 bg-success-500 rounded-full mr-2 animate-pulse"></div>
+                        <span class="text-sm text-success-700 font-medium">Real-time updates active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        {% block footer_text %}
+                        Django-CFG Payment System • 
+                        <span id="connection-status" class="text-success-600">Connected</span>
+                        {% endblock %}
+                    </div>
+                    <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span>Last update: <span id="last-update">{% now "H:i:s" %}</span></span>
+                        <span class="material-icons text-sm">schedule</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-container"></div>
+
+    <!-- JavaScript -->
+    <script src="{% static 'payments/js/theme.js' %}"></script>
+    <script src="{% static 'payments/js/notifications.js' %}"></script>
+    <script src="{% static 'payments/js/payment-utils.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Real-time updates -->
+    <script>
+        // Global payment system initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update connection status
+            const updateConnectionStatus = () => {
+                const statusEl = document.getElementById('connection-status');
+                const lastUpdateEl = document.getElementById('last-update');
+                const liveStatusEl = document.getElementById('live-status');
+                
+                if (statusEl) {
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'text-success-600';
+                }
+                
+                if (lastUpdateEl) {
+                    lastUpdateEl.textContent = new Date().toLocaleTimeString();
+                }
+                
+                if (liveStatusEl) {
+                    liveStatusEl.classList.remove('hidden');
+                }
+            };
+            
+            // Initial status update
+            updateConnectionStatus();
+            
+            // Periodic status update
+            setInterval(updateConnectionStatus, 30000); // Every 30 seconds
+        });
+    </script>
+</body>
+</html>

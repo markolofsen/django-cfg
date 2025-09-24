@@ -1,0 +1,27 @@
+{% load payments_tags %}
+
+<!-- Payment Status Badge Component -->
+<span class="payment-status-badge payment-status-{{ payment.status|lower }} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+      data-status="{{ payment.status }}">
+    {% if payment.status == 'pending' %}
+        <span class="material-icons text-sm mr-1 animate-pulse">pending</span>
+    {% elif payment.status == 'confirming' %}
+        <span class="material-icons text-sm mr-1 animate-spin">sync</span>
+    {% elif payment.status == 'confirmed' %}
+        <span class="material-icons text-sm mr-1">check_circle</span>
+    {% elif payment.status == 'completed' %}
+        <span class="material-icons text-sm mr-1">verified</span>
+    {% elif payment.status == 'failed' %}
+        <span class="material-icons text-sm mr-1">error</span>
+    {% elif payment.status == 'expired' %}
+        <span class="material-icons text-sm mr-1">schedule</span>
+    {% elif payment.status == 'cancelled' %}
+        <span class="material-icons text-sm mr-1">cancel</span>
+    {% elif payment.status == 'refunded' %}
+        <span class="material-icons text-sm mr-1">undo</span>
+    {% else %}
+        <span class="material-icons text-sm mr-1">help</span>
+    {% endif %}
+    
+    <span class="status-text">{{ payment.get_status_display }}</span>
+</span>

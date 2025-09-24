@@ -1,0 +1,144 @@
+{% load payments_tags %}
+
+<!-- Status Overview Cards -->
+{% get_payment_stats as stats %}
+
+<div class="status-overview">
+    <!-- Total Payments -->
+    <div class="status-card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-blue-600 dark:text-blue-400 text-3xl">payments</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Payments</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {{ stats.total_payments_count|default:0 }}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Payments -->
+    <div class="status-card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-yellow-600 dark:text-yellow-400 text-3xl">pending</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Pending</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {{ stats.pending_payments_count|default:0 }}
+                </p>
+                {% if stats.confirming_payments_count %}
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    +{{ stats.confirming_payments_count }} confirming
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Completed Payments -->
+    <div class="status-card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-green-600 dark:text-green-400 text-3xl">check_circle</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Completed</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {{ stats.completed_payments_count|default:0 }}
+                </p>
+                {% if stats.total_payments_count > 0 %}
+                <p class="text-xs text-green-600 dark:text-green-400">
+                    {{ stats.completed_payments_count|floatformat:0 }}/{{ stats.total_payments_count }} success
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Volume -->
+    <div class="status-card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-purple-600 dark:text-purple-400 text-3xl">account_balance</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Volume</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                    ${{ stats.total_volume|floatformat:2|default:"0.00" }}
+                </p>
+                {% if stats.failed_payments_count %}
+                <p class="text-xs text-red-500 dark:text-red-400">
+                    {{ stats.failed_payments_count }} failed
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Bar -->
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Actions:</span>
+            <div class="flex space-x-2">
+                <button class="btn btn-primary btn-sm" onclick="createNewPayment()">
+                    <span class="material-icons text-sm mr-1">add</span>
+                    New Payment
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="refreshPayments()">
+                    <span class="material-icons text-sm mr-1">refresh</span>
+                    Refresh
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="exportPayments()">
+                    <span class="material-icons text-sm mr-1">download</span>
+                    Export
+                </button>
+            </div>
+        </div>
+        
+        <!-- Live Status Indicator -->
+        <div class="flex items-center space-x-2">
+            <div class="payment-live-indicator">
+                Live Updates
+            </div>
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+                Last update: <span id="stats-last-update">{% now "H:i:s" %}</span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+// Quick actions implementation
+function createNewPayment() {
+    window.location.href = '{% url "payments_dashboard:create" %}';
+}
+
+function refreshPayments() {
+    location.reload();
+}
+
+function exportPayments() {
+    // Implement export functionality
+    if (window.notificationManager) {
+        window.notificationManager.info('Export functionality coming soon');
+    }
+}
+
+// Auto-refresh stats every 30 seconds
+setInterval(() => {
+    updateStatsLastUpdate();
+}, 30000);
+
+function updateStatsLastUpdate() {
+    const element = document.getElementById('stats-last-update');
+    if (element) {
+        element.textContent = new Date().toLocaleTimeString();
+    }
+}
+</script>

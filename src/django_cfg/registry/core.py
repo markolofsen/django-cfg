@@ -50,6 +50,7 @@ CORE_REGISTRY = {
     "create_nowpayments_config": ("django_cfg.models.payments", "create_nowpayments_config"),
     "create_cryptapi_config": ("django_cfg.models.payments", "create_cryptapi_config"),
     "create_stripe_config": ("django_cfg.models.payments", "create_stripe_config"),
+    "create_cryptomus_config": ("django_cfg.models.payments", "create_cryptomus_config"),
     
     # Pagination classes
     "DefaultPagination": ("django_cfg.middleware.pagination", "DefaultPagination"),

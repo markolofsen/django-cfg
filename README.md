@@ -1,12 +1,12 @@
 # 🚀 Django-CFG: Enterprise Django Configuration Framework
 
 
-[![Python Version](https://img.shields.io/pypi/pyversions/django-cfg.svg?style=flat-square&logo=python&logoColor=white)](https://pypi.org/project/django-cfg/)
-[![Django Version](https://img.shields.io/pypi/djversions/django-cfg.svg?style=flat-square&logo=django&logoColor=white)](https://pypi.org/project/django-cfg/)
-[![PyPI Version](https://img.shields.io/pypi/v/django-cfg.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/django-cfg/)
-[![License](https://img.shields.io/pypi/l/django-cfg.svg?style=flat-square)](https://github.com/django-cfg/django-cfg/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/django-cfg.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/django-cfg/)
-[![GitHub Stars](https://img.shields.io/github/stars/django-cfg/django-cfg?style=flat-square&logo=github)](https://github.com/django-cfg/django-cfg)
+[![Python Version](https://img.shields.io/pypi/pyversions/django-cfg.svg?style=flat-square&logo=python&logoColor=white)](https://pypi.org/project/django-cfg)
+[![Django Version](https://img.shields.io/pypi/djversions/django-cfg.svg?style=flat-square&logo=django&logoColor=white)](https://pypi.org/project/django-cfg)
+[![PyPI Version](https://img.shields.io/pypi/v/django-cfg.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/django-cfg)
+[![License](https://img.shields.io/pypi/l/django-cfg.svg?style=flat-square)](https://github.com/markolofsen/markolofsen/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/django-cfg.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/django-cfg)
+[![GitHub Stars](https://img.shields.io/github/stars/markolofsen/django-cfg?style=flat-square&logo=github)](https://github.com/markolofsen/django-cfg)
 
 > **Transform Django development with enterprise-grade type safety, AI agents, and production-ready integrations.**
 
@@ -14,8 +14,7 @@
 
 🌐 **Official Website**: [djangocfg.com](https://djangocfg.com/)  
 📚 **Documentation**: [docs.djangocfg.com](https://docs.djangocfg.com/)  
-🐙 **GitHub Repository**: [github.com/django-cfg/django-cfg](https://github.com/django-cfg/django-cfg)  
-💬 **Community Discord**: [Join our Discord](https://discord.gg/django-cfg)
+🐙 **GitHub Repository**: [github.com/markolofsen/django-cfg](https://github.com/markolofsen/django-cfg)  
 
 ---
 
@@ -391,7 +390,7 @@ python manage.py runserver_ngrok  # With ngrok integration
 docker pull djangocfg/django-cfg:latest
 
 # Or build from source
-git clone https://github.com/django-cfg/django-cfg.git
+git clone https://github.com/markolofsen/django-cfg.git
 cd django-cfg
 docker build -t my-django-cfg .
 
@@ -807,16 +806,14 @@ class EnterpriseConfigTest(EnterpriseTestCase, ConfigTestMixin):
 ### **Community Resources**
 - 🌐 **Official Website**: [djangocfg.com](https://djangocfg.com/)
 - 📚 **Documentation**: [docs.djangocfg.com](https://docs.djangocfg.com/)
-- 🐙 **GitHub**: [github.com/django-cfg/django-cfg](https://github.com/django-cfg/django-cfg)
-- 💬 **Discord Community**: [Join our Discord](https://discord.gg/django-cfg)
+- 🐙 **GitHub**: [github.com/markolofsen/django-cfg](https://github.com/markolofsen/django-cfg)
 - 📦 **PyPI Package**: [pypi.org/project/django-cfg](https://pypi.org/project/django-cfg/)
 - ❓ **Stack Overflow**: Tag questions with `django-cfg`
-- 🐦 **Twitter**: [@DjangoCFG](https://twitter.com/djangocfg)
 
 ### **Contributing**
 ```bash
 # Development setup
-git clone https://github.com/django-cfg/django-cfg.git
+git clone https://github.com/markolofsen/django-cfg.git
 cd django-cfg
 pip install -e ".[dev,test]"
 
@@ -846,7 +843,7 @@ git push origin feature/my-feature
 **Django-CFG** is released under the **MIT License** - see [LICENSE](LICENSE) file for details.
 
 ### **Enterprise License**
-For enterprises requiring additional features, support, or custom licensing terms, contact us at [enterprise@djangocfg.com](mailto:enterprise@djangocfg.com).
+For enterprises requiring additional features, support, or custom licensing terms, contact us at [enterprise@djangocfg.com](mailto:info@djangocfg.com).
 
 ---
 

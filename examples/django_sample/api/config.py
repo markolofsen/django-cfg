@@ -100,27 +100,27 @@ class SampleProjectConfig(DjangoConfig):
         providers=[
             config for config in [
                 create_nowpayments_config(
-                    api_key=env.api_keys.nowpayments_api_key,
+                    api_key=env.api_keys.payments.nowpayments_api_key,
                     sandbox=env.debug,
-                    ipn_secret=env.api_keys.nowpayments_ipn_secret
-                ) if env.api_keys.nowpayments_api_key else None,
+                    ipn_secret=env.api_keys.payments.nowpayments_ipn_secret
+                ) if env.api_keys.payments.nowpayments_api_key else None,
                 
                 create_cryptapi_config(
-                    own_address=env.api_keys.cryptapi_btc_address
-                ) if env.api_keys.cryptapi_btc_address else None,
+                    own_address=env.api_keys.payments.cryptapi_btc_address
+                ) if env.api_keys.payments.cryptapi_btc_address else None,
                 
                 create_stripe_config(
-                    api_key=env.api_keys.stripe_secret_key,
-                    publishable_key=env.api_keys.stripe_publishable_key,
-                    webhook_endpoint_secret=env.api_keys.stripe_webhook_secret,
+                    api_key=env.api_keys.payments.stripe_secret_key,
+                    publishable_key=env.api_keys.payments.stripe_publishable_key,
+                    webhook_endpoint_secret=env.api_keys.payments.stripe_webhook_secret,
                     sandbox=env.debug
-                ) if env.api_keys.stripe_secret_key else None,
+                ) if env.api_keys.payments.stripe_secret_key else None,
                 
                 create_cryptomus_config(
-                    api_key=env.api_keys.cryptomus_api_key,
-                    merchant_uuid=env.api_keys.cryptomus_merchant_uuid,
+                    api_key=env.api_keys.payments.cryptomus_api_key,
+                    merchant_uuid=env.api_keys.payments.cryptomus_merchant_uuid,
                     sandbox=env.debug
-                ) if env.api_keys.cryptomus_api_key else None,
+                ) if env.api_keys.payments.cryptomus_api_key else None,
             ] if config is not None
         ]
     )

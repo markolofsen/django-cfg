@@ -62,15 +62,9 @@ class TwilioConfig(BaseModel):
     otp_template_id: Optional[str] = None
     otp_from_email: Optional[str] = None
 
-class ApiKeysConfig(BaseModel):
-    """API keys configuration."""
+class PaymentsConfig(BaseModel):
+    """Payments configuration."""
     
-    ngrok: str = ""
-    openrouter_api_key: str = ""
-    openai_api_key: str = ""
-    sendgrid_api_key: str = ""
-    
-    # Payment provider API keys
     nowpayments_api_key: str = ""
     nowpayments_ipn_secret: str = ""
     cryptapi_btc_address: str = ""
@@ -79,6 +73,17 @@ class ApiKeysConfig(BaseModel):
     stripe_webhook_secret: str = ""
     cryptomus_api_key: str = ""
     cryptomus_merchant_uuid: str = ""
+
+
+class ApiKeysConfig(BaseModel):
+    """API keys configuration."""
+    
+    ngrok: str = ""
+    openrouter_api_key: str = ""
+    openai_api_key: str = ""
+    sendgrid_api_key: str = ""
+    
+    payments: PaymentsConfig = Field(default_factory=PaymentsConfig)
 
 class AppConfig(BaseModel):
     """Application configuration."""

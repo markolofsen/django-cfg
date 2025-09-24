@@ -1,0 +1,201 @@
+{% load payments_tags %}
+{% load humanize %}
+
+<!-- Payment Card Component -->
+<div class="payment-card bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 {% if compact %}compact{% endif %}"
+     data-payment-id="{{ payment.id }}">
+    
+    <!-- Header -->
+    <div class="payment-card-header flex items-center justify-between mb-4">
+        <div class="payment-id">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Payment</span>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                #{{ payment.internal_payment_id|default:payment.id|truncatechars:8 }}
+            </p>
+        </div>
+        {% include 'payments/components/status_badge.html' %}
+    </div>
+    
+    <!-- Amount -->
+    <div class="payment-amount mb-4">
+        <div class="flex items-baseline">
+            <span class="text-3xl font-bold text-gray-900 dark:text-white">
+                ${{ payment.amount_usd|floatformat:2 }}
+            </span>
+            <span class="ml-2 text-lg text-gray-500 dark:text-gray-400">USD</span>
+        </div>
+        {% if payment.currency_code != 'USD' and payment.pay_amount %}
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                {{ payment.pay_amount|format_crypto_amount:payment.currency_code }} {{ payment.currency_code }}
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Payment Details -->
+    <div class="payment-details space-y-2 mb-4">
+        <div class="flex justify-between">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Provider</span>
+            <div class="flex items-center">
+                <span class="material-icons text-sm mr-1 {{ payment.provider|payment_method_icon }}">{{ payment.provider|payment_method_icon }}</span>
+                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ payment.provider|provider_display_name }}
+                </span>
+            </div>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Created</span>
+            <span class="text-sm text-gray-900 dark:text-white">
+                {{ payment.created_at|naturaltime }}
+            </span>
+        </div>
+        {% if payment.completed_at %}
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Completed</span>
+                <span class="text-sm text-gray-900 dark:text-white">
+                    {{ payment.completed_at|naturaltime }}
+                </span>
+            </div>
+        {% endif %}
+        {% if payment|is_crypto_payment and payment.pay_address %}
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Address</span>
+                <span class="text-sm font-mono text-gray-900 dark:text-white">
+                    {{ payment.pay_address|truncatechars:16 }}
+                    <button onclick="window.paymentUtils?.copyToClipboard('{{ payment.pay_address }}')" 
+                            class="ml-1 text-blue-500 hover:text-blue-700">
+                        <span class="material-icons text-xs">content_copy</span>
+                    </button>
+                </span>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Progress Bar -->
+    {% include 'payments/components/progress_bar.html' %}
+    
+    <!-- Actions -->
+    {% if show_actions %}
+    <div class="payment-actions mt-4 flex space-x-2">
+        <button class="btn btn-outline btn-sm flex-1" 
+                onclick="showPaymentDetails('{{ payment.id }}')">
+            <span class="material-icons text-sm mr-1">visibility</span>
+            View Details
+        </button>
+        {% if payment|can_cancel_payment %}
+            <button class="btn btn-danger btn-sm" 
+                    onclick="cancelPayment('{{ payment.id }}')">
+                <span class="material-icons text-sm mr-1">cancel</span>
+                Cancel
+            </button>
+        {% endif %}
+        {% if payment|is_crypto_payment and payment.pay_address %}
+            <button class="btn btn-primary btn-sm" 
+                    onclick="showQRCode('{{ payment.id }}')">
+                <span class="material-icons text-sm mr-1">qr_code</span>
+                QR Code
+            </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Mobile version (hidden on desktop) -->
+<div class="mobile-payment-card lg:hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+    <div class="flex items-center justify-between mb-3">
+        <div class="payment-id">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                #{{ payment.internal_payment_id|default:payment.id|truncatechars:8 }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                {{ payment.created_at|naturaltime }}
+            </p>
+        </div>
+        {% include 'payments/components/status_badge.html' %}
+    </div>
+    
+    <div class="payment-amount mb-3">
+        <div class="flex items-baseline">
+            <span class="text-xl font-bold text-gray-900 dark:text-white">
+                ${{ payment.amount_usd|floatformat:2 }}
+            </span>
+            {% if payment.currency_code != 'USD' %}
+                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                    {{ payment.currency_code }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="payment-progress mb-3">
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ payment|payment_progress_percentage }}%"></div>
+        </div>
+    </div>
+    
+    {% if show_actions %}
+    <div class="flex space-x-2">
+        <button class="flex-1 btn btn-outline btn-sm" onclick="showPaymentDetails('{{ payment.id }}')">
+            Details
+        </button>
+        {% if payment|can_cancel_payment %}
+            <button class="btn btn-danger btn-sm" onclick="cancelPayment('{{ payment.id }}')">
+                Cancel
+            </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Payment card JavaScript functions
+function showPaymentDetails(paymentId) {
+    if (window.paymentModal) {
+        window.paymentModal.show(paymentId);
+    } else {
+        // Fallback to direct link
+        window.location.href = `/admin/payments/universalpayment/${paymentId}/change/`;
+    }
+}
+
+function cancelPayment(paymentId) {
+    if (window.paymentUtils) {
+        window.paymentUtils.showConfirmDialog(
+            'Are you sure you want to cancel this payment?',
+            () => {
+                // Make API call to cancel payment
+                fetch(`/api/payments/${paymentId}/cancel/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.notificationManager?.paymentCancelled(paymentId);
+                        location.reload(); // Refresh to show updated status
+                    } else {
+                        window.notificationManager?.error(data.error || 'Failed to cancel payment');
+                    }
+                })
+                .catch(error => {
+                    console.error('Cancel payment error:', error);
+                    window.notificationManager?.error('Failed to cancel payment');
+                });
+            }
+        );
+    }
+}
+
+function showQRCode(paymentId) {
+    // Implementation for QR code modal
+    if (window.qrModal) {
+        window.qrModal.show(paymentId);
+    }
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+</script>

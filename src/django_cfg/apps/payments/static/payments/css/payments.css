@@ -1,0 +1,340 @@
+/* Payment System Styles */
+
+/* Payment Status Colors */
+.payment-status-pending { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
+.payment-status-confirming { @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200; }
+.payment-status-confirmed { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+.payment-status-completed { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+.payment-status-failed { @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200; }
+.payment-status-expired { @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200; }
+.payment-status-cancelled { @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200; }
+.payment-status-refunded { @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200; }
+
+/* Payment Card Animations */
+.payment-card {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+}
+
+.payment-card:hover {
+    @apply ring-2 ring-blue-500 ring-opacity-50;
+}
+
+.payment-card.compact {
+    @apply p-4;
+}
+
+/* Progress Bar Styles */
+.progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700 overflow-hidden;
+}
+
+.progress-fill {
+    @apply bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out;
+}
+
+.progress-fill.success {
+    @apply bg-green-600;
+}
+
+.progress-fill.warning {
+    @apply bg-yellow-600;
+}
+
+.progress-fill.danger {
+    @apply bg-red-600;
+}
+
+/* Progress Steps */
+.progress-steps {
+    @apply flex justify-between items-center mb-4;
+}
+
+.progress-step {
+    @apply flex flex-col items-center text-center;
+}
+
+.progress-step.completed .step-icon {
+    @apply text-green-500;
+}
+
+.progress-step.active .step-icon {
+    @apply text-blue-500;
+}
+
+.step-label {
+    @apply text-xs text-gray-500 dark:text-gray-400 mt-1;
+}
+
+.step-icon {
+    @apply w-8 h-8 flex items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-600 mb-2;
+}
+
+.step-icon.completed {
+    @apply border-green-500 bg-green-500 text-white;
+}
+
+.step-icon.active {
+    @apply border-blue-500 bg-blue-500 text-white;
+}
+
+/* Real-time indicators */
+.payment-live-indicator {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800;
+}
+
+.payment-live-indicator::before {
+    content: '';
+    @apply w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse;
+}
+
+/* Status Overview Cards */
+.status-overview {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8;
+}
+
+.status-card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md;
+}
+
+.status-card:hover {
+    @apply transform scale-105;
+}
+
+/* Payment Table Styles */
+.payments-table {
+    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+.payments-table th {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider;
+}
+
+.payments-table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white;
+}
+
+.payments-table tr:hover {
+    @apply bg-gray-50 dark:bg-gray-800;
+}
+
+/* Provider Icons */
+.provider-icon {
+    @apply w-6 h-6 rounded;
+}
+
+.provider-icon.nowpayments {
+    @apply bg-orange-500;
+}
+
+.provider-icon.cryptapi {
+    @apply bg-blue-500;
+}
+
+.provider-icon.cryptomus {
+    @apply bg-purple-500;
+}
+
+.provider-icon.stripe {
+    @apply bg-indigo-500;
+}
+
+.provider-icon.internal {
+    @apply bg-gray-500;
+}
+
+/* QR Code Styles */
+.qr-code-container {
+    @apply flex flex-col items-center space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700;
+}
+
+.qr-code {
+    @apply w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center;
+}
+
+/* Filter Styles */
+.payment-filters {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6;
+}
+
+.filter-group {
+    @apply flex flex-wrap gap-4 items-center;
+}
+
+.filter-input {
+    @apply min-w-0 flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white;
+}
+
+.filter-select {
+    @apply px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white;
+}
+
+/* Button Styles */
+.btn {
+    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md transition-colors duration-200;
+}
+
+.btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.btn-secondary {
+    @apply bg-gray-600 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+}
+
+.btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+}
+
+.btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+}
+
+.btn-outline {
+    @apply border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600;
+}
+
+.btn-sm {
+    @apply px-3 py-1.5 text-xs;
+}
+
+.btn-lg {
+    @apply px-6 py-3 text-base;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+}
+
+.modal-content {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-screen overflow-y-auto;
+}
+
+.modal-header {
+    @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700;
+}
+
+.modal-body {
+    @apply px-6 py-4;
+}
+
+.modal-footer {
+    @apply px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3;
+}
+
+/* Notification Styles */
+.notification {
+    @apply max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden;
+}
+
+.notification.success {
+    @apply border-l-4 border-green-500;
+}
+
+.notification.error {
+    @apply border-l-4 border-red-500;
+}
+
+.notification.warning {
+    @apply border-l-4 border-yellow-500;
+}
+
+.notification.info {
+    @apply border-l-4 border-blue-500;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .payment-card {
+        @apply p-4;
+    }
+    
+    .status-overview {
+        @apply grid-cols-2 gap-4;
+    }
+    
+    .progress-steps {
+        @apply hidden;
+    }
+    
+    .filter-group {
+        @apply flex-col items-stretch;
+    }
+    
+    .payments-table {
+        @apply text-xs;
+    }
+    
+    .payments-table th,
+    .payments-table td {
+        @apply px-3 py-2;
+    }
+}
+
+@media (max-width: 480px) {
+    .status-overview {
+        @apply grid-cols-1;
+    }
+}
+
+/* Loading animations */
+.skeleton {
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+.skeleton-text {
+    @apply h-4 bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+.skeleton-text.w-1/4 {
+    @apply w-1/4;
+}
+
+.skeleton-text.w-1/2 {
+    @apply w-1/2;
+}
+
+.skeleton-text.w-3/4 {
+    @apply w-3/4;
+}
+
+/* Chart styles */
+.chart-container {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6;
+}
+
+.chart-legend {
+    @apply flex justify-center space-x-6 mt-4;
+}
+
+.chart-legend-item {
+    @apply flex items-center space-x-2;
+}
+
+.chart-legend-color {
+    @apply w-3 h-3 rounded-full;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .material-icons {
+        color: inherit;
+    }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
+}

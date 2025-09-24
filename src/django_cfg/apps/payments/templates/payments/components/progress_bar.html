@@ -1,0 +1,36 @@
+{% load payments_tags %}
+
+<!-- Payment Progress Bar Component -->
+<div class="payment-progress-container">
+    <!-- Progress Steps (Hidden on mobile) -->
+    <div class="progress-steps hidden md:flex">
+        {% for step in payment|payment_progress_steps %}
+            <div class="progress-step {% if step.completed %}completed{% endif %} {% if step.active %}active{% endif %}">
+                <div class="step-icon {% if step.completed %}completed{% elif step.active %}active{% endif %}">
+                    {% if step.completed %}
+                        <span class="material-icons text-sm">check</span>
+                    {% elif step.active %}
+                        <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                    {% else %}
+                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
+                    {% endif %}
+                </div>
+                <div class="step-label">{{ step.label }}</div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="progress-bar mt-4 md:mt-0">
+        <div class="progress-fill {% if payment.status == 'completed' %}success{% elif payment.status == 'failed' %}danger{% elif payment.status == 'pending' %}warning{% endif %}" 
+             style="width: {{ payment|payment_progress_percentage }}%"
+             data-percentage="{{ payment|payment_progress_percentage }}">
+        </div>
+    </div>
+    
+    <!-- Progress Text -->
+    <div class="flex justify-between items-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <span>{{ payment|payment_progress_percentage }}% Complete</span>
+        <span>{{ payment.get_status_display }}</span>
+    </div>
+</div>

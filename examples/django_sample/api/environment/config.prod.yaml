@@ -47,6 +47,16 @@ api_keys:
   openrouter_api_key: ""  # Set via OPENROUTER_API_KEY env var
   openai_api_key: ""      # Set via OPENAI_API_KEY env var
   sendgrid_api_key: ""    # Set via SENDGRID_API_KEY env var for email OTP
+  
+  payments:
+    nowpayments_api_key: ""           # Production NowPayments API key
+    nowpayments_ipn_secret: ""        # Production NowPayments IPN secret for webhooks
+    cryptapi_btc_address: ""          # Your production BTC wallet address for CryptAPI
+    stripe_secret_key: ""             # Production Stripe secret key (sk_live_...)
+    stripe_publishable_key: ""        # Production Stripe publishable key (pk_live_...)
+    stripe_webhook_secret: ""         # Production Stripe webhook endpoint secret
+    cryptomus_api_key: ""             # Production Cryptomus API key
+    cryptomus_merchant_uuid: ""       # Production Cryptomus merchant UUID
 
 # === Admin Configuration ===
 admin_emails:

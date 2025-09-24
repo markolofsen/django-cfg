@@ -30,7 +30,7 @@ optional = true
 
 [tool.poetry.group.local.dependencies]
 # Local development dependencies
-django-cfg = {path = "../", develop = true}
+django-cfg = {path = "../../", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

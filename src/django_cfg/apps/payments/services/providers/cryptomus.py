@@ -13,7 +13,8 @@ from dataclasses import dataclass
 import requests
 from pydantic import BaseModel, Field, validator
 
-from .base import PaymentProvider, ProviderResponse, ProviderConfig
+from .base import PaymentProvider, ProviderResponse
+from ..internal_types import ProviderConfig
 
 logger = logging.getLogger(__name__)
 
