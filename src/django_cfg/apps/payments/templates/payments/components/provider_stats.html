@@ -1,11 +1,11 @@
 {% load payments_tags %}
 
 <!-- Provider Statistics Component -->
-<div class="provider-stats space-y-4">
+<div class="space-y-4">
     {% for stat in provider_stats %}
     <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
         <div class="flex items-center space-x-3">
-            <div class="provider-icon {{ stat.provider }}">
+            <div class="w-6 h-6 rounded {% if stat.provider == 'nowpayments' %}bg-orange-500{% elif stat.provider == 'cryptapi' %}bg-blue-500{% elif stat.provider == 'cryptomus' %}bg-purple-500{% elif stat.provider == 'stripe' %}bg-indigo-500{% else %}bg-gray-500{% endif %} flex items-center justify-center">
                 <span class="material-icons text-white text-sm">{{ stat.provider|payment_method_icon }}</span>
             </div>
             <div>

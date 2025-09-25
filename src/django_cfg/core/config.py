@@ -11,6 +11,7 @@ Following CRITICAL_REQUIREMENTS.md:
 from typing import Dict, List, Optional, Any, Union
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator, model_validator, PrivateAttr
+from enum import Enum
 import os
 from pathlib import Path
 from urllib.parse import urlparse
@@ -66,6 +67,18 @@ DEFAULT_APPS = [
 ]
 
 
+class EnvironmentMode(str, Enum):
+    """Environment mode enumeration."""
+    DEVELOPMENT = "development" 
+    PRODUCTION = "production"
+    TEST = "test"
+    
+    @classmethod
+    def from_debug(cls, debug: bool) -> "EnvironmentMode":
+        """Get environment mode from debug flag."""
+        return cls.DEVELOPMENT if debug else cls.PRODUCTION
+
+
 class DjangoConfig(BaseModel):
     """
     Base configuration class for Django projects.
@@ -104,6 +117,12 @@ class DjangoConfig(BaseModel):
         "validate_default": True,
         "str_strip_whitespace": True,
     }
+
+    # === Environment Configuration ===
+    env_mode: EnvironmentMode = Field(
+        default=EnvironmentMode.PRODUCTION,
+        description="Environment mode: development, production, or test",
+    )
 
     # === Project Information ===
     project_name: str = Field(
@@ -400,6 +419,22 @@ class DjangoConfig(BaseModel):
             raise ConfigurationError(f"Database routing references non-existent databases: {missing_databases}", context={"available_databases": list(self.databases.keys())}, suggestions=[f"Add database configurations for: {', '.join(missing_databases)}"])
 
         return self
+
+    # === Environment Mode Properties ===
+    @property
+    def is_development(self) -> bool:
+        """Check if running in development mode."""
+        return self.env_mode == EnvironmentMode.DEVELOPMENT
+
+    @property  
+    def is_production(self) -> bool:
+        """Check if running in production mode."""
+        return self.env_mode == EnvironmentMode.PRODUCTION
+
+    @property
+    def is_test(self) -> bool:
+        """Check if running in test mode."""
+        return self.env_mode == EnvironmentMode.TEST
 
     def _detect_environment(self) -> None:
         """Detect current environment from various sources."""

@@ -42,7 +42,8 @@ telegram:
 
 # === API Keys ===
 api_keys:
-  ngrok: ""
+  cloudflare_api_key: ""
+  ngrok_api_key: ""
   openrouter_api_key: ""  # Set via OPENROUTER_API_KEY env var
   openai_api_key: ""      # Set via OPENAI_API_KEY env var
   sendgrid_api_key: ""    # Set via SENDGRID_API_KEY env var for email OTP
@@ -76,10 +77,3 @@ redis_url: "redis://localhost:6379/0"
 
 # === Security ===
 ssl_redirect: false
-
-# === Environment Flags ===
-env:
-  is_docker: false
-  is_dev: true
-  is_prod: false
-  debug: true

@@ -1,0 +1,579 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payments_tags %}
+
+{% block header_title %}Create New Payment{% endblock %}
+{% block header_subtitle %}Set up a new payment transaction{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Payment Creation Form -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Details</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Configure the payment parameters</p>
+        </div>
+        
+        <form id="payment-form" class="p-6">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- User Selection -->
+                <div>
+                    <label for="user" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">
+                        User <span class="text-red-500">*</span>
+                    </label>
+                    <select id="user" name="user" required 
+                            class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">Select User</option>
+                        <!-- Users will be loaded dynamically -->
+                    </select>
+                </div>
+
+                <!-- Amount -->
+                <div>
+                    <label for="amount_usd" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">
+                        Amount (USD) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-font-subtle-light dark:text-font-subtle-dark">$</span>
+                        <input type="number" id="amount_usd" name="amount_usd" step="0.01" min="0.01" required
+                               placeholder="0.00"
+                               class="w-full pl-8 pr-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark placeholder-font-subtle-light dark:placeholder-font-subtle-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Provider Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-3">
+                    Payment Provider <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- CryptAPI -->
+                    <div class="relative">
+                        <input type="radio" id="cryptapi" name="provider" value="cryptapi" class="sr-only peer" required>
+                        <label for="cryptapi" class="flex flex-col items-center p-4 border-2 border-base-200 dark:border-base-700 rounded-default cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 peer-checked:border-orange-500 peer-checked:bg-orange-50 dark:peer-checked:bg-orange-900/20 transition-all duration-200">
+                            <div class="w-3 h-3 rounded-full bg-orange-500 mb-2"></div>
+                            <span class="text-sm font-medium text-font-important-light dark:text-font-important-dark">CryptAPI</span>
+                            <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">Bitcoin payments</span>
+                        </label>
+                    </div>
+
+                    <!-- Cryptomus -->
+                    <div class="relative">
+                        <input type="radio" id="cryptomus" name="provider" value="cryptomus" class="sr-only peer">
+                        <label for="cryptomus" class="flex flex-col items-center p-4 border-2 border-base-200 dark:border-base-700 rounded-default cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 transition-all duration-200">
+                            <div class="w-3 h-3 rounded-full bg-blue-500 mb-2"></div>
+                            <span class="text-sm font-medium text-font-important-light dark:text-font-important-dark">Cryptomus</span>
+                            <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">Multi-crypto</span>
+                        </label>
+                    </div>
+
+                    <!-- Stripe -->
+                    <div class="relative">
+                        <input type="radio" id="stripe" name="provider" value="stripe" class="sr-only peer">
+                        <label for="stripe" class="flex flex-col items-center p-4 border-2 border-base-200 dark:border-base-700 rounded-default cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 peer-checked:border-purple-500 peer-checked:bg-purple-50 dark:peer-checked:bg-purple-900/20 transition-all duration-200">
+                            <div class="w-3 h-3 rounded-full bg-purple-500 mb-2"></div>
+                            <span class="text-sm font-medium text-font-important-light dark:text-font-important-dark">Stripe</span>
+                            <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">Card payments</span>
+                        </label>
+                    </div>
+
+                    <!-- NowPayments -->
+                    <div class="relative">
+                        <input type="radio" id="nowpayments" name="provider" value="nowpayments" class="sr-only peer">
+                        <label for="nowpayments" class="flex flex-col items-center p-4 border-2 border-base-200 dark:border-base-700 rounded-default cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/20 transition-all duration-200">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mb-2"></div>
+                            <span class="text-sm font-medium text-font-important-light dark:text-font-important-dark">NowPayments</span>
+                            <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">Crypto gateway</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crypto-specific fields (shown when crypto provider is selected) -->
+            <div id="crypto-fields" class="hidden mb-6">
+                <div class="space-y-6">
+                    <!-- Currency & Network (Combined) -->
+                    <div>
+                        <label for="currency_code" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">
+                            Cryptocurrency & Network
+                        </label>
+                        <select id="currency_code" name="currency_code" required
+                                class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                            <option value="">Select Currency & Network</option>
+                            <!-- Currency options will be populated dynamically via JavaScript -->
+                        </select>
+                        
+                        <!-- Currency Info Display -->
+                        <div id="currency-info" class="mt-3 hidden">
+                            <div id="currency-details">
+                                <!-- Currency details will be populated via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optional Fields -->
+            <div class="mb-6">
+                <h4 class="text-md font-semibold text-font-important-light dark:text-font-important-dark mb-3">Optional Information</h4>
+                
+                <!-- Description -->
+                <div class="mb-4">
+                    <label for="description" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">
+                        Description
+                    </label>
+                    <textarea id="description" name="description" rows="3"
+                              placeholder="Payment description or notes..."
+                              class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark placeholder-font-subtle-light dark:placeholder-font-subtle-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500"></textarea>
+                </div>
+
+                <!-- Metadata -->
+                <div>
+                    <label for="metadata" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">
+                        Metadata (JSON)
+                    </label>
+                    <textarea id="metadata" name="metadata" rows="3"
+                              placeholder='{"order_id": "12345", "product": "Premium Plan"}'
+                              class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark placeholder-font-subtle-light dark:placeholder-font-subtle-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"></textarea>
+                    <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        Optional JSON metadata for the payment
+                    </p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-6 border-t border-base-200 dark:border-base-700">
+                <a href="{% url 'payments_dashboard:list' %}" 
+                   class="px-4 py-2 border border-base-300 dark:border-base-600 rounded-default text-font-default-light dark:text-font-default-dark hover:bg-base-50 dark:hover:bg-base-800 transition-colors duration-200">
+                    Cancel
+                </a>
+                
+                <div class="flex space-x-3">
+                    <button type="button" id="preview-btn"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-default font-medium transition-colors duration-200">
+                        Preview
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-default font-medium transition-colors duration-200">
+                        <span class="material-icons text-sm mr-2">add</span>
+                        Create Payment
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payment Preview (initially hidden) -->
+    <div id="payment-preview" class="hidden bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Preview</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Review payment details before creation</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-sm font-semibold text-font-important-light dark:text-font-important-dark mb-3">Payment Information</h4>
+                    <dl class="space-y-2">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">User:</dt>
+                            <dd id="preview-user" class="text-sm text-font-default-light dark:text-font-default-dark"></dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Amount:</dt>
+                            <dd id="preview-amount" class="text-sm font-semibold text-font-important-light dark:text-font-important-dark"></dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Provider:</dt>
+                            <dd id="preview-provider" class="text-sm text-font-default-light dark:text-font-default-dark"></dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Currency:</dt>
+                            <dd id="preview-currency" class="text-sm text-font-default-light dark:text-font-default-dark"></dd>
+                        </div>
+                    </dl>
+                </div>
+                
+                <div>
+                    <h4 class="text-sm font-semibold text-font-important-light dark:text-font-important-dark mb-3">Configuration</h4>
+                    <dl class="space-y-2">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Network:</dt>
+                            <dd id="preview-network" class="text-sm text-font-default-light dark:text-font-default-dark"></dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Status:</dt>
+                            <dd class="text-sm">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                    Pending
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            
+            <div id="preview-description-section" class="hidden mt-6">
+                <h4 class="text-sm font-semibold text-font-important-light dark:text-font-important-dark mb-2">Description</h4>
+                <p id="preview-description" class="text-sm text-font-default-light dark:text-font-default-dark bg-base-50 dark:bg-base-800 p-3 rounded-default border border-base-200 dark:border-base-700"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Quick Actions</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Common payment templates</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button type="button" class="quick-template p-4 border border-base-200 dark:border-base-700 rounded-default hover:bg-base-50 dark:hover:bg-base-800 transition-all duration-200" 
+                        data-amount="10.00" data-provider="cryptapi" data-currency="BTC" data-description="Test payment">
+                    <div class="text-center">
+                        <span class="material-icons text-orange-600 dark:text-orange-400 text-2xl mb-2 block">currency_bitcoin</span>
+                        <h4 class="text-sm font-semibold text-font-important-light dark:text-font-important-dark">Bitcoin Test</h4>
+                        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark">$10.00 BTC payment</p>
+                    </div>
+                </button>
+
+                <button type="button" class="quick-template p-4 border border-base-200 dark:border-base-700 rounded-default hover:bg-base-50 dark:hover:bg-base-800 transition-all duration-200"
+                        data-amount="25.00" data-provider="stripe" data-description="Card payment">
+                    <div class="text-center">
+                        <span class="material-icons text-purple-600 dark:text-purple-400 text-2xl mb-2 block">credit_card</span>
+                        <h4 class="text-sm font-semibold text-font-important-light dark:text-font-important-dark">Stripe Card</h4>
+                        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark">$25.00 card payment</p>
+                    </div>
+                </button>
+
+                <button type="button" class="quick-template p-4 border border-base-200 dark:border-base-700 rounded-default hover:bg-base-50 dark:hover:bg-base-800 transition-all duration-200"
+                        data-amount="50.00" data-provider="cryptomus" data-currency="ETH" data-description="Ethereum payment">
+                    <div class="text-center">
+                        <span class="material-icons text-blue-600 dark:text-blue-400 text-2xl mb-2 block">account_balance_wallet</span>
+                        <h4 class="text-sm font-semibold text-font-important-light dark:text-font-important-dark">Ethereum</h4>
+                        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark">$50.00 ETH payment</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Payment create form loaded');
+    
+    // Elements
+    const form = document.getElementById('payment-form');
+    const providerInputs = document.querySelectorAll('input[name="provider"]');
+    const cryptoFields = document.getElementById('crypto-fields');
+    const previewBtn = document.getElementById('preview-btn');
+    const paymentPreview = document.getElementById('payment-preview');
+    const quickTemplates = document.querySelectorAll('.quick-template');
+    
+    // Provider data loaded dynamically via AJAX
+    let providerCurrencies = {};
+    let currencyNetworks = {};
+    let allProvidersData = {};
+    
+    // AJAX endpoints
+    const ajaxUrls = {
+        providerCurrencies: "{% url 'payments_dashboard:provider_currencies_ajax' %}",
+        allProviders: "{% url 'payments_dashboard:all_providers_data_ajax' %}"
+    };
+    
+    // Show/hide crypto fields based on provider selection
+    providerInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const provider = this.value;
+            const isCrypto = ['cryptapi', 'cryptomus', 'nowpayments'].includes(provider);
+            cryptoFields.classList.toggle('hidden', !isCrypto);
+            
+            // Update currency options based on provider
+            updateCurrencyOptions(provider);
+        });
+    });
+    
+    async function updateCurrencyOptions(provider) {
+        const currencySelect = document.getElementById('currency_code');
+        
+        // Clear existing options
+        currencySelect.innerHTML = '<option value="">Loading currencies...</option>';
+        
+        try {
+            // Fetch currencies for this provider
+            const response = await fetch(`${ajaxUrls.providerCurrencies}?provider=${provider}`);
+            const data = await response.json();
+            
+            // New API format: object with currency_options array
+            if (data && data.success && Array.isArray(data.currency_options)) {
+                // Clear loading message
+                currencySelect.innerHTML = '<option value="">Select Currency & Network</option>';
+                
+                // Add supported currencies with networks combined
+                data.currency_options.forEach(currencyOption => {
+                    const option = document.createElement('option');
+                    option.value = currencyOption.provider_currency_code;
+                    option.textContent = currencyOption.display_name; // e.g., "USDT (Ethereum)"
+                    option.dataset.baseCode = currencyOption.base_currency_code;
+                    option.dataset.networkCode = currencyOption.network_code || '';
+                    option.dataset.type = currencyOption.currency_type;
+                    option.dataset.usdRate = currencyOption.usd_rate || 0;
+                    option.dataset.tokensPerUsd = currencyOption.tokens_per_usd || 0;
+                    option.dataset.isPopular = currencyOption.is_popular;
+                    option.dataset.isStable = currencyOption.is_stable;
+                    currencySelect.appendChild(option);
+                });
+                
+                // Store currencies data for this provider
+                providerCurrencies[provider] = data.currency_options;
+                
+                // Set default currency based on provider
+                if (data.currency_options.length > 0) {
+                    const defaultCurrency = getDefaultProviderCurrency(provider);
+                    const defaultOption = data.currency_options.find(c => c.provider_currency_code === defaultCurrency);
+                    if (defaultOption) {
+                        currencySelect.value = defaultCurrency;
+                        updateCurrencyInfo(defaultOption);
+                    }
+                }
+                
+                console.log(`Loaded ${data.currency_options.length} currency options for ${provider}`);
+            } else {
+                currencySelect.innerHTML = '<option value="">Error loading currencies</option>';
+                console.error(`Invalid API response format for ${provider}:`, data);
+            }
+        } catch (error) {
+            currencySelect.innerHTML = '<option value="">Error loading currencies</option>';
+            console.error(`Error fetching currencies for ${provider}:`, error);
+        }
+    }
+    
+    // New function to update currency info display
+    function updateCurrencyInfo(currencyOption) {
+        const currencyInfo = document.getElementById('currency-info');
+        const currencyDetails = document.getElementById('currency-details');
+        
+        if (currencyOption && currencyDetails) {
+            let infoHtml = `
+                <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                    <div class="grid grid-cols-2 gap-2 text-sm text-font-default-light dark:text-font-default-dark">
+                        <div><strong class="text-font-important-light dark:text-font-important-dark">Base Currency:</strong> ${currencyOption.base_currency_code}</div>
+                        <div><strong class="text-font-important-light dark:text-font-important-dark">Network:</strong> ${currencyOption.network_code || 'Native'}</div>
+                        <div><strong class="text-font-important-light dark:text-font-important-dark">Type:</strong> <span class="capitalize text-primary-600 dark:text-primary-400">${currencyOption.currency_type}</span></div>
+                        <div><strong class="text-font-important-light dark:text-font-important-dark">USD Rate:</strong> <span class="text-success-600 dark:text-success-400">$${parseFloat(currencyOption.usd_rate || 0).toFixed(8)}</span></div>
+                    </div>
+            `;
+            
+            if (currencyOption.is_stable) {
+                infoHtml += '<div class="mt-2"><span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success-100 dark:bg-success-900 text-success-800 dark:text-success-200">💰 Stable Coin</span></div>';
+            }
+            if (currencyOption.is_popular) {
+                infoHtml += '<div class="mt-2"><span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200">🚀 Popular</span></div>';
+            }
+            
+            infoHtml += '</div>';
+            currencyDetails.innerHTML = infoHtml;
+            currencyInfo.classList.remove('hidden');
+        } else if (currencyInfo) {
+            currencyInfo.classList.add('hidden');
+        }
+    }
+    
+    // Get provider defaults from Django context
+    const providerDefaults = {{ provider_defaults_json|safe }};
+    
+    // Update function to get default provider currency from context
+    function getDefaultProviderCurrency(provider) {
+        return providerDefaults[provider] || '';
+    }
+    
+    
+    // Currency change handler - updated for new architecture
+    document.getElementById('currency_code').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (selectedOption && selectedOption.value) {
+            // Get current provider
+            const providerInput = document.querySelector('input[name="provider"]:checked');
+            const provider = providerInput ? providerInput.value : '';
+            
+            // Find currency option data from stored provider currencies
+            if (providerCurrencies[provider]) {
+                const currencyOption = providerCurrencies[provider].find(
+                    c => c.provider_currency_code === selectedOption.value
+                );
+                if (currencyOption) {
+                    updateCurrencyInfo(currencyOption);
+                }
+            }
+        } else {
+            // Hide currency info if no selection
+            const currencyInfo = document.getElementById('currency-info');
+            if (currencyInfo) {
+                currencyInfo.classList.add('hidden');
+            }
+        }
+    });
+    
+    // Preview functionality
+    previewBtn.addEventListener('click', function() {
+        updatePreview();
+        paymentPreview.classList.remove('hidden');
+        paymentPreview.scrollIntoView({ behavior: 'smooth' });
+    });
+    
+    // Quick template functionality
+    quickTemplates.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const data = this.dataset;
+            
+            // Fill form with template data
+            document.getElementById('amount_usd').value = data.amount;
+            document.getElementById('description').value = data.description;
+            
+            // Select provider
+            const providerInput = document.querySelector(`input[name="provider"][value="${data.provider}"]`);
+            if (providerInput) {
+                providerInput.checked = true;
+                providerInput.dispatchEvent(new Event('change'));
+            }
+            
+            // Set currency if provided
+            if (data.currency) {
+                setTimeout(() => {
+                    document.getElementById('currency_code').value = data.currency;
+                }, 100);
+            }
+            
+            // Scroll to form
+            form.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate form
+        if (!validateForm()) {
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">refresh</span>Creating...';
+        submitBtn.disabled = true;
+        
+        // Collect form data
+        const formData = new FormData(form);
+        const paymentData = Object.fromEntries(formData);
+        
+        // Parse metadata if provided
+        if (paymentData.metadata) {
+            try {
+                paymentData.metadata = JSON.parse(paymentData.metadata);
+            } catch (e) {
+                alert('Invalid JSON in metadata field');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+        }
+        
+        console.log('Creating payment:', paymentData);
+        
+        // Simulate API call
+        setTimeout(() => {
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            
+            // Show success message
+            alert('Payment created successfully!');
+            
+            // Redirect to payment list
+            window.location.href = "{% url 'payments_dashboard:list' %}";
+        }, 2000);
+    });
+    
+    // Load users for dropdown
+    loadUsers();
+    
+    function updatePreview() {
+        const formData = new FormData(form);
+        
+        // Update preview fields
+        const userSelect = document.getElementById('user');
+        const selectedUser = userSelect.options[userSelect.selectedIndex];
+        document.getElementById('preview-user').textContent = selectedUser ? selectedUser.text : 'Not selected';
+        
+        document.getElementById('preview-amount').textContent = formData.get('amount_usd') ? `$${formData.get('amount_usd')}` : 'Not set';
+        document.getElementById('preview-provider').textContent = formData.get('provider') ? formData.get('provider').toUpperCase() : 'Not selected';
+        document.getElementById('preview-currency').textContent = formData.get('currency_code') || 'USD';
+        document.getElementById('preview-network').textContent = formData.get('network') || 'N/A';
+        
+        // Show/hide description section
+        const description = formData.get('description');
+        const descSection = document.getElementById('preview-description-section');
+        if (description) {
+            document.getElementById('preview-description').textContent = description;
+            descSection.classList.remove('hidden');
+        } else {
+            descSection.classList.add('hidden');
+        }
+    }
+    
+    function validateForm() {
+        const requiredFields = ['user', 'amount_usd', 'provider'];
+        
+        for (const field of requiredFields) {
+            const input = form.querySelector(`[name="${field}"]`);
+            if (!input || !input.value) {
+                alert(`Please fill in the ${field.replace('_', ' ')} field`);
+                input?.focus();
+                return false;
+            }
+        }
+        
+        // Validate crypto fields for crypto providers
+        const provider = form.querySelector('input[name="provider"]:checked')?.value;
+        if (['cryptapi', 'cryptomus', 'nowpayments'].includes(provider)) {
+            const currency = form.querySelector('[name="currency_code"]').value;
+            if (!currency) {
+                alert('Please select a cryptocurrency');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    function loadUsers() {
+        // Simulate loading users
+        const userSelect = document.getElementById('user');
+        const users = [
+            { id: 1, name: 'John Doe', email: 'john@example.com' },
+            { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
+            { id: 3, name: 'Admin User', email: 'admin@example.com' }
+        ];
+        
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.name} (${user.email})`;
+            userSelect.appendChild(option);
+        });
+    }
+});
+</script>
+{% endblock %}

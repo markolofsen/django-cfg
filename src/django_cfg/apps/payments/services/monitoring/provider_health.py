@@ -5,7 +5,7 @@ Monitors the health of all payment providers and provides
 fallback mechanisms when providers are unavailable.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 import time
 import asyncio
 import requests
@@ -22,7 +22,7 @@ from ..providers.registry import ProviderRegistry
 from ...models.events import PaymentEvent
 from .api_schemas import parse_provider_response
 
-logger = logging.getLogger(__name__)
+logger = get_logger("provider_health")
 
 
 class HealthStatus(Enum):

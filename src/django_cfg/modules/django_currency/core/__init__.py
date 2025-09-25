@@ -5,10 +5,7 @@ Core currency conversion functionality.
 from .models import (
     Rate,
     ConversionRequest,
-    ConversionResult,
-    YFinanceCurrencies,
-    CoinGeckoCurrencies,
-    SupportedCurrencies
+    ConversionResult
 )
 
 from .exceptions import (
@@ -26,9 +23,6 @@ __all__ = [
     'Rate',
     'ConversionRequest', 
     'ConversionResult',
-    'YFinanceCurrencies',
-    'CoinGeckoCurrencies',
-    'SupportedCurrencies',
     
     # Exceptions
     'CurrencyError',

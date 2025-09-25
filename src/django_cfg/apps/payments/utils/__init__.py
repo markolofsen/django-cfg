@@ -13,8 +13,7 @@ from .config_utils import (
     CacheConfigHelper, 
     ProviderConfigHelper,
     get_payments_config,
-    is_payments_enabled,
-    is_debug_mode
+    is_payments_enabled
 )
 
 __all__ = [
@@ -41,5 +40,4 @@ __all__ = [
     'ProviderConfigHelper', 
     'get_payments_config',
     'is_payments_enabled',
-    'is_debug_mode',
 ]

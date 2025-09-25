@@ -6,7 +6,7 @@ Critical Foundation Security Component.
 import json
 import hmac
 import hashlib
-import logging
+from django_cfg.modules.django_logger import get_logger
 import time
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
@@ -16,8 +16,9 @@ from django.conf import settings
 
 from django_cfg.apps.payments.config import get_payments_config
 from django_cfg.apps.payments.models.events import PaymentEvent
+from ...models.payments import UniversalPayment
 
-logger = logging.getLogger(__name__)
+logger = get_logger("webhook_validator")
 
 
 class WebhookValidator:
@@ -400,8 +401,6 @@ class WebhookValidator:
         
         CRITICAL: Prevents webhooks for unknown addresses.
         """
-        from ..models.payments import UniversalPayment
-        
         try:
             # Check if address exists in our payments
             return UniversalPayment.objects.filter(

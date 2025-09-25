@@ -76,7 +76,7 @@ class Command(BaseCommand):
         
         # Basic counts
         total = Currency.objects.count()
-        active = Currency.objects.filter(is_active=True).count()
+        active = Currency.objects.count()
         inactive = total - active
         
         fiat_count = Currency.objects.filter(currency_type=Currency.CurrencyType.FIAT).count()
@@ -84,11 +84,9 @@ class Command(BaseCommand):
         
         active_fiat = Currency.objects.filter(
             currency_type=Currency.CurrencyType.FIAT, 
-            is_active=True
         ).count()
         active_crypto = Currency.objects.filter(
             currency_type=Currency.CurrencyType.CRYPTO, 
-            is_active=True
         ).count()
         
         self.stdout.write(f"\n📈 Overview:")
@@ -119,7 +117,6 @@ class Command(BaseCommand):
         # Top cryptocurrencies by USD value
         top_crypto = Currency.objects.filter(
             currency_type=Currency.CurrencyType.CRYPTO,
-            is_active=True
         ).order_by('-usd_rate')[:options['top']]
         
         if top_crypto:
@@ -134,7 +131,6 @@ class Command(BaseCommand):
         major_fiat = Currency.objects.filter(
             currency_type=Currency.CurrencyType.FIAT,
             code__in=['USD', 'EUR', 'GBP', 'JPY', 'CNY'],
-            is_active=True
         ).order_by('code')
         
         if major_fiat:
@@ -162,12 +158,10 @@ class Command(BaseCommand):
         # Average rates by type
         crypto_avg = Currency.objects.filter(
             currency_type=Currency.CurrencyType.CRYPTO,
-            is_active=True
         ).aggregate(avg_rate=Avg('usd_rate'))['avg_rate']
         
         fiat_avg = Currency.objects.filter(
             currency_type=Currency.CurrencyType.FIAT,
-            is_active=True
         ).aggregate(avg_rate=Avg('usd_rate'))['avg_rate']
         
         self.stdout.write(f"\n📊 Average USD Rates:")
@@ -177,13 +171,8 @@ class Command(BaseCommand):
             self.stdout.write(f"   Fiat currencies: ${fiat_avg:.6f}")
         
         # Min payment amounts
-        min_payment_stats = Currency.objects.values('min_payment_amount').annotate(
-            count=Count('min_payment_amount')
-        ).order_by('min_payment_amount')[:5]
-        
-        self.stdout.write(f"\n💰 Top Min Payment Amounts:")
-        for stat in min_payment_stats:
-            self.stdout.write(f"   ${stat['min_payment_amount']}: {stat['count']} currencies")
+        # Note: min_payment_amount field was removed - now handled at provider level
+        self.stdout.write(f"\n💰 Payment amounts now managed at provider level (ProviderCurrency)")
         
         # Rate freshness distribution
         now = timezone.now()
@@ -219,7 +208,6 @@ class Command(BaseCommand):
         very_old_threshold = now - timedelta(days=30)
         very_old = Currency.objects.filter(
             Q(rate_updated_at__lt=very_old_threshold) | Q(rate_updated_at__isnull=True),
-            is_active=True
         )
         
         if very_old.exists():
@@ -237,7 +225,6 @@ class Command(BaseCommand):
         old_currencies = Currency.objects.filter(
             rate_updated_at__lt=old_threshold,
             rate_updated_at__gte=very_old_threshold,
-            is_active=True
         )
         
         if old_currencies.exists():
@@ -249,7 +236,6 @@ class Command(BaseCommand):
         fresh_threshold = now - timedelta(hours=24)
         fresh = Currency.objects.filter(
             rate_updated_at__gte=fresh_threshold,
-            is_active=True
         ).count()
         
         if fresh > 0:
@@ -258,7 +244,7 @@ class Command(BaseCommand):
             )
         
         # Recommendations
-        total_active = Currency.objects.filter(is_active=True).count()
+        total_active = Currency.objects.count()
         if very_old.count() > 0:
             self.stdout.write(f"\n💡 Recommendations:")
             self.stdout.write(f"   • Run: python manage.py update_currencies --force-update")
@@ -294,8 +280,7 @@ class Command(BaseCommand):
                 
                 # Header
                 writer.writerow([
-                    'code', 'name', 'symbol', 'currency_type', 'decimal_places',
-                    'usd_rate', 'min_payment_amount', 'is_active', 'rate_updated_at'
+                    'code', 'name', 'currency_type', 'usd_rate', 'rate_updated_at'
                 ])
                 
                 # Data
@@ -304,12 +289,8 @@ class Command(BaseCommand):
                     writer.writerow([
                         currency.code,
                         currency.name,
-                        currency.symbol,
                         currency.currency_type,
-                        currency.decimal_places,
                         currency.usd_rate,
-                        currency.min_payment_amount,
-                        currency.is_active,
                         currency.rate_updated_at.isoformat() if currency.rate_updated_at else None
                     ])
             

@@ -20,7 +20,8 @@ router.register(r'api-keys', views.APIKeyViewSet, basename='apikey')
 router.register(r'balances', views.UserBalanceViewSet, basename='balance')
 router.register(r'transactions', views.TransactionViewSet, basename='transaction')
 router.register(r'currencies', views.CurrencyViewSet, basename='currency')
-router.register(r'currency-networks', views.CurrencyNetworkViewSet, basename='currencynetwork')
+router.register(r'networks', views.NetworkViewSet, basename='network')
+router.register(r'provider-currencies', views.ProviderCurrencyViewSet, basename='providercurrency')
 router.register(r'endpoint-groups', views.EndpointGroupViewSet, basename='endpointgroup')
 router.register(r'tariffs', views.TariffViewSet, basename='tariff')
 router.register(r'tariff-endpoint-groups', views.TariffEndpointGroupViewSet, basename='tariffendpointgroup')
@@ -75,4 +76,5 @@ urlpatterns = [
     
     # Include generic API endpoints
     path('', include(generic_patterns)),
+    
 ]

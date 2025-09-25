@@ -8,7 +8,12 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .base import superuser_required, get_progress_percentage, log_view_access
-from ...models import UniversalPayment, PaymentEvent
+from ...models import UniversalPayment, PaymentEvent, Currency, Network, ProviderCurrency
+from ...services.providers.registry import get_provider_registry
+from ...services.internal_types import ProviderCurrencyOptionsResponse, CurrencyOptionModel
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger("ajax_views")
 
 
 @superuser_required
@@ -64,7 +69,7 @@ def payment_events_ajax(request, payment_id):
         # Log access for audit
         log_view_access('payment_events_ajax', request.user, payment_id=payment_id)
         
-        events = PaymentEvent.objects.filter(payment=payment).order_by('-created_at')
+        events = PaymentEvent.objects.filter(payment_id=payment.id).order_by('-created_at')
         
         events_data = []
         for event in events:
@@ -310,3 +315,137 @@ def _handle_refresh_payment(payment, user):
             'success': False,
             'message': f'Failed to refresh payment: {str(e)}'
         })
+
+
+@superuser_required
+def provider_currencies_ajax(request):
+    """AJAX endpoint for getting supported currencies by provider using new ProviderCurrency model."""
+    try:
+        provider_name = request.GET.get('provider')
+        if not provider_name:
+            return JsonResponse({'error': 'Provider parameter required'}, status=400)
+
+        # Log access for audit
+        log_view_access('provider_currencies_ajax', request.user, provider=provider_name)
+
+        # Get flat currency options using manager method
+        try:
+            currency_options_dicts = ProviderCurrency.objects.get_currency_options_for_provider(provider_name)
+            
+            # Convert dicts to Pydantic models for validation
+            currency_options = [CurrencyOptionModel(**option) for option in currency_options_dicts]
+            
+            # Create typed response
+            response_data = ProviderCurrencyOptionsResponse(
+                success=True,
+                provider=provider_name,
+                currency_options=currency_options,
+                count=len(currency_options)
+            )
+
+            return JsonResponse(response_data.model_dump())
+
+        except Exception as e:
+            logger.error(f"Error getting currencies for {provider_name}: {e}")
+            
+            # Create typed error response
+            error_response = ProviderCurrencyOptionsResponse(
+                success=False,
+                provider=provider_name,
+                currency_options=[],
+                count=0,
+                error=f'Failed to get currencies for {provider_name}: {str(e)}'
+            )
+            return JsonResponse(error_response.model_dump())
+
+    except Exception as e:
+        logger.error(f"Provider currencies AJAX error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# currency_networks_ajax removed - networks now included in provider_currencies_ajax
+
+
+@superuser_required
+def all_providers_data_ajax(request):
+    """AJAX endpoint for getting all providers with their currencies and capabilities."""
+    try:
+        # Log access for audit
+        log_view_access('all_providers_data_ajax', request.user)
+
+        # Get provider registry
+        registry = get_provider_registry()
+        all_providers = registry.list_providers()
+
+        providers_data = {}
+        
+        for provider_name in all_providers:
+            try:
+                provider_instance = registry.get_provider(provider_name)
+                
+                if provider_instance:
+                    # Get provider info
+                    provider_info = {
+                        'name': provider_name,
+                        'display_name': provider_name.title(),
+                        'enabled': provider_instance.enabled,
+                        'is_crypto': provider_name in ['nowpayments', 'cryptapi', 'cryptomus'],
+                        'supports_webhooks': hasattr(provider_instance, 'validate_webhook'),
+                        'currencies': [],
+                        'default_currency': None
+                    }
+
+                    # Get supported currencies from ProviderCurrency model
+                    try:
+                        provider_currencies = ProviderCurrency.objects.enabled_for_provider(provider_name).select_related(
+                            'base_currency'
+                        ).distinct('base_currency')[:10]  # Limit to first 10 for performance
+                        
+                        for pc in provider_currencies:
+                            provider_info['currencies'].append({
+                                'code': pc.base_currency.code,
+                                'name': pc.base_currency.name,
+                                'type': pc.base_currency.currency_type
+                            })
+                        
+                        # Set default currency
+                        if provider_info['currencies']:
+                            defaults = {
+                                'cryptapi': 'BTC',
+                                'cryptomus': 'USDT',
+                                'nowpayments': 'BTC',
+                                'stripe': 'USD'
+                            }
+                            default_code = defaults.get(provider_name)
+                            if default_code and any(c['code'] == default_code for c in provider_info['currencies']):
+                                provider_info['default_currency'] = default_code
+                            else:
+                                provider_info['default_currency'] = provider_info['currencies'][0]['code']
+
+                    except Exception as e:
+                        provider_info['error'] = f'Failed to load currencies: {str(e)}'
+
+                    providers_data[provider_name] = provider_info
+
+                else:
+                    providers_data[provider_name] = {
+                        'name': provider_name,
+                        'enabled': False,
+                        'error': 'Provider instance not available'
+                    }
+
+            except Exception as e:
+                providers_data[provider_name] = {
+                    'name': provider_name,
+                    'enabled': False,
+                    'error': str(e)
+                }
+
+        return JsonResponse({
+            'success': True,
+            'providers': providers_data,
+            'count': len(providers_data)
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

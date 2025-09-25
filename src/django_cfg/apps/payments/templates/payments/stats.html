@@ -1,0 +1,261 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payments_tags %}
+
+{% block header_title %}Payment Analytics{% endblock %}
+{% block header_subtitle %}Comprehensive payment system statistics and insights{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-blue-600 dark:text-blue-400 text-3xl">payments</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Total Payments</p>
+                    <p class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ stats.total_payments|default:"0" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-green-600 dark:text-green-400 text-3xl">check_circle</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Completed</p>
+                    <p class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ stats.completed_payments|default:"0" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-yellow-600 dark:text-yellow-400 text-3xl">pending</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Pending</p>
+                    <p class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ stats.pending_payments|default:"0" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-purple-600 dark:text-purple-400 text-3xl">attach_money</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-font-subtle-light dark:text-font-subtle-dark">Total Volume</p>
+                    <p class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">${{ stats.total_volume|default:"0.00"|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Payment Volume Chart -->
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+            <div class="p-6 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Volume Trend</h3>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Last 30 days</p>
+            </div>
+            <div class="p-6">
+                <div class="h-64 bg-base-50 dark:bg-base-800 rounded-default border border-base-200 dark:border-base-700 flex items-center justify-center">
+                    <div class="text-center">
+                        <span class="material-icons text-font-subtle-light dark:text-font-subtle-dark text-4xl mb-2">bar_chart</span>
+                        <p class="text-font-subtle-light dark:text-font-subtle-dark">Chart will be rendered here</p>
+                        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">JavaScript charting library integration</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Distribution -->
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+            <div class="p-6 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Status Distribution</h3>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Current status breakdown</p>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for status, count in status_distribution.items %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full mr-3 {% if status == 'completed' %}bg-green-500{% elif status == 'pending' %}bg-yellow-500{% elif status == 'failed' %}bg-red-500{% else %}bg-gray-500{% endif %}"></div>
+                            <span class="text-font-default-light dark:text-font-default-dark capitalize">{{ status }}</span>
+                        </div>
+                        <span class="text-font-important-light dark:text-font-important-dark font-semibold">{{ count|default:"0" }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-font-subtle-light dark:text-font-subtle-dark text-center py-4">No payment data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Statistics -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Provider Performance</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Payment provider comparison</p>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="border-b border-base-200 dark:border-base-700">
+                            <th class="text-left py-3 text-font-important-light dark:text-font-important-dark font-semibold">Provider</th>
+                            <th class="text-left py-3 text-font-important-light dark:text-font-important-dark font-semibold">Total Payments</th>
+                            <th class="text-left py-3 text-font-important-light dark:text-font-important-dark font-semibold">Success Rate</th>
+                            <th class="text-left py-3 text-font-important-light dark:text-font-important-dark font-semibold">Volume</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for provider in provider_stats %}
+                        <tr class="border-b border-base-200 dark:border-base-700">
+                            <td class="py-3">
+                                <div class="flex items-center">
+                                    <span class="w-2 h-2 rounded-full mr-3 {% if provider.name == 'cryptapi' %}bg-orange-500{% elif provider.name == 'cryptomus' %}bg-blue-500{% elif provider.name == 'stripe' %}bg-purple-500{% else %}bg-gray-500{% endif %}"></span>
+                                    <span class="text-font-default-light dark:text-font-default-dark font-medium capitalize">{{ provider.name|default:"Unknown" }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 text-font-default-light dark:text-font-default-dark">{{ provider.total_payments|default:"0" }}</td>
+                            <td class="py-3">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                    {% if provider.success_rate >= 95 %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% elif provider.success_rate >= 85 %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                                    {{ provider.success_rate|default:"0"|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td class="py-3 text-font-default-light dark:text-font-default-dark">${{ provider.volume|default:"0.00"|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-font-subtle-light dark:text-font-subtle-dark">
+                                No provider data available
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Processing Times -->
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+            <div class="p-6 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Processing Performance</h3>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Payment processing times</p>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-font-default-light dark:text-font-default-dark">Average Processing Time</span>
+                        <span class="text-font-important-light dark:text-font-important-dark font-semibold">{{ performance_metrics.avg_processing_time_formatted|default:"N/A" }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-font-default-light dark:text-font-default-dark">Fastest Processing</span>
+                        <span class="text-font-important-light dark:text-font-important-dark font-semibold">{{ performance_metrics.min_processing_time_formatted|default:"N/A" }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-font-default-light dark:text-font-default-dark">Slowest Processing</span>
+                        <span class="text-font-important-light dark:text-font-important-dark font-semibold">{{ performance_metrics.max_processing_time_formatted|default:"N/A" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+            <div class="p-6 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Recent Activity</h3>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Latest payment events</p>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3">
+                    {% for payment in recent_payments %}
+                    <div class="flex items-center justify-between p-3 bg-base-50 dark:bg-base-800 rounded-default border border-base-200 dark:border-base-700">
+                        <div class="flex items-center">
+                            <span class="material-icons text-sm mr-3 
+                                {% if payment.status == 'completed' %}text-green-600 dark:text-green-400{% elif payment.status == 'pending' %}text-yellow-600 dark:text-yellow-400{% elif payment.status == 'failed' %}text-red-600 dark:text-red-400{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+                                {% if payment.status == 'completed' %}check_circle{% elif payment.status == 'pending' %}pending{% elif payment.status == 'failed' %}error{% else %}help{% endif %}
+                            </span>
+                            <div>
+                                <p class="text-sm font-medium text-font-important-light dark:text-font-important-dark">${{ payment.amount_usd|floatformat:2 }}</p>
+                                <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ payment.provider|capfirst }} • {{ payment.currency_code }}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ payment.created_at|timesince }} ago</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-font-subtle-light dark:text-font-subtle-dark text-center py-4">No recent payments</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export and Actions -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Analytics Actions</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Export data and manage analytics</p>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-wrap gap-3">
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">file_download</span>
+                    Export CSV
+                </button>
+                <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">table_chart</span>
+                    Export Excel
+                </button>
+                <button class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">picture_as_pdf</span>
+                    Generate Report
+                </button>
+                <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">refresh</span>
+                    Refresh Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Payment analytics loaded');
+    
+    // Real-time updates would be implemented here
+    // Chart.js or similar charting library integration
+    
+    // Add click handlers for export buttons
+    document.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.textContent.includes('Export') || this.textContent.includes('Generate')) {
+                console.log('Export action:', this.textContent);
+                // Export functionality would be implemented here
+            } else if (this.textContent.includes('Refresh')) {
+                console.log('Refreshing analytics data...');
+                // Refresh functionality would be implemented here
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

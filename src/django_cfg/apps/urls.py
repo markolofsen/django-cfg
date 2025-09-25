@@ -46,14 +46,14 @@ def get_django_cfg_urlpatterns() -> List[URLPattern]:
         
         # Tasks app - enabled when knowbase or agents are enabled
         if base_module.should_enable_tasks():
-            patterns.append(path('tasks/', include('django_cfg.apps.tasks.urls')))
+            patterns.append(path('admin/django_cfg_tasks/admin/', include('django_cfg.apps.tasks.urls_admin')))
         
         # Maintenance app - multi-site maintenance mode with Cloudflare
-        if base_module.is_maintenance_enabled():
-            patterns.append(path('maintenance/', include('django_cfg.apps.maintenance.urls')))
+        # if base_module.is_maintenance_enabled():
+        #     patterns.append(path('admin/django_cfg_maintenance/', include('django_cfg.apps.maintenance.urls_admin')))
 
         if base_module.is_payments_enabled():
-            patterns.append(path('payments/admin/', include('django_cfg.apps.payments.urls_templates')))
+            patterns.append(path('admin/django_cfg_payments/admin/', include('django_cfg.apps.payments.urls_admin')))
             
     except Exception:
         # Fallback: include all URLs if config is not available

@@ -4,21 +4,22 @@ Critical Foundation Security Component.
 """
 
 import json
-import logging
+from django_cfg.modules.django_logger import get_logger
 import traceback
 from typing import Dict, Any, Optional, Union, Type
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.conf import settings
-from .payment_notifications import payment_notifications
 from django.core.cache import cache
+from django.db.models import Count
 
-from ..models.events import PaymentEvent
+from .payment_notifications import payment_notifications
+from ...models.events import PaymentEvent
 
-logger = logging.getLogger(__name__)
+logger = get_logger("error_handler")
 
 
 class ErrorSeverity(Enum):
@@ -592,9 +593,6 @@ class CentralizedErrorHandler:
     
     def get_error_statistics(self, hours: int = 24) -> Dict[str, Any]:
         """Get error statistics for monitoring dashboard."""
-        
-        from datetime import timedelta
-        from django.db.models import Count
         
         since = timezone.now() - timedelta(hours=hours)
         

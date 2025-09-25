@@ -1,0 +1,50 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block result_list %}
+    <!-- Currency Statistics Dashboard - Unfold Semantic Colors -->
+    <div class="bg-white border border-base-200 dark:bg-base-900 dark:border-base-700 p-4 rounded-default mb-4">
+        <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark mb-3">📊 Currency Overview</h3>
+        
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="text-center bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <p class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ total_currencies }}</p>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Total Currencies</p>
+            </div>
+            <div class="text-center bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <p class="text-2xl font-bold text-success-600 dark:text-success-400">{{ enabled_provider_currencies }}</p>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Provider Mappings</p>
+            </div>
+            <div class="text-center bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <p class="text-2xl font-bold text-warning-600 dark:text-warning-400">{{ currencies_with_rates }}</p>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">With USD Rates</p>
+            </div>
+            <div class="text-center bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <p class="text-2xl font-bold text-info-600 dark:text-info-400">{{ rate_coverage|floatformat:1 }}%</p>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Rate Coverage</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">Currency Types</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>💵 Fiat: <span class="font-medium text-primary-600 dark:text-primary-400">{{ fiat_count }}</span></li>
+                    <li>₿ Crypto: <span class="font-medium text-warning-600 dark:text-warning-400">{{ crypto_count }}</span></li>
+                </ul>
+            </div>
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">🚀 Top Supported</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    {% for currency in top_currencies %}
+                        <li><span class="font-semibold text-primary-600 dark:text-primary-400">{{ currency.code }}:</span> {{ currency.provider_count }} providers</li>
+                    {% empty %}
+                        <li class="text-font-subtle-light dark:text-font-subtle-dark">No provider data available</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {{ block.super }}
+{% endblock %}

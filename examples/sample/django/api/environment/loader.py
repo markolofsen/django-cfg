@@ -8,8 +8,9 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from pydantic_yaml import parse_yaml_file_as
+from enum import Enum
 
 # Environment detection
 IS_DEV = os.environ.get("IS_DEV", "").lower() in ("true", "1", "yes")
@@ -20,6 +21,8 @@ DEBUG = os.environ.get("DEBUG", "").lower() in ("true", "1", "yes")
 # Default to development if not explicitly set
 if not any([IS_DEV, IS_PROD, IS_TEST]):
     IS_DEV = True
+
+
 
 
 class DatabaseConfig(BaseModel):
@@ -78,7 +81,8 @@ class PaymentsConfig(BaseModel):
 class ApiKeysConfig(BaseModel):
     """API keys configuration."""
     
-    ngrok: str = ""
+    ngrok_api_key: str = ""
+    cloudflare_api_key: str = ""
     openrouter_api_key: str = ""
     openai_api_key: str = ""
     sendgrid_api_key: str = ""
@@ -97,13 +101,26 @@ class AppConfig(BaseModel):
     ticket_url: str = "http://localhost:3000/support/ticket/{uuid}"
     otp_url: str = "http://localhost:3000/auth/otp/{code}"
 
-class EnvironmentFlags(BaseModel):
-    """Environment flags."""
+
+class EnvironmentMode(BaseModel):
+    """Environment mode."""
     
-    is_docker: bool = False
-    is_dev: bool = True
-    is_prod: bool = False
-    debug: bool = True
+    is_test: bool = IS_TEST
+    is_dev: bool = IS_DEV
+    is_prod: bool = IS_PROD
+
+    @computed_field
+    @property
+    def env_mode(self) -> str:
+        """Environment mode."""
+        if self.is_test:
+            return "test"
+        elif self.is_dev:
+            return "development"
+        elif self.is_prod:
+            return "production"
+        else:
+            return "development"
 
 
 class EnvironmentConfig(BaseModel):
@@ -123,7 +140,7 @@ class EnvironmentConfig(BaseModel):
     api_keys: ApiKeysConfig = Field(default_factory=ApiKeysConfig)
     twilio: TwilioConfig = Field(default_factory=TwilioConfig)
     app: AppConfig = Field(default_factory=AppConfig)
-    env: EnvironmentFlags = Field(default_factory=EnvironmentFlags)
+    env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     
     # Cache
     redis_url: Optional[str] = None

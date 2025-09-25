@@ -7,11 +7,137 @@ DO NOT duplicate Django ORM or DRF! Only for:
 3. Configuration (settings and parameters)
 """
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, computed_field
 from decimal import Decimal
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from enum import Enum
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger("internal_types")
+
+
+
+
+# =============================================================================
+# UNIVERSAL CURRENCY MODEL - for provider → base communication
+# =============================================================================
+
+class UniversalCurrency(BaseModel):
+    """Universal currency model that all providers should return."""
+    model_config = ConfigDict(validate_assignment=True, extra="allow")
+    
+    # Core identification
+    provider_currency_code: str = Field(..., description="Original provider code: USDTERC20, USDTBSC, BTC")
+    base_currency_code: str = Field(..., description="Parsed base currency: USDT, BTC")
+    network_code: Optional[str] = Field(None, description="Parsed network: ethereum, bsc, bitcoin")
+    
+    # Display info
+    name: str = Field(..., description="Human readable name")
+    currency_type: str = Field(default="crypto", description="fiat or crypto")
+    
+    # Provider flags
+    is_enabled: bool = Field(default=True, description="Available for use")
+    is_popular: bool = Field(default=False, description="Popular currency")
+    is_stable: bool = Field(default=False, description="Stablecoin")
+    priority: int = Field(default=0, description="Display priority")
+    
+    # URLs and assets
+    logo_url: str = Field(default="", description="Logo URL")
+    
+    # Limits and availability  
+    available_for_payment: bool = Field(default=True, description="Can receive payments")
+    available_for_payout: bool = Field(default=True, description="Can send payouts")
+    min_amount: Optional[float] = Field(None, description="Minimum amount")
+    max_amount: Optional[float] = Field(None, description="Maximum amount")
+    
+    # Raw provider data
+    raw_data: Dict[str, Any] = Field(default_factory=dict, description="Original provider response")
+
+
+class UniversalCurrenciesResponse(BaseModel):
+    """Universal response with parsed currencies."""
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+    
+    currencies: List[UniversalCurrency] = Field(..., description="Parsed currencies")
+
+
+# =============================================================================
+# SYNCHRONIZATION RESULTS - Typed sync operation results
+# =============================================================================
+
+class ProviderSyncResult(BaseModel):
+    """Result of provider synchronization operation."""
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+    
+    # Currencies operations
+    currencies_created: int = Field(default=0, description="Number of new currencies created")
+    currencies_updated: int = Field(default=0, description="Number of existing currencies updated")
+    
+    # Networks operations  
+    networks_created: int = Field(default=0, description="Number of new networks created")
+    networks_updated: int = Field(default=0, description="Number of existing networks updated")
+    
+    # Provider currencies operations
+    provider_currencies_created: int = Field(default=0, description="Number of new provider currencies created")
+    provider_currencies_updated: int = Field(default=0, description="Number of existing provider currencies updated")
+    
+    # Error tracking
+    errors: List[str] = Field(default_factory=list, description="List of errors encountered during sync")
+    
+    @property
+    def total_items_processed(self) -> int:
+        """Get total number of items processed."""
+        return (
+            self.currencies_created + self.currencies_updated +
+            self.networks_created + self.networks_updated +
+            self.provider_currencies_created + self.provider_currencies_updated
+        )
+    
+    @property
+    def success(self) -> bool:
+        """Check if sync completed without errors."""
+        return len(self.errors) == 0
+    
+    @property
+    def has_changes(self) -> bool:
+        """Check if any changes were made."""
+        return self.total_items_processed > 0
+
+
+# AJAX Response Types
+class CurrencyOptionModel(BaseModel):
+    """Single currency option for UI select dropdown."""
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+    
+    provider_currency_code: str = Field(..., description="Provider-specific currency code")
+    display_name: str = Field(..., description="Human-readable display name")
+    base_currency_code: str = Field(..., description="Normalized base currency code")
+    base_currency_name: str = Field(..., description="Base currency full name")
+    network_code: Optional[str] = Field(None, description="Network code if applicable")
+    network_name: Optional[str] = Field(None, description="Network full name if applicable")
+    currency_type: str = Field(..., description="Currency type: crypto or fiat")
+    is_popular: bool = Field(default=False, description="Is this a popular currency")
+    is_stable: bool = Field(default=False, description="Is this a stablecoin")
+    available_for_payment: bool = Field(default=True, description="Available for payments")
+    available_for_payout: bool = Field(default=True, description="Available for payouts")
+    min_amount: Optional[str] = Field(None, description="Minimum amount as string")
+    max_amount: Optional[str] = Field(None, description="Maximum amount as string")
+    logo_url: Optional[str] = Field(None, description="Currency logo URL")
+    # Exchange rates
+    usd_rate: float = Field(default=0.0, description="1 CURRENCY = X USD")
+    tokens_per_usd: float = Field(default=0.0, description="How many tokens for 1 USD")
+
+
+class ProviderCurrencyOptionsResponse(BaseModel):
+    """Response for provider currency options API."""
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+    
+    success: bool = Field(..., description="API call success status")
+    provider: str = Field(..., description="Provider name")
+    currency_options: List[CurrencyOptionModel] = Field(default_factory=list, description="Available currency options")
+    count: int = Field(..., description="Number of currency options")
+    error: Optional[str] = Field(None, description="Error message if any")
 
 
 # =============================================================================
@@ -30,12 +156,28 @@ class ProviderResponse(BaseModel):
     pay_address: Optional[str] = None
     status: Optional[str] = None
     error_message: Optional[str] = None
+    data: Dict[str, Any] = Field(default_factory=dict)
+    
     # Legacy fields for backward compatibility with tests
     amount: Optional[Decimal] = None
     currency: Optional[str] = None
     payment_id: Optional[str] = None
     payment_status: Optional[str] = None
     currency_code: Optional[str] = None
+
+
+class PaymentAmountEstimate(BaseModel):
+    """Universal payment amount estimation response"""
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+    
+    currency_from: str = Field(description="Source currency code")
+    currency_to: str = Field(description="Target currency code") 
+    amount_from: Decimal = Field(gt=0, description="Source amount")
+    estimated_amount: Decimal = Field(gt=0, description="Estimated target amount")
+    fee_amount: Optional[Decimal] = Field(None, ge=0, description="Provider fee amount")
+    exchange_rate: Optional[Decimal] = Field(None, gt=0, description="Exchange rate used")
+    provider_name: str = Field(description="Provider that made the estimation")
+    estimated_at: Optional[datetime] = Field(None, description="When estimation was made")
 
 
 class WebhookData(BaseModel):
@@ -114,14 +256,36 @@ class RedisConfig(BaseModel):
 
 
 class ProviderConfig(BaseModel):
-    """Base provider configuration"""
-    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+    """Base provider configuration with automatic sandbox detection"""
+    model_config = ConfigDict(validate_assignment=True, extra="allow")  # Allow extra fields for flexibility
     
     enabled: bool = True
     api_key: str
-    sandbox: bool = False
-    timeout_seconds: int = 30
+    timeout_seconds: int = Field(default=30, alias='timeout', description="Request timeout in seconds")
     max_retries: int = 3
+    
+    @computed_field
+    @property
+    def sandbox(self) -> bool:
+        """Get sandbox mode from django-cfg config."""
+        try:
+            from django_cfg.core.config import get_current_config
+            current_config = get_current_config()
+            
+            if current_config:
+                # Check env_mode first
+                if hasattr(current_config, 'env_mode'):
+                    env_mode = current_config.env_mode
+                    if isinstance(env_mode, str):
+                        return env_mode.lower() in ['development', 'dev', 'test']
+                
+                # Fallback to debug flag
+                if hasattr(current_config, 'debug'):
+                    return current_config.debug
+            
+            return True  # Default to sandbox for safety
+        except Exception:
+            return True
 
 
 # =============================================================================

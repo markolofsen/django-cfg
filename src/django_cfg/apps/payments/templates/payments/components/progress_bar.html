@@ -1,12 +1,15 @@
 {% load payments_tags %}
 
 <!-- Payment Progress Bar Component -->
-<div class="payment-progress-container">
+<div>
     <!-- Progress Steps (Hidden on mobile) -->
-    <div class="progress-steps hidden md:flex">
+    <div class="hidden md:flex justify-between items-center mb-4">
         {% for step in payment|payment_progress_steps %}
-            <div class="progress-step {% if step.completed %}completed{% endif %} {% if step.active %}active{% endif %}">
-                <div class="step-icon {% if step.completed %}completed{% elif step.active %}active{% endif %}">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-8 h-8 flex items-center justify-center rounded-full border-2 mb-2
+                    {% if step.completed %}border-green-500 bg-green-500 text-white
+                    {% elif step.active %}border-blue-500 bg-blue-500 text-white
+                    {% else %}border-gray-300 dark:border-gray-600{% endif %}">
                     {% if step.completed %}
                         <span class="material-icons text-sm">check</span>
                     {% elif step.active %}
@@ -15,14 +18,18 @@
                         <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
                     {% endif %}
                 </div>
-                <div class="step-label">{{ step.label }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ step.label }}</div>
             </div>
         {% endfor %}
     </div>
     
     <!-- Progress Bar -->
-    <div class="progress-bar mt-4 md:mt-0">
-        <div class="progress-fill {% if payment.status == 'completed' %}success{% elif payment.status == 'failed' %}danger{% elif payment.status == 'pending' %}warning{% endif %}" 
+    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-4 md:mt-0">
+        <div class="h-2 rounded-full transition-all duration-500 ease-out
+            {% if payment.status == 'completed' %}bg-green-600
+            {% elif payment.status == 'failed' %}bg-red-600
+            {% elif payment.status == 'pending' %}bg-yellow-600
+            {% else %}bg-blue-600{% endif %}" 
              style="width: {{ payment|payment_progress_percentage }}%"
              data-percentage="{{ payment|payment_progress_percentage }}">
         </div>

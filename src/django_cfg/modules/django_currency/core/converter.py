@@ -5,9 +5,9 @@ Main currency converter with intelligent routing.
 import logging
 from typing import Optional
 
-from .models import Rate, ConversionRequest, ConversionResult, SupportedCurrencies, YFinanceCurrencies, CoinGeckoCurrencies
+from .models import Rate, ConversionRequest, ConversionResult
 from .exceptions import ConversionError, CurrencyNotFoundError
-from ..clients import YFinanceClient, CoinGeckoClient
+from ..clients import YahooFinanceClient, CoinPaprikaClient
 from ..utils.cache import CacheManager
 
 logger = logging.getLogger(__name__)
@@ -23,8 +23,8 @@ class CurrencyConverter:
         Args:
             cache_ttl: Cache TTL in seconds
         """
-        self.yfinance = YFinanceClient()
-        self.coingecko = CoinGeckoClient()
+        self.yahoo = YahooFinanceClient(cache_ttl=cache_ttl)
+        self.coinpaprika = CoinPaprikaClient(cache_ttl=cache_ttl)
         self.cache = CacheManager(ttl=cache_ttl)
         
     def convert(self, amount: float, from_currency: str, to_currency: str) -> ConversionResult:
@@ -95,28 +95,28 @@ class CurrencyConverter:
             CurrencyNotFoundError: If no provider supports the pair
         """
         # Try cache first
-        for source in ["yfinance", "coingecko"]:
+        for source in ["yahoo", "coinpaprika"]:
             cached_rate = self.cache.get_rate(base, quote, source)
             if cached_rate:
                 return cached_rate
         
-        # Try YFinance first (good for fiat and major crypto)
-        if self.yfinance.supports_pair(base, quote):
+        # Try CoinPaprika first (excellent for crypto, no rate limits)
+        if self.coinpaprika.supports_pair(base, quote):
             try:
-                rate = self.yfinance.fetch_rate(base, quote)
+                rate = self.coinpaprika.fetch_rate(base, quote)
                 self.cache.set_rate(rate)
                 return rate
             except Exception as e:
-                logger.warning(f"YFinance failed for {base}/{quote}: {e}")
+                logger.warning(f"CoinPaprika failed for {base}/{quote}: {e}")
         
-        # Try CoinGecko (good for crypto)
-        if self.coingecko.supports_pair(base, quote):
+        # Try Yahoo Finance next (good for fiat and major forex pairs)
+        if self.yahoo.supports_pair(base, quote):
             try:
-                rate = self.coingecko.fetch_rate(base, quote)
+                rate = self.yahoo.fetch_rate(base, quote)
                 self.cache.set_rate(rate)
                 return rate
             except Exception as e:
-                logger.warning(f"CoinGecko failed for {base}/{quote}: {e}")
+                logger.warning(f"Yahoo Finance failed for {base}/{quote}: {e}")
         
         # Try indirect conversion via USD
         if base != "USD" and quote != "USD":
@@ -156,14 +156,9 @@ class CurrencyConverter:
             rate=combined_rate
         )
     
-    def get_supported_currencies(self) -> SupportedCurrencies:
+    def get_supported_currencies(self) -> dict:
         """Get list of supported currencies by provider."""
-        return SupportedCurrencies(
-            yfinance=YFinanceCurrencies(
-                fiat=list(self.yfinance.get_fiat_currencies())
-            ),
-            coingecko=CoinGeckoCurrencies(
-                crypto=list(self.coingecko.get_crypto_ids().keys()),
-                vs_currencies=list(self.coingecko.get_vs_currencies())
-            )
-        )
+        return {
+            "yahoo": self.yahoo.get_all_supported_currencies(),
+            "coinpaprika": self.coinpaprika.get_all_supported_currencies()
+        }

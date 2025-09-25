@@ -10,12 +10,12 @@ from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
-import logging
+from django_cfg.modules.django_logger import get_logger
 
 from ..models import APIKey
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+logger = get_logger("api_key_signals")
 
 
 @receiver(post_save, sender=User)

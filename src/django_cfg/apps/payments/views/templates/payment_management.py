@@ -4,6 +4,7 @@ Payment management views.
 Provides list, create, and management functionality for payments.
 """
 
+import json
 from django.views.generic import TemplateView, ListView
 from .base import (
     SuperuserRequiredMixin,
@@ -11,7 +12,8 @@ from .base import (
     PaymentContextMixin,
     log_view_access
 )
-from ...models import UniversalPayment
+from ...models import UniversalPayment, Currency, PaymentProvider
+from ...services.providers.registry import ProviderRegistry
 
 
 class PaymentCreateView(
@@ -46,9 +48,20 @@ class PaymentCreateView(
         # Get common context
         common_context = self.get_common_context()
         
+        # Provider enum with defaults (serialize to JSON for JavaScript)
+        provider_defaults = {
+            PaymentProvider.NOWPAYMENTS.value: 'USDTTRC20',
+            PaymentProvider.CRYPTAPI.value: 'BTC', 
+            PaymentProvider.CRYPTOMUS.value: 'USDTTRC20',
+            PaymentProvider.STRIPE.value: 'USD'
+        }
+        provider_defaults_json = json.dumps(provider_defaults)
+        
         context.update({
             'providers': providers,
             'currencies': currencies,
+            'provider_enum': PaymentProvider,
+            'provider_defaults_json': provider_defaults_json,
             'default_amount': 10.0,  # Default test amount
             **common_context
         })
@@ -56,44 +69,27 @@ class PaymentCreateView(
         return context
     
     def _get_available_providers(self):
-        """Get list of available payment providers."""
-        try:
-            from ...services.providers.registry import ProviderRegistry
-            providers = []
-            for provider_name, provider_class in ProviderRegistry.get_all_providers().items():
-                providers.append({
-                    'name': provider_name,
-                    'display_name': provider_name.title(),
-                    'is_crypto': provider_name in ['nowpayments', 'cryptapi', 'cryptomus'],
-                    'description': getattr(provider_class, '__doc__', ''),
-                })
-            return providers
-        except Exception:
-            # Fallback if registry is not available
-            return [
-                {'name': 'nowpayments', 'display_name': 'NowPayments', 'is_crypto': True},
-                {'name': 'cryptapi', 'display_name': 'CryptAPI', 'is_crypto': True},
-                {'name': 'cryptomus', 'display_name': 'Cryptomus', 'is_crypto': True},
-                {'name': 'stripe', 'display_name': 'Stripe', 'is_crypto': False},
-            ]
+        """Get list of available payment providers from registry."""
+        registry = ProviderRegistry()
+        provider_names = registry.list_providers()
+        
+        providers = []
+        for provider_name in provider_names:
+            provider_instance = registry.get_provider(provider_name)
+            providers.append({
+                'name': provider_name,
+                'display_name': provider_name.title(),
+                'is_crypto': provider_name in ['nowpayments', 'cryptapi', 'cryptomus'],
+                'description': getattr(provider_instance.__class__, '__doc__', '') if provider_instance else '',
+            })
+        return providers
     
     def _get_available_currencies(self):
-        """Get list of available currencies."""
-        from ...models import Currency
-        
-        try:
-            # Get currencies from database
-            currencies = Currency.objects.filter(is_active=True).order_by('code')
-            return [{'code': c.code, 'name': c.name} for c in currencies]
-        except Exception:
-            # Fallback list
-            return [
-                {'code': 'USD', 'name': 'US Dollar'},
-                {'code': 'EUR', 'name': 'Euro'},
-                {'code': 'BTC', 'name': 'Bitcoin'},
-                {'code': 'ETH', 'name': 'Ethereum'},
-                {'code': 'LTC', 'name': 'Litecoin'},
-            ]
+        """Get list of available currencies from database."""
+        # Get all active currencies - both fiat and crypto
+        return Currency.objects.all().order_by('currency_type', 'code')
+    
+    
 
 
 class PaymentListView(
@@ -147,9 +143,7 @@ class PaymentListView(
     
     def _get_filter_options(self):
         """Get available options for filter dropdowns."""
-        from django.db.models import Value
-        from django.db.models.functions import Concat
-        
+
         # Get unique statuses
         statuses = UniversalPayment.objects.values_list('status', flat=True).distinct()
         status_choices = [(status, status.title()) for status in statuses if status]

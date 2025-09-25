@@ -70,6 +70,8 @@ class SampleProjectConfig(DjangoConfig):
 
     Demonstrates all features and best practices with YAML environment loading.
     """
+    
+    env_mode: str = env.env.env_mode
 
     # === Project Information ===
     project_name: str = env.app.name
@@ -101,8 +103,9 @@ class SampleProjectConfig(DjangoConfig):
             config for config in [
                 create_nowpayments_config(
                     api_key=env.api_keys.payments.nowpayments_api_key,
-                    sandbox=env.debug,
-                    ipn_secret=env.api_keys.payments.nowpayments_ipn_secret
+                    ipn_secret=env.api_keys.payments.nowpayments_ipn_secret,
+                    # Webhook URL - через админ систему django-cfg
+                    callback_url=f"{env.app.site_url}/cfg/admin/django_cfg_payments/webhooks/nowpayments/"
                 ) if env.api_keys.payments.nowpayments_api_key else None,
                 
                 create_cryptapi_config(
@@ -113,20 +116,18 @@ class SampleProjectConfig(DjangoConfig):
                     api_key=env.api_keys.payments.stripe_secret_key,
                     publishable_key=env.api_keys.payments.stripe_publishable_key,
                     webhook_endpoint_secret=env.api_keys.payments.stripe_webhook_secret,
-                    sandbox=env.debug
                 ) if env.api_keys.payments.stripe_secret_key else None,
                 
                 create_cryptomus_config(
                     api_key=env.api_keys.payments.cryptomus_api_key,
                     merchant_uuid=env.api_keys.payments.cryptomus_merchant_uuid,
-                    sandbox=env.debug
                 ) if env.api_keys.payments.cryptomus_api_key else None,
             ] if config is not None
         ]
     )
     
     # === AI Services ===
-    openai_api_key: Optional[str] = env.api_keys.openai if hasattr(env, 'api_keys') and hasattr(env.api_keys, 'openai') else None
+    openai_api_key: Optional[str] = env.api_keys.openai_api_key if hasattr(env, 'api_keys') and hasattr(env.api_keys, 'openai_api_key') else None
 
     # === URLs ===
     site_url: str = env.app.site_url
@@ -352,7 +353,7 @@ class SampleProjectConfig(DjangoConfig):
     ngrok: Optional[NgrokConfig] = NgrokConfig(
         enabled=True,  # Enable for testing
         auth=NgrokAuthConfig(
-            authtoken=env.api_keys.ngrok,  # Use authtoken from YAML config
+            authtoken=env.api_keys.ngrok_api_key,  # Use authtoken from YAML config
             authtoken_from_env=False,  # Don't use env var, use YAML instead
         ),
         tunnel=NgrokTunnelConfig(

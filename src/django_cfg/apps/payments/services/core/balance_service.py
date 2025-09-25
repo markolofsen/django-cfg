@@ -5,8 +5,8 @@ This service handles user balance operations, transaction recording,
 and balance validation with atomic operations.
 """
 
-import logging
 from typing import Dict, Any, Optional, List
+from django_cfg.modules.django_logger import get_logger
 from decimal import Decimal
 from datetime import timezone
 
@@ -18,7 +18,7 @@ from ...models import UserBalance, Transaction
 from ..internal_types import ServiceOperationResult, BalanceUpdateRequest, UserBalanceResult, TransactionInfo
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+logger = get_logger("balance_service")
 
 
 class BalanceOperation(BaseModel):

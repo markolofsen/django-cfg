@@ -3,7 +3,7 @@ Webhook processing views with signature validation.
 """
 
 import json
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Dict, Any
 
 from django.http import JsonResponse, HttpResponse
@@ -20,7 +20,7 @@ from ..tasks.webhook_processing import process_webhook_with_fallback
 from ..services.security.webhook_validator import webhook_validator
 from ..services.security.error_handler import error_handler, SecurityError, ValidationError
 
-logger = logging.getLogger(__name__)
+logger = get_logger("webhook_views")
 
 
 @csrf_exempt

@@ -4,14 +4,14 @@ Configuration utilities for payments module.
 Universal utilities for working with django-cfg settings and configuration.
 """
 
-import logging
 from typing import Optional, Dict, Any, Type
 from django.conf import settings
 
 from django_cfg.modules.base import BaseCfgModule
 from ..config.settings import PaymentsSettings
+from django_cfg.modules.django_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("config_utils")
 
 
 class PaymentsConfigMixin:
@@ -227,11 +227,6 @@ class PaymentsConfigUtil:
         config = PaymentsConfigMixin.get_payments_config()
         return config.enabled
     
-    @staticmethod
-    def is_debug_mode() -> bool:
-        """Check if payments module is in debug mode."""
-        config = PaymentsConfigMixin.get_payments_config()
-        return getattr(config, 'debug_mode', False)
     
     @staticmethod
     def reset_all_caches():
@@ -242,4 +237,3 @@ class PaymentsConfigUtil:
 # Convenience exports
 get_payments_config = PaymentsConfigUtil.get_config
 is_payments_enabled = PaymentsConfigUtil.is_payments_enabled
-is_debug_mode = PaymentsConfigUtil.is_debug_mode

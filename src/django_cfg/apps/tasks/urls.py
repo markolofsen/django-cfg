@@ -18,6 +18,4 @@ urlpatterns = [
     # RESTful API endpoints using ViewSets
     path('api/', include(router.urls)),
     
-    # Dashboard view
-    path('dashboard/', views.dashboard_view, name='dashboard'),
 ]

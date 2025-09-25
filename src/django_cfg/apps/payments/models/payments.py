@@ -13,6 +13,7 @@ User = get_user_model()
 
 
 
+
 class UniversalPayment(UUIDTimestampedModel):
     """Universal payment model for all providers."""
     
@@ -208,8 +209,8 @@ class UniversalPayment(UUIDTimestampedModel):
         help_text="When the payment was processed and funds added to balance"
     )
 
-    # Import and assign manager
-    from ..managers import UniversalPaymentManager
+    # Custom managers for optimized queries
+    from ..managers.payment_manager import UniversalPaymentManager
     objects = UniversalPaymentManager()
 
     class Meta:

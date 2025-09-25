@@ -8,7 +8,7 @@ Django ORM models for the universal payments system.
 from .base import TimestampedModel
 
 # Currency models
-from .currencies import Currency, CurrencyNetwork
+from .currencies import Currency, Network, ProviderCurrency
 
 # Payment models  
 from .payments import UniversalPayment
@@ -43,7 +43,8 @@ __all__ = [
     
     # Currencies
     'Currency',
-    'CurrencyNetwork',
+    'Network',
+    'ProviderCurrency',
     
     # Models
     'UniversalPayment',

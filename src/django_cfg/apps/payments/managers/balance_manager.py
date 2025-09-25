@@ -12,9 +12,9 @@ from django.db import models, transaction
 from django.utils import timezone
 from decimal import Decimal
 from typing import Optional, Dict, Any
-import logging
+from django_cfg.modules.django_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("balance_manager")
 
 
 class UserBalanceManager(models.Manager):

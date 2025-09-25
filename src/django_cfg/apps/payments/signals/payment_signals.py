@@ -8,13 +8,13 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.db import transaction
 from django.utils import timezone
-import logging
+from django_cfg.modules.django_logger import get_logger
 
 from ..models import UniversalPayment, UserBalance, Transaction
 from ..services.cache import SimpleCache
-from django_cfg.core.redis import RedisService
+from django.core.cache import cache
 
-logger = logging.getLogger(__name__)
+logger = get_logger("payment_signals")
 
 
 @receiver(pre_save, sender=UniversalPayment)
@@ -92,8 +92,14 @@ def _process_completed_payment(payment: UniversalPayment):
             
             # Clear Redis cache for user
             try:
-                redis_service = RedisService()
-                redis_service.invalidate_user_cache(payment.user.id)
+                # Invalidate user cache using Django cache
+                user_cache_pattern = f"payments:user:{payment.user.id}:*"
+                # Note: Django cache doesn't support pattern deletion, so we clear specific keys
+                cache.delete_many([
+                    f"payments:user:{payment.user.id}:balance",
+                    f"payments:user:{payment.user.id}:api_keys",
+                    f"payments:user:{payment.user.id}:subscriptions"
+                ])
             except Exception as e:
                 logger.warning(f"Failed to clear Redis cache for user {payment.user.id}: {e}")
             

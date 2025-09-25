@@ -2,7 +2,7 @@
 {% load humanize %}
 
 <!-- Payment Card Component -->
-<div class="payment-card bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 {% if compact %}compact{% endif %}"
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
      data-payment-id="{{ payment.id }}">
     
     <!-- Header -->
@@ -76,20 +76,20 @@
     <!-- Actions -->
     {% if show_actions %}
     <div class="payment-actions mt-4 flex space-x-2">
-        <button class="btn btn-outline btn-sm flex-1" 
+        <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" 
                 onclick="showPaymentDetails('{{ payment.id }}')">
             <span class="material-icons text-sm mr-1">visibility</span>
             View Details
         </button>
         {% if payment|can_cancel_payment %}
-            <button class="btn btn-danger btn-sm" 
+            <button class="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-md transition-colors duration-200" 
                     onclick="cancelPayment('{{ payment.id }}')">
                 <span class="material-icons text-sm mr-1">cancel</span>
                 Cancel
             </button>
         {% endif %}
         {% if payment|is_crypto_payment and payment.pay_address %}
-            <button class="btn btn-primary btn-sm" 
+            <button class="px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors duration-200" 
                     onclick="showQRCode('{{ payment.id }}')">
                 <span class="material-icons text-sm mr-1">qr_code</span>
                 QR Code
@@ -134,11 +134,11 @@
     
     {% if show_actions %}
     <div class="flex space-x-2">
-        <button class="flex-1 btn btn-outline btn-sm" onclick="showPaymentDetails('{{ payment.id }}')">
+        <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" onclick="showPaymentDetails('{{ payment.id }}')">
             Details
         </button>
         {% if payment|can_cancel_payment %}
-            <button class="btn btn-danger btn-sm" onclick="cancelPayment('{{ payment.id }}')">
+            <button class="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-md transition-colors duration-200" onclick="cancelPayment('{{ payment.id }}')">
                 Cancel
             </button>
         {% endif %}

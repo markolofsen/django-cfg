@@ -20,6 +20,8 @@ from .views.templates.ajax import (
     payment_stats_ajax,
     payment_search_ajax,
     payment_action_ajax,
+    provider_currencies_ajax,
+    all_providers_data_ajax,
 )
 from .views.templates.qr_code import qr_code_data_ajax
 
@@ -46,6 +48,10 @@ urlpatterns = [
     path('ajax/payment/<uuid:payment_id>/action/', payment_action_ajax, name='payment_action_ajax'),
     path('ajax/stats/', payment_stats_ajax, name='payment_stats_ajax'),
     path('ajax/search/', payment_search_ajax, name='payment_search_ajax'),
+    
+    # Provider and Currency AJAX endpoints
+    path('ajax/provider/currencies/', provider_currencies_ajax, name='provider_currencies_ajax'),
+    path('ajax/providers/all/', all_providers_data_ajax, name='all_providers_data_ajax'),
     
     # Development/testing
     path('test/', PaymentTestView.as_view(), name='test'),

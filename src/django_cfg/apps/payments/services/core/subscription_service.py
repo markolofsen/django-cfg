@@ -5,21 +5,21 @@ This service handles subscription creation, renewal, access validation,
 and usage tracking with Redis caching.
 """
 
-import logging
 from typing import Dict, Any, Optional, List
+from django_cfg.modules.django_logger import get_logger
 from datetime import datetime, timedelta, timezone as dt_timezone
 
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from pydantic import BaseModel, Field, ValidationError
-
+from decimal import Decimal
 
 from ...models import Subscription, EndpointGroup, Tariff
-from ..internal_types import ServiceOperationResult
+from ..internal_types import ServiceOperationResult, SubscriptionInfo, EndpointGroupInfo
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+logger = get_logger("subscription_service")
 
 
 class SubscriptionRequest(BaseModel):
@@ -275,9 +275,6 @@ class SubscriptionService:
             subscriptions = queryset.select_related(
                 'endpoint_group'
             ).order_by('-created_at')
-            
-            from ..internal_types import SubscriptionInfo, EndpointGroupInfo
-            from decimal import Decimal
             
             result = [
                 SubscriptionInfo(

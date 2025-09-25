@@ -11,9 +11,6 @@ from .core import (
     Rate,
     ConversionRequest,
     ConversionResult,
-    SupportedCurrencies,
-    YFinanceCurrencies,
-    CoinGeckoCurrencies,
     CurrencyError,
     CurrencyNotFoundError,
     RateFetchError,
@@ -25,7 +22,7 @@ from .core import (
 from .utils import CacheManager
 
 # Clients
-from .clients import YFinanceClient, CoinGeckoClient
+from .clients import YahooFinanceClient, CoinPaprikaClient
 
 # Database tools
 from .database import (
@@ -34,6 +31,17 @@ from .database import (
     create_database_loader,
     load_currencies_to_database_format
 )
+
+# Shared global converter instance for caching efficiency
+_global_converter = None
+
+def _get_converter() -> CurrencyConverter:
+    """Get or create shared converter instance."""
+    global _global_converter
+    if _global_converter is None:
+        _global_converter = CurrencyConverter(cache_ttl=3600)  # 1 hour cache
+    return _global_converter
+
 
 # Simple public API
 def convert_currency(amount: float, from_currency: str, to_currency: str) -> float:
@@ -48,7 +56,7 @@ def convert_currency(amount: float, from_currency: str, to_currency: str) -> flo
     Returns:
         Converted amount
     """
-    converter = CurrencyConverter()
+    converter = _get_converter()
     result = converter.convert(amount, from_currency, to_currency)
     return result.result
 
@@ -64,7 +72,7 @@ def get_exchange_rate(base: str, quote: str) -> float:
     Returns:
         Exchange rate
     """
-    converter = CurrencyConverter()
+    converter = _get_converter()
     result = converter.convert(1.0, base, quote)
     return result.rate.rate
 
@@ -75,9 +83,6 @@ __all__ = [
     "Rate", 
     "ConversionRequest",
     "ConversionResult",
-    "SupportedCurrencies",
-    "YFinanceCurrencies", 
-    "CoinGeckoCurrencies",
     
     # Exceptions
     "CurrencyError",
@@ -90,8 +95,8 @@ __all__ = [
     "CacheManager",
     
     # Clients
-    "YFinanceClient",
-    "CoinGeckoClient",
+    "YahooFinanceClient",
+    "CoinPaprikaClient",
     
     # Database tools
     "CurrencyDatabaseLoader",

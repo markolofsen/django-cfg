@@ -1,5 +1,5 @@
 """
-Database loader for populating currency data from external APIs.
+Database loader for populating currency data using Yahoo Finance + CoinPaprika.
 """
 
 import logging
@@ -11,9 +11,8 @@ from dataclasses import dataclass
 from pydantic import BaseModel, Field, validator
 from cachetools import TTLCache
 
-# CoinGecko API
-from pycoingecko import CoinGeckoAPI
-import yfinance as yf
+# Our new clients
+from ..clients import YahooFinanceClient, CoinPaprikaClient
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +21,14 @@ logger = logging.getLogger(__name__)
 # PYDANTIC MODELS
 # ============================================================================
 
-class CoinGeckoCoinInfo(BaseModel):
-    """Single coin information from CoinGecko."""
-    id: str = Field(description="CoinGecko coin ID")
+class CoinPaprikaCoinInfo(BaseModel):
+    """Single coin information from CoinPaprika."""
+    id: str = Field(description="CoinPaprika coin ID")
     symbol: str = Field(description="Currency symbol (e.g., BTC)")
     name: str = Field(description="Full coin name")
 
 
-class YFinanceCurrencyInfo(BaseModel):
+class YahooFinanceCurrencyInfo(BaseModel):
     """Single fiat currency information."""
     code: str = Field(description="Currency code (e.g., USD)")
     name: str = Field(description="Full currency name")
@@ -45,404 +44,285 @@ class CurrencyRateInfo(BaseModel):
     decimal_places: int = Field(default=2, description="Decimal places")
     usd_rate: float = Field(description="Rate to USD")
     min_payment_amount: float = Field(default=1.0, description="Minimum payment amount")
-    is_active: bool = Field(default=True, description="Is currency active")
+
+
+class RateLimiter:
+    """Simple rate limiter for API calls."""
+    
+    def __init__(self, max_requests_per_minute: int = 30):
+        self.max_requests = max_requests_per_minute
+        self.request_times = []
+        
+    def __call__(self):
+        """Wait if necessary to respect rate limits."""
+        now = time.time()
+        
+        # Remove requests older than 1 minute
+        self.request_times = [t for t in self.request_times if now - t < 60]
+        
+        # If we're at the limit, wait
+        if len(self.request_times) >= self.max_requests:
+            sleep_time = 60 - (now - self.request_times[0]) + 1
+            if sleep_time > 0:
+                logger.debug(f"Rate limiting: sleeping for {sleep_time:.1f}s")
+                time.sleep(sleep_time)
+                
+        self.request_times.append(now)
 
 
 class DatabaseLoaderConfig(BaseModel):
     """Configuration for database loader."""
     
-    # Rate limiting
-    coingecko_delay: float = Field(default=1.5, description="Delay between CoinGecko requests (seconds)")
-    yfinance_delay: float = Field(default=0.5, description="Delay between YFinance requests (seconds)")
+    yahoo_delay: float = Field(default=1.0, description="Delay between Yahoo requests")
+    coinpaprika_delay: float = Field(default=0.5, description="Delay between CoinPaprika requests")
     max_requests_per_minute: int = Field(default=30, description="Max requests per minute")
-    
-    # Limits
     max_cryptocurrencies: int = Field(default=500, description="Max cryptocurrencies to load")
     max_fiat_currencies: int = Field(default=50, description="Max fiat currencies to load")
-    
-    # Filtering
-    min_market_cap_usd: float = Field(default=1000000, description="Minimum market cap in USD")
+    min_market_cap_usd: float = Field(default=1000000, description="Minimum market cap for crypto")
     exclude_stablecoins: bool = Field(default=False, description="Exclude stablecoins")
-    
-    # Cache
     cache_ttl_hours: int = Field(default=24, description="Cache TTL in hours")
 
 
-# ============================================================================
-# RATE LIMITER
-# ============================================================================
-
-@dataclass
-class RateLimiter:
-    """Simple rate limiter to prevent API throttling."""
-    
-    def __init__(self, max_requests_per_minute: int = 30):
-        self.max_requests = max_requests_per_minute
-        self.requests = []
-        self.last_request_time = 0.0
-    
-    def wait_if_needed(self, delay: float = 1.0):
-        """Wait if necessary to respect rate limits."""
-        current_time = time.time()
-        
-        # Remove old requests (older than 1 minute)
-        self.requests = [req_time for req_time in self.requests 
-                        if current_time - req_time < 60]
-        
-        # Check if we've hit the rate limit
-        if len(self.requests) >= self.max_requests:
-            sleep_time = 60 - (current_time - self.requests[0])
-            if sleep_time > 0:
-                logger.info(f"Rate limit reached, sleeping for {sleep_time:.2f}s")
-                time.sleep(sleep_time)
-        
-        # Check minimum delay between requests
-        time_since_last = current_time - self.last_request_time
-        if time_since_last < delay:
-            sleep_time = delay - time_since_last
-            logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f}s")
-            time.sleep(sleep_time)
-        
-        # Record this request
-        self.requests.append(time.time())
-        self.last_request_time = time.time()
-
-
-# ============================================================================
-# DATABASE LOADER
-# ============================================================================
-
 class CurrencyDatabaseLoader:
     """
-    Typed tool for loading currency data into database.
-    
-    Features:
-    - Rate limiting to prevent API throttling
-    - Configurable limits on number of currencies
-    - Market cap filtering for cryptocurrencies
-    - Caching to avoid repeated API calls
-    - Type safety with Pydantic models
+    Database loader for populating currency data from Yahoo Finance and CoinPaprika.
     """
     
     def __init__(self, config: DatabaseLoaderConfig = None):
         """Initialize the database loader."""
         self.config = config or DatabaseLoaderConfig()
         
-        # Initialize API clients
-        self.coingecko = CoinGeckoAPI()
+        # Initialize clients
+        self.yahoo = YahooFinanceClient(cache_ttl=self.config.cache_ttl_hours * 3600)
+        self.coinpaprika = CoinPaprikaClient(cache_ttl=self.config.cache_ttl_hours * 3600)
         
         # Rate limiters
-        self.coingecko_limiter = RateLimiter(self.config.max_requests_per_minute)
-        self.yfinance_limiter = RateLimiter(self.config.max_requests_per_minute)
+        self.yahoo_limiter = RateLimiter(self.config.max_requests_per_minute)
+        self.coinpaprika_limiter = RateLimiter(self.config.max_requests_per_minute)
         
-        # Cache
+        # Caches
         cache_ttl = self.config.cache_ttl_hours * 3600
-        self.crypto_cache = TTLCache(maxsize=10, ttl=cache_ttl)
-        self.fiat_cache = TTLCache(maxsize=10, ttl=cache_ttl)
+        self.crypto_cache = TTLCache(maxsize=1000, ttl=cache_ttl)
+        self.fiat_cache = TTLCache(maxsize=100, ttl=cache_ttl)
         
         logger.info(f"Initialized CurrencyDatabaseLoader with config: {self.config}")
     
-    def get_cryptocurrency_list(self) -> List[CoinGeckoCoinInfo]:
+    def get_fiat_currency_list(self) -> List[YahooFinanceCurrencyInfo]:
         """
-        Get list of cryptocurrencies from CoinGecko with filtering.
+        Get list of supported fiat currencies.
         
         Returns:
-            List of cryptocurrency information
+            List of fiat currency info objects
         """
-        cache_key = "crypto_list"
-        if cache_key in self.crypto_cache:
-            logger.debug("Retrieved cryptocurrency list from cache")
-            return self.crypto_cache[cache_key]
+        cache_key = "fiat_currencies"
         
-        logger.info("Fetching cryptocurrency list from CoinGecko...")
-        
-        try:
-            # Get coins with market data for filtering
-            self.coingecko_limiter.wait_if_needed(self.config.coingecko_delay)
-            
-            coins_markets = self.coingecko.get_coins_markets(
-                vs_currency='usd',
-                order='market_cap_desc',
-                per_page=self.config.max_cryptocurrencies,
-                page=1,
-                sparkline=False
-            )
-            
-            cryptocurrencies = []
-            for coin in coins_markets:
-                # Filter by market cap
-                market_cap = coin.get('market_cap', 0) or 0
-                if market_cap < self.config.min_market_cap_usd:
-                    continue
-                
-                # Filter stablecoins if requested
-                if self.config.exclude_stablecoins:
-                    categories = coin.get('categories', []) or []
-                    if any('stablecoin' in str(cat).lower() for cat in categories):
-                        continue
-                
-                crypto_info = CoinGeckoCoinInfo(
-                    id=coin['id'],
-                    symbol=coin['symbol'].upper(),
-                    name=coin['name']
-                )
-                cryptocurrencies.append(crypto_info)
-            
-            logger.info(f"Loaded {len(cryptocurrencies)} cryptocurrencies")
-            self.crypto_cache[cache_key] = cryptocurrencies
-            return cryptocurrencies
-            
-        except Exception as e:
-            logger.error(f"Failed to fetch cryptocurrency list: {e}")
-            raise
-    
-    def get_fiat_currency_list(self) -> List[YFinanceCurrencyInfo]:
-        """
-        Get list of fiat currencies.
-        
-        Returns:
-            List of fiat currency information
-        """
-        cache_key = "fiat_list"
         if cache_key in self.fiat_cache:
-            logger.debug("Retrieved fiat currency list from cache")
+            logger.debug("Retrieved fiat currencies from cache")
             return self.fiat_cache[cache_key]
         
-        logger.info("Building fiat currency list...")
+        # Get supported currencies from Yahoo
+        supported_currencies = self.yahoo.get_all_supported_currencies()
         
-        # Major fiat currencies with their symbols
-        fiat_currencies_data = [
-            ("USD", "US Dollar", "$"),
-            ("EUR", "Euro", "€"),
-            ("GBP", "British Pound", "£"),
-            ("JPY", "Japanese Yen", "¥"),
-            ("CNY", "Chinese Yuan", "¥"),
-            ("KRW", "South Korean Won", "₩"),
-            ("CAD", "Canadian Dollar", "C$"),
-            ("AUD", "Australian Dollar", "A$"),
-            ("CHF", "Swiss Franc", "₣"),
-            ("RUB", "Russian Ruble", "₽"),
-            ("BRL", "Brazilian Real", "R$"),
-            ("INR", "Indian Rupee", "₹"),
-            ("MXN", "Mexican Peso", "$"),
-            ("SGD", "Singapore Dollar", "S$"),
-            ("HKD", "Hong Kong Dollar", "HK$"),
-            ("SEK", "Swedish Krona", "kr"),
-            ("NOK", "Norwegian Krone", "kr"),
-            ("DKK", "Danish Krone", "kr"),
-            ("PLN", "Polish Zloty", "zł"),
-            ("CZK", "Czech Koruna", "Kč"),
-            ("HUF", "Hungarian Forint", "Ft"),
-            ("TRY", "Turkish Lira", "₺"),
-            ("ZAR", "South African Rand", "R"),
-            ("THB", "Thai Baht", "฿"),
-            ("MYR", "Malaysian Ringgit", "RM"),
-            ("PHP", "Philippine Peso", "₱"),
-            ("IDR", "Indonesian Rupiah", "Rp"),
-            ("VND", "Vietnamese Dong", "₫"),
-            ("TWD", "Taiwan Dollar", "NT$"),
-            ("NZD", "New Zealand Dollar", "NZ$")
-        ]
-        
+        # Convert to our format and limit count
         fiat_currencies = []
-        for code, name, symbol in fiat_currencies_data[:self.config.max_fiat_currencies]:
-            fiat_info = YFinanceCurrencyInfo(
+        for code, name in list(supported_currencies.items())[:self.config.max_fiat_currencies]:
+            currency_info = YahooFinanceCurrencyInfo(
                 code=code,
                 name=name,
-                symbol=symbol
+                symbol=""  # Yahoo doesn't provide symbols
             )
-            fiat_currencies.append(fiat_info)
+            fiat_currencies.append(currency_info)
         
-        logger.info(f"Built list of {len(fiat_currencies)} fiat currencies")
         self.fiat_cache[cache_key] = fiat_currencies
+        logger.info(f"Loaded {len(fiat_currencies)} fiat currencies")
+        
         return fiat_currencies
     
-    def get_currency_rates(self, currencies: List[str], vs_currency: str = "usd") -> Dict[str, float]:
+    def get_cryptocurrency_list(self) -> List[CoinPaprikaCoinInfo]:
         """
-        Get current rates for multiple currencies.
+        Get list of supported cryptocurrencies from CoinPaprika.
         
-        Args:
-            currencies: List of currency codes/IDs
-            vs_currency: Quote currency (default: usd)
-            
         Returns:
-            Dictionary mapping currency to its rate
+            List of cryptocurrency info objects
         """
-        if not currencies:
-            return {}
+        cache_key = "crypto_currencies"
         
-        logger.info(f"Fetching rates for {len(currencies)} currencies vs {vs_currency}")
+        if cache_key in self.crypto_cache:
+            logger.debug("Retrieved cryptocurrencies from cache")
+            return self.crypto_cache[cache_key]
         
         try:
-            # Split into chunks to avoid hitting API limits
-            chunk_size = 50
-            all_rates = {}
+            # Get all tickers from CoinPaprika
+            all_tickers = self.coinpaprika._fetch_all_tickers()
             
-            for i in range(0, len(currencies), chunk_size):
-                chunk = currencies[i:i + chunk_size]
+            crypto_currencies = []
+            for symbol, data in all_tickers.items():
+                # Skip if no price data
+                if data.get('price_usd') is None:
+                    continue
                 
-                self.coingecko_limiter.wait_if_needed(self.config.coingecko_delay)
+                # Apply market cap filter if needed
+                # Note: CoinPaprika doesn't provide market cap in tickers endpoint
+                # We'd need to use a different endpoint for that
                 
-                # Join currency IDs for batch request
-                ids_str = ','.join(chunk)
-                
-                price_data = self.coingecko.get_price(
-                    ids=ids_str,
-                    vs_currencies=vs_currency,
-                    include_last_updated_at=True
+                coin_info = CoinPaprikaCoinInfo(
+                    id=data['id'],
+                    symbol=symbol,
+                    name=data['name']
                 )
+                crypto_currencies.append(coin_info)
                 
-                # Extract rates
-                for currency_id, data in price_data.items():
-                    if vs_currency in data:
-                        all_rates[currency_id] = float(data[vs_currency])
-                
-                logger.debug(f"Fetched rates for chunk {i//chunk_size + 1}")
+                # Limit count
+                if len(crypto_currencies) >= self.config.max_cryptocurrencies:
+                    break
             
-            logger.info(f"Successfully fetched {len(all_rates)} currency rates")
-            return all_rates
+            self.crypto_cache[cache_key] = crypto_currencies
+            logger.info(f"Loaded {len(crypto_currencies)} cryptocurrencies")
+            
+            return crypto_currencies
             
         except Exception as e:
-            logger.error(f"Failed to fetch currency rates: {e}")
-            raise
+            logger.error(f"Failed to get cryptocurrency list: {e}")
+            return []
     
-    def get_fiat_rate(self, base_currency: str, quote_currency: str = "USD") -> Optional[float]:
+    def get_currency_rates(self, currency_ids: List[str], quote: str = 'usd') -> Dict[str, float]:
         """
-        Get fiat currency rate using YFinance.
+        Get current rates for multiple cryptocurrencies.
         
         Args:
-            base_currency: Base currency code
-            quote_currency: Quote currency code
+            currency_ids: List of currency symbols
+            quote: Quote currency (usually 'usd')
             
         Returns:
-            Exchange rate or None if not available
+            Dict mapping currency ID to rate
         """
+        self.coinpaprika_limiter()
+        
         try:
-            self.yfinance_limiter.wait_if_needed(self.config.yfinance_delay)
+            rates = {}
+            all_tickers = self.coinpaprika._fetch_all_tickers()
             
-            if base_currency == quote_currency:
-                return 1.0
+            for currency_id in currency_ids:
+                if currency_id.upper() in all_tickers:
+                    price = all_tickers[currency_id.upper()].get('price_usd')
+                    if price is not None:
+                        rates[currency_id] = price
             
-            symbol = f"{base_currency}{quote_currency}=X"
-            ticker = yf.Ticker(symbol)
-            
-            # Try to get current price
-            info = ticker.info
-            if 'regularMarketPrice' in info and info['regularMarketPrice']:
-                return float(info['regularMarketPrice'])
-            
-            # Fallback to history
-            hist = ticker.history(period="1d")
-            if not hist.empty:
-                return float(hist['Close'].iloc[-1])
-            
-            return None
+            logger.debug(f"Retrieved rates for {len(rates)} currencies")
+            return rates
             
         except Exception as e:
-            logger.debug(f"Failed to get fiat rate for {base_currency}/{quote_currency}: {e}")
+            logger.error(f"Failed to get currency rates: {e}")
+            return {}
+    
+    def get_fiat_rate(self, base: str, quote: str) -> Optional[float]:
+        """
+        Get exchange rate for fiat currency pair.
+        
+        Args:
+            base: Base currency code
+            quote: Quote currency code
+            
+        Returns:
+            Exchange rate or None if failed
+        """
+        # Handle same currency
+        if base.upper() == quote.upper():
+            return 1.0
+        
+        self.yahoo_limiter()
+        
+        try:
+            rate_obj = self.yahoo.fetch_rate(base, quote)
+            return rate_obj.rate
+        except Exception as e:
+            logger.debug(f"Failed to get fiat rate {base}/{quote}: {e}")
             return None
     
     def build_currency_database_data(self) -> List[CurrencyRateInfo]:
         """
-        Build complete currency data for database insertion.
+        Build complete currency database data combining fiat and crypto.
         
         Returns:
-            List of currency rate information ready for database
+            List of currency rate info objects
         """
-        logger.info("Building complete currency database data...")
+        currencies = []
         
-        all_currencies = []
-        
-        # 1. Get fiat currencies
-        logger.info("Processing fiat currencies...")
+        # Get fiat currencies
+        logger.info("Loading fiat currencies...")
         fiat_currencies = self.get_fiat_currency_list()
         
         for fiat in fiat_currencies:
-            # Get USD rate (skip USD itself)
-            if fiat.code == "USD":
+            # Get USD rate
+            if fiat.code == 'USD':
                 usd_rate = 1.0
             else:
-                usd_rate = self.get_fiat_rate(fiat.code, "USD")
+                usd_rate = self.get_fiat_rate(fiat.code, 'USD')
                 if usd_rate is None:
-                    logger.warning(f"Could not get USD rate for {fiat.code}, skipping")
+                    logger.warning(f"Could not get USD rate for {fiat.code}")
                     continue
             
             currency_info = CurrencyRateInfo(
                 code=fiat.code,
                 name=fiat.name,
-                symbol=fiat.symbol,
+                symbol=fiat.symbol or "$" if fiat.code == "USD" else "",
                 currency_type="fiat",
                 decimal_places=2,
                 usd_rate=usd_rate,
-                min_payment_amount=1.0,
-                is_active=True
+                min_payment_amount=1.0
             )
-            all_currencies.append(currency_info)
-            
-            logger.debug(f"Added fiat currency: {fiat.code} = {usd_rate} USD")
+            currencies.append(currency_info)
         
-        # 2. Get cryptocurrencies
-        logger.info("Processing cryptocurrencies...")
+        # Get cryptocurrencies
+        logger.info("Loading cryptocurrencies...")
         crypto_currencies = self.get_cryptocurrency_list()
         
-        # Get rates in batches
-        crypto_ids = [crypto.id for crypto in crypto_currencies]
-        crypto_rates = self.get_currency_rates(crypto_ids, "usd")
+        if crypto_currencies:
+            # Get rates for all cryptos
+            crypto_symbols = [crypto.symbol for crypto in crypto_currencies]
+            rates = self.get_currency_rates(crypto_symbols, 'usd')
+            
+            for crypto in crypto_currencies:
+                if crypto.symbol in rates:
+                    usd_rate = rates[crypto.symbol]
+                    
+                    # Calculate appropriate decimal places based on USD value
+                    if usd_rate >= 1:
+                        decimal_places = 2
+                    elif usd_rate >= 0.01:
+                        decimal_places = 4
+                    else:
+                        decimal_places = 8
+                    
+                    # Calculate minimum payment amount (roughly $1 worth)
+                    min_payment = max(1.0 / usd_rate, 0.000001)
+                    
+                    currency_info = CurrencyRateInfo(
+                        code=crypto.symbol,
+                        name=crypto.name,
+                        symbol="",  # We don't have crypto symbols
+                        currency_type="crypto",
+                        decimal_places=decimal_places,
+                        usd_rate=usd_rate,
+                        min_payment_amount=min_payment
+                    )
+                    currencies.append(currency_info)
         
-        for crypto in crypto_currencies:
-            if crypto.id not in crypto_rates:
-                logger.warning(f"No USD rate found for {crypto.symbol}, skipping")
-                continue
-            
-            usd_rate = crypto_rates[crypto.id]
-            
-            # Determine decimal places based on price
-            if usd_rate >= 1:
-                decimal_places = 2
-            elif usd_rate >= 0.01:
-                decimal_places = 4
-            else:
-                decimal_places = 8
-            
-            # Determine minimum payment amount
-            if usd_rate >= 100:
-                min_payment = 0.001
-            elif usd_rate >= 1:
-                min_payment = 0.01
-            else:
-                min_payment = 1.0
-            
-            currency_info = CurrencyRateInfo(
-                code=crypto.symbol,
-                name=crypto.name,
-                symbol=crypto.symbol,  # Use symbol as symbol for crypto
-                currency_type="crypto",
-                decimal_places=decimal_places,
-                usd_rate=usd_rate,
-                min_payment_amount=min_payment,
-                is_active=True
-            )
-            all_currencies.append(currency_info)
-            
-            logger.debug(f"Added cryptocurrency: {crypto.symbol} = {usd_rate} USD")
-        
-        logger.info(f"Built currency data for {len(all_currencies)} currencies "
-                   f"({len(fiat_currencies)} fiat, {len(crypto_currencies)} crypto)")
-        
-        return all_currencies
+        logger.info(f"Built database data for {len(currencies)} currencies")
+        return currencies
     
     def get_statistics(self) -> Dict[str, int]:
-        """Get statistics about available currencies."""
+        """Get loader statistics."""
         fiat_count = len(self.get_fiat_currency_list())
         crypto_count = len(self.get_cryptocurrency_list())
         
         return {
-            "total_fiat_currencies": fiat_count,
-            "total_cryptocurrencies": crypto_count,
-            "total_currencies": fiat_count + crypto_count,
-            "max_cryptocurrencies": self.config.max_cryptocurrencies,
-            "max_fiat_currencies": self.config.max_fiat_currencies,
-            "min_market_cap_usd": int(self.config.min_market_cap_usd)
+            'total_fiat_currencies': fiat_count,
+            'total_cryptocurrencies': crypto_count,
+            'total_currencies': fiat_count + crypto_count,
+            'max_cryptocurrencies': self.config.max_cryptocurrencies,
+            'max_fiat_currencies': self.config.max_fiat_currencies,
+            'min_market_cap_usd': self.config.min_market_cap_usd
         }
 
 
@@ -454,7 +334,8 @@ def create_database_loader(
     max_cryptocurrencies: int = 500,
     max_fiat_currencies: int = 50,
     min_market_cap_usd: float = 1000000,
-    coingecko_delay: float = 1.5
+    yahoo_delay: float = 1.0,
+    coinpaprika_delay: float = 0.5
 ) -> CurrencyDatabaseLoader:
     """
     Create a configured database loader.
@@ -463,7 +344,8 @@ def create_database_loader(
         max_cryptocurrencies: Maximum number of cryptocurrencies to load
         max_fiat_currencies: Maximum number of fiat currencies to load
         min_market_cap_usd: Minimum market cap for cryptocurrencies
-        coingecko_delay: Delay between CoinGecko requests
+        yahoo_delay: Delay between Yahoo Finance requests
+        coinpaprika_delay: Delay between CoinPaprika requests
         
     Returns:
         Configured CurrencyDatabaseLoader instance
@@ -472,24 +354,24 @@ def create_database_loader(
         max_cryptocurrencies=max_cryptocurrencies,
         max_fiat_currencies=max_fiat_currencies,
         min_market_cap_usd=min_market_cap_usd,
-        coingecko_delay=coingecko_delay
+        yahoo_delay=yahoo_delay,
+        coinpaprika_delay=coinpaprika_delay
     )
-    
     return CurrencyDatabaseLoader(config)
 
 
 def load_currencies_to_database_format() -> List[Dict]:
     """
-    Convenience function to get currency data in Django ORM format.
+    Load currencies and convert to database format.
     
     Returns:
-        List of dictionaries ready for bulk_create
+        List of currency dictionaries ready for database insertion
     """
     loader = create_database_loader()
     currencies = loader.build_currency_database_data()
     
-    # Convert to dictionary format for Django ORM
-    currency_dicts = []
+    # Convert to dict format
+    result = []
     for currency in currencies:
         currency_dict = {
             'code': currency.code,
@@ -499,9 +381,8 @@ def load_currencies_to_database_format() -> List[Dict]:
             'decimal_places': currency.decimal_places,
             'usd_rate': currency.usd_rate,
             'min_payment_amount': currency.min_payment_amount,
-            'is_active': currency.is_active,
             'rate_updated_at': datetime.now()
         }
-        currency_dicts.append(currency_dict)
+        result.append(currency_dict)
     
-    return currency_dicts
+    return result

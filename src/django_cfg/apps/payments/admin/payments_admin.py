@@ -10,6 +10,9 @@ from unfold.decorators import display
 
 from ..models import UniversalPayment
 from .filters import PaymentStatusFilter, PaymentAmountFilter, UserEmailFilter, RecentActivityFilter
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger("payments_admin")
 
 
 @admin.register(UniversalPayment)
@@ -35,6 +38,10 @@ class UniversalPaymentAdmin(ModelAdmin):
         'user__last_name'
     ]
     
+    def get_queryset(self, request):
+        """Optimize queryset to prevent N+1 queries."""
+        return super().get_queryset(request).optimized()
+    
     list_filter = [
         PaymentStatusFilter,
         PaymentAmountFilter,
@@ -59,12 +66,16 @@ class UniversalPaymentAdmin(ModelAdmin):
         ('Payment Details', {
             'fields': ['internal_payment_id', 'provider_payment_id', 'provider', 'status']
         }),
+        ('Crypto Details', {
+            'fields': ['pay_address', 'pay_amount', 'network', 'security_nonce', 'transaction_hash', 'sender_address', 'receiver_address', 'crypto_amount', 'confirmations_count'],
+            'classes': ['collapse']
+        }),
         ('Provider Data', {
-            'fields': ['provider_data'],
+            'fields': ['metadata', 'webhook_data'],
             'classes': ['collapse']
         }),
         ('Timestamps', {
-            'fields': ['created_at', 'updated_at'],
+            'fields': ['created_at', 'updated_at', 'expires_at', 'completed_at', 'processed_at'],
             'classes': ['collapse']
         })
     ]
@@ -91,8 +102,8 @@ class UniversalPaymentAdmin(ModelAdmin):
     def amount_display(self, obj):
         """Display amount with currency."""
         return format_html(
-            '<span style="font-weight: bold; font-size: 14px;">${:.2f}</span><br><small>{}</small>',
-            obj.amount_usd,
+            '<span style="font-weight: bold; font-size: 14px;">${}</span><br><small>{}</small>',
+            f"{float(obj.amount_usd):.2f}",
             obj.currency_code
         )
     

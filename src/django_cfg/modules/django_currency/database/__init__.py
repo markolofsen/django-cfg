@@ -5,8 +5,8 @@ Database utilities for currency management.
 from .database_loader import (
     CurrencyDatabaseLoader,
     DatabaseLoaderConfig,
-    CoinGeckoCoinInfo,
-    YFinanceCurrencyInfo,
+    CoinPaprikaCoinInfo,
+    YahooFinanceCurrencyInfo,
     CurrencyRateInfo,
     RateLimiter,
     create_database_loader,
@@ -16,8 +16,8 @@ from .database_loader import (
 __all__ = [
     'CurrencyDatabaseLoader',
     'DatabaseLoaderConfig', 
-    'CoinGeckoCoinInfo',
-    'YFinanceCurrencyInfo',
+    'CoinPaprikaCoinInfo',
+    'YahooFinanceCurrencyInfo',
     'CurrencyRateInfo',
     'RateLimiter',
     'create_database_loader',

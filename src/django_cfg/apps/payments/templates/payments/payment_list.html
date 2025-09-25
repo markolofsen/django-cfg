@@ -1,0 +1,354 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payments_tags %}
+
+{% block header_title %}Payment History{% endblock %}
+{% block header_subtitle %}View and manage all payment transactions{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Filters and Search -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Search -->
+                <div class="md:col-span-2">
+                    <label for="search" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">Search Payments</label>
+                    <input type="text" id="search" placeholder="Search by ID, email, or provider..." 
+                           class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark placeholder-font-subtle-light dark:placeholder-font-subtle-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+
+                <!-- Status Filter -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">Status</label>
+                    <select id="status" class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="confirming">Confirming</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="expired">Expired</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+                <!-- Provider Filter -->
+                <div>
+                    <label for="provider" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">Provider</label>
+                    <select id="provider" class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">All Providers</option>
+                        <option value="cryptapi">CryptAPI</option>
+                        <option value="cryptomus">Cryptomus</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="nowpayments">NowPayments</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Date Range -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">Date From</label>
+                    <input type="date" id="date_from" 
+                           class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                <div>
+                    <label for="date_to" class="block text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2">Date To</label>
+                    <input type="date" id="date_to" 
+                           class="w-full px-3 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 mt-4">
+                <button id="apply-filters" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">search</span>
+                    Apply Filters
+                </button>
+                <button id="clear-filters" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">clear</span>
+                    Clear
+                </button>
+                <button id="export-csv" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">file_download</span>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    {% include 'payments/components/status_overview.html' %}
+
+    <!-- Payments Table -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Transactions</h3>
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        Showing {{ payments.count|default:"0" }} of {{ total_payments|default:"0" }} payments
+                    </p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="per_page" class="text-sm text-font-default-light dark:text-font-default-dark">Show:</label>
+                    <select id="per_page" class="px-2 py-1 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-900 text-font-default-light dark:text-font-default-dark text-sm">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-base-50 dark:bg-base-800">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            Payment ID
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            User
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            Amount
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            Provider
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            Created
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-base-900 divide-y divide-base-200 dark:divide-base-700">
+                    {% for payment in payments %}
+                    <tr class="hover:bg-base-50 dark:hover:bg-base-800 transition-colors duration-200">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm">
+                                <div class="font-medium text-font-important-light dark:text-font-important-dark">
+                                    {{ payment.internal_payment_id|truncatechars:12 }}
+                                </div>
+                                {% if payment.provider_payment_id %}
+                                <div class="text-font-subtle-light dark:text-font-subtle-dark text-xs">
+                                    {{ payment.provider_payment_id|truncatechars:12 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm">
+                                <div class="font-medium text-font-important-light dark:text-font-important-dark">
+                                    {{ payment.user.get_full_name|default:payment.user.email }}
+                                </div>
+                                <div class="text-font-subtle-light dark:text-font-subtle-dark text-xs">
+                                    {{ payment.user.email }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm">
+                                <div class="font-semibold text-font-important-light dark:text-font-important-dark">
+                                    ${{ payment.amount_usd|floatformat:2 }}
+                                </div>
+                                {% if payment.crypto_amount %}
+                                <div class="text-font-subtle-light dark:text-font-subtle-dark text-xs">
+                                    {{ payment.crypto_amount|floatformat:8 }} {{ payment.currency_code }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 rounded-full mr-3 
+                                    {% if payment.provider == 'cryptapi' %}bg-orange-500
+                                    {% elif payment.provider == 'cryptomus' %}bg-blue-500
+                                    {% elif payment.provider == 'stripe' %}bg-purple-500
+                                    {% elif payment.provider == 'nowpayments' %}bg-green-500
+                                    {% else %}bg-gray-500{% endif %}">
+                                </div>
+                                <span class="text-sm text-font-default-light dark:text-font-default-dark capitalize">
+                                    {{ payment.provider }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% payment_status_badge payment %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-font-default-light dark:text-font-default-dark">
+                            <div>{{ payment.created_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                {{ payment.created_at|time:"H:i" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                            <a href="{% url 'payments_dashboard:detail' payment.pk %}" 
+                               class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                                View
+                            </a>
+                            {% if payment.pay_address and payment.pay_amount %}
+                            <a href="{% url 'payments_dashboard:qr_code' payment.pk %}" 
+                               class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+                                QR
+                            </a>
+                            {% endif %}
+                            {% if payment.status == 'pending' %}
+                            <button class="text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-medium check-status" 
+                                    data-payment-id="{{ payment.pk }}">
+                                Check
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center">
+                            <div class="text-font-subtle-light dark:text-font-subtle-dark">
+                                <span class="material-icons text-4xl mb-4 block">payment</span>
+                                <h3 class="text-lg font-medium mb-2">No payments found</h3>
+                                <p class="text-sm">Try adjusting your filters or create a new payment.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if payments.has_other_pages %}
+        <div class="px-6 py-3 border-t border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                    Showing {{ payments.start_index }} to {{ payments.end_index }} of {{ payments.paginator.count }} results
+                </div>
+                <div class="flex items-center space-x-2">
+                    {% if payments.has_previous %}
+                    <a href="?page={{ payments.previous_page_number }}" 
+                       class="px-3 py-1 border border-base-200 dark:border-base-700 rounded-default text-font-default-light dark:text-font-default-dark hover:bg-base-100 dark:hover:bg-base-700 transition-colors duration-200">
+                        Previous
+                    </a>
+                    {% endif %}
+                    
+                    <span class="px-3 py-1 bg-primary-600 text-white rounded-default">
+                        {{ payments.number }}
+                    </span>
+                    
+                    {% if payments.has_next %}
+                    <a href="?page={{ payments.next_page_number }}" 
+                       class="px-3 py-1 border border-base-200 dark:border-base-700 rounded-default text-font-default-light dark:text-font-default-dark hover:bg-base-100 dark:hover:bg-base-700 transition-colors duration-200">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Payment list loaded');
+    
+    // Filter functionality
+    const applyFiltersBtn = document.getElementById('apply-filters');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+    const exportCsvBtn = document.getElementById('export-csv');
+    const checkStatusBtns = document.querySelectorAll('.check-status');
+    
+    // Apply filters
+    applyFiltersBtn?.addEventListener('click', function() {
+        const filters = {
+            search: document.getElementById('search').value,
+            status: document.getElementById('status').value,
+            provider: document.getElementById('provider').value,
+            date_from: document.getElementById('date_from').value,
+            date_to: document.getElementById('date_to').value
+        };
+        
+        console.log('Applying filters:', filters);
+        // Implement filter logic here
+        applyFilters(filters);
+    });
+    
+    // Clear filters
+    clearFiltersBtn?.addEventListener('click', function() {
+        document.getElementById('search').value = '';
+        document.getElementById('status').value = '';
+        document.getElementById('provider').value = '';
+        document.getElementById('date_from').value = '';
+        document.getElementById('date_to').value = '';
+        
+        // Reload page without filters
+        window.location.href = window.location.pathname;
+    });
+    
+    // Export CSV
+    exportCsvBtn?.addEventListener('click', function() {
+        console.log('Exporting CSV...');
+        // Implement CSV export logic here
+    });
+    
+    // Check payment status
+    checkStatusBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const paymentId = this.dataset.paymentId;
+            console.log('Checking payment status:', paymentId);
+            checkPaymentStatus(paymentId);
+        });
+    });
+    
+    // Real-time search
+    const searchInput = document.getElementById('search');
+    let searchTimeout;
+    searchInput?.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 3) {
+                performSearch(this.value);
+            }
+        }, 500);
+    });
+    
+    function applyFilters(filters) {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(filters)) {
+            if (value) params.append(key, value);
+        }
+        
+        window.location.search = params.toString();
+    }
+    
+    function performSearch(query) {
+        console.log('Searching for:', query);
+        // Implement AJAX search logic here
+    }
+    
+    function checkPaymentStatus(paymentId) {
+        // Show loading state
+        const btn = document.querySelector(`[data-payment-id="${paymentId}"]`);
+        const originalText = btn.textContent;
+        btn.textContent = 'Checking...';
+        btn.disabled = true;
+        
+        // Simulate API call
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+            console.log('Status check completed for payment:', paymentId);
+        }, 2000);
+    }
+});
+</script>
+{% endblock %}

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: django-cfg
-Version: 1.2.29
+Version: 1.2.31
 Summary: 🚀 Next-gen Django configuration: type-safety, AI features, blazing-fast setup, and automated best practices — all in one.
 Project-URL: Homepage, https://djangocfg.com
 Project-URL: Documentation, https://docs.djangocfg.com
@@ -64,7 +64,6 @@ Requires-Dist: ngrok>=1.5.1; python_version >= '3.12'
 Requires-Dist: openai<2.0,>=1.107.0
 Requires-Dist: pgvector<1.0,>=0.4.0
 Requires-Dist: psycopg[binary,pool]<4.0,>=3.2.0
-Requires-Dist: pycoingecko<4.0.0,>=3.2.0
 Requires-Dist: pydantic-ai<2.0,>=1.0.10
 Requires-Dist: pydantic-yaml<2.0,>=1.6.0
 Requires-Dist: pydantic<3.0,>=2.11.0
@@ -82,7 +81,6 @@ Requires-Dist: tiktoken<1.0,>=0.11.0
 Requires-Dist: toml<0.11.0,>=0.10.2
 Requires-Dist: twilio<10.0,>=9.8.0
 Requires-Dist: whitenoise<7.0,>=6.8.0
-Requires-Dist: yfinance<0.3.0,>=0.2.66
 Provides-Extra: dev
 Requires-Dist: black<26.0,>=25.9; extra == 'dev'
 Requires-Dist: build<2.0,>=1.3; extra == 'dev'
@@ -1022,6 +1020,6 @@ Django-CFG is built on the shoulders of giants:
 
 ---
 
-## 🔍 SEO Keywords
+## 🔍 Keywords
 
 **Django configuration**, **Django type safety**, **Django enterprise**, **Pydantic Django**, **Django AI agents**, **Django background tasks**, **Django multi-database**, **Django production deployment**, **Django REST API**, **Django admin interface**, **Django authentication**, **Django CRM**, **Django support system**, **Django newsletter**, **Django CLI tools**, **Django Docker**, **Django ngrok**, **Django Twilio**, **Django SMS**, **Django OTP**, **Django Dramatiq**, **Django Redis**, **Django PostgreSQL**, **Django currency conversion**, **Django cryptocurrency**, **Django YFinance**, **Django CoinGecko**, **Django multi-threading**, **Django testing**, **Django migration**, **Django security**, **Django performance**, **Django scalability**, **Django monitoring**, **Django logging**, **Django webhooks**, **Django OpenAPI**, **Django Swagger**, **Django documentation**, **Django framework**, **Python Django**, **Django development**, **Django best practices**

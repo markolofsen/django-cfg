@@ -9,12 +9,12 @@ from django.dispatch import receiver
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
-import logging
+from django_cfg.modules.django_logger import get_logger
 
 from ..models import Subscription, EndpointGroup, UserBalance, Transaction
 from ..services.cache import SimpleCache
 
-logger = logging.getLogger(__name__)
+logger = get_logger("subscription_signals")
 
 
 @receiver(pre_save, sender=Subscription)

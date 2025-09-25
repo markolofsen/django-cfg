@@ -3,14 +3,14 @@ Decorators for API access control and endpoint registration.
 """
 
 import functools
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Optional, List, Callable, Any
 from django.http import JsonResponse
 from django.conf import settings
 from django.utils import timezone
 from .models import EndpointGroup, Subscription
 
-logger = logging.getLogger(__name__)
+logger = get_logger("decorators")
 
 
 def require_api_key(func: Callable) -> Callable:

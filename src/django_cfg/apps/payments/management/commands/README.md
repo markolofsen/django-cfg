@@ -1,178 +1,146 @@
-# Currency Management Commands
+# Payment Management Commands
 
-Management команды для работы с валютами в Universal Payments System.
+Optimized management commands for Django CFG payments system.
 
-## Команды
+## Available Commands
 
-### 🪙 `populate_currencies` - Первоначальное заполнение
+### 1. `manage_currencies` - Currency and Rate Management
 
-Заполняет пустую базу данных валютами из внешних API (CoinGecko, YFinance).
+Universal command for all currency-related operations.
+
+#### Usage Examples:
 
 ```bash
-# Быстрое заполнение (50 криптовалют + 20 фиатных)
-python manage.py populate_currencies --quick
+# Update USD exchange rates only
+python manage.py manage_currencies --rates-only
 
-# Стандартное заполнение (200 криптовалют + 30 фиатных)
-python manage.py populate_currencies
+# Update specific currency rate
+python manage.py manage_currencies --rates-only --currency ETH
 
-# Только криптовалюты
-python manage.py populate_currencies --crypto-only
+# Initial population (empty database)
+python manage.py manage_currencies --populate
 
-# Только фиатные валюты
-python manage.py populate_currencies --fiat-only
+# Full update with fresh rates
+python manage.py manage_currencies --force
 
-# Пропустить существующие валюты
-python manage.py populate_currencies --skip-existing
+# Dry run to see what would be updated
+python manage.py manage_currencies --dry-run
+
+# Limit number of currencies processed
+python manage.py manage_currencies --populate --max-crypto 100 --max-fiat 20
 ```
 
-### 🔄 `update_currencies` - Обновление курсов
+#### Options:
+- `--populate` - Initial population mode for empty database
+- `--rates-only` - Only update USD exchange rates  
+- `--currency CODE` - Update specific currency (e.g., BTC, ETH)
+- `--force` - Force refresh all data even if fresh
+- `--dry-run` - Show what would be done without changes
+- `--max-crypto N` - Limit crypto currencies (default: 200)
+- `--max-fiat N` - Limit fiat currencies (default: 50)
 
-Обновляет курсы валют с внешних API.
+---
+
+### 2. `manage_providers` - Payment Provider Management
+
+Universal command for all provider-related operations.
+
+#### Usage Examples:
 
 ```bash
-# Обновить устаревшие курсы (старше 6 часов)
-python manage.py update_currencies
+# Sync all active providers
+python manage.py manage_providers
 
-# Принудительно обновить все валюты
-python manage.py update_currencies --force-update
+# Sync specific provider
+python manage.py manage_providers --provider nowpayments
 
-# Сухой прогон (показать что будет обновлено)
-python manage.py update_currencies --dry-run
+# Sync multiple providers
+python manage.py manage_providers --provider nowpayments,cryptomus
 
-# Кастомные лимиты
-python manage.py update_currencies --max-crypto 100 --max-fiat 30
+# Sync providers + update USD rates
+python manage.py manage_providers --with-rates
 
-# Исключить стейблкоины
-python manage.py update_currencies --exclude-stablecoins
+# Show provider statistics
+python manage.py manage_providers --stats
 
-# Подробный вывод
-python manage.py update_currencies --verbose
+# Dry run to see what would be synced
+python manage.py manage_providers --dry-run --verbose
 ```
 
-### 📊 `currency_stats` - Статистика валют
+#### Options:
+- `--provider NAME` - Specific provider(s) to sync (comma-separated)
+- `--all` - Sync all available providers
+- `--with-rates` - Also update USD exchange rates after sync
+- `--stats` - Show provider statistics
+- `--dry-run` - Show what would be synced without changes
+- `--verbose` - Show detailed progress information
 
-Показывает статистику базы данных валют.
+---
+
+### 3. `currency_stats` - Statistics and Reports
+
+Display currency database statistics and health information.
+
+#### Usage Examples:
 
 ```bash
-# Базовая статистика
+# Basic statistics
 python manage.py currency_stats
 
-# Детальная статистика
+# Detailed breakdown
 python manage.py currency_stats --detailed
 
-# Показать топ-10 валют
+# Top currencies by value
 python manage.py currency_stats --top 10
 
-# Проверить устаревшие курсы
+# Check rate freshness
 python manage.py currency_stats --check-rates
-
-# Экспортировать в CSV
-python manage.py currency_stats --export-csv currencies.csv
 ```
 
-## Автоматизация
+---
 
-### Cron для регулярного обновления
+## Migration from Old Commands
 
+| Old Command | New Command |
+|-------------|-------------|
+| `populate_currencies` | `manage_currencies --populate` |
+| `update_currencies` | `manage_currencies` |
+| `update_currency_rates` | `manage_currencies --rates-only` |
+| `sync_providers` | `manage_providers` |
+| `currency_stats` | `currency_stats` (unchanged) |
+
+## Automation Examples
+
+### Daily Rate Updates (Crontab)
 ```bash
-# Обновлять курсы каждые 6 часов
-0 */6 * * * cd /path/to/project && poetry run python manage.py update_currencies
+# Update rates every 6 hours
+0 */6 * * * cd /path/to/project && python manage.py manage_currencies --rates-only
 
-# Ежедневная проверка статистики
-0 9 * * * cd /path/to/project && poetry run python manage.py currency_stats --check-rates
+# Sync providers once daily
+0 2 * * * cd /path/to/project && python manage.py manage_providers --with-rates
 ```
 
-### Docker
-
+### Initial Setup
 ```bash
-# В Docker контейнере
-docker exec -it container_name poetry run python manage.py populate_currencies --quick
-docker exec -it container_name poetry run python manage.py update_currencies
-```
+# 1. Populate base currencies
+python manage.py manage_currencies --populate
 
-## Примеры использования
+# 2. Sync payment providers
+python manage.py manage_providers
 
-### Первоначальная настройка
-
-```bash
-# 1. Заполнить базу данных валютами
-python manage.py populate_currencies --quick
-
-# 2. Проверить результат
+# 3. Check statistics
+python manage.py manage_providers --stats
 python manage.py currency_stats
 ```
 
-### Регулярное обслуживание
+---
 
-```bash
-# 1. Обновить курсы
-python manage.py update_currencies --verbose
+## Features
 
-# 2. Проверить устаревшие курсы
-python manage.py currency_stats --check-rates
-
-# 3. При необходимости - принудительное обновление
-python manage.py update_currencies --force-update
-```
-
-### Production обслуживание
-
-```bash
-# Обновление с минимальными API запросами
-python manage.py update_currencies --max-crypto 50 --max-fiat 20
-
-# Мониторинг состояния
-python manage.py currency_stats --detailed --export-csv daily_report.csv
-```
-
-## Интеграция с django_currency
-
-Команды используют модуль `django_currency.database.database_loader` для:
-
-- ✅ Получения списка валют с CoinGecko
-- ✅ Загрузки курсов фиатных валют с YFinance  
-- ✅ Rate limiting для защиты от API throttling
-- ✅ Кэширования для оптимизации производительности
-- ✅ Pydantic валидации для типобезопасности
-
-## Конфигурация
-
-Настройки в `DatabaseLoaderConfig`:
-
-```python
-config = DatabaseLoaderConfig(
-    max_cryptocurrencies=500,        # Максимум криптовалют
-    max_fiat_currencies=50,          # Максимум фиатных валют  
-    min_market_cap_usd=1_000_000,    # Минимальная капитализация
-    coingecko_delay=1.5,             # Задержка между запросами
-    yfinance_delay=0.5,              # Задержка для YFinance
-    exclude_stablecoins=False,       # Исключить стейблкоины
-    cache_ttl_hours=24               # TTL кэша в часах
-)
-```
-
-## Мониторинг
-
-### Логи
-
-Команды логируют в `django_cfg.apps.payments.management.commands`:
-
-```python
-import logging
-logger = logging.getLogger('django_cfg.apps.payments.management.commands')
-```
-
-### Метрики
-
-- Количество созданных/обновленных валют
-- Время выполнения API запросов
-- Ошибки валидации и API
-- Статистика курсов валют
-
-## Безопасность
-
-- ✅ Rate limiting для API запросов
-- ✅ Atomic транзакции для консистентности
-- ✅ Graceful handling ошибок API
-- ✅ Валидация данных с Pydantic
-- ✅ Rollback при критических ошибках
+- **🚀 Fast**: Optimized database queries and caching
+- **📊 Progress**: Real-time progress reporting and statistics  
+- **🔄 Atomic**: Transaction safety with rollback on errors
+- **🎯 Flexible**: Multiple operation modes and options
+- **📈 Pydantic**: Full type safety with Pydantic models
+- **🛡️ Safe**: Dry-run mode for testing changes
+- **📝 Verbose**: Detailed logging and error reporting

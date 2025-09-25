@@ -4,7 +4,7 @@ Validation utilities for payments module.
 Basic validation functions for API keys and subscription access.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Optional, Dict, Any
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -12,7 +12,7 @@ from django.utils import timezone
 from ..models import APIKey, Subscription
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+logger = get_logger("validation_utils")
 
 
 def validate_api_key(api_key: str) -> bool:

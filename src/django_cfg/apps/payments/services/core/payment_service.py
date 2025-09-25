@@ -5,7 +5,6 @@ This service handles universal payment operations, provider orchestration,
 and payment lifecycle management.
 """
 
-import logging
 from typing import Optional, List
 from decimal import Decimal
 from django.db import transaction
@@ -18,6 +17,7 @@ from .fallback_service import get_fallback_service
 from ...models import UniversalPayment, UserBalance, Transaction
 from ...utils.config_utils import get_payments_config
 from ..providers.registry import ProviderRegistry
+from django_cfg.modules.django_logger import get_logger
 from ..monitoring.provider_health import get_health_monitor
 from ..internal_types import (
     ProviderResponse, WebhookData, ServiceOperationResult,
@@ -28,9 +28,10 @@ from ..internal_types import (
 
 # Import django_currency module for currency conversion
 from django_cfg.modules.django_currency import convert_currency, CurrencyError
+from ...models.events import PaymentEvent
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+logger = get_logger("payment_service")
 
 
 class PaymentRequest(BaseModel):
@@ -501,8 +502,6 @@ class PaymentService:
             data: Event data
         """
         try:
-            from ...models.events import PaymentEvent
-            
             # Get next sequence number
             last_event = PaymentEvent.objects.filter(
                 payment_id=str(payment.id)
@@ -534,8 +533,6 @@ class PaymentService:
             List of payment events
         """
         try:
-            from ...models.events import PaymentEvent
-            
             events = PaymentEvent.objects.filter(
                 payment_id=payment_id
             ).order_by('sequence_number')

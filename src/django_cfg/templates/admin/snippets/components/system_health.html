@@ -4,7 +4,7 @@
 <div class="mt-8 w-full">
     {% include 'admin/components/section_header.html' with title='System Health' icon='health_and_safety' icon_color='green' %}
     
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
         {% for key, value in system_health.items %}
             {% if key == "database_status" %}
                 {% include 'admin/components/metric_card.html' with title='Database' description='Connection & queries' icon='storage' status=value|yesno:'healthy,error' status_text=value|title %}

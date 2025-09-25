@@ -3,7 +3,7 @@ Currency serializers.
 """
 
 from rest_framework import serializers
-from ..models import Currency, CurrencyNetwork
+from ..models import Currency, Network, ProviderCurrency
 
 
 class CurrencySerializer(serializers.ModelSerializer):
@@ -16,9 +16,8 @@ class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
         fields = [
-            'id', 'code', 'name', 'symbol', 'currency_type', 'currency_type_display',
-            'is_crypto', 'is_fiat', 'decimal_places', 'usd_rate', 'rate_updated_at',
-            'is_active', 'min_payment_amount'
+            'id', 'code', 'name', 'currency_type', 'currency_type_display',
+            'is_crypto', 'is_fiat', 'usd_rate', 'rate_updated_at'
         ]
         read_only_fields = ['rate_updated_at']
     
@@ -31,17 +30,26 @@ class CurrencySerializer(serializers.ModelSerializer):
         return obj.is_fiat
 
 
-class CurrencyNetworkSerializer(serializers.ModelSerializer):
-    """Currency network with status."""
-    
-    currency_code = serializers.CharField(source='currency.code', read_only=True)
-    currency_name = serializers.CharField(source='currency.name', read_only=True)
+class NetworkSerializer(serializers.ModelSerializer):
+    """Network information."""
     
     class Meta:
-        model = CurrencyNetwork
+        model = Network
+        fields = ['id', 'code', 'name']
+
+
+class ProviderCurrencySerializer(serializers.ModelSerializer):
+    """Provider currency with base currency and network info."""
+    
+    base_currency = CurrencySerializer(read_only=True)
+    network = NetworkSerializer(read_only=True)
+    
+    class Meta:
+        model = ProviderCurrency
         fields = [
-            'id', 'currency', 'currency_code', 'currency_name', 'network_code',
-            'network_name', 'is_active', 'confirmation_blocks'
+            'id', 'provider_name', 'provider_currency_code', 'base_currency', 'network',
+            'is_enabled', 'available_for_payment', 'available_for_payout', 
+            'is_popular', 'is_stable', 'min_amount', 'max_amount', 'logo_url'
         ]
 
 
@@ -52,4 +60,4 @@ class CurrencyListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Currency
-        fields = ['id', 'code', 'name', 'currency_type', 'currency_type_display', 'is_active']
+        fields = ['id', 'code', 'name', 'currency_type', 'currency_type_display']

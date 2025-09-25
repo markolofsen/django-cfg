@@ -5,13 +5,13 @@ Helper functions for working with payment configurations.
 """
 
 from typing import Optional
-import logging
+from django_cfg.modules.django_logger import get_logger
 
 from .module import PaymentsCfgModule
 from .settings import PaymentsSettings
 from django_cfg.models.payments import PaymentProviderConfig
 
-logger = logging.getLogger(__name__)
+logger = get_logger("config_utils")
 
 # Global payments configuration instance
 _payments_config = PaymentsCfgModule()

@@ -207,11 +207,15 @@ class PaymentStatsView(
         }
         
         # Convert seconds to human readable format
-        for key in metrics:
-            if metrics[key] > 0:
-                metrics[f"{key}_formatted"] = self._format_duration(metrics[key])
+        formatted_metrics = {}
+        for key, value in metrics.items():
+            if value > 0:
+                formatted_metrics[f"{key}_formatted"] = self._format_duration(value)
             else:
-                metrics[f"{key}_formatted"] = "N/A"
+                formatted_metrics[f"{key}_formatted"] = "N/A"
+        
+        # Add formatted metrics to the original metrics
+        metrics.update(formatted_metrics)
         
         return metrics
     

@@ -16,7 +16,7 @@ from .api_keys import (
     APIKeySerializer, APIKeyCreateSerializer, APIKeyListSerializer
 )
 from .currencies import (
-    CurrencySerializer, CurrencyNetworkSerializer, CurrencyListSerializer
+    CurrencySerializer, NetworkSerializer, ProviderCurrencySerializer, CurrencyListSerializer
 )
 from .tariffs import (
     TariffSerializer, TariffEndpointGroupSerializer, TariffListSerializer
@@ -46,7 +46,8 @@ __all__ = [
     
     # Currencies
     'CurrencySerializer',
-    'CurrencyNetworkSerializer',
+    'NetworkSerializer',
+    'ProviderCurrencySerializer',
     'CurrencyListSerializer',
     
     # Tariffs

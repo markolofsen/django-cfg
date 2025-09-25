@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.2.29"
+version = "1.2.31"
 description = "🚀 Next-gen Django configuration: type-safety, AI features, blazing-fast setup, and automated best practices — all in one."
 readme = "README.md"
 license = {text = "MIT"}
@@ -69,7 +69,7 @@ dependencies = [
     "loguru>=0.7.0,<1.0",
     "colorlog>=6.9.0,<7.0",
     "cachetools>=5.3.0,<7.0",
-    "toml (>=0.10.2,<0.11.0)",
+    "toml>=0.10.2,<0.11.0",
     
     # Development tools (Python 3.12+ only)
     "ngrok>=1.5.1; python_version>='3.12'",
@@ -86,7 +86,7 @@ dependencies = [
     "djangorestframework-simplejwt[token-blacklist]>=5.5.0,<6.0",
     "drf-nested-routers>=0.94.0,<1.0",
     "django-filter>=25.0,<26.0",
-    "django-ratelimit (>=4.1.0,<5.0.0)",
+    "django-ratelimit>=4.1.0,<5.0.0",
     "drf-spectacular>=0.28.0,<1.0",
     "drf-spectacular-sidecar>=2025.8.0,<2026.0",
     "django-json-widget>=2.0.0,<3.0",
@@ -122,9 +122,7 @@ dependencies = [
 
     # Production dependencies
     "django-revolution>=1.0.43,<2.0",
-    "yfinance (>=0.2.66,<0.3.0)",
-    "pycoingecko (>=3.2.0,<4.0.0)",
-    "tenacity (>=9.1.2,<10.0.0)",
+    "tenacity>=9.1.2,<10.0.0",
 ]
 
 [project.optional-dependencies]

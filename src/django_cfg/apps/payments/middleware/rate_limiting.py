@@ -3,16 +3,16 @@ Rate Limiting Middleware.
 Implements sliding window rate limiting using Redis.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 import time
 from typing import Optional
 from django.http import JsonResponse, HttpRequest
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 from django.utils import timezone
-from ..services import RateLimitCache
+from django.core.cache import cache
 
-logger = logging.getLogger(__name__)
+logger = get_logger("rate_limiting")
 
 
 class RateLimitingMiddleware(MiddlewareMixin):
@@ -29,7 +29,6 @@ class RateLimitingMiddleware(MiddlewareMixin):
     
     def __init__(self, get_response=None):
         super().__init__(get_response)
-        self.rate_limit_cache = RateLimitCache()
         
         # Default rate limits (can be overridden in settings)
         self.default_limits = getattr(settings, 'PAYMENTS_RATE_LIMITS', {
@@ -142,14 +141,8 @@ class RateLimitingMiddleware(MiddlewareMixin):
             # Get request count in window
             redis_key = f"rate_limit:{rate_key}:{window}"
             
-            # Use Redis sorted set for sliding window
-            # Remove old entries and count current entries
-            count = self.redis_service.sliding_window_count(
-                redis_key, 
-                window_start, 
-                current_time, 
-                window_seconds
-            )
+            # Simple cache-based rate limiting
+            count = cache.get(redis_key, 0)
             
             return count >= limit
             
@@ -181,12 +174,9 @@ class RateLimitingMiddleware(MiddlewareMixin):
                 if window_seconds:
                     redis_key = f"rate_limit:{rate_key}:{window}"
                     
-                    # Add current timestamp to sorted set
-                    self.redis_service.record_request(
-                        redis_key,
-                        current_time,
-                        window_seconds
-                    )
+                    # Increment request count
+                    current_count = cache.get(redis_key, 0)
+                    cache.set(redis_key, current_count + 1, window_seconds)
             
         except Exception as e:
             logger.error(f"Error recording request: {e}")

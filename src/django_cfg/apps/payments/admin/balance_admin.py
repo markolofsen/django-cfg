@@ -100,8 +100,8 @@ class UserBalanceAdmin(ModelAdmin):
             color = '#dc3545'  # Red
         
         return format_html(
-            '<span style="color: {}; font-weight: bold;">${:.2f}</span>',
-            color, amount
+            '<span style="color: {}; font-weight: bold;">${}</span>',
+            color, f"{float(amount):.2f}"
         )
     
     @display(description="Reserved")
@@ -109,8 +109,8 @@ class UserBalanceAdmin(ModelAdmin):
         """Display reserved amount."""
         if obj.reserved_usd > 0:
             return format_html(
-                '<span style="color: #6c757d;">${:.2f}</span>',
-                obj.reserved_usd
+                '<span style="color: #6c757d;">${}</span>',
+                f"{float(obj.reserved_usd):.2f}"
             )
         return "—"
     
@@ -119,8 +119,8 @@ class UserBalanceAdmin(ModelAdmin):
         """Display available balance."""
         available = obj.amount_usd - obj.reserved_usd
         return format_html(
-            '<span style="font-weight: bold;">${:.2f}</span>',
-            available
+            '<span style="font-weight: bold;">${}</span>',
+            f"{float(available):.2f}"
         )
     
     @display(description="Last Transaction")
@@ -129,10 +129,10 @@ class UserBalanceAdmin(ModelAdmin):
         last_transaction = obj.user.transactions.order_by('-created_at').first()
         if last_transaction:
             return format_html(
-                '<span style="color: {};">{} ${:.2f}</span><br><small>{}</small>',
+                '<span style="color: {};">{} ${}</span><br><small>{}</small>',
                 '#28a745' if last_transaction.amount_usd > 0 else '#dc3545',
                 '+' if last_transaction.amount_usd > 0 else '',
-                abs(last_transaction.amount_usd),
+                f"{float(abs(last_transaction.amount_usd)):.2f}",
                 naturaltime(last_transaction.created_at)
             )
         return "No transactions"
@@ -152,18 +152,18 @@ class UserBalanceAdmin(ModelAdmin):
         return format_html(
             '<div style="line-height: 1.6;">'
             '<strong>Statistics:</strong><br>'
-            '• Total Credited: <span style="color: #28a745;">${:.2f}</span><br>'
-            '• Total Debited: <span style="color: #dc3545;">${:.2f}</span><br>'
-            '• Net Balance: <span style="color: {};">${:.2f}</span><br>'
+            '• Total Credited: <span style="color: #28a745;">${}</span><br>'
+            '• Total Debited: <span style="color: #dc3545;">${}</span><br>'
+            '• Net Balance: <span style="color: {};">${}</span><br>'
             '• Total Transactions: {}<br>'
-            '• Available Balance: <strong>${:.2f}</strong>'
+            '• Available Balance: <strong>${}</strong>'
             '</div>',
-            total_credited,
-            total_debited,
+            f"{float(total_credited):.2f}",
+            f"{float(total_debited):.2f}",
             '#28a745' if (total_credited - total_debited) > 0 else '#dc3545',
-            total_credited - total_debited,
+            f"{float(total_credited - total_debited):.2f}",
             transaction_count,
-            obj.amount_usd - obj.reserved_usd
+            f"{float(obj.amount_usd - obj.reserved_usd):.2f}"
         )
     
     balance_statistics.short_description = "Balance Statistics"
@@ -381,7 +381,7 @@ class TransactionAdmin(ModelAdmin):
             '• ID: {}<br>'
             '• User: {} ({})<br>'
             '• Type: {}<br>'
-            '• Amount: <span style="color: {};">${:.2f}</span><br>'
+            '• Amount: <span style="color: {};">${}</span><br>'
             '• Description: {}<br>'
             '• Created: {}<br>'
             '{}'
@@ -392,7 +392,7 @@ class TransactionAdmin(ModelAdmin):
             obj.user.email,
             obj.get_transaction_type_display(),
             '#28a745' if obj.amount_usd > 0 else '#dc3545',
-            obj.amount_usd,
+            f"{float(obj.amount_usd):.2f}",
             obj.description,
             obj.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             f'• Payment: {obj.payment.internal_payment_id}<br>' if obj.payment else '',

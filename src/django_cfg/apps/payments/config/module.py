@@ -5,12 +5,12 @@ Handles loading and managing payment configurations from project settings.
 """
 
 from typing import Optional
-import logging
+from django_cfg.modules.django_logger import get_logger
 
 from django_cfg.modules.base import BaseCfgModule
 from .settings import PaymentsSettings
 
-logger = logging.getLogger(__name__)
+logger = get_logger("config_module")
 
 
 class PaymentsCfgModule(BaseCfgModule):

@@ -19,7 +19,7 @@ from .views import (
     UserAPIKeyViewSet, APIKeyViewSet,
     
     # Currency ViewSets
-    CurrencyViewSet, CurrencyNetworkViewSet,
+    CurrencyViewSet, NetworkViewSet, ProviderCurrencyViewSet,
     
     # Tariff ViewSets
     TariffViewSet, TariffEndpointGroupViewSet,
@@ -49,7 +49,8 @@ class PaymentSystemRouter:
         
         # Currency and pricing
         self.router.register(r'currencies', CurrencyViewSet, basename='currency')
-        self.router.register(r'currency-networks', CurrencyNetworkViewSet, basename='currency-network')
+        self.router.register(r'networks', NetworkViewSet, basename='network')
+        self.router.register(r'provider-currencies', ProviderCurrencyViewSet, basename='provider-currency')
         self.router.register(r'tariffs', TariffViewSet, basename='tariff')
         self.router.register(r'tariff-groups', TariffEndpointGroupViewSet, basename='tariff-group')
     

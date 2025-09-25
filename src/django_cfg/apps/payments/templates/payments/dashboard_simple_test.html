@@ -1,0 +1,35 @@
+{% extends 'payments/base.html' %}
+
+{% block title %}Payment Dashboard - Simple Test{% endblock %}
+
+{% block header_title %}Payment Dashboard - Test{% endblock %}
+{% block header_subtitle %}Simple test version{% endblock %}
+
+{% block content %}
+<div style="background: yellow; padding: 20px; margin: 20px; border: 2px solid red;">
+    <h1 style="color: black;">🔥 DASHBOARD TEST 🔥</h1>
+    <p style="color: black;"><strong>Payments count:</strong> {{ payments|length }}</p>
+    <p style="color: black;"><strong>Payment stats:</strong> {{ payment_stats }}</p>
+    <p style="color: black;"><strong>Provider stats:</strong> {{ provider_stats|length }}</p>
+    
+    {% if payments %}
+        <h2 style="color: black;">Payments List:</h2>
+        <ul style="color: black;">
+        {% for payment in payments %}
+            <li>{{ payment.user.email }} - ${{ payment.amount_usd }} ({{ payment.status }})</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p style="color: red; font-size: 20px;">❌ NO PAYMENTS FOUND</p>
+    {% endif %}
+    
+    {% if payment_stats %}
+        <h2 style="color: black;">Stats:</h2>
+        <p style="color: black;">Total: {{ payment_stats.total_payments_count }}</p>
+        <p style="color: black;">Pending: {{ payment_stats.pending_payments_count }}</p>
+        <p style="color: black;">Volume: ${{ payment_stats.total_volume }}</p>
+    {% else %}
+        <p style="color: red; font-size: 20px;">❌ NO STATS FOUND</p>
+    {% endif %}
+</div>
+{% endblock %}

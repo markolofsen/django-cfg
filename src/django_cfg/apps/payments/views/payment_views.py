@@ -76,8 +76,8 @@ class UserPaymentViewSet(viewsets.ModelViewSet):
                 
         except Exception as e:
             # Log error but don't fail completely
-            import logging
-            logger = logging.getLogger(__name__)
+            from django_cfg.modules.django_logger import get_logger
+            logger = get_logger("payment_views")
             logger.error(f"Payment status check failed for {payment.id}: {e}")
             
             return Response({

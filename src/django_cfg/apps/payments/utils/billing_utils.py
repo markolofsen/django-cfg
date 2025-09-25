@@ -5,7 +5,7 @@ Provides essential billing calculations and transaction management
 without over-engineering.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Dict, Any, Optional, Tuple
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timedelta
@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 from ..models import UserBalance, Transaction, Subscription
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+logger = get_logger("billing_utils")
 
 
 def calculate_usage_cost(

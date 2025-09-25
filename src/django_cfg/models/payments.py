@@ -457,7 +457,6 @@ class PaymentsConfig(BaseModel):
 # Helper function for easy provider configuration
 def create_nowpayments_config(
     api_key: str,
-    sandbox: bool = True,
     ipn_secret: Optional[str] = None,
     **kwargs
 ) -> NowPaymentsConfig:
@@ -465,7 +464,6 @@ def create_nowpayments_config(
     return NowPaymentsConfig(
         name="nowpayments",
         api_key=SecretStr(api_key),
-        sandbox=sandbox,
         ipn_secret=SecretStr(ipn_secret) if ipn_secret else None,
         **kwargs
     )
@@ -489,16 +487,14 @@ def create_stripe_config(
     api_key: str,
     publishable_key: Optional[str] = None,
     webhook_endpoint_secret: Optional[str] = None,
-    sandbox: bool = True,
     **kwargs
 ) -> StripeConfig:
-    """Helper to create Stripe configuration."""
+    """Helper to create Stripe configuration with automatic sandbox detection."""
     return StripeConfig(
         name="stripe",
         api_key=SecretStr(api_key),
         publishable_key=publishable_key,
         webhook_endpoint_secret=SecretStr(webhook_endpoint_secret) if webhook_endpoint_secret else None,
-        sandbox=sandbox,
         **kwargs
     )
 
@@ -506,13 +502,12 @@ def create_stripe_config(
 def create_cryptomus_config(
     api_key: str,
     merchant_uuid: str,
-    sandbox: bool = True,
     callback_url: Optional[str] = None,
     success_url: Optional[str] = None,
     fail_url: Optional[str] = None,
     **kwargs
 ):
-    """Helper to create Cryptomus configuration."""
+    """Helper to create Cryptomus configuration with automatic sandbox detection."""
     # Import here to avoid circular imports
     from django_cfg.apps.payments.config.providers import CryptomusConfig
     
@@ -520,7 +515,6 @@ def create_cryptomus_config(
         name="cryptomus",
         api_key=SecretStr(api_key),
         merchant_uuid=merchant_uuid,
-        sandbox=sandbox,
         callback_url=callback_url,
         success_url=success_url,
         fail_url=fail_url,

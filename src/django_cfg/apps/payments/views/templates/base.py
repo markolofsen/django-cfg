@@ -9,9 +9,9 @@ from django.utils.decorators import method_decorator
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from datetime import timedelta
-import logging
+from django_cfg.modules.django_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("view_base")
 
 
 def superuser_required(function=None):
@@ -103,13 +103,15 @@ class PaymentStatsMixin:
             total_volume=Sum('amount_usd')
         )
         
-        # Convert Decimal to float for JSON serialization
-        if stats['total_volume']:
-            stats['total_volume'] = float(stats['total_volume'])
-        else:
-            stats['total_volume'] = 0.0
-            
-        return stats
+        # Convert to template format
+        return {
+            'total_payments_count': stats['total_count'] or 0,
+            'pending_payments_count': stats['pending_count'] or 0,
+            'confirming_payments_count': stats['confirming_count'] or 0,
+            'completed_payments_count': stats['completed_count'] or 0,
+            'failed_payments_count': stats['failed_count'] or 0,
+            'total_volume': float(stats['total_volume'] or 0),
+        }
     
     def get_provider_stats(self, queryset=None):
         """Get provider-specific statistics."""
@@ -123,7 +125,8 @@ class PaymentStatsMixin:
             completed_count=Count('id', filter=Q(status='completed')),
         ).order_by('-volume')
         
-        # Calculate success rate
+        # Calculate success rate and convert to list of dicts
+        stats_list = []
         for stat in provider_stats:
             if stat['count'] > 0:
                 stat['success_rate'] = (stat['completed_count'] / stat['count']) * 100
@@ -135,8 +138,10 @@ class PaymentStatsMixin:
                 stat['volume'] = float(stat['volume'])
             else:
                 stat['volume'] = 0.0
+                
+            stats_list.append(stat)
         
-        return provider_stats
+        return stats_list
     
     def get_time_range_stats(self, days=30):
         """Get statistics for a specific time range."""
@@ -160,8 +165,11 @@ class PaymentContextMixin:
         """Get common context data used across multiple views."""
         from ...models import PaymentEvent
         
-        # Get recent events for activity feed
-        recent_events = PaymentEvent.objects.select_related('payment').order_by('-created_at')[:10]
+        # Get recent events for activity feed (if any exist)
+        try:
+            recent_events = PaymentEvent.objects.order_by('-created_at')[:10]
+        except Exception:
+            recent_events = []
         
         return {
             'recent_events': recent_events,

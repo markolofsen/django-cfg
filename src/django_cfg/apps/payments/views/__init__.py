@@ -16,7 +16,7 @@ from .api_key_views import (
     APIKeyCreateView, APIKeyValidateView
 )
 from .currency_views import (
-    CurrencyViewSet, CurrencyNetworkViewSet,
+    CurrencyViewSet, NetworkViewSet, ProviderCurrencyViewSet,
     SupportedCurrenciesView, CurrencyRatesView
 )
 from .tariff_views import (
@@ -50,7 +50,8 @@ __all__ = [
     
     # Currency ViewSets & Generics
     'CurrencyViewSet',
-    'CurrencyNetworkViewSet',
+    'NetworkViewSet',
+    'ProviderCurrencyViewSet',
     'SupportedCurrenciesView',
     'CurrencyRatesView',
     

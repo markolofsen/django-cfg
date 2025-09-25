@@ -3,17 +3,18 @@ Usage Tracking Middleware.
 Tracks API usage for billing, analytics, and monitoring.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 import json
 from typing import Optional, Dict, Any
 from django.http import HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 from django.utils import timezone
+from django.core.cache import cache
 from ..models import APIKey, Subscription, Transaction
 from ..services import RateLimitCache
 
-logger = logging.getLogger(__name__)
+logger = get_logger("usage_tracking")
 
 
 class UsageTrackingMiddleware(MiddlewareMixin):
@@ -30,7 +31,6 @@ class UsageTrackingMiddleware(MiddlewareMixin):
     
     def __init__(self, get_response=None):
         super().__init__(get_response)
-        self.redis_service = RedisService()
         
         # Enable/disable usage tracking
         self.enabled = getattr(settings, 'PAYMENTS_USAGE_TRACKING_ENABLED', True)
@@ -236,28 +236,31 @@ class UsageTrackingMiddleware(MiddlewareMixin):
             date_key = usage_data['start_time'].strftime('%Y-%m-%d')
             user_id = usage_data['user_id']
             
-            # Increment counters
-            self.redis_service.increment_daily_usage(user_id, date_key)
+            # Increment counters using Django cache
+            daily_usage_key = f"payments:daily_usage:{user_id}:{date_key}"
+            current_usage = cache.get(daily_usage_key, 0)
+            cache.set(daily_usage_key, current_usage + 1, timeout=86400)  # 24 hours
             
             if usage_data.get('subscription_id'):
-                self.redis_service.increment_subscription_usage(
-                    usage_data['subscription_id'], 
-                    date_key
-                )
+                sub_usage_key = f"payments:subscription_usage:{usage_data['subscription_id']}:{date_key}"
+                current_sub_usage = cache.get(sub_usage_key, 0)
+                cache.set(sub_usage_key, current_sub_usage + 1, timeout=86400)  # 24 hours
             
             # Store performance metrics
             if usage_data['response_time_ms'] > 0:
-                self.redis_service.record_response_time(
-                    usage_data['path'],
-                    usage_data['response_time_ms']
-                )
+                perf_key = f"payments:performance:{usage_data['path'].replace('/', '_')}"
+                response_times = cache.get(perf_key, [])
+                response_times.append(usage_data['response_time_ms'])
+                # Keep only last 100 measurements
+                if len(response_times) > 100:
+                    response_times = response_times[-100:]
+                cache.set(perf_key, response_times, timeout=3600)  # 1 hour
             
             # Store error metrics
             if usage_data.get('is_error'):
-                self.redis_service.increment_error_count(
-                    usage_data['path'],
-                    usage_data['status_code']
-                )
+                error_key = f"payments:errors:{usage_data['path'].replace('/', '_')}:{usage_data['status_code']}"
+                current_errors = cache.get(error_key, 0)
+                cache.set(error_key, current_errors + 1, timeout=3600)  # 1 hour
             
         except Exception as e:
             logger.error(f"Error storing usage data in Redis: {e}")

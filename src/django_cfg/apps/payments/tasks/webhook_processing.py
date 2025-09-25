@@ -5,7 +5,7 @@ Simple webhook processing with fallback to sync processing.
 Uses existing Dramatiq configuration and graceful degradation.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Dict, Any, Optional
 from django.db import transaction
 from django.utils import timezone
@@ -16,7 +16,7 @@ import dramatiq
 from ..services.core.payment_service import PaymentService
 from ..models.events import PaymentEvent
 
-logger = logging.getLogger(__name__)
+logger = get_logger("webhook_processing")
 
 
 @dramatiq.actor(

@@ -1,0 +1,373 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payments_tags %}
+
+{% block header_title %}Payment Details{% endblock %}
+{% block header_subtitle %}Payment {{ payment.internal_payment_id }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Payment Overview -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Overview</h3>
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Complete payment information</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% payment_status_badge payment %}
+                    {% if payment.pay_address and payment.pay_amount %}
+                    <a href="{% url 'payments_dashboard:qr_code' payment.pk %}" 
+                       class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-default text-sm font-medium transition-colors duration-200">
+                        <span class="material-icons text-sm mr-2">qr_code</span>
+                        QR Code
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Payment Information -->
+                <div>
+                    <h4 class="text-md font-semibold text-font-important-light dark:text-font-important-dark mb-4">Payment Information</h4>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Internal ID:</dt>
+                            <dd class="text-sm font-mono text-font-default-light dark:text-font-default-dark">{{ payment.internal_payment_id }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Provider ID:</dt>
+                            <dd class="text-sm font-mono text-font-default-light dark:text-font-default-dark">{{ payment.provider_payment_id|default:"N/A" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Amount:</dt>
+                            <dd class="text-sm font-semibold text-font-important-light dark:text-font-important-dark">${{ payment.amount_usd|floatformat:2 }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Currency:</dt>
+                            <dd class="text-sm text-font-default-light dark:text-font-default-dark">{{ payment.currency_code }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Provider:</dt>
+                            <dd class="text-sm">
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 rounded-full mr-2 
+                                        {% if payment.provider == 'cryptapi' %}bg-orange-500
+                                        {% elif payment.provider == 'cryptomus' %}bg-blue-500
+                                        {% elif payment.provider == 'stripe' %}bg-purple-500
+                                        {% elif payment.provider == 'nowpayments' %}bg-green-500
+                                        {% else %}bg-gray-500{% endif %}">
+                                    </div>
+                                    <span class="text-font-default-light dark:text-font-default-dark capitalize">{{ payment.provider }}</span>
+                                </div>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <!-- User Information -->
+                <div>
+                    <h4 class="text-md font-semibold text-font-important-light dark:text-font-important-dark mb-4">User Information</h4>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Name:</dt>
+                            <dd class="text-sm text-font-default-light dark:text-font-default-dark">{{ payment.user.get_full_name|default:"N/A" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Email:</dt>
+                            <dd class="text-sm text-font-default-light dark:text-font-default-dark">{{ payment.user.email }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">User ID:</dt>
+                            <dd class="text-sm font-mono text-font-default-light dark:text-font-default-dark">{{ payment.user.id }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crypto Details (if applicable) -->
+    {% if payment.is_crypto_provider_payment %}
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Cryptocurrency Details</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Blockchain transaction information</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Payment Addresses -->
+                <div>
+                    <h4 class="text-md font-semibold text-font-important-light dark:text-font-important-dark mb-4">Payment Addresses</h4>
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Pay Address:</dt>
+                            <dd class="text-sm font-mono bg-base-50 dark:bg-base-800 p-2 rounded-default border border-base-200 dark:border-base-700 break-all">
+                                {{ payment.pay_address|default:"N/A" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Sender Address:</dt>
+                            <dd class="text-sm font-mono bg-base-50 dark:bg-base-800 p-2 rounded-default border border-base-200 dark:border-base-700 break-all">
+                                {{ payment.sender_address|default:"N/A" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Receiver Address:</dt>
+                            <dd class="text-sm font-mono bg-base-50 dark:bg-base-800 p-2 rounded-default border border-base-200 dark:border-base-700 break-all">
+                                {{ payment.receiver_address|default:"N/A" }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <!-- Transaction Details -->
+                <div>
+                    <h4 class="text-md font-semibold text-font-important-light dark:text-font-important-dark mb-4">Transaction Details</h4>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Crypto Amount:</dt>
+                            <dd class="text-sm font-semibold text-font-important-light dark:text-font-important-dark">
+                                {{ payment.crypto_amount|default:"N/A"|floatformat:8 }}
+                            </dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Pay Amount:</dt>
+                            <dd class="text-sm text-font-default-light dark:text-font-default-dark">{{ payment.pay_amount|default:"N/A"|floatformat:8 }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Network:</dt>
+                            <dd class="text-sm text-font-default-light dark:text-font-default-dark">{{ payment.network|default:"N/A" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Confirmations:</dt>
+                            <dd class="text-sm text-font-default-light dark:text-font-default-dark">{{ payment.confirmations_count|default:"0" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Transaction Hash:</dt>
+                            <dd class="text-sm font-mono bg-base-50 dark:bg-base-800 p-2 rounded-default border border-base-200 dark:border-base-700 break-all">
+                                {{ payment.transaction_hash|default:"N/A" }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Timestamps -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Timeline</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Payment lifecycle timestamps</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Created</div>
+                    <div class="text-sm font-medium text-font-important-light dark:text-font-important-dark">{{ payment.created_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ payment.created_at|time:"H:i:s" }}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Updated</div>
+                    <div class="text-sm font-medium text-font-important-light dark:text-font-important-dark">{{ payment.updated_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ payment.updated_at|time:"H:i:s" }}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark mb-1">Processed</div>
+                    {% if payment.processed_at %}
+                    <div class="text-sm font-medium text-font-important-light dark:text-font-important-dark">{{ payment.processed_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ payment.processed_at|time:"H:i:s" }}</div>
+                    {% else %}
+                    <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Not processed</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Events -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Payment Events</h3>
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Event history and logs</p>
+                </div>
+                <button id="refresh-events" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
+                    <span class="material-icons text-sm mr-1">refresh</span>
+                    Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div id="events-container" class="space-y-3">
+                {% for event in payment.events.all %}
+                <div class="flex items-start space-x-3 p-3 bg-base-50 dark:bg-base-800 rounded-default border border-base-200 dark:border-base-700">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-sm 
+                            {% if event.event_type == 'created' %}text-blue-600 dark:text-blue-400
+                            {% elif event.event_type == 'confirmed' %}text-green-600 dark:text-green-400
+                            {% elif event.event_type == 'failed' %}text-red-600 dark:text-red-400
+                            {% else %}text-gray-600 dark:text-gray-400{% endif %}">
+                            {% if event.event_type == 'created' %}add_circle
+                            {% elif event.event_type == 'confirmed' %}check_circle
+                            {% elif event.event_type == 'failed' %}error
+                            {% else %}info{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-font-important-light dark:text-font-important-dark">{{ event.event_type|title }}</div>
+                        <div class="text-sm text-font-default-light dark:text-font-default-dark">{{ event.message }}</div>
+                        <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">{{ event.timestamp|date:"M d, Y H:i:s" }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-font-subtle-light dark:text-font-subtle-dark text-center py-4">No events recorded</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata (if available) -->
+    {% if payment.metadata %}
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6 border-b border-base-200 dark:border-base-700">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">Metadata</h3>
+            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">Additional payment information</p>
+        </div>
+        
+        <div class="p-6">
+            <pre class="text-sm font-mono bg-base-50 dark:bg-base-800 p-4 rounded-default border border-base-200 dark:border-base-700 overflow-x-auto">{{ payment.metadata|pprint }}</pre>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default shadow-xs">
+        <div class="p-6">
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'payments_dashboard:list' %}" 
+                   class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">arrow_back</span>
+                    Back to List
+                </a>
+                
+                {% if payment.status == 'pending' %}
+                <button id="check-status" data-payment-id="{{ payment.pk }}"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">refresh</span>
+                    Check Status
+                </button>
+                {% endif %}
+                
+                {% if payment.pay_address and payment.pay_amount %}
+                <a href="{% url 'payments_dashboard:qr_code' payment.pk %}" 
+                   class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">qr_code</span>
+                    View QR Code
+                </a>
+                {% endif %}
+                
+                <button id="export-details"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-default text-sm font-medium transition-colors duration-200">
+                    <span class="material-icons text-sm mr-2">file_download</span>
+                    Export Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Payment detail loaded');
+    
+    // Elements
+    const checkStatusBtn = document.getElementById('check-status');
+    const refreshEventsBtn = document.getElementById('refresh-events');
+    const exportBtn = document.getElementById('export-details');
+    
+    // Check payment status
+    checkStatusBtn?.addEventListener('click', function() {
+        const paymentId = this.dataset.paymentId;
+        const originalText = this.innerHTML;
+        
+        // Show loading state
+        this.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">refresh</span>Checking...';
+        this.disabled = true;
+        
+        // Simulate API call
+        setTimeout(() => {
+            console.log('Status checked for payment:', paymentId);
+            this.innerHTML = originalText;
+            this.disabled = false;
+            
+            // Refresh the page to show updated status
+            window.location.reload();
+        }, 2000);
+    });
+    
+    // Refresh events
+    refreshEventsBtn?.addEventListener('click', function() {
+        console.log('Refreshing events...');
+        
+        // In a real implementation, this would fetch events via AJAX
+        const eventsContainer = document.getElementById('events-container');
+        eventsContainer.style.opacity = '0.5';
+        
+        setTimeout(() => {
+            eventsContainer.style.opacity = '1';
+            console.log('Events refreshed');
+        }, 1000);
+    });
+    
+    // Export payment details
+    exportBtn?.addEventListener('click', function() {
+        console.log('Exporting payment details...');
+        
+        // Create export data
+        const paymentData = {
+            internal_id: '{{ payment.internal_payment_id }}',
+            provider_id: '{{ payment.provider_payment_id|default:"N/A" }}',
+            amount: '{{ payment.amount_usd }}',
+            currency: '{{ payment.currency_code }}',
+            provider: '{{ payment.provider }}',
+            status: '{{ payment.status }}',
+            user_email: '{{ payment.user.email }}',
+            created_at: '{{ payment.created_at|date:"Y-m-d H:i:s" }}'
+        };
+        
+        // Download as JSON
+        const dataStr = JSON.stringify(paymentData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `payment_{{ payment.internal_payment_id }}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+    });
+    
+    // Auto-refresh for pending payments
+    {% if payment.status == 'pending' %}
+    setInterval(() => {
+        console.log('Auto-checking payment status...');
+        // In a real implementation, check status via AJAX
+    }, 30000); // Check every 30 seconds
+    {% endif %}
+});
+</script>
+{% endblock %}

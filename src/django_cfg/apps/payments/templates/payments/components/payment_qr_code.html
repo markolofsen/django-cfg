@@ -1,9 +1,9 @@
 {% load payments_tags %}
 
 <!-- Payment QR Code Component -->
-<div class="qr-code-container">
+<div class="flex flex-col items-center space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
     {% if qr_data %}
-        <div class="qr-code" id="qr-code-{{ payment.id }}">
+        <div class="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center" id="qr-code-{{ payment.id }}">
             <!-- QR code will be generated here by JavaScript -->
             <span class="material-icons text-gray-400 text-4xl">qr_code</span>
         </div>
@@ -23,13 +23,13 @@
             
             <!-- Action Buttons -->
             <div class="flex space-x-2 pt-2">
-                <button class="btn btn-outline btn-sm flex-1" 
+                <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" 
                         onclick="copyToClipboard('{{ payment.pay_address }}', 'Address copied!')">
                     <span class="material-icons text-sm mr-1">content_copy</span>
                     Copy Address
                 </button>
                 {% if payment.pay_amount %}
-                <button class="btn btn-outline btn-sm flex-1" 
+                <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" 
                         onclick="copyToClipboard('{{ payment.pay_amount }}', 'Amount copied!')">
                     <span class="material-icons text-sm mr-1">content_copy</span>
                     Copy Amount

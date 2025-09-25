@@ -3,14 +3,14 @@ Payment System Notification Service
 Uses existing django_telegram and django_email modules for admin notifications.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Dict, Any, Optional
 from django.utils import timezone
 from django_cfg.modules.django_telegram import DjangoTelegram
 from django_cfg.modules.django_email import DjangoEmailService
 from django_cfg.core.config import get_current_config
 
-logger = logging.getLogger(__name__)
+logger = get_logger("payment_notifications")
 config = get_current_config()
 
 

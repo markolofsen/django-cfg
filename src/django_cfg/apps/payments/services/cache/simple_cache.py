@@ -3,14 +3,14 @@ Simple cache implementation for API keys and rate limiting.
 ONLY for API access control - NOT payment data!
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Optional, Any
 from django.core.cache import cache
 
 from .base import CacheInterface
 from ...utils.config_utils import CacheConfigHelper
 
-logger = logging.getLogger(__name__)
+logger = get_logger("simple_cache")
 
 
 class SimpleCache(CacheInterface):

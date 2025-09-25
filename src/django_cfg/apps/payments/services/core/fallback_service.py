@@ -5,7 +5,7 @@ Handles automatic provider switching when providers become unavailable,
 ensuring payment system resilience and high availability.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
@@ -18,7 +18,7 @@ from ..monitoring.provider_health import get_health_monitor, HealthStatus
 from ..providers.registry import ProviderRegistry
 from ...models.events import PaymentEvent
 
-logger = logging.getLogger(__name__)
+logger = get_logger("fallback_service")
 
 
 class FallbackStrategy(Enum):

@@ -8,7 +8,7 @@
     "setup": "./devops/setup.sh",
     "install-local": "poetry lock && poetry install --with local",
     "env": "poetry env activate",
-    "cli": "poetry run cli",
+    "cli": "poetry run python cli.py",
     "docker": "git pull & python3 devops/manage.py",
     "commit": "npx openrouter-commit -run",
     "commit2": "git add . && git commit -m 'fixes' && git push",

@@ -3,7 +3,7 @@ API Access Control Middleware.
 Handles API key authentication and subscription validation.
 """
 
-import logging
+from django_cfg.modules.django_logger import get_logger
 from typing import Optional, Tuple
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
@@ -13,7 +13,7 @@ from ..models import APIKey, Subscription, EndpointGroup
 from ..services import ApiKeyCache, RateLimitCache
 from ..services.security import error_handler, SecurityError
 
-logger = logging.getLogger(__name__)
+logger = get_logger("api_access")
 
 
 class APIAccessMiddleware(MiddlewareMixin):

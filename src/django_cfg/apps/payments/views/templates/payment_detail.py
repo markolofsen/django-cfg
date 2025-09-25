@@ -41,7 +41,7 @@ class PaymentDetailView(
         log_view_access('payment_detail', self.request.user, payment_id=payment.id)
         
         # Get payment events for this payment
-        events = PaymentEvent.objects.filter(payment=payment).order_by('-created_at')
+        events = PaymentEvent.objects.filter(payment_id=payment.id).order_by('-created_at')
         
         # Get related payments (same user, similar amount range)
         related_payments = UniversalPayment.objects.filter(

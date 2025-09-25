@@ -5,6 +5,7 @@
 {% block extrahead %}
     {{ block.super }}
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Removed Tailwind CDN - using CSS-only solution -->
     
     <script>
     // Dashboard tabs functionality
@@ -22,12 +23,10 @@
             tabs.forEach((t, i) => {
                 if (i === idx) {
                     // Active tab
-                    t.classList.add('bg-primary-600', 'text-white', 'border-primary-600');
-                    t.classList.remove('bg-base-100', 'text-font-default-light', 'border-base-200', 'dark:bg-base-800', 'dark:text-font-default-dark', 'dark:border-base-700');
+                    t.classList.add('active');
                 } else {
-                    // Inactive tab
-                    t.classList.remove('bg-primary-600', 'text-white', 'border-primary-600');
-                    t.classList.add('bg-base-100', 'text-font-default-light', 'border-base-200', 'dark:bg-base-800', 'dark:text-font-default-dark', 'dark:border-base-700');
+                    // Inactive tab  
+                    t.classList.remove('active');
                 }
             });
             
@@ -92,18 +91,20 @@
             const button = event.target.closest('button');
             const originalText = button.innerHTML;
             button.innerHTML = '<span class="material-icons text-xs mr-1">check</span>Copied';
-            button.classList.remove('bg-base-100', 'dark:bg-base-700', 'hover:bg-base-200', 'dark:hover:bg-base-600');
+            button.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
             button.classList.add('bg-green-600', 'hover:bg-green-700', 'dark:bg-green-500', 'dark:hover:bg-green-600', 'text-white');
             
             setTimeout(function() {
                 button.innerHTML = originalText;
                 button.classList.remove('bg-green-600', 'hover:bg-green-700', 'dark:bg-green-500', 'dark:hover:bg-green-600', 'text-white');
-                button.classList.add('bg-base-100', 'dark:bg-base-700', 'hover:bg-base-200', 'dark:hover:bg-base-600');
+                button.classList.add('bg-gray-100', 'dark:bg-gray-700', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
             }, 2000);
         }).catch(function(err) {
             console.error('Could not copy text: ', err);
         });
     };
+
+    // No JS needed - using pure CSS solution
 
     window.executeCommand = function(commandName) {
         const modal = document.getElementById('commandModal');
@@ -118,7 +119,7 @@
 
         commandNameEl.textContent = commandName;
         commandOutput.textContent = '';
-        commandStatus.innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">Executing...</span>';
+        commandStatus.innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Executing...</span>';
         modal.classList.remove('hidden');
         
         fetch('/cfg/commands/execute/', {
@@ -185,7 +186,7 @@
                 addLogLine(output, `🚀 Starting command: ${data.command}`, 'info');
                 addLogLine(output, `📝 Arguments: ${data.args.join(' ')}`, 'info');
                 addLogLine(output, '', 'spacer');
-                status.innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">Executing...</span>';
+                status.innerHTML = '<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></div><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Executing...</span>';
                 break;
             case 'output':
                 addLogLine(output, data.line, 'output');
@@ -232,7 +233,7 @@
                 line.className += ' h-2';
                 break;
             default:
-                line.className += ' text-font-default-light dark:text-font-default-dark';
+                line.className += ' text-gray-700 dark:text-gray-300';
         }
         
         // Set content
@@ -296,6 +297,133 @@
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
+    
+    /* 🎨 Theme classes - cross-theme compatible cards */
+    .theme-card {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px) !important;
+        color: #111827 !important;
+        border-color: rgba(229, 231, 235, 0.6) !important;
+        border-radius: 10px !important;
+        transition: all 0.2s ease;
+    }
+    
+    html.dark .theme-card {
+        background-color: rgba(31, 41, 55, 0.2) !important;
+        backdrop-filter: blur(10px) !important;
+        color: white !important;
+        border-color: rgba(55, 65, 81, 0.6) !important;
+        border-radius: 10px !important;
+    }
+    
+    .theme-text {
+        color: #111827 !important;
+    }
+    
+    html.dark .theme-text {
+        color: white !important;
+    }
+    
+    .theme-border {
+        border-color: rgba(229, 231, 235, 0.6) !important;
+    }
+    
+    html.dark .theme-border {
+        border-color: rgba(55, 65, 81, 0.6) !important;
+    }
+
+    /* Fix grid layout */
+    .overview-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+    
+    @media (min-width: 1280px) {
+        .overview-grid {
+            grid-template-columns: 2fr 1fr !important;
+        }
+    }
+
+    /* 🎯 Tab styling */
+    #dashboard-tabs {
+        border-bottom: 2px solid #e5e7eb !important;
+    }
+    
+    html.dark #dashboard-tabs {
+        border-bottom-color: #374151 !important;
+    }
+    
+    #dashboard-tabs button {
+        background-color: #f3f4f6 !important;
+        color: #6b7280 !important;
+        border-bottom: 2px solid transparent !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    html.dark #dashboard-tabs button {
+        background-color: #374151 !important;
+        color: #9ca3af !important;
+    }
+    
+    #dashboard-tabs button:hover {
+        background-color: #e5e7eb !important;
+        color: #374151 !important;
+    }
+    
+    html.dark #dashboard-tabs button:hover {
+        background-color: #4b5563 !important;
+        color: #d1d5db !important;
+    }
+    
+    /* Active tab */
+    #dashboard-tabs button.active,
+    #dashboard-tabs button[class*="bg-blue"] {
+        background-color: #2563eb !important;
+        color: white !important;
+        border-bottom-color: #2563eb !important;
+    }
+    
+    html.dark #dashboard-tabs button.active,
+    html.dark #dashboard-tabs button[class*="bg-blue"] {
+        background-color: #3b82f6 !important;
+        color: white !important;
+        border-bottom-color: #3b82f6 !important;
+    }
+
+    /* 🎯 Universal card borders - transparent cross-theme */
+    .card-border,
+    .border-base-200,
+    [class*="border-base-200"],
+    [class*="dark:border-base-700"] {
+        border-color: rgba(229, 231, 235, 0.6) !important;
+    }
+    
+    html.dark .card-border,
+    html.dark .border-base-200,
+    html.dark [class*="border-base-200"],
+    html.dark [class*="dark:border-base-700"] {
+        border-color: rgba(55, 65, 81, 0.6) !important;
+    }
+
+    /* 🎯 Icon spacing defaults - more specific targeting */
+    .theme-card .material-icons:not(.no-margin) {
+        margin-right: 0.75rem !important; /* 12px default spacing */
+    }
+    
+    /* Override for specific contexts */
+    .theme-card .flex.items-center .material-icons {
+        margin-right: 0.75rem !important;
+    }
+    
+    .theme-card .status-badge .material-icons {
+        margin-right: 0.25rem !important; /* 4px for badges */
+    }
+    
+    /* Fix for buttons and interactive elements */
+    .theme-card button .material-icons,
+    .theme-card a .material-icons {
+        margin-right: 0.5rem !important;
+    }
     </style>
 {% endblock %}
 
@@ -315,10 +443,10 @@
 {% block content %}
     <!-- Dashboard Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-font-important-light dark:text-font-important-dark">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
             {{ dashboard_title|default:"Dashboard" }}
         </h1>
-        <p class="mt-2 text-font-default-light dark:text-font-default-dark">
+        <p class="mt-2 text-gray-700 dark:text-gray-300">
             Welcome to the administration dashboard
         </p>
     </div>
@@ -335,11 +463,11 @@
         </div>
 
         <!-- Tabs Navigation -->
-        <div class="flex gap-1 mb-6 border-b border-base-200 dark:border-base-700" id="dashboard-tabs">
+        <div class="flex gap-1 mb-6" id="dashboard-tabs">
             <button 
                 type="button" 
                 data-tab="0"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none font-semibold border-b-2 bg-primary-600 text-white border-primary-600"
+                class="px-4 py-3 rounded-t-lg focus:outline-none font-semibold active"
             >
                 <span class="material-icons mr-2 align-middle text-sm">dashboard</span>
                 Overview
@@ -347,7 +475,7 @@
             <button 
                 type="button" 
                 data-tab="1"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">public</span>
                 API Zones
@@ -355,7 +483,7 @@
             <button 
                 type="button" 
                 data-tab="2"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">people</span>
                 Users
@@ -363,7 +491,7 @@
             <button 
                 type="button" 
                 data-tab="3"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">settings</span>
                 System
@@ -371,7 +499,7 @@
             <button 
                 type="button" 
                 data-tab="4"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">analytics</span>
                 Statistics
@@ -379,7 +507,7 @@
             <button 
                 type="button" 
                 data-tab="5"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">apps</span>
                 App Stats
@@ -387,7 +515,7 @@
             <button 
                 type="button" 
                 data-tab="6"
-                class="px-4 py-3 transition-all rounded-t-lg focus:outline-none bg-base-100 text-font-default-light border-b-2 border-base-200 dark:bg-base-800 dark:text-font-default-dark dark:border-base-700"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">terminal</span>
                 Commands
@@ -427,14 +555,14 @@
         </div>
 
         <!-- Footer Section -->
-        <div class="text-center py-8 border-t border-base-200 dark:border-base-700 mt-5">
-            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+        <div class="text-center py-8 border-t theme-border mt-5">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
                 {% load django_cfg %}
-                <a href="{% lib_site_url %}" class="text-primary-600 hover:text-primary-700 font-medium">
+                <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700 font-medium">
                     {% lib_name %}
                 </a>
                 <span class="mx-2">•</span>
-                <a href="{% lib_health_url %}" class="text-primary-600 hover:text-primary-700">
+                <a href="{% lib_health_url %}" class="text-blue-600 hover:text-blue-700">
                     System Health
                 </a>
             </p>

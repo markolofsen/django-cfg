@@ -145,7 +145,7 @@ class DashboardManager(BaseCfgModule):
                 collapsible=True,
                 items=[
                     NavigationItem(title="Task Queue", icon=Icons.QUEUE, link="/admin/django_dramatiq/task/"),
-                    NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/tasks/dashboard/"),
+                    NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/admin/django_cfg_tasks/admin/dashboard/"),
                 ]
             ))
         
@@ -170,13 +170,18 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
+                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/admin/django_cfg_payments/admin/"),
+                    NavigationItem(title="Payment List", icon=Icons.LIST, link="/cfg/admin/django_cfg_payments/admin/list/"),
+                    NavigationItem(title="Create Payment", icon=Icons.ADD, link="/cfg/admin/django_cfg_payments/admin/create/"),
+                    NavigationItem(title="Payment Analytics", icon=Icons.ANALYTICS, link="/cfg/admin/django_cfg_payments/admin/stats/"),
+                    NavigationItem(title="Payment Testing", icon=Icons.SETTINGS, link="/cfg/admin/django_cfg_payments/admin/test/"),
                     NavigationItem(title="Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/django_cfg_payments/universalpayment/"),
                     NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link="/admin/django_cfg_payments/subscription/"),
                     NavigationItem(title="API Keys", icon=Icons.KEY, link="/admin/django_cfg_payments/apikey/"),
                     NavigationItem(title="Balances", icon=Icons.ACCOUNT_BALANCE_WALLET, link="/admin/django_cfg_payments/userbalance/"),
                     NavigationItem(title="Transactions", icon=Icons.DESCRIPTION, link="/admin/django_cfg_payments/transaction/"),
                     NavigationItem(title="Currencies", icon=Icons.ACCOUNT_CIRCLE, link="/admin/django_cfg_payments/currency/"),
-                    NavigationItem(title="Currency Networks", icon=Icons.LINK, link="/admin/django_cfg_payments/currencynetwork/"),
+                    NavigationItem(title="Currency Networks", icon=Icons.LINK, link="/admin/django_cfg_payments/network/"),
                     NavigationItem(title="Endpoint Groups", icon=Icons.GROUP, link="/admin/django_cfg_payments/endpointgroup/"),
                     NavigationItem(title="Tariffs", icon=Icons.SETTINGS, link="/admin/django_cfg_payments/tariff/"),
                 ]
