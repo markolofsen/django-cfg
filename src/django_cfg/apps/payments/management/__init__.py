@@ -1,3 +1,1 @@
-"""
-Management commands for the payments app.
-"""
+# Management commands package

@@ -11,14 +11,19 @@ from typing import List, Optional
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django_cfg.modules.django_logger import get_logger
+
 
 from django_cfg.core.config import get_current_config
 from django_cfg.utils.path_resolution import PathResolver
 
 
+logger = get_logger('tree')
+
 class Command(BaseCommand):
     """Display Django project structure in tree format."""
     
+
     help = "Display Django project structure based on django-cfg configuration"
     
     def add_arguments(self, parser):
@@ -78,6 +83,7 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         """Execute the command."""
+        logger.info("Starting tree command")
         try:
             # Get django-cfg configuration
             config = get_current_config()

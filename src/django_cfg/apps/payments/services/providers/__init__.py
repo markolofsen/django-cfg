@@ -1,22 +1,17 @@
 """
-Payment provider services.
+Payment providers for the Universal Payment System v2.0.
 
-All payment provider implementations and abstractions.
+Provider implementations with unified interface and Pydantic validation.
 """
 
-from .base import PaymentProvider
-from .registry import ProviderRegistry
-from .nowpayments import NowPaymentsProvider, NowPaymentsConfig
-from .cryptapi import CryptAPIProvider, CryptAPIConfig
-from .cryptomus import CryptomusProvider, CryptomusConfig
+from .base import BaseProvider
+from .nowpayments import NowPaymentsProvider
+from .registry import ProviderRegistry, get_provider_registry, initialize_providers
 
 __all__ = [
-    'PaymentProvider',
-    'ProviderRegistry',
+    'BaseProvider',
     'NowPaymentsProvider',
-    'NowPaymentsConfig',
-    'CryptAPIProvider',
-    'CryptAPIConfig',
-    'CryptomusProvider',
-    'CryptomusConfig',
+    'ProviderRegistry',
+    'get_provider_registry',
+    'initialize_providers',
 ]

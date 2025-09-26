@@ -12,13 +12,18 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 import questionary
 from datetime import datetime, timedelta
+from django_cfg.modules.django_logger import get_logger
+
 
 from django_cfg import ConfigToolkit
 
 User = get_user_model()
 
 
+logger = get_logger('create_token')
+
 class Command(BaseCommand):
+
     help = 'Create API tokens and authentication tokens'
 
     def add_arguments(self, parser):
@@ -46,6 +51,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logger.info("Starting create_token command")
         if options['user'] and options['type']:
             self.create_token_for_user(
                 username=options['user'],

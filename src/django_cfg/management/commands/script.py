@@ -13,11 +13,16 @@ from django.core.management import call_command
 from django.conf import settings
 import questionary
 from datetime import datetime
+from django_cfg.modules.django_logger import get_logger
+
 
 from django_cfg import ConfigToolkit
 
 
+logger = get_logger('script')
+
 class Command(BaseCommand):
+
     help = 'Run custom scripts and manage Django applications'
 
     def add_arguments(self, parser):
@@ -48,6 +53,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logger.info("Starting script command")
         if options['list']:
             self.list_scripts()
         elif options['create']:

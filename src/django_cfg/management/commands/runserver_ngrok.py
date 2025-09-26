@@ -5,11 +5,12 @@ Simple implementation following KISS principle.
 """
 
 import os
+import time
 from django.core.management.commands.runserver import Command as RunServerCommand
 from django_cfg.modules.django_ngrok import get_ngrok_service
-import logging
+from django_cfg.modules.django_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger('runserver_ngrok')
 
 
 class Command(RunServerCommand):
@@ -66,36 +67,61 @@ class Command(RunServerCommand):
         
         # Start ngrok tunnel
         ngrok_service = get_ngrok_service()
+        
+        self.stdout.write("🚇 Starting ngrok tunnel...")
+        logger.info(f"Starting ngrok tunnel for port {server_port}")
+        
         tunnel_url = ngrok_service.start_tunnel(server_port)
         
         if tunnel_url:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"ngrok forwarding to http://127.0.0.1:{server_port} "
-                    f"from ingress url: {tunnel_url}"
+            # Wait for tunnel to be fully established
+            self.stdout.write("⏳ Waiting for tunnel to be established...")
+            logger.info("Waiting for ngrok tunnel to be fully established")
+            
+            max_retries = 10
+            retry_count = 0
+            tunnel_ready = False
+            
+            while retry_count < max_retries and not tunnel_ready:
+                time.sleep(1)
+                retry_count += 1
+                
+                # Check if tunnel is actually accessible
+                try:
+                    current_url = ngrok_service.get_tunnel_url()
+                    if current_url and current_url == tunnel_url:
+                        tunnel_ready = True
+                        logger.info(f"Ngrok tunnel established successfully: {tunnel_url}")
+                        break
+                except Exception as e:
+                    logger.warning(f"Tunnel check attempt {retry_count} failed: {e}")
+                
+                self.stdout.write(f"⏳ Tunnel check {retry_count}/{max_retries}...")
+            
+            if tunnel_ready:
+                # Set environment variables for ngrok URL
+                self._set_ngrok_env_vars(tunnel_url)
+                
+                # Update ALLOWED_HOSTS if needed
+                self._update_allowed_hosts(tunnel_url)
+                
+                # Update config URLs if enabled
+                ngrok_service.update_config_urls()
+                
+                # Brief success message - detailed info will be shown by startup_display
+                self.stdout.write(
+                    self.style.SUCCESS(f"✅ Ngrok tunnel ready: {tunnel_url}")
                 )
-            )
-            
-            # Set environment variables for ngrok URL
-            self._set_ngrok_env_vars(tunnel_url)
-            
-            # Update ALLOWED_HOSTS if needed
-            self._update_allowed_hosts(tunnel_url)
-            
-            # Update config URLs if enabled
-            ngrok_service.update_config_urls()
-            
-            # Show webhook URL example
-            webhook_url = ngrok_service.get_webhook_url("/api/webhooks/")
-            self.stdout.write(
-                self.style.HTTP_INFO(
-                    f"Webhook URL example: {webhook_url}"
+                logger.info(f"Ngrok tunnel fully ready: {tunnel_url}")
+            else:
+                self.stdout.write(
+                    self.style.WARNING("⚠️ Ngrok tunnel started but may not be fully ready")
                 )
-            )
+                logger.warning("Ngrok tunnel started but readiness check failed")
         else:
-            self.stdout.write(
-                self.style.WARNING("Failed to start ngrok tunnel")
-            )
+            error_msg = "Failed to start ngrok tunnel"
+            self.stdout.write(self.style.ERROR(f"❌ {error_msg}"))
+            logger.error(error_msg)
     
     def _set_ngrok_env_vars(self, tunnel_url: str):
         """Set environment variables with ngrok URL for easy access."""
@@ -114,11 +140,7 @@ class Command(RunServerCommand):
             # Set API URL (same as tunnel URL for most cases)
             os.environ['NGROK_API_URL'] = tunnel_url
             
-            self.stdout.write(
-                self.style.HTTP_INFO(
-                    f"Environment variables set: NGROK_URL={tunnel_url}"
-                )
-            )
+            # Environment variables set - no need for verbose output
             logger.info(f"Set ngrok environment variables: {tunnel_url}")
             
         except Exception as e:

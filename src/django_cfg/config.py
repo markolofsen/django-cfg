@@ -10,7 +10,7 @@ from .modules.django_unfold.models.dropdown import SiteDropdownItem
 
 
 # Library configuration
-LIB_NAME = "Django CFG"
+LIB_NAME = "django-cfg"
 LIB_SITE_URL = "https://djangocfg.com"
 LIB_DOCS_URL = "https://docs.djangocfg.com"
 LIB_GITHUB_URL = "https://github.com/django-cfg/django-cfg"

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: django-cfg
-Version: 1.2.31
+Version: 1.3.1
 Summary: 🚀 Next-gen Django configuration: type-safety, AI features, blazing-fast setup, and automated best practices — all in one.
 Project-URL: Homepage, https://djangocfg.com
 Project-URL: Documentation, https://docs.djangocfg.com
@@ -147,6 +147,9 @@ Description-Content-Type: text/markdown
 
 # 🚀 Django-CFG: Enterprise Django Configuration Framework
 
+<div align="center">
+  <img src="https://github.com/markolofsen/django-cfg/blob/main/examples/static/startup.png?raw=true" alt="Django-CFG Startup Interface" width="800" />
+</div>
 
 [![Python Version](https://img.shields.io/pypi/pyversions/django-cfg.svg?style=flat-square&logo=python&logoColor=white)](https://pypi.org/project/django-cfg)
 [![Django Version](https://img.shields.io/pypi/djversions/django-cfg.svg?style=flat-square&logo=django&logoColor=white)](https://pypi.org/project/django-cfg)

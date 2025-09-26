@@ -79,6 +79,13 @@ class EnvironmentMode(str, Enum):
         return cls.DEVELOPMENT if debug else cls.PRODUCTION
 
 
+class StartupInfoMode(str, Enum):
+    """Startup information display mode."""
+    NONE = "none"        # Minimal info only (version, environment, critical errors)
+    SHORT = "short"      # Essential info (apps, endpoints, status, updates)
+    FULL = "full"        # Complete info (everything from old system)
+
+
 class DjangoConfig(BaseModel):
     """
     Base configuration class for Django projects.
@@ -150,6 +157,11 @@ class DjangoConfig(BaseModel):
     )
 
     # === Django CFG Features ===
+    startup_info_mode: StartupInfoMode = Field(
+        default=StartupInfoMode.FULL,
+        description="Startup information display mode: none (minimal), short (essential), full (complete)",
+    )
+    
     enable_support: bool = Field(
         default=True,
         description="Enable django-cfg Support application (tickets, messages, chat interface)",
@@ -601,15 +613,39 @@ class DjangoConfig(BaseModel):
         if self.enable_knowbase or self.enable_agents:
             return True
         
-        # Check if payments module requires tasks
-        if self.payments and self.payments.should_enable_tasks():
-            return True
-
         # Check if agents module requires tasks
         if self.enable_agents:
             return True
         
         return False
+
+    def get_enabled_apps(self) -> List[str]:
+        """
+        Get list of enabled django-cfg apps.
+        """
+        
+        apps = [
+            "django_cfg.apps.api.health",
+            "django_cfg.apps.api.commands",
+        ]
+        
+        if self.enable_support:
+            apps.append("django_cfg.apps.support")
+        if self.enable_accounts:
+            apps.append("django_cfg.apps.accounts")
+        if self.enable_newsletter:
+            apps.append("django_cfg.apps.newsletter")
+        if self.enable_leads:
+            apps.append("django_cfg.apps.leads")
+        if self.enable_knowbase:
+            apps.append("django_cfg.apps.knowbase")
+        if self.enable_agents:
+            apps.append("django_cfg.apps.agents")
+        if self.enable_maintenance:
+            apps.append("django_cfg.apps.maintenance")
+        if self.payments and self.payments.enabled:
+            apps.append("django_cfg.apps.payments")
+        return apps
 
     def get_installed_apps(self) -> List[str]:
         """

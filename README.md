@@ -1,5 +1,8 @@
 # 🚀 Django-CFG: Enterprise Django Configuration Framework
 
+<div align="center">
+  <img src="https://github.com/markolofsen/django-cfg/blob/main/examples/static/startup.png?raw=true" alt="Django-CFG Startup Interface" width="800" />
+</div>
 
 [![Python Version](https://img.shields.io/pypi/pyversions/django-cfg.svg?style=flat-square&logo=python&logoColor=white)](https://pypi.org/project/django-cfg)
 [![Django Version](https://img.shields.io/pypi/djversions/django-cfg.svg?style=flat-square&logo=django&logoColor=white)](https://pypi.org/project/django-cfg)

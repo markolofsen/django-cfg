@@ -166,6 +166,7 @@ def get_environment_config() -> EnvironmentConfig:
         if (Path(__file__).parent / ignore_file).exists():
             config_file = ignore_file
             
+    print(f"Loading config file: {config_file}")
     
     # Get config file path
     config_path = Path(__file__).parent / config_file

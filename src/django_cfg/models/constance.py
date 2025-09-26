@@ -7,7 +7,7 @@ Unfold admin integration and smart field grouping.
 
 from typing import Dict, List, Optional, Any, Union, Literal
 from pydantic import BaseModel, Field, field_validator
-from pathlib import Path
+import traceback
 from django_cfg.models.cfg import BaseCfgAutoModule
 
 
@@ -150,14 +150,30 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
         default_factory=list,
         description="List of Constance fields",
     )
-
+    
+    # Cache for app fields to avoid multiple calls
+    _app_fields_cache: Optional[List[ConstanceField]] = None
+ 
     def _get_app_constance_fields(self) -> List[ConstanceField]:
         """Automatically collect constance fields from django-cfg apps."""
+        # Return cached result if available
+        if self._app_fields_cache is not None:
+            return self._app_fields_cache
+            
         app_fields = []
         config = self.get_config()
+
+        # Get fields from tasks app (only if knowbase or agents are enabled)
+        if config and config.should_enable_tasks():
+            try:
+                from django_cfg.modules.django_tasks import extend_constance_config_with_tasks
+                tasks_fields = extend_constance_config_with_tasks()
+                app_fields.extend(tasks_fields)
+            except (ImportError, Exception):
+                pass
         
         # Get fields from knowbase app (only if enabled)
-        if config and getattr(config, 'enable_knowbase', False):
+        if config and config.enable_knowbase:
             try:
                 from django_cfg.apps.knowbase.config import get_django_cfg_knowbase_constance_fields
                 knowbase_fields = get_django_cfg_knowbase_constance_fields()
@@ -165,15 +181,19 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
             except (ImportError, Exception):
                 pass
         
-        # Get fields from tasks app (only if knowbase or agents are enabled)
-        if config and (getattr(config, 'enable_knowbase', False) or getattr(config, 'enable_agents', False)):
+        # Get fields from payments app (only if enabled)
+        if config and config.payments and config.payments.enabled:
             try:
-                from django_cfg.modules.django_tasks import extend_constance_config_with_tasks
-                tasks_fields = extend_constance_config_with_tasks()
-                app_fields.extend(tasks_fields)
-            except (ImportError, Exception):
-                pass
-            
+                from django_cfg.apps.payments.config import get_django_cfg_payments_constance_fields
+                payments_fields = get_django_cfg_payments_constance_fields()
+                app_fields.extend(payments_fields)
+                print(f"✅ Added {len(payments_fields)} payments fields to Constance")
+            except (ImportError, Exception) as e:
+                print(f"❌ Failed to load payments constance fields: {e}")
+                traceback.print_exc()
+        
+        # Cache the result
+        self._app_fields_cache = app_fields
         return app_fields
 
     def get_all_fields(self) -> List[ConstanceField]:

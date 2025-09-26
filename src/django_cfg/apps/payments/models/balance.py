@@ -1,5 +1,7 @@
 """
-Balance and transaction models for the universal payments system.
+Balance and transaction models for the Universal Payment System v2.0.
+
+Handles user balances and transaction history with atomic operations.
 """
 
 from django.db import models, transaction
@@ -7,203 +9,236 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .base import UUIDTimestampedModel, TimestampedModel
+from .base import UUIDTimestampedModel
 
 User = get_user_model()
 
 
-class UserBalance(TimestampedModel):
-    """User balance model for tracking USD funds."""
+class UserBalance(models.Model):
+    """
+    User balance model with atomic operations.
+    
+    Tracks user balance in USD (float for performance as per requirements).
+    All balance updates are handled via Django signals for consistency.
+    """
     
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
-        related_name='balance',
+        related_name='payment_balance',
         help_text="User who owns this balance"
     )
-    amount_usd = models.FloatField(
+    
+    balance_usd = models.FloatField(
         default=0.0,
         validators=[MinValueValidator(0.0)],
-        help_text="Current balance in USD"
+        help_text="Current balance in USD (float for performance)"
     )
-    reserved_usd = models.FloatField(
+    
+    # Tracking fields
+    total_deposited = models.FloatField(
         default=0.0,
         validators=[MinValueValidator(0.0)],
-        help_text="Reserved balance in USD (for pending transactions)"
+        help_text="Total amount deposited (lifetime)"
     )
-    total_earned = models.FloatField(
-        default=0.0,
-        validators=[MinValueValidator(0.0)],
-        help_text="Total amount earned (lifetime)"
-    )
+    
     total_spent = models.FloatField(
         default=0.0,
         validators=[MinValueValidator(0.0)],
         help_text="Total amount spent (lifetime)"
     )
+    
     last_transaction_at = models.DateTimeField(
         null=True,
         blank=True,
         help_text="When the last transaction occurred"
     )
-
-    # Import and assign manager
-    from ..managers import UserBalanceManager
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Manager
+    from .managers.balance_managers import UserBalanceManager
     objects = UserBalanceManager()
-
+    
     class Meta:
-        db_table = 'user_balances'
-        verbose_name = "User Balance"
-        verbose_name_plural = "User Balances"
+        db_table = 'payments_user_balances'
+        verbose_name = 'User Balance'
+        verbose_name_plural = 'User Balances'
         indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['amount_usd']),
+            models.Index(fields=['balance_usd']),
             models.Index(fields=['last_transaction_at']),
         ]
-
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(balance_usd__gte=0.0),
+                name='balance_non_negative_check'
+            ),
+        ]
+    
     def __str__(self):
-        return f"{self.user.email} - ${self.amount_usd}"
-
+        return f"{self.user.username}: ${self.balance_usd:.2f}"
+    
+    def clean(self):
+        """Validate balance data."""
+        if self.balance_usd < 0:
+            raise ValidationError("Balance cannot be negative")
+    
     @property
-    def total_balance(self) -> float:
-        """Get total balance (available + reserved)."""
-        return self.amount_usd + self.reserved_usd
-
+    def balance_display(self) -> str:
+        """Formatted balance display."""
+        return f"${self.balance_usd:.2f} USD"
+    
     @property
-    def has_sufficient_funds(self) -> bool:
-        """Check if user has sufficient available funds."""
-        return self.amount_usd > 0
+    def is_empty(self) -> bool:
+        """Check if balance is zero."""
+        return self.balance_usd == 0.0
+    
+    @property
+    def has_transactions(self) -> bool:
+        """Check if user has any transactions."""
+        return self.last_transaction_at is not None
+    
+    def add_funds(self, amount: float, transaction_type: str = 'deposit', 
+                  description: str = None, payment_id: str = None) -> 'Transaction':
+        """Add funds to balance (delegates to manager)."""
+        return self.__class__.objects.add_funds_to_user(
+            self.user, amount, transaction_type, description, payment_id
+        )
+    
+    def subtract_funds(self, amount: float, transaction_type: str = 'withdrawal',
+                      description: str = None, payment_id: str = None) -> 'Transaction':
+        """Subtract funds from balance (delegates to manager)."""
+        return self.__class__.objects.subtract_funds_from_user(
+            self.user, amount, transaction_type, description, payment_id
+        )
+    
+    @classmethod
+    def get_or_create_for_user(cls, user: User) -> 'UserBalance':
+        """Get or create balance for user (delegates to manager)."""
+        return cls.objects.get_or_create_for_user(user)
 
-    def can_debit(self, amount: float) -> bool:
-        """Check if user can be debited the specified amount."""
-        return self.amount_usd >= amount
 
-    def get_transaction_summary(self):
-        """Get transaction summary for this user."""
-        transactions = self.user.transactions.all()
-        return {
-            'total_transactions': transactions.count(),
-            'total_payments': transactions.filter(transaction_type=Transaction.TransactionType.PAYMENT).count(),
-            'total_subscriptions': transactions.filter(transaction_type=Transaction.TransactionType.SUBSCRIPTION).count(),
-            'total_refunds': transactions.filter(transaction_type=Transaction.TransactionType.REFUND).count(),
-        }
 
 
 class Transaction(UUIDTimestampedModel):
-    """Transaction history model."""
+    """
+    Transaction record for balance changes.
+    
+    Immutable record of all balance changes with full audit trail.
+    """
     
     class TransactionType(models.TextChoices):
+        DEPOSIT = "deposit", "Deposit"
+        WITHDRAWAL = "withdrawal", "Withdrawal"
         PAYMENT = "payment", "Payment"
-        SUBSCRIPTION = "subscription", "Subscription"
         REFUND = "refund", "Refund"
-        CREDIT = "credit", "Credit"
-        DEBIT = "debit", "Debit"
-        HOLD = "hold", "Hold"
-        RELEASE = "release", "Release"
         FEE = "fee", "Fee"
+        BONUS = "bonus", "Bonus"
         ADJUSTMENT = "adjustment", "Adjustment"
     
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='transactions',
-        help_text="User who made this transaction"
+        related_name='payment_transactions',
+        help_text="User who owns this transaction"
     )
-    amount_usd = models.FloatField(
-        help_text="Transaction amount in USD (positive for credits, negative for debits)"
-    )
+    
     transaction_type = models.CharField(
         max_length=20,
         choices=TransactionType.choices,
         help_text="Type of transaction"
     )
-    description = models.TextField(
-        help_text="Human-readable description of the transaction"
+    
+    # Amount in USD (float for performance, positive for credits, negative for debits)
+    amount_usd = models.FloatField(
+        help_text="Transaction amount in USD (positive=credit, negative=debit)"
     )
-    balance_before = models.FloatField(
-        help_text="User balance before this transaction"
-    )
+    
     balance_after = models.FloatField(
+        validators=[MinValueValidator(0.0)],
         help_text="User balance after this transaction"
     )
     
-    # Related objects (nullable for flexibility)
-    from .payments import UniversalPayment
-    from .subscriptions import Subscription
-    payment = models.ForeignKey(
-        UniversalPayment,
-        on_delete=models.SET_NULL,
+    # Reference to related payment
+    payment_id = models.CharField(
+        max_length=100,
         null=True,
         blank=True,
-        related_name='transactions',
-        help_text="Related payment (if applicable)"
-    )
-    subscription = models.ForeignKey(
-        Subscription,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='transactions',
-        help_text="Related subscription (if applicable)"
+        db_index=True,
+        help_text="Related payment ID (if applicable)"
     )
     
-    # Additional metadata
-    reference_id = models.CharField(
-        max_length=255,
-        null=True,
-        blank=True,
-        help_text="External reference ID"
+    # Transaction details
+    description = models.TextField(
+        help_text="Transaction description"
     )
+    
+    # Metadata for additional information
     metadata = models.JSONField(
         default=dict,
+        blank=True,
         help_text="Additional transaction metadata"
     )
-
+    
+    # Manager
+    from .managers.balance_managers import TransactionManager
+    objects = TransactionManager()
+    
     class Meta:
-        db_table = 'user_transactions'
-        verbose_name = "Transaction"
-        verbose_name_plural = "Transactions"
+        db_table = 'payments_transactions'
+        verbose_name = 'Transaction'
+        verbose_name_plural = 'Transactions'
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['transaction_type']),
+            models.Index(fields=['transaction_type', 'created_at']),
+            models.Index(fields=['payment_id']),
             models.Index(fields=['amount_usd']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['reference_id']),
         ]
-        ordering = ['-created_at']
-
+    
     def __str__(self):
         sign = "+" if self.amount_usd >= 0 else ""
-        return f"{self.user.email} - {sign}${self.amount_usd} ({self.get_transaction_type_display()})"
-
+        return f"{self.user.username}: {sign}${self.amount_usd:.2f} ({self.transaction_type})"
+    
+    def clean(self):
+        """Validate transaction data."""
+        if self.balance_after < 0:
+            raise ValidationError("Balance after transaction cannot be negative")
+    
     @property
     def is_credit(self) -> bool:
         """Check if this is a credit transaction."""
         return self.amount_usd > 0
-
+    
     @property
     def is_debit(self) -> bool:
         """Check if this is a debit transaction."""
         return self.amount_usd < 0
-
-    def clean(self):
-        """Validate transaction data."""
-        
-        # Validate balance calculation
-        expected_balance = self.balance_before + self.amount_usd
-        if abs(expected_balance - self.balance_after) > 0.01:  # Allow for rounding
-            raise ValidationError(
-                f"Balance calculation error: {self.balance_before} + {self.amount_usd} != {self.balance_after}"
-            )
-        
-        # Validate transaction type and amount sign
-        if self.transaction_type == self.TransactionType.PAYMENT and self.amount_usd <= 0:
-            raise ValidationError("Payment transactions must have positive amounts")
-        
-        if self.transaction_type == self.TransactionType.SUBSCRIPTION and self.amount_usd >= 0:
-            raise ValidationError("Subscription transactions must have negative amounts")
-
+    
+    @property
+    def amount_display(self) -> str:
+        """Formatted amount display."""
+        sign = "+" if self.amount_usd >= 0 else ""
+        return f"{sign}${abs(self.amount_usd):.2f}"
+    
+    @property
+    def type_color(self) -> str:
+        """Get color for transaction type display."""
+        colors = {
+            self.TransactionType.DEPOSIT: 'success',
+            self.TransactionType.PAYMENT: 'primary',
+            self.TransactionType.WITHDRAWAL: 'warning',
+            self.TransactionType.REFUND: 'info',
+            self.TransactionType.FEE: 'secondary',
+            self.TransactionType.BONUS: 'success',
+            self.TransactionType.ADJUSTMENT: 'secondary',
+        }
+        return colors.get(self.transaction_type, 'secondary')
+    
     def save(self, *args, **kwargs):
-        """Override save to run validation."""
-        self.clean()
+        """Override save to ensure immutability."""
+        if self.pk:
+            raise ValidationError("Transactions are immutable and cannot be modified")
         super().save(*args, **kwargs)

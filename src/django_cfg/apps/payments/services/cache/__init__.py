@@ -1,15 +1,15 @@
 """
-Simple caching for API key access control and rate limiting.
+Cache services for the Universal Payment System v2.0.
 
-ONLY for API key caching - NOT for payment data!
+Redis-backed caching with type safety and automatic key management.
 """
 
-from .base import CacheInterface
-from .simple_cache import SimpleCache, ApiKeyCache, RateLimitCache
+from .cache_service import CacheService, get_cache_service, SimpleCache, ApiKeyCache, RateLimitCache
 
 __all__ = [
-    'CacheInterface',
-    'SimpleCache', 
+    'CacheService',
+    'get_cache_service',
     'ApiKeyCache',
     'RateLimitCache',
+    'SimpleCache',
 ]

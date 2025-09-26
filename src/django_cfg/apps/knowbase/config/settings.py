@@ -71,22 +71,23 @@ class EmbeddingConfig(BaseModel):
         description="Maximum number of items in memory cache"
     )
     
-    # API Keys from environment
-    @property
-    def openai_api_key(self) -> Optional[str]:
-        """Get OpenAI API key from environment configuration."""
-        try:
-            return settings.api_keys.openai
-        except AttributeError:
-            return os.getenv("OPENAI_API_KEY")
+    # >> Old variant, should be imported from CfgConfig
+    # # API Keys from environment
+    # @property
+    # def openai_api_key(self) -> Optional[str]:
+    #     """Get OpenAI API key from environment configuration."""
+    #     try:
+    #         return settings.api_keys.openai
+    #     except AttributeError:
+    #         return os.getenv("OPENAI_API_KEY")
     
-    @property
-    def openrouter_api_key(self) -> Optional[str]:
-        """Get OpenRouter API key from environment configuration."""
-        try:
-            return settings.api_keys.openrouter
-        except AttributeError:
-            return os.getenv("OPENROUTER_API_KEY")
+    # @property
+    # def openrouter_api_key(self) -> Optional[str]:
+    #     """Get OpenRouter API key from environment configuration."""
+    #     try:
+    #         return settings.api_keys.openrouter
+    #     except AttributeError:
+    #         return os.getenv("OPENROUTER_API_KEY")
 
 
 class ChunkingConfig(BaseModel):

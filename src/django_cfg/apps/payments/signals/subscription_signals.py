@@ -1,196 +1,248 @@
 """
-🔄 Universal Subscription Signals
+Subscription Signals for the Universal Payment System v2.0.
 
-Automatic subscription management and lifecycle handling via Django signals.
+Minimal signals focused on cache invalidation and notifications.
+Business logic stays in SubscriptionManager.
 """
 
-from django.db.models.signals import post_save, pre_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from django.db import transaction
+from django.core.cache import cache
 from django.utils import timezone
-from datetime import timedelta
-from django_cfg.modules.django_logger import get_logger
 
-from ..models import Subscription, EndpointGroup, UserBalance, Transaction
-from ..services.cache import SimpleCache
+from ..models import Subscription
+from django_cfg.modules.django_logger import get_logger
 
 logger = get_logger("subscription_signals")
 
 
 @receiver(pre_save, sender=Subscription)
-def store_original_subscription_status(sender, instance, **kwargs):
-    """Store original subscription status for change detection."""
+def store_original_subscription_data(sender, instance: Subscription, **kwargs):
+    """Store original subscription data for change detection."""
     if instance.pk:
         try:
-            old_instance = Subscription.objects.get(pk=instance.pk)
-            instance._original_status = old_instance.status
-            instance._original_expires_at = old_instance.expires_at
+            original = Subscription.objects.get(pk=instance.pk)
+            instance._original_status = original.status
+            instance._original_tier = original.tier
+            instance._original_expires_at = original.expires_at
         except Subscription.DoesNotExist:
             instance._original_status = None
+            instance._original_tier = None
             instance._original_expires_at = None
+    else:
+        instance._original_status = None
+        instance._original_tier = None
+        instance._original_expires_at = None
 
 
 @receiver(post_save, sender=Subscription)
-def process_subscription_status_changes(sender, instance, created, **kwargs):
-    """Process subscription status changes and handle lifecycle events."""
+def handle_subscription_changes(sender, instance: Subscription, created: bool, **kwargs):
+    """
+    Handle subscription changes - only cache clearing and notifications.
+    
+    Business logic (API key management, etc.) stays in managers.
+    """
     if created:
-        logger.info(
-            f"New subscription created: {instance.endpoint_group.name} "
-            f"for user {instance.user.email} (expires: {instance.expires_at})"
-        )
-        _clear_user_cache(instance.user.id)
-        return
-    
-    # Check if status changed
-    if hasattr(instance, '_original_status'):
-        old_status = instance._original_status
-        new_status = instance.status
+        logger.info(f"New subscription created", extra={
+            'subscription_id': str(instance.id),
+            'user_id': instance.user.id,
+            'tier': instance.tier,
+            'status': instance.status
+        })
         
-        if old_status != new_status:
-            logger.info(
-                f"Subscription status changed: {instance.endpoint_group.name} "
-                f"for user {instance.user.email} - {old_status} → {new_status}"
-            )
+        # Create default API key for new subscription (delegate to manager)
+        _create_default_api_key(instance)
+        
+    else:
+        # Check for status changes
+        if hasattr(instance, '_original_status'):
+            old_status = instance._original_status
+            new_status = instance.status
             
-            # Handle specific status changes
-            if new_status == Subscription.SubscriptionStatus.ACTIVE:
-                _handle_subscription_activation(instance)
-            elif new_status == Subscription.SubscriptionStatus.CANCELLED:
-                _handle_subscription_cancellation(instance)
-            elif new_status == Subscription.SubscriptionStatus.EXPIRED:
-                _handle_subscription_expiration(instance)
+            if old_status != new_status:
+                logger.info(f"Subscription status changed", extra={
+                    'subscription_id': str(instance.id),
+                    'user_id': instance.user.id,
+                    'old_status': old_status,
+                    'new_status': new_status
+                })
+                
+                # Handle activation
+                if new_status == 'active' and old_status != 'active':
+                    _handle_subscription_activated(instance)
+                
+                # Handle suspension/cancellation
+                elif new_status in ['suspended', 'cancelled'] and old_status not in ['suspended', 'cancelled']:
+                    _handle_subscription_deactivated(instance)
+        
+        # Check for tier changes
+        if hasattr(instance, '_original_tier'):
+            old_tier = instance._original_tier
+            new_tier = instance.tier
             
-            _clear_user_cache(instance.user.id)
-
-
-@receiver(post_save, sender=Subscription)
-def handle_subscription_renewal(sender, instance, created, **kwargs):
-    """Handle subscription renewal and billing."""
-    if created or not hasattr(instance, '_original_expires_at'):
-        return
+            if old_tier != new_tier:
+                logger.info(f"Subscription tier changed", extra={
+                    'subscription_id': str(instance.id),
+                    'user_id': instance.user.id,
+                    'old_tier': old_tier,
+                    'new_tier': new_tier
+                })
+                
+                _handle_tier_change(instance, old_tier, new_tier)
+        
+        # Check for expiration changes
+        if hasattr(instance, '_original_expires_at'):
+            old_expires = instance._original_expires_at
+            new_expires = instance.expires_at
+            
+            if old_expires != new_expires:
+                logger.info(f"Subscription expiration changed", extra={
+                    'subscription_id': str(instance.id),
+                    'user_id': instance.user.id,
+                    'old_expires': old_expires.isoformat() if old_expires else None,
+                    'new_expires': new_expires.isoformat() if new_expires else None
+                })
     
-    old_expires_at = instance._original_expires_at
-    new_expires_at = instance.expires_at
-    
-    # Check if subscription was renewed (expires_at extended)
-    if old_expires_at and new_expires_at and new_expires_at > old_expires_at:
-        logger.info(
-            f"Subscription renewed: {instance.endpoint_group.name} "
-            f"for user {instance.user.email} - extended to {new_expires_at}"
-        )
-        _clear_user_cache(instance.user.id)
+    # Clear subscription-related caches
+    _clear_subscription_caches(instance)
 
 
 @receiver(post_delete, sender=Subscription)
-def log_subscription_deletion(sender, instance, **kwargs):
-    """Log subscription deletions for audit purposes."""
-    logger.warning(
-        f"Subscription deleted: {instance.endpoint_group.name} "
-        f"for user {instance.user.email} - Status was: {instance.status}"
-    )
-    _clear_user_cache(instance.user.id)
+def handle_subscription_deletion(sender, instance: Subscription, **kwargs):
+    """Handle subscription deletion."""
+    logger.warning(f"Subscription deleted", extra={
+        'subscription_id': str(instance.id),
+        'user_id': instance.user.id,
+        'tier': instance.tier,
+        'status': instance.status,
+        'deletion_timestamp': timezone.now().isoformat()
+    })
+    
+    # Clear caches
+    _clear_subscription_caches(instance)
 
 
-@receiver(post_save, sender=EndpointGroup)
-def log_endpoint_group_changes(sender, instance, created, **kwargs):
-    """Log endpoint group changes that may affect subscriptions."""
-    if created:
-        logger.info(f"New endpoint group created: {instance.name}")
-    else:
-        # Check if important fields changed
-        if instance.tracker.has_changed('is_active'):
-            logger.warning(
-                f"Endpoint group activity changed: {instance.name} "
-                f"- active: {instance.is_active}"
-            )
-            # Clear cache for all users with subscriptions to this group
-            _clear_endpoint_group_cache(instance)
+# Helper functions (notifications and delegations only)
 
-
-def _handle_subscription_activation(subscription: Subscription):
-    """Handle subscription activation logic."""
+def _create_default_api_key(subscription: Subscription):
+    """Create default API key for new subscription (delegate to manager)."""
     try:
-        # Reset usage counters
-        subscription.usage_current = 0
+        from ..models import APIKey
         
-        # Set next billing date
-        if not subscription.next_billing:
-            subscription.next_billing = timezone.now() + timedelta(days=30)  # Monthly by default
+        # Use manager method which has all the business logic
+        api_key = APIKey.objects.create_api_key_for_user(
+            user=subscription.user,
+            name=f"Default API Key ({subscription.tier})",
+            expires_in_days=None  # No expiration for default key
+        )
         
-        subscription.save(update_fields=['usage_current', 'next_billing'])
-        
-        logger.info(f"Subscription activated: {subscription.endpoint_group.name} for {subscription.user.email}")
+        logger.info(f"Created default API key for subscription", extra={
+            'subscription_id': str(subscription.id),
+            'user_id': subscription.user.id,
+            'api_key_id': str(api_key.id)
+        })
         
     except Exception as e:
-        logger.error(f"Error handling subscription activation: {e}")
+        logger.error(f"Failed to create default API key", extra={
+            'subscription_id': str(subscription.id),
+            'user_id': subscription.user.id,
+            'error': str(e)
+        })
 
 
-def _handle_subscription_cancellation(subscription: Subscription):
-    """Handle subscription cancellation logic."""
+def _handle_subscription_activated(subscription: Subscription):
+    """Handle subscription activation (notification only)."""
     try:
-        # Mark as cancelled
-        subscription.cancelled_at = timezone.now()
-        subscription.save(update_fields=['cancelled_at'])
+        logger.info(f"Subscription activated", extra={
+            'subscription_id': str(subscription.id),
+            'user_id': subscription.user.id,
+            'tier': subscription.tier
+        })
         
-        logger.info(f"Subscription cancelled: {subscription.endpoint_group.name} for {subscription.user.email}")
+        # Set activation notification in cache
+        cache.set(
+            f"subscription_activated:{subscription.user.id}",
+            {
+                'subscription_id': str(subscription.id),
+                'tier': subscription.tier,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400  # 24 hours
+        )
         
     except Exception as e:
-        logger.error(f"Error handling subscription cancellation: {e}")
+        logger.error(f"Failed to handle subscription activation: {e}")
 
 
-def _handle_subscription_expiration(subscription: Subscription):
-    """Handle subscription expiration logic."""
+def _handle_subscription_deactivated(subscription: Subscription):
+    """Handle subscription deactivation (notification only)."""
     try:
-        # Mark as expired
-        subscription.expired_at = timezone.now()
-        subscription.save(update_fields=['expired_at'])
+        logger.warning(f"Subscription deactivated", extra={
+            'subscription_id': str(subscription.id),
+            'user_id': subscription.user.id,
+            'status': subscription.status,
+            'tier': subscription.tier
+        })
         
-        logger.info(f"Subscription expired: {subscription.endpoint_group.name} for {subscription.user.email}")
+        # Set deactivation notification in cache
+        cache.set(
+            f"subscription_deactivated:{subscription.user.id}",
+            {
+                'subscription_id': str(subscription.id),
+                'status': subscription.status,
+                'tier': subscription.tier,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400 * 7  # 7 days
+        )
         
     except Exception as e:
-        logger.error(f"Error handling subscription expiration: {e}")
+        logger.error(f"Failed to handle subscription deactivation: {e}")
 
 
-def _clear_user_cache(user_id: int):
-    """Clear cache for specific user."""
+def _handle_tier_change(subscription: Subscription, old_tier: str, new_tier: str):
+    """Handle subscription tier change (notification only)."""
     try:
-        cache = SimpleCache("subscriptions")
+        logger.info(f"Subscription tier changed", extra={
+            'subscription_id': str(subscription.id),
+            'user_id': subscription.user.id,
+            'old_tier': old_tier,
+            'new_tier': new_tier
+        })
+        
+        # Set tier change notification in cache
+        cache.set(
+            f"tier_changed:{subscription.user.id}",
+            {
+                'subscription_id': str(subscription.id),
+                'old_tier': old_tier,
+                'new_tier': new_tier,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400  # 24 hours
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to handle tier change: {e}")
+
+
+def _clear_subscription_caches(subscription: Subscription):
+    """Clear subscription-related cache entries."""
+    try:
         cache_keys = [
-            f"access:{user_id}",
-            f"subscriptions:{user_id}",
-            f"user_summary:{user_id}",
+            f"user_subscription:{subscription.user.id}",
+            f"subscription_access:{subscription.user.id}",
+            f"subscription_stats:{subscription.user.id}",
+            f"tier_limits:{subscription.tier}",
         ]
         
-        for key in cache_keys:
-            cache.delete(key)
-            
-    except Exception as e:
-        logger.warning(f"Failed to clear cache for user {user_id}: {e}")
-
-
-def _clear_endpoint_group_cache(endpoint_group: EndpointGroup):
-    """Clear cache for all users with subscriptions to this endpoint group."""
-    try:
-        # Get all users with active subscriptions to this group
-        user_ids = Subscription.objects.filter(
-            endpoint_group=endpoint_group,
-            status=Subscription.SubscriptionStatus.ACTIVE
-        ).values_list('user_id', flat=True)
+        cache.delete_many(cache_keys)
         
-        for user_id in user_ids:
-            _clear_user_cache(user_id)
-            
+        logger.debug(f"Cleared subscription caches", extra={
+            'subscription_id': str(subscription.id),
+            'user_id': subscription.user.id,
+            'cache_keys_cleared': len(cache_keys)
+        })
+        
     except Exception as e:
-        logger.warning(f"Failed to clear cache for endpoint group {endpoint_group.name}: {e}")
-
-
-@receiver(post_save, sender=Subscription)
-def update_usage_statistics(sender, instance, created, **kwargs):
-    """Update usage statistics when subscription is modified."""
-    if not created and hasattr(instance, '_original_status'):
-        # Only update stats if usage-related fields might have changed
-        if instance.usage_current != getattr(instance, '_original_usage_current', instance.usage_current):
-            logger.debug(
-                f"Usage updated for subscription {instance.endpoint_group.name}: "
-                f"{instance.usage_current} requests"
-            )
+        logger.warning(f"Failed to clear subscription caches: {e}")

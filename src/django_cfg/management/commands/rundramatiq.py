@@ -15,6 +15,8 @@ from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.module_loading import module_has_submodule
+from django_cfg.modules.django_logger import get_logger
+
 
 from django_cfg.modules.django_tasks import get_task_service
 
@@ -22,6 +24,9 @@ from django_cfg.modules.django_tasks import get_task_service
 # Default values
 NPROCS = multiprocessing.cpu_count()
 NTHREADS = 8
+
+
+logger = get_logger('rundramatiq')
 
 
 class Command(BaseCommand):
@@ -77,6 +82,7 @@ class Command(BaseCommand):
 
     def handle(self, watch_dir, processes, threads, verbosity, queues, 
                pid_file, log_file, worker_shutdown_timeout, dry_run, **options):
+        logger.info("Starting rundramatiq command")
         
         # Get task service and validate
         task_service = get_task_service()

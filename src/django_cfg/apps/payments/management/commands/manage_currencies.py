@@ -1,14 +1,7 @@
 """
-Universal currency management command.
+Currency management command for Universal Payment System v2.0.
 
-Combines populate_currencies, update_currencies, and update_currency_rates into one.
-
-Usage:
-    python manage.py manage_currencies                          # Update existing currencies and rates
-    python manage.py manage_currencies --populate               # Initial population + rates
-    python manage.py manage_currencies --rates-only             # Only update USD rates
-    python manage.py manage_currencies --max-crypto 50          # Limit crypto currencies
-    python manage.py manage_currencies --force                  # Force refresh all data
+Integrates with django_currency module for automatic rate updates and population.
 """
 
 from django.core.management.base import BaseCommand, CommandError
@@ -16,214 +9,373 @@ from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
 from datetime import timedelta
-from decimal import Decimal
+from typing import List, Optional
 import time
 
 from django_cfg.modules.django_logger import get_logger
-from django_cfg.modules.django_currency.database.database_loader import (
-    create_database_loader,
-    DatabaseLoaderConfig
+from django_cfg.modules.django_currency import (
+    CurrencyConverter, convert_currency, get_exchange_rate,
+    CurrencyError, CurrencyNotFoundError
 )
-from django_cfg.apps.payments.models import Currency
+from django_cfg.apps.payments.models import Currency, Network, ProviderCurrency
 
 logger = get_logger("manage_currencies")
 
 
 class Command(BaseCommand):
-    """Universal currency management command."""
+    """
+    Universal currency management command using ready modules.
     
-    help = 'Manage currencies: populate, update, and refresh USD rates'
+    Features:
+    - Population of missing currencies
+    - USD rate updates using django_currency
+    - Provider currency synchronization
+    - Flexible filtering and options
+    """
+    
+    help = 'Manage currencies and exchange rates for the payment system'
     
     def add_arguments(self, parser):
-        """Add command line arguments."""
+        """Add command arguments."""
+        
+        # Main operation modes
         parser.add_argument(
             '--populate',
             action='store_true',
-            help='Initial population mode (for empty database)'
+            help='Populate missing base currencies'
         )
+        
         parser.add_argument(
             '--rates-only',
             action='store_true',
-            help='Only update USD exchange rates'
+            help='Update USD exchange rates only (no population)'
         )
+        
         parser.add_argument(
-            '--max-crypto',
-            type=int,
-            default=200,
-            help='Maximum number of cryptocurrencies to process (default: 200)'
-        )
-        parser.add_argument(
-            '--max-fiat',
-            type=int,
-            default=50,
-            help='Maximum number of fiat currencies to process (default: 50)'
-        )
-        parser.add_argument(
-            '--force',
+            '--sync-providers',
             action='store_true',
-            help='Force refresh all data even if fresh'
+            help='Sync provider currencies after rate updates'
         )
+        
+        # Filtering options
         parser.add_argument(
             '--currency',
             type=str,
-            help='Update specific currency by code (e.g., BTC, ETH)'
+            help='Update specific currency code (e.g., BTC, ETH)'
         )
+        
+        parser.add_argument(
+            '--currency-type',
+            choices=['fiat', 'crypto'],
+            help='Filter by currency type'
+        )
+        
+        parser.add_argument(
+            '--provider',
+            type=str,
+            help='Filter by provider name'
+        )
+        
+        # Behavior options
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Force refresh rates even if recently updated'
+        )
+        
+        parser.add_argument(
+            '--skip-existing',
+            action='store_true',
+            help='Skip currencies that already exist during population'
+        )
+        
         parser.add_argument(
             '--dry-run',
             action='store_true',
             help='Show what would be done without making changes'
         )
         
+        parser.add_argument(
+            '--limit',
+            type=int,
+            default=100,
+            help='Limit number of currencies to process (default: 100)'
+        )
+    
     def handle(self, *args, **options):
-        """Execute the command."""
+        """Main command handler."""
+        
         start_time = time.time()
         
-        self.stdout.write('=' * 60)
-        self.stdout.write(self.style.SUCCESS('🚀 Currency Management Tool'))
-        self.stdout.write('=' * 60)
-        
-        # Determine mode
-        if options['rates_only']:
-            result = self._update_rates_only(options)
-        elif options['populate']:
-            result = self._populate_and_update(options)
-        else:
-            result = self._update_existing(options)
+        try:
+            self.stdout.write(
+                self.style.SUCCESS('🚀 Starting Universal Currency Management')
+            )
             
-        # Show summary
-        elapsed = time.time() - start_time
-        self.stdout.write('=' * 60)
-        self.stdout.write(f"⏱️  Completed in {elapsed:.2f} seconds")
-        self.stdout.write('=' * 60)
+            # Determine operation mode
+            if options['populate']:
+                result = self._populate_currencies(options)
+            elif options['rates_only']:
+                result = self._update_rates_only(options)
+            else:
+                # Default: populate + rates
+                self.stdout.write("📋 Running full currency management (populate + rates)")
+                populate_result = self._populate_currencies(options)
+                rates_result = self._update_rates_only(options)
+                result = populate_result + rates_result
+            
+            # Optional provider sync
+            if options['sync_providers']:
+                self._sync_provider_currencies(options)
+            
+            # Show summary
+            elapsed = time.time() - start_time
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'✅ Currency management completed in {elapsed:.1f}s'
+                )
+            )
+            
+            if not options['dry_run']:
+                self._show_final_stats()
+            
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(f'❌ Currency management failed: {e}')
+            )
+            logger.error(f"Currency management command failed: {e}")
+            raise CommandError(f"Command failed: {e}")
+    
+    def _populate_currencies(self, options) -> int:
+        """Populate missing base currencies."""
         
-        # Commands should not return values to stdout
-        pass
+        self.stdout.write("📦 Populating base currencies...")
         
-    def _update_rates_only(self, options):
-        """Update only USD exchange rates."""
+        # Define standard currencies to populate
+        standard_currencies = [
+            # Major fiat currencies
+            ('USD', 'US Dollar', Currency.CurrencyType.FIAT, '$', 2),
+            ('EUR', 'Euro', Currency.CurrencyType.FIAT, '€', 2),
+            ('GBP', 'British Pound', Currency.CurrencyType.FIAT, '£', 2),
+            ('JPY', 'Japanese Yen', Currency.CurrencyType.FIAT, '¥', 0),
+            ('CNY', 'Chinese Yuan', Currency.CurrencyType.FIAT, '¥', 2),
+            ('RUB', 'Russian Ruble', Currency.CurrencyType.FIAT, '₽', 2),
+            
+            # Major cryptocurrencies
+            ('BTC', 'Bitcoin', Currency.CurrencyType.CRYPTO, '₿', 8),
+            ('ETH', 'Ethereum', Currency.CurrencyType.CRYPTO, 'Ξ', 8),
+            ('USDT', 'Tether USD', Currency.CurrencyType.CRYPTO, '₮', 6),
+            ('USDC', 'USD Coin', Currency.CurrencyType.CRYPTO, '', 6),
+            ('BNB', 'Binance Coin', Currency.CurrencyType.CRYPTO, '', 8),
+            ('ADA', 'Cardano', Currency.CurrencyType.CRYPTO, '', 6),
+            ('SOL', 'Solana', Currency.CurrencyType.CRYPTO, '', 8),
+            ('DOT', 'Polkadot', Currency.CurrencyType.CRYPTO, '', 8),
+            ('MATIC', 'Polygon', Currency.CurrencyType.CRYPTO, '', 8),
+            ('LTC', 'Litecoin', Currency.CurrencyType.CRYPTO, 'Ł', 8),
+            ('TRX', 'TRON', Currency.CurrencyType.CRYPTO, '', 6),
+            ('XRP', 'Ripple', Currency.CurrencyType.CRYPTO, '', 6),
+        ]
+        
+        # Apply currency type filter
+        if options['currency_type']:
+            currency_type_filter = Currency.CurrencyType.FIAT if options['currency_type'] == 'fiat' else Currency.CurrencyType.CRYPTO
+            standard_currencies = [
+                c for c in standard_currencies 
+                if c[2] == currency_type_filter
+            ]
+        
+        # Apply specific currency filter
+        if options['currency']:
+            currency_code = options['currency'].upper()
+            standard_currencies = [
+                c for c in standard_currencies 
+                if c[0] == currency_code
+            ]
+            
+            if not standard_currencies:
+                raise CommandError(f"Currency '{currency_code}' not in standard list")
+        
+        created_count = 0
+        skipped_count = 0
+        
+        for code, name, currency_type, symbol, decimal_places in standard_currencies:
+            
+            if options['dry_run']:
+                exists = Currency.objects.filter(code=code).exists()
+                if exists and options['skip_existing']:
+                    self.stdout.write(f"   [DRY RUN] Would skip existing {code}")
+                    skipped_count += 1
+                else:
+                    self.stdout.write(f"   [DRY RUN] Would create/update {code}")
+                continue
+            
+            try:
+                currency, created = Currency.objects.get_or_create(
+                    code=code,
+                    defaults={
+                        'name': name,
+                        'currency_type': currency_type,
+                        'symbol': symbol,
+                        'decimal_places': decimal_places,
+                        'is_active': True
+                    }
+                )
+                
+                if created:
+                    self.stdout.write(f"   ✅ Created {code} - {name}")
+                    created_count += 1
+                    logger.info(f"Created currency: {code}")
+                elif not options['skip_existing']:
+                    # Update existing currency if not skipping
+                    currency.name = name
+                    currency.symbol = symbol
+                    currency.decimal_places = decimal_places
+                    currency.save()
+                    self.stdout.write(f"   🔄 Updated {code} - {name}")
+                else:
+                    self.stdout.write(f"   ⏭️  Skipped existing {code}")
+                    skipped_count += 1
+                    
+            except Exception as e:
+                self.stdout.write(f"   ❌ Failed to create {code}: {e}")
+                logger.error(f"Failed to create currency {code}: {e}")
+        
+        self.stdout.write(f"📦 Population complete: {created_count} created, {skipped_count} skipped")
+        return created_count
+    
+    def _update_rates_only(self, options) -> int:
+        """Update USD exchange rates using django_currency module."""
+        
         self.stdout.write("💱 Updating USD exchange rates...")
         
+        # Build queryset based on options
+        queryset = Currency.objects.all()
+        
         if options['currency']:
-            currencies = Currency.objects.filter(code__iexact=options['currency'])
-            if not currencies.exists():
+            queryset = queryset.filter(code__iexact=options['currency'])
+            if not queryset.exists():
                 raise CommandError(f"Currency '{options['currency']}' not found")
-        else:
-            # Update all currencies, prioritizing those without rates or stale rates
-            stale_threshold = timezone.now() - timedelta(days=1)
-            currencies = Currency.objects.filter(
-                Q(usd_rate__isnull=True) | 
-                Q(rate_updated_at__isnull=True) |
-                Q(rate_updated_at__lt=stale_threshold)
-            )
+        
+        if options['currency_type']:
+            currency_type = Currency.CurrencyType.FIAT if options['currency_type'] == 'fiat' else Currency.CurrencyType.CRYPTO
+            queryset = queryset.filter(currency_type=currency_type)
+        
+        # Filter by staleness unless forced
+        if not options['force']:
+            stale_threshold = timezone.now() - timedelta(hours=12)
+            
+            # Get currencies that need rate updates through ProviderCurrency
+            currencies_needing_update = Currency.objects.filter(
+                Q(providercurrency__usd_rate__isnull=True) |
+                Q(providercurrency__rate_updated_at__isnull=True) |
+                Q(providercurrency__rate_updated_at__lt=stale_threshold)
+            ).distinct()
+            
+            queryset = queryset.filter(id__in=currencies_needing_update)
+        
+        # Apply limit
+        queryset = queryset[:options['limit']]
         
         updated_count = 0
         error_count = 0
         
-        self.stdout.write(f"📊 Processing {currencies.count()} currencies...")
+        self.stdout.write(f"📊 Processing {queryset.count()} currencies...")
         
-        for currency in currencies:
+        for currency in queryset:
+            
             if options['dry_run']:
                 self.stdout.write(f"   [DRY RUN] Would update {currency.code}")
                 continue
-                
+            
             try:
-                # Force refresh if requested
-                rate = Currency.objects.get_usd_rate(
-                    currency.code, 
-                    force_refresh=options['force']
-                )
-                
-                if rate > 0:
-                    self.stdout.write(f"   ✅ {currency.code}: ${rate:.8f}")
-                    updated_count += 1
+                # Use django_currency module to get rate
+                if currency.code == 'USD':
+                    # USD is the base currency
+                    usd_rate = 1.0
                 else:
-                    self.stdout.write(f"   ⚠️  {currency.code}: No rate available")
-                    
-            except Exception as e:
-                self.stdout.write(f"   ❌ {currency.code}: {str(e)}")
-                error_count += 1
-        
-        self.stdout.write(f"📈 Updated: {updated_count}, Errors: {error_count}")
-        return updated_count
-        
-    def _populate_and_update(self, options):
-        """Initial population of currencies."""
-        self.stdout.write("🔧 Populating currencies from external APIs...")
-        
-        # Check if database is empty
-        existing_count = Currency.objects.count()
-        if existing_count > 0 and not options['force']:
-            self.stdout.write(
-                self.style.WARNING(
-                    f"⚠️  Database already contains {existing_count} currencies. "
-                    "Use --force to repopulate."
-                )
-            )
-            return 0
-            
-        if options['dry_run']:
-            self.stdout.write("[DRY RUN] Would populate currencies...")
-            return 0
-            
-        # Create database loader
-        config = DatabaseLoaderConfig(
-            max_crypto_currencies=options['max_crypto'],
-            max_fiat_currencies=options['max_fiat'],
-            yahoo_delay=1.0,
-            coinpaprika_delay=0.5
-        )
-        
-        loader = create_database_loader(config)
-        
-        try:
-            with transaction.atomic():
-                # Load currency data
-                currency_data = loader.build_currency_database_data()
+                    # Get rate from django_currency
+                    usd_rate = get_exchange_rate(currency.code, 'USD')
                 
-                created_count = 0
-                updated_count = 0
-                
-                for currency_info in currency_data:
-                    currency, created = Currency.objects.get_or_create_normalized(
-                        code=currency_info.code,
+                if usd_rate and usd_rate > 0:
+                    # Update rate in ProviderCurrency (create if doesn't exist)
+                    provider_currency, created = ProviderCurrency.objects.get_or_create(
+                        currency=currency,
+                        provider_name='system',  # System-level rate
+                        provider_currency_code=currency.code,
                         defaults={
-                            'name': currency_info.name,
-                            'currency_type': currency_info.currency_type,
-                            'usd_rate': currency_info.rate,
-                            'rate_updated_at': timezone.now()
+                            'usd_rate': usd_rate,
+                            'rate_updated_at': timezone.now(),
+                            'is_enabled': True,
+                            'is_stable': currency.currency_type == Currency.CurrencyType.FIAT
                         }
                     )
                     
-                    if created:
-                        created_count += 1
-                        self.stdout.write(f"   ➕ Created: {currency.code} - {currency.name}")
-                    else:
-                        # Update rate
-                        currency.usd_rate = currency_info.rate
-                        currency.rate_updated_at = timezone.now()
-                        currency.save()
-                        updated_count += 1
-                        self.stdout.write(f"   🔄 Updated: {currency.code} - ${currency.usd_rate:.8f}")
+                    if not created:
+                        provider_currency.usd_rate = usd_rate
+                        provider_currency.rate_updated_at = timezone.now()
+                        provider_currency.save(update_fields=['usd_rate', 'rate_updated_at'])
+                    
+                    # Update currency's exchange rate source
+                    currency.exchange_rate_source = 'django_currency'
+                    currency.save(update_fields=['exchange_rate_source'])
+                    
+                    self.stdout.write(f"   ✅ {currency.code}: ${usd_rate:.8f}")
+                    updated_count += 1
+                    
+                else:
+                    self.stdout.write(f"   ⚠️  {currency.code}: No rate available")
+                    
+            except (CurrencyError, CurrencyNotFoundError) as e:
+                self.stdout.write(f"   ⚠️  {currency.code}: {str(e)}")
+                error_count += 1
+            except Exception as e:
+                self.stdout.write(f"   ❌ {currency.code}: {str(e)}")
+                error_count += 1
+                logger.error(f"Failed to update rate for {currency.code}: {e}")
+        
+        self.stdout.write(f"💱 Rate update complete: {updated_count} updated, {error_count} errors")
+        return updated_count
+    
+    def _sync_provider_currencies(self, options):
+        """Sync provider currencies after rate updates."""
+        
+        self.stdout.write("🔄 Syncing provider currencies...")
+        
+        try:
+            from django.core.management import call_command
+            
+            if options['provider']:
+                call_command('manage_providers', '--provider', options['provider'])
+            else:
+                call_command('manage_providers', '--all')
                 
-                self.stdout.write(f"📊 Created: {created_count}, Updated: {updated_count}")
-                return created_count + updated_count
-                
+            self.stdout.write("🔄 Provider sync completed")
+            
         except Exception as e:
-            logger.exception("Failed to populate currencies")
-            raise CommandError(f"Population failed: {e}")
+            self.stdout.write(f"⚠️  Provider sync failed: {e}")
+            logger.warning(f"Provider sync failed: {e}")
+    
+    def _show_final_stats(self):
+        """Show final statistics."""
+        
+        try:
+            total_currencies = Currency.objects.count()
+            fiat_count = Currency.objects.filter(currency_type=Currency.CurrencyType.FIAT).count()
+            crypto_count = Currency.objects.filter(currency_type=Currency.CurrencyType.CRYPTO).count()
+            active_count = Currency.objects.filter(is_active=True).count()
             
-    def _update_existing(self, options):
-        """Update existing currencies and rates."""
-        self.stdout.write("🔄 Updating existing currencies...")
-        
-        if options['currency']:
-            return self._update_rates_only(options)
+            # Count currencies with rates
+            currencies_with_rates = Currency.objects.filter(
+                providercurrency__usd_rate__isnull=False
+            ).distinct().count()
             
-        # First update currency metadata if needed
-        self.stdout.write("1️⃣ Checking currency metadata...")
-        
-        # Then update rates
-        self.stdout.write("2️⃣ Updating USD exchange rates...")
-        rate_updates = self._update_rates_only(options)
-        
-        return rate_updates
+            rate_coverage = (currencies_with_rates / total_currencies * 100) if total_currencies > 0 else 0
+            
+            self.stdout.write("\n📊 Final Statistics:")
+            self.stdout.write(f"   Total currencies: {total_currencies}")
+            self.stdout.write(f"   Fiat: {fiat_count}, Crypto: {crypto_count}")
+            self.stdout.write(f"   Active: {active_count}")
+            self.stdout.write(f"   With USD rates: {currencies_with_rates} ({rate_coverage:.1f}%)")
+            
+        except Exception as e:
+            logger.warning(f"Failed to show final stats: {e}")

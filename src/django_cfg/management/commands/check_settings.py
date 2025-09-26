@@ -13,10 +13,15 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import get_connection
 from datetime import datetime
+from django_cfg.modules.django_logger import get_logger
 
+
+
+logger = get_logger('check_settings')
 
 class Command(BaseCommand):
     """Command to check and debug django-cfg settings."""
+
 
     help = "Check and debug django-cfg configuration settings"
 
@@ -34,6 +39,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Main command handler."""
+        logger.info("Starting check_settings command")
         self.stdout.write(self.style.SUCCESS("\n🔍 Django CFG Settings Checker\n"))
         
         # Show basic info

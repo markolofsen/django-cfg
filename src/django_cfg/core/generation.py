@@ -114,13 +114,34 @@ class SettingsGenerator:
 
             # Add templates configuration
             django_cfg_templates = Path(__file__).parent.parent / "templates"
+            
+            # Collect all django-cfg template directories
+            template_dirs = [
+                config.base_dir / "templates",
+                django_cfg_templates,  # Add django_cfg templates
+            ]
+            
+            # Auto-discover app template directories
+            django_cfg_dir = Path(__file__).parent.parent
+            apps_dir = django_cfg_dir / 'apps'
+            if apps_dir.exists():
+                for app_dir in apps_dir.iterdir():
+                    if app_dir.is_dir() and not app_dir.name.startswith(('@', '_', '.')):
+                        # Look for common template directory patterns
+                        possible_template_dirs = [
+                            app_dir / 'templates',
+                            app_dir / 'admin_interface' / 'templates',
+                            app_dir / 'frontend' / 'templates',
+                        ]
+                        
+                        for template_dir in possible_template_dirs:
+                            if template_dir.exists():
+                                template_dirs.append(template_dir)
+            
             settings["TEMPLATES"] = [
                 {
                     "BACKEND": "django.template.backends.django.DjangoTemplates",
-                    "DIRS": [
-                        config.base_dir / "templates",
-                        django_cfg_templates,  # Add django_cfg templates
-                    ],
+                    "DIRS": template_dirs,
                     "APP_DIRS": True,
                     "OPTIONS": {
                         "context_processors": [

@@ -9,6 +9,8 @@ import re
 from django.core.management.base import BaseCommand
 from django.urls import get_resolver
 from django.conf import settings
+from django_cfg.modules.django_logger import get_logger
+
 
 # Rich imports for beautiful output
 from rich.console import Console
@@ -20,8 +22,11 @@ from rich.align import Align
 from django_cfg.core.config import get_current_config
 
 
+logger = get_logger('list_urls')
+
 class Command(BaseCommand):
     """Command to display all available URLs in the project."""
+
     help = "Display all available URLs with Rich formatting"
     
     def __init__(self, *args, **kwargs):
@@ -53,6 +58,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logger.info("Starting list_urls command")
         filter_str = options["filter"]
         webhook_only = options["webhook"]
         api_only = options["api"]

@@ -1,611 +1,555 @@
 """
-Subscription Service - Core subscription management and access control.
+Subscription service for the Universal Payment System v2.0.
 
-This service handles subscription creation, renewal, access validation,
-and usage tracking with Redis caching.
+Handles subscription management and access control.
 """
 
-from typing import Dict, Any, Optional, List
-from django_cfg.modules.django_logger import get_logger
-from datetime import datetime, timedelta, timezone as dt_timezone
-
-from django.db import transaction
-from django.contrib.auth import get_user_model
+from typing import Optional, Dict, Any, List
+from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
-from pydantic import BaseModel, Field, ValidationError
-from decimal import Decimal
+from datetime import timedelta
 
+from .base import BaseService
+from ..types import (
+    SubscriptionCreateRequest, SubscriptionResult, SubscriptionData,
+    ServiceOperationResult
+)
 from ...models import Subscription, EndpointGroup, Tariff
-from ..internal_types import ServiceOperationResult, SubscriptionInfo, EndpointGroupInfo
-
-User = get_user_model()
-logger = get_logger("subscription_service")
 
 
-class SubscriptionRequest(BaseModel):
-    """Type-safe subscription request"""
-    user_id: int = Field(gt=0, description="User ID")
-    endpoint_group_name: str = Field(min_length=1, description="Endpoint group name")
-    tariff_id: Optional[str] = Field(None, description="Specific tariff ID")
-    billing_period: str = Field(default='monthly', pattern='^(monthly|yearly)$', description="Billing period")
-    auto_renew: bool = Field(default=True, description="Auto-renewal setting")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-
-class SubscriptionResult(BaseModel):
-    """Type-safe subscription operation result"""
-    success: bool
-    subscription_id: Optional[str] = None
-    endpoint_group_id: Optional[str] = None
-    expires_at: Optional[datetime] = None
-    error_message: Optional[str] = None
-    error_code: Optional[str] = None
-
-
-class AccessCheck(BaseModel):
-    """Type-safe access check result"""
-    allowed: bool
-    subscription_id: Optional[str] = None
-    reason: Optional[str] = None
-    remaining_requests: Optional[int] = None
-    usage_percentage: Optional[float] = None
-    required_subscription: Optional[str] = None
-    current_usage: Optional[int] = None
-    monthly_limit: Optional[int] = None
-
-
-class SubscriptionService:
+class SubscriptionService(BaseService):
     """
-    Universal subscription management service.
+    Subscription service with business logic and validation.
     
-    Handles subscription lifecycle, access control, and usage tracking
-    with support for multiple active subscriptions per user.
+    Handles subscription operations using Pydantic validation and Django ORM managers.
     """
     
-    def __init__(self):
-        """Initialize subscription service with dependencies"""
-        pass
-    
-    def create_subscription(self, subscription_data: dict) -> 'ServiceOperationResult':
+    def create_subscription(self, request: SubscriptionCreateRequest) -> SubscriptionResult:
         """
         Create new subscription for user.
         
         Args:
-            subscription_data: Dictionary with subscription details
+            request: Subscription creation request with validation
             
         Returns:
-            ServiceOperationResult with subscription details
+            SubscriptionResult: Created subscription information
         """
         try:
-            # Get user
-            user = User.objects.get(id=subscription_data['user_id'])
+            # Validate request
+            if isinstance(request, dict):
+                request = SubscriptionCreateRequest(**request)
             
-            # Get endpoint group
-            endpoint_group = EndpointGroup.objects.get(
-                name=subscription_data['endpoint_group_name'],
-                is_active=True
+            self.logger.info("Creating subscription", extra={
+                'user_id': request.user_id,
+                'tier': request.tier,
+                'duration_days': request.duration_days
+            })
+            
+            # Get user
+            try:
+                user = User.objects.get(id=request.user_id)
+            except User.DoesNotExist:
+                return SubscriptionResult(
+                    success=False,
+                    message=f"User {request.user_id} not found",
+                    error_code="user_not_found"
+                )
+            
+            # Get tariff for tier
+            try:
+                tariff = Tariff.objects.get(tier=request.tier, is_active=True)
+            except Tariff.DoesNotExist:
+                return SubscriptionResult(
+                    success=False,
+                    message=f"Tariff for tier {request.tier} not found",
+                    error_code="tariff_not_found"
+                )
+            
+            # Cancel existing active subscriptions
+            existing_active = Subscription.objects.filter(
+                user=user,
+                status=Subscription.SubscriptionStatus.ACTIVE
             )
             
-            with transaction.atomic():
-                # Check for existing active subscription
-                existing = Subscription.objects.filter(
-                    user=user,
-                    endpoint_group=endpoint_group,
-                    status=Subscription.SubscriptionStatus.ACTIVE,
-                    expires_at__gt=timezone.now()
-                ).first()
+            def create_subscription_transaction():
+                # Cancel existing subscriptions
+                for sub in existing_active:
+                    sub.cancel("Replaced by new subscription")
                 
-                if existing:
-                    return ServiceOperationResult(
-                        success=False,
-                        error_message=f"User already has active subscription for '{subscription_data['endpoint_group_name']}'"
-                    )
+                # Create new subscription
+                expires_at = timezone.now() + timedelta(days=request.duration_days)
                 
-                # Create subscription
                 subscription = Subscription.objects.create(
                     user=user,
-                    endpoint_group=endpoint_group,
-                    tier=Subscription.SubscriptionTier.BASIC,
+                    tier=request.tier,
                     status=Subscription.SubscriptionStatus.ACTIVE,
-                    monthly_price=endpoint_group.basic_price,
-                    usage_limit=endpoint_group.basic_limit,
-                    usage_current=0,
-                    expires_at=timezone.now() + timedelta(days=30),
-                    next_billing=timezone.now() + timedelta(days=30)
+                    requests_per_hour=tariff.requests_per_hour,
+                    requests_per_day=tariff.requests_per_day,
+                    monthly_cost_usd=tariff.monthly_price_usd,
+                    auto_renew=request.auto_renew,
+                    expires_at=expires_at
                 )
                 
-                # Log subscription creation
-                logger.info(
-                    f"New subscription created: {subscription_data['endpoint_group_name']} "
-                    f"for user {user.email} (expires: {subscription.expires_at})"
-                )
+                # Add endpoint groups
+                if request.endpoint_groups:
+                    endpoint_groups = EndpointGroup.objects.filter(
+                        code__in=request.endpoint_groups,
+                        is_enabled=True
+                    )
+                    subscription.endpoint_groups.set(endpoint_groups)
+                else:
+                    # Add default endpoint groups for tier
+                    default_groups = self._get_default_endpoint_groups(request.tier)
+                    subscription.endpoint_groups.set(default_groups)
                 
-                
-                return ServiceOperationResult(
-                    success=True,
-                    data={'subscription_id': str(subscription.id)}
-                )
-                
-        except Exception as e:
-            logger.error(f"Subscription creation failed: {e}", exc_info=True)
+                return subscription
             
-            return ServiceOperationResult(
-                success=False,
-                error_message=f"Internal error: {str(e)}"
+            subscription = self._execute_with_transaction(create_subscription_transaction)
+            
+            # Convert to response data
+            subscription_data = SubscriptionData.model_validate(subscription)
+            
+            self._log_operation(
+                "create_subscription",
+                True,
+                subscription_id=str(subscription.id),
+                user_id=request.user_id,
+                tier=request.tier
             )
+            
+            return SubscriptionResult(
+                success=True,
+                message="Subscription created successfully",
+                subscription_id=str(subscription.id),
+                user_id=request.user_id,
+                tier=subscription.tier,
+                status=subscription.status,
+                expires_at=subscription.expires_at,
+                data={'subscription': subscription_data.model_dump()}
+            )
+            
+        except Exception as e:
+            return SubscriptionResult(**self._handle_exception(
+                "create_subscription", e,
+                user_id=request.user_id if hasattr(request, 'user_id') else None
+            ).model_dump())
     
-    def check_endpoint_access(
-        self,
-        user: User,
-        endpoint_group_name: str,
-        use_cache: bool = True
-    ) -> AccessCheck:
+    def get_user_subscription(self, user_id: int) -> SubscriptionResult:
+        """
+        Get active subscription for user.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            SubscriptionResult: Active subscription or free tier
+        """
+        try:
+            self.logger.debug("Getting user subscription", extra={'user_id': user_id})
+            
+            # Check user exists
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return SubscriptionResult(
+                    success=False,
+                    message=f"User {user_id} not found",
+                    error_code="user_not_found"
+                )
+            
+            # Get active subscription
+            subscription = Subscription.objects.get_active_for_user(user)
+            
+            if not subscription:
+                # Create free subscription if none exists
+                subscription = Subscription.objects.create_free_subscription(user)
+            
+            # Convert to response data
+            subscription_data = SubscriptionData.model_validate(subscription)
+            
+            # Calculate requests remaining
+            requests_remaining = self._calculate_requests_remaining(subscription)
+            
+            return SubscriptionResult(
+                success=True,
+                message="Subscription retrieved successfully",
+                subscription_id=str(subscription.id),
+                user_id=user_id,
+                tier=subscription.tier,
+                status=subscription.status,
+                expires_at=subscription.expires_at,
+                requests_remaining=requests_remaining,
+                data={'subscription': subscription_data.model_dump()}
+            )
+            
+        except Exception as e:
+            return SubscriptionResult(**self._handle_exception(
+                "get_user_subscription", e,
+                user_id=user_id
+            ).model_dump())
+    
+    def check_access(self, user_id: int, endpoint_group: str) -> ServiceOperationResult:
         """
         Check if user has access to endpoint group.
         
         Args:
-            user: User object
-            endpoint_group_name: Name of endpoint group
-            use_cache: Whether to use Redis cache
+            user_id: User ID
+            endpoint_group: Endpoint group code
             
         Returns:
-            AccessCheck with access status and details
+            ServiceOperationResult: Access check result
         """
         try:
-            # Try cache first
-            if use_cache:
-                cache_key = f"access:{user.id}:{endpoint_group_name}"
-                cached = self.cache.get_cache(cache_key)
-                if cached:
-                    return AccessCheck(**cached)
+            self.logger.debug("Checking endpoint access", extra={
+                'user_id': user_id,
+                'endpoint_group': endpoint_group
+            })
             
-            # Check active subscription
-            subscription = Subscription.objects.filter(
-                user=user,
-                endpoint_group__name=endpoint_group_name,
-                status=Subscription.Status.ACTIVE,
-                expires_at__gt=timezone.now()
-            ).select_related('endpoint_group', 'tariff').first()
-            
-            if not subscription:
-                result = AccessCheck(
-                    allowed=False,
-                    reason='no_active_subscription',
-                    required_subscription=endpoint_group_name
-                )
-            elif not subscription.can_make_request():
-                result = AccessCheck(
-                    allowed=False,
-                    reason='usage_limit_exceeded',
-                    subscription_id=str(subscription.id),
-                    current_usage=subscription.current_usage,
-                    monthly_limit=subscription.get_monthly_limit()
-                )
-            else:
-                result = AccessCheck(
-                    allowed=True,
-                    subscription_id=str(subscription.id),
-                    remaining_requests=subscription.remaining_requests(),
-                    usage_percentage=subscription.usage_percentage
+            # Get user subscription
+            subscription_result = self.get_user_subscription(user_id)
+            if not subscription_result.success:
+                return self._create_error_result(
+                    subscription_result.message,
+                    subscription_result.error_code
                 )
             
-            # Cache result for 1 minute
-            if use_cache:
-                cache_data = result.dict()
-                self.cache.set_cache(f"access:{user.id}:{endpoint_group_name}", cache_data, ttl=60)
+            subscription = Subscription.objects.get(id=subscription_result.subscription_id)
             
-            return result
+            # Check if subscription is active and not expired
+            if not subscription.is_active():
+                return self._create_error_result(
+                    "Subscription is not active",
+                    "subscription_inactive"
+                )
+            
+            # Check endpoint group access
+            has_access = subscription.has_access_to_endpoint_group(endpoint_group)
+            
+            if not has_access:
+                return self._create_error_result(
+                    f"Access denied to endpoint group: {endpoint_group}",
+                    "access_denied"
+                )
+            
+            # Check rate limits
+            rate_limit_result = self._check_rate_limits(subscription)
+            if not rate_limit_result.success:
+                return rate_limit_result
+            
+            return self._create_success_result(
+                "Access granted",
+                {
+                    'user_id': user_id,
+                    'endpoint_group': endpoint_group,
+                    'subscription_id': str(subscription.id),
+                    'tier': subscription.tier,
+                    'requests_remaining': self._calculate_requests_remaining(subscription)
+                }
+            )
             
         except Exception as e:
-            logger.error(f"Access check failed for user {user.id}, endpoint {endpoint_group_name}: {e}")
-            return AccessCheck(
-                allowed=False,
-                reason='check_failed'
+            return self._handle_exception(
+                "check_access", e,
+                user_id=user_id,
+                endpoint_group=endpoint_group
             )
     
-    def record_api_usage(
-        self,
-        user: User,
-        endpoint_group_name: str,
-        usage_count: int = 1
-    ) -> bool:
+    def increment_usage(self, user_id: int) -> ServiceOperationResult:
         """
-        Record API usage for user's subscription.
-        
-        Args:
-            user: User object
-            endpoint_group_name: Name of endpoint group
-            usage_count: Number of requests to record
-            
-        Returns:
-            True if usage was recorded, False otherwise
-        """
-        try:
-            with transaction.atomic():
-                subscription = Subscription.objects.filter(
-                    user=user,
-                    endpoint_group__name=endpoint_group_name,
-                    status=Subscription.Status.ACTIVE,
-                    expires_at__gt=timezone.now()
-                ).first()
-                
-                if not subscription:
-                    logger.warning(f"No active subscription found for user {user.id}, endpoint {endpoint_group_name}")
-                    return False
-                
-                # Update usage
-                subscription.current_usage += usage_count
-                subscription.save(update_fields=['current_usage', 'updated_at'])
-                
-                # Invalidate access cache
-                self.cache.delete_key(f"access:{user.id}:{endpoint_group_name}")
-                
-                return True
-                
-        except Exception as e:
-            logger.error(f"Usage recording failed for user {user.id}: {e}")
-            return False
-    
-    def get_user_subscriptions(
-        self,
-        user_id: int,
-        active_only: bool = True
-    ) -> List['SubscriptionInfo']:
-        """
-        Get user's subscriptions.
+        Increment subscription usage counter.
         
         Args:
             user_id: User ID
-            active_only: Return only active subscriptions
             
         Returns:
-            List of subscription dictionaries
+            ServiceOperationResult: Usage increment result
         """
         try:
-            
-            # Query subscriptions
-            queryset = Subscription.objects.filter(user_id=user_id)
-            
-            if active_only:
-                queryset = queryset.filter(
-                    status=Subscription.SubscriptionStatus.ACTIVE,
-                    expires_at__gt=timezone.now()
+            # Get user subscription
+            subscription_result = self.get_user_subscription(user_id)
+            if not subscription_result.success:
+                return self._create_error_result(
+                    subscription_result.message,
+                    subscription_result.error_code
                 )
             
-            subscriptions = queryset.select_related(
-                'endpoint_group'
-            ).order_by('-created_at')
+            subscription = Subscription.objects.get(id=subscription_result.subscription_id)
             
-            result = [
-                SubscriptionInfo(
-                    id=str(sub.id),
-                    endpoint_group=EndpointGroupInfo(
-                        id=str(sub.endpoint_group.id),
-                        name=sub.endpoint_group.name,
-                        display_name=sub.endpoint_group.display_name
-                    ),
-                    status=sub.status,
-                    tier=sub.tier,
-                    monthly_price=Decimal(str(sub.monthly_price)),
-                    usage_current=sub.usage_current,
-                    usage_limit=sub.usage_limit,
-                    usage_percentage=sub.usage_current / sub.usage_limit if sub.usage_limit else 0.0,
-                    remaining_requests=sub.usage_limit - sub.usage_current if sub.usage_limit else 0,
-                    expires_at=sub.expires_at,
-                    next_billing=sub.next_billing,
-                    created_at=sub.created_at
+            # Increment usage using manager
+            success = subscription.increment_usage()
+            
+            if success:
+                return self._create_success_result(
+                    "Usage incremented successfully",
+                    {
+                        'user_id': user_id,
+                        'subscription_id': str(subscription.id),
+                        'total_requests': subscription.total_requests,
+                        'requests_remaining': self._calculate_requests_remaining(subscription)
+                    }
                 )
-                for sub in subscriptions
-            ]
-            
-            
-            return result
-            
+            else:
+                return self._create_error_result(
+                    "Failed to increment usage",
+                    "increment_failed"
+                )
+                
         except Exception as e:
-            logger.error(f"Error getting subscriptions for user {user_id}: {e}")
-            return []
+            return self._handle_exception(
+                "increment_usage", e,
+                user_id=user_id
+            )
     
-    def cancel_subscription(
-        self,
-        user: User,
-        subscription_id: str,
-        reason: str = 'user_request'
-    ) -> SubscriptionResult:
+    def renew_subscription(self, subscription_id: str, duration_days: int = 30) -> SubscriptionResult:
         """
-        Cancel user subscription.
+        Renew existing subscription.
         
         Args:
-            user: User object
-            subscription_id: Subscription UUID
+            subscription_id: Subscription ID
+            duration_days: Renewal duration in days
+            
+        Returns:
+            SubscriptionResult: Renewal result
+        """
+        try:
+            self.logger.info("Renewing subscription", extra={
+                'subscription_id': subscription_id,
+                'duration_days': duration_days
+            })
+            
+            # Get subscription
+            try:
+                subscription = Subscription.objects.get(id=subscription_id)
+            except Subscription.DoesNotExist:
+                return SubscriptionResult(
+                    success=False,
+                    message=f"Subscription {subscription_id} not found",
+                    error_code="subscription_not_found"
+                )
+            
+            # Renew using manager
+            success = subscription.renew(duration_days)
+            
+            if success:
+                subscription.refresh_from_db()
+                subscription_data = SubscriptionData.model_validate(subscription)
+                
+                self._log_operation(
+                    "renew_subscription",
+                    True,
+                    subscription_id=subscription_id,
+                    duration_days=duration_days,
+                    new_expires_at=subscription.expires_at.isoformat()
+                )
+                
+                return SubscriptionResult(
+                    success=True,
+                    message="Subscription renewed successfully",
+                    subscription_id=str(subscription.id),
+                    user_id=subscription.user.id,
+                    tier=subscription.tier,
+                    status=subscription.status,
+                    expires_at=subscription.expires_at,
+                    data={'subscription': subscription_data.model_dump()}
+                )
+            else:
+                return SubscriptionResult(
+                    success=False,
+                    message="Failed to renew subscription",
+                    error_code="renewal_failed"
+                )
+                
+        except Exception as e:
+            return SubscriptionResult(**self._handle_exception(
+                "renew_subscription", e,
+                subscription_id=subscription_id
+            ).model_dump())
+    
+    def cancel_subscription(self, subscription_id: str, reason: str = None) -> SubscriptionResult:
+        """
+        Cancel subscription.
+        
+        Args:
+            subscription_id: Subscription ID
             reason: Cancellation reason
             
         Returns:
-            SubscriptionResult with cancellation status
+            SubscriptionResult: Cancellation result
         """
         try:
-            with transaction.atomic():
-                subscription = Subscription.objects.filter(
-                    id=subscription_id,
-                    user=user,
-                    status=Subscription.Status.ACTIVE
-                ).first()
-                
-                if not subscription:
-                    return SubscriptionResult(
-                        success=False,
-                        error_code='SUBSCRIPTION_NOT_FOUND',
-                        error_message="Active subscription not found"
-                    )
-                
-                # Cancel subscription
-                subscription.status = Subscription.Status.CANCELLED
-                subscription.auto_renew = False
-                subscription.next_billing_at = None
-                subscription.metadata = {
-                    **subscription.metadata,
-                    'cancellation_reason': reason,
-                    'cancelled_at': timezone.now().isoformat()
-                }
-                subscription.save()
-                
-                
+            self.logger.info("Cancelling subscription", extra={
+                'subscription_id': subscription_id,
+                'reason': reason
+            })
+            
+            # Get subscription
+            try:
+                subscription = Subscription.objects.get(id=subscription_id)
+            except Subscription.DoesNotExist:
                 return SubscriptionResult(
-                    success=True,
-                    subscription_id=str(subscription.id)
+                    success=False,
+                    message=f"Subscription {subscription_id} not found",
+                    error_code="subscription_not_found"
+                )
+            
+            # Cancel using manager
+            success = subscription.cancel(reason)
+            
+            if success:
+                subscription.refresh_from_db()
+                subscription_data = SubscriptionData.model_validate(subscription)
+                
+                self._log_operation(
+                    "cancel_subscription",
+                    True,
+                    subscription_id=subscription_id,
+                    reason=reason
                 )
                 
-        except Exception as e:
-            logger.error(f"Subscription cancellation failed: {e}", exc_info=True)
-            return SubscriptionResult(
-                success=False,
-                error_code='INTERNAL_ERROR',
-                error_message=f"Cancellation failed: {str(e)}"
-            )
-    
-    def renew_subscription(
-        self,
-        subscription_id: str,
-        billing_period: Optional[str] = None
-    ) -> SubscriptionResult:
-        """
-        Renew expired or expiring subscription.
-        
-        Args:
-            subscription_id: Subscription UUID
-            billing_period: New billing period (optional)
-            
-        Returns:
-            SubscriptionResult with renewal status
-        """
-        try:
-            with transaction.atomic():
-                subscription = Subscription.objects.filter(
-                    id=subscription_id
-                ).first()
-                
-                if not subscription:
-                    return SubscriptionResult(
-                        success=False,
-                        error_code='SUBSCRIPTION_NOT_FOUND',
-                        error_message="Subscription not found"
-                    )
-                
-                # Calculate new expiry based on billing period
-                now = timezone.now()
-                if billing_period == 'yearly':
-                    new_expiry = now + timedelta(days=365)
-                else:  # Default to monthly
-                    new_expiry = now + timedelta(days=30)
-                
-                # Update subscription using correct enum
-                subscription.expires_at = new_expiry
-                subscription.next_billing = new_expiry
-                subscription.status = subscription.SubscriptionStatus.ACTIVE  # Use proper enum
-                subscription.usage_current = 0  # Reset usage counter
-                subscription.save()
-                
-                
                 return SubscriptionResult(
                     success=True,
+                    message="Subscription cancelled successfully",
                     subscription_id=str(subscription.id),
-                    expires_at=subscription.expires_at
+                    user_id=subscription.user.id,
+                    tier=subscription.tier,
+                    status=subscription.status,
+                    data={'subscription': subscription_data.model_dump()}
+                )
+            else:
+                return SubscriptionResult(
+                    success=False,
+                    message="Failed to cancel subscription",
+                    error_code="cancellation_failed"
                 )
                 
         except Exception as e:
-            logger.error(f"Subscription renewal failed: {e}", exc_info=True)
-            return SubscriptionResult(
-                success=False,
-                error_code='INTERNAL_ERROR',
-                error_message=f"Renewal failed: {str(e)}"
-            )
+            return SubscriptionResult(**self._handle_exception(
+                "cancel_subscription", e,
+                subscription_id=subscription_id
+            ).model_dump())
     
-    
-    def get_subscription_analytics(
-        self,
-        user: User,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
-    ) -> Dict[str, Any]:
+    def get_subscription_stats(self, days: int = 30) -> ServiceOperationResult:
         """
-        Get subscription analytics for user.
+        Get subscription statistics.
         
         Args:
-            user: User object
-            start_date: Analytics start date
-            end_date: Analytics end date
+            days: Number of days to analyze
             
         Returns:
-            Analytics data dictionary
+            ServiceOperationResult: Subscription statistics
         """
         try:
-            if not start_date:
-                start_date = timezone.now() - timedelta(days=30)
-            if not end_date:
-                end_date = timezone.now()
+            since = timezone.now() - timedelta(days=days)
             
-            # Get subscriptions in date range
-            subscriptions = Subscription.objects.filter(
-                user=user,
-                created_at__gte=start_date,
-                created_at__lte=end_date
-            ).select_related('endpoint_group')
+            # Overall stats
+            overall_stats = Subscription.objects.aggregate(
+                total_subscriptions=models.Count('id'),
+                active_subscriptions=models.Count(
+                    'id',
+                    filter=models.Q(status=Subscription.SubscriptionStatus.ACTIVE)
+                ),
+                expired_subscriptions=models.Count(
+                    'id',
+                    filter=models.Q(status=Subscription.SubscriptionStatus.EXPIRED)
+                ),
+                cancelled_subscriptions=models.Count(
+                    'id',
+                    filter=models.Q(status=Subscription.SubscriptionStatus.CANCELLED)
+                )
+            )
             
-            # Calculate analytics
-            total_subscriptions = subscriptions.count()
-            active_subscriptions = subscriptions.filter(
-                status=Subscription.Status.ACTIVE,
-                expires_at__gt=timezone.now()
+            # Tier breakdown
+            tier_breakdown = Subscription.objects.values('tier').annotate(
+                count=models.Count('id'),
+                active_count=models.Count(
+                    'id',
+                    filter=models.Q(status=Subscription.SubscriptionStatus.ACTIVE)
+                )
+            ).order_by('-count')
+            
+            # Recent activity
+            recent_stats = Subscription.objects.filter(
+                created_at__gte=since
+            ).aggregate(
+                new_subscriptions=models.Count('id'),
+                total_requests=models.Sum('total_requests'),
+                avg_requests=models.Avg('total_requests')
+            )
+            
+            stats = {
+                'period_days': days,
+                'overall_stats': overall_stats,
+                'tier_breakdown': list(tier_breakdown),
+                'recent_stats': recent_stats,
+                'generated_at': timezone.now().isoformat()
+            }
+            
+            return self._create_success_result(
+                f"Subscription statistics for {days} days",
+                stats
+            )
+            
+        except Exception as e:
+            return self._handle_exception("get_subscription_stats", e)
+    
+    def _get_default_endpoint_groups(self, tier: str) -> List[EndpointGroup]:
+        """Get default endpoint groups for subscription tier."""
+        tier_groups = {
+            'free': ['payments', 'balance'],
+            'basic': ['payments', 'balance', 'subscriptions'],
+            'pro': ['payments', 'balance', 'subscriptions', 'analytics'],
+            'enterprise': ['payments', 'balance', 'subscriptions', 'analytics', 'admin']
+        }
+        
+        group_codes = tier_groups.get(tier, ['payments'])
+        return EndpointGroup.objects.filter(
+            code__in=group_codes,
+            is_enabled=True
+        )
+    
+    def _calculate_requests_remaining(self, subscription: Subscription) -> int:
+        """Calculate remaining requests for today."""
+        # Simple calculation - in production this would check daily usage
+        return max(0, subscription.requests_per_day - subscription.total_requests)
+    
+    def _check_rate_limits(self, subscription: Subscription) -> ServiceOperationResult:
+        """Check if subscription has exceeded rate limits."""
+        # Simplified rate limit check
+        if subscription.total_requests >= subscription.requests_per_day:
+            return self._create_error_result(
+                "Daily request limit exceeded",
+                "rate_limit_exceeded"
+            )
+        
+        return self._create_success_result("Rate limits OK")
+    
+    def health_check(self) -> ServiceOperationResult:
+        """Perform subscription service health check."""
+        try:
+            # Check database connectivity
+            subscription_count = Subscription.objects.count()
+            active_count = Subscription.objects.filter(
+                status=Subscription.SubscriptionStatus.ACTIVE
             ).count()
             
-            usage_by_endpoint = {}
-            for sub in subscriptions:
-                endpoint_name = sub.endpoint_group.name
-                if endpoint_name not in usage_by_endpoint:
-                    usage_by_endpoint[endpoint_name] = {
-                        'usage': 0,
-                        'limit': 0,
-                        'percentage': 0
-                    }
-                usage_by_endpoint[endpoint_name]['usage'] += sub.current_usage
-                usage_by_endpoint[endpoint_name]['limit'] += sub.get_monthly_limit()
-            
-            # Calculate usage percentages
-            for endpoint_data in usage_by_endpoint.values():
-                if endpoint_data['limit'] > 0:
-                    endpoint_data['percentage'] = (endpoint_data['usage'] / endpoint_data['limit']) * 100
-            
-            return {
-                'period': {
-                    'start_date': start_date.isoformat(),
-                    'end_date': end_date.isoformat()
-                },
-                'summary': {
-                    'total_subscriptions': total_subscriptions,
-                    'active_subscriptions': active_subscriptions,
-                    'cancelled_subscriptions': subscriptions.filter(
-                        status=Subscription.Status.CANCELLED
-                    ).count()
-                },
-                'usage_by_endpoint': usage_by_endpoint,
-                'total_usage': sum(data['usage'] for data in usage_by_endpoint.values()),
-                'total_limit': sum(data['limit'] for data in usage_by_endpoint.values())
-            }
-            
-        except Exception as e:
-            logger.error(f"Analytics calculation failed for user {user.id}: {e}")
-            return {
-                'error': str(e),
-                'period': {
-                    'start_date': start_date.isoformat() if start_date else None,
-                    'end_date': end_date.isoformat() if end_date else None
-                }
-            }
-    
-    def check_access(
-        self,
-        user_id: int,
-        endpoint_group: str,
-        increment_usage: bool = False
-    ) -> Dict[str, Any]:
-        """
-        Check if user has access to endpoint group.
-        
-        Args:
-            user_id: User ID
-            endpoint_group: Endpoint group name
-            increment_usage: Whether to increment usage count
-            
-        Returns:
-            Access check result
-        """
-        try:
-            subscription = Subscription.objects.select_related('endpoint_group').get(
-                user_id=user_id,
-                endpoint_group__name=endpoint_group,
+            # Check for expired subscriptions that need cleanup
+            expired_count = Subscription.objects.filter(
                 status=Subscription.SubscriptionStatus.ACTIVE,
-                expires_at__gt=timezone.now()
+                expires_at__lt=timezone.now()
+            ).count()
+            
+            stats = {
+                'total_subscriptions': subscription_count,
+                'active_subscriptions': active_count,
+                'expired_needing_cleanup': expired_count,
+                'service_name': 'SubscriptionService'
+            }
+            
+            return self._create_success_result(
+                "SubscriptionService is healthy",
+                stats
             )
             
-            # Check usage limit
-            if subscription.usage_limit and subscription.usage_current >= subscription.usage_limit:
-                return {
-                    'has_access': False,
-                    'reason': 'usage_limit_exceeded',
-                    'usage_current': subscription.usage_current,
-                    'usage_limit': subscription.usage_limit
-                }
-            
-            # Increment usage if requested
-            if increment_usage:
-                subscription.usage_current += 1
-                subscription.save(update_fields=['usage_current'])
-            
-            return {
-                'has_access': True,
-                'subscription_id': str(subscription.id),
-                'usage_current': subscription.usage_current,
-                'usage_limit': subscription.usage_limit,
-                'remaining_requests': subscription.usage_limit - subscription.usage_current if subscription.usage_limit else None
-            }
-            
-        except Subscription.DoesNotExist:
-            return {
-                'has_access': False,
-                'reason': 'no_active_subscription'
-            }
         except Exception as e:
-            logger.error(f"Error checking access for user {user_id}, endpoint {endpoint_group}: {e}")
-            return {
-                'has_access': False,
-                'reason': 'internal_error'
-            }
-    
-    def increment_usage(
-        self,
-        user_id: int,
-        endpoint_group: str,
-        amount: int = 1
-    ) -> 'ServiceOperationResult':
-        """
-        Increment usage for user's subscription.
-        
-        Args:
-            user_id: User ID
-            endpoint_group: Endpoint group name
-            amount: Amount to increment
-            
-        Returns:
-            Usage increment result
-        """
-        try:
-            subscription = Subscription.objects.select_related('endpoint_group').get(
-                user_id=user_id,
-                endpoint_group__name=endpoint_group,
-                status=Subscription.SubscriptionStatus.ACTIVE,
-                expires_at__gt=timezone.now()
-            )
-            
-            subscription.usage_current += amount
-            subscription.save(update_fields=['usage_current'])
-            
-            
-            return ServiceOperationResult(
-                success=True,
-                data={
-                    'usage_current': subscription.usage_current,
-                    'usage_limit': subscription.usage_limit,
-                    'remaining_requests': subscription.usage_limit - subscription.usage_current if subscription.usage_limit else None
-                }
-            )
-            
-        except Subscription.DoesNotExist:
-            return ServiceOperationResult(
-                success=False,
-                error_message='no_active_subscription'
-            )
-        except Exception as e:
-            logger.error(f"Error incrementing usage for user {user_id}, endpoint {endpoint_group}: {e}")
-            return ServiceOperationResult(
-                success=False,
-                error_message='internal_error'
-            )
+            return self._handle_exception("health_check", e)

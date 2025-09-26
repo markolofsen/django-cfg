@@ -1,24 +1,34 @@
 """
-Admin interfaces for universal payments.
+Admin interfaces for Universal Payment System v2.0.
+
+Unfold-powered admin with modern UI/UX and advanced functionality.
 """
 
-from .balance_admin import UserBalanceAdmin, TransactionAdmin
-from .payments_admin import UniversalPaymentAdmin
-from .subscriptions_admin import SubscriptionAdmin, EndpointGroupAdmin
-from .api_keys_admin import APIKeyAdmin
 from .currencies_admin import CurrencyAdmin, NetworkAdmin, ProviderCurrencyAdmin
-from .tariffs_admin import TariffAdmin, TariffEndpointGroupAdmin
+from .payments_admin import UniversalPaymentAdmin
+from .balance_admin import UserBalanceAdmin, TransactionAdmin
+from .subscriptions_admin import SubscriptionAdmin, EndpointGroupAdmin, TariffAdmin, TariffEndpointGroupAdmin
+from .api_keys_admin import APIKeyAdmin
 
 __all__ = [
+    # Currency admins
+    'CurrencyAdmin',
+    'NetworkAdmin', 
+    'ProviderCurrencyAdmin',
+    
+    # Payment admins
+    'UniversalPaymentAdmin',
+    
+    # Balance admins
     'UserBalanceAdmin',
     'TransactionAdmin',
-    'UniversalPaymentAdmin',
+    
+    # Subscription admins
     'SubscriptionAdmin',
     'EndpointGroupAdmin',
-    'APIKeyAdmin',
-    'CurrencyAdmin',
-    'NetworkAdmin',
-    'ProviderCurrencyAdmin',
     'TariffAdmin',
     'TariffEndpointGroupAdmin',
+    
+    # API Key admins
+    'APIKeyAdmin',
 ]

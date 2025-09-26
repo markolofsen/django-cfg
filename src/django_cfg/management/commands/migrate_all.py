@@ -6,11 +6,16 @@ Migrate all databases based on django-cfg configuration.
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from django.apps import apps
+from django_cfg.modules.django_logger import get_logger
+
 
 from django_cfg.core.config import get_current_config
 
 
+logger = get_logger('migrate_all')
+
 class Command(BaseCommand):
+
     help = "Migrate all databases based on django-cfg configuration"
 
     def add_arguments(self, parser):
@@ -27,6 +32,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Run migrations for all configured databases."""
+        logger.info("Starting migrate_all command")
         dry_run = options.get("dry_run", False)
         skip_makemigrations = options.get("skip_makemigrations", False)
         

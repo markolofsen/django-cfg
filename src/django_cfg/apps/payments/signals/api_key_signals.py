@@ -1,160 +1,241 @@
 """
-🔄 Universal API Keys Auto-Creation Signals
+API Key Signals for the Universal Payment System v2.0.
 
-Automatic API key creation and management via Django signals.
-Enhanced version of CarAPI signals with universal support.
+Minimal signals focused on cache invalidation and security notifications.
+Business logic stays in APIKeyManager.
 """
 
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.core.cache import cache
 from django.utils import timezone
-from django_cfg.modules.django_logger import get_logger
 
 from ..models import APIKey
+from django_cfg.modules.django_logger import get_logger
 
-User = get_user_model()
 logger = get_logger("api_key_signals")
 
 
-@receiver(post_save, sender=User)
-def create_default_api_key(sender, instance, created, **kwargs):
-    """
-    Automatically create default API key for new users.
-    This ensures every user can immediately start using the API.
-    """
-    if created:
-        try:
-            with transaction.atomic():
-                import secrets
-                key_value = f"ak_{secrets.token_urlsafe(32)}"
-                
-                api_key = APIKey.objects.create(
-                    user=instance,
-                    name="Default API Key",
-                    key_value=key_value,
-                    key_prefix=key_value[:8],
-                    is_active=True
-                )
-                
-                logger.info(
-                    f"Created default API key for user {instance.email}: {api_key.key_prefix}***"
-                )
-                
-                # Optional: Send welcome email with API key info
-                # This would be handled in custom project implementations
-                # from .tasks import send_api_key_welcome_email
-                # send_api_key_welcome_email.delay(instance.id, api_key.id)
-                
-        except Exception as e:
-            logger.error(f"Failed to create default API key for user {instance.email}: {e}")
-
-
-@receiver(post_save, sender=User)
-def ensure_user_has_api_key(sender, instance, **kwargs):
-    """
-    Ensure user always has at least one API key.
-    Creates one if user has no active keys.
-    """
-    # Skip if this is a new user (handled by create_default_api_key)
-    if kwargs.get('created', False):
-        return
-    
-    # Check if user has any active keys
-    if not APIKey.objects.filter(user=instance, is_active=True).exists():
-        try:
-            with transaction.atomic():
-                import secrets
-                key_value = f"ak_{secrets.token_urlsafe(32)}"
-                
-                api_key = APIKey.objects.create(
-                    user=instance,
-                    name="Recovery API Key",
-                    key_value=key_value,
-                    key_prefix=key_value[:8],
-                    is_active=True
-                )
-                logger.info(
-                    f"Created recovery API key for user {instance.email}: {api_key.key_prefix}***"
-                )
-        except Exception as e:
-            logger.error(f"Failed to create recovery API key for user {instance.email}: {e}")
-
-
 @receiver(pre_save, sender=APIKey)
-def store_original_status(sender, instance, **kwargs):
-    """Store original status for change detection."""
+def store_original_api_key_data(sender, instance: APIKey, **kwargs):
+    """Store original API key data for change detection."""
     if instance.pk:
         try:
-            old_instance = APIKey.objects.get(pk=instance.pk)
-            instance._original_is_active = old_instance.is_active
+            original = APIKey.objects.get(pk=instance.pk)
+            instance._original_is_active = original.is_active
+            instance._original_total_requests = original.total_requests
         except APIKey.DoesNotExist:
             instance._original_is_active = None
-
-
-@receiver(post_save, sender=APIKey)
-def log_api_key_changes(sender, instance, created, **kwargs):
-    """Log API key creation and status changes for security monitoring."""
-    if created:
-        logger.info(
-            f"New API key created: {instance.name} ({instance.key_prefix}***) "
-            f"for user {instance.user.email}"
-        )
+            instance._original_total_requests = None
     else:
-        # Check if status changed
-        if hasattr(instance, '_original_is_active'):
-            old_status = instance._original_is_active
-            new_status = instance.is_active
-            
-            if old_status is not None and old_status != new_status:
-                status_text = "activated" if new_status else "deactivated"
-                logger.warning(
-                    f"API key {status_text}: {instance.name} ({instance.key_prefix}***) "
-                    f"for user {instance.user.email}"
-                )
+        instance._original_is_active = None
+        instance._original_total_requests = None
 
 
 @receiver(post_save, sender=APIKey)
-def update_last_used_on_activation(sender, instance, created, **kwargs):
-    """Update last_used when API key is activated."""
-    if not created and instance.is_active and hasattr(instance, '_original_is_active'):
-        if instance._original_is_active is False and instance.is_active is True:
-            # Key was just activated
-            APIKey.objects.filter(pk=instance.pk).update(
-                last_used=timezone.now()
-            )
-
-
-@receiver(post_delete, sender=APIKey)
-def log_api_key_deletion(sender, instance, **kwargs):
-    """Log API key deletions for security audit."""
-    logger.warning(
-        f"API key deleted: {instance.name} ({instance.key_prefix}***) "
-        f"for user {instance.user.email} - Status was: {'active' if instance.is_active else 'inactive'}"
-    )
-
-
-@receiver(post_delete, sender=APIKey)
-def ensure_user_has_remaining_key(sender, instance, **kwargs):
+def handle_api_key_changes(sender, instance: APIKey, created: bool, **kwargs):
     """
-    Ensure user still has at least one API key after deletion.
-    Creates a new one if this was the last active key.
-    """
-    user = instance.user
+    Handle API key changes - only cache clearing and security notifications.
     
-    # Check if user has any remaining active keys
-    if not APIKey.objects.filter(user=user, is_active=True).exists():
-        try:
-            with transaction.atomic():
-                api_key = APIKey.objects.create(
-                    user=user,
-                    name="Auto Recovery API Key",
-                    is_active=True
-                )
-                logger.info(
-                    f"Created auto-recovery API key for user {user.email}: {api_key.key_prefix}*** "
-                    f"(previous key was deleted)"
-                )
-        except Exception as e:
-            logger.error(f"Failed to create auto-recovery API key for user {user.email}: {e}")
+    Business logic (usage tracking, validation) stays in managers.
+    """
+    if created:
+        logger.info(f"New API key created", extra={
+            'api_key_id': str(instance.id),
+            'user_id': instance.user.id,
+            'name': instance.name,
+            'expires_at': instance.expires_at.isoformat() if instance.expires_at else None
+        })
+        
+        # Set creation notification in cache
+        cache.set(
+            f"api_key_created:{instance.user.id}:{instance.id}",
+            {
+                'api_key_id': str(instance.id),
+                'name': instance.name,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400  # 24 hours
+        )
+        
+    else:
+        # Check for status changes
+        if hasattr(instance, '_original_is_active'):
+            old_active = instance._original_is_active
+            new_active = instance.is_active
+            
+            if old_active != new_active:
+                if new_active:
+                    _handle_api_key_activated(instance)
+                else:
+                    _handle_api_key_deactivated(instance)
+        
+        # Check for usage increases (security monitoring)
+        if hasattr(instance, '_original_total_requests'):
+            old_requests = instance._original_total_requests or 0
+            new_requests = instance.total_requests
+            
+            if new_requests > old_requests:
+                request_increase = new_requests - old_requests
+                
+                # Log high usage increases (potential security concern)
+                if request_increase > 100:  # More than 100 requests at once
+                    logger.warning(f"High API key usage increase", extra={
+                        'api_key_id': str(instance.id),
+                        'user_id': instance.user.id,
+                        'old_requests': old_requests,
+                        'new_requests': new_requests,
+                        'increase': request_increase
+                    })
+                    
+                    _handle_high_usage_alert(instance, request_increase)
+    
+    # Clear API key-related caches
+    _clear_api_key_caches(instance)
+
+
+@receiver(post_delete, sender=APIKey)
+def handle_api_key_deletion(sender, instance: APIKey, **kwargs):
+    """Handle API key deletion."""
+    logger.warning(f"API key deleted", extra={
+        'api_key_id': str(instance.id),
+        'user_id': instance.user.id,
+        'name': instance.name,
+        'total_requests': instance.total_requests,
+        'deletion_timestamp': timezone.now().isoformat()
+    })
+    
+    # Set deletion notification in cache
+    cache.set(
+        f"api_key_deleted:{instance.user.id}:{instance.id}",
+        {
+            'api_key_id': str(instance.id),
+            'name': instance.name,
+            'total_requests': instance.total_requests,
+            'timestamp': timezone.now().isoformat()
+        },
+        timeout=86400 * 30  # 30 days for audit
+    )
+    
+    # Clear caches
+    _clear_api_key_caches(instance)
+
+
+# Helper functions (notifications and security monitoring only)
+
+def _handle_api_key_activated(api_key: APIKey):
+    """Handle API key activation (notification only)."""
+    try:
+        logger.info(f"API key activated", extra={
+            'api_key_id': str(api_key.id),
+            'user_id': api_key.user.id,
+            'name': api_key.name
+        })
+        
+        # Set activation notification in cache
+        cache.set(
+            f"api_key_activated:{api_key.user.id}:{api_key.id}",
+            {
+                'api_key_id': str(api_key.id),
+                'name': api_key.name,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400  # 24 hours
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to handle API key activation: {e}")
+
+
+def _handle_api_key_deactivated(api_key: APIKey):
+    """Handle API key deactivation (security notification)."""
+    try:
+        logger.warning(f"API key deactivated", extra={
+            'api_key_id': str(api_key.id),
+            'user_id': api_key.user.id,
+            'name': api_key.name,
+            'total_requests': api_key.total_requests
+        })
+        
+        # Set deactivation notification in cache
+        cache.set(
+            f"api_key_deactivated:{api_key.user.id}:{api_key.id}",
+            {
+                'api_key_id': str(api_key.id),
+                'name': api_key.name,
+                'total_requests': api_key.total_requests,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400 * 7  # 7 days
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to handle API key deactivation: {e}")
+
+
+def _handle_high_usage_alert(api_key: APIKey, request_increase: int):
+    """Handle high usage alert (security monitoring)."""
+    try:
+        logger.warning(f"High API key usage detected", extra={
+            'api_key_id': str(api_key.id),
+            'user_id': api_key.user.id,
+            'request_increase': request_increase,
+            'total_requests': api_key.total_requests
+        })
+        
+        # Set high usage alert in cache
+        cache.set(
+            f"high_usage_alert:{api_key.user.id}:{api_key.id}",
+            {
+                'api_key_id': str(api_key.id),
+                'request_increase': request_increase,
+                'total_requests': api_key.total_requests,
+                'timestamp': timezone.now().isoformat()
+            },
+            timeout=86400  # 24 hours
+        )
+        
+        # Check if we should temporarily disable the key (security measure)
+        if request_increase > 1000:  # More than 1000 requests at once
+            logger.critical(f"Extremely high API usage - potential abuse", extra={
+                'api_key_id': str(api_key.id),
+                'user_id': api_key.user.id,
+                'request_increase': request_increase
+            })
+            
+            # Set critical alert flag
+            cache.set(
+                f"critical_usage_alert:{api_key.user.id}:{api_key.id}",
+                {
+                    'api_key_id': str(api_key.id),
+                    'request_increase': request_increase,
+                    'timestamp': timezone.now().isoformat(),
+                    'action_required': True
+                },
+                timeout=86400 * 7  # 7 days
+            )
+        
+    except Exception as e:
+        logger.error(f"Failed to handle high usage alert: {e}")
+
+
+def _clear_api_key_caches(api_key: APIKey):
+    """Clear API key-related cache entries."""
+    try:
+        cache_keys = [
+            f"api_key_validation:{api_key.key[:10]}...",  # Partial key for security
+            f"user_api_keys:{api_key.user.id}",
+            f"api_key_stats:{api_key.user.id}",
+            f"api_key_usage:{api_key.id}",
+        ]
+        
+        cache.delete_many(cache_keys)
+        
+        logger.debug(f"Cleared API key caches", extra={
+            'api_key_id': str(api_key.id),
+            'user_id': api_key.user.id,
+            'cache_keys_cleared': len(cache_keys)
+        })
+        
+    except Exception as e:
+        logger.warning(f"Failed to clear API key caches: {e}")

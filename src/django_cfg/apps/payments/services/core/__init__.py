@@ -1,17 +1,21 @@
 """
-Core payment services.
+Core services for the Universal Payment System v2.0.
 
-Main business logic services for the payment system.
+Business logic services with Pydantic validation.
 """
 
+from .base import BaseService
 from .payment_service import PaymentService
 from .balance_service import BalanceService
 from .subscription_service import SubscriptionService
-# Core services only - no legacy adapters
+from .currency_service import CurrencyService
+from .webhook_service import WebhookService
 
 __all__ = [
+    'BaseService',
     'PaymentService',
-    'BalanceService',
-    'SubscriptionService', 
-    # No legacy services
+    'BalanceService', 
+    'SubscriptionService',
+    'CurrencyService',
+    'WebhookService',
 ]

@@ -1,0 +1,16 @@
+{% comment %}
+Loading Spinner Component
+
+Usage:
+{% include 'payments/components/loading_spinner.html' %}
+{% include 'payments/components/loading_spinner.html' with size="large" text="Loading data..." %}
+{% endcomment %}
+
+<div class="flex items-center justify-center {% if size == 'large' %}py-8{% else %}py-4{% endif %}">
+    <div class="flex items-center space-x-2">
+        <div class="animate-spin rounded-full {% if size == 'large' %}h-8 w-8{% else %}h-4 w-4{% endif %} border-b-2 border-blue-600"></div>
+        {% if text %}
+        <span class="text-gray-600 dark:text-gray-400 {% if size == 'large' %}text-base{% else %}text-sm{% endif %}">{{ text }}</span>
+        {% endif %}
+    </div>
+</div>

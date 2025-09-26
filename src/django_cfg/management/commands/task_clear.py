@@ -9,8 +9,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from typing import Any, Optional, List
 import logging
+from django_cfg.modules.django_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger('task_clear')
 
 
 class Command(BaseCommand):
@@ -50,6 +51,8 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         """Handle the command execution."""
+        logger.info("Starting task_clear command")
+        
         try:
             # Import here to avoid issues if dramatiq is not installed
             from django_cfg.modules.django_tasks import get_task_service

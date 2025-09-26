@@ -5,6 +5,7 @@ Core Django-CFG components registry.
 CORE_REGISTRY = {
     # Core configuration
     "DjangoConfig": ("django_cfg.core.config", "DjangoConfig"),
+    "StartupInfoMode": ("django_cfg.core.config", "StartupInfoMode"),
     
     # Core exceptions
     "ConfigurationError": ("django_cfg.core.exceptions", "ConfigurationError"),

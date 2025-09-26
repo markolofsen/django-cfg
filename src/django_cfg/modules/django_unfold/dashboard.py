@@ -165,26 +165,74 @@ class DashboardManager(BaseCfgModule):
         
         # Add Payments section if enabled
         if self.is_payments_enabled():
+            try:
+                from django_cfg.models.payments import PaymentsConfig
+                config = PaymentsConfig.get_current_config()
+                
+                payments_items = []
+                
+                # Main dashboard (always show if payments app enabled)
+                payments_items.append(
+                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/admin/django_cfg_payments/admin/")
+                )
+                
+                # Always show basic admin models (even if payments functionality is disabled)
+                payments_items.extend([
+                    NavigationItem(title="Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/payments/universalpayment/"),
+                    NavigationItem(title="Currencies", icon=Icons.CURRENCY_BITCOIN, link="/admin/payments/currency/"),
+                    NavigationItem(title="Currency Networks", icon=Icons.LINK, link="/admin/payments/network/"),
+                    NavigationItem(title="Provider Currencies", icon=Icons.ACCOUNT_CIRCLE, link="/admin/payments/providercurrency/"),
+                ])
+                
+                # Add advanced features only if payments functionality is enabled
+                if config.enabled:
+                    payments_items.append(
+                        NavigationItem(title="Webhook Dashboard", icon=Icons.WEBHOOK, link="/cfg/admin/django_cfg_payments/admin/webhooks/")
+                    )
+                    payments_items.append(
+                        NavigationItem(title="Create Payment", icon=Icons.ADD, link="/cfg/admin/django_cfg_payments/admin/payments/create/")
+                    )
+                    payments_items.append(
+                        NavigationItem(title="Currency Converter", icon=Icons.CURRENCY_EXCHANGE, link="/cfg/admin/django_cfg_payments/admin/tools/converter/")
+                    )
+                    
+                    # Show subscription features only if enabled
+                    if config.show_subscription_management():
+                        payments_items.extend([
+                            NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link="/admin/payments/subscription/"),
+                            NavigationItem(title="Tariffs", icon=Icons.PRICE_CHANGE, link="/admin/payments/tariff/"),
+                        ])
+                    
+                    # Show API management only if enabled
+                    if config.show_api_management():
+                        payments_items.extend([
+                            NavigationItem(title="API Keys", icon=Icons.KEY, link="/admin/payments/apikey/"),
+                            NavigationItem(title="Endpoint Groups", icon=Icons.GROUP, link="/admin/payments/endpointgroup/"),
+                        ])
+                    
+                    # Show balance/transaction features only if enabled
+                    if config.show_balance_management():
+                        payments_items.append(
+                            NavigationItem(title="Balances", icon=Icons.ACCOUNT_BALANCE_WALLET, link="/admin/payments/userbalance/")
+                        )
+                    
+                    if config.show_transaction_history():
+                        payments_items.append(
+                            NavigationItem(title="Transactions", icon=Icons.RECEIPT_LONG, link="/admin/payments/transaction/")
+                        )
+                
+            except Exception:
+                # Fallback
+                payments_items = [
+                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/admin/django_cfg_payments/admin/"),
+                    NavigationItem(title="Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/payments/universalpayment/"),
+                ]
+            
             navigation_sections.append(NavigationSection(
                 title="Payments",
                 separator=True,
                 collapsible=True,
-                items=[
-                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/admin/django_cfg_payments/admin/"),
-                    NavigationItem(title="Payment List", icon=Icons.LIST, link="/cfg/admin/django_cfg_payments/admin/list/"),
-                    NavigationItem(title="Create Payment", icon=Icons.ADD, link="/cfg/admin/django_cfg_payments/admin/create/"),
-                    NavigationItem(title="Payment Analytics", icon=Icons.ANALYTICS, link="/cfg/admin/django_cfg_payments/admin/stats/"),
-                    NavigationItem(title="Payment Testing", icon=Icons.SETTINGS, link="/cfg/admin/django_cfg_payments/admin/test/"),
-                    NavigationItem(title="Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/django_cfg_payments/universalpayment/"),
-                    NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link="/admin/django_cfg_payments/subscription/"),
-                    NavigationItem(title="API Keys", icon=Icons.KEY, link="/admin/django_cfg_payments/apikey/"),
-                    NavigationItem(title="Balances", icon=Icons.ACCOUNT_BALANCE_WALLET, link="/admin/django_cfg_payments/userbalance/"),
-                    NavigationItem(title="Transactions", icon=Icons.DESCRIPTION, link="/admin/django_cfg_payments/transaction/"),
-                    NavigationItem(title="Currencies", icon=Icons.ACCOUNT_CIRCLE, link="/admin/django_cfg_payments/currency/"),
-                    NavigationItem(title="Currency Networks", icon=Icons.LINK, link="/admin/django_cfg_payments/network/"),
-                    NavigationItem(title="Endpoint Groups", icon=Icons.GROUP, link="/admin/django_cfg_payments/endpointgroup/"),
-                    NavigationItem(title="Tariffs", icon=Icons.SETTINGS, link="/admin/django_cfg_payments/tariff/"),
-                ]
+                items=payments_items
             ))
         
         # Convert all NavigationSection objects to dictionaries

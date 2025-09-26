@@ -320,29 +320,69 @@ class ConfigToolkit:
     
     @classmethod
     def _extend_templates(cls, settings: Dict[str, Any]):
-        """Extend TEMPLATES with django-config-toolkit template directories."""
-        import os
+        """Extend TEMPLATES with django-cfg template directories."""
         from pathlib import Path
         
-        # Get toolkit's template directory
-        toolkit_dir = Path(__file__).parent
-        template_dir = toolkit_dir / 'templates'
+        print("🔍 _extend_templates called!")
         
-        if template_dir.exists():
+        # Get django-cfg base directory
+        django_cfg_dir = Path(__file__).parent.parent
+        print(f"🔍 Django-CFG base dir: {django_cfg_dir}")
+        
+        # Collect all template directories
+        template_dirs = []
+        
+        # 1. Main toolkit templates (if exists)
+        toolkit_templates = django_cfg_dir / 'utils' / 'templates'
+        print(f"🔍 Checking toolkit templates: {toolkit_templates} (exists: {toolkit_templates.exists()})")
+        if toolkit_templates.exists():
+            template_dirs.append(str(toolkit_templates))
+        
+        # 2. Auto-discover app template directories
+        apps_dir = django_cfg_dir / 'apps'
+        print(f"🔍 Checking apps dir: {apps_dir} (exists: {apps_dir.exists()})")
+        if apps_dir.exists():
+            for app_dir in apps_dir.iterdir():
+                if app_dir.is_dir() and not app_dir.name.startswith(('@', '_', '.')):
+                    print(f"🔍 Checking app: {app_dir.name}")
+                    # Look for common template directory patterns
+                    possible_template_dirs = [
+                        app_dir / 'templates',
+                        app_dir / 'admin_interface' / 'templates',
+                        app_dir / 'frontend' / 'templates',
+                    ]
+                    
+                    for template_dir in possible_template_dirs:
+                        print(f"🔍   Checking template dir: {template_dir} (exists: {template_dir.exists()})")
+                        if template_dir.exists():
+                            template_dirs.append(str(template_dir))
+        
+        # Debug: Print found template directories
+        print(f"🔍 Django-CFG found template directories: {template_dirs}")
+        
+        # Add template directories to Django settings
+        if template_dirs:
             templates = settings.get('TEMPLATES', [])
+            print(f"🔍 Current TEMPLATES config: {templates}")
             
-            # Find the first Django template backend and add our template directory
+            # Find the first Django template backend and add our template directories
             for template_config in templates:
                 if template_config.get('BACKEND') == 'django.template.backends.django.DjangoTemplates':
                     dirs = template_config.get('DIRS', [])
+                    print(f"🔍 Current DIRS: {dirs}")
                     
-                    # Add toolkit template directory if not already present
-                    if str(template_dir) not in [str(d) for d in dirs]:
-                        dirs.append(str(template_dir))
-                        template_config['DIRS'] = dirs
+                    # Add each template directory if not already present
+                    for template_dir in template_dirs:
+                        if template_dir not in [str(d) for d in dirs]:
+                            dirs.append(template_dir)
+                    
+                    template_config['DIRS'] = dirs
+                    print(f"🔍 Final TEMPLATE_DIRS: {dirs}")
                     break
             
             settings['TEMPLATES'] = templates
+        else:
+            print("🔍 No template directories found!")
     
     # ===============================================
     # 🌍 ENVIRONMENT PROPERTIES

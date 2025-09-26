@@ -1,0 +1,382 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payment_tags %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block content %}
+<div x-data="currencyConverter()" x-init="init()">
+    <!-- Converter Tool -->
+    <div class="max-w-4xl mx-auto">
+        <div class="payment-card mb-6">
+            <div class="payment-card-header">
+                <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                    <span class="material-icons-outlined mr-2">currency_exchange</span>
+                    Currency Converter
+                </h3>
+                <button @click="swapCurrencies()" 
+                        class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                    <span class="material-icons-outlined">swap_horiz</span>
+                </button>
+            </div>
+            <div class="payment-card-content">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- From Currency -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">From</label>
+                        <div class="space-y-3">
+                            <select x-model="fromCurrency" @change="convert()"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <template x-for="currency in currencies" :key="currency.code">
+                                    <option :value="currency.code" x-text="`${currency.code} - ${currency.name}`"></option>
+                                </template>
+                            </select>
+                            <div class="relative">
+                                <input type="number" 
+                                       x-model="fromAmount"
+                                       @input.debounce.500ms="convert()"
+                                       step="0.00000001"
+                                       placeholder="Enter amount"
+                                       class="w-full px-3 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                    <span class="text-gray-500 dark:text-gray-400 text-sm" x-text="fromCurrency"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- To Currency -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">To</label>
+                        <div class="space-y-3">
+                            <select x-model="toCurrency" @change="convert()"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <template x-for="currency in currencies" :key="currency.code">
+                                    <option :value="currency.code" x-text="`${currency.code} - ${currency.name}`"></option>
+                                </template>
+                            </select>
+                            <div class="relative">
+                                <input type="text" 
+                                       :value="toAmount"
+                                       readonly
+                                       placeholder="Converted amount"
+                                       class="w-full px-3 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-600 text-gray-900 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                    <span class="text-gray-500 dark:text-gray-400 text-sm" x-text="toCurrency"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exchange Rate Info -->
+                <div x-show="exchangeRate" class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="material-icons-outlined text-blue-600 dark:text-blue-400">trending_up</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Exchange Rate</span>
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400" x-text="lastUpdated"></div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-lg font-semibold text-gray-900 dark:text-white">
+                            1 <span x-text="fromCurrency"></span> = <span x-text="exchangeRate"></span> <span x-text="toCurrency"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-6 flex flex-wrap gap-2">
+                    <template x-for="amount in quickAmounts" :key="amount">
+                        <button @click="setQuickAmount(amount)" 
+                                class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <span x-text="amount"></span> <span x-text="fromCurrency"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Conversions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Popular Pairs -->
+            <div class="payment-card">
+                <div class="payment-card-header">
+                    <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                        <span class="material-icons-outlined mr-2">star</span>
+                        Popular Pairs
+                    </h3>
+                </div>
+                <div class="payment-card-content">
+                    <div class="space-y-3">
+                        <template x-for="pair in popularPairs" :key="pair.from + pair.to">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                                 @click="selectPair(pair.from, pair.to)">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex items-center space-x-1">
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="pair.from"></span>
+                                        <span class="material-icons-outlined text-gray-400 text-sm">arrow_forward</span>
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="pair.to"></span>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400" x-text="pair.rate"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rate History Chart -->
+            <div class="payment-card">
+                <div class="payment-card-header">
+                    <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                        <span class="material-icons-outlined mr-2">show_chart</span>
+                        Rate History (24h)
+                    </h3>
+                    <select x-model="chartPeriod" @change="updateChart()"
+                            class="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="1h">1 Hour</option>
+                        <option value="24h">24 Hours</option>
+                        <option value="7d">7 Days</option>
+                        <option value="30d">30 Days</option>
+                    </select>
+                </div>
+                <div class="payment-card-content">
+                    <div class="h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="text-center">
+                            <span class="material-icons-outlined text-gray-400 text-4xl mb-2">show_chart</span>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm">Rate history chart</p>
+                            <p class="text-gray-400 dark:text-gray-500 text-xs">Chart visualization would be implemented here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supported Currencies -->
+        <div class="payment-card">
+            <div class="payment-card-header">
+                <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                    <span class="material-icons-outlined mr-2">account_balance</span>
+                    Supported Currencies
+                </h3>
+                <div class="flex items-center space-x-2">
+                    <input type="text" 
+                           x-model="currencySearch"
+                           placeholder="Search currencies..."
+                           class="text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="`${filteredCurrencies.length} currencies`"></span>
+                </div>
+            </div>
+            <div class="payment-card-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="currency in filteredCurrencies.slice(0, 12)" :key="currency.code">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                             @click="selectCurrency(currency.code)">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400" x-text="currency.code.substring(0, 2)"></span>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="currency.code"></div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400" x-text="currency.name"></div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-400" x-text="currency.type"></div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="filteredCurrencies.length > 12" class="mt-4 text-center">
+                    <button @click="showAllCurrencies = !showAllCurrencies" 
+                            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                        <span x-show="!showAllCurrencies">Show all currencies</span>
+                        <span x-show="showAllCurrencies">Show less</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div x-show="loading" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        {% include 'payments/components/loading_spinner.html' %}
+    </div>
+
+    <!-- Notifications -->
+    <div x-show="notification.show" x-cloak 
+         class="fixed top-4 right-4 z-50"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-x-full"
+         x-transition:enter-end="opacity-100 transform translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform translate-x-0"
+         x-transition:leave-end="opacity-0 transform translate-x-full">
+        {% include 'payments/components/notification.html' with type="notification.type" message="notification.message" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function currencyConverter() {
+    return {
+        loading: false,
+        fromCurrency: 'USD',
+        toCurrency: 'BTC',
+        fromAmount: 100,
+        toAmount: '',
+        exchangeRate: '',
+        lastUpdated: '',
+        currencySearch: '',
+        showAllCurrencies: false,
+        chartPeriod: '24h',
+        currencies: [
+            { code: 'USD', name: 'US Dollar', type: 'Fiat' },
+            { code: 'EUR', name: 'Euro', type: 'Fiat' },
+            { code: 'GBP', name: 'British Pound', type: 'Fiat' },
+            { code: 'BTC', name: 'Bitcoin', type: 'Crypto' },
+            { code: 'ETH', name: 'Ethereum', type: 'Crypto' },
+            { code: 'LTC', name: 'Litecoin', type: 'Crypto' },
+            { code: 'XRP', name: 'Ripple', type: 'Crypto' },
+            { code: 'ADA', name: 'Cardano', type: 'Crypto' },
+            { code: 'DOT', name: 'Polkadot', type: 'Crypto' },
+            { code: 'LINK', name: 'Chainlink', type: 'Crypto' }
+        ],
+        popularPairs: [
+            { from: 'USD', to: 'BTC', rate: '0.000023' },
+            { from: 'USD', to: 'ETH', rate: '0.00041' },
+            { from: 'EUR', to: 'USD', rate: '1.08' },
+            { from: 'BTC', to: 'USD', rate: '43,250' },
+            { from: 'ETH', to: 'USD', rate: '2,450' }
+        ],
+        quickAmounts: [1, 10, 100, 1000, 10000],
+        notification: {
+            show: false,
+            type: 'info',
+            message: ''
+        },
+
+        init() {
+            this.convert();
+        },
+
+        get filteredCurrencies() {
+            if (!this.currencySearch) return this.currencies;
+            const search = this.currencySearch.toLowerCase();
+            return this.currencies.filter(currency => 
+                currency.code.toLowerCase().includes(search) || 
+                currency.name.toLowerCase().includes(search)
+            );
+        },
+
+        async convert() {
+            if (!this.fromAmount || this.fromAmount <= 0) {
+                this.toAmount = '';
+                this.exchangeRate = '';
+                return;
+            }
+
+            this.loading = true;
+            try {
+                // Simulate API call - replace with actual conversion endpoint
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Mock conversion rates
+                const rates = {
+                    'USD_BTC': 0.000023,
+                    'USD_ETH': 0.00041,
+                    'BTC_USD': 43250,
+                    'ETH_USD': 2450,
+                    'EUR_USD': 1.08,
+                    'USD_EUR': 0.93
+                };
+
+                const rateKey = `${this.fromCurrency}_${this.toCurrency}`;
+                const reverseRateKey = `${this.toCurrency}_${this.fromCurrency}`;
+                
+                let rate = rates[rateKey];
+                if (!rate && rates[reverseRateKey]) {
+                    rate = 1 / rates[reverseRateKey];
+                }
+                if (!rate) rate = 1; // Fallback
+
+                const convertedAmount = this.fromAmount * rate;
+                this.toAmount = this.formatAmount(convertedAmount);
+                this.exchangeRate = this.formatRate(rate);
+                this.lastUpdated = 'Updated ' + new Date().toLocaleTimeString();
+
+            } catch (error) {
+                this.showNotification('error', 'Failed to convert currency');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        swapCurrencies() {
+            const temp = this.fromCurrency;
+            this.fromCurrency = this.toCurrency;
+            this.toCurrency = temp;
+            
+            if (this.toAmount && this.toAmount !== '') {
+                this.fromAmount = parseFloat(this.toAmount);
+            }
+            
+            this.convert();
+        },
+
+        selectPair(from, to) {
+            this.fromCurrency = from;
+            this.toCurrency = to;
+            this.convert();
+        },
+
+        selectCurrency(code) {
+            if (this.fromCurrency === code) {
+                this.toCurrency = code;
+            } else {
+                this.fromCurrency = code;
+            }
+            this.convert();
+        },
+
+        setQuickAmount(amount) {
+            this.fromAmount = amount;
+            this.convert();
+        },
+
+        updateChart() {
+            // Chart update logic would go here
+            this.showNotification('info', `Chart updated for ${this.chartPeriod} period`);
+        },
+
+        formatAmount(amount) {
+            if (amount >= 1) {
+                return amount.toFixed(2);
+            } else if (amount >= 0.01) {
+                return amount.toFixed(4);
+            } else {
+                return amount.toFixed(8);
+            }
+        },
+
+        formatRate(rate) {
+            if (rate >= 1) {
+                return rate.toFixed(2);
+            } else if (rate >= 0.01) {
+                return rate.toFixed(4);
+            } else {
+                return rate.toFixed(8);
+            }
+        },
+
+        showNotification(type, message) {
+            this.notification = { show: true, type, message };
+            setTimeout(() => {
+                this.notification.show = false;
+            }, 5000);
+        }
+    };
+}
+</script>
+{% endblock %}

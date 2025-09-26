@@ -1,0 +1,39 @@
+{% comment %}
+Status Card Component with Material Icons
+
+Usage:
+{% include 'payments/components/status_card.html' with title="Ngrok Status" value="Active" icon="language" color_class="text-green-600" description="Tunnel URL available" %}
+
+Available icons: Material Icons names (e.g., "language", "payment", "check_circle", "error", "warning")
+{% endcomment %}
+
+<div class="payment-card">
+    <div class="flex items-center">
+        <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-{{ icon_bg_color|default:'blue' }}-100 dark:bg-{{ icon_bg_color|default:'blue' }}-900 rounded-full flex items-center justify-center">
+                <span class="material-icons-outlined text-{{ icon_bg_color|default:'blue' }}-600 dark:text-{{ icon_bg_color|default:'blue' }}-400">
+                    {{ icon|default:'analytics' }}
+                </span>
+            </div>
+        </div>
+        <div class="ml-4 flex-1">
+            <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ title }}</h3>
+            <p class="text-2xl font-semibold {{ color_class|default:'text-gray-900 dark:text-white' }} flex items-center">
+                {{ value }}
+                {% if status_icon %}
+                <span class="material-icons-outlined ml-2 text-lg">{{ status_icon }}</span>
+                {% endif %}
+            </p>
+            {% if description %}
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ description }}</p>
+            {% endif %}
+        </div>
+        {% if action_url %}
+        <div class="ml-4">
+            <a href="{{ action_url }}" class="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <span class="material-icons-outlined">{{ action_icon|default:'open_in_new' }}</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>

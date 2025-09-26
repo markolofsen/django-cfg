@@ -17,6 +17,8 @@ from django.core.cache import cache
 from django.conf import settings
 from django.utils import timezone
 
+from django_cfg.core.integration import get_current_version
+
 
 class HealthCheckView(View):
     """
@@ -40,7 +42,7 @@ class HealthCheckView(View):
                 "status": "healthy",
                 "timestamp": timezone.now().isoformat(),
                 "service": config.project_name if config else "Django CFG",
-                "version": config.project_version if config else "unknown",
+                "version": get_current_version(),
                 "checks": {}
             }
         except Exception:
@@ -48,7 +50,7 @@ class HealthCheckView(View):
                 "status": "healthy", 
                 "timestamp": timezone.now().isoformat(),
                 "service": "Django CFG",
-                "version": "unknown",
+                "version": get_current_version(),
                 "checks": {}
             }
         

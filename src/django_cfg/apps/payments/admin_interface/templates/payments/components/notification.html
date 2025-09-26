@@ -1,0 +1,27 @@
+{% comment %}
+Notification Component
+
+Usage:
+{% include 'payments/components/notification.html' with type="success" message="Operation completed successfully" %}
+
+Types: success, error, warning, info
+{% endcomment %}
+
+<div class="notification {{ type|default:'info' }} slide-in" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)">
+    <div class="flex items-center">
+        <div class="flex-shrink-0">
+            {% if type == 'success' %}✅
+            {% elif type == 'error' %}❌
+            {% elif type == 'warning' %}⚠️
+            {% else %}ℹ️{% endif %}
+        </div>
+        <div class="ml-2">
+            <p class="text-sm font-medium">{{ message }}</p>
+        </div>
+        <div class="ml-auto">
+            <button @click="show = false" class="text-white hover:text-gray-200">
+                ✕
+            </button>
+        </div>
+    </div>
+</div>

@@ -35,5 +35,5 @@ if config.debug:
     print(f"📦 Version: {config.project_version}")
     print(f"🗄️  Databases: {len(config.databases)}")
     print(f"📱 Apps: {len(config.project_apps)}")
-    print(f"⚙️  Constance Fields: {len(config.constance.fields)}")
+    print(f"⚙️  Constance Fields: {len(config.constance.get_all_fields())}")
     print("=" * 60)

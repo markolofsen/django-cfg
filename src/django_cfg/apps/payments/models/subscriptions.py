@@ -1,146 +1,165 @@
 """
-Subscription models for the universal payments system.
+Subscription models for the Universal Payment System v2.0.
+
+Handles user subscriptions and API access control.
 """
 
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
-from .base import UUIDTimestampedModel, TimestampedModel
+from .base import UUIDTimestampedModel
 
 User = get_user_model()
 
 
-class EndpointGroup(TimestampedModel):
-    """API endpoint groups for subscription management."""
+class EndpointGroup(models.Model):
+    """
+    API endpoint group for subscription management.
+    
+    Groups related API endpoints for subscription-based access control.
+    """
     
     name = models.CharField(
         max_length=100,
         unique=True,
-        help_text="Endpoint group name"
+        help_text="Endpoint group name (e.g., 'Payment API', 'Balance API')"
     )
-    display_name = models.CharField(
-        max_length=200,
-        help_text="Human-readable name"
+    
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Endpoint group code (e.g., 'payments', 'balance')"
     )
+    
     description = models.TextField(
         blank=True,
-        help_text="Group description"
+        help_text="Description of what this endpoint group provides"
     )
     
-    # Pricing tiers
-    basic_price = models.FloatField(
-        default=0.0,
-        validators=[MinValueValidator(0.0)],
-        help_text="Basic tier monthly price"
-    )
-    premium_price = models.FloatField(
-        default=0.0,
-        validators=[MinValueValidator(0.0)],
-        help_text="Premium tier monthly price"
-    )
-    enterprise_price = models.FloatField(
-        default=0.0,
-        validators=[MinValueValidator(0.0)],
-        help_text="Enterprise tier monthly price"
+    # Access control
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether this endpoint group is available"
     )
     
-    # Usage limits per tier
-    basic_limit = models.PositiveIntegerField(
+    requires_subscription = models.BooleanField(
+        default=True,
+        help_text="Whether access requires an active subscription"
+    )
+    
+    # Rate limiting defaults
+    default_rate_limit = models.PositiveIntegerField(
         default=1000,
-        help_text="Basic tier monthly usage limit"
-    )
-    premium_limit = models.PositiveIntegerField(
-        default=10000,
-        help_text="Premium tier monthly usage limit"
-    )
-    enterprise_limit = models.PositiveIntegerField(
-        default=0,  # 0 = unlimited
-        help_text="Enterprise tier monthly usage limit (0 = unlimited)"
+        help_text="Default requests per hour for this endpoint group"
     )
     
-    # Settings
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Is this endpoint group active"
-    )
-    require_api_key = models.BooleanField(
-        default=True,
-        help_text="Require API key for access"
-    )
-    
-    # Import and assign manager
-    from ..managers import EndpointGroupManager
-    objects = EndpointGroupManager()
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'endpoint_groups'
-        verbose_name = "Endpoint Group"
-        verbose_name_plural = "Endpoint Groups"
-        indexes = [
-            models.Index(fields=['name']),
-            models.Index(fields=['is_active']),
-        ]
+        db_table = 'payments_endpoint_groups'
+        verbose_name = 'Endpoint Group'
+        verbose_name_plural = 'Endpoint Groups'
         ordering = ['name']
     
     def __str__(self):
-        return self.display_name
+        return f"{self.name} ({self.code})"
     
-    def get_price_for_tier(self, tier: str) -> float:
-        """Get price for specific tier."""
-        tier_prices = {
-            'basic': self.basic_price,
-            'premium': self.premium_price,
-            'enterprise': self.enterprise_price,
-        }
-        return tier_prices.get(tier, 0.0)
+    def clean(self):
+        """Validate endpoint group data."""
+        if self.code:
+            self.code = self.code.lower().replace(' ', '_')
+
+
+class SubscriptionQuerySet(models.QuerySet):
+    """Optimized queryset for subscription operations."""
     
-    def get_limit_for_tier(self, tier: str) -> int:
-        """Get usage limit for specific tier."""
-        tier_limits = {
-            'basic': self.basic_limit,
-            'premium': self.premium_limit,
-            'enterprise': self.enterprise_limit,
-        }
-        return tier_limits.get(tier, 0)
+    def optimized(self):
+        """Prevent N+1 queries."""
+        return self.select_related('user').prefetch_related('endpoint_groups')
+    
+    def active(self):
+        """Get active subscriptions."""
+        return self.filter(
+            status=Subscription.SubscriptionStatus.ACTIVE,
+            expires_at__gt=timezone.now()
+        )
+    
+    def expired(self):
+        """Get expired subscriptions."""
+        return self.filter(expires_at__lte=timezone.now())
+    
+    def by_tier(self, tier):
+        """Filter by subscription tier."""
+        return self.filter(tier=tier)
+    
+    def by_user(self, user):
+        """Filter by user."""
+        return self.filter(user=user)
+
+
+class SubscriptionManager(models.Manager):
+    """Manager for subscription operations."""
+    
+    def get_queryset(self):
+        """Return optimized queryset by default."""
+        return SubscriptionQuerySet(self.model, using=self._db)
+    
+    def optimized(self):
+        """Get optimized queryset."""
+        return self.get_queryset().optimized()
+    
+    def active(self):
+        """Get active subscriptions."""
+        return self.get_queryset().active()
+    
+    def expired(self):
+        """Get expired subscriptions."""
+        return self.get_queryset().expired()
+    
+    def by_tier(self, tier):
+        """Get subscriptions by tier."""
+        return self.get_queryset().by_tier(tier)
 
 
 class Subscription(UUIDTimestampedModel):
-    """User subscriptions to endpoint groups."""
+    """
+    User subscription model for API access control.
+    
+    Manages user subscriptions with different tiers and access levels.
+    """
     
     class SubscriptionStatus(models.TextChoices):
         ACTIVE = "active", "Active"
         INACTIVE = "inactive", "Inactive"
-        EXPIRED = "expired", "Expired"
-        CANCELLED = "cancelled", "Cancelled"
         SUSPENDED = "suspended", "Suspended"
+        CANCELLED = "cancelled", "Cancelled"
+        EXPIRED = "expired", "Expired"
     
     class SubscriptionTier(models.TextChoices):
-        BASIC = "basic", "Basic"
-        PREMIUM = "premium", "Premium"
-        ENTERPRISE = "enterprise", "Enterprise"
+        FREE = "free", "Free Tier"
+        BASIC = "basic", "Basic Tier"
+        PRO = "pro", "Pro Tier"
+        ENTERPRISE = "enterprise", "Enterprise Tier"
     
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='subscriptions',
-        help_text="Subscriber"
-    )
-    endpoint_group = models.ForeignKey(
-        EndpointGroup,
-        on_delete=models.CASCADE,
-        related_name='subscriptions',
-        help_text="Endpoint group"
+        related_name='payment_subscriptions',
+        help_text="User who owns this subscription"
     )
     
-    # Subscription details
     tier = models.CharField(
         max_length=20,
         choices=SubscriptionTier.choices,
-        default=SubscriptionTier.BASIC,
+        default=SubscriptionTier.FREE,
         help_text="Subscription tier"
     )
+    
     status = models.CharField(
         max_length=20,
         choices=SubscriptionStatus.choices,
@@ -148,123 +167,184 @@ class Subscription(UUIDTimestampedModel):
         help_text="Subscription status"
     )
     
-    # Pricing
-    monthly_price = models.FloatField(
+    # Access control
+    endpoint_groups = models.ManyToManyField(
+        EndpointGroup,
+        related_name='subscriptions',
+        blank=True,
+        help_text="Endpoint groups accessible with this subscription"
+    )
+    
+    # Rate limiting
+    requests_per_hour = models.PositiveIntegerField(
+        default=100,
+        validators=[MinValueValidator(1), MaxValueValidator(100000)],
+        help_text="API requests allowed per hour"
+    )
+    
+    requests_per_day = models.PositiveIntegerField(
+        default=1000,
+        validators=[MinValueValidator(1), MaxValueValidator(1000000)],
+        help_text="API requests allowed per day"
+    )
+    
+    # Subscription period
+    starts_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="When this subscription starts"
+    )
+    
+    expires_at = models.DateTimeField(
+        help_text="When this subscription expires"
+    )
+    
+    # Billing information
+    monthly_cost_usd = models.FloatField(
+        default=0.0,
         validators=[MinValueValidator(0.0)],
-        help_text="Monthly subscription price"
+        help_text="Monthly cost in USD"
     )
     
     # Usage tracking
-    usage_limit = models.PositiveIntegerField(
-        default=1000,
-        help_text="Monthly usage limit (0 = unlimited)"
-    )
-    usage_current = models.PositiveIntegerField(
+    total_requests = models.PositiveIntegerField(
         default=0,
-        help_text="Current month usage"
+        help_text="Total API requests made with this subscription"
     )
     
-    # Billing
-    last_billed = models.DateTimeField(
+    last_request_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Last billing date"
-    )
-    next_billing = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Next billing date"
+        help_text="When the last API request was made"
     )
     
-    # Lifecycle
-    expires_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Subscription expiration"
-    )
-    cancelled_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Cancellation date"
+    # Auto-renewal
+    auto_renew = models.BooleanField(
+        default=False,
+        help_text="Whether to automatically renew this subscription"
     )
     
-    # Metadata
-    metadata = models.JSONField(
-        default=dict,
-        help_text="Additional subscription metadata"
-    )
-    
-    # Import and assign manager
-    from ..managers import SubscriptionManager
+    # Manager
+    from .managers.subscription_managers import SubscriptionManager
     objects = SubscriptionManager()
     
     class Meta:
-        db_table = 'user_subscriptions'
-        verbose_name = "Subscription"
-        verbose_name_plural = "Subscriptions"
+        db_table = 'payments_subscriptions'
+        verbose_name = 'Subscription'
+        verbose_name_plural = 'Subscriptions'
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'status']),
-            models.Index(fields=['endpoint_group', 'status']),
             models.Index(fields=['status', 'expires_at']),
-            models.Index(fields=['next_billing']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['tier', 'status']),
         ]
-        unique_together = [['user', 'endpoint_group']]  # One subscription per user per group
-        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(status='active'),
+                name='one_active_subscription_per_user'
+            ),
+        ]
     
     def __str__(self):
-        return f"{self.user.email} - {self.endpoint_group.name} ({self.tier})"
+        return f"{self.user.username} - {self.tier} ({self.status})"
     
-    def is_active(self) -> bool:
-        """Check if subscription is currently active."""
-        now = timezone.now()
+    def save(self, *args, **kwargs):
+        """Override save to set default expiration."""
+        if not self.expires_at:
+            # Default to 30 days from start
+            self.expires_at = self.starts_at + timedelta(days=30)
         
+        super().save(*args, **kwargs)
+    
+    def clean(self):
+        """Validate subscription data."""
+        if self.expires_at and self.starts_at and self.expires_at <= self.starts_at:
+            raise ValidationError("Expiration date must be after start date")
+        
+        if self.requests_per_day < self.requests_per_hour:
+            raise ValidationError("Daily limit cannot be less than hourly limit")
+    
+    @property
+    def is_active(self) -> bool:
+        """Check if subscription is active and not expired."""
         return (
             self.status == self.SubscriptionStatus.ACTIVE and
-            (self.expires_at is None or self.expires_at > now)
+            self.expires_at > timezone.now()
         )
     
-    def is_usage_exceeded(self) -> bool:
-        """Check if usage limit is exceeded."""
-        return self.usage_limit > 0 and self.usage_current >= self.usage_limit
+    @property
+    def is_expired(self) -> bool:
+        """Check if subscription is expired."""
+        return timezone.now() > self.expires_at
     
-    def get_usage_percentage(self) -> float:
-        """Get usage as percentage (0-100)."""
-        if self.usage_limit == 0:
-            return 0.0  # Unlimited
+    @property
+    def days_remaining(self) -> int:
+        """Get days remaining until expiration."""
+        if self.is_expired:
+            return 0
+        delta = self.expires_at - timezone.now()
+        return max(0, delta.days)
+    
+    @property
+    def usage_percentage(self) -> float:
+        """Get usage percentage for current period."""
+        # This would need to be calculated based on actual usage tracking
+        # For now, return 0.0 as placeholder
+        return 0.0
+    
+    @property
+    def tier_display(self) -> str:
+        """Get display name for tier."""
+        return self.get_tier_display()
+    
+    @property
+    def status_color(self) -> str:
+        """Get color for status display."""
+        colors = {
+            self.SubscriptionStatus.ACTIVE: 'success',
+            self.SubscriptionStatus.INACTIVE: 'secondary',
+            self.SubscriptionStatus.SUSPENDED: 'warning',
+            self.SubscriptionStatus.CANCELLED: 'danger',
+            self.SubscriptionStatus.EXPIRED: 'danger',
+        }
+        return colors.get(self.status, 'secondary')
+    
+    def activate(self):
+        """Activate subscription (delegates to manager)."""
+        return self.__class__.objects.activate_subscription(self)
+    
+    def suspend(self, reason=None):
+        """Suspend subscription (delegates to manager)."""
+        return self.__class__.objects.suspend_subscription(self, reason)
+    
+    def cancel(self, reason=None):
+        """Cancel subscription (delegates to manager)."""
+        return self.__class__.objects.cancel_subscription(self, reason)
+    
+    def renew(self, duration_days: int = 30):
+        """Renew subscription (delegates to manager)."""
+        return self.__class__.objects.renew_subscription(self, duration_days)
+    
+    def has_access_to_endpoint_group(self, endpoint_group_code: str) -> bool:
+        """Check if subscription has access to specific endpoint group."""
+        if not self.is_active:
+            return False
         
-        return min((self.usage_current / self.usage_limit) * 100, 100.0)
+        return self.endpoint_groups.filter(
+            code=endpoint_group_code,
+            is_enabled=True
+        ).exists()
     
-    def can_use_api(self) -> bool:
-        """Check if user can use API (active and not exceeded)."""
-        return self.is_active() and not self.is_usage_exceeded()
+    def increment_usage(self):
+        """Increment usage counter (delegates to manager)."""
+        return self.__class__.objects.increment_subscription_usage(self)
     
-    def increment_usage(self, count: int = 1):
-        """Increment usage counter."""
-        self.usage_current += count
-        self.save(update_fields=['usage_current'])
+    @classmethod
+    def get_active_for_user(cls, user: User) -> 'Subscription':
+        """Get active subscription for user (delegates to manager)."""
+        return cls.objects.get_active_for_user(user)
     
-    def reset_usage(self):
-        """Reset usage counter (for new billing period)."""
-        self.usage_current = 0
-        self.save(update_fields=['usage_current'])
-    
-    def cancel(self):
-        """Cancel subscription."""
-        self.status = self.SubscriptionStatus.CANCELLED
-        self.cancelled_at = timezone.now()
-        self.save(update_fields=['status', 'cancelled_at'])
-    
-    def extend_billing_period(self):
-        """Extend billing period by one month."""
-        if self.next_billing:
-            self.next_billing += timedelta(days=30)
-        else:
-            self.next_billing = timezone.now() + timedelta(days=30)
-        
-        if self.expires_at:
-            self.expires_at += timedelta(days=30)
-        else:
-            self.expires_at = timezone.now() + timedelta(days=30)
-        
-        self.save(update_fields=['next_billing', 'expires_at'])
+    @classmethod
+    def create_free_subscription(cls, user: User) -> 'Subscription':
+        """Create free tier subscription for user (delegates to manager)."""
+        return cls.objects.create_free_subscription(user)

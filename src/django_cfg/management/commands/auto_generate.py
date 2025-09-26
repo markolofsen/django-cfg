@@ -11,8 +11,11 @@ from django.core.management import call_command
 from django.conf import settings
 import questionary
 from datetime import datetime
+from django_cfg.modules.django_logger import get_logger
 
 from django_cfg import ConfigToolkit
+
+logger = get_logger('auto_generate')
 
 
 class Command(BaseCommand):
@@ -36,6 +39,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logger.info("Starting auto_generate command")
         if options['all']:
             self.generate_all()
         elif options['config']:

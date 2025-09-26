@@ -1,299 +1,308 @@
 """
-Usage Tracking Middleware.
-Tracks API usage for billing, analytics, and monitoring.
+Usage Tracking Middleware for the Universal Payment System v2.0.
+
+Lightweight middleware for tracking API usage and analytics.
 """
 
-from django_cfg.modules.django_logger import get_logger
-import json
-from typing import Optional, Dict, Any
+import time
+from typing import Optional
 from django.http import HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
-from django.conf import settings
 from django.utils import timezone
 from django.core.cache import cache
-from ..models import APIKey, Subscription, Transaction
-from ..services import RateLimitCache
 
-logger = get_logger("usage_tracking")
+from ..config.helpers import MiddlewareConfigHelper
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger("usage_tracking_middleware")
 
 
 class UsageTrackingMiddleware(MiddlewareMixin):
     """
-    Middleware for tracking API usage and creating billing records.
+    Usage Tracking Middleware for API analytics and monitoring.
     
     Features:
-    - Request/response logging
-    - Usage analytics
-    - Billing event creation
-    - Performance monitoring
-    - Error tracking
+    - Request/response time tracking
+    - Endpoint usage statistics
+    - User activity monitoring
+    - Performance metrics
+    - Error rate tracking
     """
     
     def __init__(self, get_response=None):
         super().__init__(get_response)
         
-        # Enable/disable usage tracking
-        self.enabled = getattr(settings, 'PAYMENTS_USAGE_TRACKING_ENABLED', True)
+        # Load configuration from django-cfg
+        try:
+            middleware_config = MiddlewareConfigHelper.get_middleware_config()
+            
+            # Configuration from django-cfg
+            self.enabled = middleware_config['usage_tracking_enabled']
+            self.track_anonymous = middleware_config['track_anonymous_usage']
+            self.api_prefixes = middleware_config['api_prefixes']
+            self.cache_timeout = middleware_config['cache_timeouts']['default']
+            
+            # Static exempt paths
+            self.exempt_paths = [
+                '/api/health/',
+                '/admin/',
+                '/static/',
+                '/media/',
+            ]
+            
+        except Exception as e:
+            logger.warning(f"Failed to load usage tracking config, using defaults: {e}")
+            # Fallback defaults
+            self.enabled = True
+            self.track_anonymous = False
+            self.api_prefixes = ['/api/']
+            self.exempt_paths = ['/api/health/', '/admin/']
+            self.cache_timeout = 3600
         
-        # Paths to track (empty means track all API paths)
-        self.tracked_paths = getattr(settings, 'PAYMENTS_TRACKED_PATHS', [])
-        
-        # Paths to exclude from tracking
-        self.excluded_paths = getattr(settings, 'PAYMENTS_EXCLUDED_PATHS', [
-            '/admin/',
-            '/cfg/',
-            '/api/v1/api-key/validate/',
-        ])
-        
-        # Track request bodies (be careful with sensitive data)
-        self.track_request_body = getattr(settings, 'PAYMENTS_TRACK_REQUEST_BODY', False)
-        
-        # Track response bodies (be careful with large responses)
-        self.track_response_body = getattr(settings, 'PAYMENTS_TRACK_RESPONSE_BODY', False)
+        logger.info(f"Usage Tracking Middleware initialized", extra={
+            'enabled': self.enabled,
+            'track_anonymous': self.track_anonymous
+        })
     
-    def process_request(self, request: HttpRequest) -> None:
-        """Process incoming request for usage tracking."""
-        
+    def process_request(self, request: HttpRequest) -> Optional[HttpResponse]:
+        """
+        Process incoming request - start timing and prepare tracking.
+        """
         if not self.enabled:
-            return
+            return None
         
-        # Skip excluded paths
-        if self._is_excluded_path(request):
-            return
+        # Check if we should track this request
+        if not self._should_track_request(request):
+            return None
         
-        # Only track if we have API key
-        if not hasattr(request, 'payment_api_key'):
-            return
+        # Start timing
+        request._usage_start_time = time.time()
         
-        # Record request start time
-        request._usage_start_time = timezone.now()
-        
-        # Prepare usage data
-        request._usage_data = {
-            'api_key_id': request.payment_api_key.id,
-            'user_id': request.payment_api_key.user.id,
+        # Store request info for tracking
+        request._usage_info = {
             'method': request.method,
             'path': request.path,
-            'query_params': dict(request.GET),
-            'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+            'user_agent': request.META.get('HTTP_USER_AGENT', 'unknown'),
             'ip_address': self._get_client_ip(request),
-            'start_time': request._usage_start_time,
+            'authenticated': hasattr(request, 'api_key') or (hasattr(request, 'user') and request.user.is_authenticated)
         }
         
-        # Add subscription info if available
-        if hasattr(request, 'payment_subscription'):
-            request._usage_data.update({
-                'subscription_id': request.payment_subscription.id,
-                'endpoint_group_id': request.payment_subscription.endpoint_group.id,
-                'tier': request.payment_subscription.tier,
-            })
-        
-        # Track request body if enabled and safe
-        if self.track_request_body and self._is_safe_to_track_body(request):
-            try:
-                request._usage_data['request_body'] = request.body.decode('utf-8')[:1000]  # Limit size
-            except:
-                pass
+        return None
     
     def process_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
-        """Process response for usage tracking."""
-        
-        if not self.enabled or not hasattr(request, '_usage_data'):
+        """
+        Process response - track usage and performance metrics.
+        """
+        if not self.enabled or not hasattr(request, '_usage_start_time'):
             return response
         
         try:
             # Calculate response time
-            end_time = timezone.now()
-            response_time_ms = int((end_time - request._usage_start_time).total_seconds() * 1000)
+            response_time = (time.time() - request._usage_start_time) * 1000  # ms
             
-            # Update usage data
-            usage_data = request._usage_data
-            usage_data.update({
-                'end_time': end_time,
-                'response_time_ms': response_time_ms,
-                'status_code': response.status_code,
-                'response_size': len(response.content) if hasattr(response, 'content') else 0,
-            })
+            # Get usage info
+            usage_info = getattr(request, '_usage_info', {})
             
-            # Track response body if enabled and safe
-            if (self.track_response_body and 
-                self._is_safe_to_track_response(response) and
-                response.status_code < 400):
-                try:
-                    content = response.content.decode('utf-8')[:1000]  # Limit size
-                    usage_data['response_body'] = content
-                except:
-                    pass
+            # Track the request
+            self._track_request(request, response, response_time, usage_info)
             
-            # Track error details for failed requests
-            if response.status_code >= 400:
-                usage_data['is_error'] = True
-                usage_data['error_category'] = self._categorize_error(response.status_code)
-            else:
-                usage_data['is_error'] = False
-            
-            # Store in Redis for real-time analytics
-            self._store_usage_data(usage_data)
-            
-            # Create billing transaction if needed
-            if hasattr(request, 'payment_subscription'):
-                self._create_billing_transaction(request.payment_subscription, usage_data)
-            
-            # Log for debugging
-            logger.info(
-                f"API usage tracked - User: {usage_data['user_id']}, "
-                f"Path: {usage_data['path']}, "
-                f"Status: {usage_data['status_code']}, "
-                f"Time: {response_time_ms}ms"
-            )
+            # Add performance headers
+            response['X-Response-Time'] = f"{response_time:.2f}ms"
             
         except Exception as e:
-            logger.error(f"Error in usage tracking: {e}")
+            logger.warning(f"Usage tracking failed: {e}")
         
         return response
     
-    def _is_excluded_path(self, request: HttpRequest) -> bool:
-        """Check if path should be excluded from tracking."""
-        path = request.path
+    def _should_track_request(self, request: HttpRequest) -> bool:
+        """
+        Determine if we should track this request.
+        """
+        # Check if path is in API prefixes
+        is_api_request = any(request.path.startswith(prefix) for prefix in self.api_prefixes)
         
-        # Check excluded paths
-        for excluded in self.excluded_paths:
-            if path.startswith(excluded):
-                return True
-        
-        # If tracked_paths is specified, only track those
-        if self.tracked_paths:
-            return not any(path.startswith(tracked) for tracked in self.tracked_paths)
-        
-        return False
-    
-    def _get_client_ip(self, request: HttpRequest) -> Optional[str]:
-        """Get client IP address."""
-        
-        # Check for forwarded headers first
-        forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if forwarded_for:
-            return forwarded_for.split(',')[0].strip()
-        
-        # Check for real IP header
-        real_ip = request.META.get('HTTP_X_REAL_IP')
-        if real_ip:
-            return real_ip
-        
-        # Fallback to remote address
-        return request.META.get('REMOTE_ADDR')
-    
-    def _is_safe_to_track_body(self, request: HttpRequest) -> bool:
-        """Check if it's safe to track request body."""
-        
-        # Don't track large bodies
-        content_length = request.META.get('CONTENT_LENGTH')
-        if content_length and int(content_length) > 10000:  # 10KB limit
+        if not is_api_request:
             return False
         
-        # Don't track file uploads
-        content_type = request.META.get('CONTENT_TYPE', '')
-        if 'multipart/form-data' in content_type:
+        # Check exempt paths
+        if request.path in self.exempt_paths:
             return False
         
-        # Don't track sensitive endpoints
-        sensitive_paths = ['/api/v1/api-key/', '/api/v1/payment/']
-        path = request.path
-        if any(path.startswith(sensitive) for sensitive in sensitive_paths):
-            return False
-        
-        return True
-    
-    def _is_safe_to_track_response(self, response: HttpResponse) -> bool:
-        """Check if it's safe to track response body."""
-        
-        # Don't track large responses
-        if hasattr(response, 'content') and len(response.content) > 10000:  # 10KB limit
-            return False
-        
-        # Only track JSON responses
-        content_type = response.get('Content-Type', '')
-        if 'application/json' not in content_type:
-            return False
-        
-        return True
-    
-    def _categorize_error(self, status_code: int) -> str:
-        """Categorize error by status code."""
-        
-        if 400 <= status_code < 500:
-            return 'client_error'
-        elif 500 <= status_code < 600:
-            return 'server_error'
-        else:
-            return 'unknown_error'
-    
-    def _store_usage_data(self, usage_data: Dict[str, Any]):
-        """Store usage data in Redis for analytics."""
-        
-        try:
-            # Store daily usage stats
-            date_key = usage_data['start_time'].strftime('%Y-%m-%d')
-            user_id = usage_data['user_id']
-            
-            # Increment counters using Django cache
-            daily_usage_key = f"payments:daily_usage:{user_id}:{date_key}"
-            current_usage = cache.get(daily_usage_key, 0)
-            cache.set(daily_usage_key, current_usage + 1, timeout=86400)  # 24 hours
-            
-            if usage_data.get('subscription_id'):
-                sub_usage_key = f"payments:subscription_usage:{usage_data['subscription_id']}:{date_key}"
-                current_sub_usage = cache.get(sub_usage_key, 0)
-                cache.set(sub_usage_key, current_sub_usage + 1, timeout=86400)  # 24 hours
-            
-            # Store performance metrics
-            if usage_data['response_time_ms'] > 0:
-                perf_key = f"payments:performance:{usage_data['path'].replace('/', '_')}"
-                response_times = cache.get(perf_key, [])
-                response_times.append(usage_data['response_time_ms'])
-                # Keep only last 100 measurements
-                if len(response_times) > 100:
-                    response_times = response_times[-100:]
-                cache.set(perf_key, response_times, timeout=3600)  # 1 hour
-            
-            # Store error metrics
-            if usage_data.get('is_error'):
-                error_key = f"payments:errors:{usage_data['path'].replace('/', '_')}:{usage_data['status_code']}"
-                current_errors = cache.get(error_key, 0)
-                cache.set(error_key, current_errors + 1, timeout=3600)  # 1 hour
-            
-        except Exception as e:
-            logger.error(f"Error storing usage data in Redis: {e}")
-    
-    def _create_billing_transaction(self, subscription: Subscription, usage_data: Dict[str, Any]):
-        """Create billing transaction for usage-based pricing."""
-        
-        try:
-            # Only create transaction for successful requests
-            if usage_data.get('is_error'):
-                return
-            
-            # Check if this endpoint has usage-based pricing
-            # For now, we'll create a small transaction for each API call
-            # This could be batched or calculated differently based on business logic
-            
-            cost_per_request = 0.001  # $0.001 per request (example)
-            
-            # Create transaction record
-            Transaction.objects.create(
-                user=subscription.user,
-                subscription=subscription,
-                transaction_type='debit',
-                amount_usd=-cost_per_request,  # Negative for debit
-                description=f"API usage: {usage_data['method']} {usage_data['path']}",
-                metadata={
-                    'api_call_id': f"{usage_data['api_key_id']}_{usage_data['start_time'].timestamp()}",
-                    'endpoint': usage_data['path'],
-                    'method': usage_data['method'],
-                    'response_time_ms': usage_data['response_time_ms'],
-                    'status_code': usage_data['status_code'],
-                }
+        # Check if we should track anonymous requests
+        if not self.track_anonymous:
+            is_authenticated = (
+                hasattr(request, 'api_key') or 
+                (hasattr(request, 'user') and request.user.is_authenticated)
             )
+            if not is_authenticated:
+                return False
+        
+        return True
+    
+    def _track_request(self, request: HttpRequest, response: HttpResponse, response_time: float, usage_info: dict):
+        """
+        Track request usage and performance metrics.
+        """
+        try:
+            # Get user identifier
+            user_id = None
+            if hasattr(request, 'api_key'):
+                user_id = request.api_key.user.id
+            elif hasattr(request, 'user') and request.user.is_authenticated:
+                user_id = request.user.id
+            
+            # Track endpoint usage
+            self._track_endpoint_usage(usage_info['path'], usage_info['method'], response.status_code)
+            
+            # Track user activity
+            if user_id:
+                self._track_user_activity(user_id, usage_info['path'], response_time)
+            
+            # Track performance metrics
+            self._track_performance_metrics(usage_info['path'], response_time, response.status_code)
+            
+            # Track errors
+            if response.status_code >= 400:
+                self._track_error(usage_info, response.status_code)
+            
+            # Log request
+            logger.debug(f"Request tracked", extra={
+                'path': usage_info['path'],
+                'method': usage_info['method'],
+                'status_code': response.status_code,
+                'response_time_ms': round(response_time, 2),
+                'user_id': user_id,
+                'authenticated': usage_info['authenticated']
+            })
             
         except Exception as e:
-            logger.error(f"Error creating billing transaction: {e}")
+            logger.warning(f"Failed to track request: {e}")
+    
+    def _track_endpoint_usage(self, path: str, method: str, status_code: int):
+        """
+        Track endpoint usage statistics.
+        """
+        try:
+            today = timezone.now().date().isoformat()
+            hour = timezone.now().hour
+            
+            # Daily endpoint usage
+            daily_key = f"endpoint_usage:{path}:{method}:{today}"
+            cache.set(daily_key, cache.get(daily_key, 0) + 1, timeout=86400 * 2)
+            
+            # Hourly endpoint usage
+            hourly_key = f"endpoint_usage_hourly:{path}:{method}:{today}:{hour}"
+            cache.set(hourly_key, cache.get(hourly_key, 0) + 1, timeout=86400)
+            
+            # Status code tracking
+            status_key = f"endpoint_status:{path}:{method}:{status_code}:{today}"
+            cache.set(status_key, cache.get(status_key, 0) + 1, timeout=86400 * 2)
+            
+        except Exception as e:
+            logger.warning(f"Failed to track endpoint usage: {e}")
+    
+    def _track_user_activity(self, user_id: int, path: str, response_time: float):
+        """
+        Track user activity and performance.
+        """
+        try:
+            today = timezone.now().date().isoformat()
+            
+            # Update last activity
+            cache.set(f"user_last_activity:{user_id}", timezone.now().isoformat(), timeout=86400 * 30)
+            
+            # Daily user requests
+            daily_requests_key = f"user_requests:{user_id}:{today}"
+            cache.set(daily_requests_key, cache.get(daily_requests_key, 0) + 1, timeout=86400 * 2)
+            
+            # User endpoint usage
+            user_endpoint_key = f"user_endpoint:{user_id}:{path}:{today}"
+            cache.set(user_endpoint_key, cache.get(user_endpoint_key, 0) + 1, timeout=86400 * 2)
+            
+            # User performance tracking
+            perf_key = f"user_performance:{user_id}:{today}"
+            perf_data = cache.get(perf_key, {'total_time': 0.0, 'request_count': 0})
+            perf_data['total_time'] += response_time
+            perf_data['request_count'] += 1
+            perf_data['avg_response_time'] = perf_data['total_time'] / perf_data['request_count']
+            
+            cache.set(perf_key, perf_data, timeout=86400 * 2)
+            
+        except Exception as e:
+            logger.warning(f"Failed to track user activity: {e}")
+    
+    def _track_performance_metrics(self, path: str, response_time: float, status_code: int):
+        """
+        Track performance metrics for monitoring.
+        """
+        try:
+            today = timezone.now().date().isoformat()
+            
+            # Global performance metrics
+            global_perf_key = f"global_performance:{today}"
+            global_perf = cache.get(global_perf_key, {
+                'total_requests': 0,
+                'total_time': 0.0,
+                'slow_requests': 0,  # > 1000ms
+                'fast_requests': 0,  # < 100ms
+            })
+            
+            global_perf['total_requests'] += 1
+            global_perf['total_time'] += response_time
+            
+            if response_time > 1000:
+                global_perf['slow_requests'] += 1
+            elif response_time < 100:
+                global_perf['fast_requests'] += 1
+            
+            global_perf['avg_response_time'] = global_perf['total_time'] / global_perf['total_requests']
+            
+            cache.set(global_perf_key, global_perf, timeout=86400 * 2)
+            
+            # Update system average response time for adaptive rate limiting
+            cache.set('system_avg_response_time', global_perf['avg_response_time'], timeout=300)
+            
+        except Exception as e:
+            logger.warning(f"Failed to track performance metrics: {e}")
+    
+    def _track_error(self, usage_info: dict, status_code: int):
+        """
+        Track error occurrences for monitoring.
+        """
+        try:
+            today = timezone.now().date().isoformat()
+            
+            # Global error tracking
+            error_key = f"errors:{status_code}:{today}"
+            cache.set(error_key, cache.get(error_key, 0) + 1, timeout=86400 * 7)
+            
+            # Endpoint-specific error tracking
+            endpoint_error_key = f"endpoint_errors:{usage_info['path']}:{status_code}:{today}"
+            cache.set(endpoint_error_key, cache.get(endpoint_error_key, 0) + 1, timeout=86400 * 7)
+            
+            # Log significant errors
+            if status_code >= 500:
+                logger.error(f"Server error tracked", extra={
+                    'status_code': status_code,
+                    'path': usage_info['path'],
+                    'method': usage_info['method'],
+                    'ip_address': usage_info['ip_address'],
+                    'user_agent': usage_info['user_agent']
+                })
+            
+        except Exception as e:
+            logger.warning(f"Failed to track error: {e}")
+    
+    def _get_client_ip(self, request: HttpRequest) -> str:
+        """
+        Get client IP address from request.
+        """
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
+        
+        x_real_ip = request.META.get('HTTP_X_REAL_IP')
+        if x_real_ip:
+            return x_real_ip
+        
+        return request.META.get('REMOTE_ADDR', 'unknown')

@@ -1,58 +1,49 @@
 """
-Template URLs for Payment Dashboard.
+Admin URLs for Universal Payment System v2.0.
 
-All URLs require superuser access as this is an internal admin tool.
+Internal dashboard and management interfaces.
+All URLs require staff/superuser access.
 """
 
-from django.urls import path
-from .views.templates import (
-    PaymentDashboardView,
-    PaymentDetailView,
-    PaymentCreateView,
-    PaymentStatsView,
-    PaymentListView,
-    PaymentQRCodeView,
-    PaymentTestView,
-    payment_status_ajax,
-    payment_events_ajax,
-)
-from .views.templates.ajax import (
-    payment_stats_ajax,
-    payment_search_ajax,
-    payment_action_ajax,
-    provider_currencies_ajax,
-    all_providers_data_ajax,
-)
-from .views.templates.qr_code import qr_code_data_ajax
+from django.urls import path, include
+from django.contrib.admin.views.decorators import staff_member_required
 
-app_name = 'payments_dashboard'
+from .admin_interface.views import (
+    WebhookDashboardView,
+    PaymentFormView,
+    PaymentStatusView,
+    PaymentListView,
+    PaymentDashboardView,
+    CurrencyConverterView,
+)
+
+app_name = 'cfg_payments_admin'
 
 urlpatterns = [
     # Main dashboard
-    path('', PaymentDashboardView.as_view(), name='dashboard'),
-    path('dashboard/', PaymentDashboardView.as_view(), name='dashboard_alt'),
+    path('', staff_member_required(PaymentDashboardView.as_view()), name='dashboard'),
+    path('dashboard/', staff_member_required(PaymentDashboardView.as_view()), name='dashboard_alt'),
     
     # Payment management
-    path('list/', PaymentListView.as_view(), name='list'),
-    path('create/', PaymentCreateView.as_view(), name='create'),
-    path('stats/', PaymentStatsView.as_view(), name='stats'),
+    path('payments/', include([
+        path('', staff_member_required(PaymentListView.as_view()), name='payment-list'),
+        path('create/', staff_member_required(PaymentFormView.as_view()), name='payment-create'),
+        path('<uuid:pk>/', staff_member_required(PaymentStatusView.as_view()), name='payment-detail'),
+        path('status/<uuid:pk>/', staff_member_required(PaymentStatusView.as_view()), name='payment-status'),
+    ])),
     
-    # Payment details
-    path('payment/<uuid:pk>/', PaymentDetailView.as_view(), name='detail'),
-    path('payment/<uuid:pk>/qr/', PaymentQRCodeView.as_view(), name='qr_code'),
+    # Webhook management
+    path('webhooks/', include([
+        path('', staff_member_required(WebhookDashboardView.as_view()), name='webhook-dashboard'),
+        path('dashboard/', staff_member_required(WebhookDashboardView.as_view()), name='webhook-dashboard-alt'),
+    ])),
     
-    # AJAX endpoints
-    path('ajax/payment/<uuid:payment_id>/status/', payment_status_ajax, name='payment_status_ajax'),
-    path('ajax/payment/<uuid:payment_id>/events/', payment_events_ajax, name='payment_events_ajax'),
-    path('ajax/payment/<uuid:payment_id>/qr-data/', qr_code_data_ajax, name='qr_data_ajax'),
-    path('ajax/payment/<uuid:payment_id>/action/', payment_action_ajax, name='payment_action_ajax'),
-    path('ajax/stats/', payment_stats_ajax, name='payment_stats_ajax'),
-    path('ajax/search/', payment_search_ajax, name='payment_search_ajax'),
+    # Tools and utilities
+    path('tools/', include([
+        path('converter/', staff_member_required(CurrencyConverterView.as_view()), name='currency-converter'),
+    ])),
     
-    # Provider and Currency AJAX endpoints
-    path('ajax/provider/currencies/', provider_currencies_ajax, name='provider_currencies_ajax'),
-    path('ajax/providers/all/', all_providers_data_ajax, name='all_providers_data_ajax'),
-    
-    # Development/testing
-    path('test/', PaymentTestView.as_view(), name='test'),
+    # Development/testing tools (only in DEBUG mode)
+    # path('test/', PaymentTestView.as_view(), name='test'),
+    # path('debug/', PaymentDebugView.as_view(), name='debug'),
 ]

@@ -1,0 +1,303 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+
+{% block title %}Create Payment - Universal Payment System{% endblock %}
+
+{% block page_title %}Create New Payment{% endblock %}
+{% block page_subtitle %}Process a payment through our universal payment system{% endblock %}
+
+{% block extra_css %}
+<style>
+    .currency-option {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .currency-option:hover {
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+    
+    .currency-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        margin-right: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+    }
+    
+    .provider-card {
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .provider-card:hover {
+        border-color: rgba(59, 130, 246, 0.3);
+        transform: translateY(-1px);
+    }
+    
+    .provider-card.selected {
+        border-color: #3b82f6;
+        background-color: rgba(59, 130, 246, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="paymentForm()" x-init="init()" class="max-w-4xl mx-auto">
+    <!-- Progress Steps -->
+    <div class="mb-8">
+        <div class="flex items-center justify-center space-x-4">
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center">
+                    <span class="material-icons-outlined text-sm">payment</span>
+                </div>
+                <span class="ml-2 text-sm font-medium text-blue-600">Payment Details</span>
+            </div>
+            <div class="w-16 h-0.5 bg-gray-300"></div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center">
+                    <span class="material-icons-outlined text-sm">account_balance</span>
+                </div>
+                <span class="ml-2 text-sm font-medium text-gray-500">Provider Selection</span>
+            </div>
+            <div class="w-16 h-0.5 bg-gray-300"></div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center">
+                    <span class="material-icons-outlined text-sm">check_circle</span>
+                </div>
+                <span class="ml-2 text-sm font-medium text-gray-500">Confirmation</span>
+            </div>
+        </div>
+    </div>
+
+    <form @submit.prevent="submitForm()" class="space-y-8">
+        {% csrf_token %}
+        
+        <!-- Payment Details Card -->
+        <div class="payment-card">
+            <div class="payment-card-header">
+                <h2 class="payment-card-title">
+                    <span class="material-icons-outlined">payments</span>
+                    Payment Details
+                </h2>
+            </div>
+            
+            <div class="payment-card-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Amount -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="material-icons-outlined mr-1 text-sm">attach_money</span>
+                            Amount
+                        </label>
+                        <div class="relative">
+                            <input type="number" 
+                                   x-model="formData.amount"
+                                   step="0.01" 
+                                   min="0.01"
+                                   class="form-input pl-10"
+                                   :class="{ 'border-red-500': errors.amount }"
+                                   placeholder="0.00"
+                                   required>
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-sm">$</span>
+                            </div>
+                        </div>
+                        <div x-show="errors.amount" class="form-error" x-text="errors.amount"></div>
+                        <div class="form-help">Minimum amount: $0.01</div>
+                    </div>
+
+                    <!-- Currency -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="material-icons-outlined mr-1 text-sm">currency_exchange</span>
+                            Currency
+                        </label>
+                        <select x-model="formData.currency" 
+                                class="form-select"
+                                :class="{ 'border-red-500': errors.currency }"
+                                required>
+                            <option value="">Select currency...</option>
+                            <template x-for="currency in currencies" :key="currency.code">
+                                <option :value="currency.code" x-text="`${currency.code} - ${currency.name}`"></option>
+                            </template>
+                        </select>
+                        <div x-show="errors.currency" class="form-error" x-text="errors.currency"></div>
+                        <div class="form-help">Choose the currency for your payment</div>
+                    </div>
+                </div>
+
+                <!-- Callback URL (Optional) -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="material-icons-outlined mr-1 text-sm">webhook</span>
+                        Callback URL (Optional)
+                    </label>
+                    <input type="url" 
+                           x-model="formData.callback_url"
+                           class="form-input"
+                           :class="{ 'border-red-500': errors.callback_url }"
+                           placeholder="https://your-site.com/webhook">
+                    <div x-show="errors.callback_url" class="form-error" x-text="errors.callback_url"></div>
+                    <div class="form-help">URL to receive payment status updates</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Provider Selection Card -->
+        <div class="payment-card">
+            <div class="payment-card-header">
+                <h2 class="payment-card-title">
+                    <span class="material-icons-outlined">account_balance</span>
+                    Payment Provider
+                </h2>
+            </div>
+            
+            <div class="payment-card-content">
+                <div x-show="providers.length === 0" class="text-center py-8">
+                    <div class="material-icons-outlined text-gray-400 text-4xl mb-4">account_balance</div>
+                    <p class="text-gray-500 dark:text-gray-400">Loading providers...</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="provider in providers" :key="provider.name">
+                        <div class="provider-card payment-card p-4"
+                             :class="{ 'selected': formData.provider === provider.name }"
+                             @click="formData.provider = provider.name">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
+                                    <span class="material-icons-outlined text-blue-600 dark:text-blue-400 text-sm" x-text="provider.icon || 'account_balance'"></span>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-gray-900 dark:text-white" x-text="provider.display_name"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Payment Gateway</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                                <div class="flex items-center">
+                                    <span class="material-icons-outlined mr-1" style="font-size: 14px;">security</span>
+                                    <span>Secure Processing</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="material-icons-outlined mr-1" style="font-size: 14px;">speed</span>
+                                    <span>Fast Confirmation</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="material-icons-outlined mr-1" style="font-size: 14px;">support</span>
+                                    <span>24/7 Support</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-gray-500">Status:</span>
+                                    <span class="status-badge success text-xs">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div x-show="errors.provider" class="form-error mt-4" x-text="errors.provider"></div>
+                <div class="form-help mt-4">Select a payment provider to process your transaction</div>
+            </div>
+        </div>
+
+        <!-- Summary Card -->
+        <div x-show="formData.amount && formData.currency && formData.provider" class="payment-card">
+            <div class="payment-card-header">
+                <h2 class="payment-card-title">
+                    <span class="material-icons-outlined">receipt</span>
+                    Payment Summary
+                </h2>
+            </div>
+            
+            <div class="payment-card-content">
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Amount:</span>
+                        <span class="font-medium" x-text="PaymentSystem.Utils.formatCurrency(formData.amount, formData.currency)"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Currency:</span>
+                        <span class="font-medium" x-text="formData.currency"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Provider:</span>
+                        <span class="font-medium" x-text="providers.find(p => p.name === formData.provider)?.display_name"></span>
+                    </div>
+                    <div x-show="formData.callback_url" class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Callback URL:</span>
+                        <span class="font-medium text-xs break-all" x-text="formData.callback_url"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-between items-center">
+            <a href="{% url 'cfg_payments_admin:webhook-dashboard' %}" class="btn-outline">
+                <span class="material-icons-outlined">arrow_back</span>
+                Back to Dashboard
+            </a>
+            
+            <button type="submit" 
+                    :disabled="loading || !formData.amount || !formData.currency || !formData.provider"
+                    class="btn-primary"
+                    :class="{ 'opacity-50 cursor-not-allowed': loading || !formData.amount || !formData.currency || !formData.provider }">
+                <span x-show="!loading" class="material-icons-outlined">payment</span>
+                <span x-show="loading" class="loading-spinner sm mr-2"></span>
+                <span x-text="loading ? 'Creating Payment...' : 'Create Payment'"></span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Loading Overlay -->
+    <div x-show="loading" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-4">
+            <div class="loading-spinner lg"></div>
+            <span class="text-gray-900 dark:text-white">Processing payment...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add provider health check functions
+function checkProviderHealth(providerName) {
+    PaymentSystem.Utils.showNotification(`Checking ${providerName} health...`, 'info', 'health_and_safety');
+    
+    fetch(`/payments/api/providers/${providerName}/health/`)
+        .then(response => response.json())
+        .then(data => {
+            const message = data.healthy ? `${providerName} is healthy` : `${providerName} has issues`;
+            const type = data.healthy ? 'success' : 'error';
+            PaymentSystem.Utils.showNotification(message, type, data.healthy ? 'check_circle' : 'error');
+        })
+        .catch(error => {
+            PaymentSystem.Utils.showNotification('Health check failed', 'error', 'error');
+        });
+}
+
+function testProvider(providerName) {
+    PaymentSystem.Utils.showNotification(`Testing ${providerName}...`, 'info', 'play_arrow');
+    // This would trigger the test modal or direct test
+}
+</script>
+{% endblock %}

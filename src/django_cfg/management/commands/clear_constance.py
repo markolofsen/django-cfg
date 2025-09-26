@@ -6,12 +6,14 @@ Clear Constance configuration cache and database records.
 from django.core.management.base import BaseCommand
 from django.core.cache import cache
 from django.conf import settings
-import logging
+from django_cfg.modules.django_logger import get_logger
 
-logger = logging.getLogger(__name__)
+
 
 
 class Command(BaseCommand):
+    logger = get_logger('clear_constance')
+
     help = 'Clear Constance configuration cache and database records'
 
     def add_arguments(self, parser):
@@ -38,6 +40,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Handle the command execution."""
+        self.logger.info("Starting clear_constance command")
         self.stdout.write(self.style.SUCCESS('🧹 Constance Clear Tool - Django Config Toolkit\n'))
         
         # Check if constance is installed

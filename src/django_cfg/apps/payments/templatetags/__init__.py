@@ -1,1 +1,1 @@
-# Template tags package for payments app
+# Template tags package

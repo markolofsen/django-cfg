@@ -1,11 +1,12 @@
 """
-Universal payments models package.
+Universal Payment System v2.0 - Models Package.
 
-Django ORM models for the universal payments system.
+Simplified models focused on NowPayments with extensible architecture.
+All models follow the data typing requirements: Django ORM for database layer.
 """
 
 # Base models
-from .base import TimestampedModel
+from .base import UUIDTimestampedModel
 
 # Currency models
 from .currencies import Currency, Network, ProviderCurrency
@@ -17,7 +18,7 @@ from .payments import UniversalPayment
 from .balance import UserBalance, Transaction
 
 # Subscription models
-from .subscriptions import EndpointGroup, Subscription
+from .subscriptions import Subscription, EndpointGroup
 
 # Tariff models
 from .tariffs import Tariff, TariffEndpointGroup
@@ -25,44 +26,38 @@ from .tariffs import Tariff, TariffEndpointGroup
 # API Keys
 from .api_keys import APIKey
 
-# Event sourcing
-from .events import PaymentEvent
-
-# TextChoices classes for external use (accessing inner classes)
-CurrencyType = Currency.CurrencyType
+# Export TextChoices for external use
 PaymentStatus = UniversalPayment.PaymentStatus
 PaymentProvider = UniversalPayment.PaymentProvider
+CurrencyType = Currency.CurrencyType
 TransactionType = Transaction.TransactionType
 SubscriptionStatus = Subscription.SubscriptionStatus
 SubscriptionTier = Subscription.SubscriptionTier
-EventType = PaymentEvent.EventType
 
 __all__ = [
     # Base
-    'TimestampedModel',
+    'UUIDTimestampedModel',
     
     # Currencies
     'Currency',
     'Network',
     'ProviderCurrency',
     
-    # Models
+    # Core Models
     'UniversalPayment',
     'UserBalance',
     'Transaction', 
-    'EndpointGroup',
     'Subscription',
+    'EndpointGroup',
     'Tariff',
     'TariffEndpointGroup',
     'APIKey',
-    'PaymentEvent',
     
     # TextChoices
-    'CurrencyType',
     'PaymentStatus',
-    'PaymentProvider', 
+    'PaymentProvider',
+    'CurrencyType',
     'TransactionType',
     'SubscriptionStatus',
     'SubscriptionTier',
-    'EventType',
 ]

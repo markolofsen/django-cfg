@@ -8,6 +8,9 @@ from django.core.management.base import BaseCommand, CommandParser
 from django.urls import get_resolver
 from django.conf import settings
 from django.utils.termcolors import make_style
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger('show_urls')
 
 
 class Command(BaseCommand):
@@ -78,6 +81,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         """Main command handler."""
+        logger.info("Starting show_urls command")
         self.options = options
         
         # Disable colors if requested

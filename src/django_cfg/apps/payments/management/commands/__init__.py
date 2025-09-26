@@ -1,3 +1,1 @@
-"""
-Management commands directory.
-"""
+# Management commands

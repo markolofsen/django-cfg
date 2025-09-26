@@ -10,6 +10,9 @@ import json
 import os
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger('show_config')
 
 
 class Command(BaseCommand):
@@ -30,18 +33,25 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Show configuration in requested format."""
+        logger.info("Starting show_config command")
         try:
             # Get the config instance from Django settings
             config = self._get_config_instance()
+            logger.info("Successfully retrieved configuration instance")
             
             if options['format'] == 'json':
+                logger.info("Displaying configuration in JSON format")
                 self._show_json_format(config, options['include_secrets'])
             else:
+                logger.info("Displaying configuration in table format")
                 self._show_table_format(config, options['include_secrets'])
                 
+            logger.info("show_config command completed successfully")
         except Exception as e:
+            error_msg = f'Failed to show configuration: {e}'
+            logger.error(error_msg, exc_info=True)
             self.stdout.write(
-                self.style.ERROR(f'❌ Failed to show configuration: {e}')
+                self.style.ERROR(f'❌ {error_msg}')
             )
 
     def _get_config_instance(self):
@@ -92,7 +102,7 @@ class Command(BaseCommand):
         env_data = [
             ('Environment', getattr(config, '_environment', 'auto-detected')),
             ('Debug Mode', config.debug),
-            ('Allowed Hosts', ', '.join(config.allowed_hosts)),
+            ('Security Domains', ', '.join(config.security_domains) if config.security_domains else 'None'),
         ]
         
         if include_secrets:

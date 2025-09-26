@@ -14,6 +14,9 @@ from django.conf import settings
 import questionary
 from datetime import datetime
 from django_cfg.core.config import DEFAULT_APPS
+from django_cfg.modules.django_logger import get_logger
+
+logger = get_logger('migrator')
 
 
 class Command(BaseCommand):

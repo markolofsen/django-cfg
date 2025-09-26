@@ -1,5 +1,7 @@
 """
-Middleware for universal payments.
+Middleware for the Universal Payment System v2.0.
+
+Enhanced middleware with service layer integration and smart caching.
 """
 
 from .api_access import APIAccessMiddleware

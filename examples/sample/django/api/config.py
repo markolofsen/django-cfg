@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 from decimal import Decimal
 from django_cfg import (
     DjangoConfig,
+    StartupInfoMode,
     DatabaseConfig,
     CacheConfig,
     EmailConfig,
@@ -50,12 +51,7 @@ from django_cfg import (
     Icons,
     IconCategories,
     set_current_config,
-    # Payments configuration
     PaymentsConfig,
-    create_nowpayments_config,
-    create_cryptapi_config,
-    create_stripe_config,
-    create_cryptomus_config,
 )
 from pydantic import SecretStr
 
@@ -88,6 +84,8 @@ class SampleProjectConfig(DjangoConfig):
     ssl_redirect: Optional[bool] = env.ssl_redirect
 
     # === Django CFG Features ===
+    startup_info_mode: StartupInfoMode = StartupInfoMode.FULL  # FULL shows all info, SHORT for essential, NONE for minimal
+    
     enable_support: bool = True
     enable_accounts: bool = True
     enable_newsletter: bool = True
@@ -95,36 +93,6 @@ class SampleProjectConfig(DjangoConfig):
     enable_knowbase: bool = False  # Requires tasks - auto-generates "knowledge" queue
     enable_agents: bool = False    # Requires tasks
     enable_maintenance: bool = True
-    
-    # === Payments Configuration ===
-    payments: PaymentsConfig = PaymentsConfig(
-        enabled=True,
-        providers=[
-            config for config in [
-                create_nowpayments_config(
-                    api_key=env.api_keys.payments.nowpayments_api_key,
-                    ipn_secret=env.api_keys.payments.nowpayments_ipn_secret,
-                    # Webhook URL - через админ систему django-cfg
-                    callback_url=f"{env.app.site_url}/cfg/admin/django_cfg_payments/webhooks/nowpayments/"
-                ) if env.api_keys.payments.nowpayments_api_key else None,
-                
-                create_cryptapi_config(
-                    own_address=env.api_keys.payments.cryptapi_btc_address
-                ) if env.api_keys.payments.cryptapi_btc_address else None,
-                
-                create_stripe_config(
-                    api_key=env.api_keys.payments.stripe_secret_key,
-                    publishable_key=env.api_keys.payments.stripe_publishable_key,
-                    webhook_endpoint_secret=env.api_keys.payments.stripe_webhook_secret,
-                ) if env.api_keys.payments.stripe_secret_key else None,
-                
-                create_cryptomus_config(
-                    api_key=env.api_keys.payments.cryptomus_api_key,
-                    merchant_uuid=env.api_keys.payments.cryptomus_merchant_uuid,
-                ) if env.api_keys.payments.cryptomus_api_key else None,
-            ] if config is not None
-        ]
-    )
     
     # === AI Services ===
     openai_api_key: Optional[str] = env.api_keys.openai_api_key if hasattr(env, 'api_keys') and hasattr(env.api_keys, 'openai_api_key') else None
@@ -183,6 +151,11 @@ class SampleProjectConfig(DjangoConfig):
     #     timeout=3600,
     #     key_prefix="sample_sessions",
     # )
+
+    # === Payments Configuration ===
+    payments: PaymentsConfig = PaymentsConfig(
+        enabled=True,
+    )
 
     # === Email Configuration ===
     email: Optional[EmailConfig] = (

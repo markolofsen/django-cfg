@@ -14,13 +14,18 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 import questionary
 from datetime import datetime
+from django_cfg.modules.django_logger import get_logger
+
 
 from django_cfg import ConfigToolkit
 
 User = get_user_model()
 
 
+logger = get_logger('superuser')
+
 class Command(BaseCommand):
+
     help = 'Create a superuser with enhanced validation and configuration'
 
     def add_arguments(self, parser):
@@ -56,6 +61,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logger.info("Starting superuser command")
         if options['interactive'] or not any([options['username'], options['email'], options['password']]):
             self.create_superuser_interactive()
         else:

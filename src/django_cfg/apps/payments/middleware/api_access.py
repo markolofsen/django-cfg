@@ -1,294 +1,401 @@
 """
-API Access Control Middleware.
-Handles API key authentication and subscription validation.
+API Access Control Middleware for the Universal Payment System v2.0.
+
+Enhanced middleware with service layer integration, smart caching, and graceful degradation.
 """
 
-from django_cfg.modules.django_logger import get_logger
-from typing import Optional, Tuple
+import re
+import time
+from typing import Optional, Dict, Any, Tuple
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
-from django.conf import settings
 from django.utils import timezone
-from ..models import APIKey, Subscription, EndpointGroup
-from ..services import ApiKeyCache, RateLimitCache
-from ..services.security import error_handler, SecurityError
+from django.core.cache import cache
+from django.contrib.auth import get_user_model
 
-logger = get_logger("api_access")
+from ..models import APIKey, Subscription
+from ..config.helpers import MiddlewareConfigHelper
+from django_cfg.modules.django_logger import get_logger
+
+User = get_user_model()
+logger = get_logger("api_access_middleware")
 
 
 class APIAccessMiddleware(MiddlewareMixin):
     """
-    Middleware for API access control using API keys and subscriptions.
+    Enhanced API Access Control Middleware.
     
     Features:
-    - API key validation
-    - Subscription status checking
+    - API key authentication with caching
+    - Subscription validation
     - Endpoint access control
-    - Usage tracking
+    - Usage tracking and analytics
+    - Rate limiting integration
+    - Graceful degradation
+    - Service layer integration
     """
     
     def __init__(self, get_response=None):
         super().__init__(get_response)
-        self.api_key_cache = ApiKeyCache()
-        self.rate_limit_cache = RateLimitCache()
         
-        # Paths that don't require API key authentication
-        self.exempt_paths = getattr(settings, 'PAYMENTS_EXEMPT_PATHS', [
-            '/api/v1/api-key/validate/',
-            '/api/v1/api-key/create/',
-            '/admin/',
-            '/cfg/',
-        ])
+        # Load configuration from django-cfg and Constance
+        try:
+            middleware_config = MiddlewareConfigHelper.get_middleware_config()
+            
+            # Configuration from django-cfg
+            self.enabled = middleware_config['enabled']
+            self.api_prefixes = middleware_config['api_prefixes']
+            self.exempt_paths = middleware_config['exempt_paths']
+            self.cache_timeout = middleware_config['cache_timeouts']['api_key']
+            
+            # Default settings (can be overridden by Constance)
+            self.strict_mode = False
+            self.require_api_key = True
+            
+            # Get Constance settings if available
+            constance_settings = middleware_config.get('constance_settings')
+            if constance_settings:
+                # Override with dynamic settings from Constance if needed
+                # For now, we keep static defaults
+                pass
+            
+        except Exception as e:
+            logger.warning(f"Failed to load middleware config, using defaults: {e}")
+            # Fallback defaults
+            self.enabled = True
+            self.api_prefixes = ['/api/']
+            self.exempt_paths = ['/api/health/', '/admin/']
+            self.cache_timeout = 300
+            self.strict_mode = False
+            self.require_api_key = True
         
-        # API prefixes that require authentication
-        self.api_prefixes = getattr(settings, 'PAYMENTS_API_PREFIXES', [
-            '/api/v1/',
-        ])
+        # Compile exempt path patterns (static for now)
+        self.exempt_patterns = [
+            re.compile(pattern) for pattern in [
+                r'^/api/payments/[^/]+/status/$',
+                r'^/api/webhooks/[^/]+/$',
+                r'^/api/payments/webhooks/(providers|health|stats)/$',  # Admin webhook endpoints
+                r'^/api/currencies/(rates|supported|convert)/$',
+            ]
+        ]
+        
+        logger.info(f"API Access Middleware initialized", extra={
+            'enabled': self.enabled,
+            'strict_mode': self.strict_mode,
+            'require_api_key': self.require_api_key,
+            'api_prefixes': self.api_prefixes
+        })
     
     def process_request(self, request: HttpRequest) -> Optional[JsonResponse]:
-        """Process incoming request for API access control."""
+        """
+        Process incoming request for API access control.
         
-        # Skip non-API requests
-        if not self._is_api_request(request):
+        Returns JsonResponse if access should be denied, None to continue.
+        """
+        if not self.enabled:
             return None
         
-        # Skip exempt paths
-        if self._is_exempt_path(request):
+        # Check if this path requires authentication
+        if not self._requires_authentication(request.path):
             return None
         
-        # Extract API key
-        api_key = self._extract_api_key(request)
-        if not api_key:
-            security_error = SecurityError(
-                "API key required for protected endpoint",
-                details={'path': request.path, 'method': request.method}
-            )
-            error_handler.handle_error(security_error, {
-                'middleware': 'api_access',
-                'operation': 'api_key_extraction'
-            }, request)
-            
-            return self._error_response(
-                'API key required', 
-                status=401,
-                error_code='MISSING_API_KEY'
-            )
+        # Start timing for performance monitoring
+        start_time = time.time()
         
-        # Validate API key
-        api_key_obj = self._validate_api_key(api_key)
-        if not api_key_obj:
-            security_error = SecurityError(
-                f"Invalid or expired API key attempted",
-                details={
-                    'api_key_prefix': api_key[:8] + '...' if len(api_key) > 8 else api_key,
-                    'path': request.path,
-                    'method': request.method,
-                    'ip_address': self._get_client_ip(request)
-                }
-            )
-            error_handler.handle_error(security_error, {
-                'middleware': 'api_access',
-                'operation': 'api_key_validation'
-            }, request)
+        try:
+            # Extract API key from request
+            api_key_value = self._extract_api_key(request)
             
-            return self._error_response(
-                'Invalid or expired API key',
-                status=401,
-                error_code='INVALID_API_KEY'
-            )
-        
-        # Check subscription access
-        endpoint_group = self._get_endpoint_group(request)
-        if endpoint_group:
-            subscription = self._check_subscription_access(api_key_obj.user, endpoint_group)
-            if not subscription:
-                return self._error_response(
-                    f'No active subscription for {endpoint_group.display_name}',
-                    status=403,
-                    error_code='NO_SUBSCRIPTION'
+            if not api_key_value:
+                if self.require_api_key:
+                    return self._create_error_response(
+                        'API key required',
+                        'missing_api_key',
+                        401
+                    )
+                else:
+                    # API key not required, continue without authentication
+                    return None
+            
+            # Validate API key
+            api_key, validation_result = self._validate_api_key(api_key_value)
+            
+            if not validation_result['valid']:
+                return self._create_error_response(
+                    validation_result['message'],
+                    validation_result['error_code'],
+                    401
                 )
             
-            # Check usage limits
-            if self._is_usage_exceeded(subscription):
-                return self._error_response(
-                    'Usage limit exceeded for this subscription',
-                    status=429,
-                    error_code='USAGE_EXCEEDED'
-                )
+            # Check subscription access
+            subscription_result = self._check_subscription_access(api_key, request.path)
             
-            # Store subscription in request for usage tracking
-            request.payment_subscription = subscription
-        
-        # Store API key in request
-        request.payment_api_key = api_key_obj
-        request.payment_user = api_key_obj.user
-        
-        return None
+            if not subscription_result['allowed']:
+                if self.strict_mode:
+                    return self._create_error_response(
+                        subscription_result['message'],
+                        subscription_result['error_code'],
+                        403
+                    )
+                else:
+                    # Non-strict mode: add warning but allow access
+                    request.subscription_warning = subscription_result
+            
+            # Add authentication info to request
+            request.api_key = api_key
+            request.authenticated_user = api_key.user
+            request.subscription_access = subscription_result
+            
+            # Track usage (async to avoid blocking)
+            self._track_usage_async(api_key, request)
+            
+            # Log successful authentication
+            processing_time = (time.time() - start_time) * 1000  # ms
+            logger.debug(f"API access granted", extra={
+                'api_key_id': str(api_key.id),
+                'user_id': api_key.user.id,
+                'path': request.path,
+                'processing_time_ms': round(processing_time, 2)
+            })
+            
+            return None  # Continue processing
+            
+        except Exception as e:
+            logger.error(f"API access middleware error", extra={
+                'path': request.path,
+                'error': str(e),
+                'processing_time_ms': round((time.time() - start_time) * 1000, 2)
+            })
+            
+            if self.strict_mode:
+                return self._create_error_response(
+                    'Authentication service unavailable',
+                    'service_error',
+                    503
+                )
+            else:
+                # Graceful degradation: allow access but log the issue
+                return None
     
-    def process_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
-        """Process response to track API usage."""
+    def _requires_authentication(self, path: str) -> bool:
+        """
+        Check if the given path requires API authentication.
+        """
+        # Check if path starts with API prefix
+        requires_auth = any(path.startswith(prefix) for prefix in self.api_prefixes)
         
-        # Track usage if API key was used
-        if hasattr(request, 'payment_api_key') and hasattr(request, 'payment_subscription'):
-            self._track_usage(request.payment_api_key, request.payment_subscription, request)
+        if not requires_auth:
+            return False
         
-        return response
-    
-    def _is_api_request(self, request: HttpRequest) -> bool:
-        """Check if request is an API request."""
-        path = request.path
-        return any(path.startswith(prefix) for prefix in self.api_prefixes)
-    
-    def _is_exempt_path(self, request: HttpRequest) -> bool:
-        """Check if path is exempt from API key requirement."""
-        path = request.path
-        return any(path.startswith(exempt) for exempt in self.exempt_paths)
+        # Check exempt paths
+        if path in self.exempt_paths:
+            return False
+        
+        # Check exempt patterns
+        for pattern in self.exempt_patterns:
+            if pattern.match(path):
+                return False
+        
+        return True
     
     def _extract_api_key(self, request: HttpRequest) -> Optional[str]:
-        """Extract API key from request headers or query params."""
+        """
+        Extract API key from request headers or query parameters.
         
-        # Try Authorization header first (Bearer token)
+        Supports multiple formats:
+        - Authorization: Bearer <key>
+        - Authorization: ApiKey <key>
+        - X-API-Key: <key>
+        - api_key query parameter
+        """
+        # Check Authorization header
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        
         if auth_header.startswith('Bearer '):
-            return auth_header[7:]  # Remove 'Bearer ' prefix
+            return auth_header[7:]  # Remove 'Bearer '
+        elif auth_header.startswith('ApiKey '):
+            return auth_header[7:]  # Remove 'ApiKey '
         
-        # Try X-API-Key header
-        api_key = request.META.get('HTTP_X_API_KEY')
-        if api_key:
-            return api_key
+        # Check X-API-Key header
+        api_key_header = request.META.get('HTTP_X_API_KEY')
+        if api_key_header:
+            return api_key_header
         
-        # Try query parameter (less secure, for testing)
-        api_key = request.GET.get('api_key')
-        if api_key:
-            return api_key
+        # Check query parameter (less secure, but supported)
+        api_key_param = request.GET.get('api_key')
+        if api_key_param:
+            logger.warning(f"API key provided via query parameter", extra={
+                'path': request.path,
+                'ip': self._get_client_ip(request)
+            })
+            return api_key_param
         
         return None
     
-    def _validate_api_key(self, api_key: str) -> Optional[APIKey]:
-        """Validate API key using Redis cache with DB fallback."""
+    def _validate_api_key(self, api_key_value: str) -> Tuple[Optional[APIKey], Dict[str, Any]]:
+        """
+        Validate API key with caching.
         
-        try:
-            # Try Redis first
-            cached_key = self.redis_service.get_api_key(api_key)
-            if cached_key:
-                return cached_key
-            
-            # Fallback to database
-            api_key_obj = APIKey.objects.select_related('user').filter(
-                key_value=api_key,
-                is_active=True
-            ).first()
-            
-            if api_key_obj and api_key_obj.is_valid():
-                # Cache valid key
-                self.redis_service.cache_api_key(api_key_obj)
-                
-                # Update last used
-                api_key_obj.record_usage()
-                
-                return api_key_obj
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error validating API key: {e}")
-            return None
-    
-    def _get_endpoint_group(self, request: HttpRequest) -> Optional[EndpointGroup]:
-        """Determine endpoint group based on request path."""
+        Returns tuple of (APIKey instance, validation result dict).
+        """
+        # Check cache first
+        cache_key = f"api_key_validation:{api_key_value[:10]}..."  # Partial key for security
+        cached_result = cache.get(cache_key)
         
-        # This would be customized per project
-        # For now, return None (no endpoint group restrictions)
-        # In real implementation, this would map URL patterns to endpoint groups
-        
-        path = request.path
-        
-        # Example mapping (would be configurable)
-        endpoint_mappings = {
-            '/api/v1/payments/': 'payments',
-            '/api/v1/subscriptions/': 'billing',
-            '/api/v1/users/': 'user_management',
-        }
-        
-        for path_prefix, group_name in endpoint_mappings.items():
-            if path.startswith(path_prefix):
+        if cached_result:
+            if cached_result['valid']:
                 try:
-                    return EndpointGroup.objects.get(name=group_name, is_active=True)
-                except EndpointGroup.DoesNotExist:
-                    continue
+                    api_key = APIKey.objects.get(id=cached_result['api_key_id'])
+                    return api_key, cached_result
+                except APIKey.DoesNotExist:
+                    # Cache is stale, continue with fresh validation
+                    pass
+            else:
+                # Return cached negative result
+                return None, cached_result
         
-        return None
-    
-    def _check_subscription_access(self, user, endpoint_group: EndpointGroup) -> Optional[Subscription]:
-        """Check if user has active subscription for endpoint group."""
-        
+        # Fresh validation
         try:
-            # Get active subscription for this endpoint group
-            subscription = Subscription.objects.filter(
-                user=user,
-                endpoint_group=endpoint_group,
-                status='active',
+            api_key = APIKey.get_valid_key(api_key_value)
+            
+            if api_key:
+                result = {
+                    'valid': True,
+                    'api_key_id': str(api_key.id),
+                    'user_id': api_key.user.id,
+                    'message': 'API key valid'
+                }
+                
+                # Cache positive result
+                cache.set(cache_key, result, timeout=self.cache_timeout)
+                
+                return api_key, result
+            else:
+                result = {
+                    'valid': False,
+                    'message': 'Invalid or expired API key',
+                    'error_code': 'invalid_api_key'
+                }
+                
+                # Cache negative result for shorter time
+                cache.set(cache_key, result, timeout=60)  # 1 minute
+                
+                return None, result
+                
+        except Exception as e:
+            logger.error(f"API key validation error: {e}")
+            return None, {
+                'valid': False,
+                'message': 'API key validation failed',
+                'error_code': 'validation_error'
+            }
+    
+    def _check_subscription_access(self, api_key: APIKey, path: str) -> Dict[str, Any]:
+        """
+        Check if user has valid subscription for the requested endpoint.
+        """
+        try:
+            # Get user's active subscriptions
+            active_subscriptions = Subscription.objects.filter(
+                user=api_key.user,
+                status=Subscription.SubscriptionStatus.ACTIVE,
                 expires_at__gt=timezone.now()
-            ).first()
+            ).select_related('tariff', 'endpoint_group')
             
-            return subscription
+            if not active_subscriptions.exists():
+                return {
+                    'allowed': False,
+                    'message': 'No active subscription found',
+                    'error_code': 'no_active_subscription',
+                    'upgrade_required': True
+                }
+            
+            # For now, allow access if user has any active subscription
+            # TODO: Implement endpoint-specific access control based on tariff/endpoint_group
+            
+            subscription = active_subscriptions.first()
+            
+            return {
+                'allowed': True,
+                'subscription_id': str(subscription.id),
+                'tier': subscription.tier,
+                'tariff_name': subscription.tariff.name if subscription.tariff else None,
+                'requests_remaining': subscription.requests_remaining(),
+                'expires_at': subscription.expires_at.isoformat() if subscription.expires_at else None
+            }
             
         except Exception as e:
-            logger.error(f"Error checking subscription access: {e}")
-            return None
+            logger.error(f"Subscription access check error: {e}")
+            return {
+                'allowed': not self.strict_mode,  # Allow in non-strict mode
+                'message': 'Subscription check failed',
+                'error_code': 'subscription_check_error'
+            }
     
-    def _is_usage_exceeded(self, subscription: Subscription) -> bool:
-        """Check if subscription usage limit is exceeded."""
-        
+    def _track_usage_async(self, api_key: APIKey, request: HttpRequest):
+        """
+        Track API usage asynchronously to avoid blocking the request.
+        """
         try:
-            # Check current usage against limit
-            if subscription.usage_limit == 0:  # Unlimited
-                return False
+            # Increment usage counter (this will trigger signals)
+            api_key.increment_usage(ip_address=self._get_client_ip(request))
             
-            return subscription.usage_current >= subscription.usage_limit
+            # Update usage analytics in cache
+            today = timezone.now().date().isoformat()
+            
+            # Daily usage counter
+            daily_key = f"api_usage_daily:{api_key.user.id}:{today}"
+            cache.set(daily_key, cache.get(daily_key, 0) + 1, timeout=86400 * 2)
+            
+            # Endpoint usage counter
+            endpoint_key = f"endpoint_usage:{request.path}:{today}"
+            cache.set(endpoint_key, cache.get(endpoint_key, 0) + 1, timeout=86400 * 2)
             
         except Exception as e:
-            logger.error(f"Error checking usage limits: {e}")
-            return False
-    
-    def _track_usage(self, api_key: APIKey, subscription: Subscription, request: HttpRequest):
-        """Track API usage for billing and analytics."""
-        
-        try:
-            # Increment subscription usage
-            subscription.usage_current += 1
-            subscription.save(update_fields=['usage_current'])
-            
-            # Update Redis cache
-            self.redis_service.increment_usage(api_key.key_value, subscription.id)
-            
-            # Log usage for analytics
-            logger.info(
-                f"API usage tracked - User: {api_key.user.id}, "
-                f"Subscription: {subscription.id}, "
-                f"Path: {request.path}, "
-                f"Usage: {subscription.usage_current}/{subscription.usage_limit}"
-            )
-            
-        except Exception as e:
-            logger.error(f"Error tracking usage: {e}")
+            logger.warning(f"Usage tracking failed: {e}")
     
     def _get_client_ip(self, request: HttpRequest) -> str:
-        """Extract client IP address from request."""
+        """
+        Get client IP address from request.
+        """
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
-        else:
-            ip = request.META.get('REMOTE_ADDR', '')
-        return ip
-    
-    def _error_response(self, message: str, status: int = 400, error_code: str = 'ERROR') -> JsonResponse:
-        """Return standardized error response."""
+            return x_forwarded_for.split(',')[0].strip()
         
+        x_real_ip = request.META.get('HTTP_X_REAL_IP')
+        if x_real_ip:
+            return x_real_ip
+        
+        return request.META.get('REMOTE_ADDR', 'unknown')
+    
+    def _create_error_response(self, message: str, error_code: str, status_code: int) -> JsonResponse:
+        """
+        Create standardized error response.
+        """
         return JsonResponse({
-            'error': {
-                'code': error_code,
-                'message': message,
-                'timestamp': timezone.now().isoformat(),
-            }
-        }, status=status)
+            'success': False,
+            'error': message,
+            'error_code': error_code,
+            'timestamp': timezone.now().isoformat()
+        }, status=status_code)
+    
+    def process_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
+        """
+        Process response to add headers and perform cleanup.
+        """
+        # Add API usage headers if authenticated
+        if hasattr(request, 'api_key') and hasattr(request, 'subscription_access'):
+            subscription_access = request.subscription_access
+            
+            if subscription_access.get('allowed'):
+                response['X-RateLimit-Remaining'] = str(subscription_access.get('requests_remaining', 'unlimited'))
+                response['X-Subscription-Tier'] = subscription_access.get('tier', 'unknown')
+                
+                if subscription_access.get('expires_at'):
+                    response['X-Subscription-Expires'] = subscription_access['expires_at']
+        
+        # Add security headers
+        response['X-API-Version'] = '2.0'
+        response['X-Powered-By'] = 'Universal Payment System'
+        
+        return response

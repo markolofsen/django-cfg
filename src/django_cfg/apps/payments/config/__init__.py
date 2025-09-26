@@ -1,65 +1,42 @@
 """
-Universal Payment Configuration.
+Configuration module for the Universal Payment System v2.0.
 
-Modular configuration system for the payments module.
+Provides clean separation between:
+- django-cfg integration (static config)
+- Constance integration (dynamic config)
+- Configuration utilities and helpers
 """
 
-# Core configuration classes
-from .settings import PaymentsSettings
-
-# Import unified settings from models.payments
-from django_cfg.models.payments import (
-    SecuritySettings,
-    RateLimitSettings,
-    NotificationSettings,
-    SubscriptionSettings
-)
-
-# Provider configurations - import from models.payments
-from django_cfg.models.payments import (
-    PaymentProviderConfig,
-    NowPaymentsConfig,
-    StripeConfig,
-    CryptAPIConfig
-)
-
-# Local provider configs (additional to models.payments)
-from .providers import CryptomusConfig
-
-# Configuration module
-from .module import PaymentsCfgModule
-
-# Utility functions
-from .utils import (
+# Django-cfg integration
+from .django_cfg_integration import (
+    PaymentsConfigMixin,
     get_payments_config,
-    get_provider_config,
-    is_payments_enabled
+    is_payments_enabled,
 )
 
-# Backwards compatibility exports
-payments_config = PaymentsCfgModule()
+# Constance integration (safe - no Django models)
+from .constance import (
+    get_django_cfg_payments_constance_fields,
+    PaymentConstanceSettings,
+)
+
+# Configuration helpers
+from .helpers import (
+    MiddlewareConfigHelper,
+    CacheConfigHelper,
+)
 
 __all__ = [
-    # Core settings
-    'PaymentsSettings',
-    'SecuritySettings',
-    'RateLimitSettings',
-    'NotificationSettings',
-    'SubscriptionSettings',
-    
-    # Provider configurations
-    'PaymentProviderConfig',
-    'NowPaymentsConfig',
-    'StripeConfig',
-    'CryptAPIConfig',
-    'CryptomusConfig',
-    
-    # Configuration module
-    'PaymentsCfgModule',
-    'payments_config',
-    
-    # Utility functions
+    # Django-cfg integration
+    'PaymentsConfigMixin',
     'get_payments_config',
-    'get_provider_config',
     'is_payments_enabled',
+    
+    # Constance integration
+    'get_django_cfg_payments_constance_fields',
+    'PaymentConstanceSettings',
+    
+    # Configuration helpers
+    'MiddlewareConfigHelper',
+    'CacheConfigHelper',
 ]
