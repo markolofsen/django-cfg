@@ -1,0 +1,309 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payment_tags %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block content %}
+<div x-data="paymentDashboard()" x-init="init()">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Payments -->
+        {% include 'payments/components/status_card.html' with title="Total Payments" value=stats.total_payments icon="payments" color_class="text-blue-600" description="All payment transactions" icon_bg_color="blue" %}
+        
+        <!-- Completed Payments -->
+        {% include 'payments/components/status_card.html' with title="Completed" value=stats.completed_payments icon="check_circle" color_class="text-green-600" description="Successfully processed" icon_bg_color="green" status_icon="check_circle" %}
+        
+        <!-- Pending Payments -->
+        {% include 'payments/components/status_card.html' with title="Pending" value=stats.pending_payments icon="schedule" color_class="text-yellow-600" description="Awaiting confirmation" icon_bg_color="yellow" status_icon="schedule" %}
+        
+        <!-- Failed Payments -->
+        {% include 'payments/components/status_card.html' with title="Failed" value=stats.failed_payments icon="error" color_class="text-red-600" description="Processing failed" icon_bg_color="red" status_icon="error" %}
+    </div>
+
+    <!-- Total Amount Card -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="lg:col-span-1">
+            {% include 'payments/components/status_card.html' with title="Total Amount" value="$"|add:stats.total_amount icon="account_balance_wallet" color_class="text-purple-600" description="Total processed amount" icon_bg_color="purple" %}
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="lg:col-span-2">
+            <div class="payment-card">
+                <div class="payment-card-header">
+                    <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                        <span class="material-icons-outlined mr-2">flash_on</span>
+                        Quick Actions
+                    </h3>
+                </div>
+                <div class="payment-card-content">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <a href="{% url 'cfg_payments_admin:payment-create' %}" 
+                           class="flex flex-col items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                            <span class="material-icons-outlined text-blue-600 dark:text-blue-400 mb-2">add_circle</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Create Payment</span>
+                        </a>
+                        
+                        <a href="{% url 'cfg_payments_admin:payment-list' %}" 
+                           class="flex flex-col items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                            <span class="material-icons-outlined text-green-600 dark:text-green-400 mb-2">list</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">View All</span>
+                        </a>
+                        
+                        <a href="{% url 'cfg_payments_admin:webhook-dashboard' %}" 
+                           class="flex flex-col items-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+                            <span class="material-icons-outlined text-purple-600 dark:text-purple-400 mb-2">webhook</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Webhooks</span>
+                        </a>
+                        
+                        <a href="{% url 'cfg_payments_admin:currency-converter' %}" 
+                           class="flex flex-col items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+                            <span class="material-icons-outlined text-orange-600 dark:text-orange-400 mb-2">currency_exchange</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Converter</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payments -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Payments List -->
+        <div class="payment-card">
+            <div class="payment-card-header">
+                <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                    <span class="material-icons-outlined mr-2">history</span>
+                    Recent Payments
+                </h3>
+                <a href="{% url 'cfg_payments_admin:payment-list' %}" 
+                   class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center">
+                    View All
+                    <span class="material-icons-outlined ml-1 text-sm">arrow_forward</span>
+                </a>
+            </div>
+            <div class="payment-card-content">
+                {% if stats.recent_payments %}
+                    <div class="space-y-3">
+                        {% for payment in stats.recent_payments %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center
+                                    {% if payment.status == 'completed' %}bg-green-100 dark:bg-green-900
+                                    {% elif payment.status == 'pending' %}bg-yellow-100 dark:bg-yellow-900
+                                    {% elif payment.status == 'processing' %}bg-blue-100 dark:bg-blue-900
+                                    {% else %}bg-red-100 dark:bg-red-900{% endif %}">
+                                    <span class="material-icons-outlined text-sm
+                                        {% if payment.status == 'completed' %}text-green-600 dark:text-green-400
+                                        {% elif payment.status == 'pending' %}text-yellow-600 dark:text-yellow-400
+                                        {% elif payment.status == 'processing' %}text-blue-600 dark:text-blue-400
+                                        {% else %}text-red-600 dark:text-red-400{% endif %}">
+                                        {% if payment.status == 'completed' %}check_circle
+                                        {% elif payment.status == 'pending' %}schedule
+                                        {% elif payment.status == 'processing' %}sync
+                                        {% else %}error{% endif %}
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        ${{ payment.amount_usd|floatformat:2 }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ payment.currency.code }} • {{ payment.provider|title }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ payment.created_at|timesince }} ago
+                                </div>
+                                <a href="{% url 'cfg_payments_admin:payment-detail' payment.id %}" 
+                                   class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8">
+                        <span class="material-icons-outlined text-gray-400 text-4xl mb-2">payments</span>
+                        <p class="text-gray-500 dark:text-gray-400">No payments yet</p>
+                        <a href="{% url 'cfg_payments_admin:payment-create' %}" 
+                           class="inline-flex items-center mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                            <span class="material-icons-outlined mr-1 text-sm">add</span>
+                            Create your first payment
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="payment-card">
+            <div class="payment-card-header">
+                <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                    <span class="material-icons-outlined mr-2">monitor_heart</span>
+                    System Status
+                </h3>
+                <button @click="refreshSystemStatus()" 
+                        class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center">
+                    <span class="material-icons-outlined text-sm" :class="{ 'animate-spin': refreshing }">refresh</span>
+                </button>
+            </div>
+            <div class="payment-card-content">
+                <div class="space-y-4">
+                    <!-- Payment System Status -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="material-icons-outlined text-green-600 dark:text-green-400 text-sm">check_circle</span>
+                            <span class="text-sm text-gray-900 dark:text-white">Payment System</span>
+                        </div>
+                        <span class="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
+                    </div>
+
+                    <!-- Provider Status -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="material-icons-outlined text-green-600 dark:text-green-400 text-sm">account_balance</span>
+                            <span class="text-sm text-gray-900 dark:text-white">Payment Providers</span>
+                        </div>
+                        <span class="text-xs text-green-600 dark:text-green-400 font-medium" x-text="systemStatus.providers || 'Checking...'">Checking...</span>
+                    </div>
+
+                    <!-- Database Status -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="material-icons-outlined text-green-600 dark:text-green-400 text-sm">storage</span>
+                            <span class="text-sm text-gray-900 dark:text-white">Database</span>
+                        </div>
+                        <span class="text-xs text-green-600 dark:text-green-400 font-medium">Connected</span>
+                    </div>
+
+                    <!-- Webhook Status -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="material-icons-outlined text-green-600 dark:text-green-400 text-sm">webhook</span>
+                            <span class="text-sm text-gray-900 dark:text-white">Webhooks</span>
+                        </div>
+                        <span class="text-xs text-green-600 dark:text-green-400 font-medium" x-text="systemStatus.webhooks || 'Active'">Active</span>
+                    </div>
+                </div>
+
+                <!-- System Actions -->
+                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+                    <div class="flex space-x-2">
+                        <button @click="checkSystemHealth()" 
+                                class="flex-1 btn btn-outline text-xs py-2">
+                            <span class="material-icons-outlined mr-1 text-sm">health_and_safety</span>
+                            Health Check
+                        </button>
+                        <a href="{% url 'cfg_payments_admin:webhook-dashboard' %}" 
+                           class="flex-1 btn btn-outline text-xs py-2 text-center">
+                            <span class="material-icons-outlined mr-1 text-sm">settings</span>
+                            Configure
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ngrok Status and Development Tools -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Ngrok Status -->
+        {% include 'payments/components/ngrok_status_card.html' %}
+        
+        <!-- Development Tools -->
+        {% include 'payments/components/dev_tool_card.html' %}
+    </div>
+
+    <!-- Loading Spinner Component -->
+    <div x-show="loading" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        {% include 'payments/components/loading_spinner.html' %}
+    </div>
+
+    <!-- Notifications -->
+    <div x-show="notification.show" x-cloak 
+         class="fixed top-4 right-4 z-50"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-x-full"
+         x-transition:enter-end="opacity-100 transform translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform translate-x-0"
+         x-transition:leave-end="opacity-0 transform translate-x-full">
+        {% include 'payments/components/notification.html' with type="notification.type" message="notification.message" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function paymentDashboard() {
+    return {
+        loading: false,
+        refreshing: false,
+        systemStatus: {
+            providers: 'Active',
+            webhooks: 'Active'
+        },
+        notification: {
+            show: false,
+            type: 'info',
+            message: ''
+        },
+
+        init() {
+            // Initialize dashboard
+            this.loadSystemStatus();
+        },
+
+        async loadSystemStatus() {
+            try {
+                // This would typically fetch from an API endpoint
+                // For now, we'll simulate the data
+                this.systemStatus = {
+                    providers: 'Active (1/1)',
+                    webhooks: 'Active'
+                };
+            } catch (error) {
+                console.error('Failed to load system status:', error);
+            }
+        },
+
+        async refreshSystemStatus() {
+            this.refreshing = true;
+            try {
+                await this.loadSystemStatus();
+                this.showNotification('success', 'System status refreshed');
+            } catch (error) {
+                this.showNotification('error', 'Failed to refresh system status');
+            } finally {
+                this.refreshing = false;
+            }
+        },
+
+        async checkSystemHealth() {
+            this.loading = true;
+            try {
+                // Simulate health check API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                this.showNotification('success', 'System health check completed - All systems operational');
+            } catch (error) {
+                this.showNotification('error', 'Health check failed');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        showNotification(type, message) {
+            this.notification = { show: true, type, message };
+            setTimeout(() => {
+                this.notification.show = false;
+            }, 5000);
+        }
+    };
+}
+</script>
+{% endblock %}

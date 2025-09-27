@@ -37,8 +37,8 @@ class PaymentViewSet(PaymentBaseViewSet):
     
     queryset = UniversalPayment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAdminUser]  # Admin only for global access
-    filterset_fields = ['status', 'provider', 'currency_code', 'user']
+    permission_classes = [permissions.IsAuthenticated]  # Allow authenticated users
+    filterset_fields = ['status', 'provider', 'currency__code', 'user']
     search_fields = ['description', 'provider_payment_id', 'transaction_hash']
     ordering_fields = ['created_at', 'updated_at', 'amount_usd', 'expires_at']
     
@@ -52,9 +52,15 @@ class PaymentViewSet(PaymentBaseViewSet):
     
     def get_queryset(self):
         """Optimized queryset with related objects."""
-        return super().get_queryset().select_related('user').prefetch_related(
-            'user__userbalance_set'
+        queryset = super().get_queryset().select_related('user').prefetch_related(
+            'user__payment_balance'
         )
+        
+        # Non-staff users can only see their own payments
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(user=self.request.user)
+        
+        return queryset
     
     @action(detail=True, methods=['post'])
     def check_status(self, request, pk=None):
@@ -178,7 +184,7 @@ class UserPaymentViewSet(NestedPaymentViewSet):
     queryset = UniversalPayment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['status', 'provider', 'currency_code']
+    filterset_fields = ['status', 'provider', 'currency__code']
     search_fields = ['description', 'provider_payment_id']
     ordering_fields = ['created_at', 'updated_at', 'amount_usd', 'expires_at']
     

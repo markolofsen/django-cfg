@@ -1,0 +1,35 @@
+{% comment %}
+Status Card Component with Material Icons
+
+Usage:
+{% include 'payments/components/status_card.html' with title="Ngrok Status" value="Active" icon="language" color_class="text-green-600" description="Tunnel URL available" %}
+
+Available icons: Material Icons names (e.g., "language", "payment", "check_circle", "error", "warning")
+{% endcomment %}
+
+<div class="status-card status-card-{{ icon_bg_color|default:'blue' }}">
+    <div class="status-card-content">
+        <div class="status-card-icon">
+            <span class="material-icons-outlined">{{ icon|default:'analytics' }}</span>
+        </div>
+        <div class="status-card-info">
+            <h3 class="status-card-title">{{ title }}</h3>
+            <div class="status-card-value">
+                {{ value }}
+                {% if status_icon %}
+                <span class="material-icons-outlined status-icon">{{ status_icon }}</span>
+                {% endif %}
+            </div>
+            {% if description %}
+            <p class="status-card-description">{{ description }}</p>
+            {% endif %}
+        </div>
+        {% if action_url %}
+        <div class="status-card-action">
+            <a href="{{ action_url }}" class="status-card-action-btn">
+                <span class="material-icons-outlined">{{ action_icon|default:'open_in_new' }}</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>

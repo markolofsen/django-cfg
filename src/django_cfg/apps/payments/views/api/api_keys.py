@@ -11,6 +11,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .base import PaymentBaseViewSet, NestedPaymentViewSet, ReadOnlyPaymentViewSet
 from ...models import APIKey
@@ -21,6 +22,7 @@ from ..serializers.api_keys import (
     APIKeyUpdateSerializer,
     APIKeyActionSerializer,
     APIKeyValidationSerializer,
+    APIKeyValidationResponseSerializer,
     APIKeyStatsSerializer,
 )
 from django_cfg.modules.django_logger import get_logger
@@ -78,6 +80,12 @@ class APIKeyViewSet(PaymentBaseViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        summary="Validate API Key",
+        description="Validate an API key and return key information",
+        request=APIKeyValidationSerializer,
+        responses={200: APIKeyValidationResponseSerializer}
+    )
     @action(detail=False, methods=['post'])
     def validate_key(self, request):
         """
@@ -376,6 +384,12 @@ class APIKeyValidateView(generics.GenericAPIView):
     serializer_class = APIKeyValidationSerializer
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        summary="Validate API Key (Standalone)",
+        description="Standalone endpoint to validate an API key and return key information",
+        request=APIKeyValidationSerializer,
+        responses={200: APIKeyValidationResponseSerializer}
+    )
     def post(self, request, *args, **kwargs):
         """Validate API key."""
         serializer = self.get_serializer(data=request.data)

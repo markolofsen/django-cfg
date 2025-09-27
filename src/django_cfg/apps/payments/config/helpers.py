@@ -33,8 +33,8 @@ class MiddlewareConfigHelper(PaymentsConfigMixin):
         return {
             # Static settings from django-cfg
             'enabled': config.enabled and config.middleware_enabled,
-            'api_prefixes': config.api_prefixes,
-            'exempt_paths': config.exempt_paths,
+            'protected_paths': config.protected_paths,
+            'protected_patterns': config.protected_patterns,
             'rate_limiting_enabled': config.rate_limiting_enabled,
             'default_rate_limits': config.default_rate_limits,
             'usage_tracking_enabled': config.usage_tracking_enabled,

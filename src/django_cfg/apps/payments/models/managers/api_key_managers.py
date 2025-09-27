@@ -93,6 +93,10 @@ class APIKeyManager(models.Manager):
         """Get API keys expiring soon."""
         return self.get_queryset().expiring_soon(days)
     
+    def by_user(self, user):
+        """Get API keys by user."""
+        return self.get_queryset().by_user(user)
+    
     # Business logic methods
     def increment_api_key_usage(self, api_key_id, ip_address=None):
         """
@@ -230,7 +234,7 @@ class APIKeyManager(models.Manager):
             logger.info(f"Created API key for user", extra={
                 'api_key_id': str(api_key.id),
                 'user_id': user.id,
-                'name': name,
+                'key_name': name,
                 'expires_in_days': expires_in_days
             })
             
@@ -239,7 +243,7 @@ class APIKeyManager(models.Manager):
         except Exception as e:
             logger.error(f"Failed to create API key: {e}", extra={
                 'user_id': user.id,
-                'name': name
+                'key_name': name
             })
             raise
     

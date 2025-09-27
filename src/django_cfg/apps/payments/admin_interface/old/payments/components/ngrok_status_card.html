@@ -1,0 +1,113 @@
+{% comment %}
+Ngrok Status Card Component
+
+Displays ngrok tunnel status with real-time updates
+{% endcomment %}
+
+<div class="payment-card" x-data="(window.ngrokStatus || window.PaymentSystem?.Components?.ngrokStatus)()" x-init="init()">
+    <div class="payment-card-header">
+        <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+            <span class="material-icons-outlined mr-2">language</span>
+            Ngrok Tunnel
+        </h3>
+        <button @click="refreshStatus()" 
+                class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center">
+            <span class="material-icons-outlined text-sm" :class="{ 'animate-spin': refreshing }">refresh</span>
+        </button>
+    </div>
+    <div class="payment-card-content">
+        <div class="space-y-4">
+            <!-- Tunnel Status -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="status-indicator" :class="{
+                        'status-active': status.active,
+                        'status-inactive': !status.active
+                    }"></span>
+                    <span class="text-sm text-gray-900 dark:text-white">Tunnel Status</span>
+                </div>
+                <span class="text-xs font-medium" :class="{
+                    'text-green-600 dark:text-green-400': status.active,
+                    'text-red-600 dark:text-red-400': !status.active
+                }" x-text="status.active ? 'Active' : 'Inactive'">Checking...</span>
+            </div>
+
+            <!-- Public URL -->
+            <div x-show="status.active && status.public_url" class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Public URL:</span>
+                    <button @click="copyUrl()" 
+                            class="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            title="Copy URL">
+                        <span class="material-icons-outlined text-sm">content_copy</span>
+                    </button>
+                </div>
+                <div class="code-block text-xs break-all" x-text="status.public_url">
+                    Loading...
+                </div>
+            </div>
+
+            <!-- Webhook URL -->
+            <div x-show="status.active && status.webhook_url" class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Webhook URL:</span>
+                    <button @click="copyWebhookUrl()" 
+                            class="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            title="Copy Webhook URL">
+                        <span class="material-icons-outlined text-sm">content_copy</span>
+                    </button>
+                </div>
+                <div class="code-block text-xs break-all" x-text="status.webhook_url">
+                    Loading...
+                </div>
+            </div>
+
+            <!-- Connection Info -->
+            <div x-show="status.active" class="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Region:</span>
+                    <span class="text-gray-900 dark:text-white ml-1" x-text="status.region || 'us'">us</span>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Protocol:</span>
+                    <span class="text-gray-900 dark:text-white ml-1" x-text="status.proto || 'https'">https</span>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div x-show="!status.active && status.error" class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                <span class="material-icons-outlined mr-1 text-sm">error</span>
+                <span x-text="status.error">Connection failed</span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <div class="flex space-x-2">
+                <button @click="startTunnel()" 
+                        x-show="!status.active"
+                        class="flex-1 btn btn-primary text-xs py-2">
+                    <span class="material-icons-outlined mr-1 text-sm">play_arrow</span>
+                    Start Tunnel
+                </button>
+                <button @click="stopTunnel()" 
+                        x-show="status.active"
+                        class="flex-1 btn btn-danger text-xs py-2">
+                    <span class="material-icons-outlined mr-1 text-sm">stop</span>
+                    Stop Tunnel
+                </button>
+                <a href="#" @click.prevent="openInBrowser()" 
+                   x-show="status.active && status.public_url"
+                   class="flex-1 btn btn-outline text-xs py-2 text-center">
+                    <span class="material-icons-outlined mr-1 text-sm">open_in_new</span>
+                    Open
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% comment %}
+JavaScript for this component is loaded from:
+{% load static %}{% static 'payments/js/ngrok-status.js' %}
+{% endcomment %}

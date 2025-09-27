@@ -44,8 +44,8 @@ class APIAccessMiddleware(MiddlewareMixin):
             
             # Configuration from django-cfg
             self.enabled = middleware_config['enabled']
-            self.api_prefixes = middleware_config['api_prefixes']
-            self.exempt_paths = middleware_config['exempt_paths']
+            self.protected_paths = middleware_config.get('protected_paths', [])
+            self.protected_patterns_raw = middleware_config.get('protected_patterns', [])
             self.cache_timeout = middleware_config['cache_timeouts']['api_key']
             
             # Default settings (can be overridden by Constance)
@@ -61,29 +61,32 @@ class APIAccessMiddleware(MiddlewareMixin):
             
         except Exception as e:
             logger.warning(f"Failed to load middleware config, using defaults: {e}")
-            # Fallback defaults
+            # Fallback defaults - whitelist approach
             self.enabled = True
-            self.api_prefixes = ['/api/']
-            self.exempt_paths = ['/api/health/', '/admin/']
+            self.protected_paths = [
+                '/api/admin/',  # Admin API endpoints
+                '/api/private/',  # Private API endpoints
+                '/api/secure/',  # Secure API endpoints
+            ]
+            self.protected_patterns_raw = [
+                r'^/api/admin/.*$',  # All admin API endpoints
+                r'^/api/private/.*$',  # All private API endpoints  
+                r'^/api/secure/.*$',  # All secure API endpoints
+            ]
             self.cache_timeout = 300
             self.strict_mode = False
             self.require_api_key = True
         
-        # Compile exempt path patterns (static for now)
-        self.exempt_patterns = [
-            re.compile(pattern) for pattern in [
-                r'^/api/payments/[^/]+/status/$',
-                r'^/api/webhooks/[^/]+/$',
-                r'^/api/payments/webhooks/(providers|health|stats)/$',  # Admin webhook endpoints
-                r'^/api/currencies/(rates|supported|convert)/$',
-            ]
+        # Compile protected path patterns
+        self.protected_patterns = [
+            re.compile(pattern) for pattern in self.protected_patterns_raw
         ]
         
         logger.info(f"API Access Middleware initialized", extra={
             'enabled': self.enabled,
             'strict_mode': self.strict_mode,
             'require_api_key': self.require_api_key,
-            'api_prefixes': self.api_prefixes
+            'protected_paths': self.protected_paths
         })
     
     def process_request(self, request: HttpRequest) -> Optional[JsonResponse]:
@@ -95,8 +98,8 @@ class APIAccessMiddleware(MiddlewareMixin):
         if not self.enabled:
             return None
         
-        # Check if this path requires authentication
-        if not self._requires_authentication(request.path):
+        # Check if this path is protected (whitelist approach)
+        if not self._is_protected_path(request.path):
             return None
         
         # Start timing for performance monitoring
@@ -177,26 +180,24 @@ class APIAccessMiddleware(MiddlewareMixin):
                 # Graceful degradation: allow access but log the issue
                 return None
     
-    def _requires_authentication(self, path: str) -> bool:
+    def _is_protected_path(self, path: str) -> bool:
         """
-        Check if the given path requires API authentication.
+        Check if the given path is protected and requires API authentication.
+        
+        Whitelist approach: only paths explicitly listed as protected require API key.
         """
-        # Check if path starts with API prefix
-        requires_auth = any(path.startswith(prefix) for prefix in self.api_prefixes)
+        # Check exact protected paths
+        for protected_path in self.protected_paths:
+            if path.startswith(protected_path):
+                return True
         
-        if not requires_auth:
-            return False
-        
-        # Check exempt paths
-        if path in self.exempt_paths:
-            return False
-        
-        # Check exempt patterns
-        for pattern in self.exempt_patterns:
+        # Check protected patterns
+        for pattern in self.protected_patterns:
             if pattern.match(path):
-                return False
+                return True
         
-        return True
+        # Path is not protected - no API key required
+        return False
     
     def _extract_api_key(self, request: HttpRequest) -> Optional[str]:
         """
@@ -300,7 +301,7 @@ class APIAccessMiddleware(MiddlewareMixin):
                 user=api_key.user,
                 status=Subscription.SubscriptionStatus.ACTIVE,
                 expires_at__gt=timezone.now()
-            ).select_related('tariff', 'endpoint_group')
+            ).prefetch_related('endpoint_groups')
             
             if not active_subscriptions.exists():
                 return {
@@ -319,8 +320,8 @@ class APIAccessMiddleware(MiddlewareMixin):
                 'allowed': True,
                 'subscription_id': str(subscription.id),
                 'tier': subscription.tier,
-                'tariff_name': subscription.tariff.name if subscription.tariff else None,
-                'requests_remaining': subscription.requests_remaining(),
+                'tier_name': subscription.tier,
+                'requests_remaining': 'unlimited',  # TODO: Implement rate limiting per subscription
                 'expires_at': subscription.expires_at.isoformat() if subscription.expires_at else None
             }
             

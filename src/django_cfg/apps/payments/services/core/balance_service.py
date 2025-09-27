@@ -5,9 +5,11 @@ Handles user balance operations and transaction management.
 """
 
 from typing import Optional, Dict, Any, List
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
+
+User = get_user_model()
 
 from .base import BaseService
 from ..types import (
@@ -141,7 +143,16 @@ class BalanceService(BaseService):
             
             # Convert to response data
             balance_data = BalanceData.model_validate(balance)
-            transaction_data = TransactionData.model_validate(transaction)
+            transaction_data = TransactionData(
+                id=str(transaction.id),
+                user_id=transaction.user_id,
+                amount=float(transaction.amount_usd),
+                transaction_type=transaction.transaction_type,
+                description=transaction.description,
+                payment_id=transaction.payment_id,
+                metadata=transaction.metadata or {},
+                created_at=transaction.created_at
+            )
             
             self._log_operation(
                 "update_balance",

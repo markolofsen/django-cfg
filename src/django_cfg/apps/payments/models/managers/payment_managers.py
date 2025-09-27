@@ -244,6 +244,11 @@ class PaymentManager(models.Manager):
         """Get active payments."""
         return self.get_queryset().active()
     
+    # User-based methods
+    def by_user(self, user):
+        """Get payments by user."""
+        return self.get_queryset().by_user(user)
+    
     # Provider-based methods
     def by_provider(self, provider):
         """Get payments by provider."""

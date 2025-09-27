@@ -544,7 +544,7 @@ class SubscriptionManager(models.Manager):
             else:
                 subscription = subscription_id
             
-            subscription.status = subscription.model.SubscriptionStatus.CANCELLED
+            subscription.status = self.model.SubscriptionStatus.CANCELLED
             subscription.save(update_fields=['status', 'updated_at'])
             
             logger.info(f"Subscription cancelled", extra={
@@ -580,7 +580,7 @@ class SubscriptionManager(models.Manager):
             
             from datetime import timedelta
             
-            if subscription.is_expired:
+            if subscription.expires_at <= timezone.now():
                 # If expired, start from now
                 subscription.starts_at = timezone.now()
                 subscription.expires_at = subscription.starts_at + timedelta(days=duration_days)
@@ -588,7 +588,7 @@ class SubscriptionManager(models.Manager):
                 # If not expired, extend from current expiration
                 subscription.expires_at += timedelta(days=duration_days)
             
-            subscription.status = subscription.model.SubscriptionStatus.ACTIVE
+            subscription.status = self.model.SubscriptionStatus.ACTIVE
             subscription.save(update_fields=['starts_at', 'expires_at', 'status', 'updated_at'])
             
             logger.info(f"Subscription renewed", extra={

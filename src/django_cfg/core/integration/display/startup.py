@@ -122,7 +122,7 @@ class StartupDisplayManager(BaseDisplayManager):
         info_table.add_row("🏗️ Project", self.config.project_name)
         
         # Add environment source
-        env_source = getattr(self.config, '_environment', 'default_fallback')
+        env_source = getattr(self.config, 'env_mode', 'default_fallback')
         info_table.add_row("🔍 Env Source", env_source)
         
         info_table.add_row("🌐 Site", LIB_SITE_URL)

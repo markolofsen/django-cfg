@@ -25,21 +25,22 @@ class PaymentListSerializer(serializers.ModelSerializer):
     """
     
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    amount_display = serializers.CharField(source='amount_display', read_only=True)
-    crypto_amount_display = serializers.CharField(source='crypto_amount_display', read_only=True)
+    amount_display = serializers.SerializerMethodField(read_only=True)
+    
+    def get_amount_display(self, obj):
+        """Get formatted amount display."""
+        return f"${obj.amount_usd:.2f}"
     
     class Meta:
         model = UniversalPayment
         fields = [
             'id',
             'amount_usd',
-            'crypto_amount',
-            'currency_code',
+            'currency',
             'provider',
             'status',
             'status_display',
             'amount_display',
-            'crypto_amount_display',
             'created_at',
             'expires_at',
         ]
@@ -55,17 +56,33 @@ class PaymentSerializer(serializers.ModelSerializer):
     
     user = serializers.StringRelatedField(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    status_color = serializers.CharField(source='status_color', read_only=True)
-    amount_display = serializers.CharField(source='amount_display', read_only=True)
-    crypto_amount_display = serializers.CharField(source='crypto_amount_display', read_only=True)
+    amount_display = serializers.SerializerMethodField(read_only=True)
     
     # Status check methods
-    is_pending = serializers.BooleanField(source='is_pending', read_only=True)
-    is_completed = serializers.BooleanField(source='is_completed', read_only=True)
-    is_failed = serializers.BooleanField(source='is_failed', read_only=True)
-    is_expired = serializers.BooleanField(source='is_expired', read_only=True)
-    can_be_cancelled = serializers.BooleanField(source='can_be_cancelled', read_only=True)
-    can_be_refunded = serializers.BooleanField(source='can_be_refunded', read_only=True)
+    is_pending = serializers.SerializerMethodField(read_only=True)
+    is_completed = serializers.SerializerMethodField(read_only=True)
+    is_failed = serializers.SerializerMethodField(read_only=True)
+    is_expired = serializers.SerializerMethodField(read_only=True)
+    
+    def get_amount_display(self, obj):
+        """Get formatted amount display."""
+        return f"${obj.amount_usd:.2f}"
+    
+    def get_is_pending(self, obj):
+        """Check if payment is pending."""
+        return obj.status == obj.PaymentStatus.PENDING
+    
+    def get_is_completed(self, obj):
+        """Check if payment is completed."""
+        return obj.status == obj.PaymentStatus.COMPLETED
+    
+    def get_is_failed(self, obj):
+        """Check if payment is failed."""
+        return obj.status == obj.PaymentStatus.FAILED
+    
+    def get_is_expired(self, obj):
+        """Check if payment is expired."""
+        return obj.status == obj.PaymentStatus.EXPIRED
     
     class Meta:
         model = UniversalPayment
@@ -73,24 +90,20 @@ class PaymentSerializer(serializers.ModelSerializer):
             'id',
             'user',
             'amount_usd',
-            'crypto_amount',
-            'currency_code',
+            'currency',
+            'network',
             'provider',
             'status',
             'status_display',
-            'status_color',
             'amount_display',
-            'crypto_amount_display',
             'provider_payment_id',
             'payment_url',
-            'qr_code_url',
-            'wallet_address',
+            'pay_address',
             'callback_url',
             'cancel_url',
             'description',
-            'metadata',
             'transaction_hash',
-            'confirmation_blocks',
+            'confirmations_count',
             'created_at',
             'updated_at',
             'expires_at',
@@ -100,32 +113,24 @@ class PaymentSerializer(serializers.ModelSerializer):
             'is_completed',
             'is_failed',
             'is_expired',
-            'can_be_cancelled',
-            'can_be_refunded',
         ]
         read_only_fields = [
             'id',
             'user',
-            'crypto_amount',
             'provider_payment_id',
             'payment_url',
-            'qr_code_url',
-            'wallet_address',
+            'pay_address',
             'transaction_hash',
-            'confirmation_blocks',
+            'confirmations_count',
             'created_at',
             'updated_at',
             'completed_at',
             'status_display',
-            'status_color',
             'amount_display',
-            'crypto_amount_display',
             'is_pending',
             'is_completed',
             'is_failed',
             'is_expired',
-            'can_be_cancelled',
-            'can_be_refunded',
         ]
 
 

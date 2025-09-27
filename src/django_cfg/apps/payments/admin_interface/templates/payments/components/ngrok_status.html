@@ -1,0 +1,175 @@
+{% comment %}
+Ngrok Status Component
+Shows ngrok tunnel status with real-time updates
+{% endcomment %}
+
+<div class="bg-white dark:bg-gray-800 shadow rounded-lg" x-data="ngrokStatus()" x-init="init()">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons-outlined mr-2">language</span>
+                Ngrok Tunnel
+            </h3>
+            <div class="flex items-center space-x-2">
+                <button @click="refreshStatus()" 
+                        class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                    <span class="material-icons-outlined" :class="{ 'animate-spin': loading }">refresh</span>
+                </button>
+                <button x-show="!status.active" 
+                        @click="showNgrokHelp = true"
+                        class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
+                    <span class="material-icons-outlined">help</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="p-6">
+        <!-- Status Indicator -->
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full mr-2"
+                     :class="status.active ? 'bg-green-500' : 'bg-red-500'"></div>
+                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                    Status: <span :class="status.active ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" 
+                                  x-text="status.active ? 'Active' : 'Inactive'"></span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Public URL -->
+        <div x-show="status.active && status.public_url" class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Public URL
+            </label>
+            <div class="flex items-center">
+                <input type="text" 
+                       :value="status.public_url" 
+                       readonly
+                       class="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md text-gray-900 dark:text-white">
+                <button @click="copyUrl()" 
+                        class="px-3 py-2 bg-blue-600 text-white text-sm rounded-r-md hover:bg-blue-700">
+                    <span class="material-icons-outlined text-sm">content_copy</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Webhook URL -->
+        <div x-show="status.active && status.webhook_url" class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Webhook URL
+            </label>
+            <div class="flex items-center">
+                <input type="text" 
+                       :value="status.webhook_url" 
+                       readonly
+                       class="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md text-gray-900 dark:text-white">
+                <button @click="copyWebhookUrl()" 
+                        class="px-3 py-2 bg-blue-600 text-white text-sm rounded-r-md hover:bg-blue-700">
+                    <span class="material-icons-outlined text-sm">content_copy</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div x-show="!status.active && status.error" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+            <div class="flex items-center">
+                <span class="material-icons-outlined text-red-600 dark:text-red-400 mr-2">error</span>
+                <span class="text-sm text-red-800 dark:text-red-400" x-text="status.error"></span>
+            </div>
+        </div>
+
+        <!-- Inactive Ngrok Help -->
+        <div x-show="!status.active" class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <div class="flex items-start">
+                <span class="material-icons-outlined text-blue-600 dark:text-blue-400 mr-2 mt-0.5">info</span>
+                <div class="flex-1">
+                    <div class="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                        Ngrok tunnel is not active. To enable webhook testing, restart your server with:
+                    </div>
+                    <div class="bg-gray-900 rounded px-3 py-2 font-mono text-sm text-green-400 mb-2">
+                        python manage.py runserver_ngrok
+                    </div>
+                    <button @click="showNgrokHelp = true" 
+                            class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center">
+                        <span class="material-icons-outlined mr-1 text-sm">help</span>
+                        View detailed instructions
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end" x-show="status.active && status.public_url">
+            <button @click="openTunnel()" 
+                    class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center">
+                <span class="material-icons-outlined mr-1 text-sm">open_in_new</span>
+                Open Tunnel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function ngrokStatus() {
+    return {
+        loading: false,
+        status: {
+            active: false,
+            public_url: '',
+            webhook_url: '',
+            error: null
+        },
+
+        async init() {
+            await this.refreshStatus();
+        },
+
+        async refreshStatus() {
+            this.loading = true;
+            try {
+                const response = await fetch('/cfg/admin/django_cfg_payments/admin/ngrok/status/');
+                if (response.ok) {
+                    this.status = await response.json();
+                }
+            } catch (error) {
+                console.error('Failed to fetch ngrok status:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async startTunnel() {
+            this.loading = true;
+            try {
+                const response = await fetch('/cfg/admin/django_cfg_payments/admin/ngrok/start/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                if (response.ok) {
+                    await this.refreshStatus();
+                }
+            } catch (error) {
+                console.error('Failed to start ngrok:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+
+        copyUrl() {
+            navigator.clipboard.writeText(this.status.public_url);
+        },
+
+        copyWebhookUrl() {
+            navigator.clipboard.writeText(this.status.webhook_url);
+        },
+
+        openTunnel() {
+            window.open(this.status.public_url, '_blank');
+        }
+    };
+}
+</script>

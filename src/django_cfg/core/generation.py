@@ -179,7 +179,7 @@ class SettingsGenerator:
                 # Apply database defaults for each database based on its engine
                 for alias, db_config in config.databases.items():
                     db_defaults = SmartDefaults.get_database_defaults(
-                        config._environment, 
+                        config.env_mode, 
                         config.debug, 
                         db_config.engine
                     )
@@ -219,17 +219,17 @@ class SettingsGenerator:
 
             # Default cache - always provide one
             if config.cache_default:
-                caches["default"] = config.cache_default.to_django_config(config._environment, config.debug, "default")
+                caches["default"] = config.cache_default.to_django_config(config.env_mode, config.debug, "default")
             else:
                 # Create default cache backend
                 from django_cfg.models.cache import CacheConfig
 
                 default_cache = CacheConfig()
-                caches["default"] = default_cache.to_django_config(config._environment, config.debug, "default")
+                caches["default"] = default_cache.to_django_config(config.env_mode, config.debug, "default")
 
             # Sessions cache
             if config.cache_sessions:
-                caches["sessions"] = config.cache_sessions.to_django_config(config._environment, config.debug, "sessions")
+                caches["sessions"] = config.cache_sessions.to_django_config(config.env_mode, config.debug, "sessions")
 
                 # Configure Django to use cache for sessions (can be overridden)
                 settings["SESSION_ENGINE"] = "django.contrib.sessions.backends.cache"
@@ -241,7 +241,7 @@ class SettingsGenerator:
                     cache_obj = getattr(config, attr_name)
                     if hasattr(cache_obj, "to_django_config"):
                         cache_alias = attr_name.replace("cache_", "")
-                        caches[cache_alias] = cache_obj.to_django_config(config._environment, config.debug, cache_alias)
+                        caches[cache_alias] = cache_obj.to_django_config(config.env_mode, config.debug, cache_alias)
 
             if caches:
                 settings["CACHES"] = caches
@@ -261,7 +261,7 @@ class SettingsGenerator:
             if config.security_domains or config.ssl_redirect is not None:
                 security_defaults = SmartDefaults.get_security_defaults(
                     config.security_domains, 
-                    config._environment, 
+                    config.env_mode, 
                     config.debug,
                     config.ssl_redirect,
                     config.cors_allow_headers
@@ -275,12 +275,12 @@ class SettingsGenerator:
                     pass
 
             # Additional security settings for production
-            if config._environment == "production":
+            if config.env_mode == "production":
                 settings.update(
                     {
-                        "SESSION_COOKIE_AGE": 86400,  # 24 hours
+                        "SESSION_COOKIE_AGE": 2592000,  # 30 days (30 * 24 * 60 * 60)
                         "SESSION_SAVE_EVERY_REQUEST": True,
-                        "SESSION_EXPIRE_AT_BROWSER_CLOSE": True,
+                        "SESSION_EXPIRE_AT_BROWSER_CLOSE": False,  # Allow persistent sessions
                     }
                 )
 
@@ -296,7 +296,7 @@ class SettingsGenerator:
             settings = {}
 
             if config.email:
-                email_settings = config.email.to_django_config(config._environment, config.debug)
+                email_settings = config.email.to_django_config(config.env_mode, config.debug)
                 settings.update(email_settings)
 
             return settings
@@ -311,7 +311,7 @@ class SettingsGenerator:
             settings = {}
 
             # Generate logging defaults
-            logging_defaults = SmartDefaults.get_logging_defaults(config._environment, config.debug)
+            logging_defaults = SmartDefaults.get_logging_defaults(config.env_mode, config.debug)
 
             if logging_defaults:
                 settings["LOGGING"] = logging_defaults
@@ -370,7 +370,7 @@ class SettingsGenerator:
             }
 
             # Adjust for different environments
-            if config._environment == "development":
+            if config.env_mode == "development":
                 settings["USE_L10N"] = True  # Deprecated but sometimes needed
 
             return settings

@@ -43,7 +43,7 @@ def handle_api_key_changes(sender, instance: APIKey, created: bool, **kwargs):
         logger.info(f"New API key created", extra={
             'api_key_id': str(instance.id),
             'user_id': instance.user.id,
-            'name': instance.name,
+            'key_name': instance.name,
             'expires_at': instance.expires_at.isoformat() if instance.expires_at else None
         })
         
@@ -52,7 +52,7 @@ def handle_api_key_changes(sender, instance: APIKey, created: bool, **kwargs):
             f"api_key_created:{instance.user.id}:{instance.id}",
             {
                 'api_key_id': str(instance.id),
-                'name': instance.name,
+                'key_name': instance.name,
                 'timestamp': timezone.now().isoformat()
             },
             timeout=86400  # 24 hours

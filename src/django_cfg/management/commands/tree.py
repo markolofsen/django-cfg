@@ -97,9 +97,7 @@ class Command(BaseCommand):
             
             # Try to get environment info
             try:
-                env_info = getattr(config, 'environment', 'unknown')
-                if hasattr(config, '_environment'):
-                    env_info = config._environment or 'unknown'
+                env_info = getattr(config, 'env_mode', 'unknown')
                 self.stdout.write(
                     self.style.HTTP_INFO(f"🔧 Environment: {env_info}")
                 )

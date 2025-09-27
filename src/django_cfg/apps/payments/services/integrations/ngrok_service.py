@@ -39,9 +39,9 @@ def get_api_base_url() -> str:
 
 
 def is_ngrok_available() -> bool:
-    """Check if ngrok tunnel is available."""
+    """Check if ngrok tunnel is actually active."""
     try:
-        from django_cfg.modules.django_ngrok import get_tunnel_url
-        return get_tunnel_url() is not None
+        from django_cfg.modules.django_ngrok import is_tunnel_active
+        return is_tunnel_active()
     except ImportError:
         return False

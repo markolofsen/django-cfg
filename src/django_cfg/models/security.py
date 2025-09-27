@@ -22,6 +22,20 @@ class SecurityConfig(BaseConfig):
     cors_allow_all_origins: bool = Field(default=False, description="Allow all origins (dev only)")
     cors_allowed_origins: List[str] = Field(default_factory=list, description="Allowed CORS origins")
     cors_allow_credentials: bool = Field(default=True, description="Allow CORS credentials")
+    cors_allow_headers: List[str] = Field(
+        default_factory=lambda: [
+            "accept",
+            "accept-encoding", 
+            "authorization",
+            "content-type",
+            "dnt",
+            "origin",
+            "user-agent",
+            "x-csrftoken",
+            "x-requested-with",
+        ],
+        description="CORS allowed headers with common defaults for API usage",
+    )
     
     # CSRF settings
     csrf_enabled: bool = Field(default=True, description="Enable CSRF protection")
@@ -85,6 +99,7 @@ class SecurityConfig(BaseConfig):
                 'CORS_ALLOW_ALL_ORIGINS': self.cors_allow_all_origins,
                 'CORS_ALLOWED_ORIGINS': self.cors_allowed_origins,
                 'CORS_ALLOW_CREDENTIALS': self.cors_allow_credentials,
+                'CORS_ALLOW_HEADERS': self.cors_allow_headers,
             })
             
             # Add corsheaders to middleware if not present

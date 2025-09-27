@@ -32,6 +32,7 @@ class PaymentBaseViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     ordering = ['-created_at']
+    versioning_class = None  # Disable versioning for payments API
     
     # Serializer classes mapping for different actions
     serializer_classes = {}

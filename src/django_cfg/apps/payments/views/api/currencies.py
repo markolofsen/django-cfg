@@ -195,7 +195,7 @@ class NetworkViewSet(ReadOnlyPaymentViewSet):
     queryset = Network.objects.filter(is_active=True)
     serializer_class = NetworkSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['currency', 'is_active']
+    filterset_fields = ['native_currency__code', 'is_active']
     search_fields = ['name', 'code']
     ordering_fields = ['name', 'code', 'created_at']
     
@@ -251,7 +251,7 @@ class ProviderCurrencyViewSet(ReadOnlyPaymentViewSet):
     queryset = ProviderCurrency.objects.filter(is_enabled=True)
     serializer_class = ProviderCurrencySerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['provider', 'currency', 'network', 'is_enabled']
+    filterset_fields = ['provider', 'currency__code', 'network__code', 'is_enabled']
     search_fields = ['provider_currency_code']
     ordering_fields = ['provider', 'created_at', 'min_amount', 'max_amount']
     

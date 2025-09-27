@@ -305,18 +305,18 @@ class Command(BaseCommand):
         self.stdout.write(f"   Enabled: {enabled_provider_currencies}")
         
         # Stats by provider
-        from django.db.models import Count
+        from django.db.models import Count, Q
         
-        provider_stats = ProviderCurrency.objects.values('provider_name').annotate(
+        provider_stats = ProviderCurrency.objects.values('provider').annotate(
             total=Count('id'),
-            enabled=Count('id', filter=models.Q(is_enabled=True))
+            enabled=Count('id', filter=Q(is_enabled=True))
         ).order_by('-total')
         
         if provider_stats:
             self.stdout.write(f"\n📈 By Provider:")
             for stat in provider_stats:
                 self.stdout.write(
-                    f"   - {stat['provider_name']}: {stat['total']} total, {stat['enabled']} enabled"
+                    f"   - {stat['provider']}: {stat['total']} total, {stat['enabled']} enabled"
                 )
         
         # Recent activity
@@ -330,7 +330,7 @@ class Command(BaseCommand):
         
         # Rate coverage
         currencies_with_rates = ProviderCurrency.objects.filter(
-            usd_rate__isnull=False
+            is_enabled=True
         ).count()
         
         rate_coverage = (currencies_with_rates / total_provider_currencies * 100) if total_provider_currencies > 0 else 0

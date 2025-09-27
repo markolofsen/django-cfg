@@ -81,7 +81,7 @@ class ConfigurationValidator:
             errors.append("SECRET_KEY must be at least 50 characters long")
         else:
             # Check for insecure patterns in production
-            if config._environment == 'production':
+            if config.env_mode == 'production':
                 insecure_patterns = [
                     'django-insecure',
                     'change-me',
@@ -110,7 +110,7 @@ class ConfigurationValidator:
                     errors.append(f"Invalid hostname in ALLOWED_HOSTS[{i}]: '{host}'")
             
             # Production-specific validation
-            if config._environment == 'production' and '*' in allowed_hosts:
+            if config.env_mode == 'production' and '*' in allowed_hosts:
                 errors.append("Wildcard '*' in ALLOWED_HOSTS is not recommended for production")
         
         return errors
@@ -143,7 +143,7 @@ class ConfigurationValidator:
         errors = []
         
         # Environment-specific security validation
-        if config._environment == 'production':
+        if config.env_mode == 'production':
             # Allow DEBUG=True in production for development purposes
             pass
         
@@ -161,7 +161,7 @@ class ConfigurationValidator:
         """Validate environment-specific consistency."""
         errors = []
         
-        environment = config._environment
+        environment = config.env_mode
         
         if environment == 'production':
             # Production requirements - allow DEBUG=True for development

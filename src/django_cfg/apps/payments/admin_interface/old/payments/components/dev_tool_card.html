@@ -1,0 +1,125 @@
+{% comment %}
+Development Tools Card Component
+
+Provides quick access to development and debugging tools
+{% endcomment %}
+
+<div class="payment-card">
+    <div class="payment-card-header">
+        <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+            <span class="material-icons-outlined mr-2">build</span>
+            Development Tools
+        </h3>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Debug & Test</span>
+    </div>
+    <div class="payment-card-content">
+        <div class="grid grid-cols-1 gap-3">
+            <!-- Test Payment -->
+            <a href="{% url 'cfg_payments_admin:payment-create' %}?test=1" 
+               class="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                <span class="material-icons-outlined text-blue-600 dark:text-blue-400 mr-3">science</span>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">Test Payment</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Create test payment</div>
+                </div>
+                <span class="material-icons-outlined text-gray-400 text-sm">arrow_forward</span>
+            </a>
+
+            <!-- Webhook Tester -->
+            <a href="{% url 'cfg_payments_admin:webhook-dashboard' %}#test" 
+               class="flex items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+                <span class="material-icons-outlined text-purple-600 dark:text-purple-400 mr-3">webhook</span>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">Webhook Tester</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Test webhook endpoints</div>
+                </div>
+                <span class="material-icons-outlined text-gray-400 text-sm">arrow_forward</span>
+            </a>
+
+            <!-- API Explorer -->
+            <a href="/api/schema/swagger-ui/" target="_blank"
+               class="flex items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                <span class="material-icons-outlined text-green-600 dark:text-green-400 mr-3">api</span>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">API Explorer</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Swagger UI documentation</div>
+                </div>
+                <span class="material-icons-outlined text-gray-400 text-sm">open_in_new</span>
+            </a>
+
+            <!-- Database Admin -->
+            <a href="{% url 'admin:payments_universalpayment_changelist' %}" target="_blank"
+               class="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+                <span class="material-icons-outlined text-orange-600 dark:text-orange-400 mr-3">storage</span>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">Database Admin</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Django admin interface</div>
+                </div>
+                <span class="material-icons-outlined text-gray-400 text-sm">open_in_new</span>
+            </a>
+
+            <!-- Logs Viewer -->
+            <button onclick="showLogsModal()" 
+                    class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors w-full text-left">
+                <span class="material-icons-outlined text-gray-600 dark:text-gray-400 mr-3">description</span>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">View Logs</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Application logs</div>
+                </div>
+                <span class="material-icons-outlined text-gray-400 text-sm">visibility</span>
+            </button>
+
+            <!-- Clear Cache -->
+            <button onclick="clearCache()" 
+                    class="flex items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors w-full text-left">
+                <span class="material-icons-outlined text-red-600 dark:text-red-400 mr-3">clear_all</span>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">Clear Cache</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Reset application cache</div>
+                </div>
+                <span class="material-icons-outlined text-gray-400 text-sm">refresh</span>
+            </button>
+        </div>
+
+        <!-- Development Status -->
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-gray-500 dark:text-gray-400">Environment:</span>
+                <span class="font-medium text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/20 px-2 py-1 rounded">
+                    {% if settings.DEBUG %}Development{% else %}Production{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showLogsModal() {
+    // This would typically open a modal with recent logs
+    alert('Logs viewer would open here. Implement backend endpoint for logs.');
+}
+
+function clearCache() {
+    if (confirm('Are you sure you want to clear the application cache?')) {
+        // This would typically call a backend endpoint to clear cache
+        fetch('/admin/payments/clear-cache/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Cache cleared successfully!');
+            } else {
+                alert('Failed to clear cache: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Cache clear functionality requires backend implementation.');
+        });
+    }
+}
+</script>

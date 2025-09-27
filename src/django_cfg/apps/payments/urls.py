@@ -16,6 +16,7 @@ from .views.api import (
     APIKeyViewSet, UserAPIKeyViewSet, APIKeyCreateView, APIKeyValidateView,
     UniversalWebhookView, webhook_health_check, webhook_stats, supported_providers,
 )
+from .views.overview import urls as overview_urls
 
 app_name = 'cfg_payments'
 
@@ -74,4 +75,7 @@ urlpatterns = [
     
     # Health check endpoint
     path('health/', PaymentViewSet.as_view({'get': 'health'}), name='health-check'),
+    
+    # Overview dashboard endpoints
+    path('overview/', include(overview_urls)),
 ]

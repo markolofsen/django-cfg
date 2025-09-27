@@ -52,7 +52,8 @@ def get_django_cfg_urlpatterns() -> List[URLPattern]:
         # if base_module.is_maintenance_enabled():
         #     patterns.append(path('admin/django_cfg_maintenance/', include('django_cfg.apps.maintenance.urls_admin')))
 
-        if base_module.is_payments_enabled():
+        # if base_module.is_payments_enabled():
+        if True:
             patterns.append(path('admin/django_cfg_payments/admin/', include('django_cfg.apps.payments.urls_admin')))
             
     except Exception:

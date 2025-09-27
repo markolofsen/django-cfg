@@ -128,13 +128,28 @@
 
 /* Card Components */
 .payment-card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease-in-out;
 }
 
 .payment-card:hover {
-    @apply shadow-md;
-    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Dark theme cards */
+.dark .payment-card {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .payment-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
 .payment-card-header {
@@ -153,29 +168,253 @@
     @apply space-y-3;
 }
 
+/* Status Cards */
+.status-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+.status-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.status-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.status-card-info {
+    flex: 1;
+}
+
+.status-card-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.status-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.status-card-description {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 0;
+}
+
+.status-card-action-btn {
+    padding: 8px;
+    border-radius: 8px;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.status-card-action-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* Status Card Color Variants */
+.status-card-blue .status-card-icon {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.status-card-blue .status-card-value {
+    color: #2563eb;
+}
+
+.status-card-green .status-card-icon {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.status-card-green .status-card-value {
+    color: #16a34a;
+}
+
+.status-card-red .status-card-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.status-card-red .status-card-value {
+    color: #dc2626;
+}
+
+.status-card-yellow .status-card-icon {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.status-card-yellow .status-card-value {
+    color: #d97706;
+}
+
+.status-card-purple .status-card-icon {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.status-card-purple .status-card-value {
+    color: #9333ea;
+}
+
+/* Dark Theme Status Cards */
+.dark .status-card {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .status-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+}
+
+.dark .status-card-title {
+    color: #d1d5db;
+}
+
+.dark .status-card-description {
+    color: #9ca3af;
+}
+
+.dark .status-card-action-btn {
+    color: #9ca3af;
+}
+
+.dark .status-card-action-btn:hover {
+    background: #374151;
+    color: #f3f4f6;
+}
+
+.dark .status-card-blue .status-card-icon {
+    background: #1e3a8a;
+    color: #60a5fa;
+}
+
+.dark .status-card-blue .status-card-value {
+    color: #60a5fa;
+}
+
+.dark .status-card-green .status-card-icon {
+    background: #14532d;
+    color: #4ade80;
+}
+
+.dark .status-card-green .status-card-value {
+    color: #4ade80;
+}
+
+.dark .status-card-red .status-card-icon {
+    background: #7f1d1d;
+    color: #f87171;
+}
+
+.dark .status-card-red .status-card-value {
+    color: #f87171;
+}
+
+.dark .status-card-yellow .status-card-icon {
+    background: #92400e;
+    color: #fbbf24;
+}
+
+.dark .status-card-yellow .status-card-value {
+    color: #fbbf24;
+}
+
+.dark .status-card-purple .status-card-icon {
+    background: #581c87;
+    color: #c084fc;
+}
+
+.dark .status-card-purple .status-card-value {
+    color: #c084fc;
+}
+
 /* Status Badges */
 .status-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .status-badge.success {
-    @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+    background: #dcfce7;
+    color: #166534;
 }
 
 .status-badge.error {
-    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 .status-badge.warning {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+    background: #fef3c7;
+    color: #92400e;
 }
 
 .status-badge.info {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+    background: #dbeafe;
+    color: #1d4ed8;
 }
 
 .status-badge.pending {
-    @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* Dark theme badges */
+.dark .status-badge.success {
+    background: #14532d;
+    color: #4ade80;
+}
+
+.dark .status-badge.error {
+    background: #7f1d1d;
+    color: #f87171;
+}
+
+.dark .status-badge.warning {
+    background: #92400e;
+    color: #fbbf24;
+}
+
+.dark .status-badge.info {
+    background: #1e3a8a;
+    color: #60a5fa;
+}
+
+.dark .status-badge.pending {
+    background: #374151;
+    color: #d1d5db;
 }
 
 /* Button Components */

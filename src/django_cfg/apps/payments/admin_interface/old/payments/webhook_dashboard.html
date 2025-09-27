@@ -1,0 +1,518 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+
+{% block title %}Webhook Dashboard - Universal Payment System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        padding: 12px 16px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .notification.success { background-color: #10b981; }
+    .notification.error { background-color: #ef4444; }
+    .notification.warning { background-color: #f59e0b; }
+    .notification.info { background-color: #3b82f6; }
+    
+    .slide-in {
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+    
+    .status-active { background-color: #10b981; }
+    .status-inactive { background-color: #ef4444; }
+    .status-warning { background-color: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="webhookDashboard()" x-init="init()" class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Webhook Dashboard</h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">Monitor webhook status and manage payment providers</p>
+        </div>
+        <div class="flex space-x-3">
+            <button @click="refreshData()" 
+                    :disabled="loading"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                <span x-show="!loading">🔄 Refresh</span>
+                <span x-show="loading" class="flex items-center">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Loading...
+                </span>
+            </button>
+            <button @click="showTestModal = true" 
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                🧪 Test Webhook
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Ngrok Status -->
+        {% include 'payments/components/status_card.html' with title="Ngrok Status" value="Active" icon="language" color_class="text-green-600" description="Tunnel is running" icon_bg_color="blue" %}
+
+        <!-- Providers Count -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                        <span class="text-purple-600 dark:text-purple-400">🔌</span>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Active Providers</h3>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white" x-text="providers.length"></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Payment providers configured</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Webhook Health -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                        <span class="text-green-600 dark:text-green-400">💚</span>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Health Status</h3>
+                    <p class="text-2xl font-semibold" :class="healthStatus.healthy ? 'text-green-600' : 'text-red-600'">
+                        <span x-text="healthStatus.healthy ? 'Healthy' : 'Issues'"></span>
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="healthStatus.description"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                        <span class="text-yellow-600 dark:text-yellow-400">📊</span>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Recent Webhooks</h3>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white" x-text="stats.recent_count || 0"></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Last 24 hours</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="loading" class="flex items-center justify-center py-8">
+        {% include 'payments/components/loading_spinner.html' with size="large" text="Loading webhook data..." %}
+    </div>
+
+    <!-- Main Content -->
+    <div x-show="!loading" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Providers Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Payment Providers</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Configure webhook endpoints for each provider</p>
+            </div>
+            <div class="p-6">
+                <div x-show="providers.length === 0" class="text-center py-8">
+                    <div class="text-gray-400 text-4xl mb-4">🔌</div>
+                    <p class="text-gray-500 dark:text-gray-400">No providers configured</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <template x-for="provider in providers" :key="provider.name">
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <span class="text-lg mr-2" x-text="provider.icon || '🔌'"></span>
+                                    <h4 class="font-medium text-gray-900 dark:text-white" x-text="provider.display_name"></h4>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                                    Active
+                                </span>
+                            </div>
+                            
+                            <div class="space-y-2 text-sm">
+                                <div>
+                                    <label class="text-gray-600 dark:text-gray-400">Webhook URL:</label>
+                                    <div class="flex items-center mt-1">
+                                        <code class="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs font-mono break-all" x-text="provider.webhook_url"></code>
+                                        <button @click="copyToClipboard(provider.webhook_url)" 
+                                                class="ml-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+                                                title="Copy to clipboard">
+                                            📋
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-gray-600 dark:text-gray-400">Signature Header:</label>
+                                        <code class="block mt-1 text-xs font-mono text-gray-800 dark:text-gray-200" x-text="provider.signature_header"></code>
+                                    </div>
+                                    <div>
+                                        <label class="text-gray-600 dark:text-gray-400">Algorithm:</label>
+                                        <code class="block mt-1 text-xs font-mono text-gray-800 dark:text-gray-200" x-text="provider.signature_algorithm"></code>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ngrok Status & Tools -->
+        {% include 'payments/components/ngrok_status_card.html' %}
+    </div>
+
+    <!-- Statistics Section -->
+    <div x-show="!loading" class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Webhook Statistics</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Recent webhook activity and performance metrics</p>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600" x-text="stats.total_webhooks || 0"></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Total Webhooks</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600" x-text="stats.successful_webhooks || 0"></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Successful</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-red-600" x-text="stats.failed_webhooks || 0"></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Failed</div>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Recent Activity</h3>
+                <div x-show="stats.recent_activity && stats.recent_activity.length > 0" class="space-y-2">
+                    <template x-for="activity in stats.recent_activity" :key="activity.id">
+                        <div class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded">
+                            <div class="flex items-center">
+                                <div class="status-indicator" :class="activity.success ? 'status-active' : 'status-inactive'"></div>
+                                <span class="text-sm text-gray-900 dark:text-white" x-text="activity.provider"></span>
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400" x-text="activity.timestamp"></div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="!stats.recent_activity || stats.recent_activity.length === 0" class="text-center py-4">
+                    <p class="text-gray-500 dark:text-gray-400">No recent webhook activity</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div x-show="showTestModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+         @click.away="showTestModal = false">
+        
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Test Webhook</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Provider:</label>
+                    <select x-model="testProvider" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">Select provider...</option>
+                        <template x-for="provider in providers" :key="provider.name">
+                            <option :value="provider.name" x-text="provider.display_name"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Test Data:</label>
+                    <textarea x-model="testData" 
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              rows="4" 
+                              placeholder='{"payment_id": "test_123", "status": "completed"}'></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button @click="showTestModal = false" 
+                            class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500">
+                        Cancel
+                    </button>
+                    <button @click="sendTestWebhook()" 
+                            :disabled="!testProvider || testLoading"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!testLoading">Send Test</span>
+                        <span x-show="testLoading">Testing...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Container -->
+    <div id="notifications-container"></div>
+</div>
+
+<script>
+function webhookDashboard() {
+    return {
+        loading: true,
+        providers: [],
+        ngrokStatus: {
+            active: false,
+            url: null,
+            description: 'Checking...'
+        },
+        healthStatus: {
+            healthy: false,
+            description: 'Checking...',
+            last_check: null
+        },
+        stats: {
+            total_webhooks: 0,
+            successful_webhooks: 0,
+            failed_webhooks: 0,
+            recent_count: 0,
+            recent_activity: []
+        },
+        showTestModal: false,
+        testProvider: '',
+        testData: '{"payment_id": "test_123", "status": "completed", "amount": "10.00"}',
+        testLoading: false,
+        lastTest: null,
+        testStatus: null,
+
+        async init() {
+            await this.loadData();
+            
+            // Listen for notifications from ngrok component
+            this.$el.addEventListener('show-notification', (event) => {
+                this.showNotification(event.detail.type, event.detail.message);
+            });
+        },
+
+        async loadData() {
+            this.loading = true;
+            try {
+                await Promise.all([
+                    this.loadProviders(),
+                    this.checkHealth(),
+                    this.loadStats()
+                ]);
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                this.showNotification('error', 'Failed to load dashboard data');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async loadProviders() {
+            try {
+                const response = await fetch('/api/payments/webhooks/providers/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.providers = data.providers || [];
+                } else {
+                    throw new Error(data.error || 'Failed to load providers');
+                }
+            } catch (error) {
+                console.error('Failed to load providers:', error);
+                this.providers = [];
+            }
+        },
+
+        async checkHealth() {
+            try {
+                const response = await fetch('/api/payments/webhooks/health/');
+                const data = await response.json();
+                
+                this.healthStatus = {
+                    healthy: data.success && data.status === 'healthy',
+                    description: data.message || 'Unknown status',
+                    last_check: new Date().toLocaleString()
+                };
+
+                // Update ngrok status
+                this.ngrokStatus = {
+                    active: data.ngrok_available || false,
+                    url: data.ngrok_url || null,
+                    description: data.ngrok_available ? 'Tunnel active' : 'Tunnel inactive'
+                };
+            } catch (error) {
+                console.error('Failed to check health:', error);
+                this.healthStatus = {
+                    healthy: false,
+                    description: 'Health check failed',
+                    last_check: new Date().toLocaleString()
+                };
+            }
+        },
+
+        async loadStats() {
+            try {
+                const response = await fetch('/api/payments/webhooks/stats/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.stats = {
+                        total_webhooks: data.stats.total_webhooks || 0,
+                        successful_webhooks: data.stats.successful_webhooks || 0,
+                        failed_webhooks: data.stats.failed_webhooks || 0,
+                        recent_count: data.stats.recent_count || 0,
+                        recent_activity: data.stats.recent_activity || []
+                    };
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+                this.stats = {
+                    total_webhooks: 0,
+                    successful_webhooks: 0,
+                    failed_webhooks: 0,
+                    recent_count: 0,
+                    recent_activity: []
+                };
+            }
+        },
+
+        async refreshData() {
+            await this.loadData();
+            this.showNotification('success', 'Dashboard data refreshed');
+        },
+
+        async checkNgrokStatus() {
+            // This is now handled by the ngrok component
+            this.$dispatch('show-notification', {
+                type: 'info',
+                message: 'Ngrok status updated by component'
+            });
+        },
+
+        async sendTestWebhook() {
+            if (!this.testProvider) {
+                this.showNotification('warning', 'Please select a provider');
+                return;
+            }
+
+            this.testLoading = true;
+            try {
+                const provider = this.providers.find(p => p.name === this.testProvider);
+                if (!provider) {
+                    throw new Error('Provider not found');
+                }
+
+                const response = await fetch(provider.webhook_url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [provider.signature_header]: 'test-signature'
+                    },
+                    body: this.testData
+                });
+
+                this.lastTest = new Date().toLocaleString();
+                this.testStatus = response.ok ? 'Success' : 'Failed';
+                
+                this.showNotification(
+                    response.ok ? 'success' : 'error',
+                    `Test webhook ${response.ok ? 'sent successfully' : 'failed'}`
+                );
+                
+                this.showTestModal = false;
+            } catch (error) {
+                console.error('Test webhook failed:', error);
+                this.testStatus = 'Error';
+                this.showNotification('error', 'Failed to send test webhook');
+            } finally {
+                this.testLoading = false;
+            }
+        },
+
+        copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showNotification('success', 'Copied to clipboard');
+            }).catch(() => {
+                this.showNotification('error', 'Failed to copy to clipboard');
+            });
+        },
+
+        showNotification(type, message) {
+            const container = document.getElementById('notifications-container');
+            const notification = document.createElement('div');
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            notification.innerHTML = `
+                <div class="notification ${type} slide-in">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">${icons[type] || icons.info}</div>
+                        <div class="ml-2">
+                            <p class="text-sm font-medium">${message}</p>
+                        </div>
+                        <div class="ml-auto">
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">✕</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+    }
+}
+</script>
+{% endblock %}

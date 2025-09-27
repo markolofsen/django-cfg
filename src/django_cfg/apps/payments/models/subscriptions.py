@@ -102,30 +102,6 @@ class SubscriptionQuerySet(models.QuerySet):
         return self.filter(user=user)
 
 
-class SubscriptionManager(models.Manager):
-    """Manager for subscription operations."""
-    
-    def get_queryset(self):
-        """Return optimized queryset by default."""
-        return SubscriptionQuerySet(self.model, using=self._db)
-    
-    def optimized(self):
-        """Get optimized queryset."""
-        return self.get_queryset().optimized()
-    
-    def active(self):
-        """Get active subscriptions."""
-        return self.get_queryset().active()
-    
-    def expired(self):
-        """Get expired subscriptions."""
-        return self.get_queryset().expired()
-    
-    def by_tier(self, tier):
-        """Get subscriptions by tier."""
-        return self.get_queryset().by_tier(tier)
-
-
 class Subscription(UUIDTimestampedModel):
     """
     User subscription model for API access control.

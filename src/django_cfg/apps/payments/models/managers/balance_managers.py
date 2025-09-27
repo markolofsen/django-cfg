@@ -4,7 +4,7 @@ Balance and transaction managers for the Universal Payment System v2.0.
 Optimized querysets and managers for balance and transaction operations.
 """
 
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django_cfg.modules.django_logger import get_logger
 
@@ -62,7 +62,7 @@ class UserBalanceManager(models.Manager):
         # Get or create balance
         balance = self.get_or_create_for_user(user)
         
-        with models.transaction.atomic():
+        with transaction.atomic():
             # Update balance
             balance.balance_usd += amount
             balance.total_deposited += amount
@@ -122,7 +122,7 @@ class UserBalanceManager(models.Manager):
         if amount > balance.balance_usd:
             raise ValueError(f"Insufficient balance: ${balance.balance_usd:.2f} < ${amount:.2f}")
         
-        with models.transaction.atomic():
+        with transaction.atomic():
             # Update balance
             balance.balance_usd -= amount
             balance.total_spent += amount

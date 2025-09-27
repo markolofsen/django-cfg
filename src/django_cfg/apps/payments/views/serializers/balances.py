@@ -25,9 +25,6 @@ class UserBalanceSerializer(serializers.ModelSerializer):
     """
     
     user = serializers.StringRelatedField(read_only=True)
-    balance_display = serializers.CharField(source='balance_display', read_only=True)
-    is_empty = serializers.BooleanField(source='is_empty', read_only=True)
-    has_transactions = serializers.BooleanField(source='has_transactions', read_only=True)
     
     class Meta:
         model = UserBalance
@@ -51,17 +48,17 @@ class TransactionSerializer(serializers.ModelSerializer):
     """
     
     user = serializers.StringRelatedField(read_only=True)
-    amount_display = serializers.CharField(source='amount_display', read_only=True)
-    type_color = serializers.CharField(source='type_color', read_only=True)
-    is_credit = serializers.BooleanField(source='is_credit', read_only=True)
-    is_debit = serializers.BooleanField(source='is_debit', read_only=True)
+    amount_display = serializers.CharField(read_only=True)
+    type_color = serializers.CharField(read_only=True)
+    is_credit = serializers.BooleanField(read_only=True)
+    is_debit = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Transaction
         fields = [
             'id',
             'user',
-            'amount',
+            'amount_usd',
             'amount_display',
             'transaction_type',
             'type_color',

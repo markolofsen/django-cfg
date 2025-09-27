@@ -23,8 +23,8 @@ class APIKeyListSerializer(serializers.ModelSerializer):
     """
     
     user = serializers.StringRelatedField(read_only=True)
-    is_expired = serializers.BooleanField(source='is_expired', read_only=True)
-    is_valid = serializers.BooleanField(source='is_valid', read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
+    is_valid = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = APIKey
@@ -51,10 +51,10 @@ class APIKeySerializer(serializers.ModelSerializer):
     """
     
     user = serializers.StringRelatedField(read_only=True)
-    key_preview = serializers.CharField(source='key_preview', read_only=True)
-    is_expired = serializers.BooleanField(source='is_expired', read_only=True)
-    is_valid = serializers.BooleanField(source='is_valid', read_only=True)
-    days_until_expiry = serializers.IntegerField(source='days_until_expiry', read_only=True)
+    key_preview = serializers.CharField(read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
+    is_valid = serializers.BooleanField(read_only=True)
+    days_until_expiry = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = APIKey
@@ -359,6 +359,20 @@ class APIKeyValidationSerializer(serializers.Serializer):
                 'error': f"API key validation failed: {e}",
                 'error_code': 'validation_error'
             }
+
+
+class APIKeyValidationResponseSerializer(serializers.Serializer):
+    """
+    API key validation response serializer.
+    
+    Defines the structure of API key validation response for OpenAPI schema.
+    """
+    success = serializers.BooleanField(help_text="Whether the validation was successful")
+    valid = serializers.BooleanField(help_text="Whether the API key is valid")
+    api_key = APIKeySerializer(allow_null=True, help_text="API key details if valid")
+    message = serializers.CharField(help_text="Validation message")
+    error = serializers.CharField(required=False, help_text="Error message if validation failed")
+    error_code = serializers.CharField(required=False, help_text="Error code if validation failed")
 
 
 class APIKeyStatsSerializer(serializers.Serializer):

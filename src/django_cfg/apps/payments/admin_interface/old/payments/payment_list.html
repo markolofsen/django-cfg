@@ -1,0 +1,382 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payment_tags %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block content %}
+<div x-data="paymentList()" x-init="init()">
+    <!-- Filters and Search -->
+    <div class="payment-card mb-6">
+        <div class="payment-card-header">
+            <h3 class="font-medium text-gray-900 dark:text-white flex items-center">
+                <span class="material-icons-outlined mr-2">filter_list</span>
+                Filters & Search
+            </h3>
+            <button @click="resetFilters()" 
+                    class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                Reset
+            </button>
+        </div>
+        <div class="payment-card-content">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Search -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+                    <input type="text" 
+                           x-model="filters.search"
+                           @input.debounce.300ms="applyFilters()"
+                           placeholder="Payment ID, Amount..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                    <select x-model="filters.status" @change="applyFilters()"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+                <!-- Provider Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Provider</label>
+                    <select x-model="filters.provider" @change="applyFilters()"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">All Providers</option>
+                        <option value="nowpayments">NowPayments</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="cryptapi">CryptAPI</option>
+                    </select>
+                </div>
+
+                <!-- Date Range -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Range</label>
+                    <select x-model="filters.dateRange" @change="applyFilters()"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="quarter">This Quarter</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+            Showing <span x-text="payments.length"></span> payments
+            <span x-show="totalCount > payments.length" x-text="`of ${totalCount}`"></span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button @click="exportPayments()" 
+                    class="btn btn-outline text-sm">
+                <span class="material-icons-outlined mr-1 text-sm">download</span>
+                Export
+            </button>
+            <a href="{% url 'cfg_payments_admin:payment-create' %}" 
+               class="btn btn-primary text-sm">
+                <span class="material-icons-outlined mr-1 text-sm">add</span>
+                New Payment
+            </a>
+        </div>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="payment-card">
+        <div class="payment-card-content p-0">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Payment
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Amount
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Provider
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Date
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <template x-for="payment in payments" :key="payment.id">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3"
+                                             :class="{
+                                                 'bg-green-100 dark:bg-green-900': payment.status === 'completed',
+                                                 'bg-yellow-100 dark:bg-yellow-900': payment.status === 'pending',
+                                                 'bg-blue-100 dark:bg-blue-900': payment.status === 'processing',
+                                                 'bg-red-100 dark:bg-red-900': ['failed', 'cancelled'].includes(payment.status)
+                                             }">
+                                            <span class="material-icons-outlined text-sm"
+                                                  :class="{
+                                                      'text-green-600 dark:text-green-400': payment.status === 'completed',
+                                                      'text-yellow-600 dark:text-yellow-400': payment.status === 'pending',
+                                                      'text-blue-600 dark:text-blue-400': payment.status === 'processing',
+                                                      'text-red-600 dark:text-red-400': ['failed', 'cancelled'].includes(payment.status)
+                                                  }"
+                                                  x-text="getStatusIcon(payment.status)">
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="payment.external_id || payment.id.substring(0, 8)"></div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400" x-text="payment.currency_code"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="`$${payment.amount_usd.toFixed(2)}`"></div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-show="payment.amount_crypto" x-text="payment.amount_crypto + ' ' + payment.currency_code"></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="{
+                                              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': payment.status === 'completed',
+                                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': payment.status === 'pending',
+                                              'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': payment.status === 'processing',
+                                              'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200': ['failed', 'cancelled'].includes(payment.status)
+                                          }"
+                                          x-text="payment.status.charAt(0).toUpperCase() + payment.status.slice(1)">
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" x-text="payment.provider.charAt(0).toUpperCase() + payment.provider.slice(1)"></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(payment.created_at)"></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a :href="`{% url 'cfg_payments_admin:payment-detail' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', payment.id)"
+                                           class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                            <span class="material-icons-outlined text-sm">visibility</span>
+                                        </a>
+                                        <button @click="copyPaymentId(payment.id)" 
+                                                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                            <span class="material-icons-outlined text-sm">content_copy</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+                <!-- Empty State -->
+                <div x-show="payments.length === 0 && !loading" class="text-center py-12">
+                    <span class="material-icons-outlined text-gray-400 text-6xl mb-4">payments</span>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No payments found</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">
+                        <span x-show="hasActiveFilters()">Try adjusting your filters or</span>
+                        <span x-show="!hasActiveFilters()">Get started by</span>
+                        creating your first payment.
+                    </p>
+                    <a href="{% url 'cfg_payments_admin:payment-create' %}" 
+                       class="btn btn-primary">
+                        <span class="material-icons-outlined mr-2">add</span>
+                        Create Payment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div x-show="totalPages > 1" class="flex items-center justify-between mt-6">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+            Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button @click="goToPage(currentPage - 1)" 
+                    :disabled="currentPage <= 1"
+                    class="btn btn-outline text-sm" 
+                    :class="{ 'opacity-50 cursor-not-allowed': currentPage <= 1 }">
+                <span class="material-icons-outlined text-sm">chevron_left</span>
+                Previous
+            </button>
+            <button @click="goToPage(currentPage + 1)" 
+                    :disabled="currentPage >= totalPages"
+                    class="btn btn-outline text-sm"
+                    :class="{ 'opacity-50 cursor-not-allowed': currentPage >= totalPages }">
+                Next
+                <span class="material-icons-outlined text-sm">chevron_right</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div x-show="loading" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        {% include 'payments/components/loading_spinner.html' %}
+    </div>
+
+    <!-- Notifications -->
+    <div x-show="notification.show" x-cloak 
+         class="fixed top-4 right-4 z-50"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-x-full"
+         x-transition:enter-end="opacity-100 transform translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform translate-x-0"
+         x-transition:leave-end="opacity-0 transform translate-x-full">
+        {% include 'payments/components/notification.html' with type="notification.type" message="notification.message" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function paymentList() {
+    return {
+        loading: false,
+        payments: [],
+        totalCount: 0,
+        currentPage: 1,
+        totalPages: 1,
+        filters: {
+            search: '',
+            status: '',
+            provider: '',
+            dateRange: ''
+        },
+        notification: {
+            show: false,
+            type: 'info',
+            message: ''
+        },
+
+        init() {
+            this.loadPayments();
+        },
+
+        async loadPayments() {
+            this.loading = true;
+            try {
+                // Simulate API call - replace with actual endpoint
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Mock data - replace with actual API response
+                this.payments = [
+                    {
+                        id: '123e4567-e89b-12d3-a456-426614174000',
+                        external_id: 'PAY_001',
+                        amount_usd: 100.00,
+                        amount_crypto: '0.00234',
+                        currency_code: 'BTC',
+                        status: 'completed',
+                        provider: 'nowpayments',
+                        created_at: new Date().toISOString()
+                    },
+                    {
+                        id: '123e4567-e89b-12d3-a456-426614174001',
+                        external_id: 'PAY_002',
+                        amount_usd: 50.00,
+                        amount_crypto: null,
+                        currency_code: 'USD',
+                        status: 'pending',
+                        provider: 'stripe',
+                        created_at: new Date(Date.now() - 86400000).toISOString()
+                    }
+                ];
+                this.totalCount = this.payments.length;
+                this.totalPages = Math.ceil(this.totalCount / 20);
+            } catch (error) {
+                this.showNotification('error', 'Failed to load payments');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async applyFilters() {
+            this.currentPage = 1;
+            await this.loadPayments();
+        },
+
+        resetFilters() {
+            this.filters = {
+                search: '',
+                status: '',
+                provider: '',
+                dateRange: ''
+            };
+            this.applyFilters();
+        },
+
+        hasActiveFilters() {
+            return Object.values(this.filters).some(value => value !== '');
+        },
+
+        async goToPage(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+                await this.loadPayments();
+            }
+        },
+
+        getStatusIcon(status) {
+            const icons = {
+                completed: 'check_circle',
+                pending: 'schedule',
+                processing: 'sync',
+                failed: 'error',
+                cancelled: 'cancel'
+            };
+            return icons[status] || 'help';
+        },
+
+        formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        },
+
+        async copyPaymentId(paymentId) {
+            try {
+                await navigator.clipboard.writeText(paymentId);
+                this.showNotification('success', 'Payment ID copied to clipboard');
+            } catch (error) {
+                this.showNotification('error', 'Failed to copy payment ID');
+            }
+        },
+
+        async exportPayments() {
+            this.loading = true;
+            try {
+                // Simulate export - replace with actual implementation
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                this.showNotification('success', 'Payments exported successfully');
+            } catch (error) {
+                this.showNotification('error', 'Failed to export payments');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        showNotification(type, message) {
+            this.notification = { show: true, type, message };
+            setTimeout(() => {
+                this.notification.show = false;
+            }, 5000);
+        }
+    };
+}
+</script>
+{% endblock %}

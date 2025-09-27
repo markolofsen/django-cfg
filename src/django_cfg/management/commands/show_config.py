@@ -100,7 +100,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\n🌍 Environment'))
         self.stdout.write('-' * 40)
         env_data = [
-            ('Environment', getattr(config, '_environment', 'auto-detected')),
+            ('Environment', getattr(config, 'env_mode', 'auto-detected')),
             ('Debug Mode', config.debug),
             ('Security Domains', ', '.join(config.security_domains) if config.security_domains else 'None'),
         ]
@@ -186,7 +186,7 @@ class Command(BaseCommand):
                 'description': getattr(config, 'project_description', None),
             },
             'environment': {
-                'environment': getattr(config, '_environment', 'auto-detected'),
+                'environment': getattr(config, 'env_mode', 'auto-detected'),
                 'debug': config.debug,
                 'allowed_hosts': config.allowed_hosts,
             },

@@ -28,25 +28,23 @@ class PaymentsConfig(BaseModel):
         description="Enable payments middleware"
     )
     
-    api_prefixes: List[str] = Field(
-        default=['/api/'],
-        description="API path prefixes that require authentication"
+    # Whitelist approach - only these paths require API key
+    protected_paths: List[str] = Field(
+        default=[
+            '/api/admin/',  # Admin API endpoints
+            '/api/private/',  # Private API endpoints
+            '/api/secure/',  # Secure API endpoints
+        ],
+        description="Paths that require API key authentication (whitelist approach)"
     )
     
-    exempt_paths: List[str] = Field(
+    protected_patterns: List[str] = Field(
         default=[
-            '/api/payments/create/',
-            '/api/payments/status/',
-            '/api/currencies/rates/',
-            '/api/currencies/supported/',
-            '/api/api-keys/create/',
-            '/api/api-keys/validate/',
-            '/api/health/',
-            '/admin/',
-            '/static/',
-            '/media/',
+            r'^/api/admin/.*$',  # All admin API endpoints
+            r'^/api/private/.*$',  # All private API endpoints  
+            r'^/api/secure/.*$',  # All secure API endpoints
         ],
-        description="Paths exempt from API authentication"
+        description="Regex patterns for paths that require API key authentication"
     )
     
     # Rate limiting defaults

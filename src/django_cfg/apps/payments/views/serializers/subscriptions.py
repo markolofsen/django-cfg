@@ -29,7 +29,7 @@ class EndpointGroupSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description',
-            'is_active',
+            'is_enabled',
             'created_at',
             'updated_at',
         ]
@@ -52,9 +52,9 @@ class TariffSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description',
-            'monthly_price',
+            'monthly_price_usd',
             'requests_per_month',
-            'requests_per_minute',
+            'requests_per_hour',
             'is_active',
             'endpoint_groups',
             'endpoint_groups_count',
@@ -74,8 +74,6 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
     tariff_name = serializers.CharField(source='tariff.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    is_active = serializers.BooleanField(source='is_active', read_only=True)
-    is_expired = serializers.BooleanField(source='is_expired', read_only=True)
     
     class Meta:
         model = Subscription
@@ -104,18 +102,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     tariff = TariffSerializer(read_only=True)
     endpoint_group = EndpointGroupSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    status_color = serializers.CharField(source='status_color', read_only=True)
     
-    # Status check methods
-    is_active = serializers.BooleanField(source='is_active', read_only=True)
-    is_expired = serializers.BooleanField(source='is_expired', read_only=True)
-    is_trial = serializers.BooleanField(source='is_trial', read_only=True)
-    can_be_renewed = serializers.BooleanField(source='can_be_renewed', read_only=True)
-    can_be_cancelled = serializers.BooleanField(source='can_be_cancelled', read_only=True)
-    
-    # Usage statistics
-    usage_percentage = serializers.FloatField(source='usage_percentage', read_only=True)
-    requests_remaining = serializers.IntegerField(source='requests_remaining', read_only=True)
+    # Only keep fields that actually exist or are needed
     
     class Meta:
         model = Subscription
@@ -129,16 +117,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'status_color',
             'tier',
             'total_requests',
-            'requests_used',
-            'requests_remaining',
             'usage_percentage',
             'last_request_at',
             'expires_at',
             'is_active',
             'is_expired',
-            'is_trial',
-            'can_be_renewed',
-            'can_be_cancelled',
             'created_at',
             'updated_at',
         ]
@@ -146,8 +129,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'id',
             'user',
             'total_requests',
-            'requests_used',
-            'requests_remaining',
             'usage_percentage',
             'last_request_at',
             'created_at',
@@ -156,9 +137,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'status_color',
             'is_active',
             'is_expired',
-            'is_trial',
-            'can_be_renewed',
-            'can_be_cancelled',
         ]
 
 

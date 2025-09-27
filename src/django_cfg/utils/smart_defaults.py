@@ -50,15 +50,21 @@ class SmartDefaults:
     @staticmethod
     def get_database_defaults(environment: str = "development", debug: bool = False, engine: str = "sqlite3") -> Dict[str, Any]:
         """Get database configuration defaults."""
-        return {
+        defaults = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': Path('db') / 'db.sqlite3',
             'ATOMIC_REQUESTS': True,
             'CONN_MAX_AGE': 60,
-            'OPTIONS': {
-                'timeout': 20,
-            }
+            'OPTIONS': {}
         }
+        
+        # Add engine-specific options
+        if engine == "django.db.backends.postgresql":
+            defaults['OPTIONS']['connect_timeout'] = 20
+        elif engine == "django.db.backends.sqlite3":
+            defaults['OPTIONS']['timeout'] = 20  # SQLite uses 'timeout'
+        
+        return defaults
     
     @staticmethod
     def get_cache_defaults() -> Dict[str, Any]:
@@ -83,7 +89,10 @@ class SmartDefaults:
         cors_allow_headers=None
     ) -> Dict[str, Any]:
         """Get security configuration defaults."""
-        return {
+        from ..models.security import SecurityConfig
+        
+        # Base security settings
+        base_settings = {
             'USE_TZ': True,
             'USE_I18N': True,
             'USE_L10N': True,
@@ -94,6 +103,43 @@ class SmartDefaults:
             'SECURE_HSTS_INCLUDE_SUBDOMAINS': not debug,
             'SECURE_HSTS_PRELOAD': not debug,
         }
+        
+        # Add CORS settings if security domains are configured
+        if security_domains:
+            # Combine default CORS headers with custom ones
+            default_headers = SecurityConfig().cors_allow_headers
+            if cors_allow_headers:
+                # Combine and deduplicate headers
+                all_headers = default_headers + cors_allow_headers
+                seen = set()
+                unique_headers = []
+                for header in all_headers:
+                    if header.lower() not in seen:
+                        seen.add(header.lower())
+                        unique_headers.append(header)
+                final_headers = unique_headers
+            else:
+                final_headers = default_headers
+            
+            # Create SecurityConfig with appropriate settings
+            security_config = SecurityConfig(
+                cors_enabled=True,
+                cors_allow_all_origins=debug or environment == "development",
+                cors_allowed_origins=security_domains if not (debug or environment == "development") else [],
+                cors_allow_credentials=True,
+                cors_allow_headers=final_headers,
+                ssl_redirect=ssl_redirect or False,
+            )
+            
+            # Configure for development if needed
+            if debug or environment == "development":
+                security_config.configure_for_development()
+            
+            # Get Django settings from SecurityConfig
+            cors_settings = security_config.to_django_settings()
+            base_settings.update(cors_settings)
+        
+        return base_settings
     
     @classmethod
     def get_logging_defaults(

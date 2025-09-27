@@ -9,6 +9,7 @@ from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.core.cache import cache
 from django.utils import timezone
+from decimal import Decimal
 
 from ..models import UserBalance, Transaction
 from django_cfg.modules.django_logger import get_logger
@@ -22,7 +23,8 @@ def store_original_balance(sender, instance: UserBalance, **kwargs):
     if instance.pk:
         try:
             original = UserBalance.objects.get(pk=instance.pk)
-            instance._original_balance = original.balance_usd
+            # Ensure _original_balance is always Decimal
+            instance._original_balance = Decimal(str(original.balance_usd)) if original.balance_usd is not None else None
         except UserBalance.DoesNotExist:
             instance._original_balance = None
     else:
@@ -44,8 +46,9 @@ def handle_balance_change(sender, instance: UserBalance, created: bool, **kwargs
     else:
         # Check if balance changed
         if hasattr(instance, '_original_balance'):
-            old_balance = instance._original_balance or 0.0
-            new_balance = instance.balance_usd
+            # Ensure both values are Decimal for consistent arithmetic
+            old_balance = Decimal(str(instance._original_balance or 0.0))
+            new_balance = Decimal(str(instance.balance_usd))
             
             if old_balance != new_balance:
                 balance_change = new_balance - old_balance
@@ -81,7 +84,7 @@ def handle_transaction_creation(sender, instance: Transaction, created: bool, **
             'transaction_id': str(instance.id),
             'user_id': instance.user.id,
             'transaction_type': instance.transaction_type,
-            'amount': instance.amount,
+            'amount': instance.amount_usd,
             'payment_id': str(instance.payment_id) if instance.payment_id else None
         })
         
@@ -143,7 +146,7 @@ def _handle_zero_balance(balance: UserBalance):
             f"zero_balance:{balance.user.id}",
             {
                 'timestamp': timezone.now().isoformat(),
-                'previous_balance': getattr(balance, '_original_balance', 0.0)
+                'previous_balance': getattr(balance, '_original_balance', Decimal('0.0'))
             },
             timeout=86400 * 7  # 7 days
         )

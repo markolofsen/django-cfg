@@ -336,7 +336,6 @@ class DjangoConfig(BaseModel):
     )
 
     # === Internal State ===
-    _environment: Optional[str] = PrivateAttr(default=None)
     _base_dir: Optional[Path] = PrivateAttr(default=None)
     _django_settings: Optional[Dict[str, Any]] = PrivateAttr(default=None)
 
@@ -353,7 +352,7 @@ class DjangoConfig(BaseModel):
         super().__init__(**data)
 
         # Initialize internal state
-        self._detect_environment()
+        self._auto_detect_env_mode()
         self._resolve_paths()
         self._apply_smart_defaults()
         self._load_environment_config()
@@ -448,14 +447,22 @@ class DjangoConfig(BaseModel):
         """Check if running in test mode."""
         return self.env_mode == EnvironmentMode.TEST
 
-    def _detect_environment(self) -> None:
-        """Detect current environment from various sources."""
-        from django_cfg.core.environment import EnvironmentDetector
-
-        try:
-            self._environment = EnvironmentDetector.detect_environment()
-        except Exception as e:
-            raise EnvironmentError(f"Failed to detect environment: {e}", suggestions=["Set DJANGO_ENV environment variable explicitly"]) from e
+    def _auto_detect_env_mode(self) -> None:
+        """Auto-detect environment mode from various sources."""
+        import os
+        
+        # Check environment variables first
+        env_var = os.getenv("DJANGO_ENV", "").lower()
+        if env_var in ["development", "dev"]:
+            self.env_mode = EnvironmentMode.DEVELOPMENT
+        elif env_var in ["production", "prod"]:
+            self.env_mode = EnvironmentMode.PRODUCTION
+        elif env_var in ["test", "testing"]:
+            self.env_mode = EnvironmentMode.TEST
+        elif hasattr(self, 'debug') and self.debug:
+            # Auto-detect from debug flag if no env var set
+            self.env_mode = EnvironmentMode.DEVELOPMENT
+        # Otherwise keep the default (PRODUCTION)
 
     @property
     def base_dir(self) -> Path:
@@ -509,17 +516,17 @@ class DjangoConfig(BaseModel):
         try:
             # Apply cache defaults
             if self.cache_default:
-                self.cache_default = SmartDefaults.configure_cache_backend(self.cache_default, self._environment, self.debug)
+                self.cache_default = SmartDefaults.configure_cache_backend(self.cache_default, self.env_mode, self.debug)
 
             if self.cache_sessions:
-                self.cache_sessions = SmartDefaults.configure_cache_backend(self.cache_sessions, self._environment, self.debug)
+                self.cache_sessions = SmartDefaults.configure_cache_backend(self.cache_sessions, self.env_mode, self.debug)
 
             # Apply email defaults
             if self.email:
-                self.email = SmartDefaults.configure_email_backend(self.email, self._environment, self.debug)
+                self.email = SmartDefaults.configure_email_backend(self.email, self.env_mode, self.debug)
 
         except Exception as e:
-            raise ConfigurationError(f"Failed to apply smart defaults: {e}", context={"environment": self._environment, "debug": self.debug}) from e
+            raise ConfigurationError(f"Failed to apply smart defaults: {e}", context={"environment": self.env_mode, "debug": self.debug}) from e
 
     def _load_environment_config(self) -> None:
         """Load environment-specific configuration from YAML files."""
@@ -775,6 +782,9 @@ class DjangoConfig(BaseModel):
         if self.enable_accounts:
             middleware.append("django_cfg.middleware.UserActivityMiddleware")
 
+        # Add static no-cache middleware (auto-detects development mode)
+        middleware.append("django_cfg.middleware.StaticNoCacheMiddleware")
+
         # Add payments middleware if enabled
         if self.payments and self.payments.enabled:
             middleware.extend(self.payments.get_middleware_classes())
@@ -854,7 +864,7 @@ class DjangoConfig(BaseModel):
         Returns:
             Model data with internal fields excluded
         """
-        return self.model_dump(exclude={"_environment", "_base_dir", "_django_settings"}, exclude_none=True)
+        return self.model_dump(exclude={"_base_dir", "_django_settings"}, exclude_none=True)
 
 
 # Global config instance for access from other modules

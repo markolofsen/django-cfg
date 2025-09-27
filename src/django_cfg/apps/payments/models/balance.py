@@ -239,6 +239,9 @@ class Transaction(UUIDTimestampedModel):
     
     def save(self, *args, **kwargs):
         """Override save to ensure immutability."""
-        if self.pk:
-            raise ValidationError("Transactions are immutable and cannot be modified")
+        # Only prevent updates, not creation
+        if self.pk and not kwargs.get('force_insert', False):
+            # Check if this is actually an update (record exists in DB)
+            if Transaction.objects.filter(pk=self.pk).exists():
+                raise ValidationError("Transactions are immutable and cannot be modified")
         super().save(*args, **kwargs)

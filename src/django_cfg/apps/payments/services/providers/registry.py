@@ -411,6 +411,26 @@ class ProviderRegistry:
         self._provider_configs[provider_name] = config_class
         logger.info(f"Registered provider class: {provider_name}")
     
+    def register_provider(self, provider_name: str, provider_instance: BaseProvider):
+        """
+        Register provider instance directly (for testing).
+        
+        Args:
+            provider_name: Provider name
+            provider_instance: Provider instance
+        """
+        self._providers[provider_name] = provider_instance
+        logger.info(f"Registered provider instance: {provider_name}")
+    
+    @property
+    def providers(self) -> Dict[str, BaseProvider]:
+        """Get dictionary of registered providers."""
+        return self._providers.copy()
+    
+    def list_providers(self) -> List[str]:
+        """Get list of registered provider names."""
+        return list(self._providers.keys())
+    
     def __len__(self) -> int:
         """Get number of initialized providers."""
         return len(self._providers)

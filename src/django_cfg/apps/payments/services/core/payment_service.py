@@ -6,19 +6,20 @@ Handles payment creation, status checking, and lifecycle management.
 
 from typing import Optional, Dict, Any
 from decimal import Decimal
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 
+from django_cfg.modules.django_currency import convert_currency, get_exchange_rate
 from .base import BaseService
 from ..types import (
     PaymentCreateRequest, PaymentStatusRequest, PaymentResult,
     PaymentData, ServiceOperationResult
 )
 from ...models import UniversalPayment, Currency, ProviderCurrency
-from django_cfg.modules.django_currency import convert_currency, get_exchange_rate
-# ConfigService removed - using direct Constance access
 from ..providers import ProviderRegistry, get_provider_registry
 
+User = get_user_model()
 
 class PaymentService(BaseService):
     """
@@ -85,16 +86,17 @@ class PaymentService(BaseService):
             
             # Create payment in database first
             def create_payment_transaction():
+                currency = currency_result.data['currency']
                 payment = UniversalPayment.objects.create(
                     user=user,
                     amount_usd=request.amount_usd,
-                    currency_code=request.currency_code,
+                    currency=currency,
+                    network=currency.native_networks.first(),  # Use first native network
                     provider=request.provider,
                     status=UniversalPayment.PaymentStatus.PENDING,
                     callback_url=request.callback_url,
                     cancel_url=request.cancel_url,
                     description=request.description,
-                    metadata=request.metadata,
                     expires_at=timezone.now() + timezone.timedelta(hours=1)  # 1 hour expiry
                 )
                 return payment
@@ -137,8 +139,8 @@ class PaymentService(BaseService):
                     error_code="provider_creation_failed"
                 )
             
-            # Convert to PaymentData for response
-            payment_data = PaymentData.model_validate(payment)
+            # Convert to PaymentData using our helper method
+            payment_data = self._convert_payment_to_data(payment)
             
             self._log_operation(
                 "create_payment",
@@ -154,8 +156,9 @@ class PaymentService(BaseService):
                 payment_id=str(payment.id),
                 status=payment.status,
                 amount_usd=payment.amount_usd,
-                crypto_amount=payment.crypto_amount,
-                currency_code=payment.currency_code,
+                crypto_amount=payment.pay_amount,
+                currency_code=payment.currency.code,
+                payment_url=payment.payment_url,
                 expires_at=payment.expires_at,
                 data={'payment': payment_data.model_dump()}
             )
@@ -211,8 +214,8 @@ class PaymentService(BaseService):
                     # Reload payment if status was updated
                     payment.refresh_from_db()
             
-            # Convert to PaymentData
-            payment_data = PaymentData.model_validate(payment)
+            # Convert to PaymentData using from_attributes
+            payment_data = self._convert_payment_to_data(payment)
             
             return PaymentResult(
                 success=True,
@@ -220,12 +223,12 @@ class PaymentService(BaseService):
                 payment_id=str(payment.id),
                 status=payment.status,
                 amount_usd=payment.amount_usd,
-                crypto_amount=payment.crypto_amount,
-                currency_code=payment.currency_code,
+                crypto_amount=payment.pay_amount,
+                currency_code=payment.currency.code,
                 provider_payment_id=payment.provider_payment_id,
                 payment_url=payment.payment_url,
-                qr_code_url=payment.qr_code_url,
-                wallet_address=payment.wallet_address,
+                qr_code_url=getattr(payment, 'qr_code_url', None),
+                wallet_address=payment.pay_address,
                 expires_at=payment.expires_at,
                 data={'payment': payment_data.model_dump()}
             )
@@ -279,7 +282,7 @@ class PaymentService(BaseService):
             
             if success:
                 payment.refresh_from_db()
-                payment_data = PaymentData.model_validate(payment)
+                payment_data = self._convert_payment_to_data(payment)
                 
                 self._log_operation(
                     "cancel_payment",
@@ -311,7 +314,7 @@ class PaymentService(BaseService):
     def _validate_currency(self, currency_code: str) -> ServiceOperationResult:
         """Validate currency is supported."""
         try:
-            currency = Currency.objects.get(code=currency_code, is_enabled=True)
+            currency = Currency.objects.get(code=currency_code, is_active=True)
             
             # Check if currency is supported by any provider
             provider_currency = ProviderCurrency.objects.filter(
@@ -327,7 +330,7 @@ class PaymentService(BaseService):
             
             return self._create_success_result(
                 "Currency is valid",
-                {'currency': currency_code}
+                {'currency': currency}  # Wrap in dict for Pydantic
             )
             
         except Currency.DoesNotExist:
@@ -391,10 +394,10 @@ class PaymentService(BaseService):
             total_count = queryset.count()
             payments = queryset.order_by('-created_at')[offset:offset + limit]
             
-            payment_data = [
-                PaymentData.model_validate(payment).model_dump()
-                for payment in payments
-            ]
+            payment_data = []
+            for payment in payments:
+                payment_obj = self._convert_payment_to_data(payment)
+                payment_data.append(payment_obj.model_dump())
             
             return self._create_success_result(
                 f"Retrieved {len(payment_data)} payments",
@@ -412,6 +415,30 @@ class PaymentService(BaseService):
                 "get_user_payments", e,
                 user_id=user_id
             )
+    
+    def _convert_payment_to_data(self, payment: UniversalPayment) -> PaymentData:
+        """Convert Django UniversalPayment to PaymentData."""
+        return PaymentData(
+            id=str(payment.id),
+            user_id=payment.user_id,
+            amount_usd=float(payment.amount_usd),
+            crypto_amount=payment.pay_amount,
+            currency_code=payment.currency.code,
+            provider=payment.provider,
+            status=payment.status,
+            provider_payment_id=payment.provider_payment_id,
+            payment_url=payment.payment_url,
+            qr_code_url=getattr(payment, 'qr_code_url', None),
+            wallet_address=payment.pay_address,
+            callback_url=payment.callback_url,
+            cancel_url=payment.cancel_url,
+            description=payment.description,
+            metadata={},
+            created_at=payment.created_at,
+            updated_at=payment.updated_at,
+            expires_at=payment.expires_at,
+            completed_at=getattr(payment, 'completed_at', None)
+        )
     
     def get_payment_stats(self, days: int = 30) -> ServiceOperationResult:
         """Get payment statistics."""

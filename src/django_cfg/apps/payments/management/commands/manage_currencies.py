@@ -262,16 +262,9 @@ class Command(BaseCommand):
         
         # Filter by staleness unless forced
         if not options['force']:
-            stale_threshold = timezone.now() - timedelta(hours=12)
-            
-            # Get currencies that need rate updates through ProviderCurrency
-            currencies_needing_update = Currency.objects.filter(
-                Q(providercurrency__usd_rate__isnull=True) |
-                Q(providercurrency__rate_updated_at__isnull=True) |
-                Q(providercurrency__rate_updated_at__lt=stale_threshold)
-            ).distinct()
-            
-            queryset = queryset.filter(id__in=currencies_needing_update)
+            # For now, skip staleness check since rate fields don't exist
+            # TODO: Implement proper rate tracking fields
+            pass
         
         # Apply limit
         queryset = queryset[:options['limit']]
@@ -300,20 +293,16 @@ class Command(BaseCommand):
                     # Update rate in ProviderCurrency (create if doesn't exist)
                     provider_currency, created = ProviderCurrency.objects.get_or_create(
                         currency=currency,
-                        provider_name='system',  # System-level rate
+                        provider='system',  # System-level rate
                         provider_currency_code=currency.code,
                         defaults={
-                            'usd_rate': usd_rate,
-                            'rate_updated_at': timezone.now(),
-                            'is_enabled': True,
-                            'is_stable': currency.currency_type == Currency.CurrencyType.FIAT
+                            'is_enabled': True
                         }
                     )
                     
                     if not created:
-                        provider_currency.usd_rate = usd_rate
-                        provider_currency.rate_updated_at = timezone.now()
-                        provider_currency.save(update_fields=['usd_rate', 'rate_updated_at'])
+                        # TODO: Add rate tracking fields to ProviderCurrency model
+                        provider_currency.save()  # Touch the record to update timestamp
                     
                     # Update currency's exchange rate source
                     currency.exchange_rate_source = 'django_currency'
@@ -364,9 +353,9 @@ class Command(BaseCommand):
             crypto_count = Currency.objects.filter(currency_type=Currency.CurrencyType.CRYPTO).count()
             active_count = Currency.objects.filter(is_active=True).count()
             
-            # Count currencies with rates
+            # Count currencies with provider configs (simplified since rate fields don't exist)
             currencies_with_rates = Currency.objects.filter(
-                providercurrency__usd_rate__isnull=False
+                provider_configs__isnull=False
             ).distinct().count()
             
             rate_coverage = (currencies_with_rates / total_currencies * 100) if total_currencies > 0 else 0

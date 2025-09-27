@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Universal Payment System v2.0{% endblock %}</title>
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'payments/css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'payments/css/components.css' %}">
+    
+    <!-- Custom styles -->
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Dark mode scrollbar */
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', mobileMenuOpen: false }" 
+      x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))" 
+      :class="{ 'dark': darkMode }"
+      @click.away="mobileMenuOpen = false">
+    
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo and title -->
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <span class="material-icons-round text-blue-600 mr-2 text-2xl">payment</span>
+                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                            Universal Payment System v2.0
+                        </h1>
+                    </div>
+                </div>
+                
+                <!-- Navigation links -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="{% url 'cfg_payments_admin:webhook-dashboard' %}" 
+                           class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors">
+                            <span class="material-icons-outlined mr-1 text-sm">webhook</span>
+                            <span class="hidden lg:inline">Webhooks</span>
+                            <span class="lg:hidden">Hooks</span>
+                        </a>
+                        <a href="{% url 'cfg_payments_admin:payment-list' %}" 
+                           class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors">
+                            <span class="material-icons-outlined mr-1 text-sm">payments</span>
+                            Payments
+                        </a>
+                        <a href="{% url 'admin:payments_universalpayment_changelist' %}" 
+                           class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors">
+                            <span class="material-icons-outlined mr-1 text-sm">admin_panel_settings</span>
+                            <span class="hidden lg:inline">Admin</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" 
+                            class="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <span x-show="!mobileMenuOpen" class="material-icons-outlined">menu</span>
+                        <span x-show="mobileMenuOpen" class="material-icons-outlined">close</span>
+                    </button>
+                </div>
+                
+                <!-- Dark mode toggle -->
+                <div class="flex items-center space-x-4">
+                    <button @click="darkMode = !darkMode" 
+                            class="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <span x-show="!darkMode" class="material-icons-outlined">dark_mode</span>
+                        <span x-show="darkMode" class="material-icons-outlined">light_mode</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Page header -->
+        {% block header %}
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                {% block page_title %}Dashboard{% endblock %}
+            </h2>
+            {% block page_subtitle %}
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Monitor and manage your payment system
+            </p>
+            {% endblock %}
+        </div>
+        {% endblock %}
+        
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="rounded-md p-4 {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Page content -->
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-12">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+                <div>
+                    Universal Payment System v2.0 - Built with Django-CFG
+                </div>
+                <div>
+                    {% now "Y-m-d H:i:s" %} UTC
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Custom JavaScript -->
+    <script src="{% static 'payments/js/utils.js' %}"></script>
+    <script src="{% static 'payments/js/components.js' %}"></script>
+    <script src="{% static 'payments/js/ngrok-status.js' %}"></script>
+    
+    <!-- Alpine.js for interactivity (loaded after our components) -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

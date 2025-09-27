@@ -299,6 +299,11 @@ def is_ngrok_available_from_env() -> bool:
     return get_ngrok_service().is_ngrok_available_from_env()
 
 
+def is_tunnel_active() -> bool:
+    """Check if ngrok tunnel is actually active."""
+    return get_ngrok_service().is_tunnel_active()
+
+
 def get_effective_tunnel_url() -> Optional[str]:
     """Get effective tunnel URL (from manager or environment)."""
     return get_ngrok_service().get_effective_tunnel_url()
@@ -318,5 +323,6 @@ __all__ = [
     "get_tunnel_url_from_env",
     "get_ngrok_host_from_env",
     "is_ngrok_available_from_env",
+    "is_tunnel_active",
     "get_effective_tunnel_url",
 ]

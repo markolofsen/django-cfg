@@ -40,9 +40,9 @@ class SubscriptionViewSet(PaymentBaseViewSet):
     
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
-    permission_classes = [permissions.IsAdminUser]  # Admin only for global access
-    filterset_fields = ['status', 'tier', 'tariff', 'endpoint_group', 'user']
-    search_fields = ['user__username', 'user__email', 'tariff__name']
+    permission_classes = [permissions.IsAuthenticated]  # Allow authenticated users
+    filterset_fields = ['status', 'tier', 'user']
+    search_fields = ['user__username', 'user__email']
     ordering_fields = ['created_at', 'updated_at', 'expires_at', 'total_requests']
     
     serializer_classes = {
@@ -55,11 +55,17 @@ class SubscriptionViewSet(PaymentBaseViewSet):
     
     def get_queryset(self):
         """Optimized queryset with related objects."""
-        return super().get_queryset().select_related(
-            'user', 'tariff', 'endpoint_group'
+        queryset = super().get_queryset().select_related(
+            'user'
         ).prefetch_related(
-            'tariff__endpoint_groups'
+            'endpoint_groups'
         )
+        
+        # Non-staff users can only see their own subscriptions
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(user=self.request.user)
+        
+        return queryset
     
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
@@ -161,43 +167,42 @@ class SubscriptionViewSet(PaymentBaseViewSet):
             )
     
     @action(detail=False, methods=['get'])
-    def by_tariff(self, request):
+    def by_tier(self, request):
         """
-        Get subscriptions grouped by tariff.
+        Get subscriptions grouped by tier.
         
-        GET /api/subscriptions/by_tariff/
+        GET /api/subscriptions/by_tier/
         """
         try:
             queryset = self.filter_queryset(self.get_queryset())
             
-            tariff_stats = {}
-            for subscription in queryset.select_related('tariff'):
-                tariff_name = subscription.tariff.name if subscription.tariff else 'No Tariff'
-                tariff_id = subscription.tariff.id if subscription.tariff else None
+            tier_stats = {}
+            for tier_choice in Subscription.SubscriptionTier.choices:
+                tier_code = tier_choice[0]
+                tier_name = tier_choice[1]
                 
-                if tariff_name not in tariff_stats:
-                    tariff_stats[tariff_name] = {
-                        'tariff_id': tariff_id,
-                        'tariff_name': tariff_name,
-                        'total_subscriptions': 0,
-                        'active_subscriptions': 0,
-                        'total_requests': 0,
-                    }
+                tier_subscriptions = queryset.filter(tier=tier_code)
                 
-                tariff_stats[tariff_name]['total_subscriptions'] += 1
-                if subscription.is_active():
-                    tariff_stats[tariff_name]['active_subscriptions'] += 1
-                tariff_stats[tariff_name]['total_requests'] += subscription.total_requests or 0
+                tier_stats[tier_code] = {
+                    'name': tier_name,
+                    'total_subscriptions': tier_subscriptions.count(),
+                    'active_subscriptions': tier_subscriptions.filter(
+                        status=Subscription.SubscriptionStatus.ACTIVE
+                    ).count(),
+                    'total_requests': tier_subscriptions.aggregate(
+                        total=models.Sum('total_requests')
+                    )['total'] or 0,
+                }
             
             return Response({
-                'tariff_stats': tariff_stats,
+                'tier_stats': tier_stats,
                 'generated_at': timezone.now().isoformat()
             })
             
         except Exception as e:
-            logger.error(f"Subscription tariff stats failed: {e}")
+            logger.error(f"Subscription tier stats failed: {e}")
             return Response(
-                {'error': f'Tariff stats failed: {e}'},
+                {'error': f'Tier stats failed: {e}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -212,8 +217,8 @@ class UserSubscriptionViewSet(NestedPaymentViewSet):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['status', 'tier', 'tariff', 'endpoint_group']
-    search_fields = ['tariff__name']
+    filterset_fields = ['status', 'tier']
+    search_fields = []
     ordering_fields = ['created_at', 'updated_at', 'expires_at']
     
     # Nested ViewSet configuration
@@ -236,7 +241,7 @@ class UserSubscriptionViewSet(NestedPaymentViewSet):
             if str(self.request.user.id) != str(user_id):
                 return queryset.none()
         
-        return queryset.select_related('tariff', 'endpoint_group')
+        return queryset.select_related('user').prefetch_related('endpoint_groups')
     
     @action(detail=True, methods=['post'])
     def update_status(self, request, user_pk=None, pk=None):

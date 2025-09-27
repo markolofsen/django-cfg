@@ -16,9 +16,7 @@ from .models.dashboard import StatCard, StatsCardsWidget
 
 class DashboardManager(BaseCfgModule):
     """
-    Dashboard configuration manager for Unfold.
-    
-    Based on the working configuration from @old/api__old/api/dashboard/unfold_config.py
+    Dashboard configuration manager for Unfold.    
     """
     
     def __init__(self):

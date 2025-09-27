@@ -22,9 +22,6 @@ class CurrencySerializer(serializers.ModelSerializer):
     """
     
     type_display = serializers.CharField(source='get_currency_type_display', read_only=True)
-    is_crypto = serializers.BooleanField(source='is_crypto', read_only=True)
-    is_fiat = serializers.BooleanField(source='is_fiat', read_only=True)
-    is_stable = serializers.BooleanField(source='is_stable', read_only=True)
     
     class Meta:
         model = Currency
@@ -35,11 +32,10 @@ class CurrencySerializer(serializers.ModelSerializer):
             'symbol',
             'currency_type',
             'type_display',
-            'decimals',
+            'decimal_places',
             'is_active',
             'is_crypto',
             'is_fiat',
-            'is_stable',
             'created_at',
             'updated_at',
         ]
@@ -113,7 +109,7 @@ class ProviderCurrencySerializer(serializers.ModelSerializer):
             'min_amount',
             'max_amount',
             'fee_percentage',
-            'is_active',
+            'is_enabled',
             'created_at',
             'updated_at',
         ]
