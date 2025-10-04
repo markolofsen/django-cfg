@@ -1,0 +1,51 @@
+{% load unfold %}
+
+<!-- Users Tab Content -->
+<div class="space-y-8">
+    <!-- Recent Users Table -->
+    {% include 'admin/snippets/components/recent_users_table.html' %}
+
+    <!-- User Permissions -->
+    {% include 'admin/snippets/components/user_permissions.html' %}
+
+    <!-- User Statistics -->
+    <div class="w-full">
+        <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+            User Statistics
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white dark:bg-base-900 rounded-lg p-6 border border-base-200 dark:border-base-700 shadow-xs">
+                <div class="flex items-center">
+                    <span class="material-icons text-blue-600 dark:text-blue-400 mr-3">person_add</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">New Users</h3>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ new_users_count|default:0 }}</p>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Last 7 days</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg p-6 border border-base-200 dark:border-base-700 shadow-xs">
+                <div class="flex items-center">
+                    <span class="material-icons text-green-600 dark:text-green-400 mr-3">check_circle</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">Active Users</h3>
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ active_users_count|default:0 }}</p>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Currently active</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-base-900 rounded-lg p-6 border border-base-200 dark:border-base-700 shadow-xs">
+                <div class="flex items-center">
+                    <span class="material-icons text-primary-600 dark:text-primary-500 mr-3">admin_panel_settings</span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-font-default-light dark:text-font-default-dark">Superusers</h3>
+                        <p class="text-2xl font-bold text-primary-600 dark:text-primary-500">{{ superusers_count|default:0 }}</p>
+                        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Administrators</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

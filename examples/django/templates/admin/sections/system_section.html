@@ -1,0 +1,99 @@
+{% load unfold %}
+
+<!-- System Management Section -->
+<div class="space-y-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold theme-text">{{ title|default:"System Management" }}</h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">
+                System health checks and configuration overview
+            </p>
+        </div>
+        <div class="flex items-center space-x-2">
+            {% if data.health.status == 'healthy' %}
+                <span class="material-icons text-green-500">check_circle</span>
+                <span class="text-sm text-green-600 dark:text-green-400 font-medium">Healthy</span>
+            {% else %}
+                <span class="material-icons text-red-500">error</span>
+                <span class="text-sm text-red-600 dark:text-red-400 font-medium">Issues Detected</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Health Checks Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {% for check_name, check_status in data.health.checks.items %}
+            <div class="theme-card p-6 rounded-lg shadow-sm border theme-border">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 uppercase">{{ check_name|title }}</p>
+                        <p class="text-lg font-semibold theme-text mt-2">
+                            {% if check_status %}
+                                <span class="text-green-600 dark:text-green-400">Operational</span>
+                            {% else %}
+                                <span class="text-red-600 dark:text-red-400">Failed</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if check_status %}
+                        <span class="material-icons text-green-500 text-3xl">check_circle</span>
+                    {% else %}
+                        <span class="material-icons text-red-500 text-3xl">cancel</span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Configuration & Services -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Configuration Card -->
+        <div class="theme-card rounded-lg shadow-sm border theme-border">
+            <div class="p-6 border-b theme-border">
+                <h3 class="text-lg font-semibold theme-text flex items-center">
+                    <span class="material-icons text-blue-500 mr-2">settings</span>
+                    Configuration
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for key, value in data.configuration.items %}
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-700 dark:text-gray-300">{{ key|title }}</span>
+                            <span class="font-mono text-sm theme-text">{{ value }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Services Status Card -->
+        <div class="theme-card rounded-lg shadow-sm border theme-border">
+            <div class="p-6 border-b theme-border">
+                <h3 class="text-lg font-semibold theme-text flex items-center">
+                    <span class="material-icons text-purple-500 mr-2">cloud</span>
+                    Services
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if data.services %}
+                    <div class="space-y-3">
+                        {% for service_name, service_status in data.services.items %}
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="theme-text">{{ service_name }}</span>
+                                <div class="status-indicator">
+                                    <span class="status-dot {% if service_status %}success{% else %}error{% endif %}"></span>
+                                    <span class="text-gray-600 dark:text-gray-400">
+                                        {% if service_status %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">No external services configured</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

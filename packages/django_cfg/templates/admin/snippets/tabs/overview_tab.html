@@ -1,0 +1,116 @@
+{% load unfold %}
+
+<!-- Overview Tab Content -->
+<div class="space-y-10 flex flex-col gap-8">
+  <!-- Hero Section with Key Metrics -->
+  <div>
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold theme-text">System Overview</h1>
+        <p class="text-gray-600 dark:text-gray-300 mt-2">
+          Real-time monitoring and key performance indicators
+        </p>
+      </div>
+      <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+        <span class="material-icons text-green-500">fiber_manual_record</span>
+        <span>Live data</span>
+      </div>
+    </div>
+
+    <!-- Key Statistics Cards -->
+    {% include 'admin/snippets/components/stats_cards.html' %}
+  </div>
+
+  <!-- System Health & Quick Actions - Full Width Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- System Health Card -->
+    <div class="theme-card rounded-lg shadow-sm border">
+      <div class="p-6">
+        {% include 'admin/snippets/components/system_health.html' %}
+      </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="theme-card rounded-lg border theme-border shadow-sm">
+      <div class="p-6">
+        {% include 'admin/snippets/components/quick_actions.html' %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts & Recent Activity - Full Width -->
+  <div class="space-y-8">
+    <!-- Charts Section -->
+    {% include 'admin/snippets/components/charts_section.html' %}
+
+    <!-- Recent Activity Stream -->
+    <div class="theme-card rounded-lg shadow-sm border">
+      <div class="p-6 border-b theme-border">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold theme-text flex items-center">
+            <span class="material-icons text-blue-600 mr-2">timeline</span>
+            Recent Activity
+          </h3>
+          <a
+            href="#"
+            class="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+          >
+            View all
+            <span class="material-icons text-xs ml-1">arrow_forward</span>
+          </a>
+        </div>
+      </div>
+      <div class="p-6">
+        {% include 'admin/snippets/components/recent_activity.html' %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Secondary Metrics Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- System Metrics -->
+    <div class="theme-card rounded-lg border theme-border shadow-sm">
+      <div class="p-6 border-b theme-border">
+        <h3 class="text-lg font-semibold theme-text flex items-center">
+          <span class="material-icons text-blue-500 mr-2">memory</span>
+          System Metrics
+        </h3>
+      </div>
+      <div class="p-6">
+        {% include 'admin/snippets/components/system_metrics.html' %}
+      </div>
+    </div>
+
+    <!-- Activity Tracker -->
+    <div class="theme-card rounded-lg border theme-border shadow-sm">
+      <div class="p-6 border-b theme-border">
+        <h3 class="text-lg font-semibold theme-text flex items-center">
+          <span class="material-icons text-blue-600 mr-2">track_changes</span>
+          Activity Tracker
+        </h3>
+      </div>
+      <div class="p-6">
+        {% include 'admin/snippets/components/activity_tracker.html' %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Statistics (if available) -->
+  {% if stats_groups %}
+  <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 border theme-border">
+    <div class="flex items-center mb-6">
+      <span class="material-icons text-green-500 mr-3">apps</span>
+      <div>
+        <h2 class="text-xl font-semibold theme-text">
+          Application Statistics
+        </h2>
+        <p class="text-gray-600 dark:text-gray-300 text-sm mt-1">
+          Detailed metrics for each application module
+        </p>
+      </div>
+    </div>
+    {% include 'admin/snippets/components/stats_tiles.html' %}
+  </div>
+  {% endif %}
+
+</div>

@@ -1,0 +1,50 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block result_list %}
+    <!-- Balance Statistics Dashboard -->
+    {% if balance_stats %}
+        {% include "admin/payments/_components/dashboard_header.html" with title="Balance Overview" icon="💰" %}
+        
+        {% with stats=balance_stats %}
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                {% include "admin/payments/_components/stats_card.html" with title="Total Balances" value=stats.total_balances color="primary" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Total Value" value="$"|add:stats.total_balance|floatformat:2 color="success" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Average Balance" value="$"|add:stats.avg_balance|floatformat:2 color="warning" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Active (7 days)" value=stats.active_balances color="info" %}
+            </div>
+        {% endwith %}
+        
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">Balance Distribution</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>💸 Empty: <span class="font-medium text-base-600 dark:text-base-400">{{ balance_stats.zero_balances|default:0 }}</span></li>
+                    <li>🪙 Low ($0-10): <span class="font-medium text-yellow-600 dark:text-yellow-400">{{ balance_stats.low_balances|default:0 }}</span></li>
+                    <li>💰 Medium ($10-100): <span class="font-medium text-green-600 dark:text-green-400">{{ balance_stats.medium_balances|default:0 }}</span></li>
+                    <li>💎 High ($100-1000): <span class="font-medium text-blue-600 dark:text-blue-400">{{ balance_stats.high_balances|default:0 }}</span></li>
+                    <li>🐋 Whale ($1000+): <span class="font-medium text-purple-600 dark:text-purple-400">{{ balance_stats.whale_balances|default:0 }}</span></li>
+                </ul>
+            </div>
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">🚨 Alerts</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>⚠️ Negative: <span class="font-medium text-red-600 dark:text-red-400">{{ balance_stats.negative_balances|default:0 }}</span></li>
+                    <li>🔒 Reserved: <span class="font-medium text-orange-600 dark:text-orange-400">${{ balance_stats.total_reserved|floatformat:2|default:0 }}</span></li>
+                </ul>
+            </div>
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">🏆 Top Balances</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    {% for balance in balance_stats.top_balances %}
+                        <li><span class="font-semibold text-primary-600 dark:text-primary-400">{{ balance.user.username|truncatechars:15 }}:</span> ${{ balance.balance_usd|floatformat:2 }}</li>
+                    {% empty %}
+                        <li class="text-font-subtle-light dark:text-font-subtle-dark">No balances available</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

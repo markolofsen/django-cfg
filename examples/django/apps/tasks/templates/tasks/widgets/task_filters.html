@@ -1,0 +1,37 @@
+<!-- Task Filters Widget -->
+<div class="task-filters-widget flex flex-wrap gap-3 items-center">
+    <!-- Status Filter -->
+    <select id="task-status-filter" 
+            class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="running">Running</option>
+        <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
+    </select>
+    
+    <!-- Queue Filter -->
+    <select id="task-queue-filter" 
+            class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+        <option value="">All Queues</option>
+        <option value="default">Default</option>
+        <option value="high">High Priority</option>
+        <option value="low">Low Priority</option>
+        <option value="background">Background</option>
+        <option value="payments">Payments</option>
+        <option value="critical">Critical</option>
+    </select>
+    
+    <!-- Search Input -->
+    <input id="task-search-input" 
+           type="text" 
+           placeholder="Search tasks..." 
+           class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+    
+    <!-- Last Update Time -->
+    <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 ml-auto">
+        <span class="material-icons text-sm mr-1">schedule</span>
+        <span>Last updated:</span>
+        <span id="tasks-last-update-time" class="ml-1 font-mono">--:--:--</span>
+    </div>
+</div>

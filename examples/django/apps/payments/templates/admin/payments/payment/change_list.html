@@ -1,0 +1,48 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block result_list %}
+    <!-- Payment Statistics Dashboard -->
+    {% if payment_stats %}
+        {% include "admin/payments/_components/dashboard_header.html" with title="Payment Overview" icon="💳" %}
+        
+        {% with stats=payment_stats %}
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                {% include "admin/payments/_components/stats_card.html" with title="Total Payments" value=stats.total_payments color="primary" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Completed" value=stats.status_stats.completed|default:0 color="success" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Pending" value=stats.status_stats.pending|default:0 color="warning" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Failed" value=stats.status_stats.failed|default:0 color="error" %}
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                    <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">💰 Financial</h4>
+                    <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                        <li>Total Volume: <span class="font-medium text-primary-600 dark:text-primary-400">${{ stats.total_amount|floatformat:2|default:0 }}</span></li>
+                        <li>Completed: <span class="font-medium text-success-600 dark:text-success-400">${{ stats.completed_amount|floatformat:2|default:0 }}</span></li>
+                        <li>Success Rate: <span class="font-medium text-info-600 dark:text-info-400">{{ stats.success_rate|floatformat:1|default:0 }}%</span></li>
+                    </ul>
+                </div>
+                <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                    <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">📊 Recent (24h)</h4>
+                    <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                        <li>Payments: <span class="font-medium text-primary-600 dark:text-primary-400">{{ stats.recent_payments|default:0 }}</span></li>
+                        <li>Volume: <span class="font-medium text-success-600 dark:text-success-400">${{ stats.recent_amount|floatformat:2|default:0 }}</span></li>
+                    </ul>
+                </div>
+                <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                    <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">🔗 Providers</h4>
+                    <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                        {% for provider in stats.provider_stats %}
+                            <li>{{ provider.provider|title }}: <span class="font-medium text-primary-600 dark:text-primary-400">{{ provider.count }}</span></li>
+                        {% empty %}
+                            <li class="text-font-subtle-light dark:text-font-subtle-dark">No provider data</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endwith %}
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,112 @@
+{% comment %}
+Ngrok Help Dialog Component
+Shows instructions for starting ngrok tunnel
+{% endcomment %}
+
+<!-- Ngrok Help Dialog -->
+<div x-show="showNgrokHelp" 
+     x-cloak
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+     @click.away="showNgrokHelp = false">
+    
+    <!-- Dialog Panel -->
+    <div x-show="showNgrokHelp"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95"
+         class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4"
+         @click.stop>
+        
+        <!-- Dialog Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                    <span class="material-icons-outlined mr-2 text-blue-600 dark:text-blue-400">help</span>
+                    How to Start Ngrok Tunnel
+                </h3>
+                <button @click="showNgrokHelp = false" 
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <span class="material-icons-outlined">close</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Dialog Content -->
+        <div class="px-6 py-4 space-y-4">
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div class="flex items-start">
+                    <span class="material-icons-outlined text-blue-600 dark:text-blue-400 mr-2 mt-0.5">info</span>
+                    <div>
+                        <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-1">Ngrok is not active</h4>
+                        <p class="text-sm text-blue-800 dark:text-blue-200">
+                            To enable ngrok tunnel for webhook testing, restart your development server with the ngrok command.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-medium text-gray-900 dark:text-white mb-2 flex items-center">
+                    <span class="material-icons-outlined mr-2 text-green-600 dark:text-green-400">terminal</span>
+                    Start Server with Ngrok
+                </h4>
+                <div class="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 font-mono text-sm">
+                    <div class="text-green-400 mb-2"># Stop current server (Ctrl+C) and run:</div>
+                    <div class="text-white">python manage.py runserver_ngrok</div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-medium text-gray-900 dark:text-white mb-2 flex items-center">
+                    <span class="material-icons-outlined mr-2 text-purple-600 dark:text-purple-400">settings</span>
+                    Advanced Options
+                </h4>
+                <div class="space-y-2 text-sm">
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+                        <div class="font-mono text-gray-800 dark:text-gray-200 mb-1">python manage.py runserver_ngrok --domain myapp</div>
+                        <div class="text-gray-600 dark:text-gray-400">Use custom subdomain</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+                        <div class="font-mono text-gray-800 dark:text-gray-200 mb-1">python manage.py runserver_ngrok 0.0.0.0:8080</div>
+                        <div class="text-gray-600 dark:text-gray-400">Use custom port</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div class="flex items-start">
+                    <span class="material-icons-outlined text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5">lightbulb</span>
+                    <div>
+                        <h4 class="font-medium text-yellow-900 dark:text-yellow-100 mb-1">Pro Tip</h4>
+                        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                            Once ngrok is active, you'll see the public URL here and can copy it for webhook configuration.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dialog Footer -->
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+            <a href="https://ngrok.com/docs" 
+               target="_blank"
+               class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center">
+                <span class="material-icons-outlined mr-1 text-sm">open_in_new</span>
+                Ngrok Documentation
+            </a>
+            <button @click="showNgrokHelp = false" 
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                Got it!
+            </button>
+        </div>
+    </div>
+</div>

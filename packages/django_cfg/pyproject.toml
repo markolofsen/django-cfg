@@ -1,0 +1,149 @@
+[build-system]
+requires = [ "hatchling",]
+build-backend = "hatchling.build"
+
+[project]
+name = "django-cfg"
+version = "1.4.4"
+description = "Django AI framework with built-in agents, type-safe Pydantic v2 configuration, and 8 enterprise apps. Replace settings.py, validate at startup, 90% less code. Production-ready AI workflows for Django."
+readme = "README.md"
+keywords = [ "django", "configuration", "pydantic", "settings", "type-safety", "pydantic-settings", "django-environ", "startup-validation", "ide-autocomplete", "ai-agents", "enterprise-django", "django-settings", "type-safe-config",]
+classifiers = [ "Development Status :: 4 - Beta", "Framework :: Django", "Framework :: Django :: 5.2", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.12", "Programming Language :: Python :: 3.13", "Topic :: Internet :: WWW/HTTP", "Topic :: Internet :: WWW/HTTP :: Dynamic Content", "Topic :: Software Development :: Libraries :: Python Modules", "Topic :: System :: Systems Administration", "Typing :: Typed",]
+requires-python = ">=3.12,<4.0"
+dependencies = [ "pydantic>=2.11.0,<3.0", "pydantic[email]>=2.11.0,<3.0", "PyYAML>=6.0,<7.0", "pydantic-yaml>=1.6.0,<2.0", "click>=8.2.0,<9.0", "questionary>=2.1.0,<3.0", "rich>=14.0.0,<15.0", "cloudflare>=4.3.0,<5.0", "loguru>=0.7.0,<1.0", "colorlog>=6.9.0,<7.0", "cachetools>=5.3.0,<7.0", "toml>=0.10.2,<0.11.0", "ngrok>=1.5.1; python_version>='3.12'", "psycopg[binary,pool]>=3.2.0,<4.0", "dj-database-url>=3.0.0,<4.0", "whitenoise>=6.8.0,<7.0", "django-cors-headers>=4.7.0,<5.0", "djangorestframework>=3.16.0,<4.0", "djangorestframework-simplejwt>=5.5.0,<6.0", "djangorestframework-simplejwt[token-blacklist]>=5.5.0,<6.0", "drf-nested-routers>=0.94.0,<1.0", "django-filter>=25.0,<26.0", "django-ratelimit>=4.1.0,<5.0.0", "drf-spectacular>=0.28.0,<1.0", "drf-spectacular-sidecar>=2025.8.0,<2026.0", "django-json-widget>=2.0.0,<3.0", "django-import-export>=4.3.0,<5.0", "django-extensions>=4.1.0,<5.0", "django-constance>=4.3.0,<5.0", "django-unfold>=0.64.0,<1.0", "django-redis>=6.0.0,<7.0", "redis>=6.4.0,<7.0", "hiredis>=2.0.0,<4.0", "dramatiq[redis]>=1.18.0,<2.0", "django-dramatiq>=0.14.0,<1.0", "pyTelegramBotAPI>=4.28.0,<5.0", "coolname>=2.2.0,<3.0", "django-admin-rangefilter>=0.13.0,<1.0", "python-json-logger>=3.3.0,<4.0", "requests>=2.32.0,<3.0", "tiktoken>=0.11.0,<1.0", "openai>=1.107.0,<2.0", "twilio>=9.8.0,<10.0", "sendgrid>=6.12.0,<7.0", "beautifulsoup4>=4.13.0,<5.0", "lxml>=6.0.0,<7.0", "pgvector>=0.4.0,<1.0", "pydantic-ai>=1.0.10,<2.0", "django-revolution>=1.0.43,<2.0", "tenacity>=9.1.2,<10.0.0", "mypy (>=1.18.2,<2.0.0)", "django-tailwind[reload] (>=4.2.0,<5.0.0)",]
+[[project.authors]]
+name = "Django-CFG Team"
+email = "info@djangocfg.com"
+
+[[project.maintainers]]
+name = "Django-CFG Team"
+email = "info@djangocfg.com"
+
+[project.license]
+text = "MIT"
+
+[project.optional-dependencies]
+local = []
+django52 = [ "django>=5.2,<6.0",]
+dev = [ "django>=5.2,<6.0", "pytest>=8.4,<9.0", "pytest-django>=4.11,<5.0", "pytest-cov>=7.0,<8.0", "pytest-mock>=3.15,<4.0", "factory-boy>=3.3,<4.0", "fakeredis>=2.28,<3.0", "black>=25.9,<26.0", "isort>=6.0,<7.0", "flake8>=6.0.0,<8.0", "mypy>=1.18,<2.0", "pre-commit>=4.3,<5.0", "build>=1.3,<2.0", "twine>=6.2,<7.0", "tomlkit>=0.13.3,<1.0", "questionary>=2.1.0,<3.0", "rich>=13.0.0,<15.0", "mkdocs>=1.6,<2.0", "mkdocs-material>=9.6,<10.0", "mkdocstrings[python]>=0.30,<1.0", "redis>=6.4.0,<7.0",]
+test = [ "django>=5.2,<6.0", "pytest>=8.4,<9.0", "pytest-django>=4.11,<5.0", "pytest-cov>=7.0,<8.0", "pytest-mock>=3.15,<4.0", "pytest-xdist>=3.8,<4.0", "factory-boy>=3.3,<4.0", "fakeredis>=2.28,<3.0",]
+docs = [ "mkdocs>=1.6,<2.0", "mkdocs-material>=9.6,<10.0", "mkdocstrings[python]>=0.30,<1.0", "pymdown-extensions>=10.16,<11.0",]
+tasks = [ "redis>=6.4.0,<7.0",]
+full = [ "django>=5.2,<6.0", "pytest>=8.4,<9.0", "pytest-django>=4.11,<5.0", "pytest-cov>=7.0,<8.0", "pytest-mock>=3.15,<4.0", "pytest-xdist>=3.8,<4.0", "factory-boy>=3.3,<4.0", "black>=25.9,<26.0", "isort>=6.0,<7.0", "flake8>=6.0.0,<8.0", "mypy>=1.18,<2.0", "pre-commit>=4.3,<5.0", "build>=1.3,<2.0", "twine>=6.2,<7.0", "tomlkit>=0.13.3,<1.0", "questionary>=2.1.0,<3.0", "rich>=13.0.0,<15.0", "mkdocs>=1.6,<2.0", "mkdocs-material>=9.6,<10.0", "mkdocstrings[python]>=0.30,<1.0", "pymdown-extensions>=10.16,<11.0", "redis>=6.4.0,<7.0",]
+
+[project.urls]
+Homepage = "https://djangocfg.com"
+Documentation = "https://djangocfg.com"
+Repository = "https://github.com/markolofsen/django-cfg"
+Issues = "https://github.com/markolofsen/django-cfg/issues"
+Changelog = "https://github.com/markolofsen/django-cfg/blob/main/CHANGELOG.md"
+
+[project.scripts]
+django-cfg = "django_cfg.cli.main:main"
+
+[tool.black]
+line-length = 100
+target-version = [ "py39",]
+include = "\\.pyi?$"
+extend-exclude = "/(\n    \\.eggs\n  | \\.git\n  | \\.hg\n  | \\.mypy_cache\n  | \\.tox\n  | \\.venv\n  | _build\n  | buck-out\n  | build\n  | dist\n  | migrations\n)/\n"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+known_django = [ "django",]
+known_first_party = [ "django_cfg",]
+sections = [ "FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER",]
+
+[tool.mypy]
+python_version = "3.9"
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+strict_optional = true
+show_error_codes = true
+[[tool.mypy.overrides]]
+module = [ "django.*", "rest_framework.*", "django_redis.*", "yaml.*",]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+select = [ "E", "W", "F", "I", "B", "C4", "UP", "N", "S",]
+ignore = [ "E501", "B008", "S101", "S311",]
+
+[tool.bandit]
+exclude_dirs = [ "tests", "migrations",]
+skips = [ "B101", "B601",]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = [ "S101", "S106",]
+"*/migrations/*" = [ "N806",]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+addopts = [ "--cov=django_cfg", "--cov-report=term-missing", "--cov-report=html", "--cov-report=xml", "--cov-fail-under=50", "--strict-markers", "--strict-config", "--verbose",]
+testpaths = [ "tests",]
+markers = [ "slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests as integration tests", "unit: marks tests as unit tests", "django_db: marks tests that require database access",]
+filterwarnings = [ "error", "ignore::UserWarning", "ignore::DeprecationWarning",]
+
+[tool.coverage.run]
+source = [ "src/django_cfg",]
+omit = [ "*/tests/*", "*/migrations/*", "*/__pycache__/*", "*/venv/*", "*/.venv/*",]
+
+[tool.coverage.report]
+exclude_lines = [ "pragma: no cover", "def __repr__", "if self.debug:", "if settings.DEBUG", "raise AssertionError", "raise NotImplementedError", "if 0:", "if __name__ == .__main__.:", "class .*\\bProtocol\\):", "@(abc\\.)?abstractmethod",]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.poetry.group.local]
+optional = true
+
+[tool.hatch.build.targets.wheel]
+packages = [ "src/django_cfg",]
+exclude = [ "scripts/",]
+
+[tool.hatch.build.targets.wheel.force-include]
+"README.md" = "django_cfg/README.md"
+"LICENSE" = "django_cfg/LICENSE"
+"CONTRIBUTING.md" = "django_cfg/CONTRIBUTING.md"
+"CHANGELOG.md" = "django_cfg/CHANGELOG.md"
+"pyproject.toml" = "django_cfg/pyproject.toml"
+
+[tool.hatch.build.targets.sdist]
+include = [ "src/django_cfg", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "requirements*.txt", "MANIFEST.in",]
+exclude = [ "@*", "tests", "scripts", "*.log", ".env*",]
+
+[tool.poetry.group.dev.dependencies]
+tomlkit = "^0.13.3"
+build = "^1.3.0"
+rich = "^14.1.0"
+questionary = "^2.1.0"
+psutil = "^7.0.0"
+aiohttp = "^3.12.15"
+pytest-asyncio = "^1.2.0"
+pillow = "^11.3.0"
+pytest = "^8.4.2"
+pytest-django = "^4.11.1"
+fakeredis = "^2.31.3"
+
+[tool.poetry.group.local.dependencies.django-ipc]
+path = "../django_ipc"
+develop = true
+
+# Include additional files in wheel
+[[tool.poetry.source]]
+name = "pypi"
+priority = "primary"

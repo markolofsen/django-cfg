@@ -1,0 +1,50 @@
+{% load i18n %}
+
+<tr class="border-t border-base-200 h-[55px] *:px-3 *:py-2 *:align-middle dark:border-base-800 hover:bg-base-25 dark:hover:bg-base-900 transition-colors" x-show="rowsOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-1" x-transition:enter-end="opacity-100 transform translate-y-0">
+    <!-- Name/Description Column -->
+    <td class="font-normal text-left align-top">
+        <div class="text-sm text-font-default-light dark:text-font-default-dark">
+            {{ item.help_text|linebreaksbr }}
+        </div>
+    </td>
+
+    <!-- Value Column -->
+    <td class="{% if item.form_field.errors %}group errors{% endif %} align-top">
+        {{ item.form_field }}
+        {% include "unfold/helpers/form_errors.html" with errors=item.form_field.errors %}
+    </td>
+
+    <!-- Default Value Column -->
+    <td class="align-top">
+        {% include "admin/constance/includes/default_value.html" %}
+    </td>
+
+    <!-- Code Column -->
+    <td class="align-top">
+        <a class="item-name item-anchor" href="#{{ item.name|slugify }}" tabindex="-1" id="{{ item.name|slugify }}" title="Link to this setting">
+            {% include "unfold/helpers/label.html" with text=item.name type="info" %}
+        </a>
+    </td>
+
+    <!-- Modified Column -->
+    <td class="align-top text-center">
+        {% include "unfold/helpers/boolean.html" with value=item.modified %}
+    </td>
+
+    <!-- Reset Column -->
+    <td class="w-px align-top text-center">
+        {% if not item.is_file %}
+            <a href="#"
+               tabindex="-1"
+               class="flex items-center gap-1 reset-link whitespace-nowrap hover:bg-base-100 dark:hover:bg-base-800 p-1 rounded transition-colors"
+               data-default="{% spaceless %}{% if item.is_checkbox %}{% if item.raw_default %} true {% else %} false {% endif %}{% elif item.is_date %}{{ item.raw_default|date:"U" }}{% elif item.is_datetime %}{{ item.raw_default|date:"U" }}{% else %}{{ item.default }}{% endif %}{% endspaceless %}"
+               data-field-type="{% spaceless %}{% if item.is_checkbox %}checkbox{% elif item.is_datetime %}datetime{% elif item.is_date %}date{% endif %}{% endspaceless %}"
+               data-field-id="{{ item.form_field.auto_id }}"
+               title="{% trans "Reset to default" %}">
+                <span class="material-symbols-outlined text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200 transition-colors">
+                    refresh
+                </span>
+            </a>
+        {% endif %}
+    </td>
+</tr>

@@ -1,0 +1,78 @@
+# Production Environment Configuration
+# This file is for production deployment
+# Supports environment variable substitution: ${VAR:-default}
+
+# === Core Django Settings ===
+secret_key: ${SECRET_KEY:-django-cfg-sample-prod-key-CHANGE-THIS-IN-PRODUCTION-this-is-long-enough-for-django-security-requirements-minimum-50-characters}
+debug: false
+
+# === Database ===
+database:
+  url: ${DATABASE_URL:-postgresql://django_cfg_example:django_cfg_example_password@localhost:5432/django_cfg_example}
+  url_blog: ${DATABASE_URL_BLOG:-postgresql://django_cfg_example:django_cfg_example_password@localhost:5432/django_cfg_example_blog}
+  url_shop: ${DATABASE_URL_SHOP:-postgresql://django_cfg_example:django_cfg_example_password@localhost:5432/django_cfg_example_shop}
+
+# === Application URLs ===
+app:
+  name: ${APP_NAME:-Django CFG Sample}
+  logo_url: ${LOGO_URL:-https://djangocfg.com/img/logo.png}
+  domain: ${DOMAIN:-djangocfg.com}
+  api_url: ${API_URL:-https://demoapi.djangocfg.com}
+  site_url: ${SITE_URL:-https://demosite.djangocfg.com}
+
+# === Security Domains ===
+# Format: comma-separated list in env var, e.g. SECURITY_DOMAINS="localhost,127.0.0.1,example.com"
+security_domains: ${SECURITY_DOMAINS:-localhost,127.0.0.1,djangocfg.com,demoapi.djangocfg.com,demosite.djangocfg.com}
+
+# === Email ===
+email:
+  backend: "smtp"
+  host: "smtp.djangocfg.com"
+  port: 587
+  username: "noreply@djangocfg.com"
+  password: "your-email-password"
+  use_tls: true
+  use_ssl: false
+  default_from: "Django CFG Sample <noreply@djangocfg.com>"
+
+# === Telegram Bot ===
+telegram:
+  bot_token: ""
+  chat_id: 0
+
+# === API Keys ===
+# Override with environment variables: OPENAI_API_KEY, OPENROUTER_API_KEY, etc.
+api_keys:
+  cloudflare: ""
+  ngrok: ""
+  openrouter: ""
+  openai: ""
+  sendgrid: ""
+
+# === Payments API Keys ===
+# IMPORTANT: Set these via environment variables for security!
+payments_api_keys:
+  nowpayments_api_key: ""
+  nowpayments_ipn_secret: ""
+  nowpayments_sandbox_mode: false  # Production uses live mode
+
+# === Admin Configuration ===
+admin_emails:
+  - "admin@djangocfg.com"
+  - "support@djangocfg.com"
+
+twilio:
+  account_sid: ""  # Main Account SID
+  auth_token: ""   # Main Auth Token
+  whatsapp_from: ""  # WhatsApp sandbox number
+  sms_from: ""       # Your SMS number
+  sendgrid_api_key: ""    # SendGrid API key for email OTP
+  verify_service_sid: ""  # Verify Service for OTP
+  otp_template_id: "d-******"
+  otp_from_email: ""  # SendGrid verified sender email
+
+# === Cache ===
+redis_url: ${REDIS_URL:-redis://localhost:6379/1}
+
+# === Security ===
+ssl_redirect: ${SSL_REDIRECT:-false}

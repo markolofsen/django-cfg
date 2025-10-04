@@ -1,0 +1,5 @@
+{% extends 'django_tailwind/base.html' %}
+
+{% block header %}
+{% include 'django_tailwind/components/navbar.html' with title=navbar_title|default:header_title|default:"Django CFG" icon=navbar_icon|default:header_icon|default:"💎" nav_items=navbar_items sticky=navbar_sticky|default:True show_theme_toggle=navbar_show_theme|default:True %}
+{% endblock %}

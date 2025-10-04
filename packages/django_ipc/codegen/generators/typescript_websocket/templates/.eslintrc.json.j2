@@ -1,0 +1,31 @@
+{
+  "env": {
+    "node": true,
+    "es2020": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }]
+  },
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "*.js"
+  ]
+}

@@ -1,0 +1,60 @@
+{% extends 'django_tailwind/app.html' %}
+{% load static %}
+
+{% block title %}{% block page_title_text %}Dashboard{% endblock %} - Payment Admin - Django CFG{% endblock %}
+
+{# Navbar configuration #}
+{% block header %}
+{% with navbar_items=payment_nav_items %}
+{% include 'django_tailwind/components/navbar.html' with title="Payment Admin" icon='<span class="material-icons-outlined text-blue-600">payment</span>' nav_items=navbar_items %}
+{% endwith %}
+{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+{% endblock %}
+
+{% block alpine_data_extra %}, showNgrokHelp: false{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+        {% block page_title %}Dashboard{% endblock %}
+    </h2>
+    {% block page_subtitle %}
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        Manage payments and webhooks
+    </p>
+    {% endblock %}
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div class="mb-6 space-y-2">
+    {% for message in messages %}
+    <div class="rounded-md p-4 {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800{% else %}bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Page Content -->
+{% block page_content %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+{{ block.super }}
+
+<!-- Global Dialogs -->
+{% include 'payments/components/ngrok_help_dialog.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- Payment System JS Components -->
+<script src="{% static 'payments/js/api-client.js' %}"></script>
+<script src="{% static 'payments/js/ngrok-status.js' %}"></script>
+{% endblock %}

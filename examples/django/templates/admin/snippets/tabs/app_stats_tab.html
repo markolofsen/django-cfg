@@ -1,0 +1,201 @@
+{% load unfold %}
+
+<!-- App Statistics Tab -->
+<div class="space-y-6">
+    <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+        Application Statistics
+    </h2>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-blue-600 dark:text-blue-400 mr-2">apps</span>
+                <div>
+                    <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ app_statistics.total_apps|default:0 }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">Total Apps</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-green-600 dark:text-green-400 mr-2">table_chart</span>
+                <div>
+                    <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ app_statistics.total_models|default:0 }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">Total Models</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-purple-600 dark:text-purple-400 mr-2">storage</span>
+                <div>
+                    <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ app_statistics.total_records|default:0 }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">Total Records</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4">
+            <div class="flex items-center">
+                <span class="material-icons text-xl text-orange-600 dark:text-orange-400 mr-2">public</span>
+                <div>
+                    <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ app_statistics.zones|length|default:0 }}</div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">API Zones</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Groups -->
+    {% if stats_groups %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {% for group in stats_groups %}
+                <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4">
+                    
+                    <!-- Group Header -->
+                    <div class="flex items-center mb-3 pb-2 border-b border-base-200 dark:border-base-700">
+                        {% if group.icon %}
+                            <span class="material-icons mr-2 text-lg" 
+                                  {% if group.color == 'success' %}text-green-600 dark:text-green-400
+                                  {% elif group.color == 'primary' %}text-primary-600 dark:text-primary-400
+                                  {% elif group.color == 'danger' %}text-red-600 dark:text-red-400
+                                  {% elif group.color == 'warning' %}text-amber-600 dark:text-amber-400
+                                  {% elif group.color == 'info' %}text-blue-600 dark:text-blue-400
+                                  {% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}>
+                                {{ group.icon }}
+                            </span>
+                        {% endif %}
+                        <h3 class="text-md font-semibold text-font-important-light dark:text-font-important-dark">{{ group.title }}</h3>
+                    </div>
+                    
+                    <!-- Group Sections -->
+                    {% for section in group.sections %}
+                        <div class="mb-3 last:mb-0">
+                            <h4 class="text-sm font-medium text-font-default-light dark:text-font-default-dark mb-2 flex items-center">
+                                <span class="material-icons mr-1 text-xs" 
+                                      {% if group.color == 'success' %}text-green-600 dark:text-green-400
+                                      {% elif group.color == 'primary' %}text-primary-600 dark:text-primary-400
+                                      {% elif group.color == 'danger' %}text-red-600 dark:text-red-400
+                                      {% elif group.color == 'warning' %}text-amber-600 dark:text-amber-400
+                                      {% elif group.color == 'info' %}text-blue-600 dark:text-blue-400
+                                      {% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}>
+                                    bar_chart
+                                </span>
+                                {{ section.title }}
+                            </h4>
+                            
+                            <!-- Statistics Cards Grid -->
+                            <div class="grid grid-cols-1 gap-2">
+                                {% for card in section.cards %}
+                                    <div class="flex items-center justify-between p-2 bg-base-50 dark:bg-base-800 rounded-lg hover:bg-base-100 dark:hover:bg-base-700 transition">
+                                        <div class="flex items-center">
+                                            {% if card.icon %}
+                                                <div class="w-6 h-6 rounded flex items-center justify-center mr-2"
+                                                     {% if group.color == 'success' %}bg-green-100 dark:bg-green-900/20
+                                                     {% elif group.color == 'primary' %}bg-primary-100 dark:bg-primary-900/20
+                                                     {% elif group.color == 'danger' %}bg-red-100 dark:bg-red-900/20
+                                                     {% elif group.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20
+                                                     {% elif group.color == 'info' %}bg-blue-100 dark:bg-blue-900/20
+                                                     {% else %}bg-base-100 dark:bg-base-800{% endif %}>
+                                                    <span class="material-icons text-xs" 
+                                                          {% if group.color == 'success' %}text-green-600 dark:text-green-400
+                                                          {% elif group.color == 'primary' %}text-primary-600 dark:text-primary-400
+                                                          {% elif group.color == 'danger' %}text-red-600 dark:text-red-400
+                                                          {% elif group.color == 'warning' %}text-amber-600 dark:text-amber-400
+                                                          {% elif group.color == 'info' %}text-blue-600 dark:text-blue-400
+                                                          {% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}>{{ card.icon }}</span>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="text-sm font-medium text-font-default-light dark:text-font-default-dark">{{ card.title }}</div>
+                                                {% if card.description %}
+                                                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ card.description }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                                  {% if group.color == 'success' %}bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400
+                                                  {% elif group.color == 'primary' %}bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400
+                                                  {% elif group.color == 'danger' %}bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400
+                                                  {% elif group.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400
+                                                  {% elif group.color == 'info' %}bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400
+                                                  {% else %}bg-base-100 dark:bg-base-800 text-font-default-light dark:text-font-default-dark{% endif %}>
+                                                {{ card.count|default:0 }}
+                                            </span>
+                                            <a href="{% url card.url_name %}" 
+                                               class="inline-flex items-center gap-1 px-2 py-1 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded text-xs font-medium transition">
+                                                <span class="material-icons text-xs" style="font-size: 12px;">visibility</span>
+                                                <span class="text-xs">View</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Fallback to zones display if no stats_groups -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {% for zone_name, zone_data in app_statistics.zones.items %}
+                <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-md font-semibold text-font-important-light dark:text-font-important-dark">
+                            <span class="material-icons mr-2 text-sm">public</span>
+                            {{ zone_data.name }}
+                        </h3>
+                        <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                            {{ zone_data.app_count }} apps, {{ zone_data.total_records }} records
+                        </div>
+                    </div>
+                    
+                    <!-- Apps in this zone -->
+                    <div class="space-y-2">
+                        {% for app_name, app_data in zone_data.apps.items %}
+                            <div class="bg-base-50 dark:bg-base-800 rounded p-2">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-medium text-font-default-light dark:text-font-default-dark">{{ app_data.name }}</h4>
+                                    <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ app_data.model_count }} models</span>
+                                </div>
+                                
+                                <!-- Models in this app -->
+                                <div class="space-y-1">
+                                    {% for model_name, model_data in app_data.models.items %}
+                                        <div class="flex items-center justify-between text-xs">
+                                            <span class="text-font-subtle-light dark:text-font-subtle-dark">{{ model_data.name }}</span>
+                                            <div class="flex items-center gap-1">
+                                                <span class="font-medium text-font-default-light dark:text-font-default-dark">{{ model_data.count }}</span>
+                                                <a href="{% url model_data.admin_url %}" 
+                                                   class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                                    <span class="material-icons text-xs">visibility</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="mt-2 pt-2 border-t border-base-200 dark:border-base-700">
+                                    <div class="flex justify-between text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                        <span>Total: {{ app_data.total_records }} records</span>
+                                        <span>{{ app_data.model_count }} models</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-span-full text-center py-8 text-font-subtle-light dark:text-font-subtle-dark">
+                    <span class="material-icons text-4xl mb-2 block">apps</span>
+                    <p>No application statistics available</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

@@ -1,0 +1,28 @@
+{% load unfold %}
+
+<!-- Status Badge Component -->
+<span class="status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+    {% if status == 'active' or status == 'healthy' or status == 'success' %}bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400
+    {% elif status == 'warning' or status == 'pending' %}bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400
+    {% elif status == 'error' or status == 'failed' or status == 'inactive' %}bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400
+    {% elif status == 'info' or status == 'processing' %}bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400
+    {% else %}bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400{% endif %}">
+    
+    {% if icon %}
+    <span class="material-icons text-xs mr-1">{{ icon }}</span>
+    {% else %}
+        {% if status == 'active' or status == 'healthy' or status == 'success' %}
+        <span class="material-icons text-xs mr-1">check_circle</span>
+        {% elif status == 'warning' or status == 'pending' %}
+        <span class="material-icons text-xs mr-1">warning</span>
+        {% elif status == 'error' or status == 'failed' %}
+        <span class="material-icons text-xs mr-1">error</span>
+        {% elif status == 'inactive' %}
+        <span class="material-icons text-xs mr-1">cancel</span>
+        {% elif status == 'info' or status == 'processing' %}
+        <span class="material-icons text-xs mr-1">info</span>
+        {% endif %}
+    {% endif %}
+    
+    {{ text|default:status|title }}
+</span>

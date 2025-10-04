@@ -1,0 +1,16 @@
+{% load admin_list static i18n %}
+
+<tbody x-data="{ rowsOpen: {% if forloop.first %}true{% else %}false{% endif %} }" 
+       @collapse-all.window="rowsOpen = false" 
+       @expand-all.window="rowsOpen = true">
+    <!-- Fieldset Header -->
+    {% include "admin/constance/includes/fieldset_header.html" %}
+    
+    <!-- Table Headers -->
+    {% include "admin/constance/includes/table_headers.html" %}
+
+    <!-- Setting Rows -->
+    {% for item in config_values %}
+        {% include "admin/constance/includes/setting_row.html" %}
+    {% endfor %}
+</tbody>

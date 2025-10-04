@@ -1,0 +1,124 @@
+{% comment %}
+Universal Navbar Component
+
+Parameters:
+- title: Navbar title (default: "Django CFG")
+- icon: Emoji or HTML icon (default: "💎")
+- nav_items: List of navigation items (optional)
+  Example: [
+    {'label': 'Dashboard', 'url': '/dashboard/', 'active': True},
+    {'label': 'Settings', 'url': '/settings/'},
+  ]
+- show_theme_toggle: Show dark mode toggle (default: True)
+- show_user_menu: Show user menu dropdown (default: True)
+- sticky: Make navbar sticky (default: True)
+- full_width: Make navbar full width (default: False, uses max-w-7xl)
+- extra_actions: Additional action buttons (optional, block content)
+
+User menu parameters:
+- show_profile: Show profile link in user menu (default: False)
+- show_logout: Show logout link in user menu (default: False)
+- profile_url: Custom profile URL (default: /profile/)
+- logout_url: Custom logout URL (default: /accounts/logout/)
+
+Usage:
+
+Basic:
+{% include 'django_tailwind/components/navbar.html' with title="My App" icon="🚀" %}
+
+Full width navbar:
+{% include 'django_tailwind/components/navbar.html' with title="Dashboard" full_width=True %}
+
+With navigation items:
+{% include 'django_tailwind/components/navbar.html' with title="Dashboard" nav_items=menu_items %}
+
+With user menu options:
+{% include 'django_tailwind/components/navbar.html' with show_profile=True show_logout=True %}
+
+In template context:
+menu_items = [
+    {'label': 'Home', 'url': '/', 'active': True},
+    {'label': 'About', 'url': '/about/'},
+]
+
+Custom navbar (extending):
+{% with title="My App" icon="🚀" %}
+    {% include 'django_tailwind/components/navbar.html' %}
+{% endwith %}
+{% endcomment %}
+
+<header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 {% if sticky|default:True %}sticky top-0 z-50{% endif %}">
+    <div class="{% if full_width %}w-full{% else %}max-w-7xl mx-auto{% endif %} px-4 sm:px-6 lg:px-8">
+        <!-- Main navbar row -->
+        <div class="flex justify-between h-16">
+            <!-- Left: Logo, Title & Navigation -->
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-3">
+                    {% if icon %}
+                    <span class="text-2xl">{{ icon }}</span>
+                    {% endif %}
+                    <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        {{ title|default:"Django CFG" }}
+                    </h1>
+                </div>
+
+                <!-- Navigation items (horizontal links) -->
+                {% if nav_items %}
+                <nav class="hidden md:flex items-center space-x-1">
+                    {% for item in nav_items %}
+                    <a href="{{ item.url }}"
+                       class="px-3 py-2 rounded-md text-sm font-medium transition-colors
+                              {% if item.active %}
+                                  bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white
+                              {% else %}
+                                  text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white
+                              {% endif %}">
+                        {% if item.icon %}<span class="mr-1">{{ item.icon }}</span>{% endif %}
+                        {{ item.label }}
+                    </a>
+                    {% endfor %}
+                </nav>
+                {% endif %}
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex items-center space-x-4">
+
+                <!-- Extra actions slot -->
+                {% if extra_actions %}
+                {{ extra_actions }}
+                {% endif %}
+
+                <!-- Dark Mode Toggle -->
+                {% if show_theme_toggle|default:True %}
+                {% include 'django_tailwind/components/theme_toggle.html' %}
+                {% endif %}
+
+                <!-- User Menu -->
+                {% if show_user_menu|default:True %}
+                {% include 'django_tailwind/components/user_menu.html' with show_profile=show_profile show_logout=show_logout profile_url=profile_url logout_url=logout_url %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Mobile navigation (dropdown) -->
+        {% if nav_items %}
+        <div class="md:hidden pb-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <nav class="flex flex-col space-y-1">
+                {% for item in nav_items %}
+                <a href="{{ item.url }}"
+                   class="px-3 py-2 rounded-md text-sm font-medium transition-colors
+                          {% if item.active %}
+                              bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white
+                          {% else %}
+                              text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white
+                          {% endif %}">
+                    {% if item.icon %}<span class="mr-2">{{ item.icon }}</span>{% endif %}
+                    {{ item.label }}
+                </a>
+                {% endfor %}
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</header>

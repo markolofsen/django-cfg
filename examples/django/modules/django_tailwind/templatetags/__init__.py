@@ -1,0 +1,1 @@
+"""Django Tailwind templatetags package."""

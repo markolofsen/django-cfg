@@ -1,0 +1,112 @@
+{% load unfold %}
+
+<!-- Overview Section -->
+<div class="space-y-10 flex flex-col gap-8">
+    <!-- Hero Section with Key Metrics -->
+    <div>
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold theme-text">{{ title|default:"System Overview" }}</h1>
+                <p class="text-gray-600 dark:text-gray-300 mt-2">
+                    Real-time monitoring and key performance indicators
+                </p>
+            </div>
+            <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                <span class="material-icons text-green-500">fiber_manual_record</span>
+                <span>Live data</span>
+            </div>
+        </div>
+
+        <!-- Key Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% for key, value in data.stats.items %}
+                <div class="theme-card p-6 rounded-lg shadow-sm border theme-border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 uppercase">{{ key }}</p>
+                            <p class="text-3xl font-bold theme-text mt-2">{{ value }}</p>
+                        </div>
+                        <span class="material-icons text-blue-500 text-4xl">{{ icon|default:"analytics" }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- System Health & Quick Actions -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="theme-card rounded-lg shadow-sm border theme-border">
+            <div class="p-6 border-b theme-border">
+                <h3 class="text-lg font-semibold theme-text flex items-center">
+                    <span class="material-icons text-green-500 mr-2">favorite</span>
+                    System Health
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for key, value in data.system_health.items %}
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-700 dark:text-gray-300">{{ key|title }}</span>
+                            <span class="font-mono text-sm theme-text">{{ value }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="theme-card rounded-lg border theme-border shadow-sm">
+            <div class="p-6">
+                {% include 'admin/snippets/components/quick_actions.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts & Recent Activity -->
+    <div class="space-y-8">
+        <!-- Charts Section -->
+        {% include 'admin/snippets/components/charts_section.html' %}
+
+        <!-- Recent Activity Stream -->
+        <div class="theme-card rounded-lg shadow-sm border theme-border">
+            <div class="p-6 border-b theme-border">
+                <h3 class="text-lg font-semibold theme-text flex items-center">
+                    <span class="material-icons text-blue-600 mr-2">timeline</span>
+                    Recent Activity
+                </h3>
+            </div>
+            <div class="p-6">
+                {% include 'admin/snippets/components/recent_activity_improved.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Metrics Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- System Metrics -->
+        <div class="theme-card rounded-lg border theme-border shadow-sm">
+            <div class="p-6 border-b theme-border">
+                <h3 class="text-lg font-semibold theme-text flex items-center">
+                    <span class="material-icons text-blue-500 mr-2">memory</span>
+                    System Metrics
+                </h3>
+            </div>
+            <div class="p-6">
+                {% include 'admin/snippets/components/system_metrics.html' %}
+            </div>
+        </div>
+
+        <!-- Activity Tracker -->
+        <div class="theme-card rounded-lg border theme-border shadow-sm">
+            <div class="p-6 border-b theme-border">
+                <h3 class="text-lg font-semibold theme-text flex items-center">
+                    <span class="material-icons text-blue-600 mr-2">track_changes</span>
+                    Activity Tracker
+                </h3>
+            </div>
+            <div class="p-6">
+                {% include 'admin/snippets/components/activity_tracker.html' %}
+            </div>
+        </div>
+    </div>
+</div>

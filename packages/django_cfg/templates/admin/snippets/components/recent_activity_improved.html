@@ -1,0 +1,25 @@
+{% load unfold %}
+
+<!-- Recent Users Table Component -->
+{% if recent_users_table and recent_users_table.rows %}
+    {% include 'admin/snippets/components/recent_users_table.html' %}
+{% else %}
+    <!-- Empty State -->
+    <div class="flex flex-col items-center justify-center
+                rounded-default border-2 border-dashed
+                border-base-200 bg-base-50 p-12
+                dark:border-base-700 dark:bg-base-800/50">
+
+        <div class="mb-4 rounded-full bg-base-100 p-4
+                    dark:bg-base-700">
+            <span class="material-icons text-4xl text-base-400
+                         dark:text-base-500">history</span>
+        </div>
+
+        <h3 class="mb-1 text-sm font-semibold text-font-important-light
+                   dark:text-font-important-dark">No Recent Activity</h3>
+        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+            User activity will appear here once users start joining
+        </p>
+    </div>
+{% endif %}

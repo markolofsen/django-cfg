@@ -1,0 +1,173 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Payment Admin{% endblock %}
+
+{% block page_title %}Payment Dashboard{% endblock %}
+{% block page_subtitle %}Overview of payment system status and metrics{% endblock %}
+
+{% block content %}
+<div x-data="paymentDashboard()" x-init="init()">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Payments -->
+        {% include 'payments/components/status_card.html' with title="Total Payments" value="0" icon="payment" status="info" %}
+        
+        <!-- Successful Payments -->
+        {% include 'payments/components/status_card.html' with title="Successful" value="0" icon="check_circle" status="success" %}
+        
+        <!-- Pending Payments -->
+        {% include 'payments/components/status_card.html' with title="Pending" value="0" icon="schedule" status="warning" %}
+        
+        <!-- Failed Payments -->
+        {% include 'payments/components/status_card.html' with title="Failed" value="0" icon="error" status="error" %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Recent Payments -->
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Payments</h3>
+                        <a href="{% url 'cfg_payments_admin:payment-list' %}" 
+                           class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                            View all
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div x-show="recentPayments.length === 0 && !loading" class="text-center py-8">
+                        <span class="material-icons-outlined text-gray-400 text-4xl mb-2">payment</span>
+                        <p class="text-gray-500 dark:text-gray-400">No recent payments</p>
+                    </div>
+                    
+                    <div x-show="loading" class="text-center py-8">
+                        <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <template x-for="payment in recentPayments.slice(0, 5)" :key="payment.id">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
+                                        <span class="material-icons-outlined text-blue-600 dark:text-blue-400 text-sm">payment</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="payment.id.substring(0, 8)"></div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400" x-text="payment.provider"></div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="`$${payment.amount_usd}`"></div>
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="{
+                                              'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400': payment.status === 'completed',
+                                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400': payment.status === 'pending',
+                                              'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400': payment.status === 'failed'
+                                          }"
+                                          x-text="payment.status">
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <a href="{% url 'cfg_payments_admin:payment-form' %}" 
+                           class="flex items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-4">
+                                <span class="material-icons-outlined text-blue-600 dark:text-blue-400">add</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">Create Payment</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Start a new payment</div>
+                            </div>
+                        </a>
+                        
+                        <a href="{% url 'cfg_payments_admin:webhook-dashboard' %}" 
+                           class="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                            <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mr-4">
+                                <span class="material-icons-outlined text-green-600 dark:text-green-400">webhook</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">Webhook Dashboard</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Monitor webhooks</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-8">
+            <!-- Ngrok Status -->
+            {% include 'payments/components/ngrok_status.html' %}
+
+            <!-- System Status -->
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">System Status</h3>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-900 dark:text-white">API Status</span>
+                        </div>
+                        <span class="text-sm text-green-600 dark:text-green-400">Operational</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-900 dark:text-white">Database</span>
+                        </div>
+                        <span class="text-sm text-green-600 dark:text-green-400">Connected</span>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Activity</h3>
+                </div>
+                
+                <div class="p-6">
+                    <div class="space-y-3">
+                        <template x-for="activity in recentActivity" :key="activity.id">
+                            <div class="flex items-start">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
+                                <div class="flex-1">
+                                    <p class="text-sm text-gray-900 dark:text-white" x-text="activity.message"></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="activity.time"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'payments/js/payment-dashboard.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% load unfold %}
+
+<!-- Recent Activity Content -->
+{% if recent_users %}
+    <div class="space-y-3">
+        {% for user in recent_users %}
+            <div class="flex items-center justify-between p-3 bg-base-50 dark:bg-base-800 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    {% include 'admin/components/user_avatar.html' with name=user.username color='blue' size='8' %}
+                    <div>
+                        <p class="text-sm font-medium text-font-default-light dark:text-font-default-dark">
+                            {{ user.username }}
+                        </p>
+                        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                            {{ user.email }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    {% include 'admin/components/status_badge.html' with status=user.is_active|yesno:'active,inactive' %}
+                    <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                        {{ user.date_joined|date:"M d, Y" }}
+                    </span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="flex items-center justify-center p-8 bg-base-50 dark:bg-base-800 rounded-lg border border-base-200 dark:border-base-700">
+        <div class="text-center">
+            <span class="material-icons text-4xl text-base-400 dark:text-base-500 mb-2">history</span>
+            <p class="text-font-subtle-light dark:text-font-subtle-dark">No recent activity available</p>
+        </div>
+    </div>
+{% endif %} 

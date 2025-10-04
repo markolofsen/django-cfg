@@ -1,0 +1,156 @@
+{% load unfold %}
+
+<!--
+    Component Class Example Template
+
+    This demonstrates using Unfold's Component Class system with @register_component.
+    This is an ALTERNATIVE approach to the section-based architecture.
+
+    Benefits:
+    - Templates specify which component to use
+    - Components handle their own data fetching
+    - More self-contained and reusable
+
+    Usage:
+    - Add to UNFOLD settings: custom page or tab
+    - Components automatically fetch data when rendered
+-->
+
+<div class="space-y-8">
+    <!-- System Metrics using Component Class -->
+    <div>
+        <h2 class="text-xl font-semibold mb-4">System Metrics (Component Class)</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Database Metric -->
+            {% component "unfold/components/card.html" with title="Database" component_class="SystemMetricsComponent" %}
+                {% if data.database %}
+                    {% component "unfold/components/progress.html" with
+                        value=data.database.value
+                        title=data.database.title
+                        description=data.database.description %}
+                    {% endcomponent %}
+                {% endif %}
+            {% endcomponent %}
+
+            <!-- Cache Metric -->
+            {% component "unfold/components/card.html" with title="Cache" component_class="SystemMetricsComponent" %}
+                {% if data.cache %}
+                    {% component "unfold/components/progress.html" with
+                        value=data.cache.value
+                        title=data.cache.title
+                        description=data.cache.description %}
+                    {% endcomponent %}
+                {% endif %}
+            {% endcomponent %}
+
+            <!-- Storage Metric -->
+            {% component "unfold/components/card.html" with title="Storage" component_class="SystemMetricsComponent" %}
+                {% if data.storage %}
+                    {% component "unfold/components/progress.html" with
+                        value=data.storage.value
+                        title=data.storage.title
+                        description=data.storage.description %}
+                    {% endcomponent %}
+                {% endif %}
+            {% endcomponent %}
+
+            <!-- API Metric -->
+            {% component "unfold/components/card.html" with title="API" component_class="SystemMetricsComponent" %}
+                {% if data.api %}
+                    {% component "unfold/components/progress.html" with
+                        value=data.api.value
+                        title=data.api.title
+                        description=data.api.description %}
+                    {% endcomponent %}
+                {% endif %}
+            {% endcomponent %}
+        </div>
+    </div>
+
+    <!-- Recent Users using Component Class -->
+    <div>
+        <h2 class="text-xl font-semibold mb-4">Recent Users (Component Class)</h2>
+
+        {% component "unfold/components/card.html" with title="Latest Registrations" component_class="RecentUsersComponent" %}
+            {% if data.rows %}
+                {% component "unfold/components/table.html" with
+                    table=data
+                    striped=1
+                    height=400 %}
+                {% endcomponent %}
+            {% else %}
+                <p class="text-font-subtle-light dark:text-font-subtle-dark">No users yet</p>
+            {% endif %}
+        {% endcomponent %}
+    </div>
+
+    <!-- Charts using Component Class -->
+    <div>
+        <h2 class="text-xl font-semibold mb-4">Analytics (Component Class)</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- User Registrations Chart -->
+            {% component "unfold/components/card.html" with title="User Registrations" component_class="ChartsComponent" days=7 %}
+                {% if data.registrations %}
+                    {% component "unfold/components/chart/line.html" with
+                        data=data.registrations
+                        height=300 %}
+                    {% endcomponent %}
+                {% else %}
+                    <p class="text-font-subtle-light dark:text-font-subtle-dark">No data available</p>
+                {% endif %}
+            {% endcomponent %}
+
+            <!-- User Activity Chart -->
+            {% component "unfold/components/card.html" with title="User Activity" component_class="ChartsComponent" days=7 %}
+                {% if data.activity %}
+                    {% component "unfold/components/chart/bar.html" with
+                        data=data.activity
+                        height=300 %}
+                    {% endcomponent %}
+                {% else %}
+                    <p class="text-font-subtle-light dark:text-font-subtle-dark">No data available</p>
+                {% endif %}
+            {% endcomponent %}
+        </div>
+    </div>
+
+    <!-- Activity Tracker using Component Class -->
+    <div>
+        <h2 class="text-xl font-semibold mb-4">Activity Tracker (Component Class)</h2>
+
+        {% component "unfold/components/card.html" with title="365 Day Heatmap" component_class="ActivityTrackerComponent" %}
+            {% if data %}
+                {% component "unfold/components/tracker.html" with data=data %}
+                {% endcomponent %}
+            {% else %}
+                <p class="text-font-subtle-light dark:text-font-subtle-dark">No activity data</p>
+            {% endif %}
+        {% endcomponent %}
+    </div>
+</div>
+
+<!--
+    How Component Classes Work:
+
+    1. Template specifies: component_class="SystemMetricsComponent"
+    2. Unfold finds registered component by name
+    3. Component's get_context_data() is called
+    4. Data is fetched and returned
+    5. Template receives data and renders
+
+    Comparison with Section-Based Approach:
+
+    Section-Based (current):
+    - Section class prepares all data
+    - Template receives pre-processed data
+    - Single render call for entire section
+
+    Component Classes:
+    - Each component fetches its own data
+    - More granular, reusable components
+    - Multiple component renders per page
+
+    Both approaches are valid - choose based on needs!
+-->

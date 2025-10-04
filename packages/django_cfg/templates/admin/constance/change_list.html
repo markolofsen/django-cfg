@@ -1,0 +1,113 @@
+{% extends "admin/base_site.html" %}
+
+{% load admin_list static i18n %}
+
+{% block extrahead %}
+    {% url 'admin:jsi18n' as jsi18nurl %}
+    <script type="text/javascript" src="{{ jsi18nurl|default:'../../jsi18n/' }}"></script>
+    {{ block.super }}
+    {{ media.js }}
+    <script type="text/javascript" src="{% static 'admin/js/constance.js' %}"></script>
+    
+    <!-- Enhanced Constance UI Styles -->
+    <style>
+        /* Smooth transitions for all interactive elements */
+        .constance-expandable {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        /* Better hover states */
+        .constance tr:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .dark .constance tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        
+        /* Improved focus states for accessibility */
+        .constance a:focus,
+        .constance button:focus {
+            outline: 2px solid rgb(59, 130, 246);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Better spacing for long text */
+        .constance .break-words {
+            word-break: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+        
+        /* Smooth animations for expand/collapse */
+        .constance [x-show] {
+            transition: opacity 0.2s ease-in-out;
+        }
+        
+        /* Icon rotation animation */
+        .constance .material-symbols-outlined {
+            transition: transform 0.3s ease-in-out;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div id="content-main" class="constance">
+        <div id="changelist" class="flex flex-col gap-8 w-full">
+            <form id="changelist-form" action="" method="post" enctype="multipart/form-data" novalidate class="flex flex-col gap-8 w-full">
+                {% csrf_token %}
+
+                {% include "unfold/helpers/form_errors.html" with errors=form.non_field_errors %}
+
+                {% for field in form.hidden_fields %}
+                    {{ field }}
+                {% endfor %}
+
+                <!-- Collapse/Expand All Controls -->
+                <div class="flex justify-between items-center mb-4" x-data="{ allExpanded: true }">
+                    <div class="text-sm text-base-600 dark:text-base-400">
+                        {% trans "Configuration Settings" %}
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" 
+                                @click="allExpanded = false; $dispatch('collapse-all')"
+                                class="px-3 py-1 text-xs bg-base-100 hover:bg-base-200 dark:bg-base-800 dark:hover:bg-base-700 border border-base-300 dark:border-base-600 rounded transition-colors">
+                            {% trans "Collapse All" %}
+                        </button>
+                        <button type="button" 
+                                @click="allExpanded = true; $dispatch('expand-all')"
+                                class="px-3 py-1 text-xs bg-base-100 hover:bg-base-200 dark:bg-base-800 dark:hover:bg-base-700 border border-base-300 dark:border-base-600 rounded transition-colors">
+                            {% trans "Expand All" %}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border border-base-200 rounded-default overflow-x-auto simplebar-horizontal-scrollbar-top dark:border-base-800" data-simplebar data-simplebar-auto-hide="false">
+                    <table class="w-full border-collapse">
+                        {% if fieldsets %}
+                            {% for fieldset in fieldsets %}
+                                {% with config_values=fieldset.config_values %}
+                                    {% include "admin/constance/includes/results_list.html" %}
+                                {% endwith %}
+                            {% endfor %}
+                        {% else %}
+                            {% include "admin/constance/includes/results_list.html" %}
+                        {% endif %}
+
+                        <tfoot>
+                            <tr>
+                                <td class="border-t border-base-200 px-3 py-2 dark:border-base-800" colspan="100%">
+                                    <div class="flex justify-end">
+                                        {% trans "Save" as title %}
+                                        {% include "unfold/helpers/submit.html" with title=title %}
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

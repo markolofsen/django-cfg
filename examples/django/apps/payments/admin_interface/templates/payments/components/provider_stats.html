@@ -1,0 +1,60 @@
+{% comment %}
+Provider Statistics Component
+
+Usage:
+{% include 'payments/components/provider_stats.html' with provider_stats=provider_stats %}
+
+Parameters:
+- provider_stats: List of provider statistics objects
+{% endcomment %}
+
+<div class="space-y-4">
+    {% for stat in provider_stats %}
+    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+        <div class="flex items-center space-x-3">
+            <!-- Provider Icon -->
+            <div class="w-8 h-8 rounded-full flex items-center justify-center
+                {% if stat.provider == 'cryptapi' %}bg-orange-500
+                {% elif stat.provider == 'cryptomus' %}bg-blue-500
+                {% elif stat.provider == 'stripe' %}bg-purple-500
+                {% elif stat.provider == 'nowpayments' %}bg-green-500
+                {% else %}bg-gray-500{% endif %}">
+                <span class="material-icons-outlined text-white text-sm">payment</span>
+            </div>
+            
+            <!-- Provider Info -->
+            <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                    {{ stat.provider }}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ stat.count }} payment{{ stat.count|pluralize }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="text-right">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                ${{ stat.volume|floatformat:2|default:"0.00" }}
+            </p>
+            <div class="flex items-center space-x-2 mt-1">
+                <!-- Success Rate Bar -->
+                <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                    <div class="bg-green-600 h-1.5 rounded-full transition-all duration-300" 
+                         style="width: {{ stat.success_rate|floatformat:0 }}%"></div>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ stat.success_rate|floatformat:0 }}%
+                </span>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-8">
+        <span class="material-icons-outlined text-gray-400 text-4xl mb-2">bar_chart</span>
+        <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">No Provider Data</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Provider statistics will appear here once payments are processed</p>
+    </div>
+    {% endfor %}
+</div>

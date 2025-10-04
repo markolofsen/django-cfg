@@ -1,0 +1,66 @@
+{% load unfold %}
+
+<!-- Quick Actions Section using reusable components -->
+{% if quick_actions %}
+    <div class="mt-8 w-full">
+        {% include 'admin/components/section_header.html' with title='Quick Actions' icon='flash_on' icon_color='amber' %}
+        
+        {% include 'admin/components/action_grid.html' with actions=quick_actions cols=3 xl_cols=4 %}
+        
+        <!-- Additional Action Categories -->
+        {% if admin_actions or user_actions or system_actions %}
+            <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {% if admin_actions %}
+                    <div class="bg-base-50 dark:bg-base-800 rounded-lg p-6 border border-base-200 dark:border-base-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                            <span class="material-icons text-primary-600 mr-2">admin_panel_settings</span>
+                            Admin Actions
+                        </h3>
+                        <div class="space-y-2">
+                            {% for action in admin_actions %}
+                                <a href="{{ action.link }}" class="flex items-center text-sm text-font-subtle-light dark:text-font-subtle-dark hover:text-primary-600 dark:hover:text-primary-500 transition-colors">
+                                    <span class="material-icons text-xs mr-2">{{ action.icon }}</span>
+                                    {{ action.title }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if user_actions %}
+                    <div class="bg-base-50 dark:bg-base-800 rounded-lg p-6 border border-base-200 dark:border-base-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                            <span class="material-icons text-green-600 dark:text-green-400 mr-2">people</span>
+                            User Management
+                        </h3>
+                        <div class="space-y-2">
+                            {% for action in user_actions %}
+                                <a href="{{ action.link }}" class="flex items-center text-sm text-font-subtle-light dark:text-font-subtle-dark hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                                    <span class="material-icons text-xs mr-2">{{ action.icon }}</span>
+                                    {{ action.title }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if system_actions %}
+                    <div class="bg-base-50 dark:bg-base-800 rounded-lg p-6 border border-base-200 dark:border-base-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                            <span class="material-icons text-amber-600 dark:text-amber-400 mr-2">settings</span>
+                            System Tools
+                        </h3>
+                        <div class="space-y-2">
+                            {% for action in system_actions %}
+                                <a href="{{ action.link }}" class="flex items-center text-sm text-font-subtle-light dark:text-font-subtle-dark hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                                    <span class="material-icons text-xs mr-2">{{ action.icon }}</span>
+                                    {{ action.title }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% endif %} 

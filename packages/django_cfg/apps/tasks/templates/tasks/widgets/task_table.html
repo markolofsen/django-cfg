@@ -1,0 +1,50 @@
+<!-- Task Table Widget -->
+<div class="task-table-widget overflow-x-auto">
+    <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+            <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
+                    <div class="flex items-center space-x-1">
+                        <span>Status</span>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <span class="material-icons text-sm">sort</span>
+                        </button>
+                    </div>
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center space-x-1">
+                        <span>Task</span>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <span class="material-icons text-sm">sort</span>
+                        </button>
+                    </div>
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                    <div class="flex items-center space-x-1">
+                        <span>Queue</span>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <span class="material-icons text-sm">sort</span>
+                        </button>
+                    </div>
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-20">
+                    Duration
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                    <div class="flex items-center space-x-1">
+                        <span>Updated</span>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <span class="material-icons text-sm">sort</span>
+                        </button>
+                    </div>
+                </th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
+                    Actions
+                </th>
+            </tr>
+        </thead>
+        <tbody id="task-table-body" class="divide-y divide-gray-200 dark:divide-gray-600">
+            <!-- Task rows will be inserted here by JavaScript -->
+        </tbody>
+    </table>
+</div>

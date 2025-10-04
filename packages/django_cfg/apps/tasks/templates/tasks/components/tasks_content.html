@@ -1,0 +1,51 @@
+<!-- Tasks Content -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center">
+                <span class="material-icons text-purple-600 dark:text-purple-400 mr-2">list</span>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Task Monitor</h2>
+                <span id="task-count-badge" class="ml-3 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">0 tasks</span>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button id="tasks-auto-refresh-toggle" 
+                        class="px-3 py-1 text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors">
+                    <span class="material-icons text-sm mr-1">refresh</span>Auto: ON
+                </button>
+                <button id="refresh-tasks-btn" 
+                        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                    <span class="material-icons text-sm">refresh</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        {% include 'tasks/widgets/task_filters.html' %}
+    </div>
+    
+    <!-- Content -->
+    <div class="p-6">
+        <!-- Loading State -->
+        <div id="tasks-loading" class="hidden flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <span class="ml-3 text-gray-600 dark:text-gray-400">Loading tasks...</span>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="tasks-empty" class="hidden text-center py-12">
+            <span class="material-icons text-6xl text-gray-400 dark:text-gray-600 mb-4">inbox</span>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No tasks found</h3>
+            <p class="text-gray-500 dark:text-gray-400">Try adjusting your filters or run some tasks.</p>
+        </div>
+        
+        <!-- Task List -->
+        <div id="tasks-container">
+            {% include 'tasks/widgets/task_table.html' %}
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    {% include 'tasks/widgets/task_footer.html' %}
+</div>

@@ -1,0 +1,43 @@
+{% comment %}
+Status Card Component
+
+Usage:
+{% include 'payments/components/status_card.html' with title="Status" value="Active" icon="check_circle" status="success" %}
+
+Status options: success, warning, error, info
+{% endcomment %}
+
+<div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+    <div class="flex items-center">
+        <div class="flex-shrink-0">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center
+                {% if status == 'success' %}bg-green-100 dark:bg-green-900/20
+                {% elif status == 'warning' %}bg-yellow-100 dark:bg-yellow-900/20
+                {% elif status == 'error' %}bg-red-100 dark:bg-red-900/20
+                {% else %}bg-blue-100 dark:bg-blue-900/20{% endif %}">
+                <span class="material-icons-outlined text-lg
+                    {% if status == 'success' %}text-green-600 dark:text-green-400
+                    {% elif status == 'warning' %}text-yellow-600 dark:text-yellow-400
+                    {% elif status == 'error' %}text-red-600 dark:text-red-400
+                    {% else %}text-blue-600 dark:text-blue-400{% endif %}">{{ icon|default:'info' }}</span>
+            </div>
+        </div>
+        <div class="ml-4 flex-1">
+            <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ title }}</h3>
+            <div class="mt-1">
+                <span class="text-2xl font-semibold text-gray-900 dark:text-white">{{ value }}</span>
+                {% if description %}
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ description }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% if action_url %}
+        <div class="ml-4">
+            <a href="{{ action_url }}" 
+               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <span class="material-icons-outlined">{{ action_icon|default:'open_in_new' }}</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>

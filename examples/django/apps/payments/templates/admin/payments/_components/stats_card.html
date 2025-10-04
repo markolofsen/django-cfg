@@ -1,0 +1,25 @@
+{% comment %}
+Reusable stats card component for payment admin dashboards
+
+Usage:
+{% include "admin/payments/_components/stats_card.html" with title="Total Users" value="1,234" color="primary" icon="👥" %}
+
+Parameters:
+- title: Card title
+- value: Main value to display
+- color: Color theme (primary, success, warning, error, info)
+- icon: Emoji or icon to display
+- subtitle: Optional subtitle text
+{% endcomment %}
+
+{% load humanize %}
+
+<div class="text-center bg-base-50 dark:bg-base-800 p-3 rounded-default">
+    <p class="text-2xl font-bold text-{{ color|default:'primary' }}-600 dark:text-{{ color|default:'primary' }}-400">
+        {% if icon %}<span class="mr-1">{{ icon }}</span>{% endif %}{{ value|default:0 }}
+    </p>
+    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ title }}</p>
+    {% if subtitle %}
+        <p class="text-xs text-gray-500">{{ subtitle }}</p>
+    {% endif %}
+</div>

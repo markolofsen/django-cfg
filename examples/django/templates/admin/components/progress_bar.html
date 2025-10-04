@@ -1,0 +1,20 @@
+{#
+    ⚠️ DEPRECATED: This component is deprecated.
+
+    Use Unfold's built-in progress component instead:
+    {% component "unfold/components/progress.html" with value=... title=... description=... %}
+    {% endcomponent %}
+
+    This wrapper will be removed in a future version.
+    For now it redirects to the Unfold component for backwards compatibility.
+#}
+
+{% load unfold %}
+
+<!-- Wrapper for backwards compatibility - redirects to Unfold component -->
+{% component "unfold/components/progress.html" with
+    value=value
+    title=title
+    description=description
+    class=class %}
+{% endcomponent %}

@@ -1,0 +1,83 @@
+{% comment %}
+Status Overview Component
+
+Usage:
+{% include 'payments/components/status_overview.html' with payment_stats=payment_stats %}
+
+Parameters:
+- payment_stats: Payment statistics object with counts and totals
+{% endcomment %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Total Payments -->
+    {% include 'payments/components/status_card.html' with title="Total Payments" value=payment_stats.total_payments_count|default:0 icon="payments" status="info" %}
+    
+    <!-- Pending Payments -->
+    {% include 'payments/components/status_card.html' with title="Pending" value=payment_stats.pending_payments_count|default:0 icon="pending" status="warning" description=payment_stats.confirming_payments_count|add:" confirming"|default:"" %}
+    
+    <!-- Completed Payments -->
+    {% include 'payments/components/status_card.html' with title="Completed" value=payment_stats.completed_payments_count|default:0 icon="check_circle" status="success" description=payment_stats.success_rate|floatformat:1|add:"% success rate"|default:"" %}
+    
+    <!-- Total Volume -->
+    {% include 'payments/components/status_card.html' with title="Total Volume" value="$"|add:payment_stats.total_volume|floatformat:2|default:"0.00" icon="account_balance" status="info" description=payment_stats.failed_payments_count|add:" failed"|default:"" %}
+</div>
+
+<!-- Quick Actions Bar -->
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mt-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Actions:</span>
+            <div class="flex space-x-2">
+                <a href="{% url 'cfg_payments_admin:payment-form' %}" 
+                   class="inline-flex items-center px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors">
+                    <span class="material-icons-outlined text-sm mr-1">add</span>
+                    New Payment
+                </a>
+                <button onclick="window.location.reload()" 
+                        class="inline-flex items-center px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors">
+                    <span class="material-icons-outlined text-sm mr-1">refresh</span>
+                    Refresh
+                </button>
+                <button onclick="exportPayments()" 
+                        class="inline-flex items-center px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors">
+                    <span class="material-icons-outlined text-sm mr-1">download</span>
+                    Export
+                </button>
+            </div>
+        </div>
+        
+        <!-- Live Status Indicator -->
+        <div class="flex items-center space-x-2">
+            <div class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                Live Updates
+            </div>
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+                Last update: <span id="stats-last-update">{% now "H:i:s" %}</span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+// Export payments functionality
+function exportPayments() {
+    // TODO: Implement export functionality
+    alert('Export functionality not implemented yet');
+}
+
+// Update timestamp every minute
+setInterval(function() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+    });
+    const element = document.getElementById('stats-last-update');
+    if (element) {
+        element.textContent = timeString;
+    }
+}, 60000);
+</script>

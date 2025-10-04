@@ -1,0 +1,22 @@
+{% extends 'django_tailwind/app.html' %}
+{% load static %}
+
+{% block title %}{% block page_title_text %}Tasks Dashboard{% endblock %} - Django CFG{% endblock %}
+
+{# Navbar configuration #}
+{% block header %}
+{% with navbar_items=tasks_nav_items %}
+{% include 'django_tailwind/components/navbar.html' with title=page_title|default:"Tasks Dashboard" icon='<span class="material-icons text-2xl text-primary-600 dark:text-primary-400">dashboard</span>' nav_items=navbar_items %}
+{% endwith %}
+{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<!-- Custom CSS -->
+<link rel="stylesheet" href="{% static 'tasks/css/dashboard.css' %}">
+
+{% block extra_css %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,76 @@
+# Development Environment Configuration
+# This file is for local development
+
+# === Core Django Settings ===
+secret_key: "django-cfg-sample-dev-key-change-in-production-this-is-long-enough-now"
+debug: false
+
+# === Database ===
+database:
+  # url: "postgresql://postgres:postgres@localhost:5432/django_cfg_sample"
+  url: "sqlite:///db/default.sqlite3"
+  url_blog: "sqlite:///db/blog.sqlite3"
+  url_shop: "sqlite:///db/shop.sqlite3"
+
+# === Application URLs ===
+app:
+  name: "Django CFG Sample"
+  logo_url: "https://reforms.ai/favicon.png"
+  domain: "localhost"
+  api_url: "http://localhost:8000"
+  site_url: "http://localhost:3000"
+
+# === Security Domains ===
+security_domains:
+  - "localhost"
+  - "127.0.0.1"
+  - "example.com"
+
+# === Email ===
+email:
+  backend: "console"
+  host: "localhost"
+  port: 587
+  use_tls: true
+  use_ssl: false
+  default_from: "Django CFG Sample <noreply@localhost.dev>"
+
+# === Telegram Bot ===
+telegram:
+  bot_token: ""
+  chat_id: 0
+
+# === API Keys ===
+api_keys:
+  cloudflare: ""
+  ngrok: ""
+  openrouter: ""  # Set via OPENROUTER_API_KEY env var
+  openai: ""      # Set via OPENAI_API_KEY env var
+  sendgrid: ""    # Set via SENDGRID_API_KEY env var for email OTP
+
+# === Payments API Keys ===
+# Set these via environment variables for security:
+payments_api_keys:
+  nowpayments_api_key: ""  # Set via NOWPAYMENTS_API_KEY env var
+  nowpayments_ipn_secret: ""  # Set via NOWPAYMENTS_IPN_SECRET env var
+  nowpayments_sandbox_mode: true  # Development uses sandbox
+
+# === Admin Configuration ===
+admin_emails:
+  - "admin@localhost.dev"
+
+twilio:
+  account_sid: ""  # Main Account SID
+  auth_token: ""   # Main Auth Token
+  whatsapp_from: ""  # WhatsApp sandbox number
+  sms_from: ""       # Your SMS number
+  sendgrid_api_key: ""    # SendGrid API key for email OTP
+  verify_service_sid: ""  # Verify Service for OTP
+  otp_template_id: "d-******"
+  otp_from_email: ""  # SendGrid verified sender email
+
+# === Cache ===
+redis_url: "redis://localhost:6379/0"
+
+# === Security ===
+ssl_redirect: false

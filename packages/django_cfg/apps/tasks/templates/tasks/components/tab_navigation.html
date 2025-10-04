@@ -1,0 +1,33 @@
+<!-- Tab Navigation -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+            <button data-tab="overview" 
+                    class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-primary-500 text-primary-600 dark:text-primary-400">
+                <span class="material-icons text-sm mr-2">dashboard</span>
+                Overview
+            </button>
+            
+            <button data-tab="queues" 
+                    class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                <span class="material-icons text-sm mr-2">queue</span>
+                Queues
+                <span id="queues-count-badge" class="ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">0</span>
+            </button>
+            
+            <button data-tab="workers" 
+                    class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                <span class="material-icons text-sm mr-2">engineering</span>
+                Workers
+                <span id="workers-count-badge" class="ml-2 px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">0</span>
+            </button>
+            
+            <button data-tab="tasks" 
+                    class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                <span class="material-icons text-sm mr-2">list</span>
+                Tasks
+                <span id="tasks-count-badge" class="ml-2 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">0</span>
+            </button>
+        </nav>
+    </div>
+</div>

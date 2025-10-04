@@ -1,0 +1,260 @@
+/**
+ * Django CFG Dashboard Styles
+ *
+ * Theme-aware styling for dashboard components
+ */
+
+/* =============================================================================
+   Dashboard Tab Styles
+   ============================================================================= */
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+#dashboard-tabs button {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =============================================================================
+   Theme Cards - Cross-theme Compatible
+   ============================================================================= */
+
+.theme-card {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(10px) !important;
+    color: #111827 !important;
+    border-color: rgba(229, 231, 235, 0.6) !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease;
+}
+
+html.dark .theme-card {
+    background-color: rgba(31, 41, 55, 0.2) !important;
+    backdrop-filter: blur(10px) !important;
+    color: white !important;
+    border-color: rgba(55, 65, 81, 0.6) !important;
+    border-radius: 10px !important;
+}
+
+.theme-text {
+    color: #111827 !important;
+}
+
+html.dark .theme-text {
+    color: white !important;
+}
+
+.theme-border {
+    border-color: rgba(229, 231, 235, 0.6) !important;
+}
+
+html.dark .theme-border {
+    border-color: rgba(55, 65, 81, 0.6) !important;
+}
+
+/* =============================================================================
+   Grid Layout
+   ============================================================================= */
+
+.overview-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+}
+
+@media (min-width: 1280px) {
+    .overview-grid {
+        grid-template-columns: 2fr 1fr !important;
+    }
+}
+
+/* =============================================================================
+   Tab Navigation Styling
+   ============================================================================= */
+
+#dashboard-tabs {
+    border-bottom: 2px solid #e5e7eb !important;
+}
+
+html.dark #dashboard-tabs {
+    border-bottom-color: #374151 !important;
+}
+
+#dashboard-tabs button {
+    background-color: #f3f4f6 !important;
+    color: #6b7280 !important;
+    border-bottom: 2px solid transparent !important;
+    transition: all 0.2s ease !important;
+}
+
+html.dark #dashboard-tabs button {
+    background-color: #374151 !important;
+    color: #9ca3af !important;
+}
+
+#dashboard-tabs button:hover {
+    background-color: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+html.dark #dashboard-tabs button:hover {
+    background-color: #4b5563 !important;
+    color: #d1d5db !important;
+}
+
+/* Active tab */
+#dashboard-tabs button.active,
+#dashboard-tabs button[class*="bg-blue"] {
+    background-color: #2563eb !important;
+    color: white !important;
+    border-bottom-color: #2563eb !important;
+}
+
+html.dark #dashboard-tabs button.active,
+html.dark #dashboard-tabs button[class*="bg-blue"] {
+    background-color: #3b82f6 !important;
+    color: white !important;
+    border-bottom-color: #3b82f6 !important;
+}
+
+/* =============================================================================
+   Universal Card Borders - Transparent Cross-theme
+   ============================================================================= */
+
+.card-border,
+.border-base-200,
+[class*="border-base-200"],
+[class*="dark:border-base-700"] {
+    border-color: rgba(229, 231, 235, 0.6) !important;
+}
+
+html.dark .card-border,
+html.dark .border-base-200,
+html.dark [class*="border-base-200"],
+html.dark [class*="dark:border-base-700"] {
+    border-color: rgba(55, 65, 81, 0.6) !important;
+}
+
+/* =============================================================================
+   Icon Spacing Defaults
+   ============================================================================= */
+
+.theme-card .material-icons:not(.no-margin) {
+    margin-right: 0.75rem !important; /* 12px default spacing */
+}
+
+.theme-card .flex.items-center .material-icons {
+    margin-right: 0.75rem !important;
+}
+
+.theme-card .status-badge .material-icons {
+    margin-right: 0.25rem !important; /* 4px for badges */
+}
+
+.theme-card button .material-icons,
+.theme-card a .material-icons {
+    margin-right: 0.5rem !important;
+}
+
+/* =============================================================================
+   Section Specific Styles
+   ============================================================================= */
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.section-subtitle {
+    color: #6b7280;
+    margin-top: 0.5rem;
+}
+
+html.dark .section-subtitle {
+    color: #9ca3af;
+}
+
+/* =============================================================================
+   Component Styles
+   ============================================================================= */
+
+.metric-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease;
+}
+
+.stat-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+html.dark .stat-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* =============================================================================
+   Utilities
+   ============================================================================= */
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+}
+
+.status-dot.success {
+    background-color: #10b981;
+}
+
+.status-dot.warning {
+    background-color: #f59e0b;
+}
+
+.status-dot.error {
+    background-color: #ef4444;
+}
+
+.status-dot.info {
+    background-color: #3b82f6;
+}

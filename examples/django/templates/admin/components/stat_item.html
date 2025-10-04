@@ -1,0 +1,32 @@
+{% load unfold %}
+
+<!-- Stat Item Component -->
+<div class="flex items-center justify-between p-3 bg-base-50 dark:bg-base-800 rounded-lg hover:bg-base-100 dark:hover:bg-base-700 transition-colors duration-150 group">
+    <div class="flex items-center">
+        {% if icon %}
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 bg-{{ color|default:'primary' }}-100 dark:bg-{{ color|default:'primary' }}-900/20">
+                <span class="material-icons text-xs text-{{ color|default:'primary' }}-600 dark:text-{{ color|default:'primary' }}-400">{{ icon }}</span>
+            </div>
+        {% endif %}
+        <div>
+            <div class="text-sm font-medium text-font-default-light dark:text-font-default-dark">{{ title }}</div>
+            {% if description %}
+                <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ description }}</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="flex items-center gap-3">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-{{ color|default:'primary' }}-100 dark:bg-{{ color|default:'primary' }}-900/20 text-{{ color|default:'primary' }}-600 dark:text-{{ color|default:'primary' }}-400">
+            {{ count|default:0 }}
+        </span>
+        
+        {% if url %}
+        <a href="{{ url }}" 
+           class="inline-flex items-center gap-1 px-3 py-1 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg text-xs font-medium transition-colors duration-150 group-hover:shadow-sm">
+            <span class="material-icons text-xs">visibility</span>
+            <span>View</span>
+        </a>
+        {% endif %}
+    </div>
+</div>

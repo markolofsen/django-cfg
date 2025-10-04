@@ -1,0 +1,39 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block result_list %}
+    <!-- API Key Statistics Dashboard -->
+    {% include "admin/payments/_components/dashboard_header.html" with title="API Keys Overview" icon="🔑" %}
+    
+    {% if api_key_stats %}
+        {% with stats=api_key_stats %}
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                {% include "admin/payments/_components/stats_card.html" with title="Total Keys" value=stats.total_keys color="primary" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Active" value=stats.active_keys color="success" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Expiring Soon" value=stats.expiring_soon color="warning" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Expired" value=stats.expired_keys color="error" %}
+            </div>
+        {% endwith %}
+    {% endif %}
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">Usage Statistics</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>📊 Total Requests: <span class="font-medium text-primary-600 dark:text-primary-400">{{ stats.total_requests|default:0 }}</span></li>
+                    <li>📈 Recently Used: <span class="font-medium text-success-600 dark:text-success-400">{{ stats.recently_used|default:0 }}</span></li>
+                    <li>🆕 Unused: <span class="font-medium text-warning-600 dark:text-warning-400">{{ stats.unused_keys|default:0 }}</span></li>
+                </ul>
+            </div>
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">🔒 Security</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>🔥 Heavy Usage: <span class="font-medium text-purple-600 dark:text-purple-400">{{ stats.heavy_usage_keys|default:0 }}</span></li>
+                    <li>⚠️ Old Unused: <span class="font-medium text-error-600 dark:text-error-400">{{ stats.never_used_old_keys|default:0 }}</span></li>
+                    <li>👥 Top Users: <span class="font-medium text-info-600 dark:text-info-400">{{ stats.top_users|length|default:0 }}</span></li>
+                </ul>
+            </div>
+        </div>
+
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,121 @@
+{% comment %}
+Payment Card Component
+
+Usage:
+{% include 'payments/components/payment_card.html' with payment=payment show_actions=True %}
+
+Parameters:
+- payment: UniversalPayment object
+- show_actions: Boolean to show/hide action buttons (default: False)
+{% endcomment %}
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+     data-payment-id="{{ payment.id }}">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div class="payment-id">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Payment</span>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                #{{ payment.internal_payment_id|default:payment.id|truncatechars:8 }}
+            </p>
+        </div>
+        {% include 'payments/components/status_badge.html' with payment=payment %}
+    </div>
+    
+    <!-- Amount -->
+    <div class="payment-amount mb-4">
+        <div class="flex items-baseline">
+            <span class="text-3xl font-bold text-gray-900 dark:text-white">
+                ${{ payment.amount_usd|floatformat:2 }}
+            </span>
+            <span class="ml-2 text-lg text-gray-500 dark:text-gray-400">USD</span>
+        </div>
+        {% if payment.currency.code != 'USD' and payment.pay_amount %}
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                {{ payment.pay_amount|floatformat:8 }} {{ payment.currency.code }}
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Payment Details -->
+    <div class="payment-details space-y-2 mb-4">
+        <div class="flex justify-between">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Provider</span>
+            <div class="flex items-center">
+                <div class="w-2 h-2 rounded-full mr-2 
+                    {% if payment.provider == 'cryptapi' %}bg-orange-500
+                    {% elif payment.provider == 'cryptomus' %}bg-blue-500
+                    {% elif payment.provider == 'stripe' %}bg-purple-500
+                    {% elif payment.provider == 'nowpayments' %}bg-green-500
+                    {% else %}bg-gray-500{% endif %}">
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                    {{ payment.provider }}
+                </span>
+            </div>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Created</span>
+            <span class="text-sm text-gray-900 dark:text-white">
+                {{ payment.created_at|date:"M d, H:i" }}
+            </span>
+        </div>
+        {% if payment.status_changed_at %}
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Status Changed</span>
+                <span class="text-sm text-gray-900 dark:text-white">
+                    {{ payment.status_changed_at|date:"M d, H:i" }}
+                </span>
+            </div>
+        {% endif %}
+        {% if payment.processed_at %}
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Processed</span>
+                <span class="text-sm text-gray-900 dark:text-white">
+                    {{ payment.processed_at|date:"M d, H:i" }}
+                </span>
+            </div>
+        {% endif %}
+        {% if payment.pay_address %}
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Address</span>
+                <span class="text-sm font-mono text-gray-900 dark:text-white">
+                    {{ payment.pay_address|truncatechars:16 }}
+                    <button onclick="navigator.clipboard.writeText('{{ payment.pay_address }}')" 
+                            class="ml-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                        <span class="material-icons-outlined text-xs">content_copy</span>
+                    </button>
+                </span>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Progress Bar -->
+    {% include 'payments/components/progress_bar.html' with payment=payment %}
+    
+    <!-- Actions -->
+    {% if show_actions %}
+    <div class="payment-actions mt-4 flex space-x-2">
+        <a href="{% url 'cfg_payments_admin:payment-detail' payment.id %}" 
+           class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200 text-center">
+            <span class="material-icons-outlined text-sm mr-1">visibility</span>
+            View Details
+        </a>
+        {% if payment.status == 'pending' or payment.status == 'confirming' %}
+            <button class="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-md transition-colors duration-200" 
+                    onclick="cancelPayment('{{ payment.id }}')">
+                <span class="material-icons-outlined text-sm mr-1">cancel</span>
+                Cancel
+            </button>
+        {% endif %}
+        {% if payment.pay_address %}
+            <button class="px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors duration-200" 
+                    onclick="showQRCode('{{ payment.id }}')">
+                <span class="material-icons-outlined text-sm mr-1">qr_code</span>
+                QR Code
+            </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

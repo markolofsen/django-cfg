@@ -1,0 +1,95 @@
+{% load payment_tags %}
+
+<!-- Payment QR Code Component -->
+<div class="flex flex-col items-center space-y-4 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    {% if payment.pay_address %}
+        <!-- QR Code Image -->
+        <div class="w-48 h-48 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center">
+            {% if payment.get_qr_code_url %}
+                    <img src="{{ payment.get_qr_code_url }}"
+                     alt="QR Code for {{ payment.pay_address }}" 
+                     class="w-48 h-48 rounded"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="hidden w-48 h-48 items-center justify-center">
+                    <span class="material-icons text-gray-400 text-4xl">qr_code_off</span>
+                </div>
+            {% else %}
+                <span class="material-icons text-gray-400 text-4xl">qr_code_off</span>
+            {% endif %}
+        </div>
+        
+        <!-- Payment Details -->
+        <div class="text-center space-y-2">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                Payment Address
+            </p>
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all max-w-xs">
+                {{ payment.pay_address }}
+            </p>
+            {% if payment.pay_amount %}
+            <p class="text-xs text-gray-500 dark:text-gray-500">
+                Amount: {{ payment.formatted_pay_amount }} {{ payment.currency.code }}
+            </p>
+            {% endif %}
+            
+            <!-- QR Data Preview -->
+            {% if payment.qr_data != payment.pay_address %}
+            <p class="text-xs text-blue-600 dark:text-blue-400">
+                QR contains: {{ payment.qr_data|truncatechars:50 }}
+            </p>
+            {% endif %}
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex space-x-2 pt-2">
+            <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" 
+                    onclick="copyToClipboard('{{ payment.pay_address }}', 'Address copied!')">
+                <span class="material-icons text-sm mr-1">content_copy</span>
+                Copy Address
+            </button>
+            {% if payment.pay_amount %}
+            <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" 
+                    onclick="copyToClipboard('{{ payment.pay_amount }}', 'Amount copied!')">
+                <span class="material-icons text-sm mr-1">content_copy</span>
+                Copy Amount
+            </button>
+            {% endif %}
+            {% if payment.qr_data %}
+            <button class="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors duration-200" 
+                    onclick="copyToClipboard('{{ payment.qr_data }}', 'QR data copied!')">
+                <span class="material-icons text-sm mr-1">qr_code</span>
+                Copy QR Data
+            </button>
+            {% endif %}
+        </div>
+        
+        
+    {% else %}
+        <div class="text-center py-8">
+            <span class="material-icons text-gray-400 text-4xl mb-2">qr_code_off</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                QR code not available for this payment
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Copy to clipboard utility -->
+<script>
+function copyToClipboard(text, message) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show success message (you can customize this)
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
+        toast.textContent = message || 'Copied to clipboard!';
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+</script>

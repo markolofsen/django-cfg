@@ -1,0 +1,29 @@
+# 🐳 Django-CFG Example - Production Environment
+# Modular Docker Compose setup with includes for better organization
+
+# --------------------------------------------------------------------------
+# Include Configurations
+# --------------------------------------------------------------------------
+include:
+  # Core services: PostgreSQL, Redis, Django, Dramatiq
+  - docker-compose.services.yml
+
+# --------------------------------------------------------------------------
+# Global Configuration
+# --------------------------------------------------------------------------
+# Environment variables can be set in .env file
+# Override configurations can be added in docker-compose.override.yml
+
+# --------------------------------------------------------------------------
+# Usage Commands
+# --------------------------------------------------------------------------
+# Start all services:           docker compose up -d
+# Start only core services:     docker compose -f docker-compose.services.yml up -d
+# View logs:                    docker compose logs -f [service_name]
+# Stop all services:            docker compose down
+# Rebuild and start:            docker compose up -d --build
+
+# --------------------------------------------------------------------------
+# Volumes
+# --------------------------------------------------------------------------
+# Using bind mounts - data stored in ./volumes/ directory

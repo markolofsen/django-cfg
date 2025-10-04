@@ -1,0 +1,81 @@
+{% comment %}
+Dialog Component
+
+Usage:
+{% include 'payments/components/dialog.html' with dialog_id="myDialog" title="Dialog Title" %}
+
+Then in your Alpine.js component:
+x-data="{ showMyDialog: false }"
+@click="showMyDialog = true"
+
+And in the dialog content:
+<div x-show="showMyDialog" x-cloak>
+    {% include 'payments/components/dialog.html' with dialog_id="myDialog" title="My Title" %}
+</div>
+{% endcomment %}
+
+<!-- Dialog Backdrop -->
+<div x-show="show{{ dialog_id|title }}" 
+     x-cloak
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+     @click.away="show{{ dialog_id|title }} = false">
+    
+    <!-- Dialog Panel -->
+    <div x-show="show{{ dialog_id|title }}"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95"
+         class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-96 overflow-y-auto"
+         @click.stop>
+        
+        <!-- Dialog Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                    {% if icon %}
+                    <span class="material-icons-outlined mr-2 text-{{ icon_color|default:'blue' }}-600 dark:text-{{ icon_color|default:'blue' }}-400">{{ icon }}</span>
+                    {% endif %}
+                    {{ title }}
+                </h3>
+                <button @click="show{{ dialog_id|title }} = false" 
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <span class="material-icons-outlined">close</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Dialog Content -->
+        <div class="px-6 py-4">
+            {% block dialog_content %}
+            {{ content|default:"Dialog content goes here" }}
+            {% endblock %}
+        </div>
+        
+        <!-- Dialog Footer -->
+        {% if show_footer|default:True %}
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+            {% block dialog_footer %}
+            <button @click="show{{ dialog_id|title }} = false" 
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                {{ cancel_text|default:"Close" }}
+            </button>
+            {% if confirm_action %}
+            <button @click="{{ confirm_action }}; show{{ dialog_id|title }} = false" 
+                    class="px-4 py-2 text-sm font-medium text-white bg-{{ confirm_color|default:'blue' }}-600 border border-transparent rounded-md hover:bg-{{ confirm_color|default:'blue' }}-700">
+                {{ confirm_text|default:"Confirm" }}
+            </button>
+            {% endif %}
+            {% endblock %}
+        </div>
+        {% endif %}
+    </div>
+</div>

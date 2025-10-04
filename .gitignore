@@ -1,0 +1,40 @@
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Dependencies
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Testing
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Benchmarks
+.benchmarks/
+
+# Logs
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+.ruff_cache

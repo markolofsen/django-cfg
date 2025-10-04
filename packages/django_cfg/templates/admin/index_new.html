@@ -1,0 +1,106 @@
+{% extends 'admin/layouts/base_dashboard.html' %}
+
+{% load unfold %}
+
+{% block tabs %}
+    <button type="button" data-tab="0" class="px-4 py-3 rounded-t-lg focus:outline-none font-semibold active">
+        <span class="material-icons mr-2 align-middle text-sm">dashboard</span>
+        Overview
+    </button>
+    <button type="button" data-tab="1" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">public</span>
+        API Zones
+    </button>
+    <button type="button" data-tab="2" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">people</span>
+        Users
+    </button>
+    <button type="button" data-tab="3" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">settings</span>
+        System
+    </button>
+    <button type="button" data-tab="4" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">analytics</span>
+        Statistics
+    </button>
+    <button type="button" data-tab="5" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">apps</span>
+        App Stats
+    </button>
+    <button type="button" data-tab="6" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">terminal</span>
+        Commands
+    </button>
+{% endblock %}
+
+{% block tab_content %}
+    <!-- Overview Tab -->
+    <div class="tab-content active" data-tab="0">
+        {% if overview_section %}
+            {{ overview_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/tabs/overview_tab.html' %}
+        {% endif %}
+    </div>
+
+    <!-- Zones Tab -->
+    <div class="tab-content" data-tab="1">
+        {% if zones_section %}
+            {{ zones_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/zones/zones_table.html' %}
+        {% endif %}
+    </div>
+
+    <!-- Users Tab -->
+    <div class="tab-content" data-tab="2">
+        {% if users_section %}
+            {{ users_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/tabs/users_tab.html' %}
+        {% endif %}
+    </div>
+
+    <!-- System Tab -->
+    <div class="tab-content" data-tab="3">
+        {% if system_section %}
+            {{ system_section|safe }}
+        {% else %}
+            <div class="space-y-8">
+                <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+                    System Management
+                </h2>
+                {% include 'admin/snippets/components/system_health.html' %}
+                {% include 'admin/snippets/components/system_metrics.html' %}
+                {% include 'admin/snippets/components/activity_tracker.html' %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Stats Tab -->
+    <div class="tab-content" data-tab="4">
+        {% if stats_section %}
+            {{ stats_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/tabs/stats_tab.html' %}
+        {% endif %}
+    </div>
+
+    <!-- App Stats Tab -->
+    <div class="tab-content" data-tab="5">
+        {% if app_stats_section %}
+            {{ app_stats_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/tabs/app_stats_tab.html' with stats_groups=stats_groups %}
+        {% endif %}
+    </div>
+
+    <!-- Commands Tab -->
+    <div class="tab-content" data-tab="6">
+        {% if commands_section %}
+            {{ commands_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/tabs/commands_tab.html' %}
+        {% endif %}
+    </div>
+{% endblock %}
