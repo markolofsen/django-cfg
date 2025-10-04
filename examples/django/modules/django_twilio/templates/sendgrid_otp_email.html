@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your {{site_name}} Login Code</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 0;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .otp-code {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px dashed #3b82f6;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .code-label {
+            font-size: 14px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .code {
+            font-size: 36px;
+            font-weight: bold;
+            color: #3b82f6;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .code-info {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 10px;
+        }
+        .verify-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            display: inline-block;
+            padding: 16px 32px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease;
+        }
+        .verify-button:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            text-decoration: none;
+            color: #ffffff !important;
+        }
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .warning-text {
+            color: #92400e;
+            margin: 0;
+            font-size: 14px;
+        }
+        .security-note {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .security-text {
+            color: #dc2626;
+            font-size: 14px;
+            margin: 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .footer a {
+            color: #6b7280;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            .code {
+                font-size: 28px;
+                letter-spacing: 4px;
+            }
+            .verify-button {
+                padding: 14px 24px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🔐 {{site_name}}</div>
+            <p class="subtitle">Secure Authentication</p>
+        </div>
+
+        <!-- Title -->
+        <h1 class="title">Email Verification</h1>
+        
+        <p>Hello <strong>{{user.get_full_name}}</strong>,</p>
+        
+        <p>You requested a login code for your account. Use the code below to sign in:</p>
+
+        <!-- OTP Code Box -->
+        <div class="otp-code">
+            <div class="code-label">Your Verification Code</div>
+            <div class="code">{{otp_code}}</div>
+            <p class="code-info">Valid for {{expires_minutes}} minutes</p>
+        </div>
+
+        <!-- Verify Button (if otp_link is provided) -->
+        {{#if otp_link}}
+        <div style="text-align: center;">
+            <a href="{{otp_link}}" class="verify-button" target="_blank">
+                ✓ Verify Email Now
+            </a>
+        </div>
+        
+        <p style="text-align: center; color: #6b7280; font-size: 14px; margin: 20px 0;">
+            Or copy and paste this link in your browser:<br>
+            <a href="{{otp_link}}" style="color: #3b82f6; word-break: break-all;">{{otp_link}}</a>
+        </p>
+        {{/if}}
+
+        <!-- Warning -->
+        <div class="warning">
+            <p class="warning-text">
+                <strong>⚠️ Important:</strong> This code will expire in {{expires_minutes}} minutes. 
+                If you didn't request this code, please ignore this email.
+            </p>
+        </div>
+
+        <!-- Security Notice -->
+        <div class="security-note">
+            <p class="security-text">
+                🛡️ <strong>Security Notice:</strong> Never share this code with anyone. {{site_name}} will never ask for your verification code via phone, email, or any other method.
+            </p>
+        </div>
+
+        <p>If you're having trouble, you can request a new code or contact our support team.</p>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This email was sent by {{site_name}} for account verification.</p>
+            <p>If you didn't request this verification, please ignore this email.</p>
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

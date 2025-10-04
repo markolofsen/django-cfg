@@ -1,0 +1,60 @@
+{% extends 'admin/base.html' %}
+
+{% load static %}
+{% load unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    {% if subtitle %}{{ subtitle }} | {% endif %}
+    {{ title }} | {{ site_title|default:'Django site admin' }}
+{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <!-- Main Container -->
+    {% component "unfold/components/container.html" %}
+        <!-- Tab Navigation -->
+        {% block tab_navigation %}
+            <div class="flex gap-1 mb-6" id="dashboard-tabs">
+                {% block tabs %}{% endblock %}
+            </div>
+        {% endblock %}
+
+        <!-- Tab Content -->
+        <div class="flex flex-col gap-5">
+            {% block tab_content %}{% endblock %}
+        </div>
+
+        <!-- Footer -->
+        {% block dashboard_footer %}
+            <div class="text-center py-8 border-t theme-border mt-5">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {% load django_cfg %}
+                    <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700 font-medium">
+                        {% lib_name %}
+                    </a>
+                    <span class="mx-2">•</span>
+                    <a href="{% lib_health_url %}" class="text-blue-600 hover:text-blue-700">
+                        System Health
+                    </a>
+                </p>
+            </div>
+        {% endblock %}
+    {% endcomponent %}
+{% endblock %}
+
+{% block footer %}
+    {{ block.super }}
+    <script src="{% static 'admin/js/dashboard.js' %}"></script>
+    <script src="{% static 'admin/js/commands.js' %}"></script>
+{% endblock %}

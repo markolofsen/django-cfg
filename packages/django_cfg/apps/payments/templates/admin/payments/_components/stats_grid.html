@@ -1,0 +1,16 @@
+{% comment %}
+Reusable stats grid component for payment admin dashboards
+
+Usage:
+{% include "admin/payments/_components/stats_grid.html" with stats=stats_data columns=4 %}
+
+Parameters:
+- stats: List of stat objects with title, value, color, icon properties
+- columns: Number of columns (2, 3, 4, 5)
+{% endcomment %}
+
+<div class="grid grid-cols-{{ columns|default:4 }} gap-4 mb-4">
+    {% for stat in stats %}
+        {% include "admin/payments/_components/stats_card.html" with title=stat.title value=stat.value color=stat.color icon=stat.icon subtitle=stat.subtitle %}
+    {% endfor %}
+</div>

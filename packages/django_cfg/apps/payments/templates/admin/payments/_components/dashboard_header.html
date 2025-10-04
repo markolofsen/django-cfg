@@ -1,0 +1,23 @@
+{% comment %}
+Reusable dashboard header component
+
+Usage:
+{% include "admin/payments/_components/dashboard_header.html" with title="Payment Overview" icon="💳" %}
+
+Parameters:
+- title: Dashboard title
+- icon: Emoji or icon to display
+- subtitle: Optional subtitle
+{% endcomment %}
+
+<div class="bg-white border border-base-200 dark:bg-base-900 dark:border-base-700 p-4 rounded-default mb-4">
+    <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark mb-3">
+        {% if icon %}{{ icon }} {% endif %}{{ title }}
+        {% if subtitle %}
+            <span class="text-sm font-normal text-font-subtle-light dark:text-font-subtle-dark">{{ subtitle }}</span>
+        {% endif %}
+    </h3>
+    
+    {% block dashboard_content %}
+    {% endblock %}
+</div>

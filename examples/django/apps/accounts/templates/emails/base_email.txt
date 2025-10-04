@@ -1,0 +1,15 @@
+{{ subject }}
+
+Hello {{ user.get_full_name|default:user.username }},
+
+{% if main_text %}{{ main_text }}{% endif %}
+
+{% if main_html_content %}{{ main_html_content|striptags }}{% endif %}
+
+{% if button_text and button_url %}{{ button_text }}: {{ button_url }}{% endif %}
+
+{% if secondary_text %}{{ secondary_text }}{% endif %}
+
+---
+This is an automated message from UnrealON.
+Please do not reply to this email.

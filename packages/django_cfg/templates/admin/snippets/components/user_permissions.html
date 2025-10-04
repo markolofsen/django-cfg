@@ -1,0 +1,57 @@
+{% load unfold %}
+
+<!-- User Permissions Summary -->
+{% if user_permissions %}
+    <div class="mt-8 w-full">
+        <div class="flex items-center mb-6">
+            <div class="flex items-center justify-center w-8 h-8 bg-amber-100 dark:bg-amber-900/20 rounded-lg mr-3">
+                <span class="material-icons text-amber-600 dark:text-amber-400 text-lg">security</span>
+            </div>
+            <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark">
+                Your Permissions
+            </h2>
+            <span class="ml-auto text-xs text-font-subtle-light dark:text-font-subtle-dark bg-base-100 dark:bg-base-800 px-2 py-1 rounded-full">
+                {{ user_permissions|length }} permissions
+            </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+            {% for permission, has_perm in user_permissions.items %}
+                <div class="bg-white dark:bg-base-900 rounded-xl border border-base-200 dark:border-base-700 p-4 hover:shadow-md transition-shadow duration-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex items-center justify-center w-8 h-8 rounded-lg mr-3"                                        {% if has_perm %}bg-green-100 dark:bg-green-900/20{% else %}bg-base-100 dark:bg-base-800{% endif %}">
+                                <span class="material-icons text-sm"                                            {% if has_perm %}text-green-600 dark:text-green-400{% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}">
+                                    {% if permission == "is_superuser" %}admin_panel_settings
+                                    {% elif "add" in permission %}add_circle
+                                    {% elif "change" in permission %}edit
+                                    {% elif "delete" in permission %}delete
+                                    {% elif "view" in permission %}visibility
+                                    {% else %}key{% endif %}
+                                </span>
+                            </div>
+                            <span class="text-sm font-medium text-font-default-light dark:text-font-default-dark">
+                                {% if permission == "can_add_user" %}Add Users
+                                {% elif permission == "can_change_user" %}Edit Users
+                                {% elif permission == "can_delete_user" %}Delete Users
+                                {% elif permission == "can_view_user" %}View Users
+                                {% elif permission == "is_superuser" %}Super Admin
+                                {% else %}{{ permission|title|cut:"Can_"|cut:"_" }}{% endif %}
+                            </span>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full"                                   {% if has_perm %}bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400
+                                   {% else %}bg-base-100 dark:bg-base-800 text-font-subtle-light dark:text-font-subtle-dark{% endif %}">
+                            {% if has_perm %}
+                                <span class="material-icons text-xs mr-1">check_circle</span>
+                                Granted
+                            {% else %}
+                                <span class="material-icons text-xs mr-1">cancel</span>
+                                Denied
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %} 

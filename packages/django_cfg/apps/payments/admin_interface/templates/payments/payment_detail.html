@@ -1,0 +1,363 @@
+{% extends 'payments/base.html' %}
+{% load static %}
+{% load payment_tags %}
+
+{% block title %}Payment Details - Payment Admin{% endblock %}
+
+{% block page_title %}Payment Details{% endblock %}
+{% block page_subtitle %}Payment {{ payment.internal_payment_id|default:payment.id|truncatechars:8 }}{% endblock %}
+
+{% block content %}
+<div x-data="paymentDetail()" x-init="init('{{ payment.id }}')" class="space-y-6">
+    
+    <!-- Back Navigation -->
+    <div class="flex items-center space-x-4 mb-6">
+        <a href="{% url 'cfg_payments_admin:payment-list' %}" 
+           class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors">
+            <span class="material-icons-outlined mr-2">arrow_back</span>
+            Back to Payments
+        </a>
+        
+        <!-- Status Refresh Button -->
+        <button @click="refreshPaymentStatus()" 
+                :disabled="loading"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md text-sm font-medium transition-colors">
+            <span class="material-icons-outlined mr-2" :class="{ 'animate-spin': loading }">refresh</span>
+            <span x-show="!loading">Refresh Status</span>
+            <span x-show="loading">Refreshing...</span>
+        </button>
+    </div>
+
+    <!-- Payment Overview Card -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Payment Overview</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Complete payment information</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% include 'payments/components/status_badge.html' with payment=payment %}
+                    {% if payment.pay_address %}
+                    <button @click="showQRCode = !showQRCode" 
+                            class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors">
+                        <span class="material-icons-outlined mr-2">qr_code</span>
+                        <span x-text="showQRCode ? 'Hide QR' : 'Show QR'"></span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Payment Information -->
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Payment Information</h4>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Internal ID:</dt>
+                            <dd class="text-sm font-mono text-gray-900 dark:text-white">{{ payment.internal_payment_id|default:payment.id }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Provider ID:</dt>
+                            <dd class="text-sm font-mono text-gray-900 dark:text-white">{{ payment.provider_payment_id|default:"N/A" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Amount:</dt>
+                            <dd class="text-sm font-semibold text-gray-900 dark:text-white">${{ payment.amount_usd|floatformat:2 }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Currency:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.currency.code }} - {{ payment.currency.name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Provider:</dt>
+                        <dd class="text-sm text-gray-900 dark:text-white">{{ payment.provider }}</dd>
+                        </div>
+                        {% if payment.description %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Description:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.description }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.payment_url %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Payment URL:</dt>
+                            <dd class="text-sm">
+                                <a href="{{ payment.payment_url }}" target="_blank" 
+                                   class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                    Open Payment Page
+                                    <span class="material-icons-outlined text-sm ml-1">open_in_new</span>
+                                </a>
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+
+                <!-- User Information -->
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">User Information</h4>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Name:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.user.get_full_name|default:"N/A" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Email:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.user.email }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Username:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.user.username }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">User ID:</dt>
+                            <dd class="text-sm font-mono text-gray-900 dark:text-white">{{ payment.user.id }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- QR Code Section (Collapsible) -->
+    {% if payment.pay_address %}
+    <div x-show="showQRCode" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95"
+         class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Payment QR Code</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Scan to make payment</p>
+        </div>
+        
+        <div class="p-6">
+            {% include 'payments/components/payment_qr_code.html' %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+        <strong>QR Code not shown:</strong> payment.pay_address is empty or null
+    </div>
+    {% endif %}
+
+    <!-- Crypto Details (if applicable) -->
+    {% if payment.pay_address %}
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Cryptocurrency Details</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Blockchain transaction information</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Payment Addresses -->
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Payment Addresses</h4>
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm text-gray-600 dark:text-gray-400 mb-1">Pay Address:</dt>
+                            <dd class="text-sm font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600 break-all" data-field="pay_address">
+                                {{ payment.pay_address }}
+                            </dd>
+                        </div>
+                        {% if payment.sender_address %}
+                        <div>
+                            <dt class="text-sm text-gray-600 dark:text-gray-400 mb-1">Sender Address:</dt>
+                            <dd class="text-sm font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600 break-all">
+                                {{ payment.sender_address }}
+                            </dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.receiver_address %}
+                        <div>
+                            <dt class="text-sm text-gray-600 dark:text-gray-400 mb-1">Receiver Address:</dt>
+                            <dd class="text-sm font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600 break-all">
+                                {{ payment.receiver_address }}
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+
+                <!-- Transaction Details -->
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Transaction Details</h4>
+                    <dl class="space-y-3">
+                        {% if payment.pay_amount %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Pay Amount:</dt>
+                            <dd class="text-sm font-semibold text-gray-900 dark:text-white" data-field="pay_amount">
+                                {{ payment.pay_amount|floatformat:8 }} {{ payment.currency.code }}
+                            </dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.network %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Network:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.network.name }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.expires_at %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Expires At:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.expires_at|date:"M d, Y H:i" }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.completed_at %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600 dark:text-gray-400">Completed At:</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">{{ payment.completed_at|date:"M d, Y H:i" }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.transaction_hash %}
+                        <div>
+                            <dt class="text-sm text-gray-600 dark:text-gray-400 mb-1">Transaction Hash:</dt>
+                            <dd class="text-sm font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600 break-all" data-field="transaction_hash">
+                                {{ payment.transaction_hash }}
+                                {% if payment.get_payment_explorer_link %}
+                                <a href="{{ payment.get_payment_explorer_link }}" target="_blank" 
+                                   class="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                    <span class="material-icons-outlined text-sm">open_in_new</span>
+                                </a>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Timeline -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Timeline</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Payment lifecycle timestamps</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Created</div>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ payment.created_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ payment.created_at|time:"H:i:s" }}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Status Changed</div>
+                    {% if payment.status_changed_at %}
+                    <div class="text-sm font-medium text-gray-900 dark:text-white" data-field="status_changed_at">{{ payment.status_changed_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ payment.status_changed_at|time:"H:i:s" }}</div>
+                    {% else %}
+                    <div class="text-sm text-gray-500 dark:text-gray-400" data-field="status_changed_at">Not changed</div>
+                    {% endif %}
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Updated</div>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ payment.updated_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ payment.updated_at|time:"H:i:s" }}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Processed</div>
+                    {% if payment.processed_at %}
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ payment.processed_at|date:"M d, Y" }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ payment.processed_at|time:"H:i:s" }}</div>
+                    {% else %}
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Not processed</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Data (if available) -->
+    {% if payment.provider_data %}
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Provider Information</h3>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Data provided by {{ payment.provider|title }}</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for key, value in payment.provider_data.items %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{{ key|title }}:</dt>
+                    <dd class="text-sm text-gray-900 dark:text-white">
+                        {% if value|length > 50 %}
+                            <div class="font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600 break-all text-xs">
+                                {{ value }}
+                            </div>
+                        {% else %}
+                            {{ value }}
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Raw JSON (collapsible) -->
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button onclick="document.getElementById('raw-provider-data').classList.toggle('hidden')" 
+                        class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                    <span class="material-icons-outlined text-sm mr-1">code</span>
+                    Toggle Raw JSON
+                </button>
+                <div id="raw-provider-data" class="hidden mt-3">
+                    <pre class="text-xs font-mono bg-gray-50 dark:bg-gray-700 p-4 rounded border border-gray-200 dark:border-gray-600 overflow-x-auto">{{ payment.provider_data|pprint }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="p-6">
+            <div class="flex flex-wrap gap-3">
+                {% if payment.status == 'pending' or payment.status == 'confirming' %}
+                <button @click="cancelPayment()" 
+                        :disabled="loading"
+                        class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-md text-sm font-medium transition-colors">
+                    <span class="material-icons-outlined mr-2">cancel</span>
+                    Cancel Payment
+                </button>
+                {% endif %}
+                
+                <button @click="exportDetails()" 
+                        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors">
+                    <span class="material-icons-outlined mr-2">file_download</span>
+                    Export Details
+                </button>
+                
+                {% if payment.callback_url %}
+                <a href="{{ payment.callback_url }}" 
+                   target="_blank"
+                   class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-medium transition-colors">
+                    <span class="material-icons-outlined mr-2">open_in_new</span>
+                    Callback URL
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Payment API Client -->
+<script src="{% static 'payments/js/api-client.js' %}"></script>
+<!-- Payment Detail Page JavaScript -->
+<script src="{% static 'payments/js/payment-detail.js' %}"></script>
+<!-- QR Code Library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% load unfold %}
+
+<!-- System Health Grid using reusable components -->
+<div class="mt-8 w-full">
+    {% include 'admin/components/section_header.html' with title='System Health' icon='health_and_safety' icon_color='green' %}
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        {% for key, value in system_health.items %}
+            {% if key == "database_status" %}
+                {% include 'admin/components/metric_card.html' with title='Database' description='Connection & queries' icon='storage' status=value|yesno:'healthy,error' status_text=value|title %}
+            {% elif key == "cache_status" %}
+                {% include 'admin/components/metric_card.html' with title='Cache' description='Redis & memory' icon='memory' status=value|yesno:'healthy,error' status_text=value|title %}
+            {% elif key == "queue_status" %}
+                {% include 'admin/components/metric_card.html' with title='Queue' description='Background jobs' icon='queue' status=value|yesno:'healthy,error' status_text=value|title %}
+            {% elif key == "storage_status" %}
+                {% include 'admin/components/metric_card.html' with title='Storage' description='Disk & files' icon='folder' status=value|yesno:'healthy,error' status_text=value|title %}
+            {% else %}
+                {% include 'admin/components/metric_card.html' with title=key|title description='System component' icon='info' status=value|yesno:'healthy,error' status_text=value|title %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div> 

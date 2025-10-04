@@ -1,0 +1,48 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block result_list %}
+    <!-- Subscription Statistics Dashboard -->
+    {% if subscription_stats %}
+        {% include "admin/payments/_components/dashboard_header.html" with title="Subscriptions Overview" icon="📋" %}
+        
+        {% with stats=subscription_stats %}
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                {% include "admin/payments/_components/stats_card.html" with title="Total Subscriptions" value=stats.total_subscriptions color="primary" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Active" value=stats.active_subscriptions color="success" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Expiring Soon" value=stats.expiring_subscriptions color="warning" %}
+                {% include "admin/payments/_components/stats_card.html" with title="Monthly Revenue" value="$"|add:stats.monthly_revenue|floatformat:2 color="info" %}
+            </div>
+        {% endwith %}
+    {% endif %}
+        
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">Subscription Tiers</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>🥉 Basic: <span class="font-medium text-base-600 dark:text-base-400">{{ stats.basic_subs|default:0 }}</span></li>
+                    <li>🥈 Premium: <span class="font-medium text-blue-600 dark:text-blue-400">{{ stats.premium_subs|default:0 }}</span></li>
+                    <li>🥇 Enterprise: <span class="font-medium text-purple-600 dark:text-purple-400">{{ stats.enterprise_subs|default:0 }}</span></li>
+                </ul>
+            </div>
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">Status Distribution</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>✅ Active: <span class="font-medium text-success-600 dark:text-success-400">{{ stats.active_count|default:0 }}</span></li>
+                    <li>⏸️ Paused: <span class="font-medium text-warning-600 dark:text-warning-400">{{ stats.paused_count|default:0 }}</span></li>
+                    <li>❌ Cancelled: <span class="font-medium text-error-600 dark:text-error-400">{{ stats.cancelled_count|default:0 }}</span></li>
+                    <li>⏰ Expired: <span class="font-medium text-base-600 dark:text-base-400">{{ stats.expired_count|default:0 }}</span></li>
+                </ul>
+            </div>
+            <div class="bg-base-50 dark:bg-base-800 p-3 rounded-default">
+                <h4 class="font-semibold text-font-important-light dark:text-font-important-dark mb-2">📊 Metrics</h4>
+                <ul class="text-sm space-y-1 text-font-default-light dark:text-font-default-dark">
+                    <li>📈 New (30d): <span class="font-medium text-success-600 dark:text-success-400">{{ stats.new_subs_30d|default:0 }}</span></li>
+                    <li>📉 Churn Rate: <span class="font-medium text-warning-600 dark:text-warning-400">{{ stats.churn_rate|floatformat:1|default:0 }}%</span></li>
+                    <li>💰 ARPU: <span class="font-medium text-primary-600 dark:text-primary-400">${{ stats.arpu|floatformat:2|default:0 }}</span></li>
+                </ul>
+            </div>
+        </div>
+
+    {{ block.super }}
+{% endblock %}

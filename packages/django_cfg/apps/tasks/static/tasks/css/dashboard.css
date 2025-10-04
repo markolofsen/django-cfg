@@ -1,0 +1,120 @@
+/* Tasks Dashboard CSS */
+
+/* Tab styling */
+.tab-button.active {
+    border-color: rgb(59 130 246) !important;
+    color: rgb(59 130 246) !important;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Custom scrollbar */
+.task-table-widget::-webkit-scrollbar {
+    height: 8px;
+}
+
+.task-table-widget::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.task-table-widget::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.task-table-widget::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Dark mode scrollbar */
+.dark .task-table-widget::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .task-table-widget::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark .task-table-widget::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Loading animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Status indicators */
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.status-pending {
+    background-color: #f59e0b;
+}
+
+.status-running {
+    background-color: #3b82f6;
+}
+
+.status-completed {
+    background-color: #10b981;
+}
+
+.status-failed {
+    background-color: #ef4444;
+}
+
+/* Progress bar */
+.progress-bar {
+    transition: width 0.3s ease-in-out;
+}
+
+/* Hover effects */
+.hover-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Button focus states */
+.btn-focus:focus {
+    outline: 2px solid rgb(59 130 246);
+    outline-offset: 2px;
+}
+
+/* Material icons alignment */
+.material-icons {
+    vertical-align: middle;
+    line-height: 1;
+}
+
+/* Custom primary color */
+:root {
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --primary-200: #bfdbfe;
+    --primary-300: #93c5fd;
+    --primary-400: #60a5fa;
+    --primary-500: #3b82f6;
+    --primary-600: #2563eb;
+    --primary-700: #1d4ed8;
+    --primary-800: #1e40af;
+    --primary-900: #1e3a8a;
+}

@@ -1,0 +1,938 @@
+{% load static rest_framework tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en" class="{{ html_class }}" x-data="drfApp()" x-init="init()" @keydown.window="handleKeyboard($event)">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="NONE,NOARCHIVE">
+
+    <title>{% if name %}{{ name }} – {% endif %}{{ project_name|default:"API" }}</title>
+
+    {# CSRF Token for AJAX requests #}
+    {% csrf_token %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    {# DRF CSRF data for ajax-form.js #}
+    <script id="drf_csrf" type="application/json">
+        {
+            "csrfToken": "{{ csrf_token }}",
+            "csrfHeaderName": "X-CSRFToken"
+        }
+    </script>
+
+    {# Apply theme immediately to prevent flash #}
+    <script>
+        (function() {
+            const theme = '{{ theme|default:"auto" }}';
+            const html = document.documentElement;
+            let isDark = false;
+
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                isDark = true;
+            } else if (theme === 'light') {
+                html.classList.remove('dark');
+                isDark = false;
+            } else {
+                // Auto: use system preference
+                isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (isDark) {
+                    html.classList.add('dark');
+                } else {
+                    html.classList.remove('dark');
+                }
+            }
+
+            // Store for Prism.js theme switching
+            window.__drfThemeIsDark = isDark;
+        })();
+    </script>
+
+    {# Tailwind CSS #}
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
+
+    {# Override Tailwind CDN's media-query dark mode with class-based dark mode #}
+    <style>
+        /* Force light mode colors when NOT in dark mode - override media queries */
+        html:not(.dark) body,
+        html:not(.dark) .dark\:bg-gray-900,
+        html:not(.dark) .dark\:bg-gray-800,
+        html:not(.dark) .dark\:bg-black {
+            background-color: rgb(249 250 251) !important; /* bg-gray-50 */
+        }
+
+        html:not(.dark) .dark\:bg-gray-700 {
+            background-color: rgb(243 244 246) !important; /* bg-gray-100 */
+        }
+
+        html:not(.dark) .dark\:text-gray-100,
+        html:not(.dark) .dark\:text-white,
+        html:not(.dark) .dark\:text-gray-300 {
+            color: rgb(17 24 39) !important; /* text-gray-900 */
+        }
+
+        html:not(.dark) .dark\:text-gray-400 {
+            color: rgb(75 85 99) !important; /* text-gray-600 */
+        }
+
+        html:not(.dark) .dark\:border-gray-700,
+        html:not(.dark) .dark\:border-gray-600 {
+            border-color: rgb(229 231 235) !important; /* border-gray-200 */
+        }
+
+        /* Enforce dark mode colors when IN dark mode */
+        html.dark body,
+        html.dark .dark\:bg-gray-900 {
+            background-color: rgb(17 24 39) !important;
+        }
+
+        html.dark .dark\:bg-gray-800 {
+            background-color: rgb(31 41 55) !important;
+        }
+
+        html.dark .dark\:bg-black {
+            background-color: rgb(0 0 0) !important;
+        }
+
+        html.dark .dark\:text-gray-100 {
+            color: rgb(243 244 246) !important;
+        }
+
+        html.dark .dark\:text-white {
+            color: rgb(255 255 255) !important;
+        }
+    </style>
+
+    {# Prism.js for syntax highlighting - loaded dynamically based on theme #}
+    <link rel="stylesheet" id="prism-light" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" disabled>
+    <link rel="stylesheet" id="prism-dark" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" disabled>
+    <script>
+        // Enable the correct Prism theme immediately
+        if (window.__drfThemeIsDark) {
+            document.getElementById('prism-dark').disabled = false;
+        } else {
+            document.getElementById('prism-light').disabled = false;
+        }
+    </script>
+
+    {# Alpine.js for interactivity #}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {# Custom styles #}
+    <style>
+        /* Glass morphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .dark .glass {
+            background: rgba(17, 24, 39, 0.9);
+        }
+
+        /* Smooth transitions */
+        * {
+            transition-property: background-color, border-color, color, fill, stroke;
+            transition-duration: 200ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            @apply bg-gray-100 dark:bg-gray-800;
+        }
+        ::-webkit-scrollbar-thumb {
+            @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            @apply bg-gray-400 dark:bg-gray-500;
+        }
+
+        /* Shimmer animation for loading */
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .shimmer {
+            animation: shimmer 2s infinite;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background-size: 1000px 100%;
+        }
+
+        /* Pygments dark theme overrides */
+        .dark .highlight { background: #1f2937 !important; }
+        .dark .highlight .c { color: #6ee7b7; } /* Comment */
+        .dark .highlight .k { color: #c084fc; } /* Keyword */
+        .dark .highlight .o { color: #9ca3af; } /* Operator */
+        .dark .highlight .s { color: #fca5a5; } /* String */
+        .dark .highlight .na { color: #fca5a5; } /* Name.Attribute */
+        .dark .highlight .nb { color: #c084fc; } /* Name.Builtin */
+        .dark .highlight .nc { color: #60a5fa; } /* Name.Class */
+        .dark .highlight .nf { color: #34d399; } /* Name.Function */
+        .dark .highlight .nn { color: #60a5fa; } /* Name.Namespace */
+        .dark .highlight .nt { color: #34d399; } /* Name.Tag */
+        .dark .highlight .m,
+        .dark .highlight .mi,
+        .dark .highlight .mf { color: #fb923c; } /* Numbers */
+
+        /* Simple badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.625rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-get {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .badge-post {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .badge-put {
+            background-color: #f97316;
+            color: white;
+        }
+
+        .badge-patch {
+            background-color: #a855f7;
+            color: white;
+        }
+
+        .badge-delete {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        /* Status badges */
+        .status-success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .dark .status-success {
+            background-color: rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+
+        .status-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .dark .status-info {
+            background-color: rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+
+        .status-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .dark .status-warning {
+            background-color: rgba(234, 179, 8, 0.3);
+            color: #fde047;
+        }
+
+        .status-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .dark .status-error {
+            background-color: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        /* Cards */
+        .card {
+            background-color: white;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        .dark .card {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        /* Buttons */
+        .btn-icon {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        .btn-icon:hover {
+            background-color: #f3f4f6;
+        }
+        .dark .btn-icon:hover {
+            background-color: #374151;
+        }
+
+        /* Base HTML elements styling */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        input[type="url"],
+        input[type="search"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            color: #111827;
+        }
+        .dark input[type="text"],
+        .dark input[type="email"],
+        .dark input[type="password"],
+        .dark input[type="number"],
+        .dark input[type="url"],
+        .dark input[type="search"],
+        .dark textarea,
+        .dark select {
+            background-color: #1f2937;
+            border-color: #4b5563;
+            color: white;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            ring: 2px;
+            ring-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        button[type="submit"],
+        .btn-primary {
+            padding: 0.5rem 1rem;
+            background-color: #2563eb;
+            color: white;
+            border-radius: 0.5rem;
+            font-weight: 500;
+        }
+        button[type="submit"]:hover,
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .content a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        .dark .content a {
+            color: #60a5fa;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            padding: 0.5rem 1rem;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+            font-weight: 500;
+        }
+        .dark th {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        td {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e5e7eb;
+        }
+        .dark td {
+            border-color: #374151;
+        }
+
+        pre {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+        .dark pre {
+            background-color: #111827;
+        }
+
+        code {
+            background-color: #f3f4f6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: monospace;
+        }
+        .dark code {
+            background-color: #1f2937;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: bold;
+            color: #111827;
+        }
+        .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+            color: white;
+        }
+
+        h1 { font-size: 1.875rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.25rem; }
+        h4 { font-size: 1.125rem; }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+        .dark label {
+            color: #d1d5db;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid;
+        }
+
+        .alert-error {
+            background-color: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .dark .alert-error {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: #991b1b;
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+        .dark .alert-success {
+            background-color: rgba(34, 197, 94, 0.2);
+            border-color: #166534;
+            color: #86efac;
+        }
+
+        .alert-info {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+        .dark .alert-info {
+            background-color: rgba(59, 130, 246, 0.2);
+            border-color: #1e40af;
+            color: #93c5fd;
+        }
+    </style>
+
+    {% if code_style %}<style>{{ code_style }}</style>{% endif %}
+</head>
+
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+
+    {# Glass morphism navbar #}
+    <nav class="sticky top-0 z-50 glass border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+        <div class="px-6 py-3">
+            <div class="flex items-center justify-between">
+
+                {# Left: Branding + HTTP Method Badge #}
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-all">
+                        {% block branding %}{{ project_name|default:"API" }}{% endblock %}
+                    </a>
+
+                    {% if request.method %}
+                        <span class="badge
+                                   {% if request.method == 'GET' %}badge-get
+                                   {% elif request.method == 'POST' %}badge-post
+                                   {% elif request.method == 'PUT' %}badge-put
+                                   {% elif request.method == 'PATCH' %}badge-patch
+                                   {% elif request.method == 'DELETE' %}badge-delete
+                                   {% else %}bg-gradient-to-r from-gray-500 to-gray-600 text-white{% endif %}">
+                            {{ request.method }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                {# Right: Actions #}
+                <div class="flex items-center space-x-2">
+
+                    {# Command Palette Trigger #}
+                    <button @click="commandPaletteOpen = true"
+                            class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm transition-all group">
+                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-gray-600 dark:text-gray-400">Search</span>
+                        <kbd class="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded">⌘K</kbd>
+                    </button>
+
+                    {# Theme Toggle #}
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open"
+                                class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                            <svg x-show="theme === 'light'" class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/>
+                            </svg>
+                            <svg x-show="theme === 'dark'" class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                            </svg>
+                            <svg x-show="theme === 'auto'" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </button>
+
+                        {# Theme dropdown #}
+                        <div x-show="open"
+                             @click.away="open = false"
+                             x-transition
+                             class="absolute right-0 mt-2 w-40 glass rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1">
+                            <button @click="setTheme('light'); open = false"
+                                    class="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <svg class="w-4 h-4 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Light
+                            </button>
+                            <button @click="setTheme('dark'); open = false"
+                                    class="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <svg class="w-4 h-4 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                                </svg>
+                                Dark
+                            </button>
+                            <button @click="setTheme('auto'); open = false"
+                                    class="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3"/>
+                                </svg>
+                                Auto
+                            </button>
+                        </div>
+                    </div>
+
+                    {# User Menu #}
+                    <div class="flex items-center space-x-3 pl-3 border-l border-gray-200 dark:border-gray-700">
+                        {% if user.is_authenticated %}
+                            <div class="flex items-center space-x-3">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                    <span class="hidden md:block text-sm font-medium text-gray-900 dark:text-white">{{ user.username }}</span>
+                                </div>
+                                {% if api_settings.LOGOUT_URL %}
+                                <form action="{% url api_settings.LOGOUT_URL %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                                        Logout
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            {% optional_login request %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {# Main Content #}
+    <main class="container mx-auto px-4 py-6 max-w-7xl">
+
+        {# Breadcrumbs with animation #}
+        {% if breadcrumblist %}
+            <nav class="mb-6 animate-fade-in">
+                <ol class="flex items-center space-x-2 text-sm">
+                    {% for breadcrumb_name, breadcrumb_url in breadcrumblist %}
+                        {% if not forloop.last %}
+                            <li class="flex items-center">
+                                <a href="{{ breadcrumb_url }}"
+                                   class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+                                    {{ breadcrumb_name }}
+                                </a>
+                                <svg class="w-4 h-4 mx-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </li>
+                        {% else %}
+                            <li class="text-gray-900 dark:text-gray-100 font-medium">{{ breadcrumb_name }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+        {% endif %}
+
+        {# Content Block #}
+        <div class="space-y-6">
+            {% block content %}{% endblock %}
+        </div>
+
+        {# Footer #}
+        {% load django_cfg %}
+        <footer class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-center">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Powered by
+                    <a href="{% lib_site_url %}"
+                       class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                       target="_blank" rel="noopener noreferrer">
+                        {% lib_name %}
+                    </a>
+                </p>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                    {% lib_subtitle %}
+                </p>
+            </div>
+        </footer>
+    </main>
+
+    {# Command Palette #}
+    <div x-show="commandPaletteOpen"
+         x-transition.opacity
+         @click="commandPaletteOpen = false"
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
+
+        <div @click.stop
+             class="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl glass rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+            {# Search Input #}
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="relative">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text"
+                           x-model="commandSearch"
+                           @keydown.escape="commandPaletteOpen = false"
+                           placeholder="Search actions, endpoints..."
+                           class="w-full pl-10 pr-4 py-3 bg-transparent border-0 focus:outline-none text-lg">
+                </div>
+            </div>
+
+            {# Quick Actions #}
+            <div class="p-2 max-h-96 overflow-y-auto">
+                <div class="space-y-1">
+                    <button @click="copyCurrentURL(); commandPaletteOpen = false"
+                            class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-left group">
+                        <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <div class="font-medium">Copy Current URL</div>
+                            <div class="text-sm text-gray-500">Copy this endpoint URL to clipboard</div>
+                        </div>
+                        <kbd class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 rounded">⌘C</kbd>
+                    </button>
+
+                    <button @click="toggleTheme(); commandPaletteOpen = false"
+                            class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-left group">
+                        <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <div class="font-medium">Toggle Theme</div>
+                            <div class="text-sm text-gray-500">Switch between light and dark mode</div>
+                        </div>
+                        <kbd class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 rounded">⌘D</kbd>
+                    </button>
+
+                    <button @click="showShortcuts(); commandPaletteOpen = false"
+                            class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-left group">
+                        <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <div class="font-medium">Keyboard Shortcuts</div>
+                            <div class="text-sm text-gray-500">View all available shortcuts</div>
+                        </div>
+                        <kbd class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 rounded">?</kbd>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Toast Notifications #}
+    <div class="fixed bottom-4 right-4 z-50 space-y-2">
+        <template x-for="(toast, index) in toasts" :key="index">
+            <div x-show="toast.show"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-4"
+                 class="glass rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center space-x-3 max-w-sm">
+
+                <svg x-show="toast.type === 'success'" class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+
+                <svg x-show="toast.type === 'error'" class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+
+                <p class="flex-1 text-sm" x-text="toast.message"></p>
+
+                <button @click="removeToast(index)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            </div>
+        </template>
+    </div>
+
+    {# Scripts #}
+    {# jQuery required for DRF ajax-form.js #}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+    <script src="{% static 'rest_framework/js/csrf.js' %}"></script>
+    <script src="{% static 'rest_framework/js/ajax-form.js' %}"></script>
+
+    <script>
+        function drfApp() {
+            return {
+                theme: '{{ theme|default:"auto" }}',
+                commandPaletteOpen: false,
+                commandSearch: '',
+                toasts: [],
+
+                init() {
+                    this.applyTheme();
+                    this.listenForSystemTheme();
+                },
+
+                applyTheme() {
+                    let isDark = false;
+
+                    if (this.theme === 'dark') {
+                        document.documentElement.classList.add('dark');
+                        isDark = true;
+                    } else if (this.theme === 'light') {
+                        document.documentElement.classList.remove('dark');
+                        isDark = false;
+                    } else {
+                        // Auto: use system preference
+                        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        if (isDark) {
+                            document.documentElement.classList.add('dark');
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                        }
+                    }
+
+                    // Switch Prism.js theme
+                    const prismLight = document.getElementById('prism-light');
+                    const prismDark = document.getElementById('prism-dark');
+                    if (prismLight && prismDark) {
+                        prismLight.disabled = isDark;
+                        prismDark.disabled = !isDark;
+                    }
+                },
+
+                setTheme(newTheme) {
+                    this.theme = newTheme;
+                    this.applyTheme();
+                    document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+                    this.showToast(`Theme changed to ${newTheme}`, 'success');
+                },
+
+                toggleTheme() {
+                    const themes = ['light', 'dark', 'auto'];
+                    const currentIndex = themes.indexOf(this.theme);
+                    const nextTheme = themes[(currentIndex + 1) % themes.length];
+                    this.setTheme(nextTheme);
+                },
+
+                listenForSystemTheme() {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                        if (this.theme === 'auto') {
+                            this.applyTheme();
+                        }
+                    });
+                },
+
+                handleKeyboard(event) {
+                    // Command Palette (Cmd/Ctrl + K)
+                    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+                        event.preventDefault();
+                        this.commandPaletteOpen = !this.commandPaletteOpen;
+                    }
+
+                    // Toggle theme (Cmd/Ctrl + D)
+                    if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
+                        event.preventDefault();
+                        this.toggleTheme();
+                    }
+
+                    // Copy URL (Cmd/Ctrl + C when not in input and no text selected)
+                    if ((event.metaKey || event.ctrlKey) && event.key === 'c' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+                        // Only intercept if no text is selected
+                        const selection = window.getSelection();
+                        if (!selection || selection.toString().length === 0) {
+                            event.preventDefault();
+                            this.copyCurrentURL();
+                        }
+                    }
+
+                    // Show shortcuts (?)
+                    if (event.key === '?' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+                        event.preventDefault();
+                        this.showShortcuts();
+                    }
+
+                    // Close command palette (Escape)
+                    if (event.key === 'Escape') {
+                        this.commandPaletteOpen = false;
+                    }
+                },
+
+                copyCurrentURL() {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                        this.showToast('URL copied to clipboard!', 'success');
+                    }).catch(() => {
+                        this.showToast('Failed to copy URL', 'error');
+                    });
+                },
+
+                showShortcuts() {
+                    const shortcuts = `
+Keyboard Shortcuts:
+
+⌘K or Ctrl+K - Open command palette
+⌘D or Ctrl+D - Toggle theme
+⌘C or Ctrl+C - Copy current URL
+? - Show this help
+Esc - Close dialogs
+                    `.trim();
+
+                    alert(shortcuts);
+                },
+
+                showToast(message, type = 'success') {
+                    const toast = { message, type, show: true };
+                    this.toasts.push(toast);
+
+                    setTimeout(() => {
+                        const index = this.toasts.indexOf(toast);
+                        if (index > -1) {
+                            this.toasts[index].show = false;
+                            setTimeout(() => this.removeToast(index), 300);
+                        }
+                    }, 3000);
+                },
+
+                removeToast(index) {
+                    this.toasts.splice(index, 1);
+                }
+            }
+        }
+
+        // Global JSON rendering function
+        function renderJSON(data, level = 0) {
+            if (data === null) return '<span class="text-gray-500 dark:text-gray-400">null</span>';
+            if (data === undefined) return '<span class="text-gray-500 dark:text-gray-400">undefined</span>';
+            if (typeof data === 'boolean') return `<span class="text-purple-600 dark:text-purple-400">${data}</span>`;
+            if (typeof data === 'number') return `<span class="text-orange-600 dark:text-orange-400">${data}</span>`;
+            if (typeof data === 'string') return `<span class="text-green-600 dark:text-green-400">"${escapeHtml(data)}"</span>`;
+
+            const indent = '  '.repeat(level);
+            const childIndent = '  '.repeat(level + 1);
+
+            if (Array.isArray(data)) {
+                if (data.length === 0) return '<span class="text-gray-600 dark:text-gray-400">[]</span>';
+
+                const id = 'json-' + Math.random().toString(36).substr(2, 9);
+                let html = `<div class="json-node">
+                    <span class="json-toggle cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-700 px-1 rounded"
+                          onclick="this.dataset.expanded = this.dataset.expanded === 'true' ? 'false' : 'true';
+                                   this.textContent = this.dataset.expanded === 'true' ? '▼' : '▶';
+                                   document.getElementById('${id}').style.display = this.dataset.expanded === 'true' ? 'block' : 'none'"
+                          data-expanded="false">▶</span>
+                    <span class="text-gray-600 dark:text-gray-400">[</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-500 ml-2">${data.length} items</span>
+                    <div id="${id}" class="json-content ml-4" style="display: none;">`;
+
+                data.forEach((item, i) => {
+                    html += `<div class="py-0.5">${childIndent}${renderJSON(item, level + 1)}${i < data.length - 1 ? '<span class="text-gray-600 dark:text-gray-400">,</span>' : ''}</div>`;
+                });
+
+                html += `</div>${indent}<span class="text-gray-600 dark:text-gray-400">]</span></div>`;
+                return html;
+            }
+
+            if (typeof data === 'object') {
+                const keys = Object.keys(data);
+                if (keys.length === 0) return '<span class="text-gray-600 dark:text-gray-400">{}</span>';
+
+                const id = 'json-' + Math.random().toString(36).substr(2, 9);
+                let html = `<div class="json-node">
+                    <span class="json-toggle cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-700 px-1 rounded"
+                          onclick="this.dataset.expanded = this.dataset.expanded === 'true' ? 'false' : 'true';
+                                   this.textContent = this.dataset.expanded === 'true' ? '▼' : '▶';
+                                   document.getElementById('${id}').style.display = this.dataset.expanded === 'true' ? 'block' : 'none'"
+                          data-expanded="false">▶</span>
+                    <span class="text-gray-600 dark:text-gray-400">{</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-500 ml-2">${keys.length} keys</span>
+                    <div id="${id}" class="json-content ml-4" style="display: none;">`;
+
+                keys.forEach((key, i) => {
+                    html += `<div class="py-0.5">${childIndent}<span class="text-blue-600 dark:text-blue-400">"${escapeHtml(key)}"</span><span class="text-gray-600 dark:text-gray-400">: </span>${renderJSON(data[key], level + 1)}${i < keys.length - 1 ? '<span class="text-gray-600 dark:text-gray-400">,</span>' : ''}</div>`;
+                });
+
+                html += `</div>${indent}<span class="text-gray-600 dark:text-gray-400">}</span></div>`;
+                return html;
+            }
+
+            return String(data);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+
+    {% if django_browser_reload_enabled %}
+        <script src="{% static 'django_browser_reload/reload-listener.js' %}"></script>
+    {% endif %}
+
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ email_title }} - {{ project_name }}</title>
+    <style>
+      /* Modern email template with gradient and improved typography */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+          "Segoe UI Symbol";
+        line-height: 1.7;
+        color: #2d3748;
+        margin: 0;
+        padding: 0;
+        background-color: #f8fafc;
+        min-height: 100vh;
+      }
+
+      .email-wrapper {
+        padding: 40px 20px;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 100%;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+
+      .header {
+        text-align: center;
+        padding: 32px 30px;
+        background-color: #1f2937;
+      }
+
+      .header-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .header a {
+        text-decoration: none;
+        color: inherit;
+        display: inline-flex;
+        align-items: center;
+        transition: transform 0.2s ease;
+      }
+
+      .header a:hover {
+        transform: translateY(-2px);
+      }
+
+      .logo {
+        width: 48px;
+        height: 48px;
+        margin-right: 12px;
+        border-radius: 8px;
+        object-fit: cover;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .site-name {
+        font-size: 28px;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+      }
+
+      .content {
+        padding: 40px 40px 30px;
+        background-color: #ffffff;
+      }
+
+      .content-inner {
+        max-width: 480px;
+        margin: 0 auto;
+      }
+
+      .footer {
+        text-align: center;
+        padding: 30px 40px;
+        color: #718096;
+        font-size: 13px;
+        background: linear-gradient(to bottom, #f7fafc, #edf2f7);
+        border-top: 1px solid #e2e8f0;
+      }
+
+      h1 {
+        color: #1a202c;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        margin-top: 0;
+        line-height: 1.3;
+        letter-spacing: -0.5px;
+      }
+
+      p {
+        margin: 0 0 18px 0;
+        color: #4a5568;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      .greeting {
+        font-size: 18px;
+        color: #2d3748;
+        margin-bottom: 24px;
+      }
+
+      .main-content {
+        margin: 20px 0;
+      }
+
+      .button-container {
+        text-align: center;
+        margin: 36px 0;
+      }
+
+      .btn {
+        display: inline-block !important;
+        background-color: #1e40af !important;
+        color: #ffffff !important;
+        text-decoration: none !important;
+        padding: 14px 28px !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        border: 2px solid #1e40af !important;
+        cursor: pointer !important;
+        mso-padding-alt: 0;
+        text-align: center !important;
+      }
+
+      .btn:hover {
+        background-color: #1d4ed8 !important;
+        border-color: #1d4ed8 !important;
+        color: #ffffff !important;
+        text-decoration: none !important;
+      }
+
+      .btn:visited {
+        color: #ffffff !important;
+        text-decoration: none !important;
+      }
+
+      .btn:active {
+        color: #ffffff !important;
+        text-decoration: none !important;
+      }
+
+      .secondary-text {
+        font-size: 14px;
+        color: #718096;
+        margin-top: 24px;
+        font-style: italic;
+      }
+
+      .signature {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid #e2e8f0;
+        color: #4a5568;
+      }
+
+      .signature strong {
+        color: #2d3748;
+        font-weight: 600;
+      }
+
+      a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+      }
+
+      a:hover {
+        color: #5a67d8;
+        text-decoration: underline;
+      }
+
+      .footer a {
+        color: #667eea;
+        font-weight: 500;
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        .content {
+          background-color: #1a202c;
+        }
+        
+        h1 {
+          color: #f7fafc;
+        }
+        
+        p {
+          color: #cbd5e0;
+        }
+        
+        .main-content {
+          background: #2d3748;
+          color: #e2e8f0;
+        }
+      }
+
+      /* Mobile responsiveness */
+      @media only screen and (max-width: 600px) {
+        .email-wrapper {
+          padding: 20px 10px;
+        }
+        
+        .container {
+          border-radius: 12px;
+        }
+        
+        .header {
+          padding: 30px 20px 25px;
+        }
+        
+        .site-name {
+          font-size: 24px;
+        }
+        
+        .content {
+          padding: 30px 25px 25px;
+        }
+        
+        .footer {
+          padding: 25px 25px;
+        }
+        
+        h1 {
+          font-size: 24px;
+        }
+        
+        .btn {
+          padding: 14px 28px;
+          font-size: 15px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="email-wrapper">
+      <div class="container">
+        <div class="header">
+          <div class="header-content">
+            <a href="{{ site_url }}">
+              {% if logo_url %}
+              <img src="{{ logo_url }}" alt="{{ project_name }}" class="logo" />
+              {% endif %}
+              <span class="site-name">{{ project_name }}</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="content-inner">
+            <h1>{{ email_title }}</h1>
+            
+            {% if greeting %}
+            <p class="greeting">{{ greeting }},</p>
+            {% else %}
+            <p class="greeting">Hello,</p>
+            {% endif %}
+
+            {% if main_text %}
+            <div class="main-content">
+              <p>{{ main_text | safe }}</p>
+            </div>
+            {% endif %}
+
+            {% if main_html_content %}
+            <div class="main-content">
+              {{ main_html_content | safe }}
+            </div>
+            {% endif %}
+
+            {% if button_url and button_text %}
+            <div class="button-container">
+              <!-- Gmail-compatible button using table -->
+              <table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="background-color: #1e40af; border-radius: 8px; border: 2px solid #1e40af;">
+                    {% if tracking_click_url %}
+                    <a href="{{ tracking_click_url }}?url={{ button_url|urlencode }}"
+                        style="display: inline-block; padding: 14px 28px; font-family: Arial, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 8px; text-align: center;"
+                        class="btn">{{ button_text }}</a>
+                    {% else %}
+                    <a href="{{ button_url }}"
+                        style="display: inline-block; padding: 14px 28px; font-family: Arial, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 8px; text-align: center;"
+                        class="btn">{{ button_text }}</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            </div>
+            {% endif %}
+
+            {% if secondary_text %}
+            <div class="secondary-text">
+              {{ secondary_text | safe }}
+            </div>
+            {% endif %}
+
+            <div class="signature">
+              <p>If you need further assistance, please don't hesitate to contact our support team.</p>
+              <p><strong>Thanks,<br />The {{ project_name }} Team</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
+          <p>You are receiving this email because it relates to your account activity.</p>
+          {% if site_url != '#' %}
+          <p><a href="{{ site_url }}">Visit {{ project_name }}</a></p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Email tracking pixel -->
+    {% if tracking_pixel_url %}
+    <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display: none;" alt="" />
+    {% endif %}
+  </body>
+</html>

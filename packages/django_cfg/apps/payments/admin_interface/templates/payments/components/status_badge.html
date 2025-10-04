@@ -1,0 +1,41 @@
+{% comment %}
+Payment Status Badge Component
+
+Usage:
+{% include 'payments/components/status_badge.html' with payment=payment %}
+
+Parameters:
+- payment: UniversalPayment object
+{% endcomment %}
+
+<span class="payment-status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+    {% if payment.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400
+    {% elif payment.status == 'confirming' %}bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400
+    {% elif payment.status == 'confirmed' or payment.status == 'completed' %}bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400
+    {% elif payment.status == 'failed' %}bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400
+    {% elif payment.status == 'expired' or payment.status == 'cancelled' %}bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400
+    {% elif payment.status == 'refunded' %}bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400
+    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400{% endif %}"
+      data-status="{{ payment.status }}">
+    {% if payment.status == 'pending' %}
+        <span class="material-icons-outlined text-sm mr-1 animate-pulse">pending</span>
+    {% elif payment.status == 'confirming' %}
+        <span class="material-icons-outlined text-sm mr-1 animate-spin">sync</span>
+    {% elif payment.status == 'confirmed' %}
+        <span class="material-icons-outlined text-sm mr-1">check_circle</span>
+    {% elif payment.status == 'completed' %}
+        <span class="material-icons-outlined text-sm mr-1">verified</span>
+    {% elif payment.status == 'failed' %}
+        <span class="material-icons-outlined text-sm mr-1">error</span>
+    {% elif payment.status == 'expired' %}
+        <span class="material-icons-outlined text-sm mr-1">schedule</span>
+    {% elif payment.status == 'cancelled' %}
+        <span class="material-icons-outlined text-sm mr-1">cancel</span>
+    {% elif payment.status == 'refunded' %}
+        <span class="material-icons-outlined text-sm mr-1">undo</span>
+    {% else %}
+        <span class="material-icons-outlined text-sm mr-1">help</span>
+    {% endif %}
+    
+    <span class="status-text">{{ payment.get_status_display }}</span>
+</span>

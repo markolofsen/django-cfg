@@ -1,0 +1,117 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% block page_title %}Page{% endblock %} - Django CFG{% endblock %}</title>
+
+    <!-- Tailwind CSS (compiled via django-tailwind) -->
+    {% tailwind_css %}
+
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        /* Prevent flash of unstyled content */
+        [x-cloak] { display: none !important; }
+
+        /* Override Tailwind's media-query dark mode with class-based dark mode */
+        /* This ensures dark: classes work when .dark is on <html>, not just media queries */
+
+        /* Force light mode when NOT in dark mode - override media queries */
+        @media (prefers-color-scheme: dark) {
+            html:not(.dark) body,
+            html:not(.dark) .dark\:bg-gray-900,
+            html:not(.dark) .dark\:bg-gray-800,
+            html:not(.dark) .dark\:bg-gray-700,
+            html:not(.dark) .dark\:bg-gray-600 {
+                background-color: inherit !important;
+            }
+
+            html:not(.dark) .dark\:text-gray-100,
+            html:not(.dark) .dark\:text-white,
+            html:not(.dark) .dark\:text-gray-300,
+            html:not(.dark) .dark\:text-gray-400,
+            html:not(.dark) .dark\:text-gray-500 {
+                color: inherit !important;
+            }
+
+            html:not(.dark) .dark\:border-gray-700,
+            html:not(.dark) .dark\:border-gray-600,
+            html:not(.dark) .dark\:border-gray-800 {
+                border-color: inherit !important;
+            }
+
+            html:not(.dark) .dark\:hover\:bg-gray-700:hover,
+            html:not(.dark) .dark\:hover\:bg-gray-800:hover {
+                background-color: inherit !important;
+            }
+
+            html:not(.dark) .dark\:hover\:text-white:hover,
+            html:not(.dark) .dark\:hover\:text-blue-400:hover {
+                color: inherit !important;
+            }
+        }
+    </style>
+
+    <!-- Dark mode initialization (prevents flash) -->
+    <script>
+        (function() {
+            const isDark = localStorage.getItem('darkMode') === 'true' ||
+                          (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900"
+      x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' || (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches){% block alpine_data_extra %}{% endblock %} }"
+      x-init="$watch('darkMode', val => { localStorage.setItem('darkMode', val); document.documentElement.classList.toggle('dark', val); }){% block alpine_init_extra %}{% endblock %}">
+
+    {% block body %}
+    <div class="min-h-full flex flex-col">
+        {% block header %}{% endblock %}
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            {% block main %}
+                <div class="{% block container_class %}max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6{% endblock %}">
+                    {% block content %}{% endblock %}
+                </div>
+            {% endblock %}
+        </main>
+
+        {% block footer %}
+        {% load django_cfg %}
+        <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {% block footer_content %}
+                <div class="text-center">
+                    {% block footer_text %}
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Powered by
+                        <a href="{% lib_site_url %}"
+                           class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                           target="_blank" rel="noopener noreferrer">
+                            {% lib_name %}
+                        </a>
+                    </p>
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                        {% lib_subtitle %}
+                    </p>
+                    {% endblock %}
+                </div>
+                {% endblock %}
+            </div>
+        </footer>
+        {% endblock %}
+    </div>
+    {% endblock %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

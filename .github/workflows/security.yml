@@ -1,0 +1,148 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install safety bandit semgrep detect-secrets
+        
+    - name: Run Bandit security scan
+      run: |
+        bandit -r src/ devops/ -f json -o bandit-report.json || true
+        bandit -r src/ devops/ -f txt
+        
+    - name: Run Safety vulnerability check
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check
+        
+    - name: Run detect-secrets
+      run: |
+        detect-secrets scan --baseline .secrets.baseline --all-files || true
+        
+    - name: Run Semgrep security analysis
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json src/ devops/ || true
+        semgrep --config=auto src/ devops/
+        
+    - name: Run custom security scanner
+      run: |
+        cd devops
+        python scripts/security_scan.py --json --output ../security-scan-report.json
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          semgrep-report.json
+          security-scan-report.json
+          
+    - name: Comment PR with security results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let comment = '## 🔒 Security Scan Results\n\n';
+          
+          try {
+            // Read custom security scan results
+            const securityReport = JSON.parse(fs.readFileSync('security-scan-report.json', 'utf8'));
+            
+            comment += `**Overall Status:** ${securityReport.overall_status}\n`;
+            comment += `**Secrets Found:** ${securityReport.secrets_count}\n`;
+            comment += `**Vulnerabilities Found:** ${securityReport.vulnerabilities_count}\n\n`;
+            
+            if (securityReport.should_block) {
+              comment += '❌ **SECURITY ISSUES FOUND - REVIEW REQUIRED**\n\n';
+              securityReport.blocking_issues.forEach(issue => {
+                comment += `- ${issue}\n`;
+              });
+            } else {
+              comment += '✅ **No blocking security issues found**\n\n';
+            }
+            
+            if (securityReport.recommendations.length > 0) {
+              comment += '### Recommendations:\n';
+              securityReport.recommendations.forEach(rec => {
+                comment += `- ${rec}\n`;
+              });
+            }
+            
+          } catch (error) {
+            comment += 'Could not parse security scan results.\n';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+        
+  codeql-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: python
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2

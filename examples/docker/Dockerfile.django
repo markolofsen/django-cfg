@@ -1,0 +1,81 @@
+# 🐳 Django-CFG Example - Production Docker Image
+# Optimized build for production deployment
+
+FROM python:3.13-slim
+
+# Build arguments
+ARG BUILD_DATE
+ARG VERSION
+ARG VCS_REF
+
+# Labels
+LABEL org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.title="Django-CFG Example" \
+      org.opencontainers.image.description="Django-CFG Example Application" \
+      org.opencontainers.image.vendor="Django-CFG"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_SETTINGS_MODULE=api.settings \
+    ENVIRONMENT=production \
+    DEBUG=false \
+    IS_PROD=true \
+    IS_DOCKER=true
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    netcat-openbsd \
+    nano \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install poetry==1.8.3
+
+# Configure Poetry
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+# Set work directory
+WORKDIR /app
+
+# Copy django-cfg library first (needed for local dependency)
+COPY django_cfg/ /app/django_cfg/
+
+# Copy Poetry files for the example app
+COPY django_cfg_example/django/pyproject.toml django_cfg_example/django/poetry.lock* ./
+
+# Install django-cfg library as editable package
+RUN pip install -e /app/django_cfg
+
+# Install application dependencies using Poetry (django-cfg already installed)
+RUN poetry install --only main --no-root && \
+    rm -rf $POETRY_CACHE_DIR
+
+# Copy application code
+COPY django_cfg_example/django/ .
+
+# Copy Docker scripts
+COPY django_cfg_example/docker/scripts/ ./docker/scripts/
+
+# Set executable permissions for entrypoint and create directories
+RUN chmod +x /app/docker/scripts/entrypoint.sh && \
+    mkdir -p /app/logs /app/static /app/media
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/cfg/status/ || exit 1
+
+# Set entrypoint and default command
+ENTRYPOINT ["/app/docker/scripts/entrypoint.sh"]
+CMD ["runserver"]

@@ -1,0 +1,19 @@
+<!-- Queues Content -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <span class="material-icons text-blue-600 dark:text-blue-400 mr-2">queue</span>
+            Queue Details
+        </h2>
+        <button id="refresh-queues-btn" 
+                class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">
+            <span class="material-icons text-sm">refresh</span>
+        </button>
+    </div>
+    <div class="p-6">
+        <div id="queues-container">
+            <!-- Queues will be loaded here by JavaScript -->
+            <p class="text-gray-600 dark:text-gray-400">Loading queues...</p>
+        </div>
+    </div>
+</div>

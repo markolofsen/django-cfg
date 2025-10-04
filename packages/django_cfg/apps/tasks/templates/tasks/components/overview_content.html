@@ -1,0 +1,69 @@
+<!-- Overview Content -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Status Cards -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-2xl text-blue-600 dark:text-blue-400">queue</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Queues</p>
+                <p id="active-queues-count" class="text-2xl font-semibold text-gray-900 dark:text-white">0</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-2xl text-green-600 dark:text-green-400">engineering</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Workers</p>
+                <p id="workers-count" class="text-2xl font-semibold text-gray-900 dark:text-white">0</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-2xl text-yellow-600 dark:text-yellow-400">schedule</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Tasks</p>
+                <p id="pending-tasks-count" class="text-2xl font-semibold text-gray-900 dark:text-white">0</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <span class="material-icons text-2xl text-red-600 dark:text-red-400">error</span>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Failed Tasks</p>
+                <p id="failed-tasks-count" class="text-2xl font-semibold text-gray-900 dark:text-white">0</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <span class="material-icons text-primary-600 dark:text-primary-400 mr-2">monitor_heart</span>
+            System Status
+        </h2>
+    </div>
+    <div class="p-6">
+        <div id="system-status">
+            <div class="flex items-center justify-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                <span class="ml-3 text-gray-600 dark:text-gray-400">Loading status...</span>
+            </div>
+        </div>
+    </div>
+</div>

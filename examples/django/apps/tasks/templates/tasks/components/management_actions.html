@@ -1,0 +1,50 @@
+<!-- Management Actions -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <span class="material-icons text-primary-600 dark:text-primary-400 mr-2">settings</span>
+            Management Actions
+        </h2>
+    </div>
+    
+    <div class="p-4">
+        <!-- All Actions in One Row -->
+        <div class="flex flex-wrap gap-3">
+            <!-- Primary Actions -->
+            <button id="simulate-data-btn" 
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg border border-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
+                <span class="material-icons text-sm mr-2">science</span>
+                Simulate Data
+            </button>
+            
+            <button id="clear-test-data-btn" 
+                    class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg border border-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-1">
+                <span class="material-icons text-sm mr-2">clear_all</span>
+                Clear Data
+            </button>
+            
+            <!-- Secondary Actions -->
+            <button id="clear-all-queues-btn" 
+                    class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg border border-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">
+                <span class="material-icons text-sm mr-2">delete_sweep</span>
+                Clear Queues
+            </button>
+            
+            <button id="purge-failed-tasks-btn" 
+                    class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg border border-purple-600 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1">
+                <span class="material-icons text-sm mr-2">cleaning_services</span>
+                Purge Failed
+            </button>
+        </div>
+        
+        <!-- Action Status -->
+        <div id="management-action-status" class="mt-4 hidden">
+            <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <div class="flex items-center">
+                    <span class="material-icons text-blue-600 dark:text-blue-400 mr-2">info</span>
+                    <span id="management-action-message" class="text-sm text-blue-800 dark:text-blue-200"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,27 @@
+Welcome to {{ site_name }}!
+
+Hello {{ user.get_full_name|default:user.username }},
+
+Welcome to {{ site_name }}! We're excited to have you on board. 
+Your account ({{ user.email }}) has been created and you're ready to get started.
+
+What you can expect:
+
+🔐 Secure Login
+   Use OTP codes for secure, passwordless authentication
+
+⚡ Fast Access  
+   Quick login with email verification codes
+
+🛡️ Enhanced Security
+   No passwords to remember or compromise
+
+To get started, simply request a login code whenever you want to sign in. 
+We'll send you a secure code via email that you can use to access your account.
+
+Thanks for joining {{ site_name }}!
+
+If you have any questions, feel free to contact our support team.
+
+---
+{{ site_name }} Team

@@ -1,0 +1,67 @@
+{% load unfold %}
+
+<!-- Data Table Component -->
+<div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 overflow-hidden shadow-xs">
+    
+    <!-- Table Header -->
+    {% if title or actions %}
+    <div class="px-6 py-4 border-b border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800">
+        <div class="flex items-center justify-between">
+            {% if title %}
+            <div class="flex items-center">
+                {% if icon %}
+                <span class="material-icons text-primary-600 mr-2">{{ icon }}</span>
+                {% endif %}
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">{{ title }}</h3>
+            </div>
+            {% endif %}
+            
+            {% if actions %}
+            <div class="flex items-center space-x-2">
+                {{ actions }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Table Content -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            {% if headers %}
+            <thead class="bg-base-50 dark:bg-base-800">
+                <tr>
+                    {% for header in headers %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-font-subtle-light dark:text-font-subtle-dark uppercase tracking-wider">
+                        {{ header }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            {% endif %}
+            
+            <tbody class="bg-white dark:bg-base-900 divide-y divide-base-200 dark:divide-base-700">
+                {% if rows %}
+                    {% for row in rows %}
+                    <tr class="hover:bg-base-100 dark:hover:bg-base-800 transition-colors duration-150">
+                        {% for cell in row %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {{ cell }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="{{ headers|length|default:'5' }}" class="px-6 py-8 text-center">
+                            <div class="flex flex-col items-center">
+                                <span class="material-icons text-4xl text-base-400 dark:text-base-500 mb-2">{{ empty_icon|default:'inbox' }}</span>
+                                <p class="text-font-subtle-light dark:text-font-subtle-dark">{{ empty_message|default:'No data available' }}</p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

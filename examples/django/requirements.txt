@@ -1,0 +1,47 @@
+# Django CFG Sample Project Requirements
+# 
+# This file provides pip-based installation as an alternative to Poetry.
+# For Poetry users, use: poetry install
+
+# Core Dependencies
+# Django framework (required by django-cfg)
+django>=5.2.0,<6.0.0
+
+# Django CFG (main package) - includes all necessary dependencies:
+# - Django REST Framework
+# - Django Unfold admin theme
+# - Django Constance dynamic settings
+# - DRF Spectacular API documentation
+# - And many more integrations!
+#
+# Note: In real usage, install from PyPI: django-cfg>=1.0.0
+# For this sample, install from local path: pip install -e ../
+
+# Additional dependencies for this sample project:
+# Image handling (for product/user avatars)
+Pillow>=10.0.0,<11.0.0
+
+# Database Drivers (optional - uncomment as needed)
+# psycopg2-binary>=2.9.0,<3.0.0  # PostgreSQL
+# mysqlclient>=2.1.0,<3.0.0      # MySQL
+# cx-Oracle>=8.3.0,<9.0.0        # Oracle
+
+# Cache Backends (optional - uncomment as needed)
+# redis>=4.5.0,<5.0.0             # Redis cache
+# python-memcached>=1.59,<2.0.0   # Memcached
+
+# Email Backends (optional - uncomment as needed)
+# django-ses>=3.5.0,<4.0.0        # Amazon SES
+# sendgrid>=6.10.0,<7.0.0         # SendGrid
+
+# Development Dependencies (optional)
+# pytest>=7.4.0,<8.0.0
+# pytest-django>=4.5.2,<5.0.0
+# black>=23.0.0,<24.0.0
+# isort>=5.12.0,<6.0.0
+# flake8>=6.0.0,<7.0.0
+
+# Production Dependencies (optional)
+# gunicorn>=21.2.0,<22.0.0         # WSGI server
+# whitenoise>=6.5.0,<7.0.0         # Static files
+# sentry-sdk[django]>=1.32.0,<2.0.0  # Error tracking

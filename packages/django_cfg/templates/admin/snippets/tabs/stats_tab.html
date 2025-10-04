@@ -1,0 +1,89 @@
+{% load unfold %}
+
+<!-- Statistics Tab -->
+<div class="space-y-8">
+    <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+        System Statistics
+    </h2>
+    
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {% for card in stats_cards %}
+            {% component "unfold/components/card.html" with title=card.title %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="material-icons text-2xl text-font-subtle-light dark:text-font-subtle-dark mr-3">{{ card.icon }}</span>
+                        <div>
+                            <div class="text-3xl font-bold text-font-important-light dark:text-font-important-dark">{{ card.value }}</div>
+                            <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">{{ card.change }}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ card.change_type }}</div>
+                    </div>
+                </div>
+            {% endcomponent %}
+        {% endfor %}
+    </div>
+    
+    <!-- Detailed Stats Sections -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Users Statistics -->
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-6">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+                <span class="material-icons mr-2">people</span>
+                User Statistics
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Total Users</span>
+                    <span class="font-semibold text-font-default-light dark:text-font-default-dark">{{ total_users_count }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Active Users</span>
+                    <span class="font-semibold text-font-default-light dark:text-font-default-dark">{{ active_users_count }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">New Users (7d)</span>
+                    <span class="font-semibold text-font-default-light dark:text-font-default-dark">{{ new_users_count }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Superusers</span>
+                    <span class="font-semibold text-font-default-light dark:text-font-default-dark">{{ superusers_count }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Health -->
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 p-6">
+            <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark mb-4">
+                <span class="material-icons mr-2">health_and_safety</span>
+                System Health
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Database</span>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400">                        Healthy
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Cache</span>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400">                        Healthy
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Queue</span>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400">                        Healthy
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">Storage</span>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400">                        Healthy
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+</div> 

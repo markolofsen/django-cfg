@@ -1,0 +1,24 @@
+{% load i18n %}
+
+{% if item.default %}
+    {% if item.default|length > 80 %}
+        <!-- Long default value with smart truncation -->
+        <div x-data="{ expanded: false }" class="constance-expandable">
+            <div x-show="!expanded" @click="expanded = true" class="cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 p-1 rounded transition-colors">
+                {% include "unfold/helpers/label.html" with text=item.default|truncatechars:60 %}
+                <br><small class="text-base-400 dark:text-base-500 text-xs">{% trans "Click to expand" %}</small>
+            </div>
+            <div x-show="expanded" @click="expanded = false" class="cursor-pointer">
+                <div class="max-w-xs break-words whitespace-pre-wrap text-xs bg-base-100 dark:bg-base-800 p-2 rounded border border-base-200 dark:border-base-700 shadow-sm">
+                    {{ item.default }}
+                </div>
+                <small class="text-base-400 dark:text-base-500 text-xs">{% trans "Click to collapse" %}</small>
+            </div>
+        </div>
+    {% else %}
+        <!-- Short default value - normal display -->
+        {% include "unfold/helpers/label.html" with text=item.default %}
+    {% endif %}
+{% else %}
+    <span class="text-base-400 dark:text-base-500">-</span>
+{% endif %}

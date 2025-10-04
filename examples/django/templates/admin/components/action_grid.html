@@ -1,0 +1,49 @@
+{% load unfold %}
+
+<!-- Action Grid Component -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for action in actions %}
+        <a href="{{ action.link }}" 
+           class="group flex items-center p-4 theme-card rounded-lg border theme-border hover:border-blue-600 dark:hover:border-blue-500 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            
+            <!-- Icon -->
+            <div class="flex-shrink-0 mr-4">
+                <div class="p-2 rounded-lg transition-colors duration-200
+                    {% if action.color == 'primary' %}bg-blue-100 dark:bg-blue-900/20 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/30
+                    {% elif action.color == 'success' %}bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-800/30
+                    {% elif action.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20 group-hover:bg-amber-200 dark:group-hover:bg-amber-800/30
+                    {% elif action.color == 'danger' %}bg-red-100 dark:bg-red-900/20 group-hover:bg-red-200 dark:group-hover:bg-red-800/30
+                    {% else %}bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700{% endif %}">
+                    
+                    <span class="material-icons text-lg
+                        {% if action.color == 'primary' %}text-blue-600 dark:text-blue-400
+                        {% elif action.color == 'success' %}text-green-600 dark:text-green-400
+                        {% elif action.color == 'warning' %}text-amber-600 dark:text-amber-400
+                        {% elif action.color == 'danger' %}text-red-600 dark:text-red-400
+                        {% else %}text-gray-600 dark:text-gray-400{% endif %}">
+                        {{ action.icon }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-medium theme-text group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors duration-200">
+                    {{ action.title }}
+                </h3>
+                {% if action.description %}
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        {{ action.description }}
+                    </p>
+                {% endif %}
+            </div>
+            
+            <!-- Arrow -->
+            <div class="flex-shrink-0 ml-2">
+                <span class="material-icons text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors duration-200">
+                    arrow_forward
+                </span>
+            </div>
+        </a>
+    {% endfor %}
+</div>

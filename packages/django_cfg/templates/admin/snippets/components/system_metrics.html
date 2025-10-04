@@ -1,0 +1,191 @@
+{% load unfold %}
+
+<!-- System Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% if system_metrics %}
+        <!-- Database Status -->
+        {% if system_metrics.database %}
+        <div class="bg-gradient-to-br from-green-50 to-white dark:from-green-900/10 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 p-4 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons
+                    {% if system_metrics.database.status == 'healthy' %}text-green-600 dark:text-green-400
+                    {% elif system_metrics.database.status == 'warning' %}text-amber-600 dark:text-amber-400
+                    {% else %}text-red-600 dark:text-red-400{% endif %} mr-2">storage</span>
+                Database
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ system_metrics.database.type }}</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Connection Health</span>
+                    <span class="font-semibold">{{ system_metrics.database.health_percentage }}%</span>
+                </div>
+                <div class="w-full bg-green-100 dark:bg-green-900/30 rounded-full h-2">
+                    <div class="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300 group-hover:bg-green-700 dark:group-hover:bg-green-400" style="width: {{ system_metrics.database.health_percentage }}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ system_metrics.database.description }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Cache Status -->
+        {% if system_metrics.cache %}
+        <div class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 hover:shadow-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons
+                    {% if system_metrics.cache.status == 'healthy' %}text-blue-600 dark:text-blue-400
+                    {% elif system_metrics.cache.status == 'warning' %}text-amber-600 dark:text-amber-400
+                    {% else %}text-red-600 dark:text-red-400{% endif %} mr-2">memory</span>
+                Cache
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ system_metrics.cache.type }}</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Performance</span>
+                    <span class="font-semibold">{{ system_metrics.cache.health_percentage }}%</span>
+                </div>
+                <div class="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
+                    <div class="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300 group-hover:bg-blue-700 dark:group-hover:bg-blue-400" style="width: {{ system_metrics.cache.health_percentage }}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ system_metrics.cache.description }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Storage Status -->
+        {% if system_metrics.storage %}
+        <div class="bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/10 dark:to-gray-800 rounded-lg border border-amber-200 dark:border-amber-800 p-4 hover:shadow-lg hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons
+                    {% if system_metrics.storage.status == 'healthy' %}text-amber-600 dark:text-amber-400
+                    {% elif system_metrics.storage.status == 'warning' %}text-orange-600 dark:text-orange-400
+                    {% else %}text-gray-600 dark:text-gray-400{% endif %} mr-2">folder</span>
+                Storage
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ system_metrics.storage.type }}</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Usage</span>
+                    <span class="font-semibold">{{ system_metrics.storage.health_percentage }}%</span>
+                </div>
+                <div class="w-full bg-amber-100 dark:bg-amber-900/30 rounded-full h-2">
+                    <div class="bg-amber-600 dark:bg-amber-500 h-2 rounded-full transition-all duration-300 group-hover:bg-amber-700 dark:group-hover:bg-amber-400" style="width: {{ system_metrics.storage.health_percentage }}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ system_metrics.storage.description }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- API Status -->
+        {% if system_metrics.api %}
+        <div class="bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/10 dark:to-gray-800 rounded-lg border border-purple-200 dark:border-purple-800 p-4 hover:shadow-lg hover:border-purple-400 dark:hover:border-purple-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons
+                    {% if system_metrics.api.status == 'healthy' %}text-purple-600 dark:text-purple-400
+                    {% elif system_metrics.api.status == 'warning' %}text-amber-600 dark:text-amber-400
+                    {% else %}text-red-600 dark:text-red-400{% endif %} mr-2">api</span>
+                API
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ system_metrics.api.type }}</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>URL Patterns</span>
+                    <span class="font-semibold">{{ system_metrics.api.health_percentage }}%</span>
+                </div>
+                <div class="w-full bg-purple-100 dark:bg-purple-900/30 rounded-full h-2">
+                    <div class="bg-purple-600 dark:bg-purple-500 h-2 rounded-full transition-all duration-300 group-hover:bg-purple-700 dark:group-hover:bg-purple-400" style="width: {{ system_metrics.api.health_percentage }}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ system_metrics.api.description }}</p>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <!-- Fallback static metrics -->
+        <div class="bg-gradient-to-br from-green-50 to-white dark:from-green-900/10 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 p-4 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons text-green-600 dark:text-green-400 mr-2">storage</span>
+                Database
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">PostgreSQL</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Connection Health</span>
+                    <span class="font-semibold">85%</span>
+                </div>
+                <div class="w-full bg-green-100 dark:bg-green-900/30 rounded-full h-2">
+                    <div class="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300 group-hover:bg-green-700 dark:group-hover:bg-green-400" style="width: 85%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Healthy - 85%</p>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 hover:shadow-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons text-blue-600 dark:text-blue-400 mr-2">memory</span>
+                Cache
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">Memory Cache</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Performance</span>
+                    <span class="font-semibold">90%</span>
+                </div>
+                <div class="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
+                    <div class="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300 group-hover:bg-blue-700 dark:group-hover:bg-blue-400" style="width: 90%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Optimal - 90%</p>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/10 dark:to-gray-800 rounded-lg border border-amber-200 dark:border-amber-800 p-4 hover:shadow-lg hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons text-amber-600 dark:text-amber-400 mr-2">folder</span>
+                Storage
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">Disk Space</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Usage</span>
+                    <span class="font-semibold">67%</span>
+                </div>
+                <div class="w-full bg-amber-100 dark:bg-amber-900/30 rounded-full h-2">
+                    <div class="bg-amber-600 dark:bg-amber-500 h-2 rounded-full transition-all duration-300 group-hover:bg-amber-700 dark:group-hover:bg-amber-400" style="width: 67%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">67% used (33% free)</p>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/10 dark:to-gray-800 rounded-lg border border-purple-200 dark:border-purple-800 p-4 hover:shadow-lg hover:border-purple-400 dark:hover:border-purple-600 transition-all duration-200 group">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                <span class="material-icons text-purple-600 dark:text-purple-400 mr-2">api</span>
+                API
+            </h4>
+            <div class="flex items-center mb-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">REST API</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>URL Patterns</span>
+                    <span class="font-semibold">100%</span>
+                </div>
+                <div class="w-full bg-purple-100 dark:bg-purple-900/30 rounded-full h-2">
+                    <div class="bg-purple-600 dark:bg-purple-500 h-2 rounded-full transition-all duration-300 group-hover:bg-purple-700 dark:group-hover:bg-purple-400" style="width: 100%"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">All routes healthy</p>
+            </div>
+        </div>
+    {% endif %}
+</div> 

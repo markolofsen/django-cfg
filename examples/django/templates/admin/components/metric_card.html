@@ -1,0 +1,39 @@
+{% load unfold %}
+
+<!-- Metric Card Component -->
+<div class="theme-card rounded-lg p-5 border theme-border hover:shadow-md transition-shadow duration-200">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="flex-shrink-0">
+                <span class="material-icons 
+                    {% if status == 'healthy' or status == 'success' %}text-green-600 dark:text-green-400
+                    {% elif status == 'warning' %}text-amber-600 dark:text-amber-400
+                    {% elif status == 'error' or status == 'failed' %}text-red-600 dark:text-red-400
+                    {% elif status == 'info' %}text-blue-600 dark:text-blue-400
+                    {% else %}text-blue-600 dark:text-blue-400{% endif %}">
+                    {{ icon }}
+                </span>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="text-sm font-medium theme-text truncate">
+                    {{ title }}
+                </div>
+                {% if description %}
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    {{ description }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="flex-shrink-0">
+            {% include 'admin/components/status_badge.html' with status=status text=status_text %}
+        </div>
+    </div>
+    
+    {% if progress %}
+    <div class="mt-4">
+        {% include 'admin/components/progress_bar.html' with value=progress title=progress_title description=progress_description %}
+    </div>
+    {% endif %}
+</div>

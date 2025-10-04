@@ -1,0 +1,36 @@
+"""
+RPC Client Logger
+
+Auto-generated logging module for RPC client.
+"""
+
+import json
+import logging
+from datetime import datetime
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+
+class ClientLoggerConfig:
+    """Configuration for client logger."""
+
+    def __init__(
+        self,
+        log_dir: str = "./client_logs",
+        level: str = "INFO",
+        log_rpc_calls: bool = True,
+        max_bytes: int = 10 * 1024 * 1024,  # 10 MB
+        backup_count: int = 5,
+        console_output: bool = True,
+    ):
+        """
+        Initialize logger config.
+
+        Args:
+            log_dir: Directory for log files
+            level: Log level (DEBUG, INFO, WARNING, ERROR)
+            log_rpc_calls: Whether to log RPC calls
+            max_bytes: Max file size before rotation
+            backup_count: Number of backup files to keep
+            console_output: Whether to output to console

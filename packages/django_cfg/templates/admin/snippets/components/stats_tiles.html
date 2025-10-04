@@ -1,0 +1,92 @@
+{% load unfold %}
+
+<!-- Statistics Tiles Grid -->
+{% if stats_groups %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {% for group in stats_groups %}
+            <div class="bg-white dark:bg-base-900 rounded-xl border border-base-200 dark:border-base-700 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div class="flex items-center mb-4 pb-3 border-b border-base-200 dark:border-base-700">
+                    {% if group.icon %}
+                        <div class="flex items-center justify-center w-10 h-10 rounded-lg mr-3"                                    {% if group.color == 'success' %}bg-green-100 dark:bg-green-900/20
+                                    {% elif group.color == 'primary' %}bg-primary-100 dark:bg-primary-900/20
+                                    {% elif group.color == 'danger' %}bg-red-100 dark:bg-red-900/20
+                                    {% elif group.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20
+                                    {% elif group.color == 'info' %}bg-blue-100 dark:bg-blue-900/20
+                                    {% else %}bg-base-100 dark:bg-base-800{% endif %}">
+                            <span class="material-icons text-lg"                                        {% if group.color == 'success' %}text-green-600 dark:text-green-400
+                                        {% elif group.color == 'primary' %}text-primary-600 dark:text-primary-500
+                                        {% elif group.color == 'danger' %}text-red-600 dark:text-red-400
+                                        {% elif group.color == 'warning' %}text-amber-600 dark:text-amber-400
+                                        {% elif group.color == 'info' %}text-blue-600 dark:text-blue-400
+                                        {% else %}text-font-default-light dark:text-font-default-dark{% endif %}">
+                                {{ group.icon }}
+                            </span>
+                        </div>
+                    {% endif %}
+                    <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">{{ group.title }}</h3>
+                </div>
+                
+                {% for section in group.sections %}
+                    <div class="mb-4 last:mb-0">
+                        <h4 class="text-sm font-medium text-font-default-light dark:text-font-default-dark mb-3 flex items-center">
+                            <span class="material-icons mr-2 text-sm"                                        {% if group.color == 'success' %}text-green-600 dark:text-green-400
+                                        {% elif group.color == 'primary' %}text-primary-600 dark:text-primary-500
+                                        {% elif group.color == 'danger' %}text-red-600 dark:text-red-400
+                                        {% elif group.color == 'warning' %}text-amber-600 dark:text-amber-400
+                                        {% elif group.color == 'info' %}text-blue-600 dark:text-blue-400
+                                        {% else %}text-font-subtle-light dark:text-font-subtle-dark{% endif %}">
+                                bar_chart
+                            </span>
+                            {{ section.title }}
+                        </h4>
+                        
+                        <div class="space-y-3">
+                            {% for card in section.cards %}
+                                <div class="flex items-center justify-between p-3 bg-base-50 dark:bg-base-800 rounded-lg hover:bg-base-100 dark:hover:bg-base-700 transition-colors duration-150 group">
+                                    <div class="flex items-center">
+                                        {% if card.icon %}
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3"                                                        {% if group.color == 'success' %}bg-green-100 dark:bg-green-900/20
+                                                        {% elif group.color == 'primary' %}bg-primary-100 dark:bg-primary-900/20
+                                                        {% elif group.color == 'danger' %}bg-red-100 dark:bg-red-900/20
+                                                        {% elif group.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20
+                                                        {% elif group.color == 'info' %}bg-blue-100 dark:bg-blue-900/20
+                                                        {% else %}bg-base-100 dark:bg-base-800{% endif %}">
+                                                <span class="material-icons text-xs"                                        {% if group.color == 'success' %}text-green-600 dark:text-green-400
+                                                        {% elif group.color == 'primary' %}text-primary-600 dark:text-primary-400
+                                                        {% elif group.color == 'danger' %}text-red-600 dark:text-red-400
+                                                        {% elif group.color == 'warning' %}text-amber-600 dark:text-amber-400
+                                                        {% elif group.color == 'info' %}text-blue-600 dark:text-blue-400
+                                                        {% else %}text-font-default-light dark:text-font-default-dark{% endif %}">{{ card.icon }}</span>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="text-sm font-medium text-font-default-light dark:text-font-default-dark">{{ card.title }}</div>
+                                            {% if card.description %}
+                                                <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ card.description }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"                                                    {% if group.color == 'success' %}bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400
+                                                    {% elif group.color == 'primary' %}bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400
+                                                    {% elif group.color == 'danger' %}bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400
+                                                    {% elif group.color == 'warning' %}bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400
+                                                    {% elif group.color == 'info' %}bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400
+                                                    {% else %}bg-base-100 dark:bg-base-800 text-font-default-light dark:text-font-default-dark{% endif %}">
+                                            {{ card.count|default:0 }}
+                                        </span>
+                                        <a href="{% url card.url_name %}" 
+                                           class="inline-flex items-center gap-1 px-3 py-1 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg text-xs font-medium transition-colors duration-150 group-hover:shadow-sm">
+                                            <span class="material-icons text-xs">visibility</span>
+                                            <span>View</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %} 

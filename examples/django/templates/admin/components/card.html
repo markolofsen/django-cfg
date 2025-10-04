@@ -1,0 +1,50 @@
+{% load unfold %}
+
+<!-- Enhanced Card Component following Unfold patterns -->
+<div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 shadow-xs overflow-hidden {% if hover %}hover:shadow-md hover:border-base-300 dark:hover:border-base-600 transition-all duration-200{% endif %}{% if class %} {{ class }}{% endif %}">
+    
+    <!-- Card Header -->
+    {% if title or header_actions %}
+    <div class="p-6 border-b border-base-200 dark:border-base-700 {% if header_bg %}{{ header_bg }}{% else %}bg-base-50 dark:bg-base-800{% endif %}">
+        <div class="flex items-center justify-between">
+            {% if title %}
+            <div class="flex items-center space-x-3">
+                {% if icon %}
+                <div class="flex items-center justify-center w-8 h-8 bg-{{ icon_color|default:'primary' }}-100 dark:bg-{{ icon_color|default:'primary' }}-900/20 rounded-lg">
+                    <span class="material-icons text-{{ icon_color|default:'primary' }}-600 dark:text-{{ icon_color|default:'primary' }}-400 text-lg">{{ icon }}</span>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">
+                        {{ title }}
+                    </h3>
+                    {% if subtitle %}
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        {{ subtitle }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if header_actions %}
+            <div class="flex items-center space-x-2">
+                {{ header_actions }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Card Body -->
+    <div class="p-6{% if compact %} p-4{% endif %}">
+        {{ content }}
+    </div>
+    
+    <!-- Card Footer -->
+    {% if footer %}
+    <div class="px-6 py-4 border-t border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800">
+        {{ footer }}
+    </div>
+    {% endif %}
+</div>

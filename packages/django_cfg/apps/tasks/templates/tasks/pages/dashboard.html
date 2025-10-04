@@ -1,0 +1,82 @@
+{% extends 'tasks/layout/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Tab styling - важно для работы табов */
+    .tab-button.active {
+        border-color: #3b82f6 !important;
+        color: #3b82f6 !important;
+    }
+    
+    .tab-panel {
+        display: none !important;
+    }
+    
+    .tab-panel.active {
+        display: block !important;
+    }
+    
+    /* Убираем все остальные табы кроме активного */
+    #queues-tab,
+    #workers-tab, 
+    #tasks-tab {
+        display: none;
+    }
+    
+    #overview-tab {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Management Actions -->
+{% include 'tasks/components/management_actions.html' %}
+
+<!-- Tab Navigation -->
+{% include 'tasks/components/tab_navigation.html' %}
+
+<!-- Tab Content -->
+<div class="tab-content mt-6">
+    <!-- Overview Tab -->
+    <div id="overview-tab" class="tab-panel active">
+        {% include 'tasks/components/overview_content.html' %}
+    </div>
+    
+    <!-- Queues Tab -->
+    <div id="queues-tab" class="tab-panel">
+        {% include 'tasks/components/queues_content.html' %}
+    </div>
+    
+    <!-- Workers Tab -->
+    <div id="workers-tab" class="tab-panel">
+        {% include 'tasks/components/workers_content.html' %}
+    </div>
+    
+    <!-- Tasks Tab -->
+    <div id="tasks-tab" class="tab-panel">
+        {% include 'tasks/components/tasks_content.html' %}
+    </div>
+</div>
+
+<!-- Templates for JavaScript -->
+{% include 'tasks/partials/task_row_template.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- API Client (не модуль) -->
+<script src="{% static 'tasks/js/api.js' %}"></script>
+
+<!-- Dashboard Modules -->
+<script type="module" src="{% static 'tasks/js/dashboard/overview.mjs' %}"></script>
+<script type="module" src="{% static 'tasks/js/dashboard/queues.mjs' %}"></script>
+<script type="module" src="{% static 'tasks/js/dashboard/workers.mjs' %}"></script>
+<script type="module" src="{% static 'tasks/js/dashboard/tasks.mjs' %}"></script>
+
+<!-- Main Dashboard Controller -->
+<script type="module" src="{% static 'tasks/js/dashboard/main.mjs' %}"></script>
+{% endblock %}

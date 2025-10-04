@@ -1,0 +1,34 @@
+{% extends "admin/change_list.html" %}
+{% load admin_urls i18n %}
+
+{% block object-tools %}
+    {# Override object-tools to integrate import/export buttons into unfold header #}
+    <div class="ml-2 flex flex-row items-center gap-2">
+        {# Import button #}
+        {% if has_import_permission %}
+            <a href="{% url opts|admin_urlname:"import" %}" 
+                class="bg-white border border-base-200 cursor-pointer flex font-medium gap-2 items-center px-3 py-2 rounded-default shadow-xs text-sm hover:text-primary-600 dark:bg-base-900 dark:border-base-700 dark:hover:text-primary-500">
+                <span class="material-symbols-outlined">upload</span>
+                {% trans "Import" %}
+            </a>
+        {% endif %}
+
+        {# Export button #}
+        {% if has_export_permission %}
+            <a href="{% url opts|admin_urlname:'export' %}{{ cl.get_query_string }}" 
+                class="bg-white border border-base-200 cursor-pointer flex font-medium gap-2 items-center px-3 py-2 rounded-default shadow-xs text-sm hover:text-primary-600 dark:bg-base-900 dark:border-base-700 dark:hover:text-primary-500">
+                <span class="material-symbols-outlined">download</span>
+                {% trans "Export" %}
+            </a>
+        {% endif %}
+
+        {# Add button and other standard tools #}
+        {% if has_add_permission %}
+            <a href="{% url cl.opts|admin_urlname:'add' %}{% if is_popup %}?{{ popup_var }}=1{% endif %}" 
+                class="addlink bg-primary-600 flex items-center h-9 justify-center -my-1 rounded-full w-9" 
+                title="{% blocktrans with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}">
+                <span class="material-symbols-outlined text-white">add</span>
+            </a>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{
+  "name": "rpc-client",
+  "version": "1.0.0",
+  "description": "Auto-generated WebSocket RPC Client",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"**/*.{ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "rpc",
+    "websocket",
+    "client"
+  ],
+  "author": "django_ipc codegen",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0",
+    "consola": "^3.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "eslint": "^9.16.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0"
+  }
+}

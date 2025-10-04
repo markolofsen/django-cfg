@@ -1,0 +1,626 @@
+{% load unfold %}
+
+<!-- Commands Section -->
+<div class="space-y-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ title|default:"Management Commands" }}</h1>
+            <p class="text-font-default-light dark:text-font-default-dark mt-2">
+                Execute Django management commands directly from the dashboard
+            </p>
+        </div>
+        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+            Total: <span id="commands-total" class="font-mono font-semibold text-font-important-light dark:text-font-important-dark">{{ data.commands|length }}</span> commands
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="flex items-center gap-3 mb-6">
+        <div class="relative flex-1 max-w-md">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-base-400 dark:text-base-500">search</span>
+            <input
+                type="text"
+                id="command-search"
+                placeholder="Search commands..."
+                class="w-full pl-10 pr-10 py-2 border border-base-200 dark:border-base-700 rounded-default bg-white dark:bg-base-800 text-font-important-light dark:text-font-important-dark placeholder-font-subtle-light dark:placeholder-font-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <button
+                id="clear-search"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300"
+                onclick="clearSearch()"
+            >
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Commands by Category -->
+    {% if data.categories %}
+        <div class="flex flex-col gap-6">
+            {% for category, category_commands in data.categories.items %}
+                {% if category_commands %}
+                    <div class="category-block bg-gradient-to-br from-white to-base-50 dark:from-base-800 dark:to-base-900 rounded-default shadow-md border border-base-200 dark:border-base-700 overflow-hidden">
+                        <div class="p-6 border-b border-base-200 dark:border-base-700 category-toggle cursor-pointer hover:bg-base-100/50 dark:hover:bg-base-900/30 transition-all duration-200"
+                             data-category="{{ category }}">
+                            <div class="w-full flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark flex items-center">
+                                    <div class="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mr-3">
+                                        <span class="material-symbols-outlined text-primary-600 dark:text-primary-400">
+                                            {% if category == 'django_cfg' %}settings
+                                            {% elif category == 'django_core' %}apps
+                                            {% elif category == 'third_party' %}extension
+                                            {% else %}folder{% endif %}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            {{ category|title }} Commands
+                                            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-base-200 dark:bg-base-700 text-font-default-light dark:text-font-default-dark category-count">
+                                                {{ category_commands|length }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </h3>
+                                <span class="material-symbols-outlined text-base-400 dark:text-base-500 toggle-icon transition-transform duration-200 select-none">expand_more</span>
+                            </div>
+                        </div>
+                        <div class="p-6 category-content bg-base-50/30 dark:bg-base-900/30" data-category="{{ category }}" style="display: none;">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for cmd in category_commands %}
+                                    <button type="button"
+                                            class="command-btn command-item text-left p-4 rounded-default border border-base-200/60 dark:border-base-700/60 bg-white dark:bg-base-800 hover:border-base-300 dark:hover:border-base-600 hover:bg-white/80 dark:hover:bg-base-800/80 transition-all duration-200 group"
+                                            data-command="{{ cmd.name }}"
+                                            data-app="{{ cmd.app }}"
+                                            data-description="{{ cmd.description|default:'' }}">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex-shrink-0">
+                                                <span class="material-symbols-outlined text-primary-500 dark:text-primary-400 text-xl group-hover:text-primary-600 dark:group-hover:text-primary-300 transition-colors">terminal</span>
+                                            </div>
+                                            <div class="flex-1 grow min-w-0">
+                                                <p class="font-mono text-sm text-font-important-light dark:text-font-important-dark font-semibold command-name truncate">{{ cmd.name }}</p>
+                                                {% if cmd.description %}
+                                                    <p class="text-xs text-font-default-light dark:text-font-default-dark mt-1 line-clamp-2">{{ cmd.description }}</p>
+                                                {% endif %}
+                                                {% if cmd.app %}
+                                                    <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1 truncate">
+                                                        <span class="opacity-60">from</span> {{ cmd.app }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-shrink-0">
+                                                <span class="material-symbols-outlined text-base-400 dark:text-base-600 group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors text-2xl">chevron_right</span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Fallback: All Commands List -->
+        <div class="bg-white dark:bg-base-800 rounded-default shadow-sm border border-base-200 dark:border-base-700">
+            <div class="p-6 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark flex items-center">
+                    <span class="material-symbols-outlined text-primary-500 mr-2">list</span>
+                    All Commands
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for cmd in data.commands %}
+                        <button type="button"
+                                class="command-btn text-left p-4 rounded-default border border-base-200 dark:border-base-700 bg-white dark:bg-base-800 hover:bg-base-100 dark:hover:bg-white/[.04] transition-colors"
+                                data-command="{{ cmd.name }}">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-mono text-sm text-font-important-light dark:text-font-important-dark font-semibold">{{ cmd.name }}</p>
+                                    {% if cmd.app %}
+                                        <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">{{ cmd.app }}</p>
+                                    {% endif %}
+                                </div>
+                                <span class="material-symbols-outlined text-primary-500">play_arrow</span>
+                            </div>
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="hidden backdrop-blur-xs bg-base-900/80 fixed inset-0 p-4 lg:p-32 z-[1000]">
+        <div class="bg-white dark:bg-base-800 rounded-default shadow-lg border border-base-200 dark:border-base-700 max-w-3xl mx-auto w-full">
+            <div class="px-4 py-3 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-500 dark:text-amber-400">warning</span>
+                    Confirm Command Execution
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-font-default-light dark:text-font-default-dark mb-4">
+                    Are you sure you want to execute the following command?
+                </p>
+                <div class="bg-base-100 dark:bg-base-900 rounded-default p-4 border border-base-200 dark:border-base-700">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-primary-600 dark:text-primary-400 text-xl">terminal</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-mono text-sm font-semibold text-font-important-light dark:text-font-important-dark" id="confirm-command-name"></p>
+                            <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-2" id="confirm-command-app"></p>
+                            <p class="text-xs text-font-default-light dark:text-font-default-dark mt-1" id="confirm-command-desc"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-4 py-3 border-t border-base-200 dark:border-base-800 flex items-center justify-end gap-3">
+                <button type="button" id="cancel-confirm" class="px-4 py-2 text-font-default-light dark:text-font-default-dark hover:bg-base-100 dark:hover:bg-base-700 rounded-default transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="execute-confirm" class="px-4 py-2 bg-primary-600 text-white rounded-default hover:bg-primary-700 transition-colors font-medium">
+                    Execute Command
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Output Modal -->
+    <div id="command-modal" class="hidden backdrop-blur-xs bg-base-900/80 flex flex-col fixed inset-0 p-4 lg:p-32 z-[1000]">
+        <div class="bg-white dark:bg-base-800 flex flex-col max-w-3xl min-h-0 mx-auto overflow-hidden rounded-default shadow-lg w-full">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 dark:border-base-700">
+                <h3 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-600 dark:text-primary-400">terminal</span>
+                    <span id="modal-command-name" class="font-mono"></span>
+                </h3>
+                <button type="button" id="close-modal" class="text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="grow overflow-y-auto overflow-x-hidden w-full" data-simplebar id="output-container">
+                <div class="p-4">
+                    <pre id="command-output" class="bg-base-900 dark:bg-black text-green-400 p-4 rounded-default font-mono text-xs leading-relaxed whitespace-pre overflow-x-auto"></pre>
+                </div>
+            </div>
+            <div class="px-4 py-3 border-t border-base-200 dark:border-base-700">
+                <div class="flex items-center justify-between">
+                    <div id="command-status" class="text-sm font-medium"></div>
+                    <button type="button" id="copy-output" class="px-4 py-2 bg-primary-600 text-white rounded-default hover:bg-primary-700 transition-colors flex items-center gap-2 font-medium">
+                        <span class="material-symbols-outlined text-base">content_copy</span>
+                        Copy Output
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Commands Section -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Category toggle functionality
+    const categoryToggles = document.querySelectorAll('.category-toggle');
+    categoryToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const category = this.dataset.category;
+            const content = document.querySelector(`.category-content[data-category="${category}"]`);
+            const icon = this.querySelector('.toggle-icon');
+
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                icon.textContent = 'expand_less';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = 'expand_more';
+            }
+        });
+
+        // Initialize - start collapsed
+        const category = toggle.dataset.category;
+        const content = document.querySelector(`.category-content[data-category="${category}"]`);
+        if (content) {
+            content.style.display = 'none';
+        }
+    });
+
+    // Command click handlers - show confirm first
+    const commandButtons = document.querySelectorAll('.command-btn');
+    commandButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commandName = this.dataset.command;
+            const commandApp = this.dataset.app || '';
+            const commandDesc = this.dataset.description || '';
+            showConfirmModal(commandName, commandApp, commandDesc);
+        });
+    });
+
+    // Confirm modal handlers
+    const confirmModal = document.getElementById('confirm-modal');
+    const cancelConfirm = document.getElementById('cancel-confirm');
+    const executeConfirm = document.getElementById('execute-confirm');
+
+    if (cancelConfirm) {
+        cancelConfirm.addEventListener('click', function() {
+            confirmModal.classList.add('hidden');
+        });
+    }
+
+    if (executeConfirm) {
+        executeConfirm.addEventListener('click', function() {
+            const commandName = document.getElementById('confirm-command-name').textContent;
+            confirmModal.classList.add('hidden');
+            executeCommand(commandName);
+        });
+    }
+
+    // Close confirm modal on background click
+    if (confirmModal) {
+        confirmModal.addEventListener('click', function(e) {
+            if (e.target === confirmModal) {
+                confirmModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Output Modal close handlers
+    const outputModal = document.getElementById('command-modal');
+    const closeBtn = document.getElementById('close-modal');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            outputModal.classList.add('hidden');
+        });
+    }
+
+    // Close output modal on background click
+    if (outputModal) {
+        outputModal.addEventListener('click', function(e) {
+            if (e.target === outputModal) {
+                outputModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Copy output functionality
+    const copyBtn = document.getElementById('copy-output');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+            const output = document.getElementById('command-output');
+            if (output) {
+                navigator.clipboard.writeText(output.textContent).then(function() {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined mr-2">check</span>Copied!';
+                    setTimeout(function() {
+                        copyBtn.innerHTML = originalText;
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('Could not copy text: ', err);
+                });
+            }
+        });
+    }
+
+    // Escape key to close modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (confirmModal && !confirmModal.classList.contains('hidden')) {
+                confirmModal.classList.add('hidden');
+            }
+            if (outputModal && !outputModal.classList.contains('hidden')) {
+                outputModal.classList.add('hidden');
+            }
+        }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('command-search');
+    const clearSearchBtn = document.getElementById('clear-search');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            filterCommands(query);
+
+            // Show/hide clear button
+            if (query) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+            }
+        });
+    }
+});
+
+// Search/filter commands
+function filterCommands(query) {
+    const categoryBlocks = document.querySelectorAll('.category-block');
+    let totalVisible = 0;
+
+    categoryBlocks.forEach(block => {
+        const commands = block.querySelectorAll('.command-item');
+        const categoryCount = block.querySelector('.category-count');
+        let visibleCount = 0;
+
+        commands.forEach(cmd => {
+            const commandName = cmd.querySelector('.command-name').textContent.toLowerCase();
+            const commandApp = cmd.dataset.app ? cmd.dataset.app.toLowerCase() : '';
+            const commandDesc = cmd.dataset.description ? cmd.dataset.description.toLowerCase() : '';
+
+            if (!query || commandName.includes(query) || commandApp.includes(query) || commandDesc.includes(query)) {
+                cmd.style.display = 'block';
+                visibleCount++;
+                totalVisible++;
+            } else {
+                cmd.style.display = 'none';
+            }
+        });
+
+        // Update category count
+        if (categoryCount) {
+            categoryCount.textContent = `(${visibleCount})`;
+        }
+
+        // Hide category if no visible commands
+        if (visibleCount === 0) {
+            block.style.display = 'none';
+        } else {
+            block.style.display = 'block';
+
+            // Auto-expand categories when searching
+            if (query) {
+                const content = block.querySelector('.category-content');
+                const icon = block.querySelector('.toggle-icon');
+                if (content && icon) {
+                    content.style.display = 'block';
+                    icon.textContent = 'expand_less';
+                }
+            }
+        }
+    });
+
+    // Update total commands count
+    const totalCounter = document.getElementById('commands-total');
+    if (totalCounter) {
+        totalCounter.textContent = totalVisible;
+    }
+}
+
+// Clear search
+function clearSearch() {
+    const searchInput = document.getElementById('command-search');
+    const clearBtn = document.getElementById('clear-search');
+    const categoryBlocks = document.querySelectorAll('.category-block');
+    const totalCounter = document.getElementById('commands-total');
+
+    // Clear input
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // Hide clear button
+    if (clearBtn) {
+        clearBtn.classList.add('hidden');
+    }
+
+    // Reset all blocks
+    categoryBlocks.forEach(block => {
+        block.style.display = 'block';
+        const commands = block.querySelectorAll('.command-item');
+        const categoryCount = block.querySelector('.category-count');
+
+        // Show all commands
+        commands.forEach(cmd => {
+            cmd.style.display = 'block';
+        });
+
+        // Reset category count
+        if (categoryCount) {
+            const originalCount = commands.length;
+            categoryCount.textContent = `(${originalCount})`;
+        }
+
+        // Collapse categories
+        const content = block.querySelector('.category-content');
+        const icon = block.querySelector('.toggle-icon');
+        if (content && icon) {
+            content.style.display = 'none';
+            icon.textContent = 'expand_more';
+        }
+    });
+
+    // Reset total
+    if (totalCounter) {
+        const allCommands = document.querySelectorAll('.command-item');
+        totalCounter.textContent = allCommands.length;
+    }
+}
+
+// Show confirm modal
+function showConfirmModal(commandName, commandApp, commandDesc) {
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmCommandName = document.getElementById('confirm-command-name');
+    const confirmCommandApp = document.getElementById('confirm-command-app');
+    const confirmCommandDesc = document.getElementById('confirm-command-desc');
+
+    if (!confirmModal || !confirmCommandName) {
+        console.error('Confirm modal elements not found');
+        return;
+    }
+
+    confirmCommandName.textContent = commandName;
+    confirmCommandApp.textContent = commandApp ? `from ${commandApp}` : '';
+    confirmCommandDesc.textContent = commandDesc || '';
+
+    confirmModal.classList.remove('hidden');
+}
+
+// Execute command function with SSE streaming
+function executeCommand(commandName) {
+    const modal = document.getElementById('command-modal');
+    const modalCommandName = document.getElementById('modal-command-name');
+    const commandOutput = document.getElementById('command-output');
+    const commandStatus = document.getElementById('command-status');
+
+    if (!modal || !modalCommandName || !commandOutput || !commandStatus) {
+        console.error('Command modal elements not found');
+        return;
+    }
+
+    // Show modal and initialize
+    modalCommandName.textContent = commandName;
+    commandOutput.innerHTML = '';
+    commandStatus.textContent = 'Executing...';
+    commandStatus.className = 'text-sm text-primary-600 dark:text-primary-400';
+    modal.classList.remove('hidden');
+
+    // Execute command via API with SSE streaming
+    fetch('/cfg/commands/execute/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            command: commandName,
+            args: [],
+            options: {}
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        function readStream() {
+            return reader.read().then(({done, value}) => {
+                if (done) return;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                lines.forEach(line => {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            handleCommandData(data);
+                        } catch (e) {
+                            console.error('Error parsing command data:', e, line);
+                        }
+                    }
+                });
+
+                return readStream();
+            });
+        }
+
+        return readStream();
+    })
+    .catch(error => {
+        console.error('Error executing command:', error);
+        addLogLine(commandOutput, `\n❌ Error: ${error.message}`, 'error');
+        commandStatus.textContent = '❌ Error';
+        commandStatus.className = 'text-sm text-red-500 dark:text-red-400';
+    });
+}
+
+// Handle SSE command data
+function handleCommandData(data) {
+    const output = document.getElementById('command-output');
+    const status = document.getElementById('command-status');
+
+    if (!output || !status) return;
+
+    switch (data.type) {
+        case 'start':
+            output.innerHTML = '';
+            addLogLine(output, `🚀 Starting command: ${data.command}`, 'info');
+            const args = (data.args && Array.isArray(data.args)) ? data.args.join(' ') : 'none';
+            addLogLine(output, `📝 Arguments: ${args}`, 'info');
+            addLogLine(output, '', 'spacer');
+            status.textContent = 'Executing...';
+            status.className = 'text-sm text-primary-600 dark:text-primary-400';
+            break;
+        case 'output':
+            addLogLine(output, data.line, 'output');
+            scrollToBottom(document.getElementById('output-container'));
+            break;
+        case 'complete':
+            const success = data.return_code === 0;
+            status.textContent = success ? '✅ Success' : '❌ Failed';
+            status.className = success
+                ? 'text-sm text-green-500 dark:text-green-400'
+                : 'text-sm text-red-500 dark:text-red-400';
+
+            addLogLine(output, '', 'spacer');
+            let completionMessage = `${success ? '✅' : '❌'} Command completed with exit code: ${data.return_code}`;
+            if (data.execution_time) {
+                completionMessage += ` (${data.execution_time}s)`;
+            }
+            addLogLine(output, completionMessage, success ? 'success' : 'error');
+            scrollToBottom(document.getElementById('output-container'));
+            break;
+        case 'error':
+            const errorMsg = data.message || data.error || 'Unknown error';
+            addLogLine(output, `❌ ${errorMsg}`, 'error');
+            status.textContent = '❌ Error';
+            status.className = 'text-sm text-red-500 dark:text-red-400';
+            scrollToBottom(document.getElementById('output-container'));
+            break;
+    }
+}
+
+// Add log line to output
+function addLogLine(container, text, type = 'output') {
+    const line = document.createElement('div');
+    line.className = 'log-line font-mono';
+
+    switch (type) {
+        case 'info':
+            line.className += ' text-blue-500 dark:text-blue-400';
+            break;
+        case 'success':
+            line.className += ' text-green-500 dark:text-green-400 font-semibold';
+            break;
+        case 'error':
+            line.className += ' text-red-500 dark:text-red-400 font-semibold';
+            break;
+        case 'spacer':
+            line.style.height = '0.5em';
+            line.innerHTML = '&nbsp;';
+            break;
+        default:
+            line.className += ' text-green-400 dark:text-green-400';
+    }
+
+    if (type !== 'spacer') {
+        line.textContent = text;
+    }
+    container.appendChild(line);
+}
+
+// Scroll to bottom helper
+function scrollToBottom(element) {
+    if (element) {
+        element.scrollTop = element.scrollHeight;
+    }
+}
+
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>

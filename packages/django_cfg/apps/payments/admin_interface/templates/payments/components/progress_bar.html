@@ -1,0 +1,37 @@
+{% comment %}
+Payment Progress Bar Component
+
+Usage:
+{% include 'payments/components/progress_bar.html' with payment=payment %}
+
+Parameters:
+- payment: UniversalPayment object
+{% endcomment %}
+
+<div class="payment-progress">
+    <!-- Progress Bar -->
+    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div class="h-2 rounded-full transition-all duration-500 ease-out
+            {% if payment.status == 'completed' %}bg-green-600
+            {% elif payment.status == 'failed' %}bg-red-600
+            {% elif payment.status == 'pending' %}bg-yellow-600
+            {% elif payment.status == 'confirming' %}bg-blue-600
+            {% elif payment.status == 'cancelled' %}bg-gray-600
+            {% else %}bg-blue-600{% endif %}" 
+             style="width: {% if payment.status == 'completed' %}100{% elif payment.status == 'failed' or payment.status == 'cancelled' %}100{% elif payment.status == 'confirming' %}75{% elif payment.status == 'pending' %}25{% else %}0{% endif %}%">
+        </div>
+    </div>
+    
+    <!-- Progress Text -->
+    <div class="flex justify-between items-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <span>
+            {% if payment.status == 'completed' %}100% Complete
+            {% elif payment.status == 'failed' %}Failed
+            {% elif payment.status == 'cancelled' %}Cancelled
+            {% elif payment.status == 'confirming' %}75% Confirming
+            {% elif payment.status == 'pending' %}25% Pending
+            {% else %}0% Initiated{% endif %}
+        </span>
+        <span>{{ payment.get_status_display }}</span>
+    </div>
+</div>
