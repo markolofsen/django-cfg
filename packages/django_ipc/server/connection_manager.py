@@ -62,7 +62,12 @@ class ActiveConnection(BaseModel):
         Validate websocket has required methods.
 
         Allows both real WebSocketServerProtocol and mocks for testing.
+        Also allows None for RPC bridge fake connections.
         """
+        # Allow None for RPC bridge
+        if v is None:
+            return v
+
         # Check for required methods (duck typing)
         required_methods = ["send", "recv", "close"]
         for method in required_methods:

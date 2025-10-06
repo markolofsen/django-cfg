@@ -14,11 +14,6 @@ urlpatterns = [
     # Admin interface (with Unfold theme)
     path("admin/", admin.site.urls),
 
-    # Sample app URLs
-    path("blog/", include("apps.blog.urls")),
-    path("shop/", include("apps.shop.urls")),
-    path("profiles/", include("apps.profiles.urls")),
-
     # Home page
     path("", TemplateView.as_view(template_name="home.html"), name="home"),
 ]

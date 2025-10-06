@@ -26,9 +26,9 @@ if not any([IS_DEV, IS_PROD, IS_TEST]):
 class DatabaseConfig(BaseModel):
     """Database connection configuration."""
 
-    url: str = ""
-    url_blog: str = ""
-    url_shop: str = ""
+    url: str = "sqlite:///db/default.sqlite3"
+    url_blog: str = "sqlite:///db/blog.sqlite3"
+    url_shop: str = "sqlite:///db/shop.sqlite3"
 
 
 class EmailConfig(BaseModel):

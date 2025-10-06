@@ -11,10 +11,12 @@ import logging
 import os
 from typing import Any, Dict, Optional, Literal
 from websockets import connect, WebSocketClientProtocol
+{% if models %}
 
 from .models import (
 {% for model_name in models | unique | sort %}    {{ model_name }},
 {% endfor %})
+{% endif %}
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +279,7 @@ class RPCClient:
     # ========== Generated RPC Methods ==========
 
 {% for method in methods %}
-    async def {{ method.name }}(self, params: {{ method.param_type }}) -> {{ method.return_type }}:
+    async def {{ method.name_python }}(self, params: {{ method.param_type }}) -> {{ method.return_type }}:
         """{{ method.docstring | replace('\n', '\n        ') }}
 
         Args:

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-ipc"
-version = "1.0.4"
+version = "1.0.5"
 description = "🚀 Production-ready WebSocket RPC for Django - Auto-generated clients, 100% type-safe, 5-minute setup"
 readme = "README.md"
 keywords = [ "django", "websocket", "websocket-rpc", "django-websocket", "real-time", "django-real-time", "ipc", "redis", "pydantic", "type-safety", "django-ipc", "auto-generated-clients", "django-notifications", "websocket-server", "django-channels-alternative",]
@@ -72,10 +72,10 @@ omit = [ "*/tests/*", "*/__pycache__/*",]
 [tool.hatch.build.targets.wheel]
 packages = [ "src/django_ipc",]
 
-[tool.hatch.build.targets.wheel.force-include]
-"README.md" = "django_ipc/README.md"
-"pyproject.toml" = "django_ipc/pyproject.toml"
-
 [tool.hatch.build.targets.sdist]
 include = [ "src/django_ipc", "README.md", "LICENSE", "CHANGELOG.md", "requirements*.txt", "MANIFEST.in",]
 exclude = [ "tests", "*.log", ".env*",]
+
+[tool.hatch.build.targets.wheel.force-include]
+"README.md" = "django_ipc/README.md"
+"pyproject.toml" = "django_ipc/pyproject.toml"

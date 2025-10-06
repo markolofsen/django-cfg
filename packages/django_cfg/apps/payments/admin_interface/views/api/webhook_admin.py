@@ -154,8 +154,8 @@ class AdminWebhookEventViewSet(AdminReadOnlyViewSet):
     
     # No model - using mock data for now
     serializer_class = WebhookEventListSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['event_type', 'status', 'provider']
+    filter_backends = [SearchFilter, OrderingFilter]
+    # filterset_fields removed - not compatible with mock data approach
     search_fields = ['event_type', 'webhook_url']
     ordering_fields = ['timestamp', 'event_type', 'status']
     ordering = ['-timestamp']

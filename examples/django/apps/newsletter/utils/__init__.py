@@ -1,1 +1,0 @@
-# Mailer utilities package

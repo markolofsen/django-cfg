@@ -170,15 +170,15 @@ class SampleProjectConfig(DjangoConfig):
         # Blog database with routing - engine auto-detected
         "blog_db": DatabaseConfig.from_url(
             url=env.database.url_blog,
-            apps=["apps.blog"],
+            apps=["blog"],  # Use app_label, not full Python path
             operations=["read", "write", "migrate"],  # Allow migrations
             routing_description="Blog posts and comments",
         ),
-        
+
         # Shop database with routing - engine auto-detected
         "shop_db": DatabaseConfig.from_url(
             url=env.database.url_shop,
-            apps=["apps.shop"],
+            apps=["shop"],  # Use app_label, not full Python path
             operations=["read", "write", "migrate"],  # Allow migrations
             routing_description="Products, orders, and inventory",
         ),
@@ -463,6 +463,14 @@ class SampleProjectConfig(DjangoConfig):
                 apps=["apps.shop"],
                 title="Shop API", 
                 description="E-commerce products, orders and categories",
+                public=True,
+                auth_required=False,
+                version="v1",
+            ),
+            "profiles": ZoneConfig(
+                apps=["apps.profiles"],
+                title="Profiles API",
+                description="Profiles management",
                 public=True,
                 auth_required=False,
                 version="v1",

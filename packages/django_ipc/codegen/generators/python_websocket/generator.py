@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...discovery import RPCMethodInfo
+from ...utils import to_python_method_name
 
 logger = logging.getLogger(__name__)
 
@@ -168,8 +169,12 @@ class PythonWebSocketGenerator:
             param_type = method.param_type.__name__ if method.param_type else "Any"
             return_type = method.return_type.__name__ if method.return_type else "Any"
 
+            # Convert method name to valid Python identifier
+            method_name_python = to_python_method_name(method.name)
+
             methods_data.append({
-                'name': method.name,
+                'name': method.name,  # Original name for RPC call
+                'name_python': method_name_python,  # Python-safe name
                 'param_type': param_type,
                 'return_type': return_type,
                 'docstring': method.docstring or f"Call {method.name} RPC method",

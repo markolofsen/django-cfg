@@ -26,11 +26,24 @@ class DatabaseRouter:
         return rules.get(model._meta.app_label)
 
     def allow_relation(self, obj1, obj2, **hints):
-        """Allow relations between same database."""
+        """
+        Allow relations between objects.
+
+        - If both objects are routed: only allow if they're in the same database
+        - If one or both objects are NOT routed (e.g., User in default): allow
+          (This enables cross-database ForeignKeys for shared models like User)
+        """
         rules = getattr(settings, 'DATABASE_ROUTING_RULES', {})
         db1 = rules.get(obj1._meta.app_label)
         db2 = rules.get(obj2._meta.app_label)
-        return db1 == db2 if db1 and db2 else None
+
+        # If both are routed, they must be in the same database
+        if db1 and db2:
+            return db1 == db2
+
+        # If one or both are not routed (e.g., User in default db), allow the relation
+        # This enables routed apps (blog, shop) to have ForeignKeys to shared models (User)
+        return True
 
     def allow_migrate(self, db, app_label, **hints):
         """Allow migrations to correct database."""
