@@ -13,7 +13,7 @@ from django_ipc.server.connection_manager import ConnectionManager, ActiveConnec
 
 # Import codegen modules
 from .discovery import discover_rpc_methods_from_router, get_method_summary, extract_all_models
-from .type_converter import generate_typescript_types
+from .utils.type_converter import generate_typescript_types
 
 
 # ==== Define Example Pydantic Models ====

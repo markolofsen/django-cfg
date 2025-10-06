@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.4.4"
+version = "1.4.5"
 description = "Django AI framework with built-in agents, type-safe Pydantic v2 configuration, and 8 enterprise apps. Replace settings.py, validate at startup, 90% less code. Production-ready AI workflows for Django."
 readme = "README.md"
 keywords = [ "django", "configuration", "pydantic", "settings", "type-safety", "pydantic-settings", "django-environ", "startup-validation", "ide-autocomplete", "ai-agents", "enterprise-django", "django-settings", "type-safe-config",]
@@ -85,6 +85,11 @@ ignore = [ "E501", "B008", "S101", "S311",]
 exclude_dirs = [ "tests", "migrations",]
 skips = [ "B101", "B601",]
 
+[tool.poetry]
+[[tool.poetry.source]]
+name = "pypi"
+priority = "primary"
+
 [tool.ruff.per-file-ignores]
 "tests/*" = [ "S101", "S106",]
 "*/migrations/*" = [ "N806",]
@@ -115,13 +120,6 @@ optional = true
 packages = [ "src/django_cfg",]
 exclude = [ "scripts/",]
 
-[tool.hatch.build.targets.wheel.force-include]
-"README.md" = "django_cfg/README.md"
-"LICENSE" = "django_cfg/LICENSE"
-"CONTRIBUTING.md" = "django_cfg/CONTRIBUTING.md"
-"CHANGELOG.md" = "django_cfg/CHANGELOG.md"
-"pyproject.toml" = "django_cfg/pyproject.toml"
-
 [tool.hatch.build.targets.sdist]
 include = [ "src/django_cfg", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "requirements*.txt", "MANIFEST.in",]
 exclude = [ "@*", "tests", "scripts", "*.log", ".env*",]
@@ -139,11 +137,12 @@ pytest = "^8.4.2"
 pytest-django = "^4.11.1"
 fakeredis = "^2.31.3"
 
-[tool.poetry.group.local.dependencies.django-ipc]
-path = "../django_ipc"
-develop = true
+[tool.hatch.build.targets.wheel.force-include]
+LICENSE = "django_cfg/LICENSE"
+"CONTRIBUTING.md" = "django_cfg/CONTRIBUTING.md"
+"CHANGELOG.md" = "django_cfg/CHANGELOG.md"
+"pyproject.toml" = "django_cfg/pyproject.toml"
 
-# Include additional files in wheel
-[[tool.poetry.source]]
-name = "pypi"
-priority = "primary"
+[tool.poetry.group.local.dependencies.django-ipc]
+path = "/Users/markinmatrix/djangoipc"
+develop = true

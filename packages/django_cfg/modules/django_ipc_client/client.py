@@ -228,6 +228,7 @@ class DjangoCfgRPCClient:
             "method": method,
             "params": json.loads(params_json),  # Embedded as dict
             "correlation_id": cid,
+            "reply_to": reply_key,  # Redis List key for response
             "timeout": timeout,
         }
 

@@ -38,3 +38,6 @@ logs/
 Thumbs.db
 
 .ruff_cache
+
+# Generated packages (built by publisher)
+packages/

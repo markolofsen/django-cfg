@@ -161,10 +161,11 @@ class Order(models.Model):
     
     # Order identification
     order_number = models.CharField(max_length=50, unique=True)
-    
+
     # Customer
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    
+    # db_constraint=False allows cross-database ForeignKey for multi-database routing
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', db_constraint=False)
+
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     

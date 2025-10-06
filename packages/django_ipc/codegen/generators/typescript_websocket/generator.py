@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...discovery import RPCMethodInfo
-from ...type_converter import pydantic_to_typescript
+from ...utils import pydantic_to_typescript, to_typescript_method_name
 
 logger = logging.getLogger(__name__)
 
@@ -220,9 +220,15 @@ class TypeScriptWebSocketGenerator:
         logger.debug(f"Generated {output_file}")
 
     def _snake_to_camel(self, snake_str: str) -> str:
-        """Convert snake_case to camelCase."""
-        components = snake_str.split('_')
-        return components[0] + ''.join(x.title() for x in components[1:])
+        """
+        Convert snake_case to camelCase, handling namespaced methods.
+
+        Examples:
+            workspace.file_changed -> workspaceFileChanged
+            send_email -> sendEmail
+            user.update_profile -> userUpdateProfile
+        """
+        return to_typescript_method_name(snake_str)
 
 
 __all__ = ['TypeScriptWebSocketGenerator']

@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Complete Django CFG sample project demonstrating all features"
 authors = ["Django CFG Team"]
 readme = "README.md"
-packages = [{include = "apps"}, {include = "api"}, {include = "manage.py"}]
+packages = [{include = "apps"}, {include = "api"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -31,8 +31,9 @@ pydantic-yaml = "^1.0.0"
 optional = true
 
 [tool.poetry.group.local.dependencies]
-# Local development dependencies
-django-cfg = {path = "../../django-cfg-dev", develop = true}
+# Local development dependencies (path configured via Makefile)
+django-cfg = {path = "/Users/markinmatrix/djangocfg", develop = true}
+django-ipc = {path = "/Users/markinmatrix/djangoipc", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

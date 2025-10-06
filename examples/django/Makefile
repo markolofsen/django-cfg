@@ -1,11 +1,11 @@
-.PHONY: help setup install-local env docker test commit kill-ports dev dev-ngrok manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker
+.PHONY: help install install-local env docker test commit kill-ports dev dev-ngrok manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker
 
 help:
 	@echo "Django CFG Sample Project - Make Commands"
 	@echo ""
 	@echo "Setup & Installation:"
-	@echo "  make setup         - Run setup script"
-	@echo "  make install-local - Lock and install dependencies with local group"
+	@echo "  make install       - Install dependencies (production mode)"
+	@echo "  make install-local - Install with local django-cfg and django-ipc"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev           - Run development server (kills port 8000 first)"
@@ -46,11 +46,16 @@ help:
 	@echo ""
 	@echo "📖 Full command reference: see COMMANDS.md"
 
-setup:
-	./devops/setup.sh
+install:
+	@echo "📦 Installing dependencies (production mode)..."
+	poetry install
 
 install-local:
-	poetry lock && poetry install --with local
+	@echo "📦 Installing with local django-cfg and django-ipc..."
+	@rm -f poetry.lock
+	@poetry add --group local --editable ~/djangocfg --lock
+	@poetry add --group local --editable ~/djangoipc --lock
+	@poetry install --with local --no-root
 
 env:
 	@poetry env info

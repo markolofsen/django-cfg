@@ -21,7 +21,9 @@ def get_django_cfg_urlpatterns() -> List[URLPattern]:
     patterns = [
         # Core APIs (always enabled)
         path('health/', include('django_cfg.apps.api.health.urls')),
+        path('endpoints/', include('django_cfg.apps.api.endpoints.urls')),
         path('commands/', include('django_cfg.apps.api.commands.urls')),
+        
     ]
     
     try:

@@ -91,7 +91,8 @@ class Post(models.Model):
     excerpt = models.TextField(max_length=500, blank=True, help_text='Brief description')
     
     # Relationships
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts')
+    # db_constraint=False allows cross-database ForeignKey for multi-database routing
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts', db_constraint=False)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
     tags = models.ManyToManyField(Tag, blank=True, related_name='posts')
     
@@ -154,9 +155,10 @@ class Post(models.Model):
 
 class Comment(models.Model):
     """Blog post comments."""
-    
+
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_comments')
+    # db_constraint=False allows cross-database ForeignKey for multi-database routing
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_comments', db_constraint=False)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     
     content = models.TextField()
@@ -206,7 +208,8 @@ class PostLike(models.Model):
     ]
     
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_likes')
+    # db_constraint=False allows cross-database ForeignKey for multi-database routing
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_likes', db_constraint=False)
     reaction = models.CharField(max_length=10, choices=REACTION_CHOICES, default='like')
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -225,8 +228,9 @@ class PostView(models.Model):
     """Post view tracking."""
     
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_views')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='blog_views')
-    
+    # db_constraint=False allows cross-database ForeignKey for multi-database routing
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='blog_views', db_constraint=False)
+
     # Anonymous user tracking
     session_key = models.CharField(max_length=40, null=True, blank=True)
     ip_address = models.GenericIPAddressField()
