@@ -63,25 +63,29 @@ def extract_template(archive_path: Path, target_path: Path) -> None:
             if not root_folder:
                 raise ValueError("Archive structure is invalid")
 
-            # Path to django project in archive: django-cfg-main/libs/django_cfg_example/django/
-            template_prefix = f"{root_folder}/libs/django_cfg_example/django/"
+            # Path to examples directory: django-cfg-main/examples/
+            examples_prefix = f"{root_folder}/examples/"
 
-            # Extract only files from the django/ folder
+            # Extract files from examples/ folder (preserving django/ and docker/ subdirectories)
             extracted_files = 0
             for member in members:
-                # Skip if not in template path
-                if not member.startswith(template_prefix):
+                # Skip if not in examples path
+                if not member.startswith(examples_prefix):
                     continue
 
-                # Skip the django_cfg folder (local package)
-                if f"{root_folder}/libs/django_cfg_example/django_cfg/" in member:
-                    continue
-
-                # Calculate relative path (remove template_prefix)
-                relative_path = member[len(template_prefix):]
+                # Calculate relative path (remove examples_prefix, keep django/ and docker/)
+                relative_path = member[len(examples_prefix):]
 
                 # Skip empty paths (directory markers)
                 if not relative_path:
+                    continue
+
+                # Skip docker volumes directory
+                if relative_path.startswith("docker/volumes/"):
+                    continue
+
+                # Skip .gitignore files
+                if relative_path.endswith(".gitignore"):
                     continue
 
                 # Target file path
@@ -142,16 +146,20 @@ def create_project(path: str, force: bool):
         django-cfg create-project --force
     """
 
-    # Determine target path
-    target_path = Path(path).resolve()
+    # Determine parent path and project folder name
+    parent_path = Path(path).resolve()
 
-    # Check if target directory exists and has files
-    if target_path.exists() and any(target_path.iterdir()):
+    # Create django-project folder inside the specified path
+    target_path = parent_path / "django-project"
+
+    # Check if django-project directory already exists
+    if target_path.exists():
         if not force:
-            click.echo(f"❌ Directory '{target_path}' is not empty. Use --force to overwrite.", err=True)
+            click.echo(f"❌ Directory '{target_path}' already exists. Use --force to overwrite.", err=True)
             return
         else:
-            click.echo(f"⚠️  Directory is not empty, files will be overwritten...")
+            click.echo(f"⚠️  Directory '{target_path}' exists and will be overwritten...")
+            shutil.rmtree(target_path)
 
     temp_archive = None
 
@@ -176,12 +184,15 @@ def create_project(path: str, force: bool):
         # Show next steps
         click.echo()
         click.echo("📋 Next steps:")
-        if target_path != Path.cwd():
-            click.echo(f"   cd {target_path}")
+        click.echo(f"   cd {target_path}/django")
         click.echo("   poetry install  # or: pip install -r requirements.txt")
         click.echo("   python manage.py migrate")
         click.echo("   python manage.py createsuperuser")
         click.echo("   python manage.py runserver")
+        click.echo()
+        click.echo("🐳 Docker deployment:")
+        click.echo(f"   cd {target_path}/docker")
+        click.echo("   docker-compose up -d")
 
         click.echo()
         click.echo("💡 Features included:")
