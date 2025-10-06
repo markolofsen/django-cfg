@@ -52,6 +52,7 @@ class RateLimitingMiddleware(MiddlewareMixin):
             self.window_precision = 10  # sub-windows
             self.exempt_paths = [
                 '/api/health/',
+                '/cfg/',  # Exempt all django-cfg internal endpoints
                 '/admin/',
                 '/static/',
                 '/media/',
@@ -73,7 +74,7 @@ class RateLimitingMiddleware(MiddlewareMixin):
             self.burst_allowance = 0.5
             self.window_size = 60
             self.window_precision = 10
-            self.exempt_paths = ['/api/health/', '/admin/']
+            self.exempt_paths = ['/api/health/', '/cfg/', '/admin/']
             self.cache_timeout = 300
         
         logger.info(f"Rate Limiting Middleware initialized", extra={
@@ -92,9 +93,14 @@ class RateLimitingMiddleware(MiddlewareMixin):
         if not self.enabled:
             return None
         
-        # Check if path is exempt
-        if request.path in self.exempt_paths:
+        # Check if this is a django-cfg internal endpoint check (bypass rate limiting)
+        if request.META.get('HTTP_X_DJANGO_CFG_INTERNAL_CHECK') == 'true':
             return None
+
+        # Check if path is exempt (supports prefix matching)
+        for exempt_path in self.exempt_paths:
+            if request.path.startswith(exempt_path):
+                return None
         
         start_time = time.time()
         

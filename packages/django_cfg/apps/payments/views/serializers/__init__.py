@@ -41,7 +41,7 @@ from .currencies import (
 
 # API Key serializers
 from .api_keys import (
-    APIKeySerializer,
+    APIKeyDetailSerializer,
     APIKeyCreateSerializer,
     APIKeyListSerializer,
     APIKeyUpdateSerializer,
@@ -85,7 +85,7 @@ __all__ = [
     'CurrencyConversionSerializer',
     
     # API Key serializers
-    'APIKeySerializer',
+    'APIKeyDetailSerializer',
     'APIKeyCreateSerializer',
     'APIKeyListSerializer',
     'APIKeyUpdateSerializer',

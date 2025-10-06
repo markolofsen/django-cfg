@@ -118,7 +118,9 @@ class TagViewSet(viewsets.ModelViewSet):
 class PostViewSet(viewsets.ModelViewSet):
     """ViewSet for blog posts."""
     
-    queryset = Post.objects.select_related('author', 'category').prefetch_related('tags')
+    # Note: 'author' removed from select_related for multi-database compatibility
+    # Author (User) is in 'default' DB, Post is in 'blog_db' - SQLite can't JOIN across DBs
+    queryset = Post.objects.select_related('category').prefetch_related('tags')
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -188,11 +190,11 @@ class PostViewSet(viewsets.ModelViewSet):
             'popular_posts': Post.objects.filter(status='published').order_by('-views_count')[:5],
             'recent_posts': Post.objects.filter(status='published').order_by('-published_at')[:5],
             'top_categories': Category.objects.annotate(
-                posts_count=Count('posts', filter=Q(posts__status='published'))
-            ).order_by('-posts_count')[:5],
+                published_posts=Count('posts', filter=Q(posts__status='published'))
+            ).order_by('-published_posts')[:5],
             'top_tags': Tag.objects.annotate(
-                posts_count=Count('posts', filter=Q(posts__status='published'))
-            ).order_by('-posts_count')[:10]
+                published_posts=Count('posts', filter=Q(posts__status='published'))
+            ).order_by('-published_posts')[:10]
         }
         
         serializer = BlogStatsSerializer(stats)
@@ -241,7 +243,8 @@ class PostViewSet(viewsets.ModelViewSet):
     def likes(self, request, slug=None):
         """Get post likes."""
         post = self.get_object()
-        likes = post.likes.select_related('user').all()
+        # Note: 'user' removed from select_related for multi-database compatibility
+        likes = post.likes.all()
         serializer = PostLikeSerializer(likes, many=True)
         return Response(serializer.data)
     
@@ -288,7 +291,8 @@ class PostViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet for blog comments."""
     
-    queryset = Comment.objects.select_related('author', 'post').prefetch_related('replies')
+    # Note: 'author' removed from select_related for multi-database compatibility
+    queryset = Comment.objects.select_related('post').prefetch_related('replies')
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]

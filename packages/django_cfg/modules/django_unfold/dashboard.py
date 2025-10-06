@@ -61,6 +61,7 @@ class DashboardManager(BaseCfgModule):
                     NavigationItem(title="Overview", icon=Icons.DASHBOARD, link="/admin/"),
                     NavigationItem(title="Settings", icon=Icons.SETTINGS, link="/admin/constance/config/"),
                     NavigationItem(title="Health Check", icon=Icons.HEALTH_AND_SAFETY, link="/cfg/health/"),
+                    NavigationItem(title="Endpoints Status", icon=Icons.API, link="/cfg/endpoints/drf/"),
                 ]
             ),
         ]

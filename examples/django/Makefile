@@ -1,4 +1,8 @@
-.PHONY: help install install-local env docker test commit kill-ports dev dev-ngrok manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker
+.PHONY: help install install-local env docker test commit kill-ports dev dev-ngrok manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
+
+# Python from virtual environment (poetry)
+PYTHON := .venv/bin/python
+POETRY := poetry
 
 help:
 	@echo "Django CFG Sample Project - Make Commands"
@@ -12,11 +16,12 @@ help:
 	@echo "  make dev-ngrok     - Run development server with ngrok tunnel"
 	@echo "  make kill-ports    - Kill processes on port 8000"
 	@echo "  make shell         - Open Django shell"
+	@echo "  make api           - Generate and deploy API clients"
+	@echo "  make claude        - Start Claude Code"
 	@echo ""
 	@echo "Database:"
 	@echo "  make migrate       - Run all migrations"
-	@echo "  make migrate-all   - Run migrations on all databases"
-	@echo "  make makemigrations- Generate migrations"
+	@echo "  make populate      - Populate database with sample data"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  make config        - Show current configuration"
@@ -25,6 +30,8 @@ help:
 	@echo ""
 	@echo "URLs & Structure:"
 	@echo "  make show-urls     - Show all URL patterns"
+	@echo "  make list-urls     - List all URLs (Rich formatted)"
+	@echo "  make check-endpoints - Check API endpoints status"
 	@echo "  make tree          - Show project structure"
 	@echo ""
 	@echo "Users & Auth:"
@@ -48,23 +55,23 @@ help:
 
 install:
 	@echo "📦 Installing dependencies (production mode)..."
-	poetry install
+	$(POETRY) install
 
 install-local:
 	@echo "📦 Installing with local django-cfg and django-ipc..."
 	@rm -f poetry.lock
-	@poetry add --group local --editable ~/djangocfg --lock
-	@poetry add --group local --editable ~/djangoipc --lock
-	@poetry install --with local --no-root
+	$(POETRY) add --group local --editable ~/djangocfg --lock
+	$(POETRY) add --group local --editable ~/djangoipc --lock
+	$(POETRY) install --with local --no-root
 
 env:
-	@poetry env info
+	@$(POETRY) env info
 
 docker:
 	git pull && python3 devops/manage.py
 
 test:
-	poetry run python manage.py test
+	$(PYTHON) manage.py test
 
 commit:
 	git add . && git commit && git push
@@ -73,49 +80,63 @@ kill-ports:
 	lsof -i :8000 | awk 'NR>1 {print $$2}' | xargs kill -9 || true
 
 dev: kill-ports
-	poetry run python manage.py runserver
+	$(PYTHON) manage.py runserver
 
 dev-ngrok: kill-ports
-	poetry run python manage.py runserver_ngrok
+	$(PYTHON) manage.py runserver_ngrok
 
 manage:
-	poetry run python manage.py $(CMD)
+	$(PYTHON) manage.py $(CMD)
 
 migrate:
-	poetry run python manage.py migrate
-
-migrate-all:
-	poetry run python manage.py migrate_all
-
-makemigrations:
-	poetry run python manage.py makemigrations
+	$(PYTHON) manage.py migrate_all
 
 shell:
-	poetry run python manage.py shell
+	$(PYTHON) manage.py shell
 
 show-urls:
-	poetry run python manage.py show_urls
+	$(PYTHON) manage.py show_urls
+
+list-urls:
+	$(PYTHON) manage.py list_urls
+
+check-endpoints:
+	$(PYTHON) manage.py check_endpoints
 
 tree:
-	poetry run python manage.py tree
+	$(PYTHON) manage.py tree
 
 config:
-	poetry run python manage.py show_config
+	$(PYTHON) manage.py show_config
 
 check:
-	poetry run python manage.py check
+	$(PYTHON) manage.py check
 
 check-settings:
-	poetry run python manage.py check_settings
+	$(PYTHON) manage.py check_settings
 
 superuser:
-	poetry run python manage.py superuser
+	$(PYTHON) manage.py superuser
 
 tasks-status:
-	poetry run python manage.py task_status
+	$(PYTHON) manage.py task_status
 
 tasks-worker:
-	poetry run python manage.py rundramatiq
+	$(PYTHON) manage.py rundramatiq
 
 tasks-clear:
-	poetry run python manage.py task_clear
+	$(PYTHON) manage.py task_clear
+
+# API Generation
+api:
+	$(PYTHON) manage.py generate_api
+
+# Populate database with sample data
+populate:
+	rm -f db/*.sqlite3
+	$(PYTHON) manage.py migrate_all
+	$(PYTHON) manage.py populate_sample_data
+
+# Start Claude Code with dangerously-skip-permissions flag
+claude:
+	claude --dangerously-skip-permissions
