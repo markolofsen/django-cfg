@@ -16,7 +16,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from .base import PaymentBaseViewSet, NestedPaymentViewSet, ReadOnlyPaymentViewSet
 from ...models import APIKey
 from ..serializers.api_keys import (
-    APIKeySerializer,
+    APIKeyDetailSerializer,
     APIKeyCreateSerializer,
     APIKeyListSerializer,
     APIKeyUpdateSerializer,
@@ -39,16 +39,16 @@ class APIKeyViewSet(PaymentBaseViewSet):
     """
     
     queryset = APIKey.objects.all()
-    serializer_class = APIKeySerializer
+    serializer_class = APIKeyDetailSerializer
     permission_classes = [permissions.IsAdminUser]  # Admin only for global access
     filterset_fields = ['is_active', 'user']
     search_fields = ['name', 'user__username', 'user__email']
     ordering_fields = ['created_at', 'updated_at', 'last_used_at', 'expires_at', 'total_requests']
-    
+
     serializer_classes = {
         'list': APIKeyListSerializer,
         'create': APIKeyCreateSerializer,
-        'retrieve': APIKeySerializer,
+        'retrieve': APIKeyDetailSerializer,
         'update': APIKeyUpdateSerializer,
         'partial_update': APIKeyUpdateSerializer,
     }
@@ -209,20 +209,20 @@ class UserAPIKeyViewSet(NestedPaymentViewSet):
     """
     
     queryset = APIKey.objects.all()
-    serializer_class = APIKeySerializer
+    serializer_class = APIKeyDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
     filterset_fields = ['is_active']
     search_fields = ['name']
     ordering_fields = ['created_at', 'updated_at', 'last_used_at', 'expires_at']
-    
+
     # Nested ViewSet configuration
     parent_lookup_field = 'user_pk'
     parent_model_field = 'user'
-    
+
     serializer_classes = {
         'list': APIKeyListSerializer,
         'create': APIKeyCreateSerializer,
-        'retrieve': APIKeySerializer,
+        'retrieve': APIKeyDetailSerializer,
         'update': APIKeyUpdateSerializer,
         'partial_update': APIKeyUpdateSerializer,
     }

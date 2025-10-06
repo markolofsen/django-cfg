@@ -7,7 +7,8 @@ debug: false
 
 # === Database ===
 database:
-  url: "postgresql://postgres:postgres@localhost:5432/django_cfg_test2"
+  # url: "postgresql://postgres:postgres@localhost:5432/django_cfg_test2"
+  url: "sqlite:///db/default.sqlite3"
   url_blog: "sqlite:///db/blog.sqlite3"
   url_shop: "sqlite:///db/shop.sqlite3"
 

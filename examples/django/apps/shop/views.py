@@ -114,7 +114,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 status__in=['delivered', 'shipped']
             ).aggregate(total=Sum('total_amount'))['total'] or 0,
             'popular_products': Product.objects.filter(status='active').order_by('-sales_count')[:5],
-            'recent_orders': Order.objects.select_related('customer').order_by('-created_at')[:5]
+            # Note: 'customer' removed from select_related for multi-database compatibility
+            'recent_orders': Order.objects.order_by('-created_at')[:5]
         }
         
         serializer = ShopStatsSerializer(stats)
@@ -136,7 +137,9 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for orders."""
     
-    queryset = Order.objects.select_related('customer').prefetch_related('items__product')
+    # Note: 'customer' removed from select_related for multi-database compatibility
+    # Customer (User) is in 'default' DB, Order is in 'shop_db' - SQLite can't JOIN across DBs
+    queryset = Order.objects.prefetch_related('items__product')
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'customer']

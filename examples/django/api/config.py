@@ -166,7 +166,7 @@ class SampleProjectConfig(DjangoConfig):
     databases: Dict[str, DatabaseConfig] = {
         # Main application database - engine auto-detected from URL
         "default": DatabaseConfig.from_url(url=env.database.url),
-        
+
         # Blog database with routing - engine auto-detected
         "blog_db": DatabaseConfig.from_url(
             url=env.database.url_blog,
@@ -446,7 +446,7 @@ class SampleProjectConfig(DjangoConfig):
         drf_title=f"{env.app.name} API",
         drf_description="Complete API documentation for Django CFG sample project",
         drf_version="1.0.0",
-        drf_schema_path_prefix="/apix/",  # Match api_prefix
+        drf_schema_path_prefix="/api/",  # Match api_prefix
         drf_enable_browsable_api=True,
         drf_enable_throttling=False,  # Disable for sample
 
@@ -457,7 +457,7 @@ class SampleProjectConfig(DjangoConfig):
                 description="Blog posts and comments management",
                 public=True,
                 auth_required=False,
-                version="v1",
+                # version="v1",
             ),
             "shop": ZoneConfig(
                 apps=["apps.shop"],
@@ -465,7 +465,7 @@ class SampleProjectConfig(DjangoConfig):
                 description="E-commerce products, orders and categories",
                 public=True,
                 auth_required=False,
-                version="v1",
+                # version="v1",
             ),
             "profiles": ZoneConfig(
                 apps=["apps.profiles"],
@@ -473,7 +473,7 @@ class SampleProjectConfig(DjangoConfig):
                 description="Profiles management",
                 public=True,
                 auth_required=False,
-                version="v1",
+                # version="v1",
             ),
         },
     )

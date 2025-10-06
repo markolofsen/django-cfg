@@ -117,7 +117,7 @@ class Command(BaseCommand):
             
             process_args = [
                 executable_name,
-                "django_cfg.modules.dramatiq_setup",  # Broker module
+                "django_cfg.modules.django_tasks.dramatiq_setup",  # Broker module
                 "--processes", str(processes),
                 "--threads", str(threads),
                 "--worker-shutdown-timeout", str(worker_shutdown_timeout),
@@ -155,7 +155,7 @@ class Command(BaseCommand):
         # Build process arguments exactly like django_dramatiq
         process_args = [
             executable_name,
-            "django_cfg.modules.dramatiq_setup",  # Broker module
+            "django_cfg.modules.django_tasks.dramatiq_setup",  # Broker module
             "--processes", str(processes),
             "--threads", str(threads),
             "--worker-shutdown-timeout", str(worker_shutdown_timeout),
@@ -213,7 +213,7 @@ class Command(BaseCommand):
     def _discover_tasks_modules(self):
         """Discover task modules like django_dramatiq does."""
         # Always include our broker setup module first
-        tasks_modules = ["django_cfg.modules.dramatiq_setup"]
+        tasks_modules = ["django_cfg.modules.django_tasks.dramatiq_setup"]
         
         # Get task service for configuration
         task_service = get_task_service()

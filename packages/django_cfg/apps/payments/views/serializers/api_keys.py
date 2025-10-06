@@ -7,6 +7,7 @@ DRF serializers for API key operations with service integration.
 from rest_framework import serializers
 from typing import Dict, Any
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiTypes
 
 from ...models import APIKey
 from django_cfg.modules.django_logging import get_logger
@@ -43,19 +44,19 @@ class APIKeyListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class APIKeySerializer(serializers.ModelSerializer):
+class APIKeyDetailSerializer(serializers.ModelSerializer):
     """
     Complete API key serializer with full details.
-    
+
     Used for API key detail views (no key value for security).
     """
-    
+
     user = serializers.StringRelatedField(read_only=True)
     key_preview = serializers.CharField(read_only=True)
     is_expired = serializers.BooleanField(read_only=True)
     is_valid = serializers.BooleanField(read_only=True)
     days_until_expiry = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = APIKey
         fields = [
@@ -73,18 +74,7 @@ class APIKeySerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = [
-            'id',
-            'user',
-            'key_preview',
-            'is_expired',
-            'is_valid',
-            'days_until_expiry',
-            'total_requests',
-            'last_used_at',
-            'created_at',
-            'updated_at',
-        ]
+        read_only_fields = fields  # All fields are read-only to prevent TypeScript split
 
 
 class APIKeyCreateSerializer(serializers.Serializer):
@@ -153,7 +143,7 @@ class APIKeyCreateSerializer(serializers.Serializer):
     
     def to_representation(self, instance: APIKey) -> Dict[str, Any]:
         """Return API key data with full key value (only on creation)."""
-        data = APIKeySerializer(instance, context=self.context).data
+        data = APIKeyDetailSerializer(instance, context=self.context).data
         
         # Add full key value only on creation (security: shown only once)
         data['key'] = instance.key
@@ -288,7 +278,7 @@ class APIKeyActionSerializer(serializers.Serializer):
                 return {
                     'success': True,
                     'message': message,
-                    'api_key': APIKeySerializer(api_key, context=self.context).data
+                    'api_key': APIKeyDetailSerializer(api_key, context=self.context).data
                 }
             else:
                 return {
@@ -341,7 +331,7 @@ class APIKeyValidationSerializer(serializers.Serializer):
                 return {
                     'success': True,
                     'valid': True,
-                    'api_key': APIKeySerializer(api_key, context=self.context).data,
+                    'api_key': APIKeyDetailSerializer(api_key, context=self.context).data,
                     'message': 'API key is valid'
                 }
             else:
@@ -364,12 +354,12 @@ class APIKeyValidationSerializer(serializers.Serializer):
 class APIKeyValidationResponseSerializer(serializers.Serializer):
     """
     API key validation response serializer.
-    
+
     Defines the structure of API key validation response for OpenAPI schema.
     """
     success = serializers.BooleanField(help_text="Whether the validation was successful")
     valid = serializers.BooleanField(help_text="Whether the API key is valid")
-    api_key = APIKeySerializer(allow_null=True, help_text="API key details if valid")
+    api_key = APIKeyDetailSerializer(allow_null=True, read_only=True, required=False, help_text="API key details if valid")
     message = serializers.CharField(help_text="Validation message")
     error = serializers.CharField(required=False, help_text="Error message if validation failed")
     error_code = serializers.CharField(required=False, help_text="Error code if validation failed")

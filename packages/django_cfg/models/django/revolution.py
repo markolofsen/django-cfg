@@ -3,6 +3,19 @@ Django Revolution Configuration with DRF Integration
 
 Extended configuration model that includes DRF parameters for automatic
 integration with django_revolution's create_drf_config.
+
+TypeScript Client Generation Issue & Solution:
+----------------------------------------------
+Problem: @hey-api/openapi-ts splits types with mixed readonly/writable fields into
+Readable/Writable versions (e.g., ApiKeyDetailReadable, ApiKeyDetailWritable),
+but references inside other types still use the base name (e.g., ApiKeyDetail),
+causing "Cannot find name 'ApiKeyDetail'" errors.
+
+Solution: Make all fields in detail serializers read-only to prevent splitting:
+    class Meta:
+        read_only_fields = fields  # All fields read-only prevents TS split
+
+This ensures TypeScript generator creates a single type without Readable/Writable suffix.
 """
 
 from typing import Dict, Any, Optional
@@ -104,7 +117,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Support tickets and messages API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
             
             # Add Accounts zone if enabled
@@ -116,9 +129,9 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="User management, OTP, profiles, and activity tracking API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
-            
+
             # Add Newsletter zone if enabled
             default_newsletter_zone = 'cfg_newsletter'
             if newsletter_enabled and default_newsletter_zone not in zones:
@@ -128,9 +141,9 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Email campaigns, subscriptions, and newsletter management API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
-            
+
             # Add Leads zone if enabled
             default_leads_zone = 'cfg_leads'
             if leads_enabled and default_leads_zone not in zones:
@@ -140,9 +153,9 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Lead collection, contact forms, and CRM integration API",
                     public=True,  # Leads can be public for contact forms
                     auth_required=False,
-                    version="v1",
+                    # version="v1",
                 )
-            
+
             # Add Knowbase zone if enabled
             default_knowbase_zone = 'cfg_knowbase'
             if knowbase_enabled and default_knowbase_zone not in zones:
@@ -152,9 +165,9 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Knowledge base, AI chat, embeddings, and search API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
-            
+
             # Add Agents zone if enabled
             default_agents_zone = 'cfg_agents'
             if agents_enabled and default_agents_zone not in zones:
@@ -164,9 +177,9 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Agent definitions, executions, workflows, and tools API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
-            
+
             # Add Tasks zone if enabled
             default_tasks_zone = 'cfg_tasks'
             if tasks_enabled and default_tasks_zone not in zones:
@@ -176,7 +189,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Tasks, workflows, and automation API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
 
             # Add Payments zone if enabled
@@ -188,7 +201,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     description="Payments, subscriptions, and billing API",
                     public=False,
                     auth_required=True,
-                    version="v1",
+                    # version="v1",
                 )
 
         except Exception:
