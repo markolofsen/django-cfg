@@ -4,14 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-revolution"
-version = "1.0.44"
+version = "1.0.45"
 description = "🚀 OpenAPI client generation framework for Django - Auto-generated TypeScript & Python clients, Zone-based API architecture"
 readme = "README.md"
 keywords = [ "django", "api", "openapi", "rest", "zones", "typescript", "python", "client", "generation", "drf-spectacular", "openapi-generator", "api-client", "typescript-client", "python-client",]
 classifiers = [ "Development Status :: 5 - Production/Stable", "Framework :: Django", "Framework :: Django :: 3.2", "Framework :: Django :: 4.0", "Framework :: Django :: 4.1", "Framework :: Django :: 4.2", "Framework :: Django :: 5.0", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Programming Language :: Python :: 3.13", "Topic :: Internet :: WWW/HTTP", "Topic :: Internet :: WWW/HTTP :: Dynamic Content", "Topic :: Software Development :: Libraries :: Python Modules", "Topic :: Software Development :: Code Generators", "Typing :: Typed",]
 requires-python = ">=3.10,<4.0"
 dependencies = [ "Django>=3.2", "djangorestframework>=3.12.0", "drf-spectacular>=0.24.0", "Jinja2>=3.0.0", "PyYAML>=6.0", "pydantic>=2.0.0", "pydantic-settings>=2.0.0", "click>=8.0.0", "rich>=13.0.0", "openapi-python-client>=0.26.1,<0.27.0",]
-
 [[project.authors]]
 name = "Django-CFG Team"
 email = "info@djangocfg.com"
