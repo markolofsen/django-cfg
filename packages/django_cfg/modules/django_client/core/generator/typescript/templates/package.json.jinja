@@ -1,0 +1,52 @@
+{
+  "name": "{{ package_name }}",
+  "version": "{{ version }}",
+  "description": "{{ description }}",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "vitest",
+    "lint": "eslint src/",
+    "format": "prettier --write src/"
+  },
+  "keywords": {{ keywords | tojson }},
+  {% if author %}"author": "{{ author }}",{% endif %}
+  "license": "{{ license }}",
+  {% if repository_url %}"repository": {
+    "type": "git",
+    "url": "{{ repository_url }}"
+  },{% endif %}
+  "dependencies": {
+    "p-retry": "^7.0.0",
+    "consola": "^3.4.2"{% if generate_zod_schemas %},
+    "zod": "^3.23.0"{% endif %}{% if generate_swr_hooks %},
+    "swr": "^2.2.0"{% endif %}
+  },{% if generate_swr_hooks %}
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },{% endif %}
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }{% if private %},
+  "private": true{% endif %}
+}

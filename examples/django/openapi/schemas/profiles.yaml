@@ -61,7 +61,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "profiles_profiles_create",
@@ -108,7 +109,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/profiles/profiles/{id}/": {
@@ -149,7 +151,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "profiles_profiles_update",
@@ -207,7 +210,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "profiles_profiles_partial_update",
@@ -265,7 +269,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "profiles_profiles_destroy",
@@ -297,7 +302,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/profiles/profiles/me/": {
@@ -327,7 +333,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "profiles_profiles_me_update",
@@ -374,7 +381,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "profiles_profiles_me_partial_update",
@@ -421,7 +429,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/profiles/profiles/stats/": {
@@ -451,7 +460,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     }
   },

@@ -1,0 +1,18 @@
+from __future__ import annotations
+
+import httpx
+
+from .models import *
+
+
+class {{ class_name }}:
+    """API endpoints for {{ tag }}."""
+
+    def __init__(self, client: httpx.AsyncClient):
+        """Initialize sub-client with shared httpx client."""
+        self._client = client
+
+{% for operation in operations %}
+{{ operation | indent(4, first=True) }}
+
+{% endfor %}

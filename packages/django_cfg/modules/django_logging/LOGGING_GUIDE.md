@@ -247,7 +247,7 @@ config = get_current_config()
 
 if config and config.debug:
     # Expensive operation only in debug mode
-    from django_cfg.dashboard.debug import save_section_render
+    from django_cfg.modules.django_dashboard.debug import save_section_render
     save_section_render('overview', html_content)
 else:
     # Skip debug rendering in production

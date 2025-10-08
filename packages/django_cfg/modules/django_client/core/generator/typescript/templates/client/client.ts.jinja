@@ -1,0 +1,403 @@
+{% if sub_clients %}
+{# Namespaced client with sub-clients #}
+{% if include_imports %}
+{% for tag in tags %}
+import { {{ tag.class_name }} } from "./{{ tag.slug }}";
+{% endfor %}
+import { HttpClientAdapter, FetchAdapter } from "./http";
+import { APIError, NetworkError } from "./errors";
+import { APILogger, type LoggerConfig } from "./logger";
+import { withRetry, type RetryConfig } from "./retry";
+
+
+{% endif %}
+/**
+ * Async API client for {{ info.title }}.
+ *
+ * Usage:
+ * ```typescript
+ * const client = new APIClient('https://api.example.com');
+ * const users = await client.users.list();
+ * const post = await client.posts.create(newPost);
+ *
+ * // Custom HTTP adapter (e.g., Axios)
+ * const client = new APIClient('https://api.example.com', {
+ *   httpClient: new AxiosAdapter()
+ * });
+ * ```
+ */
+export class APIClient {
+  private baseUrl: string;
+  private httpClient: HttpClientAdapter;
+  private logger: APILogger | null = null;
+  private retryConfig: RetryConfig | null = null;
+
+  // Sub-clients
+{% for tag in tags %}
+  public {{ tag.property }}: {{ tag.class_name }};
+{% endfor %}
+
+  constructor(
+    baseUrl: string,
+    options?: {
+      httpClient?: HttpClientAdapter;
+      loggerConfig?: Partial<LoggerConfig>;
+      retryConfig?: RetryConfig;
+    }
+  ) {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.httpClient = options?.httpClient || new FetchAdapter();
+
+    // Initialize logger if config provided
+    if (options?.loggerConfig !== undefined) {
+      this.logger = new APILogger(options.loggerConfig);
+    }
+
+    // Store retry configuration
+    if (options?.retryConfig !== undefined) {
+      this.retryConfig = options.retryConfig;
+    }
+
+    // Initialize sub-clients
+{% for tag in tags %}
+    this.{{ tag.property }} = new {{ tag.class_name }}(this);
+{% endfor %}
+  }
+
+  /**
+   * Get CSRF token from cookies.
+   */
+  getCsrfToken(): string | null {
+    const name = 'csrftoken';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  }
+
+  /**
+   * Make HTTP request with Django CSRF and session handling.
+   * Automatically retries on network errors and 5xx server errors.
+   */
+  async request<T>(
+    method: string,
+    path: string,
+    options?: {
+      params?: Record<string, any>;
+      body?: any;
+      formData?: FormData;
+    }
+  ): Promise<T> {
+    // Wrap request in retry logic if configured
+    if (this.retryConfig) {
+      return withRetry(() => this._makeRequest<T>(method, path, options), {
+        ...this.retryConfig,
+        onFailedAttempt: (info) => {
+          // Log retry attempts
+          if (this.logger) {
+            this.logger.warn(
+              `Retry attempt ${info.attemptNumber}/${info.retriesLeft + info.attemptNumber} ` +
+              `for ${method} ${path}: ${info.error.message}`
+            );
+          }
+          // Call user's onFailedAttempt if provided
+          this.retryConfig?.onFailedAttempt?.(info);
+        },
+      });
+    }
+
+    // No retry configured, make request directly
+    return this._makeRequest<T>(method, path, options);
+  }
+
+  /**
+   * Internal request method (without retry wrapper).
+   * Used by request() method with optional retry logic.
+   */
+  private async _makeRequest<T>(
+    method: string,
+    path: string,
+    options?: {
+      params?: Record<string, any>;
+      body?: any;
+      formData?: FormData;
+    }
+  ): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    const startTime = Date.now();
+
+    // Build headers
+    const headers: Record<string, string> = {};
+
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    if (!options?.formData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    // Add CSRF token for non-GET requests
+    if (method !== 'GET') {
+      const csrfToken = this.getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+
+    // Log request
+    if (this.logger) {
+      this.logger.logRequest({
+        method,
+        url: url.toString(),
+        headers,
+        body: options?.formData || options?.body,
+        timestamp: startTime,
+      });
+    }
+
+    try {
+      // Make request via HTTP adapter
+      const response = await this.httpClient.request<T>({
+        method,
+        url: url.toString(),
+        headers,
+        params: options?.params,
+        body: options?.body,
+        formData: options?.formData,
+      });
+
+      const duration = Date.now() - startTime;
+
+      // Check for HTTP errors
+      if (response.status >= 400) {
+        const error = new APIError(
+          response.status,
+          response.statusText,
+          response.data,
+          url.toString()
+        );
+
+        // Log error
+        if (this.logger) {
+          this.logger.logError(
+            {
+              method,
+              url: url.toString(),
+              headers,
+              body: options?.formData || options?.body,
+              timestamp: startTime,
+            },
+            {
+              message: error.message,
+              statusCode: response.status,
+              duration,
+              timestamp: Date.now(),
+            }
+          );
+        }
+
+        throw error;
+      }
+
+      // Log successful response
+      if (this.logger) {
+        this.logger.logResponse(
+          {
+            method,
+            url: url.toString(),
+            headers,
+            body: options?.formData || options?.body,
+            timestamp: startTime,
+          },
+          {
+            status: response.status,
+            statusText: response.statusText,
+            data: response.data,
+            duration,
+            timestamp: Date.now(),
+          }
+        );
+      }
+
+      return response.data as T;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      // Re-throw APIError as-is
+      if (error instanceof APIError) {
+        throw error;
+      }
+
+      // Wrap other errors as NetworkError
+      const networkError = error instanceof Error
+        ? new NetworkError(error.message, url.toString(), error)
+        : new NetworkError('Unknown error', url.toString());
+
+      // Log network error
+      if (this.logger) {
+        this.logger.logError(
+          {
+            method,
+            url: url.toString(),
+            headers,
+            body: options?.formData || options?.body,
+            timestamp: startTime,
+          },
+          {
+            message: networkError.message,
+            duration,
+            timestamp: Date.now(),
+          }
+        );
+      }
+
+      throw networkError;
+    }
+  }
+}
+{% else %}
+{# Flat client without sub-clients #}
+import * as Enums from "./enums";
+import { HttpClientAdapter, FetchAdapter } from "./http";
+import { APIError, NetworkError } from "./errors";
+import { withRetry, type RetryConfig } from "./retry";
+
+
+/**
+ * Async API client for {{ info.title }}.
+ *
+ * Usage:
+ * ```typescript
+ * const client = new APIClient('https://api.example.com');
+ * const users = await client.usersList();
+ *
+ * // Custom HTTP adapter
+ * const client = new APIClient('https://api.example.com', {
+ *   httpClient: new AxiosAdapter()
+ * });
+ * ```
+ */
+export class APIClient {
+  private baseUrl: string;
+  private httpClient: HttpClientAdapter;
+  private retryConfig: RetryConfig | null = null;
+
+  constructor(
+    baseUrl: string,
+    options?: {
+      httpClient?: HttpClientAdapter;
+      retryConfig?: RetryConfig;
+    }
+  ) {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.httpClient = options?.httpClient || new FetchAdapter();
+
+    // Store retry configuration
+    if (options?.retryConfig !== undefined) {
+      this.retryConfig = options.retryConfig;
+    }
+  }
+
+  /**
+   * Get CSRF token from cookies.
+   */
+  private getCsrfToken(): string | null {
+    const name = 'csrftoken';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  }
+
+  /**
+   * Make HTTP request with Django CSRF and session handling.
+   * Automatically retries on network errors and 5xx server errors.
+   */
+  private async request<T>(
+    method: string,
+    path: string,
+    options?: {
+      params?: Record<string, any>;
+      body?: any;
+      formData?: FormData;
+    }
+  ): Promise<T> {
+    // Wrap request in retry logic if configured
+    if (this.retryConfig) {
+      return withRetry(() => this._makeRequest<T>(method, path, options), this.retryConfig);
+    }
+
+    // No retry configured, make request directly
+    return this._makeRequest<T>(method, path, options);
+  }
+
+  /**
+   * Internal request method (without retry wrapper).
+   */
+  private async _makeRequest<T>(
+    method: string,
+    path: string,
+    options?: {
+      params?: Record<string, any>;
+      body?: any;
+      formData?: FormData;
+    }
+  ): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+
+    // Build headers
+    const headers: Record<string, string> = {};
+
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    if (!options?.formData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    // Add CSRF token for non-GET requests
+    if (method !== 'GET') {
+      const csrfToken = this.getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+
+    try {
+      // Make request via HTTP adapter
+      const response = await this.httpClient.request<T>({
+        method,
+        url: url.toString(),
+        headers,
+        params: options?.params,
+        body: options?.body,
+        formData: options?.formData,
+      });
+
+      // Check for HTTP errors
+      if (response.status >= 400) {
+        throw new APIError(
+          response.status,
+          response.statusText,
+          response.data,
+          url.toString()
+        );
+      }
+
+      return response.data as T;
+    } catch (error) {
+      // Re-throw APIError as-is
+      if (error instanceof APIError) {
+        throw error;
+      }
+
+      // Wrap other errors as NetworkError
+      throw error instanceof Error
+        ? new NetworkError(error.message, url.toString(), error)
+        : new NetworkError('Unknown error', url.toString());
+    }
+  }
+
+  {# Operations will be added here by generator #}
+}
+{% endif %}

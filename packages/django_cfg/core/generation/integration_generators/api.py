@@ -152,9 +152,10 @@ class APIFrameworksGenerator:
                 },
                 "COMPONENT_SPLIT_REQUEST": True,
                 "COMPONENT_SPLIT_PATCH": True,
-                # Auto-fix enum naming collisions
+                # Postprocessing hooks
                 "POSTPROCESSING_HOOKS": [
                     "django_cfg.modules.django_client.spectacular.auto_fix_enum_names",
+                    "django_cfg.modules.django_client.spectacular.mark_async_operations",
                 ],
             }
 

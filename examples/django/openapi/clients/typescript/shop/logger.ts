@@ -131,7 +131,7 @@ export class APILogger {
       if (SENSITIVE_HEADERS.includes(lowerKey)) {
         filtered[key] = '***';
       } else {
-        filtered[key] = headers[key];
+        filtered[key] = headers[key] || '';
       }
     });
 
@@ -219,6 +219,14 @@ export class APILogger {
   warn(message: string, ...args: any[]): void {
     if (!this.config.enabled) return;
     this.consola.warn(message, ...args);
+  }
+
+  /**
+   * Log error
+   */
+  error(message: string, ...args: any[]): void {
+    if (!this.config.enabled) return;
+    this.consola.error(message, ...args);
   }
 
   /**

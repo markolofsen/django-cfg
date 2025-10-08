@@ -8,11 +8,11 @@ This replaces django-revolution with a cleaner, faster, type-safe implementation
 """
 
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
 from django_cfg.modules.django_client.core.config import OpenAPIConfig, OpenAPIGroupConfig
 
 
-class ExtendedOpenAPIConfig(OpenAPIConfig):
+class OpenAPIClientConfig(OpenAPIConfig):
     """
     Extended OpenAPI configuration with DRF parameters for django-cfg integration.
 
@@ -21,9 +21,9 @@ class ExtendedOpenAPIConfig(OpenAPIConfig):
 
     Example:
         ```python
-        from django_cfg import ExtendedOpenAPIConfig, OpenAPIGroupConfig
+        from django_cfg import OpenAPIClientConfig, OpenAPIGroupConfig
 
-        config = ExtendedOpenAPIConfig(
+        config = OpenAPIClientConfig(
             enabled=True,
             groups=[
                 OpenAPIGroupConfig(
@@ -153,86 +153,10 @@ class ExtendedOpenAPIConfig(OpenAPIConfig):
                     description="All django-cfg built-in applications",
                 )
 
-            # Skip individual cfg_* groups - use unified 'cfg' instead
             return groups_dict
-
-            # Add Support group if enabled
-            if support_enabled and 'cfg_support' not in groups_dict:
-                groups_dict['cfg_support'] = OpenAPIGroupConfig(
-                    name="cfg_support",
-                    apps=["django_cfg.apps.support"],
-                    title="Support API",
-                    description="Support tickets and messages API",
-                )
-
-            # Add Accounts group if enabled
-            if accounts_enabled and 'cfg_accounts' not in groups_dict:
-                groups_dict['cfg_accounts'] = OpenAPIGroupConfig(
-                    name="cfg_accounts",
-                    apps=["django_cfg.apps.accounts"],
-                    title="Accounts API",
-                    description="User management, OTP, profiles, and activity tracking API",
-                )
-
-            # Add Newsletter group if enabled
-            if newsletter_enabled and 'cfg_newsletter' not in groups_dict:
-                groups_dict['cfg_newsletter'] = OpenAPIGroupConfig(
-                    name="cfg_newsletter",
-                    apps=["django_cfg.apps.newsletter"],
-                    title="Newsletter API",
-                    description="Email campaigns, subscriptions, and newsletter management API",
-                )
-
-            # Add Leads group if enabled
-            if leads_enabled and 'cfg_leads' not in groups_dict:
-                groups_dict['cfg_leads'] = OpenAPIGroupConfig(
-                    name="cfg_leads",
-                    apps=["django_cfg.apps.leads"],
-                    title="Leads API",
-                    description="Lead collection, contact forms, and CRM integration API",
-                )
-
-            # Add Knowbase group if enabled
-            if knowbase_enabled and 'cfg_knowbase' not in groups_dict:
-                groups_dict['cfg_knowbase'] = OpenAPIGroupConfig(
-                    name="cfg_knowbase",
-                    apps=["django_cfg.apps.knowbase"],
-                    title="Knowbase API",
-                    description="Knowledge base, AI chat, embeddings, and search API",
-                )
-
-            # Add Agents group if enabled
-            if agents_enabled and 'cfg_agents' not in groups_dict:
-                groups_dict['cfg_agents'] = OpenAPIGroupConfig(
-                    name="cfg_agents",
-                    apps=["django_cfg.apps.agents"],
-                    title="Agents API",
-                    description="Agent definitions, executions, workflows, and tools API",
-                )
-
-            # Add Tasks group if enabled
-            if tasks_enabled and 'cfg_tasks' not in groups_dict:
-                groups_dict['cfg_tasks'] = OpenAPIGroupConfig(
-                    name="cfg_tasks",
-                    apps=["django_cfg.apps.tasks"],
-                    title="Tasks API",
-                    description="Tasks, workflows, and automation API",
-                )
-
-            # Add Payments group if enabled
-            if payments_enabled and 'cfg_payments' not in groups_dict:
-                groups_dict['cfg_payments'] = OpenAPIGroupConfig(
-                    name="cfg_payments",
-                    apps=["django_cfg.apps.payments"],
-                    title="Payments API",
-                    description="Payments, subscriptions, and billing API",
-                )
 
         except Exception:
             pass
 
         return groups_dict
 
-
-# Alias for easier import
-OpenAPIClientConfig = ExtendedOpenAPIConfig

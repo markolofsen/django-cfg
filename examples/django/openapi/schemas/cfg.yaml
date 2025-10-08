@@ -87,7 +87,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_accounts/otp/verify/": {
@@ -157,7 +158,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_accounts/profile/": {
@@ -197,7 +199,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_accounts/profile/avatar/": {
@@ -266,7 +269,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_accounts/profile/partial/": {
@@ -347,7 +351,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_accounts_profile_partial_partial_update",
@@ -426,7 +431,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_accounts/profile/update/": {
@@ -507,7 +513,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_accounts_profile_update_partial_update",
@@ -586,7 +593,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_accounts/token/refresh/": {
@@ -627,7 +635,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_leads/leads/": {
@@ -677,7 +686,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "django_cfg_leads_leads_create",
@@ -725,7 +735,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_leads/leads/{id}/": {
@@ -766,7 +777,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "django_cfg_leads_leads_update",
@@ -825,7 +837,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_leads_leads_partial_update",
@@ -883,7 +896,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "django_cfg_leads_leads_destroy",
@@ -915,7 +929,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_leads/leads/submit/": {
@@ -992,7 +1007,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/bulk/": {
@@ -1052,7 +1068,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/campaigns/": {
@@ -1102,7 +1119,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "django_cfg_newsletter_campaigns_create",
@@ -1150,7 +1168,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/campaigns/{id}/": {
@@ -1190,7 +1209,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "django_cfg_newsletter_campaigns_update",
@@ -1248,7 +1268,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_newsletter_campaigns_partial_update",
@@ -1304,7 +1325,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "django_cfg_newsletter_campaigns_destroy",
@@ -1335,7 +1357,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/campaigns/send/": {
@@ -1405,7 +1428,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/logs/": {
@@ -1455,7 +1479,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/newsletters/": {
@@ -1506,7 +1531,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/newsletters/{id}/": {
@@ -1547,7 +1573,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/subscribe/": {
@@ -1618,7 +1645,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/subscriptions/": {
@@ -1668,7 +1696,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/test/": {
@@ -1729,7 +1758,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_newsletter/unsubscribe/": {
@@ -1790,7 +1820,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "django_cfg_newsletter_unsubscribe_update",
@@ -1838,7 +1869,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_newsletter_unsubscribe_partial_update",
@@ -1885,7 +1917,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_support/tickets/": {
@@ -1917,7 +1950,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "django_cfg_support_tickets_create",
@@ -1964,7 +1998,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_support/tickets/{ticket_uuid}/messages/": {
@@ -2008,7 +2043,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "django_cfg_support_tickets_messages_create",
@@ -2067,7 +2103,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_support/tickets/{ticket_uuid}/messages/{uuid}/": {
@@ -2118,7 +2155,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "django_cfg_support_tickets_messages_update",
@@ -2187,7 +2225,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_support_tickets_messages_partial_update",
@@ -2255,7 +2294,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "django_cfg_support_tickets_messages_destroy",
@@ -2297,7 +2337,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/django_cfg_support/tickets/{uuid}/": {
@@ -2338,7 +2379,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "django_cfg_support_tickets_update",
@@ -2397,7 +2439,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "django_cfg_support_tickets_partial_update",
@@ -2455,7 +2498,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "django_cfg_support_tickets_destroy",
@@ -2487,7 +2531,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/": {
@@ -2568,7 +2613,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_api_keys_create",
@@ -2615,7 +2661,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/{id}/": {
@@ -2656,7 +2703,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_api_keys_update",
@@ -2715,7 +2763,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_api_keys_partial_update",
@@ -2773,7 +2822,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_api_keys_destroy",
@@ -2805,7 +2855,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/{id}/perform_action/": {
@@ -2846,7 +2897,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/analytics/": {
@@ -2875,7 +2927,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/by_user/": {
@@ -2904,7 +2957,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/create/": {
@@ -2953,7 +3007,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/expiring_soon/": {
@@ -2982,7 +3037,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/health/": {
@@ -3011,7 +3067,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/stats/": {
@@ -3040,7 +3097,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/validate/": {
@@ -3090,7 +3148,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/api-keys/validate_key/": {
@@ -3140,7 +3199,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/balances/": {
@@ -3214,7 +3274,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/balances/{id}/": {
@@ -3254,7 +3315,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/balances/analytics/": {
@@ -3283,7 +3345,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/balances/health/": {
@@ -3312,7 +3375,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/balances/stats/": {
@@ -3341,7 +3405,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/balances/summary/": {
@@ -3370,7 +3435,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/": {
@@ -3457,7 +3523,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_currencies_create",
@@ -3484,7 +3551,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/{id}/": {
@@ -3524,7 +3592,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/{id}/networks/": {
@@ -3564,7 +3633,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/{id}/providers/": {
@@ -3604,7 +3674,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/convert/": {
@@ -3633,7 +3704,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/crypto/": {
@@ -3662,7 +3734,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/fiat/": {
@@ -3691,7 +3764,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/health/": {
@@ -3720,7 +3794,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/rates/": {
@@ -3770,7 +3845,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/stable/": {
@@ -3799,7 +3875,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/stats/": {
@@ -3828,7 +3905,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/currencies/supported/": {
@@ -3881,7 +3959,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/endpoint-groups/": {
@@ -3955,7 +4034,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/endpoint-groups/{id}/": {
@@ -3995,7 +4075,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/endpoint-groups/available/": {
@@ -4024,7 +4105,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/endpoint-groups/health/": {
@@ -4053,7 +4135,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/endpoint-groups/stats/": {
@@ -4082,7 +4165,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/health/": {
@@ -4111,7 +4195,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/networks/": {
@@ -4192,7 +4277,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/networks/{id}/": {
@@ -4232,7 +4318,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/networks/by_currency/": {
@@ -4261,7 +4348,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/networks/health/": {
@@ -4290,7 +4378,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/networks/stats/": {
@@ -4319,7 +4408,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/api_keys_overview/": {
@@ -4349,7 +4439,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/balance_overview/": {
@@ -4379,7 +4470,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/chart_data/": {
@@ -4426,7 +4518,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/metrics/": {
@@ -4456,7 +4549,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/overview/": {
@@ -4486,7 +4580,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/payment_analytics/": {
@@ -4527,7 +4622,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/recent_payments/": {
@@ -4586,7 +4682,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/recent_transactions/": {
@@ -4645,7 +4742,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/overview/dashboard/subscription_overview/": {
@@ -4675,7 +4773,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/": {
@@ -4787,7 +4886,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_payments_create",
@@ -4834,7 +4934,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/{id}/": {
@@ -4875,7 +4976,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_payments_update",
@@ -4934,7 +5036,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_payments_partial_update",
@@ -4992,7 +5095,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_payments_destroy",
@@ -5024,7 +5128,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/{id}/cancel/": {
@@ -5085,7 +5190,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/{id}/check_status/": {
@@ -5146,7 +5252,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/analytics/": {
@@ -5175,7 +5282,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/by_provider/": {
@@ -5204,7 +5312,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/create/": {
@@ -5253,7 +5362,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/health/": {
@@ -5282,7 +5392,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/stats/": {
@@ -5311,7 +5422,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/payments/status/{id}/": {
@@ -5351,7 +5463,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/provider-currencies/": {
@@ -5446,7 +5559,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/provider-currencies/{id}/": {
@@ -5486,7 +5600,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/provider-currencies/by_provider/": {
@@ -5515,7 +5630,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/provider-currencies/health/": {
@@ -5544,7 +5660,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/provider-currencies/limits/": {
@@ -5573,7 +5690,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/provider-currencies/stats/": {
@@ -5602,7 +5720,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/": {
@@ -5707,7 +5826,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_subscriptions_create",
@@ -5754,7 +5874,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/{id}/": {
@@ -5795,7 +5916,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_subscriptions_update",
@@ -5854,7 +5976,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_subscriptions_partial_update",
@@ -5912,7 +6035,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_subscriptions_destroy",
@@ -5944,7 +6068,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/{id}/increment_usage/": {
@@ -6005,7 +6130,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/{id}/update_status/": {
@@ -6066,7 +6192,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/analytics/": {
@@ -6095,7 +6222,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/by_status/": {
@@ -6124,7 +6252,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/by_tier/": {
@@ -6153,7 +6282,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/health/": {
@@ -6182,7 +6312,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/subscriptions/stats/": {
@@ -6211,7 +6342,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/": {
@@ -6285,7 +6417,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/{id}/": {
@@ -6325,7 +6458,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/{id}/endpoint_groups/": {
@@ -6365,7 +6499,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/free/": {
@@ -6394,7 +6529,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/health/": {
@@ -6423,7 +6559,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/paid/": {
@@ -6452,7 +6589,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/tariffs/stats/": {
@@ -6481,7 +6619,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/transactions/": {
@@ -6580,7 +6719,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/transactions/{id}/": {
@@ -6621,7 +6761,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/transactions/by_type/": {
@@ -6650,7 +6791,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/transactions/health/": {
@@ -6679,7 +6821,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/transactions/recent/": {
@@ -6708,7 +6851,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/transactions/stats/": {
@@ -6737,7 +6881,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/": {
@@ -6842,7 +6987,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_users_create",
@@ -6889,7 +7035,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{id}/": {
@@ -6930,7 +7077,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_users_update",
@@ -6989,7 +7137,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_users_partial_update",
@@ -7047,7 +7196,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_users_destroy",
@@ -7079,7 +7229,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{id}/cancel/": {
@@ -7140,7 +7291,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{id}/check_status/": {
@@ -7201,7 +7353,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/": {
@@ -7284,7 +7437,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_users_api_keys_create",
@@ -7342,7 +7496,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/{id}/": {
@@ -7392,7 +7547,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_users_api_keys_update",
@@ -7460,7 +7616,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_users_api_keys_partial_update",
@@ -7527,7 +7684,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_users_api_keys_destroy",
@@ -7568,7 +7726,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/{id}/perform_action/": {
@@ -7618,7 +7777,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/active/": {
@@ -7658,7 +7818,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/health/": {
@@ -7698,7 +7859,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/stats/": {
@@ -7738,7 +7900,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/api-keys/summary/": {
@@ -7778,7 +7941,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/": {
@@ -7892,7 +8056,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_users_payments_create",
@@ -7950,7 +8115,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/{id}/": {
@@ -8000,7 +8166,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_users_payments_update",
@@ -8068,7 +8235,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_users_payments_partial_update",
@@ -8135,7 +8303,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_users_payments_destroy",
@@ -8176,7 +8345,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/{id}/cancel/": {
@@ -8246,7 +8416,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/{id}/check_status/": {
@@ -8316,7 +8487,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/health/": {
@@ -8356,7 +8528,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/stats/": {
@@ -8396,7 +8569,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/payments/summary/": {
@@ -8436,7 +8610,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/": {
@@ -8543,7 +8718,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_users_subscriptions_create",
@@ -8601,7 +8777,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/{id}/": {
@@ -8651,7 +8828,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "put": {
         "operationId": "payments_users_subscriptions_update",
@@ -8719,7 +8897,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "patch": {
         "operationId": "payments_users_subscriptions_partial_update",
@@ -8786,7 +8965,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "delete": {
         "operationId": "payments_users_subscriptions_destroy",
@@ -8827,7 +9007,8 @@
           "204": {
             "description": "No response body"
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/{id}/increment_usage/": {
@@ -8897,7 +9078,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/{id}/update_status/": {
@@ -8967,7 +9149,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/active/": {
@@ -9007,7 +9190,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/health/": {
@@ -9047,7 +9231,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/stats/": {
@@ -9087,7 +9272,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/{user_pk}/subscriptions/summary/": {
@@ -9127,7 +9313,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/health/": {
@@ -9156,7 +9343,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/stats/": {
@@ -9185,7 +9373,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/users/summary/": {
@@ -9214,7 +9403,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/webhooks/{provider}/": {
@@ -9256,7 +9446,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       },
       "post": {
         "operationId": "payments_webhooks_create",
@@ -9316,7 +9507,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/webhooks/health/": {
@@ -9347,7 +9539,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/webhooks/providers/": {
@@ -9378,7 +9571,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/payments/webhooks/stats/": {
@@ -9420,7 +9614,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/clear/": {
@@ -9469,7 +9664,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/clear-queues/": {
@@ -9518,7 +9714,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/purge-failed/": {
@@ -9567,7 +9764,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/queues/manage/": {
@@ -9616,7 +9814,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/queues/status/": {
@@ -9645,7 +9844,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/simulate/": {
@@ -9694,7 +9894,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/tasks/list/": {
@@ -9723,7 +9924,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/tasks/stats/": {
@@ -9752,7 +9954,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/workers/list/": {
@@ -9781,7 +9984,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     },
     "/tasks/api/workers/manage/": {
@@ -9830,7 +10034,8 @@
             },
             "description": ""
           }
-        }
+        },
+        "x-async-capable": false
       }
     }
   },

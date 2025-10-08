@@ -85,7 +85,9 @@ export class APIError extends Error {
     const fieldErrors = this.fieldErrors;
     if (fieldErrors) {
       const firstField = Object.keys(fieldErrors)[0];
-      return `${firstField}: ${fieldErrors[firstField].join(', ')}`;
+      if (firstField) {
+        return `${firstField}: ${fieldErrors[firstField]?.join(', ')}`;
+      }
     }
 
     return this.message;

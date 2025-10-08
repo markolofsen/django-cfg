@@ -1,0 +1,158 @@
+/**
+ * Storage adapters for cross-platform token storage.
+ *
+ * Supports:
+ * - LocalStorage (browser)
+ * - Cookies (SSR/browser)
+ * - Memory (Node.js/Electron/testing)
+ */
+
+import type { APILogger } from './logger';
+
+/**
+ * Storage adapter interface for cross-platform token storage.
+ */
+export interface StorageAdapter {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+/**
+ * LocalStorage adapter with safe try-catch for browser environments.
+ * Works in modern browsers with localStorage support.
+ */
+export class LocalStorageAdapter implements StorageAdapter {
+  private logger?: APILogger;
+
+  constructor(logger?: APILogger) {
+    this.logger = logger;
+  }
+
+  getItem(key: string): string | null {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const value = localStorage.getItem(key);
+        this.logger?.debug(`LocalStorage.getItem("${key}"): ${value ? 'found' : 'not found'}`);
+        return value;
+      }
+      this.logger?.warn('LocalStorage not available: window.localStorage is undefined');
+    } catch (error) {
+      this.logger?.error('LocalStorage.getItem failed:', error);
+    }
+    return null;
+  }
+
+  setItem(key: string, value: string): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(key, value);
+        this.logger?.debug(`LocalStorage.setItem("${key}"): success`);
+      } else {
+        this.logger?.warn('LocalStorage not available: window.localStorage is undefined');
+      }
+    } catch (error) {
+      this.logger?.error('LocalStorage.setItem failed:', error);
+    }
+  }
+
+  removeItem(key: string): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(key);
+        this.logger?.debug(`LocalStorage.removeItem("${key}"): success`);
+      } else {
+        this.logger?.warn('LocalStorage not available: window.localStorage is undefined');
+      }
+    } catch (error) {
+      this.logger?.error('LocalStorage.removeItem failed:', error);
+    }
+  }
+}
+
+/**
+ * Cookie-based storage adapter for SSR and browser environments.
+ * Useful for Next.js, Nuxt.js, and other SSR frameworks.
+ */
+export class CookieStorageAdapter implements StorageAdapter {
+  private logger?: APILogger;
+
+  constructor(logger?: APILogger) {
+    this.logger = logger;
+  }
+
+  getItem(key: string): string | null {
+    try {
+      if (typeof document === 'undefined') {
+        this.logger?.warn('Cookies not available: document is undefined (SSR context?)');
+        return null;
+      }
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${key}=`);
+      if (parts.length === 2) {
+        const result = parts.pop()?.split(';').shift() || null;
+        this.logger?.debug(`CookieStorage.getItem("${key}"): ${result ? 'found' : 'not found'}`);
+        return result;
+      }
+      this.logger?.debug(`CookieStorage.getItem("${key}"): not found`);
+    } catch (error) {
+      this.logger?.error('CookieStorage.getItem failed:', error);
+    }
+    return null;
+  }
+
+  setItem(key: string, value: string): void {
+    try {
+      if (typeof document !== 'undefined') {
+        document.cookie = `${key}=${value}; path=/; max-age=31536000`;
+        this.logger?.debug(`CookieStorage.setItem("${key}"): success`);
+      } else {
+        this.logger?.warn('Cookies not available: document is undefined (SSR context?)');
+      }
+    } catch (error) {
+      this.logger?.error('CookieStorage.setItem failed:', error);
+    }
+  }
+
+  removeItem(key: string): void {
+    try {
+      if (typeof document !== 'undefined') {
+        document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        this.logger?.debug(`CookieStorage.removeItem("${key}"): success`);
+      } else {
+        this.logger?.warn('Cookies not available: document is undefined (SSR context?)');
+      }
+    } catch (error) {
+      this.logger?.error('CookieStorage.removeItem failed:', error);
+    }
+  }
+}
+
+/**
+ * In-memory storage adapter for Node.js, Electron, and testing environments.
+ * Data is stored in RAM and cleared when process exits.
+ */
+export class MemoryStorageAdapter implements StorageAdapter {
+  private storage: Map<string, string> = new Map();
+  private logger?: APILogger;
+
+  constructor(logger?: APILogger) {
+    this.logger = logger;
+  }
+
+  getItem(key: string): string | null {
+    const value = this.storage.get(key) || null;
+    this.logger?.debug(`MemoryStorage.getItem("${key}"): ${value ? 'found' : 'not found'}`);
+    return value;
+  }
+
+  setItem(key: string, value: string): void {
+    this.storage.set(key, value);
+    this.logger?.debug(`MemoryStorage.setItem("${key}"): success`);
+  }
+
+  removeItem(key: string): void {
+    this.storage.delete(key);
+    this.logger?.debug(`MemoryStorage.removeItem("${key}"): success`);
+  }
+}

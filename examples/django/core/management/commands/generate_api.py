@@ -5,7 +5,7 @@ Usage:
     python manage.py generate_api
 
 Workflow:
-    1. Generate OpenAPI clients (django-revolution)
+    1. Generate OpenAPI clients (django-cfg)
     2. Copy TypeScript to ../api/generated (one level up from django/)
 """
 
@@ -35,10 +35,10 @@ class Command(BaseCommand):
 
         # base_dir is django-cfg-example/django
         base_dir = Path(__file__).resolve().parent.parent.parent.parent
-        ts_source = base_dir / "openapi" / "clients" / "typescript"
+        ts_source = base_dir / "openapi" / "clients"
 
         # Target: one level up from django/ -> django-cfg-example/api/generated
-        target = base_dir.parent / "api" / "generated"
+        target = base_dir.parent / "generated"
 
         if not ts_source.exists():
             self.stdout.write(self.style.ERROR(f'❌ TypeScript source not found: {ts_source}'))

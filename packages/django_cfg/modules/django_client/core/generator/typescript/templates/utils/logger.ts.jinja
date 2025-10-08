@@ -1,0 +1,259 @@
+/**
+ * API Logger with Consola
+ * Beautiful console logging for API requests and responses
+ *
+ * Installation:
+ *   npm install consola
+ */
+
+import { type ConsolaInstance, createConsola } from 'consola';
+
+/**
+ * Request log data
+ */
+export interface RequestLog {
+  method: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: any;
+  timestamp: number;
+}
+
+/**
+ * Response log data
+ */
+export interface ResponseLog {
+  status: number;
+  statusText: string;
+  data?: any;
+  duration: number;
+  timestamp: number;
+}
+
+/**
+ * Error log data
+ */
+export interface ErrorLog {
+  message: string;
+  statusCode?: number;
+  fieldErrors?: Record<string, string[]>;
+  duration: number;
+  timestamp: number;
+}
+
+/**
+ * Logger configuration
+ */
+export interface LoggerConfig {
+  /** Enable logging */
+  enabled: boolean;
+  /** Log requests */
+  logRequests: boolean;
+  /** Log responses */
+  logResponses: boolean;
+  /** Log errors */
+  logErrors: boolean;
+  /** Log request/response bodies */
+  logBodies: boolean;
+  /** Log headers (excluding sensitive ones) */
+  logHeaders: boolean;
+  /** Custom consola instance */
+  consola?: ConsolaInstance;
+}
+
+/**
+ * Default logger configuration
+ */
+const DEFAULT_CONFIG: LoggerConfig = {
+  enabled: process.env.NODE_ENV !== 'production',
+  logRequests: true,
+  logResponses: true,
+  logErrors: true,
+  logBodies: true,
+  logHeaders: false,
+};
+
+/**
+ * Sensitive header names to filter out
+ */
+const SENSITIVE_HEADERS = [
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'x-api-key',
+  'x-csrf-token',
+];
+
+/**
+ * API Logger class
+ */
+export class APILogger {
+  private config: LoggerConfig;
+  private consola: ConsolaInstance;
+
+  constructor(config: Partial<LoggerConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.consola = config.consola || createConsola({
+      level: this.config.enabled ? 4 : 0,
+    });
+  }
+
+  /**
+   * Enable logging
+   */
+  enable(): void {
+    this.config.enabled = true;
+  }
+
+  /**
+   * Disable logging
+   */
+  disable(): void {
+    this.config.enabled = false;
+  }
+
+  /**
+   * Update configuration
+   */
+  setConfig(config: Partial<LoggerConfig>): void {
+    this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * Filter sensitive headers
+   */
+  private filterHeaders(headers?: Record<string, string>): Record<string, string> {
+    if (!headers) return {};
+
+    const filtered: Record<string, string> = {};
+    Object.keys(headers).forEach((key) => {
+      const lowerKey = key.toLowerCase();
+      if (SENSITIVE_HEADERS.includes(lowerKey)) {
+        filtered[key] = '***';
+      } else {
+        filtered[key] = headers[key] || '';
+      }
+    });
+
+    return filtered;
+  }
+
+  /**
+   * Log request
+   */
+  logRequest(request: RequestLog): void {
+    if (!this.config.enabled || !this.config.logRequests) return;
+
+    const { method, url, headers, body } = request;
+
+    this.consola.start(`${method} ${url}`);
+
+    if (this.config.logHeaders && headers) {
+      this.consola.debug('Headers:', this.filterHeaders(headers));
+    }
+
+    if (this.config.logBodies && body) {
+      this.consola.debug('Body:', body);
+    }
+  }
+
+  /**
+   * Log response
+   */
+  logResponse(request: RequestLog, response: ResponseLog): void {
+    if (!this.config.enabled || !this.config.logResponses) return;
+
+    const { method, url } = request;
+    const { status, statusText, data, duration } = response;
+
+    const statusColor = status >= 500 ? 'red'
+      : status >= 400 ? 'yellow'
+      : status >= 300 ? 'cyan'
+      : 'green';
+
+    this.consola.success(
+      `${method} ${url} ${status} ${statusText} (${duration}ms)`
+    );
+
+    if (this.config.logBodies && data) {
+      this.consola.debug('Response:', data);
+    }
+  }
+
+  /**
+   * Log error
+   */
+  logError(request: RequestLog, error: ErrorLog): void {
+    if (!this.config.enabled || !this.config.logErrors) return;
+
+    const { method, url } = request;
+    const { message, statusCode, fieldErrors, duration } = error;
+
+    this.consola.error(
+      `${method} ${url} ${statusCode || 'Network'} Error (${duration}ms)`
+    );
+
+    this.consola.error('Message:', message);
+
+    if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+      this.consola.error('Field Errors:');
+      Object.entries(fieldErrors).forEach(([field, errors]) => {
+        errors.forEach((err) => {
+          this.consola.error(`  • ${field}: ${err}`);
+        });
+      });
+    }
+  }
+
+  /**
+   * Log general info
+   */
+  info(message: string, ...args: any[]): void {
+    if (!this.config.enabled) return;
+    this.consola.info(message, ...args);
+  }
+
+  /**
+   * Log warning
+   */
+  warn(message: string, ...args: any[]): void {
+    if (!this.config.enabled) return;
+    this.consola.warn(message, ...args);
+  }
+
+  /**
+   * Log error
+   */
+  error(message: string, ...args: any[]): void {
+    if (!this.config.enabled) return;
+    this.consola.error(message, ...args);
+  }
+
+  /**
+   * Log debug
+   */
+  debug(message: string, ...args: any[]): void {
+    if (!this.config.enabled) return;
+    this.consola.debug(message, ...args);
+  }
+
+  /**
+   * Log success
+   */
+  success(message: string, ...args: any[]): void {
+    if (!this.config.enabled) return;
+    this.consola.success(message, ...args);
+  }
+
+  /**
+   * Create a sub-logger with prefix
+   */
+  withTag(tag: string): ConsolaInstance {
+    return this.consola.withTag(tag);
+  }
+}
+
+/**
+ * Default logger instance
+ */
+export const defaultLogger = new APILogger();

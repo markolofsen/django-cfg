@@ -1,0 +1,9 @@
+def {{ method_name }}({{ params | join(', ') }}) -> {{ return_type }}:
+{% if docstring %}
+    """
+{{ docstring | indent(4, first=True) }}
+    """
+{% endif %}
+{% for line in body_lines %}
+    {{ line }}
+{% endfor %}
