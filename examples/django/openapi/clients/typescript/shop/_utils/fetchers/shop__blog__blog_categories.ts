@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /blog/categories/
  */
-export async function getBlogCategories(
+export async function getBlogCategoriesList(
   params?: { ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedBlogCategoryList> {
@@ -79,7 +79,7 @@ export async function createBlogCategories(
  * @method GET
  * @path /blog/categories/{slug}/
  */
-export async function getBlogCategorie(
+export async function getBlogCategoriesById(
   slug: string,
   client?: API
 ): Promise<BlogCategory> {

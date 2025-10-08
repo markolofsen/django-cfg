@@ -180,24 +180,23 @@ class HooksGenerator:
         Convert operation to hook name.
 
         Examples:
-            users_list (GET) -> useUsers
-            users_retrieve (GET) -> useUser
-            users_create (POST) -> useCreateUser
-            users_update (PUT) -> useUpdateUser
-            users_partial_update (PATCH) -> useUpdateUser
-            users_destroy (DELETE) -> useDeleteUser
+            users_list (GET) -> useUsersList
+            users_retrieve (GET) -> useUsersById
+            users_create (POST) -> useCreateUsers
+            users_update (PUT) -> useUpdateUsers
+            users_partial_update (PATCH) -> usePartialUpdateUsers
+            users_destroy (DELETE) -> useDeleteUsers
         """
         op_id = operation.operation_id
 
+        # Keep full resource name and add suffixes for uniqueness
         if op_id.endswith("_list"):
-            resource = op_id.replace("_list", "")
-            # Plural form
-            return f"use{self._to_pascal_case(resource)}"
+            resource = op_id.removesuffix("_list")
+            return f"use{self._to_pascal_case(resource)}List"
         elif op_id.endswith("_retrieve"):
-            resource = op_id.replace("_retrieve", "")
-            # Singular form (remove trailing 's')
-            resource_singular = resource.rstrip('s') if resource.endswith('s') and len(resource) > 1 else resource
-            return f"use{self._to_pascal_case(resource_singular)}"
+            resource = op_id.removesuffix("_retrieve")
+            # Add ById suffix to distinguish from list
+            return f"use{self._to_pascal_case(resource)}ById"
         elif op_id.endswith("_create"):
             resource = op_id.removesuffix("_create")
             return f"useCreate{self._to_pascal_case(resource)}"
@@ -215,18 +214,17 @@ class HooksGenerator:
             return f"use{self._to_pascal_case(op_id)}"
 
     def _operation_to_fetcher_name(self, operation: IROperationObject) -> str:
-        """Get corresponding fetcher function name."""
+        """Get corresponding fetcher function name (must match fetchers_generator logic)."""
         op_id = operation.operation_id
 
-        # Remove only suffix, not all occurrences (same logic as fetchers_generator)
+        # Must match fetchers_generator._operation_to_function_name() exactly
         if op_id.endswith("_list"):
             resource = op_id.removesuffix("_list")
-            return f"get{self._to_pascal_case(resource)}"
+            return f"get{self._to_pascal_case(resource)}List"
         elif op_id.endswith("_retrieve"):
             resource = op_id.removesuffix("_retrieve")
-            # Singular
-            resource_singular = resource.rstrip('s') if resource.endswith('s') else resource
-            return f"get{self._to_pascal_case(resource_singular)}"
+            # Add ById suffix to match fetchers_generator
+            return f"get{self._to_pascal_case(resource)}ById"
         elif op_id.endswith("_create"):
             resource = op_id.removesuffix("_create")
             return f"create{self._to_pascal_case(resource)}"
@@ -240,7 +238,7 @@ class HooksGenerator:
             resource = op_id.removesuffix("_destroy")
             return f"delete{self._to_pascal_case(resource)}"
         else:
-            return f"{operation.http_method.lower()}{self._to_pascal_case(op_id)}"
+            return self._to_camel_case(op_id)
 
     def _get_param_info(self, operation: IROperationObject) -> dict:
         """
@@ -390,6 +388,11 @@ class HooksGenerator:
     def _to_pascal_case(self, snake_str: str) -> str:
         """Convert snake_case to PascalCase."""
         return ''.join(word.capitalize() for word in snake_str.split('_'))
+
+    def _to_camel_case(self, snake_str: str) -> str:
+        """Convert snake_case to camelCase."""
+        components = snake_str.split('_')
+        return components[0] + ''.join(x.capitalize() for x in components[1:])
 
     def generate_tag_hooks_file(
         self,

@@ -16,8 +16,8 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
         "x-django-metadata": {
             "group": "cfg",
             "apps": [
-                "django_cfg_support",
                 "django_cfg_accounts",
+                "django_cfg_support",
                 "django_cfg_newsletter",
                 "django_cfg_leads",
                 "django_cfg_agents",

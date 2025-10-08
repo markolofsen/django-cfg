@@ -37,10 +37,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_newsletter/subscriptions/
  */
-export function useDjangoCfgNewsletterSubscriptions(params?: { page?: number; page_size?: number }) {
+export function useDjangoCfgNewsletterSubscriptionsList(params?: { page?: number; page_size?: number }) {
   return useSWR<PaginatedNewsletterSubscriptionList>(
     params ? ['django-cfg-newsletter-subscriptions', params] : 'django-cfg-newsletter-subscriptions',
-    () => Fetchers.getDjangoCfgNewsletterSubscriptions(params)
+    () => Fetchers.getDjangoCfgNewsletterSubscriptionsList(params)
   )
 }
 

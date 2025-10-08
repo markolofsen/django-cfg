@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /blog/tags/
  */
-export async function getBlogTags(
+export async function getBlogTagsList(
   params?: { ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedTagList> {

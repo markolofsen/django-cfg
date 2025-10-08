@@ -79,7 +79,7 @@ class DashboardManager(BaseCfgModule):
         if self.should_enable_tasks():
             operations_items.extend([
                 NavigationItem(title="Background Tasks", icon=Icons.TASK, link="/admin/django_dramatiq/task/"),
-                NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/admin/django_cfg_tasks/admin/dashboard/"),
+                NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/tasks/admin/dashboard/"),
             ])
 
         # Maintenance Mode (if enabled)
@@ -194,7 +194,7 @@ class DashboardManager(BaseCfgModule):
 
                 # Main dashboard (always show if payments app enabled)
                 payments_items.append(
-                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/admin/django_cfg_payments/admin/")
+                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/payments/admin/")
                 )
 
                 # Always show basic admin models (even if payments functionality is disabled)
@@ -208,13 +208,13 @@ class DashboardManager(BaseCfgModule):
                 # Add advanced features only if payments functionality is enabled
                 if config.enabled:
                     # payments_items.append(
-                    #     NavigationItem(title="Webhook Dashboard", icon=Icons.WEBHOOK, link="/cfg/admin/django_cfg_payments/admin/webhooks/")
+                    #     NavigationItem(title="Webhook Dashboard", icon=Icons.WEBHOOK, link="/cfg/payments/admin/webhooks/")
                     # )
                     # payments_items.append(
-                    #     NavigationItem(title="Create Payment", icon=Icons.ADD, link="/cfg/admin/django_cfg_payments/admin/payments/create/")
+                    #     NavigationItem(title="Create Payment", icon=Icons.ADD, link="/cfg/payments/admin/payments/create/")
                     # )
                     # payments_items.append(
-                    #     NavigationItem(title="Currency Converter", icon=Icons.CURRENCY_EXCHANGE, link="/cfg/admin/django_cfg_payments/admin/tools/converter/")
+                    #     NavigationItem(title="Currency Converter", icon=Icons.CURRENCY_EXCHANGE, link="/cfg/payments/admin/tools/converter/")
                     # )
 
                     # Show subscription features only if enabled
@@ -246,7 +246,7 @@ class DashboardManager(BaseCfgModule):
             except Exception:
                 # Fallback
                 payments_items = [
-                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/admin/django_cfg_payments/admin/"),
+                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/payments/admin/"),
                     NavigationItem(title="Universal Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/payments/universalpayment/"),
                 ]
 

@@ -36,7 +36,7 @@ import { getAPIInstance } from '../../api-instance'
 import type { API } from '../../index'
 
 /**
- * getDjangoCfgLeadsLeads
+ * getDjangoCfgLeadsLeadsList
  *
  * ViewSet for Lead model.
  * 
@@ -45,7 +45,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /django_cfg_leads/leads/
  */
-export async function getDjangoCfgLeadsLeads(
+export async function getDjangoCfgLeadsLeadsList(
   params?: { page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedLeadSubmissionList> {
@@ -76,7 +76,7 @@ export async function createDjangoCfgLeadsLeads(
 }
 
 /**
- * getDjangoCfgLeadsLead
+ * getDjangoCfgLeadsLeadsById
  *
  * ViewSet for Lead model.
  * 
@@ -85,7 +85,7 @@ export async function createDjangoCfgLeadsLeads(
  * @method GET
  * @path /django_cfg_leads/leads/{id}/
  */
-export async function getDjangoCfgLeadsLead(
+export async function getDjangoCfgLeadsLeadsById(
   id: number,
   client?: API
 ): Promise<LeadSubmission> {

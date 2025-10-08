@@ -113,14 +113,14 @@ export async function createTasksApiQueuesManage(
 }
 
 /**
- * getTasksApiQueuesStatu
+ * getTasksApiQueuesStatusById
  *
  * Get current status of all queues.
  *
  * @method GET
  * @path /tasks/api/queues/status/
  */
-export async function getTasksApiQueuesStatu(
+export async function getTasksApiQueuesStatusById(
   client?: API
 ): Promise<QueueStatus> {
   const api = client || getAPIInstance()
@@ -148,14 +148,14 @@ export async function createTasksApiSimulate(
 }
 
 /**
- * getTasksApiTasksList
+ * getTasksApiTasksListById
  *
  * Get paginated task list with filtering.
  *
  * @method GET
  * @path /tasks/api/tasks/list/
  */
-export async function getTasksApiTasksList(
+export async function getTasksApiTasksListById(
   client?: API
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
@@ -165,14 +165,14 @@ export async function getTasksApiTasksList(
 }
 
 /**
- * getTasksApiTasksStat
+ * getTasksApiTasksStatsById
  *
  * Get task execution statistics.
  *
  * @method GET
  * @path /tasks/api/tasks/stats/
  */
-export async function getTasksApiTasksStat(
+export async function getTasksApiTasksStatsById(
   client?: API
 ): Promise<TaskStatistics> {
   const api = client || getAPIInstance()
@@ -182,14 +182,14 @@ export async function getTasksApiTasksStat(
 }
 
 /**
- * getTasksApiWorkersList
+ * getTasksApiWorkersListById
  *
  * Get detailed list of workers.
  *
  * @method GET
  * @path /tasks/api/workers/list/
  */
-export async function getTasksApiWorkersList(
+export async function getTasksApiWorkersListById(
   client?: API
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()

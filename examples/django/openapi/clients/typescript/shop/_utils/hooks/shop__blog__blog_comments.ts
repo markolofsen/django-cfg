@@ -36,10 +36,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /blog/comments/
  */
-export function useBlogComments(post_slug: string, params?: { author?: number; is_approved?: boolean; ordering?: string; page?: number; page_size?: number; parent?: number; post?: number }) {
+export function useBlogCommentsList(post_slug: string, params?: { author?: number; is_approved?: boolean; ordering?: string; page?: number; page_size?: number; parent?: number; post?: number }) {
   return useSWR<PaginatedCommentList>(
     ['blog-comments', post_slug],
-    () => Fetchers.getBlogComments(post_slug, params)
+    () => Fetchers.getBlogCommentsList(post_slug, params)
   )
 }
 
@@ -49,10 +49,10 @@ export function useBlogComments(post_slug: string, params?: { author?: number; i
  * @method GET
  * @path /blog/comments/{id}/
  */
-export function useBlogComment(id: number) {
+export function useBlogCommentsById(id: number) {
   return useSWR<Comment>(
     ['blog-comment', id],
-    () => Fetchers.getBlogComment(id)
+    () => Fetchers.getBlogCommentsById(id)
   )
 }
 
@@ -62,10 +62,10 @@ export function useBlogComment(id: number) {
  * @method GET
  * @path /blog/posts/{post_slug}/comments/
  */
-export function useBlogPostsComments(post_slug: string, params?: { author?: number; is_approved?: boolean; ordering?: string; page?: number; page_size?: number; parent?: number; post?: number }) {
+export function useBlogPostsCommentsList(post_slug: string, params?: { author?: number; is_approved?: boolean; ordering?: string; page?: number; page_size?: number; parent?: number; post?: number }) {
   return useSWR<PaginatedCommentList>(
     ['blog-posts-comments', post_slug],
-    () => Fetchers.getBlogPostsComments(post_slug, params)
+    () => Fetchers.getBlogPostsCommentsList(post_slug, params)
   )
 }
 
@@ -75,10 +75,10 @@ export function useBlogPostsComments(post_slug: string, params?: { author?: numb
  * @method GET
  * @path /blog/posts/{post_slug}/comments/{id}/
  */
-export function useBlogPostsComment(id: number, post_slug: string) {
+export function useBlogPostsCommentsById(id: number, post_slug: string) {
   return useSWR<Comment>(
     ['blog-posts-comment', id],
-    () => Fetchers.getBlogPostsComment(id, post_slug)
+    () => Fetchers.getBlogPostsCommentsById(id, post_slug)
   )
 }
 

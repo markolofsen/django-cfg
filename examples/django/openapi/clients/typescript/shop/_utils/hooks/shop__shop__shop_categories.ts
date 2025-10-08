@@ -34,10 +34,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /shop/categories/
  */
-export function useShopCategories(params?: { ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function useShopCategoriesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedShopCategoryList>(
     params ? ['shop-categories', params] : 'shop-categories',
-    () => Fetchers.getShopCategories(params)
+    () => Fetchers.getShopCategoriesList(params)
   )
 }
 
@@ -47,9 +47,9 @@ export function useShopCategories(params?: { ordering?: string; page?: number; p
  * @method GET
  * @path /shop/categories/{slug}/
  */
-export function useShopCategorie(slug: string) {
+export function useShopCategoriesById(slug: string) {
   return useSWR<ShopCategory>(
     ['shop-categorie', slug],
-    () => Fetchers.getShopCategorie(slug)
+    () => Fetchers.getShopCategoriesById(slug)
   )
 }

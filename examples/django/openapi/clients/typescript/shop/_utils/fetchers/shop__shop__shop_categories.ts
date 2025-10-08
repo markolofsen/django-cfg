@@ -42,7 +42,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /shop/categories/
  */
-export async function getShopCategories(
+export async function getShopCategoriesList(
   params?: { ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedShopCategoryList> {
@@ -60,7 +60,7 @@ export async function getShopCategories(
  * @method GET
  * @path /shop/categories/{slug}/
  */
-export async function getShopCategorie(
+export async function getShopCategoriesById(
   slug: string,
   client?: API
 ): Promise<ShopCategory> {

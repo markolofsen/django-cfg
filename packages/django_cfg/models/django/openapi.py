@@ -57,8 +57,8 @@ class OpenAPIClientConfig(OpenAPIConfig):
         description="Schema path prefix for DRF Spectacular"
     )
     drf_enable_browsable_api: bool = Field(
-        default=False,
-        description="Enable DRF browsable API"
+        default=True,
+        description="Enable DRF browsable API with Tailwind theme"
     )
     drf_enable_throttling: bool = Field(
         default=False,
@@ -104,6 +104,8 @@ class OpenAPIClientConfig(OpenAPIConfig):
     def get_groups_with_defaults(self) -> Dict[str, OpenAPIGroupConfig]:
         """
         Get groups with django-cfg default groups automatically added.
+        
+        Automatically adds the 'cfg' group with all django-cfg apps if not explicitly defined.
 
         Returns:
             Dict of groups including default django-cfg groups
@@ -111,52 +113,13 @@ class OpenAPIClientConfig(OpenAPIConfig):
         # Convert list to dict for compatibility
         groups_dict = {group.name: group for group in self.groups}
 
-        # Add default django-cfg groups if enabled
-        try:
-            from django_cfg.modules.base import BaseCfgModule
-            base_module = BaseCfgModule()
-
-            support_enabled = base_module.is_support_enabled()
-            accounts_enabled = base_module.is_accounts_enabled()
-            newsletter_enabled = base_module.is_newsletter_enabled()
-            leads_enabled = base_module.is_leads_enabled()
-            knowbase_enabled = base_module.is_knowbase_enabled()
-            agents_enabled = base_module.is_agents_enabled()
-            tasks_enabled = base_module.should_enable_tasks()
-            payments_enabled = base_module.is_payments_enabled()
-
-            # Collect all enabled django-cfg apps for unified group
-            enabled_cfg_apps = []
-            if support_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.support")
-            if accounts_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.accounts")
-            if newsletter_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.newsletter")
-            if leads_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.leads")
-            if knowbase_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.knowbase")
-            if agents_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.agents")
-            if tasks_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.tasks")
-            if payments_enabled:
-                enabled_cfg_apps.append("django_cfg.apps.payments")
-
-            # Add unified 'cfg' group with all enabled apps
-            if enabled_cfg_apps and 'cfg' not in groups_dict:
-                groups_dict['cfg'] = OpenAPIGroupConfig(
-                    name="cfg",
-                    apps=enabled_cfg_apps,
-                    title="Django-CFG API",
-                    description="All django-cfg built-in applications",
-                )
-
-            return groups_dict
-
-        except Exception:
-            pass
+        # Add default 'cfg' group if not explicitly defined
+        if 'cfg' not in groups_dict:
+            try:
+                from django_cfg.apps.urls import get_default_cfg_group
+                groups_dict['cfg'] = get_default_cfg_group()
+            except Exception:
+                pass
 
         return groups_dict
 

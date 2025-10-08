@@ -35,10 +35,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /blog/tags/
  */
-export function useBlogTags(params?: { ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function useBlogTagsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedTagList>(
     params ? ['blog-tags', params] : 'blog-tags',
-    () => Fetchers.getBlogTags(params)
+    () => Fetchers.getBlogTagsList(params)
   )
 }
 

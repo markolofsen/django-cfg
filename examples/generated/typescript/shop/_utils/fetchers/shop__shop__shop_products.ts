@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /shop/products/
  */
-export async function getShopProducts(
+export async function getShopProductsList(
   params?: { category?: number; is_digital?: boolean; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string },
   client?: API
 ): Promise<PaginatedProductListList> {
@@ -61,7 +61,7 @@ export async function getShopProducts(
  * @method GET
  * @path /shop/products/{slug}/
  */
-export async function getShopProduct(
+export async function getShopProductsById(
   slug: string,
   client?: API
 ): Promise<ProductDetail> {
@@ -79,7 +79,7 @@ export async function getShopProduct(
  * @method GET
  * @path /shop/products/featured/
  */
-export async function getShopProductsFeatured(
+export async function getShopProductsFeaturedById(
   client?: API
 ): Promise<ProductDetail> {
   const api = client || getAPIInstance()
@@ -96,7 +96,7 @@ export async function getShopProductsFeatured(
  * @method GET
  * @path /shop/products/stats/
  */
-export async function getShopProductsStat(
+export async function getShopProductsStatsById(
   client?: API
 ): Promise<ShopStats> {
   const api = client || getAPIInstance()

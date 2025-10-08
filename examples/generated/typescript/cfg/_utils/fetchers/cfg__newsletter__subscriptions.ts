@@ -63,7 +63,7 @@ export async function createDjangoCfgNewsletterSubscribe(
  * @method GET
  * @path /django_cfg_newsletter/subscriptions/
  */
-export async function getDjangoCfgNewsletterSubscriptions(
+export async function getDjangoCfgNewsletterSubscriptionsList(
   params?: { page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedNewsletterSubscriptionList> {

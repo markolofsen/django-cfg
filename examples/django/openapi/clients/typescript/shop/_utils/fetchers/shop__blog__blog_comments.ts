@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /blog/comments/
  */
-export async function getBlogComments(
+export async function getBlogCommentsList(
   post_slug: string, params?: { author?: number; is_approved?: boolean; ordering?: string; page?: number; page_size?: number; parent?: number; post?: number },
   client?: API
 ): Promise<PaginatedCommentList> {
@@ -79,7 +79,7 @@ export async function createBlogComments(
  * @method GET
  * @path /blog/comments/{id}/
  */
-export async function getBlogComment(
+export async function getBlogCommentsById(
   id: number,
   client?: API
 ): Promise<Comment> {
@@ -151,7 +151,7 @@ export async function deleteBlogComments(
  * @method GET
  * @path /blog/posts/{post_slug}/comments/
  */
-export async function getBlogPostsComments(
+export async function getBlogPostsCommentsList(
   post_slug: string, params?: { author?: number; is_approved?: boolean; ordering?: string; page?: number; page_size?: number; parent?: number; post?: number },
   client?: API
 ): Promise<PaginatedCommentList> {
@@ -187,7 +187,7 @@ export async function createBlogPostsComments(
  * @method GET
  * @path /blog/posts/{post_slug}/comments/{id}/
  */
-export async function getBlogPostsComment(
+export async function getBlogPostsCommentsById(
   id: number, post_slug: string,
   client?: API
 ): Promise<Comment> {

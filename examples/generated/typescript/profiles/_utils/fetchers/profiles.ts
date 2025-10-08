@@ -46,7 +46,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /profiles/profiles/
  */
-export async function getProfilesProfiles(
+export async function getProfilesProfilesList(
   params?: { page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedUserProfileList> {
@@ -82,7 +82,7 @@ export async function createProfilesProfiles(
  * @method GET
  * @path /profiles/profiles/{id}/
  */
-export async function getProfilesProfile(
+export async function getProfilesProfilesById(
   id: number,
   client?: API
 ): Promise<UserProfile> {
@@ -154,7 +154,7 @@ export async function deleteProfilesProfiles(
  * @method GET
  * @path /profiles/profiles/me/
  */
-export async function getProfilesProfilesMe(
+export async function getProfilesProfilesMeById(
   client?: API
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
@@ -206,7 +206,7 @@ export async function partialUpdateProfilesProfilesMe(
  * @method GET
  * @path /profiles/profiles/stats/
  */
-export async function getProfilesProfilesStat(
+export async function getProfilesProfilesStatsById(
   client?: API
 ): Promise<UserProfileStats> {
   const api = client || getAPIInstance()

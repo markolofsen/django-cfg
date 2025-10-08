@@ -35,10 +35,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /shop/products/
  */
-export function useShopProducts(params?: { category?: number; is_digital?: boolean; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string }) {
+export function useShopProductsList(params?: { category?: number; is_digital?: boolean; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string }) {
   return useSWR<PaginatedProductListList>(
     params ? ['shop-products', params] : 'shop-products',
-    () => Fetchers.getShopProducts(params)
+    () => Fetchers.getShopProductsList(params)
   )
 }
 
@@ -48,10 +48,10 @@ export function useShopProducts(params?: { category?: number; is_digital?: boole
  * @method GET
  * @path /shop/products/{slug}/
  */
-export function useShopProduct(slug: string) {
+export function useShopProductsById(slug: string) {
   return useSWR<ProductDetail>(
     ['shop-product', slug],
-    () => Fetchers.getShopProduct(slug)
+    () => Fetchers.getShopProductsById(slug)
   )
 }
 
@@ -61,10 +61,10 @@ export function useShopProduct(slug: string) {
  * @method GET
  * @path /shop/products/featured/
  */
-export function useShopProductsFeatured() {
+export function useShopProductsFeaturedById() {
   return useSWR<ProductDetail>(
     'shop-products-featured',
-    () => Fetchers.getShopProductsFeatured()
+    () => Fetchers.getShopProductsFeaturedById()
   )
 }
 
@@ -74,9 +74,9 @@ export function useShopProductsFeatured() {
  * @method GET
  * @path /shop/products/stats/
  */
-export function useShopProductsStat() {
+export function useShopProductsStatsById() {
   return useSWR<ShopStats>(
     'shop-products-stat',
-    () => Fetchers.getShopProductsStat()
+    () => Fetchers.getShopProductsStatsById()
   )
 }

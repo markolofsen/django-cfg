@@ -39,10 +39,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_support/tickets/
  */
-export function useDjangoCfgSupportTickets() {
+export function useDjangoCfgSupportTicketsList() {
   return useSWR<any>(
     'django-cfg-support-tickets',
-    () => Fetchers.getDjangoCfgSupportTickets()
+    () => Fetchers.getDjangoCfgSupportTicketsList()
   )
 }
 
@@ -51,10 +51,10 @@ export function useDjangoCfgSupportTickets() {
  * @method GET
  * @path /django_cfg_support/tickets/{ticket_uuid}/messages/
  */
-export function useDjangoCfgSupportTicketsMessages(ticket_uuid: string) {
+export function useDjangoCfgSupportTicketsMessagesList(ticket_uuid: string) {
   return useSWR<any>(
     ['django-cfg-support-tickets-messages', ticket_uuid],
-    () => Fetchers.getDjangoCfgSupportTicketsMessages(ticket_uuid)
+    () => Fetchers.getDjangoCfgSupportTicketsMessagesList(ticket_uuid)
   )
 }
 
@@ -63,10 +63,10 @@ export function useDjangoCfgSupportTicketsMessages(ticket_uuid: string) {
  * @method GET
  * @path /django_cfg_support/tickets/{ticket_uuid}/messages/{uuid}/
  */
-export function useDjangoCfgSupportTicketsMessage(ticket_uuid: string, uuid: string) {
+export function useDjangoCfgSupportTicketsMessagesById(ticket_uuid: string, uuid: string) {
   return useSWR<Message>(
     ['django-cfg-support-tickets-message', ticket_uuid],
-    () => Fetchers.getDjangoCfgSupportTicketsMessage(ticket_uuid, uuid)
+    () => Fetchers.getDjangoCfgSupportTicketsMessagesById(ticket_uuid, uuid)
   )
 }
 
@@ -75,10 +75,10 @@ export function useDjangoCfgSupportTicketsMessage(ticket_uuid: string, uuid: str
  * @method GET
  * @path /django_cfg_support/tickets/{uuid}/
  */
-export function useDjangoCfgSupportTicket(uuid: string) {
+export function useDjangoCfgSupportTicketsById(uuid: string) {
   return useSWR<Ticket>(
     ['django-cfg-support-ticket', uuid],
-    () => Fetchers.getDjangoCfgSupportTicket(uuid)
+    () => Fetchers.getDjangoCfgSupportTicketsById(uuid)
   )
 }
 
