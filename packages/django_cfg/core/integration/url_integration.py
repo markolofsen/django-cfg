@@ -10,18 +10,17 @@ from django_cfg.core.environment import EnvironmentDetector
 from django.conf import settings
 
 
-def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/") -> List[URLPattern]:
+def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     """
     Automatically add django_cfg URLs and all integrations to the main URL configuration.
     
     This function adds:
-    - Django CFG management URLs (cfg/)
+    - Django CFG management URLs
     - Django Client URLs (if available)
     - Startup information display (based on config)
     
     Args:
         urlpatterns: Existing URL patterns list
-        cfg_prefix: URL prefix for django_cfg endpoints (default: "cfg/")
         
     Returns:
         Updated URL patterns list with all URLs added
@@ -35,17 +34,13 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/")
             path("admin/", admin.site.urls),
         ]
         
-        # Automatically adds:
-        # - path("cfg/", include("django_cfg.apps.urls"))
-        # - Django Client URLs (if available)
-        # - Startup info display (based on config.startup_info_mode)
+        # Automatically adds django_cfg URLs with proper prefixes
         urlpatterns = add_django_cfg_urls(urlpatterns)
     """
     # Add django_cfg API URLs
-    # Note: Django Client URLs are included in django_cfg.apps.urls
-    # at /cfg/openapi/{group}/schema/ to avoid conflicts
+    # Note: URL prefixes (cfg/, health/, etc.) are defined in django_cfg.apps.urls
     new_patterns = urlpatterns + [
-        path(cfg_prefix, include("django_cfg.apps.urls")),
+        path("", include("django_cfg.apps.urls")),
     ]
 
     # Add django-browser-reload URLs in development (if installed)

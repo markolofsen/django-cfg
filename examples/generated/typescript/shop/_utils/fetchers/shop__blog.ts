@@ -73,14 +73,14 @@ export async function partialUpdateBlogPosts(
 }
 
 /**
- * getBlogTag
+ * getBlogTagsById
  *
  * ViewSet for blog tags.
  *
  * @method GET
  * @path /blog/tags/{slug}/
  */
-export async function getBlogTag(
+export async function getBlogTagsById(
   slug: string,
   client?: API
 ): Promise<Tag> {

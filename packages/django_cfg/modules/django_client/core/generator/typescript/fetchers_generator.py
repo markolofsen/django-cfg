@@ -110,24 +110,24 @@ class FetchersGenerator:
         Convert operation to function name.
 
         Examples:
-            users_list (GET) -> getUsers
-            users_retrieve (GET) -> getUser
-            users_create (POST) -> createUser
-            users_update (PUT) -> updateUser
-            users_partial_update (PATCH) -> updateUser
-            users_destroy (DELETE) -> deleteUser
+            users_list (GET) -> getUsersList
+            users_retrieve (GET) -> getUsersById
+            users_create (POST) -> createUsers
+            users_update (PUT) -> updateUsers
+            users_partial_update (PATCH) -> partialUpdateUsers
+            users_destroy (DELETE) -> deleteUsers
         """
         # Remove tag prefix from operation_id
         op_id = operation.operation_id
 
-        # Handle common patterns (remove only suffix, not all occurrences)
+        # Handle common patterns - keep full resource name for uniqueness
         if op_id.endswith("_list"):
             resource = op_id.removesuffix("_list")
-            return f"get{self._to_pascal_case(resource)}"
+            return f"get{self._to_pascal_case(resource)}List"
         elif op_id.endswith("_retrieve"):
             resource = op_id.removesuffix("_retrieve")
-            # Singular
-            return f"get{self._to_pascal_case(resource).rstrip('s')}"
+            # Add ById suffix to distinguish from list
+            return f"get{self._to_pascal_case(resource)}ById"
         elif op_id.endswith("_create"):
             resource = op_id.removesuffix("_create")
             return f"create{self._to_pascal_case(resource)}"

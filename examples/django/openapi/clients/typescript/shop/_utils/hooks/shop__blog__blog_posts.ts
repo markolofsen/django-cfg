@@ -41,10 +41,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /blog/posts/
  */
-export function useBlogPosts(params?: { author?: number; category?: number; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tags?: any[] }) {
+export function useBlogPostsList(params?: { author?: number; category?: number; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tags?: any[] }) {
   return useSWR<PaginatedPostListList>(
     params ? ['blog-posts', params] : 'blog-posts',
-    () => Fetchers.getBlogPosts(params)
+    () => Fetchers.getBlogPostsList(params)
   )
 }
 
@@ -54,10 +54,10 @@ export function useBlogPosts(params?: { author?: number; category?: number; is_f
  * @method GET
  * @path /blog/posts/{slug}/
  */
-export function useBlogPost(slug: string) {
+export function useBlogPostsById(slug: string) {
   return useSWR<PostDetail>(
     ['blog-post', slug],
-    () => Fetchers.getBlogPost(slug)
+    () => Fetchers.getBlogPostsById(slug)
   )
 }
 
@@ -67,10 +67,10 @@ export function useBlogPost(slug: string) {
  * @method GET
  * @path /blog/posts/{slug}/likes/
  */
-export function useBlogPostsLikes(slug: string, params?: { author?: number; category?: number; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tags?: any[] }) {
+export function useBlogPostsLikesList(slug: string, params?: { author?: number; category?: number; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tags?: any[] }) {
   return useSWR<PaginatedPostLikeList>(
     ['blog-posts-likes', slug],
-    () => Fetchers.getBlogPostsLikes(slug, params)
+    () => Fetchers.getBlogPostsLikesList(slug, params)
   )
 }
 
@@ -80,10 +80,10 @@ export function useBlogPostsLikes(slug: string, params?: { author?: number; cate
  * @method GET
  * @path /blog/posts/featured/
  */
-export function useBlogPostsFeatured() {
+export function useBlogPostsFeaturedById() {
   return useSWR<PostDetail>(
     'blog-posts-featured',
-    () => Fetchers.getBlogPostsFeatured()
+    () => Fetchers.getBlogPostsFeaturedById()
   )
 }
 
@@ -93,10 +93,10 @@ export function useBlogPostsFeatured() {
  * @method GET
  * @path /blog/posts/stats/
  */
-export function useBlogPostsStat() {
+export function useBlogPostsStatsById() {
   return useSWR<BlogStats>(
     'blog-posts-stat',
-    () => Fetchers.getBlogPostsStat()
+    () => Fetchers.getBlogPostsStatsById()
   )
 }
 

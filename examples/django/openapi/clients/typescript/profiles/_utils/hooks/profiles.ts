@@ -40,10 +40,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /profiles/profiles/
  */
-export function useProfilesProfiles(params?: { page?: number; page_size?: number }) {
+export function useProfilesProfilesList(params?: { page?: number; page_size?: number }) {
   return useSWR<PaginatedUserProfileList>(
     params ? ['profiles-profiles', params] : 'profiles-profiles',
-    () => Fetchers.getProfilesProfiles(params)
+    () => Fetchers.getProfilesProfilesList(params)
   )
 }
 
@@ -53,10 +53,10 @@ export function useProfilesProfiles(params?: { page?: number; page_size?: number
  * @method GET
  * @path /profiles/profiles/{id}/
  */
-export function useProfilesProfile(id: number) {
+export function useProfilesProfilesById(id: number) {
   return useSWR<UserProfile>(
     ['profiles-profile', id],
-    () => Fetchers.getProfilesProfile(id)
+    () => Fetchers.getProfilesProfilesById(id)
   )
 }
 
@@ -66,10 +66,10 @@ export function useProfilesProfile(id: number) {
  * @method GET
  * @path /profiles/profiles/me/
  */
-export function useProfilesProfilesMe() {
+export function useProfilesProfilesMeById() {
   return useSWR<UserProfile>(
     'profiles-profiles-me',
-    () => Fetchers.getProfilesProfilesMe()
+    () => Fetchers.getProfilesProfilesMeById()
   )
 }
 
@@ -79,10 +79,10 @@ export function useProfilesProfilesMe() {
  * @method GET
  * @path /profiles/profiles/stats/
  */
-export function useProfilesProfilesStat() {
+export function useProfilesProfilesStatsById() {
   return useSWR<UserProfileStats>(
     'profiles-profiles-stat',
-    () => Fetchers.getProfilesProfilesStat()
+    () => Fetchers.getProfilesProfilesStatsById()
   )
 }
 

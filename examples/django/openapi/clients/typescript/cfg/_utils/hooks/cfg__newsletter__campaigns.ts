@@ -37,10 +37,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_newsletter/campaigns/
  */
-export function useDjangoCfgNewsletterCampaigns(params?: { page?: number; page_size?: number }) {
+export function useDjangoCfgNewsletterCampaignsList(params?: { page?: number; page_size?: number }) {
   return useSWR<PaginatedNewsletterCampaignList>(
     params ? ['django-cfg-newsletter-campaigns', params] : 'django-cfg-newsletter-campaigns',
-    () => Fetchers.getDjangoCfgNewsletterCampaigns(params)
+    () => Fetchers.getDjangoCfgNewsletterCampaignsList(params)
   )
 }
 
@@ -50,10 +50,10 @@ export function useDjangoCfgNewsletterCampaigns(params?: { page?: number; page_s
  * @method GET
  * @path /django_cfg_newsletter/campaigns/{id}/
  */
-export function useDjangoCfgNewsletterCampaign(id: number) {
+export function useDjangoCfgNewsletterCampaignsById(id: number) {
   return useSWR<NewsletterCampaign>(
     ['django-cfg-newsletter-campaign', id],
-    () => Fetchers.getDjangoCfgNewsletterCampaign(id)
+    () => Fetchers.getDjangoCfgNewsletterCampaignsById(id)
   )
 }
 

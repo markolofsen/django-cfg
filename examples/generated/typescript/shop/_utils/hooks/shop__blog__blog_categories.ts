@@ -35,10 +35,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /blog/categories/
  */
-export function useBlogCategories(params?: { ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function useBlogCategoriesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedBlogCategoryList>(
     params ? ['blog-categories', params] : 'blog-categories',
-    () => Fetchers.getBlogCategories(params)
+    () => Fetchers.getBlogCategoriesList(params)
   )
 }
 
@@ -48,10 +48,10 @@ export function useBlogCategories(params?: { ordering?: string; page?: number; p
  * @method GET
  * @path /blog/categories/{slug}/
  */
-export function useBlogCategorie(slug: string) {
+export function useBlogCategoriesById(slug: string) {
   return useSWR<BlogCategory>(
     ['blog-categorie', slug],
-    () => Fetchers.getBlogCategorie(slug)
+    () => Fetchers.getBlogCategoriesById(slug)
   )
 }
 

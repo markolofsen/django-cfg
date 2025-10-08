@@ -37,10 +37,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /payments/webhooks/{provider}/
  */
-export function usePaymentsWebhook(provider: string) {
+export function usePaymentsWebhooksById(provider: string) {
   return useSWR<WebhookResponse>(
     ['payments-webhook', provider],
-    () => Fetchers.getPaymentsWebhook(provider)
+    () => Fetchers.getPaymentsWebhooksById(provider)
   )
 }
 
@@ -50,10 +50,10 @@ export function usePaymentsWebhook(provider: string) {
  * @method GET
  * @path /payments/webhooks/health/
  */
-export function usePaymentsWebhooksHealth() {
+export function usePaymentsWebhooksHealthById() {
   return useSWR<WebhookHealth>(
     'payments-webhooks-health',
-    () => Fetchers.getPaymentsWebhooksHealth()
+    () => Fetchers.getPaymentsWebhooksHealthById()
   )
 }
 
@@ -63,10 +63,10 @@ export function usePaymentsWebhooksHealth() {
  * @method GET
  * @path /payments/webhooks/providers/
  */
-export function usePaymentsWebhooksProvider() {
+export function usePaymentsWebhooksProvidersById() {
   return useSWR<SupportedProviders>(
     'payments-webhooks-provider',
-    () => Fetchers.getPaymentsWebhooksProvider()
+    () => Fetchers.getPaymentsWebhooksProvidersById()
   )
 }
 
@@ -76,10 +76,10 @@ export function usePaymentsWebhooksProvider() {
  * @method GET
  * @path /payments/webhooks/stats/
  */
-export function usePaymentsWebhooksStat(params?: { days?: number }) {
+export function usePaymentsWebhooksStatsById(params?: { days?: number }) {
   return useSWR<WebhookStats>(
     params ? ['payments-webhooks-stat', params] : 'payments-webhooks-stat',
-    () => Fetchers.getPaymentsWebhooksStat(params)
+    () => Fetchers.getPaymentsWebhooksStatsById(params)
   )
 }
 

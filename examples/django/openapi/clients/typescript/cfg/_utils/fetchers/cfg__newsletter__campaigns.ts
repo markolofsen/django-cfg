@@ -45,7 +45,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /django_cfg_newsletter/campaigns/
  */
-export async function getDjangoCfgNewsletterCampaigns(
+export async function getDjangoCfgNewsletterCampaignsList(
   params?: { page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedNewsletterCampaignList> {
@@ -81,7 +81,7 @@ export async function createDjangoCfgNewsletterCampaigns(
  * @method GET
  * @path /django_cfg_newsletter/campaigns/{id}/
  */
-export async function getDjangoCfgNewsletterCampaign(
+export async function getDjangoCfgNewsletterCampaignsById(
   id: number,
   client?: API
 ): Promise<NewsletterCampaign> {

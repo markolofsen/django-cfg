@@ -39,14 +39,14 @@ import { getAPIInstance } from '../../api-instance'
 import type { API } from '../../index'
 
 /**
- * getDjangoCfgSupportTickets
+ * getDjangoCfgSupportTicketsList
  *
  * ViewSet for managing support tickets.
  *
  * @method GET
  * @path /django_cfg_support/tickets/
  */
-export async function getDjangoCfgSupportTickets(
+export async function getDjangoCfgSupportTicketsList(
   client?: API
 ): Promise<any> {
   const api = client || getAPIInstance()
@@ -74,14 +74,14 @@ export async function createDjangoCfgSupportTickets(
 }
 
 /**
- * getDjangoCfgSupportTicketsMessages
+ * getDjangoCfgSupportTicketsMessagesList
  *
  * ViewSet for managing support messages.
  *
  * @method GET
  * @path /django_cfg_support/tickets/{ticket_uuid}/messages/
  */
-export async function getDjangoCfgSupportTicketsMessages(
+export async function getDjangoCfgSupportTicketsMessagesList(
   ticket_uuid: string,
   client?: API
 ): Promise<any> {
@@ -110,14 +110,14 @@ export async function createDjangoCfgSupportTicketsMessages(
 }
 
 /**
- * getDjangoCfgSupportTicketsMessage
+ * getDjangoCfgSupportTicketsMessagesById
  *
  * ViewSet for managing support messages.
  *
  * @method GET
  * @path /django_cfg_support/tickets/{ticket_uuid}/messages/{uuid}/
  */
-export async function getDjangoCfgSupportTicketsMessage(
+export async function getDjangoCfgSupportTicketsMessagesById(
   ticket_uuid: string, uuid: string,
   client?: API
 ): Promise<Message> {
@@ -182,14 +182,14 @@ export async function deleteDjangoCfgSupportTicketsMessages(
 }
 
 /**
- * getDjangoCfgSupportTicket
+ * getDjangoCfgSupportTicketsById
  *
  * ViewSet for managing support tickets.
  *
  * @method GET
  * @path /django_cfg_support/tickets/{uuid}/
  */
-export async function getDjangoCfgSupportTicket(
+export async function getDjangoCfgSupportTicketsById(
   uuid: string,
   client?: API
 ): Promise<Ticket> {

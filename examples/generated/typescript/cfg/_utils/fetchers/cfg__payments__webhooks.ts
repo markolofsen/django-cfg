@@ -45,7 +45,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /payments/webhooks/{provider}/
  */
-export async function getPaymentsWebhook(
+export async function getPaymentsWebhooksById(
   provider: string,
   client?: API
 ): Promise<WebhookResponse> {
@@ -81,7 +81,7 @@ export async function createPaymentsWebhooks(
  * @method GET
  * @path /payments/webhooks/health/
  */
-export async function getPaymentsWebhooksHealth(
+export async function getPaymentsWebhooksHealthById(
   client?: API
 ): Promise<WebhookHealth> {
   const api = client || getAPIInstance()
@@ -98,7 +98,7 @@ export async function getPaymentsWebhooksHealth(
  * @method GET
  * @path /payments/webhooks/providers/
  */
-export async function getPaymentsWebhooksProvider(
+export async function getPaymentsWebhooksProvidersById(
   client?: API
 ): Promise<SupportedProviders> {
   const api = client || getAPIInstance()
@@ -115,7 +115,7 @@ export async function getPaymentsWebhooksProvider(
  * @method GET
  * @path /payments/webhooks/stats/
  */
-export async function getPaymentsWebhooksStat(
+export async function getPaymentsWebhooksStatsById(
   params?: { days?: number },
   client?: API
 ): Promise<WebhookStats> {

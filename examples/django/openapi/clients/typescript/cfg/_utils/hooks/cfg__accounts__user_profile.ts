@@ -35,10 +35,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_accounts/profile/
  */
-export function useDjangoCfgAccountsProfile() {
+export function useDjangoCfgAccountsProfileById() {
   return useSWR<User>(
     'django-cfg-accounts-profile',
-    () => Fetchers.getDjangoCfgAccountsProfile()
+    () => Fetchers.getDjangoCfgAccountsProfileById()
   )
 }
 

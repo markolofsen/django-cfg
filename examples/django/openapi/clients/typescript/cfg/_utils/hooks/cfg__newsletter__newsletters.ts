@@ -34,10 +34,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_newsletter/newsletters/
  */
-export function useDjangoCfgNewsletterNewsletters(params?: { page?: number; page_size?: number }) {
+export function useDjangoCfgNewsletterNewslettersList(params?: { page?: number; page_size?: number }) {
   return useSWR<PaginatedNewsletterList>(
     params ? ['django-cfg-newsletter-newsletters', params] : 'django-cfg-newsletter-newsletters',
-    () => Fetchers.getDjangoCfgNewsletterNewsletters(params)
+    () => Fetchers.getDjangoCfgNewsletterNewslettersList(params)
   )
 }
 
@@ -47,9 +47,9 @@ export function useDjangoCfgNewsletterNewsletters(params?: { page?: number; page
  * @method GET
  * @path /django_cfg_newsletter/newsletters/{id}/
  */
-export function useDjangoCfgNewsletterNewsletter(id: number) {
+export function useDjangoCfgNewsletterNewslettersById(id: number) {
   return useSWR<Newsletter>(
     ['django-cfg-newsletter-newsletter', id],
-    () => Fetchers.getDjangoCfgNewsletterNewsletter(id)
+    () => Fetchers.getDjangoCfgNewsletterNewslettersById(id)
   )
 }

@@ -35,10 +35,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_leads/leads/
  */
-export function useDjangoCfgLeadsLeads(params?: { page?: number; page_size?: number }) {
+export function useDjangoCfgLeadsLeadsList(params?: { page?: number; page_size?: number }) {
   return useSWR<PaginatedLeadSubmissionList>(
     params ? ['django-cfg-leads-leads', params] : 'django-cfg-leads-leads',
-    () => Fetchers.getDjangoCfgLeadsLeads(params)
+    () => Fetchers.getDjangoCfgLeadsLeadsList(params)
   )
 }
 
@@ -47,10 +47,10 @@ export function useDjangoCfgLeadsLeads(params?: { page?: number; page_size?: num
  * @method GET
  * @path /django_cfg_leads/leads/{id}/
  */
-export function useDjangoCfgLeadsLead(id: number) {
+export function useDjangoCfgLeadsLeadsById(id: number) {
   return useSWR<LeadSubmission>(
     ['django-cfg-leads-lead', id],
-    () => Fetchers.getDjangoCfgLeadsLead(id)
+    () => Fetchers.getDjangoCfgLeadsLeadsById(id)
   )
 }
 

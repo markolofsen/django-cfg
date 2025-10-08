@@ -38,10 +38,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /blog/tags/{slug}/
  */
-export function useBlogTag(slug: string) {
+export function useBlogTagsById(slug: string) {
   return useSWR<Tag>(
     ['blog-tag', slug],
-    () => Fetchers.getBlogTag(slug)
+    () => Fetchers.getBlogTagsById(slug)
   )
 }
 

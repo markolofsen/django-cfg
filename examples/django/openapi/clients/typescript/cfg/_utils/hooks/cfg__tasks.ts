@@ -39,10 +39,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /tasks/api/queues/status/
  */
-export function useTasksApiQueuesStatu() {
+export function useTasksApiQueuesStatusById() {
   return useSWR<QueueStatus>(
     'tasks-api-queues-statu',
-    () => Fetchers.getTasksApiQueuesStatu()
+    () => Fetchers.getTasksApiQueuesStatusById()
   )
 }
 
@@ -51,10 +51,10 @@ export function useTasksApiQueuesStatu() {
  * @method GET
  * @path /tasks/api/tasks/list/
  */
-export function useTasksApiTasksList() {
+export function useTasksApiTasksListById() {
   return useSWR<APIResponse>(
     'tasks-api-task',
-    () => Fetchers.getTasksApiTasksList()
+    () => Fetchers.getTasksApiTasksListById()
   )
 }
 
@@ -63,10 +63,10 @@ export function useTasksApiTasksList() {
  * @method GET
  * @path /tasks/api/tasks/stats/
  */
-export function useTasksApiTasksStat() {
+export function useTasksApiTasksStatsById() {
   return useSWR<TaskStatistics>(
     'tasks-api-tasks-stat',
-    () => Fetchers.getTasksApiTasksStat()
+    () => Fetchers.getTasksApiTasksStatsById()
   )
 }
 
@@ -75,10 +75,10 @@ export function useTasksApiTasksStat() {
  * @method GET
  * @path /tasks/api/workers/list/
  */
-export function useTasksApiWorkersList() {
+export function useTasksApiWorkersListById() {
   return useSWR<APIResponse>(
     'tasks-api-worker',
-    () => Fetchers.getTasksApiWorkersList()
+    () => Fetchers.getTasksApiWorkersListById()
   )
 }
 

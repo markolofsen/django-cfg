@@ -42,7 +42,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /shop/orders/
  */
-export async function getShopOrders(
+export async function getShopOrdersList(
   params?: { customer?: number; ordering?: string; page?: number; page_size?: number; search?: string; status?: string },
   client?: API
 ): Promise<PaginatedOrderListList> {
@@ -60,7 +60,7 @@ export async function getShopOrders(
  * @method GET
  * @path /shop/orders/{id}/
  */
-export async function getShopOrder(
+export async function getShopOrdersById(
   id: number,
   client?: API
 ): Promise<OrderDetail> {

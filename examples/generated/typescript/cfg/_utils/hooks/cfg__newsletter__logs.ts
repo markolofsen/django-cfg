@@ -33,9 +33,9 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /django_cfg_newsletter/logs/
  */
-export function useDjangoCfgNewsletterLogs(params?: { page?: number; page_size?: number }) {
+export function useDjangoCfgNewsletterLogsList(params?: { page?: number; page_size?: number }) {
   return useSWR<PaginatedEmailLogList>(
     params ? ['django-cfg-newsletter-logs', params] : 'django-cfg-newsletter-logs',
-    () => Fetchers.getDjangoCfgNewsletterLogs(params)
+    () => Fetchers.getDjangoCfgNewsletterLogsList(params)
   )
 }

@@ -42,7 +42,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /django_cfg_accounts/profile/
  */
-export async function getDjangoCfgAccountsProfile(
+export async function getDjangoCfgAccountsProfileById(
   client?: API
 ): Promise<User> {
   const api = client || getAPIInstance()

@@ -49,7 +49,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /blog/posts/
  */
-export async function getBlogPosts(
+export async function getBlogPostsList(
   params?: { author?: number; category?: number; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tags?: any[] },
   client?: API
 ): Promise<PaginatedPostListList> {
@@ -85,7 +85,7 @@ export async function createBlogPosts(
  * @method GET
  * @path /blog/posts/{slug}/
  */
-export async function getBlogPost(
+export async function getBlogPostsById(
   slug: string,
   client?: API
 ): Promise<PostDetail> {
@@ -157,7 +157,7 @@ export async function createBlogPostsLike(
  * @method GET
  * @path /blog/posts/{slug}/likes/
  */
-export async function getBlogPostsLikes(
+export async function getBlogPostsLikesList(
   slug: string, params?: { author?: number; category?: number; is_featured?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tags?: any[] },
   client?: API
 ): Promise<PaginatedPostLikeList> {
@@ -175,7 +175,7 @@ export async function getBlogPostsLikes(
  * @method GET
  * @path /blog/posts/featured/
  */
-export async function getBlogPostsFeatured(
+export async function getBlogPostsFeaturedById(
   client?: API
 ): Promise<PostDetail> {
   const api = client || getAPIInstance()
@@ -192,7 +192,7 @@ export async function getBlogPostsFeatured(
  * @method GET
  * @path /blog/posts/stats/
  */
-export async function getBlogPostsStat(
+export async function getBlogPostsStatsById(
   client?: API
 ): Promise<BlogStats> {
   const api = client || getAPIInstance()

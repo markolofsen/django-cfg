@@ -41,7 +41,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /django_cfg_newsletter/logs/
  */
-export async function getDjangoCfgNewsletterLogs(
+export async function getDjangoCfgNewsletterLogsList(
   params?: { page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedEmailLogList> {

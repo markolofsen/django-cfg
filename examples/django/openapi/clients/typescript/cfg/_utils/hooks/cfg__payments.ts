@@ -75,10 +75,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /payments/api-keys/
  */
-export function usePaymentsApiKeys(params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; user?: number }) {
+export function usePaymentsApiKeysList(params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; user?: number }) {
   return useSWR<PaginatedAPIKeyListList>(
     params ? ['payments-api-keys', params] : 'payments-api-keys',
-    () => Fetchers.getPaymentsApiKeys(params)
+    () => Fetchers.getPaymentsApiKeysList(params)
   )
 }
 
@@ -87,10 +87,10 @@ export function usePaymentsApiKeys(params?: { is_active?: boolean; ordering?: st
  * @method GET
  * @path /payments/api-keys/{id}/
  */
-export function usePaymentsApiKey(id: string) {
+export function usePaymentsApiKeysById(id: string) {
   return useSWR<APIKeyDetail>(
     ['payments-api-key', id],
-    () => Fetchers.getPaymentsApiKey(id)
+    () => Fetchers.getPaymentsApiKeysById(id)
   )
 }
 
@@ -99,10 +99,10 @@ export function usePaymentsApiKey(id: string) {
  * @method GET
  * @path /payments/api-keys/analytics/
  */
-export function usePaymentsApiKeysAnalytic() {
+export function usePaymentsApiKeysAnalyticsById() {
   return useSWR<APIKeyDetail>(
     'payments-api-keys-analytic',
-    () => Fetchers.getPaymentsApiKeysAnalytic()
+    () => Fetchers.getPaymentsApiKeysAnalyticsById()
   )
 }
 
@@ -111,10 +111,10 @@ export function usePaymentsApiKeysAnalytic() {
  * @method GET
  * @path /payments/api-keys/by_user/
  */
-export function usePaymentsApiKeysByUser() {
+export function usePaymentsApiKeysByUserById() {
   return useSWR<APIKeyDetail>(
     'payments-api-keys-by-user',
-    () => Fetchers.getPaymentsApiKeysByUser()
+    () => Fetchers.getPaymentsApiKeysByUserById()
   )
 }
 
@@ -123,10 +123,10 @@ export function usePaymentsApiKeysByUser() {
  * @method GET
  * @path /payments/api-keys/expiring_soon/
  */
-export function usePaymentsApiKeysExpiringSoon() {
+export function usePaymentsApiKeysExpiringSoonById() {
   return useSWR<APIKeyDetail>(
     'payments-api-keys-expiring-soon',
-    () => Fetchers.getPaymentsApiKeysExpiringSoon()
+    () => Fetchers.getPaymentsApiKeysExpiringSoonById()
   )
 }
 
@@ -135,10 +135,10 @@ export function usePaymentsApiKeysExpiringSoon() {
  * @method GET
  * @path /payments/api-keys/health/
  */
-export function usePaymentsApiKeysHealth() {
+export function usePaymentsApiKeysHealthById() {
   return useSWR<APIKeyDetail>(
     'payments-api-keys-health',
-    () => Fetchers.getPaymentsApiKeysHealth()
+    () => Fetchers.getPaymentsApiKeysHealthById()
   )
 }
 
@@ -147,10 +147,10 @@ export function usePaymentsApiKeysHealth() {
  * @method GET
  * @path /payments/api-keys/stats/
  */
-export function usePaymentsApiKeysStat() {
+export function usePaymentsApiKeysStatsById() {
   return useSWR<APIKeyDetail>(
     'payments-api-keys-stat',
-    () => Fetchers.getPaymentsApiKeysStat()
+    () => Fetchers.getPaymentsApiKeysStatsById()
   )
 }
 
@@ -159,10 +159,10 @@ export function usePaymentsApiKeysStat() {
  * @method GET
  * @path /payments/balances/
  */
-export function usePaymentsBalances(params?: { ordering?: string; page?: number; page_size?: number; search?: string; user?: number }) {
+export function usePaymentsBalancesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string; user?: number }) {
   return useSWR<PaginatedUserBalanceList>(
     params ? ['payments-balances', params] : 'payments-balances',
-    () => Fetchers.getPaymentsBalances(params)
+    () => Fetchers.getPaymentsBalancesList(params)
   )
 }
 
@@ -171,10 +171,10 @@ export function usePaymentsBalances(params?: { ordering?: string; page?: number;
  * @method GET
  * @path /payments/balances/{id}/
  */
-export function usePaymentsBalance(id: number) {
+export function usePaymentsBalancesById(id: number) {
   return useSWR<UserBalance>(
     ['payments-balance', id],
-    () => Fetchers.getPaymentsBalance(id)
+    () => Fetchers.getPaymentsBalancesById(id)
   )
 }
 
@@ -183,10 +183,10 @@ export function usePaymentsBalance(id: number) {
  * @method GET
  * @path /payments/balances/analytics/
  */
-export function usePaymentsBalancesAnalytic() {
+export function usePaymentsBalancesAnalyticsById() {
   return useSWR<UserBalance>(
     'payments-balances-analytic',
-    () => Fetchers.getPaymentsBalancesAnalytic()
+    () => Fetchers.getPaymentsBalancesAnalyticsById()
   )
 }
 
@@ -195,10 +195,10 @@ export function usePaymentsBalancesAnalytic() {
  * @method GET
  * @path /payments/balances/health/
  */
-export function usePaymentsBalancesHealth() {
+export function usePaymentsBalancesHealthById() {
   return useSWR<UserBalance>(
     'payments-balances-health',
-    () => Fetchers.getPaymentsBalancesHealth()
+    () => Fetchers.getPaymentsBalancesHealthById()
   )
 }
 
@@ -207,10 +207,10 @@ export function usePaymentsBalancesHealth() {
  * @method GET
  * @path /payments/balances/stats/
  */
-export function usePaymentsBalancesStat() {
+export function usePaymentsBalancesStatsById() {
   return useSWR<UserBalance>(
     'payments-balances-stat',
-    () => Fetchers.getPaymentsBalancesStat()
+    () => Fetchers.getPaymentsBalancesStatsById()
   )
 }
 
@@ -219,10 +219,10 @@ export function usePaymentsBalancesStat() {
  * @method GET
  * @path /payments/balances/summary/
  */
-export function usePaymentsBalancesSummary() {
+export function usePaymentsBalancesSummaryById() {
   return useSWR<UserBalance>(
     'payments-balances-summary',
-    () => Fetchers.getPaymentsBalancesSummary()
+    () => Fetchers.getPaymentsBalancesSummaryById()
   )
 }
 
@@ -231,10 +231,10 @@ export function usePaymentsBalancesSummary() {
  * @method GET
  * @path /payments/currencies/
  */
-export function usePaymentsCurrencies(params?: { currency_type?: string; is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function usePaymentsCurrenciesList(params?: { currency_type?: string; is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedCurrencyListList>(
     params ? ['payments-currencies', params] : 'payments-currencies',
-    () => Fetchers.getPaymentsCurrencies(params)
+    () => Fetchers.getPaymentsCurrenciesList(params)
   )
 }
 
@@ -243,10 +243,10 @@ export function usePaymentsCurrencies(params?: { currency_type?: string; is_acti
  * @method GET
  * @path /payments/currencies/{id}/
  */
-export function usePaymentsCurrencie(id: number) {
+export function usePaymentsCurrenciesById(id: number) {
   return useSWR<Currency>(
     ['payments-currencie', id],
-    () => Fetchers.getPaymentsCurrencie(id)
+    () => Fetchers.getPaymentsCurrenciesById(id)
   )
 }
 
@@ -255,10 +255,10 @@ export function usePaymentsCurrencie(id: number) {
  * @method GET
  * @path /payments/currencies/{id}/networks/
  */
-export function usePaymentsCurrenciesNetwork(id: number) {
+export function usePaymentsCurrenciesNetworksById(id: number) {
   return useSWR<Currency>(
     ['payments-currencies-network', id],
-    () => Fetchers.getPaymentsCurrenciesNetwork(id)
+    () => Fetchers.getPaymentsCurrenciesNetworksById(id)
   )
 }
 
@@ -267,10 +267,10 @@ export function usePaymentsCurrenciesNetwork(id: number) {
  * @method GET
  * @path /payments/currencies/{id}/providers/
  */
-export function usePaymentsCurrenciesProvider(id: number) {
+export function usePaymentsCurrenciesProvidersById(id: number) {
   return useSWR<Currency>(
     ['payments-currencies-provider', id],
-    () => Fetchers.getPaymentsCurrenciesProvider(id)
+    () => Fetchers.getPaymentsCurrenciesProvidersById(id)
   )
 }
 
@@ -279,10 +279,10 @@ export function usePaymentsCurrenciesProvider(id: number) {
  * @method GET
  * @path /payments/currencies/crypto/
  */
-export function usePaymentsCurrenciesCrypto() {
+export function usePaymentsCurrenciesCryptoById() {
   return useSWR<Currency>(
     'payments-currencies-crypto',
-    () => Fetchers.getPaymentsCurrenciesCrypto()
+    () => Fetchers.getPaymentsCurrenciesCryptoById()
   )
 }
 
@@ -291,10 +291,10 @@ export function usePaymentsCurrenciesCrypto() {
  * @method GET
  * @path /payments/currencies/fiat/
  */
-export function usePaymentsCurrenciesFiat() {
+export function usePaymentsCurrenciesFiatById() {
   return useSWR<Currency>(
     'payments-currencies-fiat',
-    () => Fetchers.getPaymentsCurrenciesFiat()
+    () => Fetchers.getPaymentsCurrenciesFiatById()
   )
 }
 
@@ -303,10 +303,10 @@ export function usePaymentsCurrenciesFiat() {
  * @method GET
  * @path /payments/currencies/health/
  */
-export function usePaymentsCurrenciesHealth() {
+export function usePaymentsCurrenciesHealthById() {
   return useSWR<Currency>(
     'payments-currencies-health',
-    () => Fetchers.getPaymentsCurrenciesHealth()
+    () => Fetchers.getPaymentsCurrenciesHealthById()
   )
 }
 
@@ -316,10 +316,10 @@ export function usePaymentsCurrenciesHealth() {
  * @method GET
  * @path /payments/currencies/rates/
  */
-export function usePaymentsCurrenciesRate(params: { base_currency: string; currencies: string }) {
+export function usePaymentsCurrenciesRatesById(params: { base_currency: string; currencies: string }) {
   return useSWR<Currency>(
     params ? ['payments-currencies-rate', params] : 'payments-currencies-rate',
-    () => Fetchers.getPaymentsCurrenciesRate(params)
+    () => Fetchers.getPaymentsCurrenciesRatesById(params)
   )
 }
 
@@ -328,10 +328,10 @@ export function usePaymentsCurrenciesRate(params: { base_currency: string; curre
  * @method GET
  * @path /payments/currencies/stable/
  */
-export function usePaymentsCurrenciesStable() {
+export function usePaymentsCurrenciesStableById() {
   return useSWR<Currency>(
     'payments-currencies-stable',
-    () => Fetchers.getPaymentsCurrenciesStable()
+    () => Fetchers.getPaymentsCurrenciesStableById()
   )
 }
 
@@ -340,10 +340,10 @@ export function usePaymentsCurrenciesStable() {
  * @method GET
  * @path /payments/currencies/stats/
  */
-export function usePaymentsCurrenciesStat() {
+export function usePaymentsCurrenciesStatsById() {
   return useSWR<Currency>(
     'payments-currencies-stat',
-    () => Fetchers.getPaymentsCurrenciesStat()
+    () => Fetchers.getPaymentsCurrenciesStatsById()
   )
 }
 
@@ -353,10 +353,10 @@ export function usePaymentsCurrenciesStat() {
  * @method GET
  * @path /payments/currencies/supported/
  */
-export function usePaymentsCurrenciesSupported(params?: { currency_type?: string; provider?: string }) {
+export function usePaymentsCurrenciesSupportedById(params?: { currency_type?: string; provider?: string }) {
   return useSWR<Currency>(
     params ? ['payments-currencies-supported', params] : 'payments-currencies-supported',
-    () => Fetchers.getPaymentsCurrenciesSupported(params)
+    () => Fetchers.getPaymentsCurrenciesSupportedById(params)
   )
 }
 
@@ -365,10 +365,10 @@ export function usePaymentsCurrenciesSupported(params?: { currency_type?: string
  * @method GET
  * @path /payments/endpoint-groups/
  */
-export function usePaymentsEndpointGroups(params?: { is_enabled?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function usePaymentsEndpointGroupsList(params?: { is_enabled?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedEndpointGroupList>(
     params ? ['payments-endpoint-groups', params] : 'payments-endpoint-groups',
-    () => Fetchers.getPaymentsEndpointGroups(params)
+    () => Fetchers.getPaymentsEndpointGroupsList(params)
   )
 }
 
@@ -377,10 +377,10 @@ export function usePaymentsEndpointGroups(params?: { is_enabled?: boolean; order
  * @method GET
  * @path /payments/endpoint-groups/{id}/
  */
-export function usePaymentsEndpointGroup(id: number) {
+export function usePaymentsEndpointGroupsById(id: number) {
   return useSWR<EndpointGroup>(
     ['payments-endpoint-group', id],
-    () => Fetchers.getPaymentsEndpointGroup(id)
+    () => Fetchers.getPaymentsEndpointGroupsById(id)
   )
 }
 
@@ -389,10 +389,10 @@ export function usePaymentsEndpointGroup(id: number) {
  * @method GET
  * @path /payments/endpoint-groups/available/
  */
-export function usePaymentsEndpointGroupsAvailable() {
+export function usePaymentsEndpointGroupsAvailableById() {
   return useSWR<EndpointGroup>(
     'payments-endpoint-groups-available',
-    () => Fetchers.getPaymentsEndpointGroupsAvailable()
+    () => Fetchers.getPaymentsEndpointGroupsAvailableById()
   )
 }
 
@@ -401,10 +401,10 @@ export function usePaymentsEndpointGroupsAvailable() {
  * @method GET
  * @path /payments/endpoint-groups/health/
  */
-export function usePaymentsEndpointGroupsHealth() {
+export function usePaymentsEndpointGroupsHealthById() {
   return useSWR<EndpointGroup>(
     'payments-endpoint-groups-health',
-    () => Fetchers.getPaymentsEndpointGroupsHealth()
+    () => Fetchers.getPaymentsEndpointGroupsHealthById()
   )
 }
 
@@ -413,10 +413,10 @@ export function usePaymentsEndpointGroupsHealth() {
  * @method GET
  * @path /payments/endpoint-groups/stats/
  */
-export function usePaymentsEndpointGroupsStat() {
+export function usePaymentsEndpointGroupsStatsById() {
   return useSWR<EndpointGroup>(
     'payments-endpoint-groups-stat',
-    () => Fetchers.getPaymentsEndpointGroupsStat()
+    () => Fetchers.getPaymentsEndpointGroupsStatsById()
   )
 }
 
@@ -425,10 +425,10 @@ export function usePaymentsEndpointGroupsStat() {
  * @method GET
  * @path /payments/health/
  */
-export function usePaymentsHealth() {
+export function usePaymentsHealthById() {
   return useSWR<Payment>(
     'payments-health',
-    () => Fetchers.getPaymentsHealth()
+    () => Fetchers.getPaymentsHealthById()
   )
 }
 
@@ -437,10 +437,10 @@ export function usePaymentsHealth() {
  * @method GET
  * @path /payments/networks/
  */
-export function usePaymentsNetworks(params?: { is_active?: boolean; native_currency__code?: string; ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function usePaymentsNetworksList(params?: { is_active?: boolean; native_currency__code?: string; ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedNetworkList>(
     params ? ['payments-networks', params] : 'payments-networks',
-    () => Fetchers.getPaymentsNetworks(params)
+    () => Fetchers.getPaymentsNetworksList(params)
   )
 }
 
@@ -449,10 +449,10 @@ export function usePaymentsNetworks(params?: { is_active?: boolean; native_curre
  * @method GET
  * @path /payments/networks/{id}/
  */
-export function usePaymentsNetwork(id: number) {
+export function usePaymentsNetworksById(id: number) {
   return useSWR<Network>(
     ['payments-network', id],
-    () => Fetchers.getPaymentsNetwork(id)
+    () => Fetchers.getPaymentsNetworksById(id)
   )
 }
 
@@ -461,10 +461,10 @@ export function usePaymentsNetwork(id: number) {
  * @method GET
  * @path /payments/networks/by_currency/
  */
-export function usePaymentsNetworksByCurrency() {
+export function usePaymentsNetworksByCurrencyById() {
   return useSWR<Network>(
     'payments-networks-by-currency',
-    () => Fetchers.getPaymentsNetworksByCurrency()
+    () => Fetchers.getPaymentsNetworksByCurrencyById()
   )
 }
 
@@ -473,10 +473,10 @@ export function usePaymentsNetworksByCurrency() {
  * @method GET
  * @path /payments/networks/health/
  */
-export function usePaymentsNetworksHealth() {
+export function usePaymentsNetworksHealthById() {
   return useSWR<Network>(
     'payments-networks-health',
-    () => Fetchers.getPaymentsNetworksHealth()
+    () => Fetchers.getPaymentsNetworksHealthById()
   )
 }
 
@@ -485,10 +485,10 @@ export function usePaymentsNetworksHealth() {
  * @method GET
  * @path /payments/networks/stats/
  */
-export function usePaymentsNetworksStat() {
+export function usePaymentsNetworksStatsById() {
   return useSWR<Network>(
     'payments-networks-stat',
-    () => Fetchers.getPaymentsNetworksStat()
+    () => Fetchers.getPaymentsNetworksStatsById()
   )
 }
 
@@ -498,10 +498,10 @@ export function usePaymentsNetworksStat() {
  * @method GET
  * @path /payments/overview/dashboard/api_keys_overview/
  */
-export function usePaymentsOverviewDashboardApiKeysOverview() {
+export function usePaymentsOverviewDashboardApiKeysOverviewById() {
   return useSWR<APIKeysOverview>(
     'payments-overview-dashboard-api-keys-overview',
-    () => Fetchers.getPaymentsOverviewDashboardApiKeysOverview()
+    () => Fetchers.getPaymentsOverviewDashboardApiKeysOverviewById()
   )
 }
 
@@ -511,10 +511,10 @@ export function usePaymentsOverviewDashboardApiKeysOverview() {
  * @method GET
  * @path /payments/overview/dashboard/balance_overview/
  */
-export function usePaymentsOverviewDashboardBalanceOverview() {
+export function usePaymentsOverviewDashboardBalanceOverviewById() {
   return useSWR<BalanceOverview>(
     'payments-overview-dashboard-balance-overview',
-    () => Fetchers.getPaymentsOverviewDashboardBalanceOverview()
+    () => Fetchers.getPaymentsOverviewDashboardBalanceOverviewById()
   )
 }
 
@@ -524,10 +524,10 @@ export function usePaymentsOverviewDashboardBalanceOverview() {
  * @method GET
  * @path /payments/overview/dashboard/chart_data/
  */
-export function usePaymentsOverviewDashboardChartData(params?: { period?: string }) {
+export function usePaymentsOverviewDashboardChartDataById(params?: { period?: string }) {
   return useSWR<PaymentsChartResponse>(
     params ? ['payments-overview-dashboard-chart-data', params] : 'payments-overview-dashboard-chart-data',
-    () => Fetchers.getPaymentsOverviewDashboardChartData(params)
+    () => Fetchers.getPaymentsOverviewDashboardChartDataById(params)
   )
 }
 
@@ -537,10 +537,10 @@ export function usePaymentsOverviewDashboardChartData(params?: { period?: string
  * @method GET
  * @path /payments/overview/dashboard/metrics/
  */
-export function usePaymentsOverviewDashboardMetric() {
+export function usePaymentsOverviewDashboardMetricsById() {
   return useSWR<PaymentsMetrics>(
     'payments-overview-dashboard-metric',
-    () => Fetchers.getPaymentsOverviewDashboardMetric()
+    () => Fetchers.getPaymentsOverviewDashboardMetricsById()
   )
 }
 
@@ -550,10 +550,10 @@ export function usePaymentsOverviewDashboardMetric() {
  * @method GET
  * @path /payments/overview/dashboard/overview/
  */
-export function usePaymentsOverviewDashboardOverview() {
+export function usePaymentsOverviewDashboardOverviewById() {
   return useSWR<PaymentsDashboardOverview>(
     'payments-overview-dashboard-overview',
-    () => Fetchers.getPaymentsOverviewDashboardOverview()
+    () => Fetchers.getPaymentsOverviewDashboardOverviewById()
   )
 }
 
@@ -563,10 +563,10 @@ export function usePaymentsOverviewDashboardOverview() {
  * @method GET
  * @path /payments/overview/dashboard/payment_analytics/
  */
-export function usePaymentsOverviewDashboardPaymentAnalytic(params?: { limit?: number }) {
+export function usePaymentsOverviewDashboardPaymentAnalyticsById(params?: { limit?: number }) {
   return useSWR<PaymentAnalyticsResponse>(
     params ? ['payments-overview-dashboard-payment-analytic', params] : 'payments-overview-dashboard-payment-analytic',
-    () => Fetchers.getPaymentsOverviewDashboardPaymentAnalytic(params)
+    () => Fetchers.getPaymentsOverviewDashboardPaymentAnalyticsById(params)
   )
 }
 
@@ -576,10 +576,10 @@ export function usePaymentsOverviewDashboardPaymentAnalytic(params?: { limit?: n
  * @method GET
  * @path /payments/overview/dashboard/recent_payments/
  */
-export function usePaymentsOverviewDashboardRecentPayments(params?: { limit?: number; page?: number; page_size?: number }) {
+export function usePaymentsOverviewDashboardRecentPaymentsList(params?: { limit?: number; page?: number; page_size?: number }) {
   return useSWR<PaginatedRecentPaymentList>(
     params ? ['payments-overview-dashboard-recent-payments', params] : 'payments-overview-dashboard-recent-payments',
-    () => Fetchers.getPaymentsOverviewDashboardRecentPayments(params)
+    () => Fetchers.getPaymentsOverviewDashboardRecentPaymentsList(params)
   )
 }
 
@@ -589,10 +589,10 @@ export function usePaymentsOverviewDashboardRecentPayments(params?: { limit?: nu
  * @method GET
  * @path /payments/overview/dashboard/recent_transactions/
  */
-export function usePaymentsOverviewDashboardRecentTransactions(params?: { limit?: number; page?: number; page_size?: number }) {
+export function usePaymentsOverviewDashboardRecentTransactionsList(params?: { limit?: number; page?: number; page_size?: number }) {
   return useSWR<PaginatedRecentTransactionList>(
     params ? ['payments-overview-dashboard-recent-transactions', params] : 'payments-overview-dashboard-recent-transactions',
-    () => Fetchers.getPaymentsOverviewDashboardRecentTransactions(params)
+    () => Fetchers.getPaymentsOverviewDashboardRecentTransactionsList(params)
   )
 }
 
@@ -602,10 +602,10 @@ export function usePaymentsOverviewDashboardRecentTransactions(params?: { limit?
  * @method GET
  * @path /payments/overview/dashboard/subscription_overview/
  */
-export function usePaymentsOverviewDashboardSubscriptionOverview() {
+export function usePaymentsOverviewDashboardSubscriptionOverviewById() {
   return useSWR<SubscriptionOverview>(
     'payments-overview-dashboard-subscription-overview',
-    () => Fetchers.getPaymentsOverviewDashboardSubscriptionOverview()
+    () => Fetchers.getPaymentsOverviewDashboardSubscriptionOverviewById()
   )
 }
 
@@ -614,10 +614,10 @@ export function usePaymentsOverviewDashboardSubscriptionOverview() {
  * @method GET
  * @path /payments/payments/
  */
-export function usePaymentsPayments(params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string; user?: number }) {
+export function usePaymentsPaymentsList(params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string; user?: number }) {
   return useSWR<PaginatedPaymentListList>(
     params ? ['payments-payments', params] : 'payments-payments',
-    () => Fetchers.getPaymentsPayments(params)
+    () => Fetchers.getPaymentsPaymentsList(params)
   )
 }
 
@@ -626,10 +626,10 @@ export function usePaymentsPayments(params?: { currency__code?: string; ordering
  * @method GET
  * @path /payments/payments/{id}/
  */
-export function usePaymentsPayment(id: string) {
+export function usePaymentsPaymentsById(id: string) {
   return useSWR<Payment>(
     ['payments-payment', id],
-    () => Fetchers.getPaymentsPayment(id)
+    () => Fetchers.getPaymentsPaymentsById(id)
   )
 }
 
@@ -638,10 +638,10 @@ export function usePaymentsPayment(id: string) {
  * @method GET
  * @path /payments/payments/analytics/
  */
-export function usePaymentsPaymentsAnalytic() {
+export function usePaymentsPaymentsAnalyticsById() {
   return useSWR<Payment>(
     'payments-payments-analytic',
-    () => Fetchers.getPaymentsPaymentsAnalytic()
+    () => Fetchers.getPaymentsPaymentsAnalyticsById()
   )
 }
 
@@ -650,10 +650,10 @@ export function usePaymentsPaymentsAnalytic() {
  * @method GET
  * @path /payments/payments/by_provider/
  */
-export function usePaymentsPaymentsByProvider() {
+export function usePaymentsPaymentsByProviderById() {
   return useSWR<Payment>(
     'payments-payments-by-provider',
-    () => Fetchers.getPaymentsPaymentsByProvider()
+    () => Fetchers.getPaymentsPaymentsByProviderById()
   )
 }
 
@@ -662,10 +662,10 @@ export function usePaymentsPaymentsByProvider() {
  * @method GET
  * @path /payments/payments/health/
  */
-export function usePaymentsPaymentsHealth() {
+export function usePaymentsPaymentsHealthById() {
   return useSWR<Payment>(
     'payments-payments-health',
-    () => Fetchers.getPaymentsPaymentsHealth()
+    () => Fetchers.getPaymentsPaymentsHealthById()
   )
 }
 
@@ -674,10 +674,10 @@ export function usePaymentsPaymentsHealth() {
  * @method GET
  * @path /payments/payments/stats/
  */
-export function usePaymentsPaymentsStat() {
+export function usePaymentsPaymentsStatsById() {
   return useSWR<Payment>(
     'payments-payments-stat',
-    () => Fetchers.getPaymentsPaymentsStat()
+    () => Fetchers.getPaymentsPaymentsStatsById()
   )
 }
 
@@ -686,10 +686,10 @@ export function usePaymentsPaymentsStat() {
  * @method GET
  * @path /payments/payments/status/{id}/
  */
-export function usePaymentsPaymentsStatu(id: string) {
+export function usePaymentsPaymentsStatusById(id: string) {
   return useSWR<Payment>(
     ['payments-payments-statu', id],
-    () => Fetchers.getPaymentsPaymentsStatu(id)
+    () => Fetchers.getPaymentsPaymentsStatusById(id)
   )
 }
 
@@ -698,10 +698,10 @@ export function usePaymentsPaymentsStatu(id: string) {
  * @method GET
  * @path /payments/provider-currencies/
  */
-export function usePaymentsProviderCurrencies(params?: { currency__code?: string; is_enabled?: boolean; network__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string }) {
+export function usePaymentsProviderCurrenciesList(params?: { currency__code?: string; is_enabled?: boolean; network__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string }) {
   return useSWR<PaginatedProviderCurrencyList>(
     params ? ['payments-provider-currencies', params] : 'payments-provider-currencies',
-    () => Fetchers.getPaymentsProviderCurrencies(params)
+    () => Fetchers.getPaymentsProviderCurrenciesList(params)
   )
 }
 
@@ -710,10 +710,10 @@ export function usePaymentsProviderCurrencies(params?: { currency__code?: string
  * @method GET
  * @path /payments/provider-currencies/{id}/
  */
-export function usePaymentsProviderCurrencie(id: number) {
+export function usePaymentsProviderCurrenciesById(id: number) {
   return useSWR<ProviderCurrency>(
     ['payments-provider-currencie', id],
-    () => Fetchers.getPaymentsProviderCurrencie(id)
+    () => Fetchers.getPaymentsProviderCurrenciesById(id)
   )
 }
 
@@ -722,10 +722,10 @@ export function usePaymentsProviderCurrencie(id: number) {
  * @method GET
  * @path /payments/provider-currencies/by_provider/
  */
-export function usePaymentsProviderCurrenciesByProvider() {
+export function usePaymentsProviderCurrenciesByProviderById() {
   return useSWR<ProviderCurrency>(
     'payments-provider-currencies-by-provider',
-    () => Fetchers.getPaymentsProviderCurrenciesByProvider()
+    () => Fetchers.getPaymentsProviderCurrenciesByProviderById()
   )
 }
 
@@ -734,10 +734,10 @@ export function usePaymentsProviderCurrenciesByProvider() {
  * @method GET
  * @path /payments/provider-currencies/health/
  */
-export function usePaymentsProviderCurrenciesHealth() {
+export function usePaymentsProviderCurrenciesHealthById() {
   return useSWR<ProviderCurrency>(
     'payments-provider-currencies-health',
-    () => Fetchers.getPaymentsProviderCurrenciesHealth()
+    () => Fetchers.getPaymentsProviderCurrenciesHealthById()
   )
 }
 
@@ -746,10 +746,10 @@ export function usePaymentsProviderCurrenciesHealth() {
  * @method GET
  * @path /payments/provider-currencies/limits/
  */
-export function usePaymentsProviderCurrenciesLimit() {
+export function usePaymentsProviderCurrenciesLimitsById() {
   return useSWR<ProviderCurrency>(
     'payments-provider-currencies-limit',
-    () => Fetchers.getPaymentsProviderCurrenciesLimit()
+    () => Fetchers.getPaymentsProviderCurrenciesLimitsById()
   )
 }
 
@@ -758,10 +758,10 @@ export function usePaymentsProviderCurrenciesLimit() {
  * @method GET
  * @path /payments/provider-currencies/stats/
  */
-export function usePaymentsProviderCurrenciesStat() {
+export function usePaymentsProviderCurrenciesStatsById() {
   return useSWR<ProviderCurrency>(
     'payments-provider-currencies-stat',
-    () => Fetchers.getPaymentsProviderCurrenciesStat()
+    () => Fetchers.getPaymentsProviderCurrenciesStatsById()
   )
 }
 
@@ -770,10 +770,10 @@ export function usePaymentsProviderCurrenciesStat() {
  * @method GET
  * @path /payments/subscriptions/
  */
-export function usePaymentsSubscriptions(params?: { ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tier?: string; user?: number }) {
+export function usePaymentsSubscriptionsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tier?: string; user?: number }) {
   return useSWR<PaginatedSubscriptionListList>(
     params ? ['payments-subscriptions', params] : 'payments-subscriptions',
-    () => Fetchers.getPaymentsSubscriptions(params)
+    () => Fetchers.getPaymentsSubscriptionsList(params)
   )
 }
 
@@ -782,10 +782,10 @@ export function usePaymentsSubscriptions(params?: { ordering?: string; page?: nu
  * @method GET
  * @path /payments/subscriptions/{id}/
  */
-export function usePaymentsSubscription(id: string) {
+export function usePaymentsSubscriptionsById(id: string) {
   return useSWR<Subscription>(
     ['payments-subscription', id],
-    () => Fetchers.getPaymentsSubscription(id)
+    () => Fetchers.getPaymentsSubscriptionsById(id)
   )
 }
 
@@ -794,10 +794,10 @@ export function usePaymentsSubscription(id: string) {
  * @method GET
  * @path /payments/subscriptions/analytics/
  */
-export function usePaymentsSubscriptionsAnalytic() {
+export function usePaymentsSubscriptionsAnalyticsById() {
   return useSWR<Subscription>(
     'payments-subscriptions-analytic',
-    () => Fetchers.getPaymentsSubscriptionsAnalytic()
+    () => Fetchers.getPaymentsSubscriptionsAnalyticsById()
   )
 }
 
@@ -806,10 +806,10 @@ export function usePaymentsSubscriptionsAnalytic() {
  * @method GET
  * @path /payments/subscriptions/by_status/
  */
-export function usePaymentsSubscriptionsByStatu() {
+export function usePaymentsSubscriptionsByStatusById() {
   return useSWR<Subscription>(
     'payments-subscriptions-by-statu',
-    () => Fetchers.getPaymentsSubscriptionsByStatu()
+    () => Fetchers.getPaymentsSubscriptionsByStatusById()
   )
 }
 
@@ -818,10 +818,10 @@ export function usePaymentsSubscriptionsByStatu() {
  * @method GET
  * @path /payments/subscriptions/by_tier/
  */
-export function usePaymentsSubscriptionsByTier() {
+export function usePaymentsSubscriptionsByTierById() {
   return useSWR<Subscription>(
     'payments-subscriptions-by-tier',
-    () => Fetchers.getPaymentsSubscriptionsByTier()
+    () => Fetchers.getPaymentsSubscriptionsByTierById()
   )
 }
 
@@ -830,10 +830,10 @@ export function usePaymentsSubscriptionsByTier() {
  * @method GET
  * @path /payments/subscriptions/health/
  */
-export function usePaymentsSubscriptionsHealth() {
+export function usePaymentsSubscriptionsHealthById() {
   return useSWR<Subscription>(
     'payments-subscriptions-health',
-    () => Fetchers.getPaymentsSubscriptionsHealth()
+    () => Fetchers.getPaymentsSubscriptionsHealthById()
   )
 }
 
@@ -842,10 +842,10 @@ export function usePaymentsSubscriptionsHealth() {
  * @method GET
  * @path /payments/subscriptions/stats/
  */
-export function usePaymentsSubscriptionsStat() {
+export function usePaymentsSubscriptionsStatsById() {
   return useSWR<Subscription>(
     'payments-subscriptions-stat',
-    () => Fetchers.getPaymentsSubscriptionsStat()
+    () => Fetchers.getPaymentsSubscriptionsStatsById()
   )
 }
 
@@ -854,10 +854,10 @@ export function usePaymentsSubscriptionsStat() {
  * @method GET
  * @path /payments/tariffs/
  */
-export function usePaymentsTariffs(params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function usePaymentsTariffsList(params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedTariffList>(
     params ? ['payments-tariffs', params] : 'payments-tariffs',
-    () => Fetchers.getPaymentsTariffs(params)
+    () => Fetchers.getPaymentsTariffsList(params)
   )
 }
 
@@ -866,10 +866,10 @@ export function usePaymentsTariffs(params?: { is_active?: boolean; ordering?: st
  * @method GET
  * @path /payments/tariffs/{id}/
  */
-export function usePaymentsTariff(id: number) {
+export function usePaymentsTariffsById(id: number) {
   return useSWR<Tariff>(
     ['payments-tariff', id],
-    () => Fetchers.getPaymentsTariff(id)
+    () => Fetchers.getPaymentsTariffsById(id)
   )
 }
 
@@ -878,10 +878,10 @@ export function usePaymentsTariff(id: number) {
  * @method GET
  * @path /payments/tariffs/{id}/endpoint_groups/
  */
-export function usePaymentsTariffsEndpointGroup(id: number) {
+export function usePaymentsTariffsEndpointGroupsById(id: number) {
   return useSWR<Tariff>(
     ['payments-tariffs-endpoint-group', id],
-    () => Fetchers.getPaymentsTariffsEndpointGroup(id)
+    () => Fetchers.getPaymentsTariffsEndpointGroupsById(id)
   )
 }
 
@@ -890,10 +890,10 @@ export function usePaymentsTariffsEndpointGroup(id: number) {
  * @method GET
  * @path /payments/tariffs/free/
  */
-export function usePaymentsTariffsFree() {
+export function usePaymentsTariffsFreeById() {
   return useSWR<Tariff>(
     'payments-tariffs-free',
-    () => Fetchers.getPaymentsTariffsFree()
+    () => Fetchers.getPaymentsTariffsFreeById()
   )
 }
 
@@ -902,10 +902,10 @@ export function usePaymentsTariffsFree() {
  * @method GET
  * @path /payments/tariffs/health/
  */
-export function usePaymentsTariffsHealth() {
+export function usePaymentsTariffsHealthById() {
   return useSWR<Tariff>(
     'payments-tariffs-health',
-    () => Fetchers.getPaymentsTariffsHealth()
+    () => Fetchers.getPaymentsTariffsHealthById()
   )
 }
 
@@ -914,10 +914,10 @@ export function usePaymentsTariffsHealth() {
  * @method GET
  * @path /payments/tariffs/paid/
  */
-export function usePaymentsTariffsPaid() {
+export function usePaymentsTariffsPaidById() {
   return useSWR<Tariff>(
     'payments-tariffs-paid',
-    () => Fetchers.getPaymentsTariffsPaid()
+    () => Fetchers.getPaymentsTariffsPaidById()
   )
 }
 
@@ -926,10 +926,10 @@ export function usePaymentsTariffsPaid() {
  * @method GET
  * @path /payments/tariffs/stats/
  */
-export function usePaymentsTariffsStat() {
+export function usePaymentsTariffsStatsById() {
   return useSWR<Tariff>(
     'payments-tariffs-stat',
-    () => Fetchers.getPaymentsTariffsStat()
+    () => Fetchers.getPaymentsTariffsStatsById()
   )
 }
 
@@ -938,10 +938,10 @@ export function usePaymentsTariffsStat() {
  * @method GET
  * @path /payments/transactions/
  */
-export function usePaymentsTransactions(params?: { ordering?: string; page?: number; page_size?: number; payment_id?: string; search?: string; transaction_type?: string; user?: number }) {
+export function usePaymentsTransactionsList(params?: { ordering?: string; page?: number; page_size?: number; payment_id?: string; search?: string; transaction_type?: string; user?: number }) {
   return useSWR<PaginatedTransactionList>(
     params ? ['payments-transactions', params] : 'payments-transactions',
-    () => Fetchers.getPaymentsTransactions(params)
+    () => Fetchers.getPaymentsTransactionsList(params)
   )
 }
 
@@ -950,10 +950,10 @@ export function usePaymentsTransactions(params?: { ordering?: string; page?: num
  * @method GET
  * @path /payments/transactions/{id}/
  */
-export function usePaymentsTransaction(id: string) {
+export function usePaymentsTransactionsById(id: string) {
   return useSWR<Transaction>(
     ['payments-transaction', id],
-    () => Fetchers.getPaymentsTransaction(id)
+    () => Fetchers.getPaymentsTransactionsById(id)
   )
 }
 
@@ -962,10 +962,10 @@ export function usePaymentsTransaction(id: string) {
  * @method GET
  * @path /payments/transactions/by_type/
  */
-export function usePaymentsTransactionsByType() {
+export function usePaymentsTransactionsByTypeById() {
   return useSWR<Transaction>(
     'payments-transactions-by-type',
-    () => Fetchers.getPaymentsTransactionsByType()
+    () => Fetchers.getPaymentsTransactionsByTypeById()
   )
 }
 
@@ -974,10 +974,10 @@ export function usePaymentsTransactionsByType() {
  * @method GET
  * @path /payments/transactions/health/
  */
-export function usePaymentsTransactionsHealth() {
+export function usePaymentsTransactionsHealthById() {
   return useSWR<Transaction>(
     'payments-transactions-health',
-    () => Fetchers.getPaymentsTransactionsHealth()
+    () => Fetchers.getPaymentsTransactionsHealthById()
   )
 }
 
@@ -986,10 +986,10 @@ export function usePaymentsTransactionsHealth() {
  * @method GET
  * @path /payments/transactions/recent/
  */
-export function usePaymentsTransactionsRecent() {
+export function usePaymentsTransactionsRecentById() {
   return useSWR<Transaction>(
     'payments-transactions-recent',
-    () => Fetchers.getPaymentsTransactionsRecent()
+    () => Fetchers.getPaymentsTransactionsRecentById()
   )
 }
 
@@ -998,10 +998,10 @@ export function usePaymentsTransactionsRecent() {
  * @method GET
  * @path /payments/transactions/stats/
  */
-export function usePaymentsTransactionsStat() {
+export function usePaymentsTransactionsStatsById() {
   return useSWR<Transaction>(
     'payments-transactions-stat',
-    () => Fetchers.getPaymentsTransactionsStat()
+    () => Fetchers.getPaymentsTransactionsStatsById()
   )
 }
 
@@ -1010,10 +1010,10 @@ export function usePaymentsTransactionsStat() {
  * @method GET
  * @path /payments/users/
  */
-export function usePaymentsUsers(params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string }) {
+export function usePaymentsUsersList(params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string }) {
   return useSWR<PaginatedPaymentListList>(
     params ? ['payments-users', params] : 'payments-users',
-    () => Fetchers.getPaymentsUsers(params)
+    () => Fetchers.getPaymentsUsersList(params)
   )
 }
 
@@ -1022,10 +1022,10 @@ export function usePaymentsUsers(params?: { currency__code?: string; ordering?: 
  * @method GET
  * @path /payments/users/{id}/
  */
-export function usePaymentsUser(id: string) {
+export function usePaymentsUsersById(id: string) {
   return useSWR<Payment>(
     ['payments-user', id],
-    () => Fetchers.getPaymentsUser(id)
+    () => Fetchers.getPaymentsUsersById(id)
   )
 }
 
@@ -1034,10 +1034,10 @@ export function usePaymentsUser(id: string) {
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/
  */
-export function usePaymentsUsersApiKeys(user_pk: number, params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
+export function usePaymentsUsersApiKeysList(user_pk: number, params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string }) {
   return useSWR<PaginatedAPIKeyListList>(
     ['payments-users-api-keys', user_pk],
-    () => Fetchers.getPaymentsUsersApiKeys(user_pk, params)
+    () => Fetchers.getPaymentsUsersApiKeysList(user_pk, params)
   )
 }
 
@@ -1046,10 +1046,10 @@ export function usePaymentsUsersApiKeys(user_pk: number, params?: { is_active?: 
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/{id}/
  */
-export function usePaymentsUsersApiKey(id: string, user_pk: number) {
+export function usePaymentsUsersApiKeysById(id: string, user_pk: number) {
   return useSWR<APIKeyDetail>(
     ['payments-users-api-key', id],
-    () => Fetchers.getPaymentsUsersApiKey(id, user_pk)
+    () => Fetchers.getPaymentsUsersApiKeysById(id, user_pk)
   )
 }
 
@@ -1058,10 +1058,10 @@ export function usePaymentsUsersApiKey(id: string, user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/active/
  */
-export function usePaymentsUsersApiKeysActive(user_pk: number) {
+export function usePaymentsUsersApiKeysActiveById(user_pk: number) {
   return useSWR<APIKeyDetail>(
     ['payments-users-api-keys-active', user_pk],
-    () => Fetchers.getPaymentsUsersApiKeysActive(user_pk)
+    () => Fetchers.getPaymentsUsersApiKeysActiveById(user_pk)
   )
 }
 
@@ -1070,10 +1070,10 @@ export function usePaymentsUsersApiKeysActive(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/health/
  */
-export function usePaymentsUsersApiKeysHealth(user_pk: number) {
+export function usePaymentsUsersApiKeysHealthById(user_pk: number) {
   return useSWR<APIKeyDetail>(
     ['payments-users-api-keys-health', user_pk],
-    () => Fetchers.getPaymentsUsersApiKeysHealth(user_pk)
+    () => Fetchers.getPaymentsUsersApiKeysHealthById(user_pk)
   )
 }
 
@@ -1082,10 +1082,10 @@ export function usePaymentsUsersApiKeysHealth(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/stats/
  */
-export function usePaymentsUsersApiKeysStat(user_pk: number) {
+export function usePaymentsUsersApiKeysStatsById(user_pk: number) {
   return useSWR<APIKeyDetail>(
     ['payments-users-api-keys-stat', user_pk],
-    () => Fetchers.getPaymentsUsersApiKeysStat(user_pk)
+    () => Fetchers.getPaymentsUsersApiKeysStatsById(user_pk)
   )
 }
 
@@ -1094,10 +1094,10 @@ export function usePaymentsUsersApiKeysStat(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/summary/
  */
-export function usePaymentsUsersApiKeysSummary(user_pk: number) {
+export function usePaymentsUsersApiKeysSummaryById(user_pk: number) {
   return useSWR<APIKeyDetail>(
     ['payments-users-api-keys-summary', user_pk],
-    () => Fetchers.getPaymentsUsersApiKeysSummary(user_pk)
+    () => Fetchers.getPaymentsUsersApiKeysSummaryById(user_pk)
   )
 }
 
@@ -1106,10 +1106,10 @@ export function usePaymentsUsersApiKeysSummary(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/payments/
  */
-export function usePaymentsUsersPayments(user_pk: number, params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string }) {
+export function usePaymentsUsersPaymentsList(user_pk: number, params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string }) {
   return useSWR<PaginatedPaymentListList>(
     ['payments-users-payments', user_pk],
-    () => Fetchers.getPaymentsUsersPayments(user_pk, params)
+    () => Fetchers.getPaymentsUsersPaymentsList(user_pk, params)
   )
 }
 
@@ -1118,10 +1118,10 @@ export function usePaymentsUsersPayments(user_pk: number, params?: { currency__c
  * @method GET
  * @path /payments/users/{user_pk}/payments/{id}/
  */
-export function usePaymentsUsersPayment(id: string, user_pk: number) {
+export function usePaymentsUsersPaymentsById(id: string, user_pk: number) {
   return useSWR<Payment>(
     ['payments-users-payment', id],
-    () => Fetchers.getPaymentsUsersPayment(id, user_pk)
+    () => Fetchers.getPaymentsUsersPaymentsById(id, user_pk)
   )
 }
 
@@ -1130,10 +1130,10 @@ export function usePaymentsUsersPayment(id: string, user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/payments/health/
  */
-export function usePaymentsUsersPaymentsHealth(user_pk: number) {
+export function usePaymentsUsersPaymentsHealthById(user_pk: number) {
   return useSWR<Payment>(
     ['payments-users-payments-health', user_pk],
-    () => Fetchers.getPaymentsUsersPaymentsHealth(user_pk)
+    () => Fetchers.getPaymentsUsersPaymentsHealthById(user_pk)
   )
 }
 
@@ -1142,10 +1142,10 @@ export function usePaymentsUsersPaymentsHealth(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/payments/stats/
  */
-export function usePaymentsUsersPaymentsStat(user_pk: number) {
+export function usePaymentsUsersPaymentsStatsById(user_pk: number) {
   return useSWR<Payment>(
     ['payments-users-payments-stat', user_pk],
-    () => Fetchers.getPaymentsUsersPaymentsStat(user_pk)
+    () => Fetchers.getPaymentsUsersPaymentsStatsById(user_pk)
   )
 }
 
@@ -1154,10 +1154,10 @@ export function usePaymentsUsersPaymentsStat(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/payments/summary/
  */
-export function usePaymentsUsersPaymentsSummary(user_pk: number) {
+export function usePaymentsUsersPaymentsSummaryById(user_pk: number) {
   return useSWR<Payment>(
     ['payments-users-payments-summary', user_pk],
-    () => Fetchers.getPaymentsUsersPaymentsSummary(user_pk)
+    () => Fetchers.getPaymentsUsersPaymentsSummaryById(user_pk)
   )
 }
 
@@ -1166,10 +1166,10 @@ export function usePaymentsUsersPaymentsSummary(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/
  */
-export function usePaymentsUsersSubscriptions(user_pk: number, params?: { ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tier?: string }) {
+export function usePaymentsUsersSubscriptionsList(user_pk: number, params?: { ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tier?: string }) {
   return useSWR<PaginatedSubscriptionListList>(
     ['payments-users-subscriptions', user_pk],
-    () => Fetchers.getPaymentsUsersSubscriptions(user_pk, params)
+    () => Fetchers.getPaymentsUsersSubscriptionsList(user_pk, params)
   )
 }
 
@@ -1178,10 +1178,10 @@ export function usePaymentsUsersSubscriptions(user_pk: number, params?: { orderi
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/{id}/
  */
-export function usePaymentsUsersSubscription(id: string, user_pk: number) {
+export function usePaymentsUsersSubscriptionsById(id: string, user_pk: number) {
   return useSWR<Subscription>(
     ['payments-users-subscription', id],
-    () => Fetchers.getPaymentsUsersSubscription(id, user_pk)
+    () => Fetchers.getPaymentsUsersSubscriptionsById(id, user_pk)
   )
 }
 
@@ -1190,10 +1190,10 @@ export function usePaymentsUsersSubscription(id: string, user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/active/
  */
-export function usePaymentsUsersSubscriptionsActive(user_pk: number) {
+export function usePaymentsUsersSubscriptionsActiveById(user_pk: number) {
   return useSWR<Subscription>(
     ['payments-users-subscriptions-active', user_pk],
-    () => Fetchers.getPaymentsUsersSubscriptionsActive(user_pk)
+    () => Fetchers.getPaymentsUsersSubscriptionsActiveById(user_pk)
   )
 }
 
@@ -1202,10 +1202,10 @@ export function usePaymentsUsersSubscriptionsActive(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/health/
  */
-export function usePaymentsUsersSubscriptionsHealth(user_pk: number) {
+export function usePaymentsUsersSubscriptionsHealthById(user_pk: number) {
   return useSWR<Subscription>(
     ['payments-users-subscriptions-health', user_pk],
-    () => Fetchers.getPaymentsUsersSubscriptionsHealth(user_pk)
+    () => Fetchers.getPaymentsUsersSubscriptionsHealthById(user_pk)
   )
 }
 
@@ -1214,10 +1214,10 @@ export function usePaymentsUsersSubscriptionsHealth(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/stats/
  */
-export function usePaymentsUsersSubscriptionsStat(user_pk: number) {
+export function usePaymentsUsersSubscriptionsStatsById(user_pk: number) {
   return useSWR<Subscription>(
     ['payments-users-subscriptions-stat', user_pk],
-    () => Fetchers.getPaymentsUsersSubscriptionsStat(user_pk)
+    () => Fetchers.getPaymentsUsersSubscriptionsStatsById(user_pk)
   )
 }
 
@@ -1226,10 +1226,10 @@ export function usePaymentsUsersSubscriptionsStat(user_pk: number) {
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/summary/
  */
-export function usePaymentsUsersSubscriptionsSummary(user_pk: number) {
+export function usePaymentsUsersSubscriptionsSummaryById(user_pk: number) {
   return useSWR<Subscription>(
     ['payments-users-subscriptions-summary', user_pk],
-    () => Fetchers.getPaymentsUsersSubscriptionsSummary(user_pk)
+    () => Fetchers.getPaymentsUsersSubscriptionsSummaryById(user_pk)
   )
 }
 
@@ -1238,10 +1238,10 @@ export function usePaymentsUsersSubscriptionsSummary(user_pk: number) {
  * @method GET
  * @path /payments/users/health/
  */
-export function usePaymentsUsersHealth() {
+export function usePaymentsUsersHealthById() {
   return useSWR<Payment>(
     'payments-users-health',
-    () => Fetchers.getPaymentsUsersHealth()
+    () => Fetchers.getPaymentsUsersHealthById()
   )
 }
 
@@ -1250,10 +1250,10 @@ export function usePaymentsUsersHealth() {
  * @method GET
  * @path /payments/users/stats/
  */
-export function usePaymentsUsersStat() {
+export function usePaymentsUsersStatsById() {
   return useSWR<Payment>(
     'payments-users-stat',
-    () => Fetchers.getPaymentsUsersStat()
+    () => Fetchers.getPaymentsUsersStatsById()
   )
 }
 
@@ -1262,10 +1262,10 @@ export function usePaymentsUsersStat() {
  * @method GET
  * @path /payments/users/summary/
  */
-export function usePaymentsUsersSummary() {
+export function usePaymentsUsersSummaryById() {
   return useSWR<Payment>(
     'payments-users-summary',
-    () => Fetchers.getPaymentsUsersSummary()
+    () => Fetchers.getPaymentsUsersSummaryById()
   )
 }
 

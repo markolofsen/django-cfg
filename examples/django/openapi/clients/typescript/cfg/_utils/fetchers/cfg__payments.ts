@@ -74,7 +74,7 @@ import { getAPIInstance } from '../../api-instance'
 import type { API } from '../../index'
 
 /**
- * getPaymentsApiKeys
+ * getPaymentsApiKeysList
  *
  * Global API Key ViewSet: /api/api-keys/
  * 
@@ -83,7 +83,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /payments/api-keys/
  */
-export async function getPaymentsApiKeys(
+export async function getPaymentsApiKeysList(
   params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string; user?: number },
   client?: API
 ): Promise<PaginatedAPIKeyListList> {
@@ -114,7 +114,7 @@ export async function createPaymentsApiKeys(
 }
 
 /**
- * getPaymentsApiKey
+ * getPaymentsApiKeysById
  *
  * Global API Key ViewSet: /api/api-keys/
  * 
@@ -123,7 +123,7 @@ export async function createPaymentsApiKeys(
  * @method GET
  * @path /payments/api-keys/{id}/
  */
-export async function getPaymentsApiKey(
+export async function getPaymentsApiKeysById(
   id: string,
   client?: API
 ): Promise<APIKeyDetail> {
@@ -214,7 +214,7 @@ export async function createPaymentsApiKeysPerformAction(
 }
 
 /**
- * getPaymentsApiKeysAnalytic
+ * getPaymentsApiKeysAnalyticsById
  *
  * Get API key analytics.
  * 
@@ -223,7 +223,7 @@ export async function createPaymentsApiKeysPerformAction(
  * @method GET
  * @path /payments/api-keys/analytics/
  */
-export async function getPaymentsApiKeysAnalytic(
+export async function getPaymentsApiKeysAnalyticsById(
   client?: API
 ): Promise<APIKeyDetail> {
   const api = client || getAPIInstance()
@@ -233,7 +233,7 @@ export async function getPaymentsApiKeysAnalytic(
 }
 
 /**
- * getPaymentsApiKeysByUser
+ * getPaymentsApiKeysByUserById
  *
  * Get API keys grouped by user.
  * 
@@ -242,7 +242,7 @@ export async function getPaymentsApiKeysAnalytic(
  * @method GET
  * @path /payments/api-keys/by_user/
  */
-export async function getPaymentsApiKeysByUser(
+export async function getPaymentsApiKeysByUserById(
   client?: API
 ): Promise<APIKeyDetail> {
   const api = client || getAPIInstance()
@@ -272,7 +272,7 @@ export async function createPaymentsApiKeysCreate(
 }
 
 /**
- * getPaymentsApiKeysExpiringSoon
+ * getPaymentsApiKeysExpiringSoonById
  *
  * Get API keys expiring soon.
  * 
@@ -281,7 +281,7 @@ export async function createPaymentsApiKeysCreate(
  * @method GET
  * @path /payments/api-keys/expiring_soon/
  */
-export async function getPaymentsApiKeysExpiringSoon(
+export async function getPaymentsApiKeysExpiringSoonById(
   client?: API
 ): Promise<APIKeyDetail> {
   const api = client || getAPIInstance()
@@ -291,7 +291,7 @@ export async function getPaymentsApiKeysExpiringSoon(
 }
 
 /**
- * getPaymentsApiKeysHealth
+ * getPaymentsApiKeysHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -300,7 +300,7 @@ export async function getPaymentsApiKeysExpiringSoon(
  * @method GET
  * @path /payments/api-keys/health/
  */
-export async function getPaymentsApiKeysHealth(
+export async function getPaymentsApiKeysHealthById(
   client?: API
 ): Promise<APIKeyDetail> {
   const api = client || getAPIInstance()
@@ -310,7 +310,7 @@ export async function getPaymentsApiKeysHealth(
 }
 
 /**
- * getPaymentsApiKeysStat
+ * getPaymentsApiKeysStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -319,7 +319,7 @@ export async function getPaymentsApiKeysHealth(
  * @method GET
  * @path /payments/api-keys/stats/
  */
-export async function getPaymentsApiKeysStat(
+export async function getPaymentsApiKeysStatsById(
   client?: API
 ): Promise<APIKeyDetail> {
   const api = client || getAPIInstance()
@@ -365,7 +365,7 @@ export async function createPaymentsApiKeysValidateKey(
 }
 
 /**
- * getPaymentsBalances
+ * getPaymentsBalancesList
  *
  * User balance ViewSet: /api/balances/
  * 
@@ -374,7 +374,7 @@ export async function createPaymentsApiKeysValidateKey(
  * @method GET
  * @path /payments/balances/
  */
-export async function getPaymentsBalances(
+export async function getPaymentsBalancesList(
   params?: { ordering?: string; page?: number; page_size?: number; search?: string; user?: number },
   client?: API
 ): Promise<PaginatedUserBalanceList> {
@@ -385,7 +385,7 @@ export async function getPaymentsBalances(
 }
 
 /**
- * getPaymentsBalance
+ * getPaymentsBalancesById
  *
  * User balance ViewSet: /api/balances/
  * 
@@ -394,7 +394,7 @@ export async function getPaymentsBalances(
  * @method GET
  * @path /payments/balances/{id}/
  */
-export async function getPaymentsBalance(
+export async function getPaymentsBalancesById(
   id: number,
   client?: API
 ): Promise<UserBalance> {
@@ -405,7 +405,7 @@ export async function getPaymentsBalance(
 }
 
 /**
- * getPaymentsBalancesAnalytic
+ * getPaymentsBalancesAnalyticsById
  *
  * Get balance analytics.
  * 
@@ -414,7 +414,7 @@ export async function getPaymentsBalance(
  * @method GET
  * @path /payments/balances/analytics/
  */
-export async function getPaymentsBalancesAnalytic(
+export async function getPaymentsBalancesAnalyticsById(
   client?: API
 ): Promise<UserBalance> {
   const api = client || getAPIInstance()
@@ -424,7 +424,7 @@ export async function getPaymentsBalancesAnalytic(
 }
 
 /**
- * getPaymentsBalancesHealth
+ * getPaymentsBalancesHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -433,7 +433,7 @@ export async function getPaymentsBalancesAnalytic(
  * @method GET
  * @path /payments/balances/health/
  */
-export async function getPaymentsBalancesHealth(
+export async function getPaymentsBalancesHealthById(
   client?: API
 ): Promise<UserBalance> {
   const api = client || getAPIInstance()
@@ -443,7 +443,7 @@ export async function getPaymentsBalancesHealth(
 }
 
 /**
- * getPaymentsBalancesStat
+ * getPaymentsBalancesStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -452,7 +452,7 @@ export async function getPaymentsBalancesHealth(
  * @method GET
  * @path /payments/balances/stats/
  */
-export async function getPaymentsBalancesStat(
+export async function getPaymentsBalancesStatsById(
   client?: API
 ): Promise<UserBalance> {
   const api = client || getAPIInstance()
@@ -462,7 +462,7 @@ export async function getPaymentsBalancesStat(
 }
 
 /**
- * getPaymentsBalancesSummary
+ * getPaymentsBalancesSummaryById
  *
  * Get balance summary for all users.
  * 
@@ -471,7 +471,7 @@ export async function getPaymentsBalancesStat(
  * @method GET
  * @path /payments/balances/summary/
  */
-export async function getPaymentsBalancesSummary(
+export async function getPaymentsBalancesSummaryById(
   client?: API
 ): Promise<UserBalance> {
   const api = client || getAPIInstance()
@@ -481,7 +481,7 @@ export async function getPaymentsBalancesSummary(
 }
 
 /**
- * getPaymentsCurrencies
+ * getPaymentsCurrenciesList
  *
  * Currency ViewSet: /api/currencies/
  * 
@@ -490,7 +490,7 @@ export async function getPaymentsBalancesSummary(
  * @method GET
  * @path /payments/currencies/
  */
-export async function getPaymentsCurrencies(
+export async function getPaymentsCurrenciesList(
   params?: { currency_type?: string; is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedCurrencyListList> {
@@ -518,7 +518,7 @@ export async function createPaymentsCurrencies(
 }
 
 /**
- * getPaymentsCurrencie
+ * getPaymentsCurrenciesById
  *
  * Currency ViewSet: /api/currencies/
  * 
@@ -527,7 +527,7 @@ export async function createPaymentsCurrencies(
  * @method GET
  * @path /payments/currencies/{id}/
  */
-export async function getPaymentsCurrencie(
+export async function getPaymentsCurrenciesById(
   id: number,
   client?: API
 ): Promise<Currency> {
@@ -538,7 +538,7 @@ export async function getPaymentsCurrencie(
 }
 
 /**
- * getPaymentsCurrenciesNetwork
+ * getPaymentsCurrenciesNetworksById
  *
  * Get networks for specific currency.
  * 
@@ -547,7 +547,7 @@ export async function getPaymentsCurrencie(
  * @method GET
  * @path /payments/currencies/{id}/networks/
  */
-export async function getPaymentsCurrenciesNetwork(
+export async function getPaymentsCurrenciesNetworksById(
   id: number,
   client?: API
 ): Promise<Currency> {
@@ -558,7 +558,7 @@ export async function getPaymentsCurrenciesNetwork(
 }
 
 /**
- * getPaymentsCurrenciesProvider
+ * getPaymentsCurrenciesProvidersById
  *
  * Get providers supporting specific currency.
  * 
@@ -567,7 +567,7 @@ export async function getPaymentsCurrenciesNetwork(
  * @method GET
  * @path /payments/currencies/{id}/providers/
  */
-export async function getPaymentsCurrenciesProvider(
+export async function getPaymentsCurrenciesProvidersById(
   id: number,
   client?: API
 ): Promise<Currency> {
@@ -597,7 +597,7 @@ export async function createPaymentsCurrenciesConvert(
 }
 
 /**
- * getPaymentsCurrenciesCrypto
+ * getPaymentsCurrenciesCryptoById
  *
  * Get only cryptocurrencies.
  * 
@@ -606,7 +606,7 @@ export async function createPaymentsCurrenciesConvert(
  * @method GET
  * @path /payments/currencies/crypto/
  */
-export async function getPaymentsCurrenciesCrypto(
+export async function getPaymentsCurrenciesCryptoById(
   client?: API
 ): Promise<Currency> {
   const api = client || getAPIInstance()
@@ -616,7 +616,7 @@ export async function getPaymentsCurrenciesCrypto(
 }
 
 /**
- * getPaymentsCurrenciesFiat
+ * getPaymentsCurrenciesFiatById
  *
  * Get only fiat currencies.
  * 
@@ -625,7 +625,7 @@ export async function getPaymentsCurrenciesCrypto(
  * @method GET
  * @path /payments/currencies/fiat/
  */
-export async function getPaymentsCurrenciesFiat(
+export async function getPaymentsCurrenciesFiatById(
   client?: API
 ): Promise<Currency> {
   const api = client || getAPIInstance()
@@ -635,7 +635,7 @@ export async function getPaymentsCurrenciesFiat(
 }
 
 /**
- * getPaymentsCurrenciesHealth
+ * getPaymentsCurrenciesHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -644,7 +644,7 @@ export async function getPaymentsCurrenciesFiat(
  * @method GET
  * @path /payments/currencies/health/
  */
-export async function getPaymentsCurrenciesHealth(
+export async function getPaymentsCurrenciesHealthById(
   client?: API
 ): Promise<Currency> {
   const api = client || getAPIInstance()
@@ -661,7 +661,7 @@ export async function getPaymentsCurrenciesHealth(
  * @method GET
  * @path /payments/currencies/rates/
  */
-export async function getPaymentsCurrenciesRate(
+export async function getPaymentsCurrenciesRatesById(
   params: { base_currency: string; currencies: string },
   client?: API
 ): Promise<Currency> {
@@ -672,7 +672,7 @@ export async function getPaymentsCurrenciesRate(
 }
 
 /**
- * getPaymentsCurrenciesStable
+ * getPaymentsCurrenciesStableById
  *
  * Get only stablecoins.
  * 
@@ -681,7 +681,7 @@ export async function getPaymentsCurrenciesRate(
  * @method GET
  * @path /payments/currencies/stable/
  */
-export async function getPaymentsCurrenciesStable(
+export async function getPaymentsCurrenciesStableById(
   client?: API
 ): Promise<Currency> {
   const api = client || getAPIInstance()
@@ -691,7 +691,7 @@ export async function getPaymentsCurrenciesStable(
 }
 
 /**
- * getPaymentsCurrenciesStat
+ * getPaymentsCurrenciesStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -700,7 +700,7 @@ export async function getPaymentsCurrenciesStable(
  * @method GET
  * @path /payments/currencies/stats/
  */
-export async function getPaymentsCurrenciesStat(
+export async function getPaymentsCurrenciesStatsById(
   client?: API
 ): Promise<Currency> {
   const api = client || getAPIInstance()
@@ -717,7 +717,7 @@ export async function getPaymentsCurrenciesStat(
  * @method GET
  * @path /payments/currencies/supported/
  */
-export async function getPaymentsCurrenciesSupported(
+export async function getPaymentsCurrenciesSupportedById(
   params?: { currency_type?: string; provider?: string },
   client?: API
 ): Promise<Currency> {
@@ -728,7 +728,7 @@ export async function getPaymentsCurrenciesSupported(
 }
 
 /**
- * getPaymentsEndpointGroups
+ * getPaymentsEndpointGroupsList
  *
  * Endpoint Group ViewSet: /api/endpoint-groups/
  * 
@@ -737,7 +737,7 @@ export async function getPaymentsCurrenciesSupported(
  * @method GET
  * @path /payments/endpoint-groups/
  */
-export async function getPaymentsEndpointGroups(
+export async function getPaymentsEndpointGroupsList(
   params?: { is_enabled?: boolean; ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedEndpointGroupList> {
@@ -748,7 +748,7 @@ export async function getPaymentsEndpointGroups(
 }
 
 /**
- * getPaymentsEndpointGroup
+ * getPaymentsEndpointGroupsById
  *
  * Endpoint Group ViewSet: /api/endpoint-groups/
  * 
@@ -757,7 +757,7 @@ export async function getPaymentsEndpointGroups(
  * @method GET
  * @path /payments/endpoint-groups/{id}/
  */
-export async function getPaymentsEndpointGroup(
+export async function getPaymentsEndpointGroupsById(
   id: number,
   client?: API
 ): Promise<EndpointGroup> {
@@ -768,7 +768,7 @@ export async function getPaymentsEndpointGroup(
 }
 
 /**
- * getPaymentsEndpointGroupsAvailable
+ * getPaymentsEndpointGroupsAvailableById
  *
  * Get available endpoint groups for subscription.
  * 
@@ -777,7 +777,7 @@ export async function getPaymentsEndpointGroup(
  * @method GET
  * @path /payments/endpoint-groups/available/
  */
-export async function getPaymentsEndpointGroupsAvailable(
+export async function getPaymentsEndpointGroupsAvailableById(
   client?: API
 ): Promise<EndpointGroup> {
   const api = client || getAPIInstance()
@@ -787,7 +787,7 @@ export async function getPaymentsEndpointGroupsAvailable(
 }
 
 /**
- * getPaymentsEndpointGroupsHealth
+ * getPaymentsEndpointGroupsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -796,7 +796,7 @@ export async function getPaymentsEndpointGroupsAvailable(
  * @method GET
  * @path /payments/endpoint-groups/health/
  */
-export async function getPaymentsEndpointGroupsHealth(
+export async function getPaymentsEndpointGroupsHealthById(
   client?: API
 ): Promise<EndpointGroup> {
   const api = client || getAPIInstance()
@@ -806,7 +806,7 @@ export async function getPaymentsEndpointGroupsHealth(
 }
 
 /**
- * getPaymentsEndpointGroupsStat
+ * getPaymentsEndpointGroupsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -815,7 +815,7 @@ export async function getPaymentsEndpointGroupsHealth(
  * @method GET
  * @path /payments/endpoint-groups/stats/
  */
-export async function getPaymentsEndpointGroupsStat(
+export async function getPaymentsEndpointGroupsStatsById(
   client?: API
 ): Promise<EndpointGroup> {
   const api = client || getAPIInstance()
@@ -825,7 +825,7 @@ export async function getPaymentsEndpointGroupsStat(
 }
 
 /**
- * getPaymentsHealth
+ * getPaymentsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -834,7 +834,7 @@ export async function getPaymentsEndpointGroupsStat(
  * @method GET
  * @path /payments/health/
  */
-export async function getPaymentsHealth(
+export async function getPaymentsHealthById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -844,7 +844,7 @@ export async function getPaymentsHealth(
 }
 
 /**
- * getPaymentsNetworks
+ * getPaymentsNetworksList
  *
  * Network ViewSet: /api/networks/
  * 
@@ -853,7 +853,7 @@ export async function getPaymentsHealth(
  * @method GET
  * @path /payments/networks/
  */
-export async function getPaymentsNetworks(
+export async function getPaymentsNetworksList(
   params?: { is_active?: boolean; native_currency__code?: string; ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedNetworkList> {
@@ -864,7 +864,7 @@ export async function getPaymentsNetworks(
 }
 
 /**
- * getPaymentsNetwork
+ * getPaymentsNetworksById
  *
  * Network ViewSet: /api/networks/
  * 
@@ -873,7 +873,7 @@ export async function getPaymentsNetworks(
  * @method GET
  * @path /payments/networks/{id}/
  */
-export async function getPaymentsNetwork(
+export async function getPaymentsNetworksById(
   id: number,
   client?: API
 ): Promise<Network> {
@@ -884,7 +884,7 @@ export async function getPaymentsNetwork(
 }
 
 /**
- * getPaymentsNetworksByCurrency
+ * getPaymentsNetworksByCurrencyById
  *
  * Get networks grouped by currency.
  * 
@@ -893,7 +893,7 @@ export async function getPaymentsNetwork(
  * @method GET
  * @path /payments/networks/by_currency/
  */
-export async function getPaymentsNetworksByCurrency(
+export async function getPaymentsNetworksByCurrencyById(
   client?: API
 ): Promise<Network> {
   const api = client || getAPIInstance()
@@ -903,7 +903,7 @@ export async function getPaymentsNetworksByCurrency(
 }
 
 /**
- * getPaymentsNetworksHealth
+ * getPaymentsNetworksHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -912,7 +912,7 @@ export async function getPaymentsNetworksByCurrency(
  * @method GET
  * @path /payments/networks/health/
  */
-export async function getPaymentsNetworksHealth(
+export async function getPaymentsNetworksHealthById(
   client?: API
 ): Promise<Network> {
   const api = client || getAPIInstance()
@@ -922,7 +922,7 @@ export async function getPaymentsNetworksHealth(
 }
 
 /**
- * getPaymentsNetworksStat
+ * getPaymentsNetworksStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -931,7 +931,7 @@ export async function getPaymentsNetworksHealth(
  * @method GET
  * @path /payments/networks/stats/
  */
-export async function getPaymentsNetworksStat(
+export async function getPaymentsNetworksStatsById(
   client?: API
 ): Promise<Network> {
   const api = client || getAPIInstance()
@@ -948,7 +948,7 @@ export async function getPaymentsNetworksStat(
  * @method GET
  * @path /payments/overview/dashboard/api_keys_overview/
  */
-export async function getPaymentsOverviewDashboardApiKeysOverview(
+export async function getPaymentsOverviewDashboardApiKeysOverviewById(
   client?: API
 ): Promise<APIKeysOverview> {
   const api = client || getAPIInstance()
@@ -965,7 +965,7 @@ export async function getPaymentsOverviewDashboardApiKeysOverview(
  * @method GET
  * @path /payments/overview/dashboard/balance_overview/
  */
-export async function getPaymentsOverviewDashboardBalanceOverview(
+export async function getPaymentsOverviewDashboardBalanceOverviewById(
   client?: API
 ): Promise<BalanceOverview> {
   const api = client || getAPIInstance()
@@ -982,7 +982,7 @@ export async function getPaymentsOverviewDashboardBalanceOverview(
  * @method GET
  * @path /payments/overview/dashboard/chart_data/
  */
-export async function getPaymentsOverviewDashboardChartData(
+export async function getPaymentsOverviewDashboardChartDataById(
   params?: { period?: string },
   client?: API
 ): Promise<PaymentsChartResponse> {
@@ -1000,7 +1000,7 @@ export async function getPaymentsOverviewDashboardChartData(
  * @method GET
  * @path /payments/overview/dashboard/metrics/
  */
-export async function getPaymentsOverviewDashboardMetric(
+export async function getPaymentsOverviewDashboardMetricsById(
   client?: API
 ): Promise<PaymentsMetrics> {
   const api = client || getAPIInstance()
@@ -1017,7 +1017,7 @@ export async function getPaymentsOverviewDashboardMetric(
  * @method GET
  * @path /payments/overview/dashboard/overview/
  */
-export async function getPaymentsOverviewDashboardOverview(
+export async function getPaymentsOverviewDashboardOverviewById(
   client?: API
 ): Promise<PaymentsDashboardOverview> {
   const api = client || getAPIInstance()
@@ -1034,7 +1034,7 @@ export async function getPaymentsOverviewDashboardOverview(
  * @method GET
  * @path /payments/overview/dashboard/payment_analytics/
  */
-export async function getPaymentsOverviewDashboardPaymentAnalytic(
+export async function getPaymentsOverviewDashboardPaymentAnalyticsById(
   params?: { limit?: number },
   client?: API
 ): Promise<PaymentAnalyticsResponse> {
@@ -1052,7 +1052,7 @@ export async function getPaymentsOverviewDashboardPaymentAnalytic(
  * @method GET
  * @path /payments/overview/dashboard/recent_payments/
  */
-export async function getPaymentsOverviewDashboardRecentPayments(
+export async function getPaymentsOverviewDashboardRecentPaymentsList(
   params?: { limit?: number; page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedRecentPaymentList> {
@@ -1070,7 +1070,7 @@ export async function getPaymentsOverviewDashboardRecentPayments(
  * @method GET
  * @path /payments/overview/dashboard/recent_transactions/
  */
-export async function getPaymentsOverviewDashboardRecentTransactions(
+export async function getPaymentsOverviewDashboardRecentTransactionsList(
   params?: { limit?: number; page?: number; page_size?: number },
   client?: API
 ): Promise<PaginatedRecentTransactionList> {
@@ -1088,7 +1088,7 @@ export async function getPaymentsOverviewDashboardRecentTransactions(
  * @method GET
  * @path /payments/overview/dashboard/subscription_overview/
  */
-export async function getPaymentsOverviewDashboardSubscriptionOverview(
+export async function getPaymentsOverviewDashboardSubscriptionOverviewById(
   client?: API
 ): Promise<SubscriptionOverview> {
   const api = client || getAPIInstance()
@@ -1098,7 +1098,7 @@ export async function getPaymentsOverviewDashboardSubscriptionOverview(
 }
 
 /**
- * getPaymentsPayments
+ * getPaymentsPaymentsList
  *
  * Global payment ViewSet: /api/v1/payments/
  * 
@@ -1107,7 +1107,7 @@ export async function getPaymentsOverviewDashboardSubscriptionOverview(
  * @method GET
  * @path /payments/payments/
  */
-export async function getPaymentsPayments(
+export async function getPaymentsPaymentsList(
   params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string; user?: number },
   client?: API
 ): Promise<PaginatedPaymentListList> {
@@ -1138,7 +1138,7 @@ export async function createPaymentsPayments(
 }
 
 /**
- * getPaymentsPayment
+ * getPaymentsPaymentsById
  *
  * Global payment ViewSet: /api/v1/payments/
  * 
@@ -1147,7 +1147,7 @@ export async function createPaymentsPayments(
  * @method GET
  * @path /payments/payments/{id}/
  */
-export async function getPaymentsPayment(
+export async function getPaymentsPaymentsById(
   id: string,
   client?: API
 ): Promise<Payment> {
@@ -1258,7 +1258,7 @@ export async function createPaymentsPaymentsCheckStatus(
 }
 
 /**
- * getPaymentsPaymentsAnalytic
+ * getPaymentsPaymentsAnalyticsById
  *
  * Get payment analytics.
  * 
@@ -1267,7 +1267,7 @@ export async function createPaymentsPaymentsCheckStatus(
  * @method GET
  * @path /payments/payments/analytics/
  */
-export async function getPaymentsPaymentsAnalytic(
+export async function getPaymentsPaymentsAnalyticsById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -1277,7 +1277,7 @@ export async function getPaymentsPaymentsAnalytic(
 }
 
 /**
- * getPaymentsPaymentsByProvider
+ * getPaymentsPaymentsByProviderById
  *
  * Get payments grouped by provider.
  * 
@@ -1286,7 +1286,7 @@ export async function getPaymentsPaymentsAnalytic(
  * @method GET
  * @path /payments/payments/by_provider/
  */
-export async function getPaymentsPaymentsByProvider(
+export async function getPaymentsPaymentsByProviderById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -1316,7 +1316,7 @@ export async function createPaymentsPaymentsCreate(
 }
 
 /**
- * getPaymentsPaymentsHealth
+ * getPaymentsPaymentsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -1325,7 +1325,7 @@ export async function createPaymentsPaymentsCreate(
  * @method GET
  * @path /payments/payments/health/
  */
-export async function getPaymentsPaymentsHealth(
+export async function getPaymentsPaymentsHealthById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -1335,7 +1335,7 @@ export async function getPaymentsPaymentsHealth(
 }
 
 /**
- * getPaymentsPaymentsStat
+ * getPaymentsPaymentsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -1344,7 +1344,7 @@ export async function getPaymentsPaymentsHealth(
  * @method GET
  * @path /payments/payments/stats/
  */
-export async function getPaymentsPaymentsStat(
+export async function getPaymentsPaymentsStatsById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -1354,7 +1354,7 @@ export async function getPaymentsPaymentsStat(
 }
 
 /**
- * getPaymentsPaymentsStatu
+ * getPaymentsPaymentsStatusById
  *
  * Standalone payment status endpoint: /api/v1/payments/{id}/status/
  * 
@@ -1363,7 +1363,7 @@ export async function getPaymentsPaymentsStat(
  * @method GET
  * @path /payments/payments/status/{id}/
  */
-export async function getPaymentsPaymentsStatu(
+export async function getPaymentsPaymentsStatusById(
   id: string,
   client?: API
 ): Promise<Payment> {
@@ -1374,7 +1374,7 @@ export async function getPaymentsPaymentsStatu(
 }
 
 /**
- * getPaymentsProviderCurrencies
+ * getPaymentsProviderCurrenciesList
  *
  * Provider Currency ViewSet: /api/provider-currencies/
  * 
@@ -1383,7 +1383,7 @@ export async function getPaymentsPaymentsStatu(
  * @method GET
  * @path /payments/provider-currencies/
  */
-export async function getPaymentsProviderCurrencies(
+export async function getPaymentsProviderCurrenciesList(
   params?: { currency__code?: string; is_enabled?: boolean; network__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string },
   client?: API
 ): Promise<PaginatedProviderCurrencyList> {
@@ -1394,7 +1394,7 @@ export async function getPaymentsProviderCurrencies(
 }
 
 /**
- * getPaymentsProviderCurrencie
+ * getPaymentsProviderCurrenciesById
  *
  * Provider Currency ViewSet: /api/provider-currencies/
  * 
@@ -1403,7 +1403,7 @@ export async function getPaymentsProviderCurrencies(
  * @method GET
  * @path /payments/provider-currencies/{id}/
  */
-export async function getPaymentsProviderCurrencie(
+export async function getPaymentsProviderCurrenciesById(
   id: number,
   client?: API
 ): Promise<ProviderCurrency> {
@@ -1414,7 +1414,7 @@ export async function getPaymentsProviderCurrencie(
 }
 
 /**
- * getPaymentsProviderCurrenciesByProvider
+ * getPaymentsProviderCurrenciesByProviderById
  *
  * Get provider currencies grouped by provider.
  * 
@@ -1423,7 +1423,7 @@ export async function getPaymentsProviderCurrencie(
  * @method GET
  * @path /payments/provider-currencies/by_provider/
  */
-export async function getPaymentsProviderCurrenciesByProvider(
+export async function getPaymentsProviderCurrenciesByProviderById(
   client?: API
 ): Promise<ProviderCurrency> {
   const api = client || getAPIInstance()
@@ -1433,7 +1433,7 @@ export async function getPaymentsProviderCurrenciesByProvider(
 }
 
 /**
- * getPaymentsProviderCurrenciesHealth
+ * getPaymentsProviderCurrenciesHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -1442,7 +1442,7 @@ export async function getPaymentsProviderCurrenciesByProvider(
  * @method GET
  * @path /payments/provider-currencies/health/
  */
-export async function getPaymentsProviderCurrenciesHealth(
+export async function getPaymentsProviderCurrenciesHealthById(
   client?: API
 ): Promise<ProviderCurrency> {
   const api = client || getAPIInstance()
@@ -1452,7 +1452,7 @@ export async function getPaymentsProviderCurrenciesHealth(
 }
 
 /**
- * getPaymentsProviderCurrenciesLimit
+ * getPaymentsProviderCurrenciesLimitsById
  *
  * Get currency limits by provider.
  * 
@@ -1461,7 +1461,7 @@ export async function getPaymentsProviderCurrenciesHealth(
  * @method GET
  * @path /payments/provider-currencies/limits/
  */
-export async function getPaymentsProviderCurrenciesLimit(
+export async function getPaymentsProviderCurrenciesLimitsById(
   client?: API
 ): Promise<ProviderCurrency> {
   const api = client || getAPIInstance()
@@ -1471,7 +1471,7 @@ export async function getPaymentsProviderCurrenciesLimit(
 }
 
 /**
- * getPaymentsProviderCurrenciesStat
+ * getPaymentsProviderCurrenciesStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -1480,7 +1480,7 @@ export async function getPaymentsProviderCurrenciesLimit(
  * @method GET
  * @path /payments/provider-currencies/stats/
  */
-export async function getPaymentsProviderCurrenciesStat(
+export async function getPaymentsProviderCurrenciesStatsById(
   client?: API
 ): Promise<ProviderCurrency> {
   const api = client || getAPIInstance()
@@ -1490,7 +1490,7 @@ export async function getPaymentsProviderCurrenciesStat(
 }
 
 /**
- * getPaymentsSubscriptions
+ * getPaymentsSubscriptionsList
  *
  * Global subscription ViewSet: /api/subscriptions/
  * 
@@ -1499,7 +1499,7 @@ export async function getPaymentsProviderCurrenciesStat(
  * @method GET
  * @path /payments/subscriptions/
  */
-export async function getPaymentsSubscriptions(
+export async function getPaymentsSubscriptionsList(
   params?: { ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tier?: string; user?: number },
   client?: API
 ): Promise<PaginatedSubscriptionListList> {
@@ -1530,7 +1530,7 @@ export async function createPaymentsSubscriptions(
 }
 
 /**
- * getPaymentsSubscription
+ * getPaymentsSubscriptionsById
  *
  * Global subscription ViewSet: /api/subscriptions/
  * 
@@ -1539,7 +1539,7 @@ export async function createPaymentsSubscriptions(
  * @method GET
  * @path /payments/subscriptions/{id}/
  */
-export async function getPaymentsSubscription(
+export async function getPaymentsSubscriptionsById(
   id: string,
   client?: API
 ): Promise<Subscription> {
@@ -1650,7 +1650,7 @@ export async function createPaymentsSubscriptionsUpdateStatus(
 }
 
 /**
- * getPaymentsSubscriptionsAnalytic
+ * getPaymentsSubscriptionsAnalyticsById
  *
  * Get subscription analytics.
  * 
@@ -1659,7 +1659,7 @@ export async function createPaymentsSubscriptionsUpdateStatus(
  * @method GET
  * @path /payments/subscriptions/analytics/
  */
-export async function getPaymentsSubscriptionsAnalytic(
+export async function getPaymentsSubscriptionsAnalyticsById(
   client?: API
 ): Promise<Subscription> {
   const api = client || getAPIInstance()
@@ -1669,7 +1669,7 @@ export async function getPaymentsSubscriptionsAnalytic(
 }
 
 /**
- * getPaymentsSubscriptionsByStatu
+ * getPaymentsSubscriptionsByStatusById
  *
  * Get subscriptions grouped by status.
  * 
@@ -1678,7 +1678,7 @@ export async function getPaymentsSubscriptionsAnalytic(
  * @method GET
  * @path /payments/subscriptions/by_status/
  */
-export async function getPaymentsSubscriptionsByStatu(
+export async function getPaymentsSubscriptionsByStatusById(
   client?: API
 ): Promise<Subscription> {
   const api = client || getAPIInstance()
@@ -1688,7 +1688,7 @@ export async function getPaymentsSubscriptionsByStatu(
 }
 
 /**
- * getPaymentsSubscriptionsByTier
+ * getPaymentsSubscriptionsByTierById
  *
  * Get subscriptions grouped by tier.
  * 
@@ -1697,7 +1697,7 @@ export async function getPaymentsSubscriptionsByStatu(
  * @method GET
  * @path /payments/subscriptions/by_tier/
  */
-export async function getPaymentsSubscriptionsByTier(
+export async function getPaymentsSubscriptionsByTierById(
   client?: API
 ): Promise<Subscription> {
   const api = client || getAPIInstance()
@@ -1707,7 +1707,7 @@ export async function getPaymentsSubscriptionsByTier(
 }
 
 /**
- * getPaymentsSubscriptionsHealth
+ * getPaymentsSubscriptionsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -1716,7 +1716,7 @@ export async function getPaymentsSubscriptionsByTier(
  * @method GET
  * @path /payments/subscriptions/health/
  */
-export async function getPaymentsSubscriptionsHealth(
+export async function getPaymentsSubscriptionsHealthById(
   client?: API
 ): Promise<Subscription> {
   const api = client || getAPIInstance()
@@ -1726,7 +1726,7 @@ export async function getPaymentsSubscriptionsHealth(
 }
 
 /**
- * getPaymentsSubscriptionsStat
+ * getPaymentsSubscriptionsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -1735,7 +1735,7 @@ export async function getPaymentsSubscriptionsHealth(
  * @method GET
  * @path /payments/subscriptions/stats/
  */
-export async function getPaymentsSubscriptionsStat(
+export async function getPaymentsSubscriptionsStatsById(
   client?: API
 ): Promise<Subscription> {
   const api = client || getAPIInstance()
@@ -1745,7 +1745,7 @@ export async function getPaymentsSubscriptionsStat(
 }
 
 /**
- * getPaymentsTariffs
+ * getPaymentsTariffsList
  *
  * Tariff ViewSet: /api/tariffs/
  * 
@@ -1754,7 +1754,7 @@ export async function getPaymentsSubscriptionsStat(
  * @method GET
  * @path /payments/tariffs/
  */
-export async function getPaymentsTariffs(
+export async function getPaymentsTariffsList(
   params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedTariffList> {
@@ -1765,7 +1765,7 @@ export async function getPaymentsTariffs(
 }
 
 /**
- * getPaymentsTariff
+ * getPaymentsTariffsById
  *
  * Tariff ViewSet: /api/tariffs/
  * 
@@ -1774,7 +1774,7 @@ export async function getPaymentsTariffs(
  * @method GET
  * @path /payments/tariffs/{id}/
  */
-export async function getPaymentsTariff(
+export async function getPaymentsTariffsById(
   id: number,
   client?: API
 ): Promise<Tariff> {
@@ -1785,7 +1785,7 @@ export async function getPaymentsTariff(
 }
 
 /**
- * getPaymentsTariffsEndpointGroup
+ * getPaymentsTariffsEndpointGroupsById
  *
  * Get endpoint groups for specific tariff.
  * 
@@ -1794,7 +1794,7 @@ export async function getPaymentsTariff(
  * @method GET
  * @path /payments/tariffs/{id}/endpoint_groups/
  */
-export async function getPaymentsTariffsEndpointGroup(
+export async function getPaymentsTariffsEndpointGroupsById(
   id: number,
   client?: API
 ): Promise<Tariff> {
@@ -1805,7 +1805,7 @@ export async function getPaymentsTariffsEndpointGroup(
 }
 
 /**
- * getPaymentsTariffsFree
+ * getPaymentsTariffsFreeById
  *
  * Get free tariffs.
  * 
@@ -1814,7 +1814,7 @@ export async function getPaymentsTariffsEndpointGroup(
  * @method GET
  * @path /payments/tariffs/free/
  */
-export async function getPaymentsTariffsFree(
+export async function getPaymentsTariffsFreeById(
   client?: API
 ): Promise<Tariff> {
   const api = client || getAPIInstance()
@@ -1824,7 +1824,7 @@ export async function getPaymentsTariffsFree(
 }
 
 /**
- * getPaymentsTariffsHealth
+ * getPaymentsTariffsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -1833,7 +1833,7 @@ export async function getPaymentsTariffsFree(
  * @method GET
  * @path /payments/tariffs/health/
  */
-export async function getPaymentsTariffsHealth(
+export async function getPaymentsTariffsHealthById(
   client?: API
 ): Promise<Tariff> {
   const api = client || getAPIInstance()
@@ -1843,7 +1843,7 @@ export async function getPaymentsTariffsHealth(
 }
 
 /**
- * getPaymentsTariffsPaid
+ * getPaymentsTariffsPaidById
  *
  * Get paid tariffs.
  * 
@@ -1852,7 +1852,7 @@ export async function getPaymentsTariffsHealth(
  * @method GET
  * @path /payments/tariffs/paid/
  */
-export async function getPaymentsTariffsPaid(
+export async function getPaymentsTariffsPaidById(
   client?: API
 ): Promise<Tariff> {
   const api = client || getAPIInstance()
@@ -1862,7 +1862,7 @@ export async function getPaymentsTariffsPaid(
 }
 
 /**
- * getPaymentsTariffsStat
+ * getPaymentsTariffsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -1871,7 +1871,7 @@ export async function getPaymentsTariffsPaid(
  * @method GET
  * @path /payments/tariffs/stats/
  */
-export async function getPaymentsTariffsStat(
+export async function getPaymentsTariffsStatsById(
   client?: API
 ): Promise<Tariff> {
   const api = client || getAPIInstance()
@@ -1881,7 +1881,7 @@ export async function getPaymentsTariffsStat(
 }
 
 /**
- * getPaymentsTransactions
+ * getPaymentsTransactionsList
  *
  * Transaction ViewSet: /api/transactions/
  * 
@@ -1890,7 +1890,7 @@ export async function getPaymentsTariffsStat(
  * @method GET
  * @path /payments/transactions/
  */
-export async function getPaymentsTransactions(
+export async function getPaymentsTransactionsList(
   params?: { ordering?: string; page?: number; page_size?: number; payment_id?: string; search?: string; transaction_type?: string; user?: number },
   client?: API
 ): Promise<PaginatedTransactionList> {
@@ -1901,7 +1901,7 @@ export async function getPaymentsTransactions(
 }
 
 /**
- * getPaymentsTransaction
+ * getPaymentsTransactionsById
  *
  * Transaction ViewSet: /api/transactions/
  * 
@@ -1910,7 +1910,7 @@ export async function getPaymentsTransactions(
  * @method GET
  * @path /payments/transactions/{id}/
  */
-export async function getPaymentsTransaction(
+export async function getPaymentsTransactionsById(
   id: string,
   client?: API
 ): Promise<Transaction> {
@@ -1921,7 +1921,7 @@ export async function getPaymentsTransaction(
 }
 
 /**
- * getPaymentsTransactionsByType
+ * getPaymentsTransactionsByTypeById
  *
  * Get transactions grouped by type.
  * 
@@ -1930,7 +1930,7 @@ export async function getPaymentsTransaction(
  * @method GET
  * @path /payments/transactions/by_type/
  */
-export async function getPaymentsTransactionsByType(
+export async function getPaymentsTransactionsByTypeById(
   client?: API
 ): Promise<Transaction> {
   const api = client || getAPIInstance()
@@ -1940,7 +1940,7 @@ export async function getPaymentsTransactionsByType(
 }
 
 /**
- * getPaymentsTransactionsHealth
+ * getPaymentsTransactionsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -1949,7 +1949,7 @@ export async function getPaymentsTransactionsByType(
  * @method GET
  * @path /payments/transactions/health/
  */
-export async function getPaymentsTransactionsHealth(
+export async function getPaymentsTransactionsHealthById(
   client?: API
 ): Promise<Transaction> {
   const api = client || getAPIInstance()
@@ -1959,7 +1959,7 @@ export async function getPaymentsTransactionsHealth(
 }
 
 /**
- * getPaymentsTransactionsRecent
+ * getPaymentsTransactionsRecentById
  *
  * Get recent transactions.
  * 
@@ -1968,7 +1968,7 @@ export async function getPaymentsTransactionsHealth(
  * @method GET
  * @path /payments/transactions/recent/
  */
-export async function getPaymentsTransactionsRecent(
+export async function getPaymentsTransactionsRecentById(
   client?: API
 ): Promise<Transaction> {
   const api = client || getAPIInstance()
@@ -1978,7 +1978,7 @@ export async function getPaymentsTransactionsRecent(
 }
 
 /**
- * getPaymentsTransactionsStat
+ * getPaymentsTransactionsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -1987,7 +1987,7 @@ export async function getPaymentsTransactionsRecent(
  * @method GET
  * @path /payments/transactions/stats/
  */
-export async function getPaymentsTransactionsStat(
+export async function getPaymentsTransactionsStatsById(
   client?: API
 ): Promise<Transaction> {
   const api = client || getAPIInstance()
@@ -1997,7 +1997,7 @@ export async function getPaymentsTransactionsStat(
 }
 
 /**
- * getPaymentsUsers
+ * getPaymentsUsersList
  *
  * User-specific payment ViewSet: /api/v1/users/{user_id}/payments/
  * 
@@ -2006,7 +2006,7 @@ export async function getPaymentsTransactionsStat(
  * @method GET
  * @path /payments/users/
  */
-export async function getPaymentsUsers(
+export async function getPaymentsUsersList(
   params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string },
   client?: API
 ): Promise<PaginatedPaymentListList> {
@@ -2037,7 +2037,7 @@ export async function createPaymentsUsers(
 }
 
 /**
- * getPaymentsUser
+ * getPaymentsUsersById
  *
  * User-specific payment ViewSet: /api/v1/users/{user_id}/payments/
  * 
@@ -2046,7 +2046,7 @@ export async function createPaymentsUsers(
  * @method GET
  * @path /payments/users/{id}/
  */
-export async function getPaymentsUser(
+export async function getPaymentsUsersById(
   id: string,
   client?: API
 ): Promise<Payment> {
@@ -2157,7 +2157,7 @@ export async function createPaymentsUsersCheckStatus(
 }
 
 /**
- * getPaymentsUsersApiKeys
+ * getPaymentsUsersApiKeysList
  *
  * User-specific API Key ViewSet: /api/users/{user_id}/api-keys/
  * 
@@ -2166,7 +2166,7 @@ export async function createPaymentsUsersCheckStatus(
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/
  */
-export async function getPaymentsUsersApiKeys(
+export async function getPaymentsUsersApiKeysList(
   user_pk: number, params?: { is_active?: boolean; ordering?: string; page?: number; page_size?: number; search?: string },
   client?: API
 ): Promise<PaginatedAPIKeyListList> {
@@ -2197,7 +2197,7 @@ export async function createPaymentsUsersApiKeys(
 }
 
 /**
- * getPaymentsUsersApiKey
+ * getPaymentsUsersApiKeysById
  *
  * User-specific API Key ViewSet: /api/users/{user_id}/api-keys/
  * 
@@ -2206,7 +2206,7 @@ export async function createPaymentsUsersApiKeys(
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/{id}/
  */
-export async function getPaymentsUsersApiKey(
+export async function getPaymentsUsersApiKeysById(
   id: string, user_pk: number,
   client?: API
 ): Promise<APIKeyDetail> {
@@ -2297,7 +2297,7 @@ export async function createPaymentsUsersApiKeysPerformAction(
 }
 
 /**
- * getPaymentsUsersApiKeysActive
+ * getPaymentsUsersApiKeysActiveById
  *
  * Get user's active API keys.
  * 
@@ -2306,7 +2306,7 @@ export async function createPaymentsUsersApiKeysPerformAction(
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/active/
  */
-export async function getPaymentsUsersApiKeysActive(
+export async function getPaymentsUsersApiKeysActiveById(
   user_pk: number,
   client?: API
 ): Promise<APIKeyDetail> {
@@ -2317,7 +2317,7 @@ export async function getPaymentsUsersApiKeysActive(
 }
 
 /**
- * getPaymentsUsersApiKeysHealth
+ * getPaymentsUsersApiKeysHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -2326,7 +2326,7 @@ export async function getPaymentsUsersApiKeysActive(
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/health/
  */
-export async function getPaymentsUsersApiKeysHealth(
+export async function getPaymentsUsersApiKeysHealthById(
   user_pk: number,
   client?: API
 ): Promise<APIKeyDetail> {
@@ -2337,7 +2337,7 @@ export async function getPaymentsUsersApiKeysHealth(
 }
 
 /**
- * getPaymentsUsersApiKeysStat
+ * getPaymentsUsersApiKeysStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -2346,7 +2346,7 @@ export async function getPaymentsUsersApiKeysHealth(
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/stats/
  */
-export async function getPaymentsUsersApiKeysStat(
+export async function getPaymentsUsersApiKeysStatsById(
   user_pk: number,
   client?: API
 ): Promise<APIKeyDetail> {
@@ -2357,7 +2357,7 @@ export async function getPaymentsUsersApiKeysStat(
 }
 
 /**
- * getPaymentsUsersApiKeysSummary
+ * getPaymentsUsersApiKeysSummaryById
  *
  * Get user API key summary.
  * 
@@ -2366,7 +2366,7 @@ export async function getPaymentsUsersApiKeysStat(
  * @method GET
  * @path /payments/users/{user_pk}/api-keys/summary/
  */
-export async function getPaymentsUsersApiKeysSummary(
+export async function getPaymentsUsersApiKeysSummaryById(
   user_pk: number,
   client?: API
 ): Promise<APIKeyDetail> {
@@ -2377,7 +2377,7 @@ export async function getPaymentsUsersApiKeysSummary(
 }
 
 /**
- * getPaymentsUsersPayments
+ * getPaymentsUsersPaymentsList
  *
  * User-specific payment ViewSet: /api/v1/users/{user_id}/payments/
  * 
@@ -2386,7 +2386,7 @@ export async function getPaymentsUsersApiKeysSummary(
  * @method GET
  * @path /payments/users/{user_pk}/payments/
  */
-export async function getPaymentsUsersPayments(
+export async function getPaymentsUsersPaymentsList(
   user_pk: number, params?: { currency__code?: string; ordering?: string; page?: number; page_size?: number; provider?: string; search?: string; status?: string },
   client?: API
 ): Promise<PaginatedPaymentListList> {
@@ -2417,7 +2417,7 @@ export async function createPaymentsUsersPayments(
 }
 
 /**
- * getPaymentsUsersPayment
+ * getPaymentsUsersPaymentsById
  *
  * User-specific payment ViewSet: /api/v1/users/{user_id}/payments/
  * 
@@ -2426,7 +2426,7 @@ export async function createPaymentsUsersPayments(
  * @method GET
  * @path /payments/users/{user_pk}/payments/{id}/
  */
-export async function getPaymentsUsersPayment(
+export async function getPaymentsUsersPaymentsById(
   id: string, user_pk: number,
   client?: API
 ): Promise<Payment> {
@@ -2537,7 +2537,7 @@ export async function createPaymentsUsersPaymentsCheckStatus(
 }
 
 /**
- * getPaymentsUsersPaymentsHealth
+ * getPaymentsUsersPaymentsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -2546,7 +2546,7 @@ export async function createPaymentsUsersPaymentsCheckStatus(
  * @method GET
  * @path /payments/users/{user_pk}/payments/health/
  */
-export async function getPaymentsUsersPaymentsHealth(
+export async function getPaymentsUsersPaymentsHealthById(
   user_pk: number,
   client?: API
 ): Promise<Payment> {
@@ -2557,7 +2557,7 @@ export async function getPaymentsUsersPaymentsHealth(
 }
 
 /**
- * getPaymentsUsersPaymentsStat
+ * getPaymentsUsersPaymentsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -2566,7 +2566,7 @@ export async function getPaymentsUsersPaymentsHealth(
  * @method GET
  * @path /payments/users/{user_pk}/payments/stats/
  */
-export async function getPaymentsUsersPaymentsStat(
+export async function getPaymentsUsersPaymentsStatsById(
   user_pk: number,
   client?: API
 ): Promise<Payment> {
@@ -2577,7 +2577,7 @@ export async function getPaymentsUsersPaymentsStat(
 }
 
 /**
- * getPaymentsUsersPaymentsSummary
+ * getPaymentsUsersPaymentsSummaryById
  *
  * Get user payment summary.
  * 
@@ -2586,7 +2586,7 @@ export async function getPaymentsUsersPaymentsStat(
  * @method GET
  * @path /payments/users/{user_pk}/payments/summary/
  */
-export async function getPaymentsUsersPaymentsSummary(
+export async function getPaymentsUsersPaymentsSummaryById(
   user_pk: number,
   client?: API
 ): Promise<Payment> {
@@ -2597,7 +2597,7 @@ export async function getPaymentsUsersPaymentsSummary(
 }
 
 /**
- * getPaymentsUsersSubscriptions
+ * getPaymentsUsersSubscriptionsList
  *
  * User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/
  * 
@@ -2606,7 +2606,7 @@ export async function getPaymentsUsersPaymentsSummary(
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/
  */
-export async function getPaymentsUsersSubscriptions(
+export async function getPaymentsUsersSubscriptionsList(
   user_pk: number, params?: { ordering?: string; page?: number; page_size?: number; search?: string; status?: string; tier?: string },
   client?: API
 ): Promise<PaginatedSubscriptionListList> {
@@ -2637,7 +2637,7 @@ export async function createPaymentsUsersSubscriptions(
 }
 
 /**
- * getPaymentsUsersSubscription
+ * getPaymentsUsersSubscriptionsById
  *
  * User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/
  * 
@@ -2646,7 +2646,7 @@ export async function createPaymentsUsersSubscriptions(
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/{id}/
  */
-export async function getPaymentsUsersSubscription(
+export async function getPaymentsUsersSubscriptionsById(
   id: string, user_pk: number,
   client?: API
 ): Promise<Subscription> {
@@ -2757,7 +2757,7 @@ export async function createPaymentsUsersSubscriptionsUpdateStatus(
 }
 
 /**
- * getPaymentsUsersSubscriptionsActive
+ * getPaymentsUsersSubscriptionsActiveById
  *
  * Get user's active subscription.
  * 
@@ -2766,7 +2766,7 @@ export async function createPaymentsUsersSubscriptionsUpdateStatus(
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/active/
  */
-export async function getPaymentsUsersSubscriptionsActive(
+export async function getPaymentsUsersSubscriptionsActiveById(
   user_pk: number,
   client?: API
 ): Promise<Subscription> {
@@ -2777,7 +2777,7 @@ export async function getPaymentsUsersSubscriptionsActive(
 }
 
 /**
- * getPaymentsUsersSubscriptionsHealth
+ * getPaymentsUsersSubscriptionsHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -2786,7 +2786,7 @@ export async function getPaymentsUsersSubscriptionsActive(
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/health/
  */
-export async function getPaymentsUsersSubscriptionsHealth(
+export async function getPaymentsUsersSubscriptionsHealthById(
   user_pk: number,
   client?: API
 ): Promise<Subscription> {
@@ -2797,7 +2797,7 @@ export async function getPaymentsUsersSubscriptionsHealth(
 }
 
 /**
- * getPaymentsUsersSubscriptionsStat
+ * getPaymentsUsersSubscriptionsStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -2806,7 +2806,7 @@ export async function getPaymentsUsersSubscriptionsHealth(
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/stats/
  */
-export async function getPaymentsUsersSubscriptionsStat(
+export async function getPaymentsUsersSubscriptionsStatsById(
   user_pk: number,
   client?: API
 ): Promise<Subscription> {
@@ -2817,7 +2817,7 @@ export async function getPaymentsUsersSubscriptionsStat(
 }
 
 /**
- * getPaymentsUsersSubscriptionsSummary
+ * getPaymentsUsersSubscriptionsSummaryById
  *
  * Get user subscription summary.
  * 
@@ -2826,7 +2826,7 @@ export async function getPaymentsUsersSubscriptionsStat(
  * @method GET
  * @path /payments/users/{user_pk}/subscriptions/summary/
  */
-export async function getPaymentsUsersSubscriptionsSummary(
+export async function getPaymentsUsersSubscriptionsSummaryById(
   user_pk: number,
   client?: API
 ): Promise<Subscription> {
@@ -2837,7 +2837,7 @@ export async function getPaymentsUsersSubscriptionsSummary(
 }
 
 /**
- * getPaymentsUsersHealth
+ * getPaymentsUsersHealthById
  *
  * Health check for the ViewSet and related services.
  * 
@@ -2846,7 +2846,7 @@ export async function getPaymentsUsersSubscriptionsSummary(
  * @method GET
  * @path /payments/users/health/
  */
-export async function getPaymentsUsersHealth(
+export async function getPaymentsUsersHealthById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -2856,7 +2856,7 @@ export async function getPaymentsUsersHealth(
 }
 
 /**
- * getPaymentsUsersStat
+ * getPaymentsUsersStatsById
  *
  * Get statistics for the current queryset.
  * 
@@ -2865,7 +2865,7 @@ export async function getPaymentsUsersHealth(
  * @method GET
  * @path /payments/users/stats/
  */
-export async function getPaymentsUsersStat(
+export async function getPaymentsUsersStatsById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()
@@ -2875,7 +2875,7 @@ export async function getPaymentsUsersStat(
 }
 
 /**
- * getPaymentsUsersSummary
+ * getPaymentsUsersSummaryById
  *
  * Get user payment summary.
  * 
@@ -2884,7 +2884,7 @@ export async function getPaymentsUsersStat(
  * @method GET
  * @path /payments/users/summary/
  */
-export async function getPaymentsUsersSummary(
+export async function getPaymentsUsersSummaryById(
   client?: API
 ): Promise<Payment> {
   const api = client || getAPIInstance()

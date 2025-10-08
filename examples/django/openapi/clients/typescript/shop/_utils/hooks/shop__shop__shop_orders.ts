@@ -34,10 +34,10 @@ import * as Fetchers from '../fetchers'
  * @method GET
  * @path /shop/orders/
  */
-export function useShopOrders(params?: { customer?: number; ordering?: string; page?: number; page_size?: number; search?: string; status?: string }) {
+export function useShopOrdersList(params?: { customer?: number; ordering?: string; page?: number; page_size?: number; search?: string; status?: string }) {
   return useSWR<PaginatedOrderListList>(
     params ? ['shop-orders', params] : 'shop-orders',
-    () => Fetchers.getShopOrders(params)
+    () => Fetchers.getShopOrdersList(params)
   )
 }
 
@@ -47,9 +47,9 @@ export function useShopOrders(params?: { customer?: number; ordering?: string; p
  * @method GET
  * @path /shop/orders/{id}/
  */
-export function useShopOrder(id: number) {
+export function useShopOrdersById(id: number) {
   return useSWR<OrderDetail>(
     ['shop-order', id],
-    () => Fetchers.getShopOrder(id)
+    () => Fetchers.getShopOrdersById(id)
   )
 }
