@@ -440,6 +440,10 @@ class SampleProjectConfig(DjangoConfig):
     # === Django Client (OpenAPI) Configuration ===
     openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
+        generate_package_files=True,
+        generate_zod_schemas=True,
+        generate_fetchers=True,
+        generate_swr_hooks=True,
         api_prefix="api",
         output_dir="openapi",
         drf_title=f"{env.app.name} API",

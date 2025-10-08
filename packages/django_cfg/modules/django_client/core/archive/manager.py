@@ -57,12 +57,12 @@ class ArchiveManager:
 
         if python_dir and python_dir.exists():
             dest = archive_path / "python"
-            shutil.copytree(python_dir, dest)
+            shutil.copytree(python_dir, dest, dirs_exist_ok=True)
             copied["python"] = str(dest)
 
         if typescript_dir and typescript_dir.exists():
             dest = archive_path / "typescript"
-            shutil.copytree(typescript_dir, dest)
+            shutil.copytree(typescript_dir, dest, dirs_exist_ok=True)
             copied["typescript"] = str(dest)
 
         # Create metadata

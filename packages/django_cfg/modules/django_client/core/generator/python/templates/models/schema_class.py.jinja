@@ -1,0 +1,21 @@
+class {{ name }}(BaseModel):
+{% if docstring %}
+    """
+{{ docstring | indent(4, first=True) }}
+    """
+{% endif %}
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="forbid",
+        frozen=False,
+    )
+{% if fields %}
+
+{% for field in fields %}
+    {{ field }}
+{% endfor %}
+{% else %}
+
+    pass
+{% endif %}

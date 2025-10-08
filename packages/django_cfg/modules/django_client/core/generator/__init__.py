@@ -22,10 +22,10 @@ Usage:
 from pathlib import Path
 from typing import Literal
 
-from django_cfg.modules.django_client.core.generator.base import GeneratedFile
-from django_cfg.modules.django_client.core.generator.python import PythonGenerator
-from django_cfg.modules.django_client.core.generator.typescript import TypeScriptGenerator
-from django_cfg.modules.django_client.core.ir import IRContext
+from .base import GeneratedFile
+from .python import PythonGenerator
+from .typescript import TypeScriptGenerator
+from ..ir import IRContext
 
 __all__ = [
     "PythonGenerator",

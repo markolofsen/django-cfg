@@ -1,0 +1,21 @@
+/**
+ * Zod Schemas - Runtime validation and type inference
+ *
+ * Auto-generated from OpenAPI specification.
+ * Provides runtime validation for API requests and responses.
+ *
+ * Usage:
+ * ```typescript
+ * import { UserSchema } from './schemas'
+ *
+ * // Validate data
+ * const user = UserSchema.parse(data)
+ *
+ * // Type inference
+ * type User = z.infer<typeof UserSchema>
+ * ```
+ */
+
+{% for schema_name in schema_names %}
+export * from './{{ schema_name }}.schema'
+{% endfor %}

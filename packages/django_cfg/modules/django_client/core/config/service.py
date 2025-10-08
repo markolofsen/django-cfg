@@ -59,7 +59,7 @@ class DjangoOpenAPI:
         if not self.config:
             return {}
 
-        # Use get_groups_with_defaults if available (ExtendedOpenAPIConfig)
+        # Use get_groups_with_defaults if available (OpenAPIClientConfig)
         if hasattr(self.config, 'get_groups_with_defaults'):
             return self.config.get_groups_with_defaults()
 

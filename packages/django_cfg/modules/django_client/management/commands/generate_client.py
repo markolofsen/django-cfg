@@ -356,6 +356,7 @@ class Command(BaseCommand):
                         client_structure=service.config.client_structure,
                         openapi_schema=schema_dict,
                         tag_prefix=f"{group_name}_",
+                        generate_package_files=service.config.generate_package_files,
                     )
                     py_files = py_generator.generate()
 
@@ -377,6 +378,10 @@ class Command(BaseCommand):
                         client_structure=service.config.client_structure,
                         openapi_schema=schema_dict,
                         tag_prefix=f"{group_name}_",
+                        generate_package_files=service.config.generate_package_files,
+                        generate_zod_schemas=service.config.generate_zod_schemas,
+                        generate_fetchers=service.config.generate_fetchers,
+                        generate_swr_hooks=service.config.generate_swr_hooks,
                     )
                     ts_files = ts_generator.generate()
 

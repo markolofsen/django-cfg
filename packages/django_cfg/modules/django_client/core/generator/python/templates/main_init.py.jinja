@@ -1,0 +1,52 @@
+"""
+{{ api_title }} - API Client with JWT Management
+
+Usage:
+    >>> from api import API
+    >>>
+    >>> api = API('https://api.example.com')
+    >>>
+    >>> # Set JWT token
+    >>> api.set_token('your-jwt-token', 'refresh-token')
+    >>>
+    >>> # Use API
+    >>> async with api:
+    ...     posts = await api.posts.list()
+    ...     user = await api.users.retrieve(1)
+    >>>
+    >>> # Check authentication
+    >>> if api.is_authenticated():
+    ...     # ...
+    >>>
+    >>> # Get OpenAPI schema
+    >>> schema = api.get_schema()
+"""
+
+from __future__ import annotations
+
+import threading
+from typing import Any
+
+import httpx
+
+from .client import APIClient
+from .schema import OPENAPI_SCHEMA
+from .logger import LoggerConfig
+from .retry import RetryConfig
+{% for tag in tags %}
+from .{{ tag.slug }} import {{ tag.class_name }}
+{% endfor %}
+{% if has_enums %}
+from . import enums
+from .enums import {{ enum_names | join(', ') }}
+{% endif %}
+
+TOKEN_KEY = "auth_token"
+REFRESH_TOKEN_KEY = "refresh_token"
+
+{{ api_class }}
+
+__all__ = [
+    "API",
+    "APIClient",
+]

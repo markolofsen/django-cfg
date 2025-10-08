@@ -76,6 +76,26 @@ class OpenAPIConfig(BaseModel):
         description="Generate TypeScript client",
     )
 
+    generate_package_files: bool = Field(
+        default=False,
+        description="Generate package.json (TypeScript) and pyproject.toml (Python)",
+    )
+
+    generate_zod_schemas: bool = Field(
+        default=False,
+        description="Generate Zod schemas for runtime validation (TypeScript only)",
+    )
+
+    generate_fetchers: bool = Field(
+        default=False,
+        description="Generate typed fetcher functions (TypeScript only, requires Zod schemas)",
+    )
+
+    generate_swr_hooks: bool = Field(
+        default=False,
+        description="Generate SWR hooks for React (TypeScript only, requires fetchers)",
+    )
+
     client_structure: Literal["flat", "namespaced"] = Field(
         default="namespaced",
         description=(

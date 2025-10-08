@@ -1,0 +1,24 @@
+/**
+ * Zod schema for {{ schema_name }}
+ *
+ * This schema provides runtime validation and type inference.
+ * {% if description %}
+ * {{ description }}
+ * {% endif %}
+ */
+import { z } from 'zod'
+{% if has_enums %}
+import * as Enums from '../../enums'
+{% endif %}
+{% if has_refs %}
+{% for ref_name in refs %}
+import { {{ ref_name }}Schema } from './{{ ref_name }}.schema'
+{% endfor %}
+{% endif %}
+
+{{ schema_code }}
+
+/**
+ * Infer TypeScript type from Zod schema
+ */
+export type {{ schema_name }} = z.infer<typeof {{ schema_name }}Schema>

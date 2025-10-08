@@ -1,0 +1,18 @@
+from __future__ import annotations
+
+import httpx
+
+from .models import *
+
+
+class Sync{{ class_name }}:
+    """Synchronous API endpoints for {{ tag }}."""
+
+    def __init__(self, client: httpx.Client):
+        """Initialize sync sub-client with shared httpx client."""
+        self._client = client
+
+{% for operation in operations %}
+{{ operation | indent(4, first=True) }}
+
+{% endfor %}

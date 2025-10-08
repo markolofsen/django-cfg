@@ -24,12 +24,12 @@ from .users import UsersCallbacks
 from .base import get_user_admin_urls
 
 # Import new dashboard sections
-from django_cfg.dashboard.sections.overview import OverviewSection
-from django_cfg.dashboard.sections.stats import StatsSection
-from django_cfg.dashboard.sections.system import SystemSection
-from django_cfg.dashboard.sections.commands import CommandsSection
-from django_cfg.dashboard.sections.documentation import DocumentationSection
-from django_cfg.dashboard.debug import save_section_render
+from django_cfg.modules.django_dashboard.sections.overview import OverviewSection
+from django_cfg.modules.django_dashboard.sections.stats import StatsSection
+from django_cfg.modules.django_dashboard.sections.system import SystemSection
+from django_cfg.modules.django_dashboard.sections.commands import CommandsSection
+from django_cfg.modules.django_dashboard.sections.documentation import DocumentationSection
+from django_cfg.modules.django_dashboard.debug import save_section_render
 
 logger = logging.getLogger(__name__)
 

@@ -48,6 +48,11 @@ class BaseGenerator(ABC):
         client_structure: str = "namespaced",
         openapi_schema: dict | None = None,
         tag_prefix: str = "",
+        package_config: dict | None = None,
+        generate_package_files: bool = False,
+        generate_zod_schemas: bool = False,
+        generate_fetchers: bool = False,
+        generate_swr_hooks: bool = False,
     ):
         """
         Initialize generator with IR context.
@@ -57,11 +62,21 @@ class BaseGenerator(ABC):
             client_structure: Client structure ("flat" or "namespaced")
             openapi_schema: OpenAPI schema dict (for embedding in client)
             tag_prefix: Prefix to add to all tag names (e.g., "cfg_")
+            package_config: Package configuration (name, version, author, etc.)
+            generate_package_files: Whether to generate package.json/pyproject.toml
+            generate_zod_schemas: Whether to generate Zod schemas (TypeScript only)
+            generate_fetchers: Whether to generate typed fetchers (TypeScript only)
+            generate_swr_hooks: Whether to generate SWR hooks (TypeScript only, React)
         """
         self.context = context
         self.client_structure = client_structure
         self.openapi_schema = openapi_schema
         self.tag_prefix = tag_prefix
+        self.package_config = package_config or {}
+        self.generate_package_files = generate_package_files
+        self.generate_zod_schemas = generate_zod_schemas
+        self.generate_fetchers = generate_fetchers
+        self.generate_swr_hooks = generate_swr_hooks
 
     # ===== Namespaced Structure Helpers =====
 
@@ -765,3 +780,59 @@ class BaseGenerator(ABC):
             lines.append(" ".join(current_line))
 
         return lines
+
+    def format_enum_description(self, text: str) -> str:
+        """
+        Format enum description by splitting bullet points.
+
+        Enum descriptions from OpenAPI often have the format:
+        "* `value1` - Desc1 * `value2` - Desc2"
+
+        This method splits them into separate lines:
+        "* `value1` - Desc1\n* `value2` - Desc2"
+
+        Args:
+            text: Enum description text
+
+        Returns:
+            Formatted description with proper line breaks
+        """
+        if not text:
+            return text
+
+        # Split by " * `" pattern (preserving the first *)
+        import re
+        # Replace " * `" with newline + "* `"
+        formatted = re.sub(r'\s+\*\s+`', '\n* `', text.strip())
+
+        return formatted
+
+    def sanitize_enum_name(self, name: str) -> str:
+        """
+        Sanitize enum name by converting to PascalCase.
+
+        Examples:
+            "OrderDetail.status" -> "OrderDetailStatus"
+            "Currency.currency_type" -> "CurrencyCurrencyType"
+            "CurrencyList.currency_type" -> "CurrencyListCurrencyType"
+            "User.role" -> "UserRole"
+
+        Args:
+            name: Original enum name (may contain dots, underscores)
+
+        Returns:
+            Sanitized PascalCase name
+        """
+        # Replace dots with underscores, then split and convert to PascalCase
+        parts = name.replace('.', '_').split('_')
+        result = []
+        for word in parts:
+            if not word:
+                continue
+            # If word is already PascalCase/camelCase, keep it as is
+            # Otherwise capitalize first letter only
+            if word[0].isupper():
+                result.append(word)
+            else:
+                result.append(word[0].upper() + word[1:] if len(word) > 1 else word.upper())
+        return ''.join(result)

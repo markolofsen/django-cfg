@@ -62,7 +62,6 @@ install-local:
 	@rm -f poetry.lock
 	$(POETRY) add --group local --editable ~/djangocfg --lock
 	$(POETRY) add --group local --editable ~/djangoipc --lock
-	$(POETRY) add --group local --editable ~/revolution --lock
 	$(POETRY) install --with local --no-root
 
 env:
@@ -131,9 +130,6 @@ tasks-clear:
 # API Generation
 api:
 	$(PYTHON) manage.py generate_api
-
-api-test:
-	$(PYTHON) manage.py revolution --test-schemas
 
 # Populate database with sample data
 populate:
