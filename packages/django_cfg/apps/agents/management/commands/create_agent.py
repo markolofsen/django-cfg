@@ -6,7 +6,7 @@ import asyncio
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
-from django_cfg.modules.django_orchestrator.models.registry import AgentDefinition
+from django_cfg.apps.agents.models.registry import AgentDefinition
 
 
 class Command(BaseCommand):

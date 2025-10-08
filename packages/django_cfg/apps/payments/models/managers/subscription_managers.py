@@ -196,7 +196,6 @@ class SubscriptionQuerySet(models.QuerySet):
         """Get usage statistics."""
         return self.aggregate(
             total_requests=models.Sum('total_requests'),
-            avg_requests=models.Avg('total_requests'),
             max_requests=models.Max('total_requests'),
             active_users=models.Count('user', distinct=True)
         )

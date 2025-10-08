@@ -42,7 +42,7 @@ DEFAULT_APPS: List[str] = [
     "constance.backends.database",
     # Django CFG Core
     "django_cfg",
-    "django_revolution",
+    "django_cfg.modules.django_client",
 ]
 
 # Default middleware stack

@@ -1,0 +1,38 @@
+class APIClient:
+    """
+    Async API client for {{ api_title }}.
+
+    Usage:
+        >>> async with APIClient(base_url='https://api.example.com') as client:
+        ...     users = await client.users_list()
+    """
+
+    def __init__(self, base_url: str, **kwargs: Any):
+        """
+        Initialize API client.
+
+        Args:
+            base_url: Base API URL (e.g., 'https://api.example.com')
+            **kwargs: Additional httpx.AsyncClient kwargs
+        """
+        self.base_url = base_url.rstrip('/')
+        self._client = httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=30.0,
+            **kwargs,
+        )
+
+    async def __aenter__(self) -> 'APIClient':
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self._client.aclose()
+
+    async def close(self) -> None:
+        """Close HTTP client."""
+        await self._client.aclose()
+
+{% for operation in operations %}
+    {{ operation }}
+
+{% endfor %}

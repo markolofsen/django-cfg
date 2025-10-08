@@ -70,7 +70,11 @@ class UsageTrackingMiddleware(MiddlewareMixin):
         """
         if not self.enabled:
             return None
-        
+
+        # Check if this is a django-cfg internal endpoint check (skip tracking)
+        if request.META.get('HTTP_X_DJANGO_CFG_INTERNAL_CHECK') == 'true':
+            return None
+
         # Check if we should track this request
         if not self._should_track_request(request):
             return None

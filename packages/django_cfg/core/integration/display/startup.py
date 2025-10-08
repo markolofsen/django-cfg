@@ -160,8 +160,8 @@ class StartupDisplayManager(BaseDisplayManager):
             # App-specific configuration panels
             self._display_config_panels()
 
-            # Revolution info
-            self._display_revolution_info()
+            # OpenAPI Client info
+            self._display_openapi_client_info()
 
             # Management commands
             self._display_commands_info()
@@ -661,30 +661,38 @@ class StartupDisplayManager(BaseDisplayManager):
             print(f"❌ ERROR in _display_constance_summary: {e}")
             traceback.print_exc()
     
-    def _display_revolution_info(self):
-        """Display Django Revolution information."""
+    def _display_openapi_client_info(self):
+        """Display Django Client (OpenAPI) information."""
         try:
-            from django_revolution import get_revolution_info
-            revolution_info = get_revolution_info()
-            
-            revolution_table = self.create_table()
-            revolution_table.add_column("Setting", style="cyan", width=30)
-            revolution_table.add_column("Value", style="white")
-            
-            revolution_table.add_row("📦 Version", revolution_info.get('version', 'unknown'))
-            revolution_table.add_row("📊 Zones", str(revolution_info.get('zones_count', 0)))
-            revolution_table.add_row("📱 Apps", str(revolution_info.get('apps_count', 0)))
-            revolution_table.add_row("🔗 API Prefix", revolution_info.get('api_prefix', '/api/'))
-            
-            revolution_panel = self.create_panel(
-                revolution_table,
-                title="🚀 Django Revolution",
+            from django_cfg.modules.django_client.core.config.service import DjangoOpenAPI
+
+            service = DjangoOpenAPI.instance()
+            if not service.config or not service.config.enabled:
+                return
+
+            openapi_table = self.create_table()
+            openapi_table.add_column("Setting", style="cyan", width=30)
+            openapi_table.add_column("Value", style="white")
+
+            openapi_table.add_row("📦 Status", "[green]Enabled[/green]")
+            openapi_table.add_row("📊 Groups", str(len(service.config.groups)))
+            openapi_table.add_row("🔗 API Prefix", f"/{service.config.api_prefix}/")
+            openapi_table.add_row("📁 Output Dir", str(service.config.output_dir))
+
+            # List groups
+            group_names = [g.name for g in service.config.groups]
+            if group_names:
+                openapi_table.add_row("🏷️  Groups", ", ".join(group_names[:3]) + ("..." if len(group_names) > 3 else ""))
+
+            openapi_panel = self.create_panel(
+                openapi_table,
+                title="🚀 Django Client (OpenAPI)",
                 border_style="blue"
             )
-            
-            self.console.print(revolution_panel)
+
+            self.console.print(openapi_panel)
         except ImportError:
-            # Django Revolution not available
+            # Django Client not available
             pass
         except Exception:
             pass

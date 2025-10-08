@@ -16,7 +16,7 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/")
     
     This function adds:
     - Django CFG management URLs (cfg/)
-    - Django Revolution URLs (if available)
+    - Django Client URLs (if available)
     - Startup information display (based on config)
     
     Args:
@@ -37,22 +37,16 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern], cfg_prefix: str = "cfg/")
         
         # Automatically adds:
         # - path("cfg/", include("django_cfg.apps.urls"))
-        # - Django Revolution URLs (if available)
+        # - Django Client URLs (if available)
         # - Startup info display (based on config.startup_info_mode)
         urlpatterns = add_django_cfg_urls(urlpatterns)
     """
     # Add django_cfg API URLs
+    # Note: Django Client URLs are included in django_cfg.apps.urls
+    # at /cfg/openapi/{group}/schema/ to avoid conflicts
     new_patterns = urlpatterns + [
         path(cfg_prefix, include("django_cfg.apps.urls")),
     ]
-    
-    # Try to add Django Revolution URLs if available
-    try:
-        from django_revolution import add_revolution_urls
-        new_patterns = add_revolution_urls(new_patterns)
-    except ImportError:
-        # Django Revolution not available - skip
-        pass
 
     # Add django-browser-reload URLs in development (if installed)
     if settings.DEBUG:
@@ -122,13 +116,18 @@ def get_django_cfg_urls_info() -> dict:
         }
     }
     
-    # Add Django Revolution info if available
+    # Add Django Client info if available
     try:
-        from django_revolution import get_revolution_urls_info
-        revolution_info = get_revolution_urls_info()
-        if revolution_info:
-            info["django_revolution"] = revolution_info
+        from django_cfg.modules.django_client.core.config.service import DjangoOpenAPI
+        service = DjangoOpenAPI.instance()
+        if service.config and service.config.enabled:
+            info["django_client"] = {
+                "enabled": True,
+                "groups": len(service.config.groups),
+                "base_url": service.config.base_url,
+                "output_dir": service.config.output_dir,
+            }
     except ImportError:
         pass
-    
+
     return info

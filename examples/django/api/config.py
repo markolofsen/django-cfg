@@ -32,8 +32,8 @@ from django_cfg import (
     SiteDropdownItem,
     NavigationSection,
     NavigationItem,
-    RevolutionConfig,
-    ZoneConfig,
+    OpenAPIClientConfig,
+    OpenAPIGroupConfig,
     TwilioConfig,
     SendGridConfig,
     TwilioVerifyConfig,
@@ -105,7 +105,7 @@ class SampleProjectConfig(DjangoConfig):
     payments: PaymentsConfig = PaymentsConfig(
         enabled=True,
         middleware_enabled=True,
-        rate_limiting_enabled=True,
+        rate_limiting_enabled=True,  # Schema endpoints are now exempt
         usage_tracking_enabled=True,
         track_anonymous_usage=False,
         # API keys configuration with provider-specific configs
@@ -327,31 +327,31 @@ class SampleProjectConfig(DjangoConfig):
 
     # === DRF Configuration ===
     # DRF with Tailwind CSS theme
-    drf: Optional[DRFConfig] = DRFConfig(
-        default_authentication_classes=[
-            "rest_framework.authentication.SessionAuthentication",
-            "rest_framework.authentication.TokenAuthentication",
-        ],
-        default_permission_classes=[
-            "rest_framework.permissions.IsAuthenticated",
-        ],
-        default_pagination_class="rest_framework.pagination.PageNumberPagination",
-        page_size=20,
-        # Use Tailwind Browsable API renderer
-        renderer_classes=[
-            'rest_framework.renderers.JSONRenderer',
-            'django_cfg.modules.django_drf_theme.renderers.TailwindBrowsableAPIRenderer',
-        ],
-        # Spectacular (OpenAPI) configuration - disabled temporarily
-        # spectacular=SpectacularConfig(
-        #     title=f"{env.app.name} API",
-        #     description="Complete API documentation for Django CFG sample project",
-        #     version="1.0.0",
-        #     contact_email="admin@sample.local",
-        #     license_name="MIT",
-        #     serve_include_schema=False,
-        # ),
-    )
+    # drf: Optional[DRFConfig] = DRFConfig(
+    #     default_authentication_classes=[
+    #         "rest_framework.authentication.SessionAuthentication",
+    #         "rest_framework.authentication.TokenAuthentication",
+    #     ],
+    #     default_permission_classes=[
+    #         "rest_framework.permissions.IsAuthenticated",
+    #     ],
+    #     default_pagination_class="rest_framework.pagination.PageNumberPagination",
+    #     page_size=20,
+    #     # Use Tailwind Browsable API renderer
+    #     renderer_classes=[
+    #         'rest_framework.renderers.JSONRenderer',
+    #         'django_cfg.modules.django_drf_theme.renderers.TailwindBrowsableAPIRenderer',
+    #     ],
+    #     # Spectacular (OpenAPI) configuration - disabled temporarily
+    #     # spectacular=SpectacularConfig(
+    #     #     title=f"{env.app.name} API",
+    #     #     description="Complete API documentation for Django CFG sample project",
+    #     #     version="1.0.0",
+    #     #     contact_email="admin@sample.local",
+    #     #     license_name="MIT",
+    #     #     serve_include_schema=False,
+    #     # ),
+    # )
 
     # === Application Limits Configuration ===
     # limits: LimitsConfig = LimitsConfig(
@@ -437,45 +437,30 @@ class SampleProjectConfig(DjangoConfig):
         ],
     )
 
-    # === Django Revolution API Configuration ===
-    revolution: RevolutionConfig = RevolutionConfig(
+    # === Django Client (OpenAPI) Configuration ===
+    openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
+        enabled=True,
         api_prefix="api",
-        debug=debug,
-        auto_install_deps=True,
-        # DRF Configuration
+        output_dir="openapi",
         drf_title=f"{env.app.name} API",
         drf_description="Complete API documentation for Django CFG sample project",
         drf_version="1.0.0",
-        drf_schema_path_prefix="/api/",  # Match api_prefix
-        drf_enable_browsable_api=True,
-        drf_enable_throttling=False,  # Disable for sample
-
-        zones={
-            "blog": ZoneConfig(
-                apps=["apps.blog"],
-                title="Blog API",
-                description="Blog posts and comments management",
-                public=True,
-                auth_required=False,
-                # version="v1",
-            ),
-            "shop": ZoneConfig(
-                apps=["apps.shop"],
-                title="Shop API", 
+        groups=[
+            OpenAPIGroupConfig(
+                name="shop",
+                apps=["apps.blog", "apps.shop"],
+                title="Shop API",
                 description="E-commerce products, orders and categories",
-                public=True,
-                auth_required=False,
-                # version="v1",
+                version="1.0.0",
             ),
-            "profiles": ZoneConfig(
+            OpenAPIGroupConfig(
+                name="profiles",
                 apps=["apps.profiles"],
                 title="Profiles API",
                 description="Profiles management",
-                public=True,
-                auth_required=False,
-                # version="v1",
+                version="1.0.0",
             ),
-        },
+        ],
     )
 
 

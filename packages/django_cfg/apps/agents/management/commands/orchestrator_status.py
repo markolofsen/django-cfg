@@ -7,9 +7,9 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
 
-from django_cfg.modules.django_orchestrator.integration.registry import get_registry
-from django_cfg.modules.django_orchestrator.models.execution import AgentExecution, WorkflowExecution
-from django_cfg.modules.django_orchestrator.models.registry import AgentDefinition
+from django_cfg.apps.agents.integration.registry import get_registry
+from django_cfg.apps.agents.models.execution import AgentExecution, WorkflowExecution
+from django_cfg.apps.agents.models.registry import AgentDefinition
 
 
 class Command(BaseCommand):

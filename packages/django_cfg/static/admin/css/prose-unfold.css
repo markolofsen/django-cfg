@@ -1,0 +1,666 @@
+/**
+ * Prose Unfold - Universal Markdown Styling
+ *
+ * Semantic color system for markdown content that adapts to Unfold theme
+ * Overrides Tailwind Typography variables with Unfold semantic colors
+ *
+ * Usage: Add class "prose-unfold" to markdown container
+ * Example: <div class="prose prose-unfold">{{ markdown_content|safe }}</div>
+ */
+
+/* ========================================
+   Base Prose Container
+   Override Tailwind Typography variables
+   ======================================== */
+.prose-unfold {
+    /* Override Tailwind Typography CSS variables with Unfold colors */
+    --tw-prose-body: var(--color-font-default-light);
+    --tw-prose-headings: var(--color-font-important-light);
+    --tw-prose-lead: var(--color-font-default-light);
+    --tw-prose-links: var(--color-primary-600);
+    --tw-prose-bold: var(--color-font-important-light);
+    --tw-prose-counters: var(--color-font-subtle-light);
+    --tw-prose-bullets: var(--color-font-subtle-light);
+    --tw-prose-hr: var(--color-base-200);
+    --tw-prose-quotes: var(--color-font-subtle-light);
+    --tw-prose-quote-borders: var(--color-base-300);
+    --tw-prose-captions: var(--color-font-subtle-light);
+    --tw-prose-kbd: var(--color-font-default-light);
+    --tw-prose-code: var(--color-primary-600);
+    --tw-prose-pre-code: var(--color-font-default-light);
+    --tw-prose-pre-bg: var(--color-base-100);
+    --tw-prose-th-borders: var(--color-base-200);
+    --tw-prose-td-borders: var(--color-base-200);
+}
+
+html.dark .prose-unfold {
+    /* Dark mode overrides */
+    --tw-prose-body: var(--color-font-default-dark);
+    --tw-prose-headings: var(--color-font-important-dark);
+    --tw-prose-lead: var(--color-font-default-dark);
+    --tw-prose-links: var(--color-primary-400);
+    --tw-prose-bold: var(--color-font-important-dark);
+    --tw-prose-counters: var(--color-font-subtle-dark);
+    --tw-prose-bullets: var(--color-font-subtle-dark);
+    --tw-prose-hr: var(--color-base-700);
+    --tw-prose-quotes: var(--color-font-subtle-dark);
+    --tw-prose-quote-borders: var(--color-base-600);
+    --tw-prose-captions: var(--color-font-subtle-dark);
+    --tw-prose-kbd: var(--color-font-default-dark);
+    --tw-prose-code: var(--color-primary-400);
+    --tw-prose-pre-code: var(--color-font-default-dark);
+    --tw-prose-pre-bg: var(--color-base-700);
+    --tw-prose-th-borders: var(--color-base-700);
+    --tw-prose-td-borders: var(--color-base-700);
+}
+
+/* ========================================
+   Headings - Semantic Typography
+   ======================================== */
+.prose-unfold h1,
+.prose-unfold h2,
+.prose-unfold h3,
+.prose-unfold h4,
+.prose-unfold h5,
+.prose-unfold h6 {
+    scroll-margin-top: 2rem;
+}
+
+.prose-unfold h1 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    border-bottom: 2px solid var(--color-base-200) !important;
+    color: var(--color-font-important-light) !important;
+}
+
+html.dark .prose-unfold h1 {
+    border-bottom-color: var(--color-base-700) !important;
+    color: var(--color-font-important-dark) !important;
+}
+
+.prose-unfold h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-top: 2em;
+    margin-bottom: 1em;
+    color: var(--color-font-important-light);
+}
+
+html.dark .prose-unfold h2 {
+    color: var(--color-font-important-dark);
+}
+
+.prose-unfold h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold h3 {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold h4 {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-top: 1.25em;
+    margin-bottom: 0.5em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold h4 {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold h5 {
+    font-size: 1em;
+    font-weight: 600;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold h5 {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold h6 {
+    font-size: 0.9em;
+    font-weight: 600;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    color: var(--color-font-subtle-light);
+}
+
+html.dark .prose-unfold h6 {
+    color: var(--color-font-subtle-dark);
+}
+
+/* ========================================
+   Paragraphs and Text
+   ======================================== */
+.prose-unfold p {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold p {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold strong {
+    font-weight: 600;
+    color: var(--color-font-important-light);
+}
+
+html.dark .prose-unfold strong {
+    color: var(--color-font-important-dark);
+}
+
+.prose-unfold em {
+    font-style: italic;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold em {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold mark {
+    padding: 0.1em 0.2em;
+    border-radius: 0.25em;
+    background-color: rgb(254 252 232); /* yellow-100 */
+    color: rgb(113 63 18); /* yellow-900 */
+}
+
+html.dark .prose-unfold mark {
+    background-color: rgba(113 63 18 / 0.3); /* yellow-900/30 */
+    color: rgb(254 240 138); /* yellow-200 */
+}
+
+.prose-unfold sub,
+.prose-unfold sup {
+    font-size: 0.75em;
+}
+
+/* ========================================
+   Lists
+   ======================================== */
+.prose-unfold ul,
+.prose-unfold ol {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold ul,
+html.dark .prose-unfold ol {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold li {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.prose-unfold ul > li::marker {
+    color: var(--color-font-subtle-light);
+}
+
+html.dark .prose-unfold ul > li::marker {
+    color: var(--color-font-subtle-dark);
+}
+
+.prose-unfold ol > li::marker {
+    font-weight: 600;
+    color: var(--color-font-subtle-light);
+}
+
+html.dark .prose-unfold ol > li::marker {
+    color: var(--color-font-subtle-dark);
+}
+
+/* Nested lists */
+.prose-unfold ul ul,
+.prose-unfold ul ol,
+.prose-unfold ol ul,
+.prose-unfold ol ol {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Task lists (GitHub flavored) */
+.prose-unfold input[type="checkbox"] {
+    margin-right: 0.5em;
+    accent-color: var(--color-primary-600);
+}
+
+html.dark .prose-unfold input[type="checkbox"] {
+    accent-color: var(--color-primary-400);
+}
+
+/* ========================================
+   Code - Inline and Blocks
+   ======================================== */
+.prose-unfold code {
+    padding: 0.2em 0.4em;
+    border-radius: 0.25em;
+    font-size: 0.875em;
+    font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+    font-weight: 500;
+    background-color: var(--color-base-100);
+    color: var(--color-primary-600);
+}
+
+html.dark .prose-unfold code {
+    background-color: var(--color-base-700);
+    color: var(--color-primary-400);
+}
+
+/* Pre and code blocks are styled by Tailwind Typography using --tw-prose-pre-bg variable */
+
+/* Special styling for pre blocks inside documentation card */
+.documentation-card .prose-unfold {
+    --tw-prose-pre-bg: var(--color-base-100) !important;
+    --tw-prose-pre-code: var(--color-font-default-light) !important;
+}
+
+html.dark .documentation-card .prose-unfold {
+    --tw-prose-pre-bg: var(--color-base-900) !important;
+    --tw-prose-pre-code: var(--color-base-50) !important;
+}
+
+/* Direct override for pre elements */
+.documentation-card .prose-unfold pre {
+    background-color: var(--color-base-100) !important;
+}
+
+html.dark .documentation-card .prose-unfold pre {
+    background-color: var(--color-base-900) !important;
+}
+
+.documentation-card .prose-unfold pre code {
+    color: var(--color-font-default-light) !important;
+}
+
+html.dark .documentation-card .prose-unfold pre code {
+    color: var(--color-base-50) !important;
+}
+
+.prose-unfold kbd {
+    padding: 0.2em 0.4em;
+    border-radius: 0.25em;
+    font-size: 0.875em;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    background-color: var(--color-base-100);
+    border: 1px solid var(--color-base-300);
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold kbd {
+    background-color: var(--color-base-700);
+    border-color: var(--color-base-600);
+    color: var(--color-font-default-dark);
+}
+
+/* ========================================
+   Links
+   ======================================== */
+.prose-unfold a {
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: var(--color-primary-600);
+}
+
+html.dark .prose-unfold a {
+    color: var(--color-primary-400);
+}
+
+.prose-unfold a:hover {
+    text-decoration: underline;
+    color: var(--color-primary-700);
+}
+
+html.dark .prose-unfold a:hover {
+    color: var(--color-primary-300);
+}
+
+/* External links indicator (optional) */
+.prose-unfold a[href^="http"]::after {
+    content: " ↗";
+    font-size: 0.8em;
+    opacity: 0.6;
+}
+
+.prose-unfold a[href^="http"][href*="localhost"]::after,
+.prose-unfold a[href^="http"][href*="127.0.0.1"]::after {
+    content: "";
+}
+
+/* ========================================
+   Blockquotes
+   ======================================== */
+.prose-unfold blockquote {
+    border-left: 4px solid var(--color-base-300);
+    padding-left: 1em;
+    font-style: italic;
+    margin: 1.5em 0;
+    color: var(--color-font-subtle-light);
+}
+
+html.dark .prose-unfold blockquote {
+    border-left-color: var(--color-base-600);
+    color: var(--color-font-subtle-dark);
+}
+
+.prose-unfold blockquote p {
+    margin: 0.5em 0;
+}
+
+/* ========================================
+   Tables
+   ======================================== */
+.prose-unfold table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold table {
+    color: var(--color-font-default-dark);
+}
+
+.prose-unfold th,
+.prose-unfold td {
+    padding: 0.75em 1em;
+    text-align: left;
+    border: 1px solid var(--color-base-200);
+}
+
+html.dark .prose-unfold th,
+html.dark .prose-unfold td {
+    border-color: var(--color-base-700);
+}
+
+.prose-unfold thead {
+    background-color: var(--color-base-50);
+}
+
+html.dark .prose-unfold thead {
+    background-color: var(--color-base-800);
+}
+
+.prose-unfold th {
+    font-weight: 600;
+    color: var(--color-font-important-light);
+}
+
+html.dark .prose-unfold th {
+    color: var(--color-font-important-dark);
+}
+
+.prose-unfold tbody tr:hover {
+    background-color: var(--color-base-50);
+}
+
+html.dark .prose-unfold tbody tr:hover {
+    background-color: rgba(var(--color-base-800) / 0.5);
+}
+
+/* ========================================
+   Horizontal Rule
+   ======================================== */
+.prose-unfold hr {
+    border: 0;
+    margin: 2em 0;
+    border-top: 1px solid var(--color-base-200);
+}
+
+html.dark .prose-unfold hr {
+    border-top-color: var(--color-base-700);
+}
+
+/* ========================================
+   Images and Media
+   ======================================== */
+.prose-unfold img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5em;
+    margin: 1.5em 0;
+    border: 1px solid var(--color-base-200);
+}
+
+html.dark .prose-unfold img {
+    border-color: var(--color-base-700);
+}
+
+.prose-unfold figure {
+    margin: 1.5em 0;
+}
+
+.prose-unfold figcaption {
+    margin-top: 0.5em;
+    font-size: 0.875em;
+    text-align: center;
+    color: var(--color-font-subtle-light);
+}
+
+html.dark .prose-unfold figcaption {
+    color: var(--color-font-subtle-dark);
+}
+
+/* ========================================
+   Definition Lists
+   ======================================== */
+.prose-unfold dl {
+    margin: 1em 0;
+}
+
+.prose-unfold dt {
+    font-weight: 600;
+    margin-top: 1em;
+    color: var(--color-font-important-light);
+}
+
+html.dark .prose-unfold dt {
+    color: var(--color-font-important-dark);
+}
+
+.prose-unfold dd {
+    margin-left: 1.5em;
+    margin-top: 0.5em;
+    color: var(--color-font-default-light);
+}
+
+html.dark .prose-unfold dd {
+    color: var(--color-font-default-dark);
+}
+
+/* ========================================
+   Details/Summary (Collapsible)
+   ======================================== */
+.prose-unfold details {
+    margin: 1em 0;
+    padding: 1em;
+    border-radius: 0.5em;
+    background-color: var(--color-base-50);
+    border: 1px solid var(--color-base-200);
+}
+
+html.dark .prose-unfold details {
+    background-color: var(--color-base-800);
+    border-color: var(--color-base-700);
+}
+
+.prose-unfold summary {
+    cursor: pointer;
+    font-weight: 600;
+    user-select: none;
+    color: var(--color-font-important-light);
+}
+
+html.dark .prose-unfold summary {
+    color: var(--color-font-important-dark);
+}
+
+.prose-unfold summary:hover {
+    color: var(--color-primary-600);
+}
+
+html.dark .prose-unfold summary:hover {
+    color: var(--color-primary-400);
+}
+
+.prose-unfold details[open] summary {
+    margin-bottom: 0.5em;
+}
+
+/* ========================================
+   Footnotes
+   ======================================== */
+.prose-unfold .footnote {
+    font-size: 0.875em;
+    color: var(--color-font-subtle-light);
+}
+
+html.dark .prose-unfold .footnote {
+    color: var(--color-font-subtle-dark);
+}
+
+.prose-unfold .footnote-ref {
+    font-size: 0.75em;
+    vertical-align: super;
+    color: var(--color-primary-600);
+}
+
+html.dark .prose-unfold .footnote-ref {
+    color: var(--color-primary-400);
+}
+
+/* ========================================
+   Badges and Pills
+   ======================================== */
+.prose-unfold .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25em 0.75em;
+    border-radius: 9999px;
+    font-size: 0.75em;
+    font-weight: 600;
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-600);
+}
+
+html.dark .prose-unfold .badge {
+    background-color: rgba(var(--color-primary-900) / 0.2);
+    color: var(--color-primary-400);
+}
+
+/* ========================================
+   Admonitions/Alerts
+   ======================================== */
+.prose-unfold .admonition {
+    padding: 1em;
+    margin: 1em 0;
+    border-left: 4px solid;
+    border-radius: 0.5em;
+}
+
+.prose-unfold .admonition-note {
+    background-color: rgb(239 246 255); /* blue-50 */
+    border-left-color: rgb(59 130 246); /* blue-500 */
+}
+
+html.dark .prose-unfold .admonition-note {
+    background-color: rgba(59 130 246 / 0.1);
+    border-left-color: rgb(96 165 250); /* blue-400 */
+}
+
+.prose-unfold .admonition-tip {
+    background-color: rgb(240 253 244); /* green-50 */
+    border-left-color: rgb(34 197 94); /* green-500 */
+}
+
+html.dark .prose-unfold .admonition-tip {
+    background-color: rgba(34 197 94 / 0.1);
+    border-left-color: rgb(74 222 128); /* green-400 */
+}
+
+.prose-unfold .admonition-warning {
+    background-color: rgb(254 252 232); /* yellow-50 */
+    border-left-color: rgb(234 179 8); /* yellow-500 */
+}
+
+html.dark .prose-unfold .admonition-warning {
+    background-color: rgba(234 179 8 / 0.1);
+    border-left-color: rgb(250 204 21); /* yellow-400 */
+}
+
+.prose-unfold .admonition-danger {
+    background-color: rgb(254 242 242); /* red-50 */
+    border-left-color: rgb(239 68 68); /* red-500 */
+}
+
+html.dark .prose-unfold .admonition-danger {
+    background-color: rgba(239 68 68 / 0.1);
+    border-left-color: rgb(248 113 113); /* red-400 */
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+@media print {
+    .prose-unfold {
+        color: #000;
+    }
+
+    .prose-unfold a {
+        color: #000;
+        text-decoration: underline;
+    }
+
+    .prose-unfold code,
+    .prose-unfold pre {
+        border: 1px solid #ddd;
+    }
+
+    .prose-unfold a[href^="http"]::after {
+        content: " (" attr(href) ")";
+    }
+}
+
+/* ========================================
+   Responsive Adjustments
+   ======================================== */
+@media (max-width: 640px) {
+    .prose-unfold {
+        font-size: 0.9rem;
+    }
+
+    .prose-unfold h1 {
+        font-size: 1.75em;
+    }
+
+    .prose-unfold h2 {
+        font-size: 1.4em;
+    }
+
+    .prose-unfold pre {
+        padding: 0.75em;
+    }
+
+    .prose-unfold table {
+        font-size: 0.875em;
+    }
+}

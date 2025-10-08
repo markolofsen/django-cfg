@@ -23,6 +23,11 @@ User = get_user_model()
         description="Get a paginated list of all user profiles",
         tags=["Profiles"]
     ),
+    create=extend_schema(
+        summary="Create user profile",
+        description="Create a new user profile",
+        tags=["Profiles"]
+    ),
     retrieve=extend_schema(
         summary="Get user profile",
         description="Get detailed information about a specific user profile",
@@ -36,6 +41,11 @@ User = get_user_model()
     partial_update=extend_schema(
         summary="Partially update user profile",
         description="Partially update user profile information",
+        tags=["Profiles"]
+    ),
+    destroy=extend_schema(
+        summary="Delete user profile",
+        description="Delete a user profile",
         tags=["Profiles"]
     ),
 )

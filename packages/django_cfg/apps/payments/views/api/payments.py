@@ -10,6 +10,8 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.db import models
 
 from .base import PaymentBaseViewSet, NestedPaymentViewSet
 from ...models import UniversalPayment
@@ -371,7 +373,7 @@ class PaymentStatusView(generics.RetrieveAPIView):
     queryset = UniversalPayment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
-    lookup_field = 'id'
+    lookup_field = 'pk'  # URL uses <uuid:pk>
     
     def get_object(self):
         """Get payment with permission check."""

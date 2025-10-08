@@ -313,12 +313,12 @@ class DjangoConfig(BaseModel):
     # === API Configuration ===
     drf: Optional[DRFConfig] = Field(
         default=None,
-        description="Extended Django REST Framework configuration (supplements Revolution)",
+        description="Extended Django REST Framework configuration (supplements OpenAPI Client)",
     )
 
     spectacular: Optional[SpectacularConfig] = Field(
         default=None,
-        description="Extended DRF Spectacular configuration (supplements Revolution)",
+        description="Extended DRF Spectacular configuration (supplements OpenAPI Client)",
     )
 
     # === Limits Configuration ===

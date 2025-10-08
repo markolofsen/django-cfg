@@ -9,7 +9,7 @@ from .views import UserProfileViewSet
 
 # Main router
 router = DefaultRouter()
-router.register(r'profiles', UserProfileViewSet, basename='profile')
+router.register(r'profiles', UserProfileViewSet, basename='Profiles')
 
 urlpatterns = [
     path('', include(router.urls)),

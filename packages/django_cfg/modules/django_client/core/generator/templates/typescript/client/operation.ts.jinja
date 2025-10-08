@@ -1,0 +1,61 @@
+{# Macro for generating TypeScript operation method #}
+{% macro render_operation(operation, in_subclient=False) %}
+{%- set request_prefix = "this.client" if in_subclient else "this" -%}
+
+{%- if operation.summary or operation.description -%}
+/**
+{%- if operation.summary %}
+ * {{ operation.summary }}
+{%- endif %}
+{%- if operation.description %}
+ *
+{%- for line in operation.description.split('\n') %}
+ * {{ line }}
+{%- endfor %}
+{%- endif %}
+ */
+{%- endif %}
+async {{ operation.method_name }}(
+  {%- for param in operation.params -%}
+  {{ param.name }}{{ '?' if param.optional else '' }}: {{ param.type }}{{ ', ' if not loop.last else '' }}
+  {%- endfor -%}
+): Promise<{{ operation.return_type }}> {
+{%- if operation.is_multipart %}
+  const formData = new FormData();
+{%- for field in operation.multipart_fields %}
+{%- if field.is_file %}
+  formData.append('{{ field.name }}', {{ field.name }});
+{%- else %}
+{%- if field.optional %}
+  if ({{ field.name }} !== undefined) formData.append('{{ field.name }}', String({{ field.name }}));
+{%- else %}
+  formData.append('{{ field.name }}', String({{ field.name }}));
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+  const response = await {{ request_prefix }}.request<{{ operation.return_type }}>(
+    '{{ operation.http_method }}',
+    {{ operation.path_expr }}
+    {%- if operation.has_options -%}
+    , {
+      {%- if operation.query_params %}
+      params: { {{ operation.query_params }} }{{ ',' if operation.has_body or operation.is_multipart else '' }}
+      {%- endif %}
+      {%- if operation.is_multipart %}
+      formData
+      {%- elif operation.has_body %}
+      body: data
+      {%- endif %}
+    }
+    {%- endif -%}
+  );
+{%- if operation.is_list %}
+  return (response as any).results || [];
+{%- elif operation.return_type != 'void' %}
+  return response;
+{%- else %}
+  return;
+{%- endif %}
+}
+{% endmacro %}

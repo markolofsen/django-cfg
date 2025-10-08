@@ -8,12 +8,12 @@ from rest_framework.response import Response
 from django.db.models import Count, Q, F
 from django.utils import timezone
 from datetime import timedelta
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Category, Tag, Post, Comment, PostLike, PostView
 from .serializers import (
-    CategorySerializer, TagSerializer, PostListSerializer, PostDetailSerializer,
+    BlogCategorySerializer, TagSerializer, PostListSerializer, PostDetailSerializer,
     PostCreateSerializer, PostUpdateSerializer, CommentSerializer,
     PostLikeSerializer, BlogStatsSerializer
 )
@@ -48,11 +48,11 @@ from .serializers import (
 )
 class CategoryViewSet(viewsets.ModelViewSet):
     """ViewSet for blog categories."""
-    
+
     queryset = Category.objects.annotate(
         published_posts_count=Count('posts', filter=Q(posts__status='published'))
     ).prefetch_related('children')
-    serializer_class = CategorySerializer
+    serializer_class = BlogCategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -265,11 +265,29 @@ class PostViewSet(viewsets.ModelViewSet):
     list=extend_schema(
         summary="List comments",
         description="Get a list of comments",
+        parameters=[
+            OpenApiParameter(
+                name='post_slug',
+                description='Post slug for nested comments endpoint',
+                required=False,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH
+            )
+        ],
         tags=["Blog - Comments"]
     ),
     create=extend_schema(
         summary="Create comment",
         description="Create a new comment",
+        parameters=[
+            OpenApiParameter(
+                name='post_slug',
+                description='Post slug for nested comments endpoint',
+                required=False,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH
+            )
+        ],
         tags=["Blog - Comments"]
     ),
     retrieve=extend_schema(
@@ -280,6 +298,11 @@ class PostViewSet(viewsets.ModelViewSet):
     update=extend_schema(
         summary="Update comment",
         description="Update comment content",
+        tags=["Blog - Comments"]
+    ),
+    partial_update=extend_schema(
+        summary="Partially update comment",
+        description="Partially update comment content",
         tags=["Blog - Comments"]
     ),
     destroy=extend_schema(

@@ -1,0 +1,109 @@
+/**
+ * Async API client for {{ api_title }}.
+ *
+ * Usage:
+ * ```typescript
+ * const client = new APIClient('https://api.example.com');
+ * const users = await client.usersList();
+ *
+ * // Custom HTTP adapter
+ * const client = new APIClient('https://api.example.com', {
+ *   httpClient: new AxiosAdapter()
+ * });
+ * ```
+ */
+export class APIClient {
+  private baseUrl: string;
+  private httpClient: HttpClientAdapter;
+
+  constructor(
+    baseUrl: string,
+    options?: { httpClient?: HttpClientAdapter }
+  ) {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.httpClient = options?.httpClient || new FetchAdapter();
+  }
+
+  /**
+   * Get CSRF token from cookies.
+   */
+  private getCsrfToken(): string | null {
+    const name = 'csrftoken';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  }
+
+  /**
+   * Make HTTP request with Django CSRF and session handling.
+   */
+  private async request<T>(
+    method: string,
+    path: string,
+    options?: {
+      params?: Record<string, any>;
+      body?: any;
+      formData?: FormData;
+    }
+  ): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+
+    // Build headers
+    const headers: Record<string, string> = {};
+
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    if (!options?.formData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    // Add CSRF token for non-GET requests
+    if (method !== 'GET') {
+      const csrfToken = this.getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+
+    try {
+      // Make request via HTTP adapter
+      const response = await this.httpClient.request<T>({
+        method,
+        url: url.toString(),
+        headers,
+        params: options?.params,
+        body: options?.body,
+        formData: options?.formData,
+      });
+
+      // Check for HTTP errors
+      if (response.status >= 400) {
+        throw new APIError(
+          response.status,
+          response.statusText,
+          response.data,
+          url.toString()
+        );
+      }
+
+      return response.data as T;
+    } catch (error) {
+      // Re-throw APIError as-is
+      if (error instanceof APIError) {
+        throw error;
+      }
+
+      // Wrap other errors as NetworkError
+      throw error instanceof Error
+        ? new NetworkError(error.message, url.toString(), error)
+        : new NetworkError('Unknown error', url.toString());
+    }
+  }
+
+{% for operation in operations %}
+  {{ operation }}
+
+{% endfor %}
+}

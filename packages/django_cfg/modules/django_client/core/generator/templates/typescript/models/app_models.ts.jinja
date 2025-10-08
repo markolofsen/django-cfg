@@ -1,0 +1,8 @@
+{% if has_enums %}
+import * as Enums from "../enums";
+
+{% endif %}
+{% for schema in schemas %}
+{{ schema }}
+
+{% endfor %}

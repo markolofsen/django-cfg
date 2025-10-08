@@ -1,7 +1,0 @@
-openapi: 3.0.3
-info:
-  title: Django CFG Sample API
-  version: 1.0.0 (v1)
-  description: Complete API documentation for Django CFG sample project
-paths: {}
-components: {}

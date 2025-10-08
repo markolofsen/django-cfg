@@ -27,7 +27,7 @@ class PaymentListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     amount_display = serializers.SerializerMethodField(read_only=True)
     
-    def get_amount_display(self, obj):
+    def get_amount_display(self, obj) -> str:
         """Get formatted amount display."""
         return f"${obj.amount_usd:.2f}"
     
@@ -64,23 +64,23 @@ class PaymentSerializer(serializers.ModelSerializer):
     is_failed = serializers.SerializerMethodField(read_only=True)
     is_expired = serializers.SerializerMethodField(read_only=True)
     
-    def get_amount_display(self, obj):
+    def get_amount_display(self, obj) -> str:
         """Get formatted amount display."""
         return f"${obj.amount_usd:.2f}"
     
-    def get_is_pending(self, obj):
+    def get_is_pending(self, obj) -> bool:
         """Check if payment is pending."""
         return obj.status == obj.PaymentStatus.PENDING
     
-    def get_is_completed(self, obj):
+    def get_is_completed(self, obj) -> bool:
         """Check if payment is completed."""
         return obj.status == obj.PaymentStatus.COMPLETED
     
-    def get_is_failed(self, obj):
+    def get_is_failed(self, obj) -> bool:
         """Check if payment is failed."""
         return obj.status == obj.PaymentStatus.FAILED
     
-    def get_is_expired(self, obj):
+    def get_is_expired(self, obj) -> bool:
         """Check if payment is expired."""
         return obj.status == obj.PaymentStatus.EXPIRED
     

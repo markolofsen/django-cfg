@@ -5,11 +5,12 @@ DRF Serializers for Blog app.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Category, Tag, Post, Comment, PostLike, PostView
+from typing import Any, Dict, List, Optional
 
 User = get_user_model()
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class BlogCategorySerializer(serializers.ModelSerializer):
     """Serializer for blog categories."""
     
     posts_count = serializers.IntegerField(read_only=True)
@@ -24,9 +25,9 @@ class CategorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'slug', 'posts_count', 'created_at', 'updated_at']
     
-    def get_children(self, obj):
+    def get_children(self, obj) -> List[Dict[str, Any]]:
         if obj.children.exists():
-            return CategorySerializer(obj.children.all(), many=True).data
+            return BlogCategorySerializer(obj.children.all(), many=True).data
         return []
 
 
@@ -67,12 +68,12 @@ class CommentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'author', 'is_approved', 'likes_count', 'created_at', 'updated_at']
     
-    def get_replies(self, obj):
+    def get_replies(self, obj) -> List[Dict[str, Any]]:
         if obj.replies.filter(is_approved=True).exists():
             return CommentSerializer(obj.replies.filter(is_approved=True), many=True, context=self.context).data
         return []
     
-    def get_can_edit(self, obj):
+    def get_can_edit(self, obj) -> bool:
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.author == request.user or request.user.is_staff
@@ -92,9 +93,9 @@ class PostLikeSerializer(serializers.ModelSerializer):
 
 class PostListSerializer(serializers.ModelSerializer):
     """Serializer for post list view."""
-    
+
     author = AuthorSerializer(read_only=True)
-    category = CategorySerializer(read_only=True)
+    category = BlogCategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     
     class Meta:
@@ -109,9 +110,9 @@ class PostListSerializer(serializers.ModelSerializer):
 
 class PostDetailSerializer(serializers.ModelSerializer):
     """Serializer for post detail view."""
-    
+
     author = AuthorSerializer(read_only=True)
-    category = CategorySerializer(read_only=True)
+    category = BlogCategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
     user_reaction = serializers.SerializerMethodField()
@@ -129,13 +130,13 @@ class PostDetailSerializer(serializers.ModelSerializer):
             'comments', 'user_reaction', 'can_edit'
         ]
     
-    def get_comments(self, obj):
+    def get_comments(self, obj) -> List[Any]:
         if obj.allow_comments:
             comments = obj.comments.filter(is_approved=True, parent=None)
             return CommentSerializer(comments, many=True, context=self.context).data
         return []
     
-    def get_user_reaction(self, obj):
+    def get_user_reaction(self, obj) -> Optional[Any]:
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             try:
@@ -145,7 +146,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
                 pass
         return None
     
-    def get_can_edit(self, obj):
+    def get_can_edit(self, obj) -> bool:
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.author == request.user or request.user.is_staff
@@ -202,7 +203,7 @@ class PostUpdateSerializer(serializers.ModelSerializer):
 
 class BlogStatsSerializer(serializers.Serializer):
     """Serializer for blog statistics."""
-    
+
     total_posts = serializers.IntegerField()
     published_posts = serializers.IntegerField()
     draft_posts = serializers.IntegerField()
@@ -211,5 +212,5 @@ class BlogStatsSerializer(serializers.Serializer):
     total_likes = serializers.IntegerField()
     popular_posts = PostListSerializer(many=True)
     recent_posts = PostListSerializer(many=True)
-    top_categories = CategorySerializer(many=True)
+    top_categories = BlogCategorySerializer(many=True)
     top_tags = TagSerializer(many=True)

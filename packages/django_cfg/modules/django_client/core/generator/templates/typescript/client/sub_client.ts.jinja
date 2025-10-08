@@ -1,0 +1,15 @@
+/**
+ * API endpoints for {{ tag }}.
+ */
+class {{ class_name }} {
+  private client: APIClient;
+
+  constructor(client: APIClient) {
+    this.client = client;
+  }
+
+{% for operation in operations %}
+  {{ operation }}
+
+{% endfor %}
+}

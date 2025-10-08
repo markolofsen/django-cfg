@@ -79,7 +79,7 @@ def environment_callback(request: HttpRequest) -> Dict[str, Any]:
         },
         "features": {
             "unfold": True,  # Unfold always enabled
-            "revolution": True,  # Revolution always enabled
+            "openapi_client": hasattr(config, 'openapi_client') and config.openapi_client and config.openapi_client.enabled if config else False,
             "constance": getattr(config, 'enable_constance', False) if config else False,
         }
     }

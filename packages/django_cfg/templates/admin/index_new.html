@@ -31,6 +31,10 @@
         <span class="material-icons mr-2 align-middle text-sm">terminal</span>
         Commands
     </button>
+    <button type="button" data-tab="7" class="px-4 py-3 rounded-t-lg focus:outline-none">
+        <span class="material-icons mr-2 align-middle text-sm">description</span>
+        Documentation
+    </button>
 {% endblock %}
 
 {% block tab_content %}
@@ -101,6 +105,15 @@
             {{ commands_section|safe }}
         {% else %}
             {% include 'admin/snippets/tabs/commands_tab.html' %}
+        {% endif %}
+    </div>
+
+    <!-- Documentation Tab -->
+    <div class="tab-content" data-tab="7">
+        {% if documentation_section %}
+            {{ documentation_section|safe }}
+        {% else %}
+            {% include 'admin/snippets/tabs/documentation_tab.html' %}
         {% endif %}
     </div>
 {% endblock %}

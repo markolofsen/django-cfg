@@ -8,7 +8,12 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 
 from ..models import NewsletterCampaign
-from ..serializers import NewsletterCampaignSerializer, SendCampaignSerializer
+from ..serializers import (
+    NewsletterCampaignSerializer,
+    SendCampaignSerializer,
+    SendCampaignResponseSerializer,
+    ErrorResponseSerializer,
+)
 
 
 class NewsletterCampaignListView(generics.ListCreateAPIView):
@@ -67,7 +72,7 @@ class NewsletterCampaignDetailView(generics.RetrieveUpdateDestroyAPIView):
     @extend_schema(
         summary="Delete Campaign",
         description="Delete a newsletter campaign.",
-        responses={204: "No Content"},
+        responses={204: None},
         tags=["Campaigns"]
     )
     def delete(self, request, *args, **kwargs):
@@ -84,7 +89,11 @@ class SendCampaignView(generics.CreateAPIView):
         summary="Send Newsletter Campaign",
         description="Send a newsletter campaign to all subscribers.",
         request=SendCampaignSerializer,
-        responses={200: "Success", 400: "Bad Request", 404: "Campaign not found"},
+        responses={
+            200: SendCampaignResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
         tags=["Campaigns"]
     )
     def post(self, request, *args, **kwargs):

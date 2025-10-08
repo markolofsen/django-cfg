@@ -9,7 +9,12 @@ from drf_spectacular.utils import extend_schema
 
 from ..models import EmailLog
 from ..services.email_service import NewsletterEmailService
-from ..serializers import TestEmailSerializer, BulkEmailSerializer, EmailLogSerializer
+from ..serializers import (
+    TestEmailSerializer,
+    BulkEmailSerializer,
+    EmailLogSerializer,
+    BulkEmailResponseSerializer,
+)
 
 
 class TestEmailView(generics.CreateAPIView):
@@ -22,7 +27,10 @@ class TestEmailView(generics.CreateAPIView):
         summary="Test Email Sending",
         description="Send a test email to verify mailer configuration.",
         request=TestEmailSerializer,
-        responses={200: "Success", 400: "Bad Request"},
+        responses={
+            200: BulkEmailResponseSerializer,
+            400: BulkEmailResponseSerializer,
+        },
         tags=["Testing"]
     )
     def post(self, request, *args, **kwargs):
@@ -67,7 +75,10 @@ class BulkEmailView(generics.CreateAPIView):
         summary="Send Bulk Email",
         description="Send bulk emails to multiple recipients using base email template.",
         request=BulkEmailSerializer,
-        responses={200: "Success", 400: "Bad Request"},
+        responses={
+            200: BulkEmailResponseSerializer,
+            400: BulkEmailResponseSerializer,
+        },
         tags=["Bulk Email"]
     )
     def post(self, request, *args, **kwargs):

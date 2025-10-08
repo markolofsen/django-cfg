@@ -47,7 +47,7 @@ The middleware intelligently detects API requests using:
 3. **REST methods** (POST, PUT, PATCH, DELETE) on non-admin paths
 
 4. **Configured API prefixes**
-   - Django Revolution API: `/{api_prefix}/` (from config)
+   - Django Client API: `/{api_prefix}/` (from config)
    - Django CFG API: `/cfg/` (always)
 
 ### 📊 Statistics

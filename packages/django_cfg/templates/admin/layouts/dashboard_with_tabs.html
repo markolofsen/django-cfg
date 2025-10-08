@@ -16,7 +16,7 @@
         if (!tabs.length || !contents.length) return;
         
         // Tab names for URL hash
-        const tabNames = ['overview', 'zones', 'users', 'system', 'stats', 'app-stats', 'commands'];
+        const tabNames = ['overview', 'zones', 'users', 'system', 'stats', 'app-stats', 'commands', 'documentation'];
         
         // Global function for tab switching
         window.switchTab = function(idx, updateHash = true) {
@@ -493,13 +493,21 @@
                 <span class="material-icons mr-2 align-middle text-sm">apps</span>
                 App Stats
             </button>
-            <button 
-                type="button" 
+            <button
+                type="button"
                 data-tab="6"
                 class="px-4 py-3 rounded-t-lg focus:outline-none"
             >
                 <span class="material-icons mr-2 align-middle text-sm">terminal</span>
                 Commands
+            </button>
+            <button
+                type="button"
+                data-tab="7"
+                class="px-4 py-3 rounded-t-lg focus:outline-none"
+            >
+                <span class="material-icons mr-2 align-middle text-sm">description</span>
+                Documentation
             </button>
         </div>
 
@@ -532,6 +540,10 @@
 
             <div class="tab-content" data-tab="6">
                 {% block commands_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" data-tab="7">
+                {% block documentation_tab %}{% endblock %}
             </div>
         </div>
 

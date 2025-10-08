@@ -17,9 +17,16 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from ...services.core.webhook_service import WebhookService
 from ...services.types import WebhookValidationRequest, WebhookProcessingResult
+from ..serializers.webhooks import (
+    WebhookResponseSerializer,
+    WebhookHealthSerializer,
+    WebhookStatsSerializer,
+    SupportedProvidersSerializer,
+)
 from django_cfg.modules.django_logging import get_logger
 
 logger = get_logger("webhook_views")
@@ -29,7 +36,7 @@ logger = get_logger("webhook_views")
 class UniversalWebhookView(APIView):
     """
     Universal webhook handler for all payment providers.
-    
+
     Features:
     - Provider-agnostic webhook processing
     - Signature validation and security
@@ -37,13 +44,29 @@ class UniversalWebhookView(APIView):
     - Comprehensive logging and monitoring
     - Integration with ngrok for development
     """
-    
+
     permission_classes = [AllowAny]  # Webhooks don't use standard auth
+    serializer_class = WebhookResponseSerializer  # For OpenAPI schema generation
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.webhook_service = WebhookService()
-    
+
+    @extend_schema(
+        summary="Process Webhook",
+        description="Process incoming webhook from payment provider",
+        parameters=[
+            OpenApiParameter(
+                name='provider',
+                description='Payment provider name (nowpayments, stripe, etc.)',
+                required=True,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH
+            )
+        ],
+        responses={200: WebhookResponseSerializer},
+        tags=["Webhooks"]
+    )
     def post(self, request: HttpRequest, provider: str) -> JsonResponse:
         """
         Handle incoming webhook from any payment provider.
@@ -144,10 +167,25 @@ class UniversalWebhookView(APIView):
                 request_id
             )
     
+    @extend_schema(
+        summary="Webhook Endpoint Info",
+        description="Get webhook endpoint information for debugging and configuration",
+        parameters=[
+            OpenApiParameter(
+                name='provider',
+                description='Payment provider name',
+                required=True,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH
+            )
+        ],
+        responses={200: WebhookResponseSerializer},
+        tags=["Webhooks"]
+    )
     def get(self, request: HttpRequest, provider: str) -> JsonResponse:
         """
         Handle GET requests for webhook endpoint info.
-        
+
         Useful for debugging and provider configuration verification.
         """
         
@@ -314,12 +352,18 @@ class UniversalWebhookView(APIView):
         return JsonResponse(response_data, status=status_code)
 
 
+@extend_schema(
+    summary="Webhook Health Check",
+    description="Check webhook service health status and recent activity metrics",
+    responses={200: WebhookHealthSerializer},
+    tags=["Webhooks"]
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def webhook_health_check(request):
     """
     Health check endpoint for webhook service.
-    
+
     Returns service status and recent activity metrics.
     """
     
@@ -362,12 +406,27 @@ def webhook_health_check(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@extend_schema(
+    summary="Webhook Statistics",
+    description="Get webhook processing statistics for a given time period",
+    parameters=[
+        OpenApiParameter(
+            name='days',
+            description='Number of days to analyze (1-365)',
+            required=False,
+            type=OpenApiTypes.INT,
+            default=30
+        )
+    ],
+    responses={200: WebhookStatsSerializer},
+    tags=["Webhooks"]
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def webhook_stats(request):
     """
     Get webhook processing statistics.
-    
+
     Query parameters:
     - days: Number of days to analyze (default: 30)
     """
@@ -408,12 +467,18 @@ def webhook_stats(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@extend_schema(
+    summary="Supported Webhook Providers",
+    description="Get list of supported webhook providers with configuration details",
+    responses={200: SupportedProvidersSerializer},
+    tags=["Webhooks"]
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def supported_providers(request):
     """
     Get list of supported webhook providers.
-    
+
     Returns provider information and webhook URLs.
     """
     

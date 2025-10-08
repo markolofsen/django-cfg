@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.utils import timezone
 
 from .base import PaymentBaseViewSet, NestedPaymentViewSet, ReadOnlyPaymentViewSet
 from ...models import UserBalance, Transaction
@@ -245,12 +246,12 @@ class TransactionViewSet(ReadOnlyPaymentViewSet):
                     'total_transactions': type_transactions.count(),
                     'total_amount': float(
                         type_transactions.aggregate(
-                            total=models.Sum('amount')
+                            total=models.Sum('amount_usd')
                         )['total'] or 0
                     ),
                     'average_amount': float(
                         type_transactions.aggregate(
-                            avg=models.Avg('amount')
+                            avg=models.Avg('amount_usd')
                         )['avg'] or 0
                     ),
                 }
@@ -344,14 +345,14 @@ class UserTransactionViewSet(NestedPaymentViewSet):
             summary = queryset.aggregate(
                 total_transactions=models.Count('id'),
                 total_credits=models.Sum(
-                    'amount',
-                    filter=models.Q(amount__gt=0)
+                    'amount_usd',
+                    filter=models.Q(amount_usd__gt=0)
                 ),
                 total_debits=models.Sum(
-                    'amount',
-                    filter=models.Q(amount__lt=0)
+                    'amount_usd',
+                    filter=models.Q(amount_usd__lt=0)
                 ),
-                net_amount=models.Sum('amount'),
+                net_amount=models.Sum('amount_usd'),
             )
             
             # Get type breakdown

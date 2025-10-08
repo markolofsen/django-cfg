@@ -1,7 +1,7 @@
 """
 API frameworks generator.
 
-Handles JWT, DRF, Spectacular, and Django Revolution configuration.
+Handles JWT, DRF, Spectacular, and Django Client (OpenAPI) configuration.
 Size: ~250 lines (focused on API frameworks)
 """
 
@@ -20,7 +20,7 @@ class APIFrameworksGenerator:
 
     Responsibilities:
     - JWT authentication configuration
-    - Django Revolution framework
+    - Django Client (OpenAPI) framework
     - Django REST Framework (DRF)
     - DRF Spectacular (OpenAPI/Swagger)
     - Auto-configuration and extensions
@@ -56,7 +56,7 @@ class APIFrameworksGenerator:
 
         # Generate settings for each API framework
         settings.update(self._generate_jwt_settings())
-        settings.update(self._generate_revolution_settings())
+        settings.update(self._generate_openapi_client_settings())
         settings.update(self._apply_drf_spectacular_extensions())
 
         return settings
@@ -74,71 +74,104 @@ class APIFrameworksGenerator:
         jwt_settings = self.config.jwt.to_django_settings(self.config.secret_key)
         return jwt_settings
 
-    def _generate_revolution_settings(self) -> Dict[str, Any]:
+    def _generate_openapi_client_settings(self) -> Dict[str, Any]:
         """
-        Generate Django Revolution framework settings.
+        Generate Django Client (OpenAPI) framework settings.
 
         Returns:
-            Dictionary with Revolution and auto-generated DRF configuration
+            Dictionary with OpenAPI configuration and auto-generated DRF configuration
         """
-        if not hasattr(self.config, "revolution") or not self.config.revolution:
+        if not hasattr(self.config, "openapi_client") or not self.config.openapi_client:
             return {}
 
         settings = {}
 
-        # Revolution configuration
-        revolution_settings = {
-            "DJANGO_REVOLUTION": {
-                "api_prefix": self.config.revolution.api_prefix,
-                "debug": getattr(self.config.revolution, "debug", self.config.debug),
-                "auto_install_deps": getattr(self.config.revolution, "auto_install_deps", True),
-                "zones": {
-                    zone_name: zone_config.model_dump()
-                    for zone_name, zone_config in self.config.revolution.get_zones_with_defaults().items()
-                },
-            }
+        # OpenAPI Client configuration
+        openapi_settings = {
+            "OPENAPI_CLIENT": self.config.openapi_client.model_dump(),
         }
-        settings.update(revolution_settings)
+        settings.update(openapi_settings)
 
-        # Auto-generate DRF configuration using Revolution's core_config
-        drf_settings = self._generate_drf_from_revolution()
+        # Auto-generate DRF configuration from OpenAPIClientConfig
+        drf_settings = self._generate_drf_from_openapi()
         if drf_settings:
             settings.update(drf_settings)
 
         return settings
 
-    def _generate_drf_from_revolution(self) -> Dict[str, Any]:
+    def _generate_drf_from_openapi(self) -> Dict[str, Any]:
         """
-        Generate DRF + Spectacular settings from Revolution config.
+        Generate DRF + Spectacular settings from OpenAPIClientConfig.
 
         Returns:
             Dictionary with DRF and Spectacular configuration
         """
         try:
-            from django_revolution import create_drf_spectacular_config
+            # Extract DRF parameters from OpenAPIClientConfig
+            openapi_config = self.config.openapi_client
 
-            # Extract DRF parameters from RevolutionConfig
-            drf_kwargs = {
-                "title": getattr(self.config.revolution, "drf_title", "API"),
-                "description": getattr(self.config.revolution, "drf_description", "RESTful API"),
-                "version": getattr(self.config.revolution, "drf_version", "1.0.0"),
-                "schema_path_prefix": f"/{self.config.revolution.api_prefix}/",
-                "enable_browsable_api": getattr(self.config.revolution, "drf_enable_browsable_api", False),
-                "enable_throttling": getattr(self.config.revolution, "drf_enable_throttling", False),
+            # Build REST_FRAMEWORK settings
+            rest_framework = {
+                "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+                "DEFAULT_PAGINATION_CLASS": "django_cfg.middleware.pagination.DefaultPagination",
+                "PAGE_SIZE": 100,
+                "DEFAULT_RENDERER_CLASSES": [
+                    "rest_framework.renderers.JSONRenderer",
+                    "django_cfg.modules.django_drf_theme.renderers.TailwindBrowsableAPIRenderer",
+                ],
             }
 
-            # Create DRF + Spectacular config with Revolution's comprehensive settings
-            drf_settings = create_drf_spectacular_config(**drf_kwargs)
+            # Add authentication classes if not browsable
+            if not openapi_config.drf_enable_browsable_api:
+                rest_framework["DEFAULT_RENDERER_CLASSES"] = [
+                    "rest_framework.renderers.JSONRenderer",
+                ]
 
-            logger.info("🚀 Generated DRF + Spectacular settings using Revolution's create_drf_spectacular_config")
+            # Add throttling if enabled
+            if openapi_config.drf_enable_throttling:
+                rest_framework["DEFAULT_THROTTLE_CLASSES"] = [
+                    "rest_framework.throttling.AnonRateThrottle",
+                    "rest_framework.throttling.UserRateThrottle",
+                ]
+                rest_framework["DEFAULT_THROTTLE_RATES"] = {
+                    "anon": "100/day",
+                    "user": "1000/day",
+                }
+
+            # Build SPECTACULAR_SETTINGS
+            spectacular_settings = {
+                "TITLE": openapi_config.drf_title,
+                "DESCRIPTION": openapi_config.drf_description,
+                "VERSION": openapi_config.drf_version,
+                "SERVE_INCLUDE_SCHEMA": openapi_config.drf_serve_include_schema,
+                "SCHEMA_PATH_PREFIX": openapi_config.get_drf_schema_path_prefix(),
+                "SWAGGER_UI_SETTINGS": {
+                    "deepLinking": True,
+                    "persistAuthorization": True,
+                    "displayOperationId": True,
+                },
+                "COMPONENT_SPLIT_REQUEST": True,
+                "COMPONENT_SPLIT_PATCH": True,
+                # Auto-fix enum naming collisions
+                "POSTPROCESSING_HOOKS": [
+                    "django_cfg.modules.django_client.spectacular.auto_fix_enum_names",
+                ],
+            }
+
+            drf_settings = {
+                "REST_FRAMEWORK": rest_framework,
+                "SPECTACULAR_SETTINGS": spectacular_settings,
+            }
+
+            logger.info("🚀 Generated DRF + Spectacular settings from OpenAPIClientConfig")
+            logger.info("   - Pagination: django_cfg.middleware.pagination.DefaultPagination")
+            logger.info("   - Renderer: TailwindBrowsableAPIRenderer")
+            logger.info(f"   - API: {openapi_config.drf_title} v{openapi_config.drf_version}")
 
             return drf_settings
 
-        except ImportError as e:
-            logger.warning(f"Could not import django_revolution.create_drf_spectacular_config: {e}")
-            return {}
         except Exception as e:
-            logger.warning(f"Could not generate DRF config from Revolution: {e}")
+            logger.warning(f"Could not generate DRF config from OpenAPIClientConfig: {e}")
             return {}
 
     def _apply_drf_spectacular_extensions(self) -> Dict[str, Any]:
@@ -175,7 +208,7 @@ class APIFrameworksGenerator:
         Returns:
             Dictionary with Spectacular settings
         """
-        # Check if Spectacular settings exist (from Revolution or elsewhere)
+        # Check if Spectacular settings exist (from OpenAPI Client or elsewhere)
         if not hasattr(self, '_has_spectacular_settings'):
             return {}
 
@@ -205,9 +238,17 @@ class APIFrameworksGenerator:
         """
         Apply DRF settings extensions.
 
+        Note: This method should NOT overwrite existing REST_FRAMEWORK settings.
+        It should only add missing settings or extend existing ones.
+
         Returns:
             Dictionary with DRF settings
         """
+        # Don't override if OpenAPIClientConfig already created full DRF config
+        if hasattr(self.config, 'openapi_client') and self.config.openapi_client:
+            logger.info("🔧 DRF settings already configured by OpenAPIClientConfig, skipping django-cfg extensions")
+            return {}
+
         settings = {}
 
         if self.config.drf:

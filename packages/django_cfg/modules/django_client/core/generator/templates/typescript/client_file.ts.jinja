@@ -1,0 +1,9 @@
+{% if has_enums %}
+import * as Enums from "./enums";
+{% endif %}
+import { HttpClientAdapter, FetchAdapter } from "./http";
+import { APIError, NetworkError } from "./errors";
+import { APILogger, type LoggerConfig } from "./logger";
+
+
+{{ client_code }}

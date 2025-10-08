@@ -1,0 +1,219 @@
+/**
+ * Django CFG Sample API - API Client with JWT Management
+ *
+ * Usage:
+ * ```typescript
+ * import { API } from './api';
+ *
+ * const api = new API('https://api.example.com');
+ *
+ * // Set JWT token
+ * api.setToken('your-jwt-token', 'refresh-token');
+ *
+ * // Use API
+ * const posts = await api.posts.list();
+ * const user = await api.users.retrieve(1);
+ *
+ * // Check authentication
+ * if (api.isAuthenticated()) {
+ *   // ...
+ * }
+ *
+ * // Custom storage (for Electron/Node.js)
+ * import { MemoryStorageAdapter } from './storage';
+ * const api = new API('https://api.example.com', {
+ *   storage: new MemoryStorageAdapter()
+ * });
+ *
+ * // Get OpenAPI schema
+ * const schema = api.getSchema();
+ * ```
+ */
+
+import { APIClient } from "./client";
+import { OPENAPI_SCHEMA } from "./schema";
+import {
+  StorageAdapter,
+  LocalStorageAdapter,
+  CookieStorageAdapter,
+  MemoryStorageAdapter
+} from "./storage";
+export * as ShopBlogCategoriesTypes from "./shop__blog__blog_categories/models";
+export * as ShopBlogCommentsTypes from "./shop__blog__blog_comments/models";
+export * as ShopBlogPostsTypes from "./shop__blog__blog_posts/models";
+export * as ShopBlogTagsTypes from "./shop__blog__blog_tags/models";
+export * as ShopCategoriesTypes from "./shop__shop__shop_categories/models";
+export * as ShopOrdersTypes from "./shop__shop__shop_orders/models";
+export * as ShopProductsTypes from "./shop__shop__shop_products/models";
+export * as ShopBlogTypes from "./shop__blog/models";
+export * as Enums from "./enums";
+
+// Re-export storage adapters for convenience
+export {
+  StorageAdapter,
+  LocalStorageAdapter,
+  CookieStorageAdapter,
+  MemoryStorageAdapter
+};
+
+export const TOKEN_KEY = "auth_token";
+export const REFRESH_TOKEN_KEY = "refresh_token";
+
+export interface APIOptions {
+  /** Custom storage adapter (defaults to LocalStorageAdapter) */
+  storage?: StorageAdapter;
+}
+
+export class API {
+  private baseUrl: string;
+  private _client!: APIClient;
+  private _token: string | null = null;
+  private _refreshToken: string | null = null;
+  private storage: StorageAdapter;
+
+  // Sub-clients
+  public shop_blog_categories!: APIClient['shop_blog_categories'];
+  public shop_blog_comments!: APIClient['shop_blog_comments'];
+  public shop_blog_posts!: APIClient['shop_blog_posts'];
+  public shop_blog_tags!: APIClient['shop_blog_tags'];
+  public shop_categories!: APIClient['shop_categories'];
+  public shop_orders!: APIClient['shop_orders'];
+  public shop_products!: APIClient['shop_products'];
+  public shop_blog!: APIClient['shop_blog'];
+
+  constructor(baseUrl: string, options?: APIOptions) {
+    this.baseUrl = baseUrl;
+    this.storage = options?.storage || new LocalStorageAdapter();
+    this._loadTokensFromStorage();
+    this._initClients();
+  }
+
+  private _loadTokensFromStorage(): void {
+    this._token = this.storage.getItem(TOKEN_KEY);
+    this._refreshToken = this.storage.getItem(REFRESH_TOKEN_KEY);
+  }
+
+  private _initClients(): void {
+    this._client = new APIClient(this.baseUrl);
+
+    // Inject Authorization header if token exists
+    if (this._token) {
+      this._injectAuthHeader();
+    }
+
+    // Proxy sub-clients
+    this.shop_blog_categories = this._client.shop_blog_categories;
+    this.shop_blog_comments = this._client.shop_blog_comments;
+    this.shop_blog_posts = this._client.shop_blog_posts;
+    this.shop_blog_tags = this._client.shop_blog_tags;
+    this.shop_categories = this._client.shop_categories;
+    this.shop_orders = this._client.shop_orders;
+    this.shop_products = this._client.shop_products;
+    this.shop_blog = this._client.shop_blog;
+  }
+
+  private _injectAuthHeader(): void {
+    // Override request method to inject auth header
+    const originalRequest = this._client.request.bind(this._client);
+    this._client.request = async <T>(
+      method: string,
+      path: string,
+      options?: { params?: Record<string, any>; body?: any }
+    ): Promise<T> => {
+      const headers: Record<string, string> = {};
+
+      if (this._token) {
+        headers['Authorization'] = `Bearer ${this._token}`;
+      }
+
+      // Merge with existing options
+      const mergedOptions = {
+        ...options,
+        headers: {
+          ...(options as any)?.headers,
+          ...headers,
+        },
+      };
+
+      return originalRequest(method, path, mergedOptions);
+    };
+  }
+
+  /**
+   * Get current JWT token
+   */
+  getToken(): string | null {
+    return this.storage.getItem(TOKEN_KEY);
+  }
+
+  /**
+   * Get current refresh token
+   */
+  getRefreshToken(): string | null {
+    return this.storage.getItem(REFRESH_TOKEN_KEY);
+  }
+
+  /**
+   * Set JWT token and refresh token
+   * @param token - JWT access token
+   * @param refreshToken - JWT refresh token (optional)
+   */
+  setToken(token: string, refreshToken?: string): void {
+    this._token = token;
+    this.storage.setItem(TOKEN_KEY, token);
+
+    if (refreshToken) {
+      this._refreshToken = refreshToken;
+      this.storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+
+    // Reinitialize clients with new token
+    this._initClients();
+  }
+
+  /**
+   * Clear all tokens
+   */
+  clearTokens(): void {
+    this._token = null;
+    this._refreshToken = null;
+    this.storage.removeItem(TOKEN_KEY);
+    this.storage.removeItem(REFRESH_TOKEN_KEY);
+
+    // Reinitialize clients without token
+    this._initClients();
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated(): boolean {
+    return !!this.getToken();
+  }
+
+  /**
+   * Update base URL and reinitialize clients
+   * @param url - New base URL
+   */
+  setBaseUrl(url: string): void {
+    this.baseUrl = url;
+    this._initClients();
+  }
+
+  /**
+   * Get current base URL
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
+   * Get OpenAPI schema
+   * @returns Complete OpenAPI specification for this API
+   */
+  getSchema(): any {
+    return OPENAPI_SCHEMA;
+  }
+}
+
+export default API;

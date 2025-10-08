@@ -19,7 +19,7 @@ from .system import SystemCallbacks
 from .actions import ActionsCallbacks
 from .charts import ChartsCallbacks
 from .commands import CommandsCallbacks
-from .revolution import RevolutionCallbacks
+from .revolution import OpenAPIClientCallbacks
 from .users import UsersCallbacks
 from .base import get_user_admin_urls
 
@@ -28,6 +28,7 @@ from django_cfg.dashboard.sections.overview import OverviewSection
 from django_cfg.dashboard.sections.stats import StatsSection
 from django_cfg.dashboard.sections.system import SystemSection
 from django_cfg.dashboard.sections.commands import CommandsSection
+from django_cfg.dashboard.sections.documentation import DocumentationSection
 from django_cfg.dashboard.debug import save_section_render
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class UnfoldCallbacks(
     ActionsCallbacks,
     ChartsCallbacks,
     CommandsCallbacks,
-    RevolutionCallbacks,
+    OpenAPIClientCallbacks,
     UsersCallbacks
 ):
     """
@@ -145,6 +146,15 @@ class UnfoldCallbacks(
                 logger.error(f"Failed to render commands section: {e}", exc_info=True)
                 commands_section = None
 
+            try:
+                documentation_section = DocumentationSection(request).render()
+                # Debug: save render (only in debug mode)
+                if config and config.debug:
+                    save_section_render('documentation', documentation_section)
+            except Exception as e:
+                logger.error(f"Failed to render documentation section: {e}", exc_info=True)
+                documentation_section = None
+
             # Combine all stat cards (data already loaded above)
             all_stats = user_stats + support_stats
 
@@ -165,6 +175,7 @@ class UnfoldCallbacks(
                 "stats_section": stats_section,
                 "system_section": system_section,
                 "commands_section": commands_section,
+                "documentation_section": documentation_section,
 
                 # Statistics cards
                 "cards": cards_data,
@@ -198,8 +209,8 @@ class UnfoldCallbacks(
                     for action in dashboard_data.quick_actions
                     if action.category == "system"
                 ],
-                
-                # Revolution zones
+
+                # OpenAPI Client groups
                 "zones_table": {
                     "headers": [
                         {"label": "Zone"},
@@ -209,7 +220,7 @@ class UnfoldCallbacks(
                         {"label": "Status"},
                         {"label": "Actions"},
                     ],
-                    "rows": self.get_revolution_zones_data()[0],
+                    "rows": OpenAPIClientCallbacks().get_openapi_groups_data()[0],
                 },
                 
                 # Recent users
