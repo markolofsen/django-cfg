@@ -140,35 +140,39 @@ class ModelsGenerator:
         Examples:
             id: number;
             username: string;
-            email?: string | null;
+            email?: string;
             status: Enums.StatusEnum;
         """
         # Check if this field is an enum
         if schema.enum and schema.name:
             # Use enum type from shared enums (sanitized)
             ts_type = f"Enums.{self.base.sanitize_enum_name(schema.name)}"
-            if schema.nullable:
-                ts_type = f"{ts_type} | null"
+            # Don't add | null for nullable - use optional marker instead
         # Check if this field is a reference to an enum (via $ref)
         elif schema.ref and schema.ref in self.context.schemas:
             ref_schema = self.context.schemas[schema.ref]
             if ref_schema.enum:
                 # This is a reference to an enum component (sanitized to PascalCase)
                 ts_type = f"Enums.{self.base.sanitize_enum_name(schema.ref)}"
-                if schema.nullable:
-                    ts_type = f"{ts_type} | null"
+                # Don't add | null for nullable - use optional marker instead
             else:
-                # Regular reference
+                # Regular reference - get base type without | null
                 ts_type = schema.typescript_type
+                # Remove | null suffix if present (we'll use optional marker instead)
+                if ts_type.endswith(" | null"):
+                    ts_type = ts_type[:-7]  # Remove " | null"
         else:
-            # Get TypeScript type
+            # Get TypeScript type and remove | null suffix if present
             ts_type = schema.typescript_type
+            if ts_type.endswith(" | null"):
+                ts_type = ts_type[:-7]  # Remove " | null"
 
         # Check if required
         is_required = name in required_fields
 
-        # Optional marker
-        optional_marker = "" if is_required else "?"
+        # Optional marker - use for both non-required AND nullable fields
+        # This converts Django's nullable=True to TypeScript's optional (undefined)
+        optional_marker = "" if is_required and not schema.nullable else "?"
 
         # Comment
         if schema.description:

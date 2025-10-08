@@ -117,13 +117,10 @@ class SchemasGenerator:
         # Check if required
         is_required = name in required_fields
 
-        # Handle optional fields
-        if not is_required:
+        # Handle optional fields - use .optional() for both non-required AND nullable
+        # This converts Django's nullable=True to TypeScript's optional (undefined)
+        if not is_required or schema.nullable:
             zod_type = f"{zod_type}.optional()"
-
-        # Handle nullable fields
-        if schema.nullable:
-            zod_type = f"{zod_type}.nullable()"
 
         return f"{name}: {zod_type}"
 
