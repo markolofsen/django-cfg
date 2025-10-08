@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.4.14"
+version = "1.4.15"
 description = "Django AI framework with built-in agents, type-safe Pydantic v2 configuration, and 8 enterprise apps. Replace settings.py, validate at startup, 90% less code. Production-ready AI workflows for Django."
 readme = "README.md"
 keywords = [ "django", "configuration", "pydantic", "settings", "type-safety", "pydantic-settings", "django-environ", "startup-validation", "ide-autocomplete", "ai-agents", "enterprise-django", "django-settings", "type-safe-config",]
