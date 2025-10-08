@@ -69,4 +69,12 @@
     {% else %}
         {% include 'admin/snippets/tabs/commands_tab.html' %}
     {% endif %}
+{% endblock %}
+
+{% block documentation_tab %}
+    {% if documentation_section %}
+        {{ documentation_section|safe }}
+    {% else %}
+        {% include 'admin/snippets/tabs/documentation_tab.html' %}
+    {% endif %}
 {% endblock %} 

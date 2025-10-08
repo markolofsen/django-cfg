@@ -340,16 +340,16 @@ class BalanceService(BaseService):
                 created_at__gte=since
             ).aggregate(
                 total_transactions=models.Count('id'),
-                total_volume=models.Sum('amount'),
+                total_volume=models.Sum('amount_usd'),
                 deposits=models.Sum(
-                    'amount',
+                    'amount_usd',
                     filter=models.Q(transaction_type='deposit')
                 ),
                 withdrawals=models.Sum(
-                    'amount',
+                    'amount_usd',
                     filter=models.Q(transaction_type='withdrawal')
                 ),
-                avg_transaction=models.Avg('amount')
+                avg_transaction=models.Avg('amount_usd')
             )
             
             # Transaction type breakdown
@@ -357,7 +357,7 @@ class BalanceService(BaseService):
                 created_at__gte=since
             ).values('transaction_type').annotate(
                 count=models.Count('id'),
-                volume=models.Sum('amount')
+                volume=models.Sum('amount_usd')
             ).order_by('-count')
             
             stats = {

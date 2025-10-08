@@ -24,7 +24,7 @@ class Command(BaseCommand):
         # Step 1: Generate OpenAPI clients
         self.stdout.write('⚙️  Generating OpenAPI clients...')
         try:
-            call_command('generate')
+            call_command('generate_clients')
             self.stdout.write(self.style.SUCCESS('✅ OpenAPI clients generated'))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'❌ Generation failed: {e}'))

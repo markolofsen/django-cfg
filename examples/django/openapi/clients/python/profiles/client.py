@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+from typing import Any, Optional
+
+import httpx
+
+from .profiles import ProfilesProfilesAPI
+from .logger import APILogger, LoggerConfig
+
+
+class APIClient:
+    """
+    Async API client for Django CFG Sample API.
+
+    Usage:
+        >>> async with APIClient(base_url='https://api.example.com') as client:
+        ...     users = await client.users.list()
+        ...     post = await client.posts.create(data=new_post)
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        logger_config: Optional[LoggerConfig] = None,
+        **kwargs: Any,
+    ):
+        """
+        Initialize API client.
+
+        Args:
+            base_url: Base API URL (e.g., 'https://api.example.com')
+            logger_config: Logger configuration (None to disable logging)
+            **kwargs: Additional httpx.AsyncClient kwargs
+        """
+        self.base_url = base_url.rstrip('/')
+        self._client = httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=30.0,
+            **kwargs,
+        )
+
+        # Initialize logger
+        self.logger: Optional[APILogger] = None
+        if logger_config is not None:
+            self.logger = APILogger(logger_config)
+
+        # Initialize sub-clients
+        self.profiles_profiles = ProfilesProfilesAPI(self._client)
+
+    async def __aenter__(self) -> 'APIClient':
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self._client.aclose()
+
+    async def close(self) -> None:
+        """Close HTTP client."""
+        await self._client.aclose()

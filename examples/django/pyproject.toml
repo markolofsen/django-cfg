@@ -26,6 +26,7 @@ django-dramatiq = ">=0.14.0,<1.0"
 redis = ">=6.4.0,<7.0"
 # Configuration management with YAML support
 pydantic-yaml = "^1.0.0"
+markdown = "^3.9"
 
 [tool.poetry.group.local]
 optional = true
@@ -33,7 +34,7 @@ optional = true
 [tool.poetry.group.local.dependencies]
 # Local development dependencies (path configured via Makefile)
 django-ipc = {path = "/Users/markinmatrix/djangoipc", develop = true}
-django-cfg = {path = "/Users/markinmatrix/djangocfg", develop = true}
+django-cfg = {path = "../../django-cfg-dev", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+from typing import Any
+
+import httpx
+
+from .models import *
+{% if has_enums %}
+from .enums import *
+{% endif %}
+
+
+{{ client_code }}

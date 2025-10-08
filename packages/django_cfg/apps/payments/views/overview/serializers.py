@@ -201,5 +201,38 @@ class TimePeriodSerializer(serializers.Serializer):
         ('90d', 'Last 90 days'),
         ('1y', 'Last year'),
     ]
-    
+
     period = serializers.ChoiceField(choices=PERIOD_CHOICES, default='30d')
+
+
+class CurrencyAnalyticsItemSerializer(serializers.Serializer):
+    """
+    Analytics data for a single currency
+    """
+    currency_code = serializers.CharField(help_text="Currency code (e.g., BTC)")
+    currency_name = serializers.CharField(help_text="Currency name (e.g., Bitcoin)")
+    total_payments = serializers.IntegerField(help_text="Total number of payments")
+    total_amount = serializers.FloatField(help_text="Total amount in USD")
+    completed_payments = serializers.IntegerField(help_text="Number of completed payments")
+    average_amount = serializers.FloatField(help_text="Average payment amount in USD")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
+
+
+class ProviderAnalyticsItemSerializer(serializers.Serializer):
+    """
+    Analytics data for a single payment provider
+    """
+    provider = serializers.CharField(help_text="Provider code")
+    provider_display = serializers.CharField(help_text="Provider display name")
+    total_payments = serializers.IntegerField(help_text="Total number of payments")
+    total_amount = serializers.FloatField(help_text="Total amount in USD")
+    completed_payments = serializers.IntegerField(help_text="Number of completed payments")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
+
+
+class PaymentAnalyticsResponseSerializer(serializers.Serializer):
+    """
+    Payment analytics response with currency and provider breakdown
+    """
+    currency_analytics = CurrencyAnalyticsItemSerializer(many=True, help_text="Analytics by currency")
+    provider_analytics = ProviderAnalyticsItemSerializer(many=True, help_text="Analytics by provider")

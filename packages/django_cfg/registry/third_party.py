@@ -3,13 +3,11 @@ Third-party integrations registry.
 """
 
 THIRD_PARTY_REGISTRY = {
-    # Django Revolution
-    "RevolutionConfig": ("django_cfg.models.django.revolution", "RevolutionConfig"),
-    "APIZone": ("django_revolution.config", "ZoneModel"),
-    "ZoneModel": ("django_revolution.config", "ZoneModel"),
-    "ZoneConfig": ("django_revolution.app_config", "ZoneConfig"),
-    "DjangoRevolutionSettings": ("django_revolution.config", "DjangoRevolutionSettings"),
-    
+    # Django Client (OpenAPI)
+    "OpenAPIClientConfig": ("django_cfg.models.django.openapi", "OpenAPIClientConfig"),
+    "OpenAPIGroupConfig": ("django_cfg.modules.django_client.core.config", "OpenAPIGroupConfig"),
+    "OpenAPIConfig": ("django_cfg.modules.django_client.core.config", "OpenAPIConfig"),
+
     # Unfold Admin
     "UnfoldConfig": ("django_cfg.modules.django_unfold.models.config", "UnfoldConfig"),
     "UnfoldTheme": ("django_cfg.modules.django_unfold.models.config", "UnfoldTheme"),

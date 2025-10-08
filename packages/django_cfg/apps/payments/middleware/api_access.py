@@ -96,12 +96,16 @@ class APIAccessMiddleware(MiddlewareMixin):
     def process_request(self, request: HttpRequest) -> Optional[JsonResponse]:
         """
         Process incoming request for API access control.
-        
+
         Returns JsonResponse if access should be denied, None to continue.
         """
         if not self.enabled:
             return None
-        
+
+        # Check if this is a django-cfg internal endpoint check (bypass API key validation)
+        if request.META.get('HTTP_X_DJANGO_CFG_INTERNAL_CHECK') == 'true':
+            return None
+
         # Check if this path is protected (whitelist approach)
         if not self._is_protected_path(request.path):
             return None

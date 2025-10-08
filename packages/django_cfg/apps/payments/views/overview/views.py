@@ -26,6 +26,7 @@ from .serializers import (
     BalanceOverviewSerializer,
     SubscriptionOverviewSerializer,
     APIKeysOverviewSerializer,
+    PaymentAnalyticsResponseSerializer,
 )
 
 
@@ -95,7 +96,7 @@ from .serializers import (
                 default=10
             )
         ],
-        responses={200: 'object'}  # Generic object since it's a dict with currency_analytics and provider_analytics
+        responses={200: PaymentAnalyticsResponseSerializer}
     ),
     balance_overview=extend_schema(
         summary="Balance Overview",

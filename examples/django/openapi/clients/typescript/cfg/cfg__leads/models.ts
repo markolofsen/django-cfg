@@ -1,0 +1,99 @@
+import * as Enums from "../enums";
+
+/**
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface PaginatedLeadSubmissionList {
+  /** Total number of items across all pages */
+  count: number;
+  /** Current page number (1-based) */
+  page: number;
+  /** Total number of pages */
+  pages: number;
+  /** Number of items per page */
+  page_size: number;
+  /** Whether there is a next page */
+  has_next: boolean;
+  /** Whether there is a previous page */
+  has_previous: boolean;
+  /** Next page number (null if no next page) */
+  next_page?: number | null;
+  /** Previous page number (null if no previous page) */
+  previous_page?: number | null;
+  /** Array of items for current page */
+  results: Array<LeadSubmission>;
+}
+
+/**
+ * Serializer for lead form submission from frontend.
+ * 
+ * Request model (no read-only fields).
+ */
+export interface LeadSubmissionRequest {
+  name: string;
+  email: string;
+  company?: string | null;
+  company_site?: string | null;
+  /** * `email` - Email
+  * `whatsapp` - WhatsApp
+  * `telegram` - Telegram
+  * `phone` - Phone
+  * `other` - Other */
+  contact_type?: Enums.LeadSubmissionRequest.contact_type;
+  contact_value?: string | null;
+  subject?: string | null;
+  message: string;
+  extra?: string | null;
+  /** Frontend URL where form was submitted */
+  site_url: string;
+}
+
+/**
+ * Serializer for lead form submission from frontend.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface LeadSubmission {
+  name: string;
+  email: string;
+  company?: string | null;
+  company_site?: string | null;
+  /** * `email` - Email
+  * `whatsapp` - WhatsApp
+  * `telegram` - Telegram
+  * `phone` - Phone
+  * `other` - Other */
+  contact_type?: Enums.LeadSubmission.contact_type;
+  contact_value?: string | null;
+  subject?: string | null;
+  message: string;
+  extra?: string | null;
+  /** Frontend URL where form was submitted */
+  site_url: string;
+}
+
+/**
+ * Serializer for lead form submission from frontend.
+ * 
+ * Request model (no read-only fields).
+ */
+export interface PatchedLeadSubmissionRequest {
+  name?: string;
+  email?: string;
+  company?: string | null;
+  company_site?: string | null;
+  /** * `email` - Email
+  * `whatsapp` - WhatsApp
+  * `telegram` - Telegram
+  * `phone` - Phone
+  * `other` - Other */
+  contact_type?: Enums.PatchedLeadSubmissionRequest.contact_type;
+  contact_value?: string | null;
+  subject?: string | null;
+  message?: string;
+  extra?: string | null;
+  /** Frontend URL where form was submitted */
+  site_url?: string;
+}
+

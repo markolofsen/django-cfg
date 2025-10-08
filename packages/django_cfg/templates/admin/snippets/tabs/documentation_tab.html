@@ -1,0 +1,231 @@
+{% load unfold %}
+
+<!-- Documentation Tab Content -->
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">Commands Documentation</h1>
+                <p class="text-font-default-light dark:text-font-default-dark mt-2">
+                    Complete guide to all Django management commands
+                </p>
+            </div>
+            <div class="flex items-center space-x-2 text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                <span class="material-icons text-blue-500">menu_book</span>
+                <span>Management Commands Reference</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documentation Content -->
+    <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 overflow-hidden shadow-sm">
+        <div class="p-6">
+            {% if documentation_content %}
+                <!-- Rendered Markdown Content -->
+                <div class="prose prose-slate dark:prose-invert max-w-none">
+                    {{ documentation_content|safe }}
+                </div>
+            {% else %}
+                <!-- Fallback: Display README.md as code -->
+                <div class="markdown-body">
+                    <pre class="bg-base-50 dark:bg-base-800 rounded-lg p-4 overflow-x-auto text-sm"><code>{% if readme_content %}{{ readme_content }}{% else %}Documentation not found.
+
+Please ensure that README.md exists at:
+/src/django_cfg/management/README.md{% endif %}</code></pre>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Markdown/Documentation styling */
+.prose {
+    color: #374151;
+}
+
+.dark .prose {
+    color: #d1d5db;
+}
+
+.prose h1 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 1em;
+    color: #111827;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5em;
+}
+
+.dark .prose h1 {
+    color: #f9fafb;
+    border-bottom-color: #374151;
+}
+
+.prose h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-top: 2em;
+    margin-bottom: 1em;
+    color: #1f2937;
+}
+
+.dark .prose h2 {
+    color: #e5e7eb;
+}
+
+.prose h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+    color: #374151;
+}
+
+.dark .prose h3 {
+    color: #d1d5db;
+}
+
+.prose h4 {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-top: 1.25em;
+    margin-bottom: 0.5em;
+    color: #4b5563;
+}
+
+.dark .prose h4 {
+    color: #9ca3af;
+}
+
+.prose p {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    line-height: 1.75;
+}
+
+.prose ul, .prose ol {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+}
+
+.prose li {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.prose code {
+    background-color: #f3f4f6;
+    color: #ef4444;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25em;
+    font-size: 0.875em;
+    font-family: 'Courier New', monospace;
+}
+
+.dark .prose code {
+    background-color: #374151;
+    color: #fca5a5;
+}
+
+.prose pre {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5em;
+    padding: 1em;
+    overflow-x: auto;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.dark .prose pre {
+    background-color: #1f2937;
+    border-color: #374151;
+}
+
+.prose pre code {
+    background-color: transparent;
+    color: #111827;
+    padding: 0;
+    border-radius: 0;
+}
+
+.dark .prose pre code {
+    color: #f9fafb;
+}
+
+.prose a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.prose a:hover {
+    text-decoration: underline;
+}
+
+.dark .prose a {
+    color: #60a5fa;
+}
+
+.prose blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1em;
+    font-style: italic;
+    color: #6b7280;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.dark .prose blockquote {
+    border-left-color: #374151;
+    color: #9ca3af;
+}
+
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.prose th,
+.prose td {
+    border: 1px solid #e5e7eb;
+    padding: 0.5em 1em;
+    text-align: left;
+}
+
+.dark .prose th,
+.dark .prose td {
+    border-color: #374151;
+}
+
+.prose th {
+    background-color: #f9fafb;
+    font-weight: 600;
+}
+
+.dark .prose th {
+    background-color: #1f2937;
+}
+
+.prose hr {
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+.dark .prose hr {
+    border-top-color: #374151;
+}
+
+/* Add emoji support */
+.prose :where(p, li, td):not(:where([class~="not-prose"] *)) {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+</style>

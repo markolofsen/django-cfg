@@ -40,9 +40,9 @@ class DjangoLogger(BaseCfgModule):
         logs_dir.mkdir(parents=True, exist_ok=True)
         djangocfg_logs_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"[django-cfg] Setting up modular logging:")
-        print(f"  Django logs: {logs_dir / 'django.log'}")
-        print(f"  Django-CFG logs: {djangocfg_logs_dir}/")
+        # print(f"[django-cfg] Setting up modular logging:")
+        # print(f"  Django logs: {logs_dir / 'django.log'}")
+        # print(f"  Django-CFG logs: {djangocfg_logs_dir}/")
         
         # Get debug mode
         try:
@@ -79,7 +79,7 @@ class DjangoLogger(BaseCfgModule):
             root_logger.addHandler(console_handler)
             root_logger.addHandler(django_handler)  # All logs go to django.log
             
-            print(f"[django-cfg] Modular logging configured successfully! Debug: {debug}")
+            # print(f"[django-cfg] Modular logging configured successfully! Debug: {debug}")
             cls._configured = True
             
         except Exception as e:
@@ -139,7 +139,7 @@ class DjangoLogger(BaseCfgModule):
                 logger.addHandler(file_handler)
                 logger.propagate = True  # Also send to parent (django.log)
                 
-                print(f"[django-cfg] Created modular logger: {name} -> {log_file_path}")
+                # print(f"[django-cfg] Created modular logger: {name} -> {log_file_path}")
                 
             except Exception as e:
                 print(f"[django-cfg] ERROR creating modular logger for {name}: {e}")
@@ -189,7 +189,7 @@ def get_logger(name: str = "django_cfg") -> logging.Logger:
                                 
                                 if clean_parts:
                                     auto_name = f"django_cfg.{'.'.join(clean_parts)}"
-                                    print(f"[django-cfg] Auto-detected logger name: {name} -> {auto_name}")
+                                    # print(f"[django-cfg] Auto-detected logger name: {name} -> {auto_name}")
                                     name = auto_name
                         
                         elif module_path.startswith('modules/'):

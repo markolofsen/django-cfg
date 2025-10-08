@@ -5,6 +5,7 @@ DRF Serializers for Profiles app.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserProfile
+from typing import Any, Dict
 
 User = get_user_model()
 
@@ -23,7 +24,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'user', 'posts_count', 'comments_count', 'orders_count', 'created_at', 'updated_at']
     
-    def get_user_info(self, obj):
+    def get_user_info(self, obj) -> Dict[str, Any]:
         """Get basic user information."""
         return {
             'id': obj.user.id,

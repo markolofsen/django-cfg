@@ -103,9 +103,9 @@ class UserActivityMiddleware(MiddlewareMixin, BaseCfgModule):
         try:
             config = self.get_config()
             if config:
-                # Check Django Revolution API prefix
-                if hasattr(config, 'revolution') and config.revolution:
-                    api_prefix = f"/{getattr(config.revolution, 'api_prefix', 'api')}/"
+                # Check Django Client (OpenAPI) API prefix
+                if hasattr(config, 'openapi_client') and config.openapi_client:
+                    api_prefix = f"/{getattr(config.openapi_client, 'api_prefix', 'api')}/"
                     if path.startswith(api_prefix):
                         return True
                 

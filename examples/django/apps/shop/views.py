@@ -11,7 +11,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .models import Category, Product, Order, OrderItem
 from .serializers import (
-    CategorySerializer, ProductListSerializer, ProductDetailSerializer,
+    ShopCategorySerializer, ProductListSerializer, ProductDetailSerializer,
     OrderListSerializer, OrderDetailSerializer, ShopStatsSerializer
 )
 
@@ -30,11 +30,11 @@ from .serializers import (
 )
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for shop categories."""
-    
+
     queryset = Category.objects.filter(is_active=True).annotate(
         active_products_count=Count('products', filter=Q(products__status='active'))
     ).prefetch_related('children')
-    serializer_class = CategorySerializer
+    serializer_class = ShopCategorySerializer
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']

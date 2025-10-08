@@ -12,8 +12,8 @@ User = get_user_model()
 
 class NewsletterSerializer(serializers.ModelSerializer):
     """Serializer for Newsletter model."""
-    
-    subscribers_count = serializers.ReadOnlyField()
+
+    subscribers_count = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = Newsletter
@@ -102,7 +102,7 @@ class EmailLogSerializer(serializers.ModelSerializer):
 
 class BulkEmailSerializer(serializers.Serializer):
     """Simple serializer for bulk email."""
-    
+
     recipients = serializers.ListField(
         child=serializers.EmailField(),
         min_length=1,
@@ -115,3 +115,40 @@ class BulkEmailSerializer(serializers.Serializer):
     button_text = serializers.CharField(max_length=100, required=False, allow_blank=True)
     button_url = serializers.URLField(required=False, allow_blank=True)
     secondary_text = serializers.CharField(required=False, allow_blank=True)
+
+
+# Response serializers
+class SuccessResponseSerializer(serializers.Serializer):
+    """Generic success response."""
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+
+
+class SubscribeResponseSerializer(serializers.Serializer):
+    """Response for subscription."""
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    subscription_id = serializers.IntegerField(required=False)
+
+
+class ErrorResponseSerializer(serializers.Serializer):
+    """Generic error response."""
+    success = serializers.BooleanField(default=False)
+    message = serializers.CharField()
+
+
+class BulkEmailResponseSerializer(serializers.Serializer):
+    """Response for bulk email sending."""
+    success = serializers.BooleanField()
+    sent_count = serializers.IntegerField()
+    failed_count = serializers.IntegerField()
+    total_recipients = serializers.IntegerField()
+    error = serializers.CharField(required=False, allow_blank=True)
+
+
+class SendCampaignResponseSerializer(serializers.Serializer):
+    """Response for sending campaign."""
+    success = serializers.BooleanField()
+    message = serializers.CharField(required=False)
+    sent_count = serializers.IntegerField(required=False)
+    error = serializers.CharField(required=False)

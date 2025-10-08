@@ -38,7 +38,7 @@ from .api.drf.redoc import RedocUISettings
 # Django-specific
 from .django.environment import EnvironmentConfig
 from .django.constance import ConstanceConfig, ConstanceField
-from .django.revolution import RevolutionConfig
+from .django.openapi import OpenAPIClientConfig
 
 # Services
 from .services.email import EmailConfig
@@ -80,7 +80,7 @@ __all__ = [
     "EnvironmentConfig",
     "ConstanceConfig",
     "ConstanceField",
-    "RevolutionConfig",
+    "OpenAPIClientConfig",
     "UnfoldConfig",
     # Services
     "EmailConfig",

@@ -1,5 +1,5 @@
 """
-Django Revolution integration callbacks.
+Django Client (OpenAPI) integration callbacks.
 """
 
 import logging
@@ -10,67 +10,72 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-class RevolutionCallbacks:
-    """Django Revolution integration callbacks."""
-    
-    def get_revolution_zones_data(self) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-        """Get Django Revolution zones data."""
-        try:
-            # Try to get revolution config from Django settings
-            revolution_config = getattr(settings, "DJANGO_REVOLUTION", {})
-            zones = revolution_config.get("zones", {})
-            api_prefix = revolution_config.get("api_prefix", "apix")
+class OpenAPIClientCallbacks:
+    """Django Client (OpenAPI) integration callbacks."""
 
-            zones_data = []
+    def get_openapi_groups_data(self) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get Django Client (OpenAPI) groups data."""
+        try:
+            # Try to get openapi_client config from Django settings
+            openapi_config = getattr(settings, "OPENAPI_CLIENT", {})
+            if isinstance(openapi_config, dict):
+                groups_list = openapi_config.get("groups", [])
+                api_prefix = openapi_config.get("api_prefix", "api")
+            else:
+                # Handle Pydantic model instance
+                groups_list = getattr(openapi_config, "groups", [])
+                api_prefix = getattr(openapi_config, "api_prefix", "api")
+
+            groups_data = []
             total_apps = 0
             total_endpoints = 0
 
-            for zone_name, zone_config in zones.items():
+            for group in groups_list:
                 # Handle both dict and object access
-                if isinstance(zone_config, dict):
-                    title = zone_config.get("title", zone_name.title())
-                    description = zone_config.get("description", f"{zone_name} zone")
-                    apps = zone_config.get("apps", [])
-                    public = zone_config.get("public", False)
-                    auth_required = zone_config.get("auth_required", True)
+                if isinstance(group, dict):
+                    group_name = group.get("name", "unknown")
+                    title = group.get("title", group_name.title())
+                    description = group.get("description", f"{group_name} group")
+                    apps = group.get("apps", [])
                 else:
-                    # Handle object access (for ZoneConfig instances)
-                    title = getattr(zone_config, "title", zone_name.title())
-                    description = getattr(zone_config, "description", f"{zone_name} zone")
-                    apps = getattr(zone_config, "apps", [])
-                    public = getattr(zone_config, "public", False)
-                    auth_required = getattr(zone_config, "auth_required", True)
+                    # Handle object access (for OpenAPIGroupConfig instances)
+                    group_name = getattr(group, "name", "unknown")
+                    title = getattr(group, "title", group_name.title())
+                    description = getattr(group, "description", f"{group_name} group")
+                    apps = getattr(group, "apps", [])
 
                 # Count actual endpoints by checking URL patterns (simplified estimate)
                 endpoint_count = len(apps) * 3  # Conservative estimate
 
-                zones_data.append({
-                    "name": zone_name,
+                groups_data.append({
+                    "name": group_name,
                     "title": title,
                     "description": description,
                     "app_count": len(apps),
                     "endpoint_count": endpoint_count,
                     "status": "active",
-                    "public": public,
-                    "auth_required": auth_required,
-                    "schema_url": f"/schema/{zone_name}/schema/",
-                    "swagger_url": f"/schema/{zone_name}/schema/swagger/",
-                    "redoc_url": f"/schema/{zone_name}/redoc/",
-                    "api_url": f"/{api_prefix}/{zone_name}/",
+                    "schema_url": f"/schema/{group_name}/",
+                    "swagger_url": f"/schema/{group_name}/swagger/",
+                    "redoc_url": f"/schema/{group_name}/redoc/",
+                    "api_url": f"/{api_prefix}/{group_name}/",
                 })
 
                 total_apps += len(apps)
                 total_endpoints += endpoint_count
 
-            return zones_data, {
+            return groups_data, {
                 "total_apps": total_apps,
                 "total_endpoints": total_endpoints,
-                "total_zones": len(zones),
+                "total_groups": len(groups_list),
             }
         except Exception as e:
-            logger.error(f"Error getting revolution zones: {e}")
+            logger.error(f"Error getting OpenAPI groups: {e}")
             return [], {
                 "total_apps": 0,
                 "total_endpoints": 0,
-                "total_zones": 0,
+                "total_groups": 0,
             }
+
+
+# Keep backward compatibility alias
+RevolutionCallbacks = OpenAPIClientCallbacks

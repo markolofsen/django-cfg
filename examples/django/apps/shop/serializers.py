@@ -5,11 +5,12 @@ DRF Serializers for Shop app.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Category, Product, Order, OrderItem
+from typing import Any, Dict, List
 
 User = get_user_model()
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class ShopCategorySerializer(serializers.ModelSerializer):
     """Serializer for shop categories."""
     
     products_count = serializers.IntegerField(read_only=True)
@@ -25,16 +26,16 @@ class CategorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'slug', 'products_count', 'created_at', 'updated_at']
     
-    def get_children(self, obj):
+    def get_children(self, obj) -> List[Dict[str, Any]]:
         if obj.children.filter(is_active=True).exists():
-            return CategorySerializer(obj.children.filter(is_active=True), many=True).data
+            return ShopCategorySerializer(obj.children.filter(is_active=True), many=True).data
         return []
 
 
 class ProductListSerializer(serializers.ModelSerializer):
     """Serializer for product list view."""
-    
-    category = CategorySerializer(read_only=True)
+
+    category = ShopCategorySerializer(read_only=True)
     current_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     is_on_sale = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True)
@@ -53,8 +54,8 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     """Serializer for product detail view."""
-    
-    category = CategorySerializer(read_only=True)
+
+    category = ShopCategorySerializer(read_only=True)
     current_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     is_on_sale = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True)
@@ -101,7 +102,7 @@ class OrderListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
-    def get_items_count(self, obj):
+    def get_items_count(self, obj) -> int:
         return obj.items.count()
 
 

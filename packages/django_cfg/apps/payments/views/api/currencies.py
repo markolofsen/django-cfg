@@ -9,6 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
 from .base import ReadOnlyPaymentViewSet
 from ...models import Currency, Network, ProviderCurrency
@@ -157,34 +159,75 @@ class CurrencyViewSet(ReadOnlyPaymentViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='base_currency',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Base currency code (e.g., USD)',
+                required=True,
+            ),
+            OpenApiParameter(
+                name='currencies',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Comma-separated list of target currency codes (e.g., BTC,ETH,USDT)',
+                required=True,
+            ),
+        ],
+        summary='Get exchange rates',
+        description='Get current exchange rates for specified currencies',
+    )
     @action(detail=False, methods=['get'])
     def rates(self, request):
         """
         Get current exchange rates.
-        
+
         GET /api/currencies/rates/?base_currency=USD&currencies=BTC,ETH
         """
         serializer = CurrencyRatesSerializer(data=request.query_params)
-        
+
         if serializer.is_valid():
             result = serializer.save()
             return Response(result)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='provider',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Payment provider name (e.g., nowpayments)',
+                required=False,
+            ),
+            OpenApiParameter(
+                name='currency_type',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Currency type filter: crypto, fiat, or stablecoin',
+                required=False,
+                enum=['crypto', 'fiat', 'stablecoin'],
+            ),
+        ],
+        summary='Get supported currencies',
+        description='Get list of supported currencies from payment providers',
+    )
     @action(detail=False, methods=['get'])
     def supported(self, request):
         """
         Get supported currencies from providers.
-        
+
         GET /api/currencies/supported/?provider=nowpayments&currency_type=crypto
         """
         serializer = SupportedCurrenciesSerializer(data=request.query_params)
-        
+
         if serializer.is_valid():
             result = serializer.save()
             return Response(result)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -204,7 +247,7 @@ class NetworkViewSet(ReadOnlyPaymentViewSet):
     
     def get_queryset(self):
         """Optimize queryset with related objects."""
-        return super().get_queryset().select_related('currency')
+        return super().get_queryset().select_related('native_currency')
     
     @action(detail=False, methods=['get'])
     def by_currency(self, request):
@@ -218,11 +261,11 @@ class NetworkViewSet(ReadOnlyPaymentViewSet):
             
             networks_by_currency = {}
             for network in queryset:
-                currency_code = network.currency.code
-                
+                currency_code = network.native_currency.code
+
                 if currency_code not in networks_by_currency:
                     networks_by_currency[currency_code] = {
-                        'currency': CurrencyListSerializer(network.currency).data,
+                        'currency': CurrencyListSerializer(network.native_currency).data,
                         'networks': []
                     }
                 

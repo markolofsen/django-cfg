@@ -1,0 +1,15 @@
+class {{ name }}({{ base_class }}):
+{% if docstring %}
+    """{{ docstring }}"""
+{% endif %}
+{% if members %}
+{% if docstring %}
+
+{% endif %}
+{% for member in members %}
+    {{ member }}
+{% endfor %}
+{% else %}
+
+    pass
+{% endif %}

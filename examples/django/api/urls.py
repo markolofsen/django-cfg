@@ -23,7 +23,7 @@ urlpatterns = [
 # - /cfg/health/ (Health check endpoint)
 # - /cfg/commands/ (Management commands interface)
 # - /admin/rpc/ (RPC Dashboard - if django_cfg_rpc is enabled)
-# - Django Revolution URLs (if available)
+# - Django Client URLs (OpenAPI client endpoints - if available)
 # - Debug output (in development)
 urlpatterns = add_django_cfg_urls(urlpatterns)
 

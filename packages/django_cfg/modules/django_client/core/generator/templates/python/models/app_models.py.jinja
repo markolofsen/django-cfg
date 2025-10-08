@@ -1,0 +1,17 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+{% if has_enums and enum_names %}
+
+from ..enums import {{ enum_names | join(', ') }}
+{% endif %}
+
+
+{% for schema in schemas %}
+{{ schema }}
+
+
+{% endfor %}

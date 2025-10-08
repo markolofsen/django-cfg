@@ -319,7 +319,6 @@ class APIKeyManager(models.Manager):
         # Usage statistics
         usage_stats = queryset.aggregate(
             total_requests=models.Sum('total_requests'),
-            avg_requests=models.Avg('total_requests'),
             max_requests=models.Max('total_requests')
         )
         stats.update(usage_stats)

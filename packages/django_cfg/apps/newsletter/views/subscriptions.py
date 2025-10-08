@@ -12,6 +12,9 @@ from ..serializers import (
     NewsletterSubscriptionSerializer,
     SubscribeSerializer,
     UnsubscribeSerializer,
+    SubscribeResponseSerializer,
+    SuccessResponseSerializer,
+    ErrorResponseSerializer,
 )
 
 
@@ -25,7 +28,11 @@ class SubscribeView(generics.CreateAPIView):
         summary="Subscribe to Newsletter",
         description="Subscribe an email address to a newsletter.",
         request=SubscribeSerializer,
-        responses={201: "Created", 400: "Bad Request"},
+        responses={
+            201: SubscribeResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
         tags=["Subscriptions"]
     )
     def post(self, request, *args, **kwargs):
@@ -83,7 +90,10 @@ class UnsubscribeView(generics.UpdateAPIView):
         summary="Unsubscribe from Newsletter",
         description="Unsubscribe from a newsletter using subscription ID.",
         request=UnsubscribeSerializer,
-        responses={200: "Success", 404: "Subscription not found"},
+        responses={
+            200: SuccessResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
         tags=["Subscriptions"]
     )
     def post(self, request, *args, **kwargs):

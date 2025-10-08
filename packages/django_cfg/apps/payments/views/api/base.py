@@ -82,10 +82,10 @@ class PaymentBaseViewSet(viewsets.ModelViewSet):
         return context
     
     @action(detail=False, methods=['get'])
-    def stats(self, request):
+    def stats(self, request, **kwargs):
         """
         Get statistics for the current queryset.
-        
+
         Returns counts, aggregates, and breakdowns.
         """
         try:
@@ -120,10 +120,10 @@ class PaymentBaseViewSet(viewsets.ModelViewSet):
             )
     
     @action(detail=False, methods=['get'])
-    def health(self, request):
+    def health(self, request, **kwargs):
         """
         Health check for the ViewSet and related services.
-        
+
         Returns service status and basic metrics.
         """
         try:
@@ -264,12 +264,16 @@ class NestedPaymentViewSet(PaymentBaseViewSet):
     def get_queryset(self):
         """Filter queryset by parent object from URL."""
         queryset = super().get_queryset()
-        
+
         parent_id = self.kwargs.get(self.parent_lookup_field)
         if parent_id:
+            # Skip filtering for schema generation placeholders
+            if str(parent_id).lower() in ['test', 'string', 'example']:
+                return queryset.none()
+
             filter_kwargs = {self.parent_model_field + '_id': parent_id}
             queryset = queryset.filter(**filter_kwargs)
-        
+
         return queryset
     
     def perform_create(self, serializer):

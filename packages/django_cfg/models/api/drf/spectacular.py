@@ -54,8 +54,8 @@ class SpectacularConfig(BaseModel):
         description="Post-processing hooks"
     )
 
-    # NOTE: Enum generation settings are handled by django-revolution
-    # Only override if you need different values than Revolution defaults
+    # NOTE: Enum generation settings are handled by django-client (OpenAPI)
+    # Only override if you need different values than django-client defaults
 
     # Enum overrides
     enum_name_overrides: Dict[str, str] = Field(
@@ -69,7 +69,7 @@ class SpectacularConfig(BaseModel):
         """
         Get django-cfg Spectacular extensions.
 
-        NOTE: This extends Revolution's base settings, not replaces them.
+        NOTE: This extends django-client's base settings, not replaces them.
         Only include settings that are unique to django-cfg or critical fixes.
 
         Args:
@@ -77,13 +77,13 @@ class SpectacularConfig(BaseModel):
         """
         settings = {
             # django-cfg specific UI enhancements
-            "REDOC_UI_SETTINGS": self.redoc_ui_settings.to_dict(),  # Revolution doesn't have custom Redoc settings
+            "REDOC_UI_SETTINGS": self.redoc_ui_settings.to_dict(),  # django-client doesn't have custom Redoc settings
 
             # django-cfg specific processing extensions
             "ENUM_NAME_OVERRIDES": self.enum_name_overrides,  # Custom enum overrides
 
-            # CRITICAL: Ensure enum generation is always enabled (fix Revolution gaps)
-            # These settings ensure proper enum generation even if Revolution config changes
+            # CRITICAL: Ensure enum generation is always enabled (fix django-client gaps)
+            # These settings ensure proper enum generation even if django-client config changes
             "GENERATE_ENUM_FROM_CHOICES": True,
             "ENUM_GENERATE_CHOICE_FROM_PATH": True,
             "ENUM_NAME_SUFFIX": "Enum",

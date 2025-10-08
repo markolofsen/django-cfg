@@ -344,7 +344,6 @@ class UserSubscriptionViewSet(NestedPaymentViewSet):
                     filter=models.Q(expires_at__lt=timezone.now())
                 ),
                 total_requests=models.Sum('total_requests'),
-                requests_used=models.Sum('requests_used'),
             )
             
             return Response({
@@ -352,8 +351,6 @@ class UserSubscriptionViewSet(NestedPaymentViewSet):
                 'summary': {
                     **summary,
                     'total_requests': summary['total_requests'] or 0,
-                    'requests_used': summary['requests_used'] or 0,
-                    'requests_remaining': (summary['total_requests'] or 0) - (summary['requests_used'] or 0),
                 },
                 'generated_at': timezone.now().isoformat()
             })
@@ -430,7 +427,7 @@ class TariffViewSet(ReadOnlyPaymentViewSet):
         
         GET /api/tariffs/free/
         """
-        free_tariffs = self.get_queryset().filter(monthly_price=0)
+        free_tariffs = self.get_queryset().filter(monthly_price_usd=0)
         serializer = self.get_serializer(free_tariffs, many=True)
         
         return Response({
@@ -447,7 +444,7 @@ class TariffViewSet(ReadOnlyPaymentViewSet):
         
         GET /api/tariffs/paid/
         """
-        paid_tariffs = self.get_queryset().filter(monthly_price__gt=0)
+        paid_tariffs = self.get_queryset().filter(monthly_price_usd__gt=0)
         serializer = self.get_serializer(paid_tariffs, many=True)
         
         return Response({

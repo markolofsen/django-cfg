@@ -473,8 +473,7 @@ class SubscriptionService(BaseService):
                 created_at__gte=since
             ).aggregate(
                 new_subscriptions=models.Count('id'),
-                total_requests=models.Sum('total_requests'),
-                avg_requests=models.Avg('total_requests')
+                total_requests=models.Sum('total_requests')
             )
             
             stats = {

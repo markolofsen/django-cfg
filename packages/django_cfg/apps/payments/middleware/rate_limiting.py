@@ -56,6 +56,7 @@ class RateLimitingMiddleware(MiddlewareMixin):
                 '/admin/',
                 '/static/',
                 '/media/',
+                '/schema/',  # Exempt schema generation endpoints (Spectacular)
             ]
             
         except Exception as e:
@@ -74,7 +75,7 @@ class RateLimitingMiddleware(MiddlewareMixin):
             self.burst_allowance = 0.5
             self.window_size = 60
             self.window_precision = 10
-            self.exempt_paths = ['/api/health/', '/cfg/', '/admin/']
+            self.exempt_paths = ['/api/health/', '/cfg/', '/admin/', '/schema/']
             self.cache_timeout = 300
         
         logger.info(f"Rate Limiting Middleware initialized", extra={
