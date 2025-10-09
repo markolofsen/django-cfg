@@ -27,7 +27,7 @@ export const SubscriptionSchema = z.object({
   tier: z.nativeEnum(Enums.SubscriptionTier).optional(),
   total_requests: z.number().int(),
   usage_percentage: z.number(),
-  last_request_at: z.string().datetime().nullable(),
+  last_request_at: z.string().datetime().optional(),
   expires_at: z.string().datetime(),
   is_active: z.boolean(),
   is_expired: z.boolean(),

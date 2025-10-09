@@ -22,7 +22,7 @@ app_name = 'cfg_payments'
 
 # Main router for global endpoints
 router = DefaultRouter()
-router.register(r'payments', PaymentViewSet, basename='payment')
+router.register(r'payment', PaymentViewSet, basename='payment')
 router.register(r'balances', UserBalanceViewSet, basename='balance')
 router.register(r'transactions', TransactionViewSet, basename='transaction')
 router.register(r'currencies', CurrencyViewSet, basename='currency')
@@ -38,7 +38,7 @@ users_router = routers.SimpleRouter()
 users_router.register(r'users', UserPaymentViewSet, basename='user') # Base for nesting
 
 payments_router = routers.NestedSimpleRouter(users_router, r'users', lookup='user')
-payments_router.register(r'payments', UserPaymentViewSet, basename='user-payment')
+payments_router.register(r'payment', UserPaymentViewSet, basename='user-payment')
 
 subscriptions_router = routers.NestedSimpleRouter(users_router, r'users', lookup='user')
 subscriptions_router.register(r'subscriptions', UserSubscriptionViewSet, basename='user-subscription')
@@ -57,8 +57,8 @@ urlpatterns = [
     path('', include(apikeys_router.urls)),
     
     # Custom API endpoints
-    path('payments/create/', PaymentCreateView.as_view(), name='payment-create'),
-    path('payments/status/<uuid:pk>/', PaymentStatusView.as_view(), name='payment-status'),
+    path('payment/create/', PaymentCreateView.as_view(), name='payment-create'),
+    path('payment/status/<uuid:pk>/', PaymentStatusView.as_view(), name='payment-status'),
     
     # Note: currencies/convert/ is handled by CurrencyViewSet action
     # path('currencies/convert/', CurrencyConversionView.as_view(), name='currency-convert'),

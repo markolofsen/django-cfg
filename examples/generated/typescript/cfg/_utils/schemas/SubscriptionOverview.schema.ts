@@ -26,7 +26,7 @@ export const SubscriptionOverviewSchema = z.object({
   cost_display: z.string(),
   starts_at: z.string().datetime(),
   expires_at: z.string().datetime(),
-  last_request_at: z.string().datetime().nullable(),
+  last_request_at: z.string().datetime().optional(),
   endpoint_groups_count: z.number().int(),
   endpoint_groups: z.array(z.string()),
 })

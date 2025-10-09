@@ -16,9 +16,9 @@ export interface PaginatedBlogCategoryList {
   /** Whether there is a previous page */
   has_previous: boolean;
   /** Next page number (null if no next page) */
-  next_page?: number | null;
+  next_page?: number;
   /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
+  previous_page?: number;
   /** Array of items for current page */
   results: Array<BlogCategory>;
 }
@@ -35,7 +35,7 @@ export interface BlogCategoryRequest {
   color?: string;
   meta_title?: string;
   meta_description?: string;
-  parent?: number | null;
+  parent?: number;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface BlogCategory {
   color?: string;
   meta_title?: string;
   meta_description?: string;
-  parent?: number | null;
+  parent?: number;
   posts_count: number;
   children: Array<Record<string, any>>;
   created_at: string;

@@ -1,0 +1,20 @@
+/**
+ * {{ operation.summary or 'API operation' }}
+ *
+ * @method {{ operation.http_method }}
+ * @path {{ operation.path }}
+ */
+export function {{ hook_name }}(
+{%- if func_params -%}
+{{ func_params }}, client?: API
+{%- else %}
+client?: API
+{%- endif %}
+): ReturnType<typeof useSWR<{{ response_type }}>> {
+  return useSWR<{{ response_type }}>(
+    {{ swr_key }},
+{% if fetcher_params %}    () => Fetchers.{{ fetcher_name }}({{ fetcher_params }}, client)
+{% else %}    () => Fetchers.{{ fetcher_name }}(client)
+{% endif %}  )
+}
+

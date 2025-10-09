@@ -162,17 +162,22 @@ class ModelsGenerator:
                 if ts_type.endswith(" | null"):
                     ts_type = ts_type[:-7]  # Remove " | null"
         else:
-            # Get TypeScript type and remove | null suffix if present
+            # Get TypeScript type
             ts_type = schema.typescript_type
+            # Remove | null suffix to rebuild it properly based on schema.nullable
             if ts_type.endswith(" | null"):
                 ts_type = ts_type[:-7]  # Remove " | null"
 
         # Check if required
         is_required = name in required_fields
 
-        # Optional marker - use for both non-required AND nullable fields
-        # This converts Django's nullable=True to TypeScript's optional (undefined)
-        optional_marker = "" if is_required and not schema.nullable else "?"
+        # Handle nullable and optional separately
+        # - nullable: add | null to type
+        # - not required: add ? optional marker
+        if schema.nullable:
+            ts_type = f"{ts_type} | null"
+        
+        optional_marker = "" if is_required else "?"
 
         # Comment
         if schema.description:
@@ -203,10 +208,14 @@ class ModelsGenerator:
             if not var_name or (isinstance(value, str) and value == ''):
                 continue
 
+            # Sanitize var_name: replace dots and spaces with underscores, convert to UPPER_CASE
+            # "TAR.GZ" -> "TAR_GZ", "TAR GZ" -> "TAR_GZ"
+            sanitized_var_name = var_name.replace('.', '_').replace(' ', '_').upper()
+
             if isinstance(value, str):
-                member_lines.append(f'{var_name} = "{value}",')
+                member_lines.append(f'{sanitized_var_name} = "{value}",')
             else:
-                member_lines.append(f"{var_name} = {value},")
+                member_lines.append(f"{sanitized_var_name} = {value},")
 
         # Build enum
         lines = []

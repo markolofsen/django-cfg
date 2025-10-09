@@ -15,7 +15,7 @@ export const AuthorSchema = z.object({
   first_name: z.string().max(50).optional(),
   last_name: z.string().max(50).optional(),
   full_name: z.string(),
-  avatar: z.string().url().optional().nullable(),
+  avatar: z.string().url().optional(),
 })
 
 /**

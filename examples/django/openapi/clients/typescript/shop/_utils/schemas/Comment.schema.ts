@@ -14,7 +14,7 @@ export const CommentSchema = z.object({
   id: z.number().int(),
   content: z.string(),
   author: AuthorSchema,
-  parent: z.number().int().optional().nullable(),
+  parent: z.number().int().optional(),
   is_approved: z.boolean(),
   likes_count: z.number().int(),
   replies: z.array(z.record(z.string(), z.any())),

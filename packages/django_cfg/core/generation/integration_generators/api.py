@@ -112,7 +112,7 @@ class APIFrameworksGenerator:
 
             # Build REST_FRAMEWORK settings
             rest_framework = {
-                "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+                "DEFAULT_SCHEMA_CLASS": "django_cfg.modules.django_client.spectacular.schema.PathBasedAutoSchema",
                 "DEFAULT_PAGINATION_CLASS": "django_cfg.middleware.pagination.DefaultPagination",
                 "PAGE_SIZE": 100,
                 "DEFAULT_RENDERER_CLASSES": [

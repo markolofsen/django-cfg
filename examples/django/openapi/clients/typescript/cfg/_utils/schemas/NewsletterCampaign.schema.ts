@@ -23,7 +23,7 @@ export const NewsletterCampaignSchema = z.object({
   secondary_text: z.string().optional(),
   status: z.nativeEnum(Enums.NewsletterCampaignStatus),
   created_at: z.string().datetime(),
-  sent_at: z.string().datetime().nullable(),
+  sent_at: z.string().datetime().optional(),
   recipient_count: z.number().int(),
 })
 

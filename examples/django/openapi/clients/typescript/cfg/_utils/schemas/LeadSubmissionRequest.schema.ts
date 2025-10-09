@@ -13,13 +13,13 @@ import * as Enums from '../../enums'
 export const LeadSubmissionRequestSchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().email().min(1).max(254),
-  company: z.string().max(200).optional().nullable(),
-  company_site: z.string().max(200).optional().nullable(),
+  company: z.string().max(200).optional(),
+  company_site: z.string().max(200).optional(),
   contact_type: z.nativeEnum(Enums.LeadSubmissionRequestContactType).optional(),
-  contact_value: z.string().max(200).optional().nullable(),
-  subject: z.string().max(200).optional().nullable(),
+  contact_value: z.string().max(200).optional(),
+  subject: z.string().max(200).optional(),
   message: z.string().min(1),
-  extra: z.string().optional().nullable(),
+  extra: z.string().optional(),
   site_url: z.string().url().min(1).max(200),
 })
 

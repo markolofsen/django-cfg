@@ -15,7 +15,7 @@ Creates new API keys and returns the full key value (only once).
  */
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string().min(1).max(100),
-  expires_in_days: z.number().int().min(1.0).max(365.0).optional().nullable(),
+  expires_in_days: z.number().int().min(1.0).max(365.0).optional(),
 })
 
 /**

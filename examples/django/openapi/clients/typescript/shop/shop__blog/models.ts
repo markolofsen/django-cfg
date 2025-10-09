@@ -12,7 +12,7 @@ export interface PatchedBlogCategoryRequest {
   color?: string;
   meta_title?: string;
   meta_description?: string;
-  parent?: number | null;
+  parent?: number;
 }
 
 /**
@@ -29,7 +29,7 @@ export interface BlogCategory {
   color?: string;
   meta_title?: string;
   meta_description?: string;
-  parent?: number | null;
+  parent?: number;
   posts_count: number;
   children: Array<Record<string, any>>;
   created_at: string;
@@ -46,7 +46,7 @@ export interface PatchedPostUpdateRequest {
   content?: string;
   /** Brief description */
   excerpt?: string;
-  category?: number | null;
+  category?: number;
   tags?: Array<number>;
   /** * `draft` - Draft
   * `published` - Published
@@ -57,7 +57,7 @@ export interface PatchedPostUpdateRequest {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
 }
 
@@ -71,7 +71,7 @@ export interface PostUpdate {
   content: string;
   /** Brief description */
   excerpt?: string;
-  category?: number | null;
+  category?: number;
   tags?: Array<number>;
   /** * `draft` - Draft
   * `published` - Published
@@ -82,7 +82,7 @@ export interface PostUpdate {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
 }
 

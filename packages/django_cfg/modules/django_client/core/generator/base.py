@@ -208,7 +208,7 @@ class BaseGenerator(ABC):
         Extract Django app name from URL path.
 
         Args:
-            path: URL path (e.g., "/django_cfg_leads/leads/", "/django_cfg_newsletter/campaigns/")
+            path: URL path (e.g., "/django_cfg_leads/leads/", "/django_cfg_newsletter/campaigns/", "/cfg/accounts/otp/")
 
         Returns:
             App name without trailing slash, or None if no app detected
@@ -220,9 +220,15 @@ class BaseGenerator(ABC):
             'django_cfg_newsletter'
             >>> generator.extract_app_from_path("/api/users/")
             'api'
+            >>> generator.extract_app_from_path("/cfg/accounts/otp/")
+            'accounts'
         """
         # Remove leading/trailing slashes and split
         parts = path.strip('/').split('/')
+
+        # For cfg group URLs (/cfg/accounts/, /cfg/support/), skip the 'cfg' prefix
+        if len(parts) >= 2 and parts[0] == 'cfg':
+            return parts[1]
 
         # First part is usually the app name
         if parts:
@@ -396,26 +402,15 @@ class BaseGenerator(ABC):
             'retrieve'  # No prefix to remove
         """
         from django.utils.text import slugify
+        import re
 
         # First, strip common app label prefixes from operation_id
-        # This handles cases like "django_cfg_newsletter_campaigns_list"
-        cleaned_op_id = operation_id
-        app_prefixes_to_strip = [
-            'django_cfg_newsletter_',
-            'django_cfg_accounts_',
-            'django_cfg_leads_',
-            'django_cfg_support_',
-            'django_cfg_agents_',
-            'django_cfg_knowbase_',
-            'django_cfg_payments_',
-            'django_cfg_tasks_',
-            'django_cfg_',  # Catch-all for any django_cfg_* prefixes
-        ]
-
-        for app_prefix in app_prefixes_to_strip:
-            if cleaned_op_id.startswith(app_prefix):
-                cleaned_op_id = cleaned_op_id[len(app_prefix):]
-                break
+        # This handles cases like "django_cfg_newsletter_campaigns_list" or "cfg_support_tickets_list"
+        # Remove only the cfg/django_cfg prefix, not the entire app name
+        # Examples:
+        #   cfg_support_tickets_list → support_tickets_list
+        #   django_cfg_accounts_otp_request → accounts_otp_request
+        cleaned_op_id = re.sub(r'^(django_)?cfg_', '', operation_id)
 
         # Now try to remove the normalized tag as a prefix
         # Normalize tag same way as tag_to_property_name but without adding group prefix
@@ -432,7 +427,10 @@ class BaseGenerator(ABC):
         # Strip leading underscores from tag
         normalized_tag = normalized_tag.lstrip('_')
 
-        # Try to remove normalized tag as prefix
+        # Remove tag prefix from operation_id if it matches
+        # This ensures methods in each API folder have clean, contextual names
+        # e.g., in cfg__support: "support_tickets_list" → "tickets_list"
+        # e.g., in cfg__accounts: "accounts_otp_request" → "otp_request"
         tag_prefix = f"{normalized_tag}_"
         if cleaned_op_id.startswith(tag_prefix):
             cleaned_op_id = cleaned_op_id[len(tag_prefix):]

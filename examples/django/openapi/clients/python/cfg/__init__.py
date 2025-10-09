@@ -33,24 +33,26 @@ from .client import APIClient
 from .schema import OPENAPI_SCHEMA
 from .logger import LoggerConfig
 from .retry import RetryConfig
-from .cfg__accounts__auth import CfgAuthAPI
-from .cfg__newsletter__bulk_email import CfgBulkEmailAPI
-from .cfg__newsletter__campaigns import CfgCampaignsAPI
-from .cfg__leads__lead_submission import CfgLeadSubmissionAPI
-from .cfg__newsletter__logs import CfgLogsAPI
-from .cfg__newsletter__newsletters import CfgNewslettersAPI
-from .cfg__newsletter__subscriptions import CfgSubscriptionsAPI
-from .cfg__newsletter__testing import CfgTestingAPI
-from .cfg__accounts__user_profile import CfgUserProfileAPI
-from .cfg__payments__webhooks import CfgWebhooksAPI
-from .cfg__accounts import CfgAccountsAPI
-from .cfg__leads import CfgLeadsAPI
-from .cfg__newsletter import CfgNewsletterAPI
-from .cfg__support import CfgSupportAPI
-from .cfg__payments import CfgPaymentsAPI
-from .cfg__tasks import CfgTasksAPI
+from .cfg__cfg__auth import CfgAuthAPI
+from .cfg__cfg__bulk_email import CfgBulkEmailAPI
+from .cfg__cfg__campaigns import CfgCampaignsAPI
+from .cfg__cfg__lead_submission import CfgLeadSubmissionAPI
+from .cfg__cfg__logs import CfgLogsAPI
+from .cfg__cfg__newsletters import CfgNewslettersAPI
+from .cfg__cfg__subscriptions import CfgSubscriptionsAPI
+from .cfg__cfg__testing import CfgTestingAPI
+from .cfg__cfg__user_profile import CfgUserProfileAPI
+from .cfg__cfg__webhooks import CfgWebhooksAPI
+from .cfg__cfg__cfg__accounts import CfgAccountsAPI
+from .cfg__cfg__cfg__endpoints import CfgEndpointsAPI
+from .cfg__cfg__cfg__health import CfgHealthAPI
+from .cfg__cfg__cfg__leads import CfgLeadsAPI
+from .cfg__cfg__cfg__newsletter import CfgNewsletterAPI
+from .cfg__cfg__cfg__payments import CfgPaymentsAPI
+from .cfg__cfg__cfg__support import CfgSupportAPI
+from .cfg__cfg__cfg__tasks import CfgTasksAPI
 from . import enums
-from .enums import Currency.currency_type, CurrencyList.currency_type, EmailLog.status, LeadSubmission.contact_type, LeadSubmissionRequest.contact_type, NewsletterCampaign.status, OTPRequestRequest.channel, OTPVerifyRequest.channel, PatchedLeadSubmissionRequest.contact_type, PatchedPaymentRequest.provider, PatchedPaymentRequest.status, PatchedSubscriptionRequest.status, PatchedSubscriptionRequest.tier, PatchedTicketRequest.status, Payment.provider, Payment.status, PaymentCreate.currency_code, PaymentCreate.provider, PaymentCreateRequest.currency_code, PaymentCreateRequest.provider, PaymentList.provider, PaymentList.status, PaymentRequest.provider, PaymentRequest.status, QueueAction.action, QueueActionRequest.action, Subscription.status, Subscription.tier, SubscriptionList.status, SubscriptionRequest.status, SubscriptionRequest.tier, Ticket.status, TicketRequest.status, Transaction.transaction_type, WorkerAction.action, WorkerActionRequest.action
+from .enums import AdminPaymentUpdate.status, AdminPaymentUpdateRequest.status, Currency.currency_type, CurrencyList.currency_type, EmailLog.status, LeadSubmission.contact_type, LeadSubmissionRequest.contact_type, NewsletterCampaign.status, OTPRequestRequest.channel, OTPVerifyRequest.channel, PatchedAdminPaymentUpdateRequest.status, PatchedLeadSubmissionRequest.contact_type, PatchedPaymentRequest.provider, PatchedPaymentRequest.status, PatchedSubscriptionRequest.status, PatchedSubscriptionRequest.tier, PatchedTicketRequest.status, Payment.provider, Payment.status, PaymentCreate.currency_code, PaymentCreate.provider, PaymentCreateRequest.currency_code, PaymentCreateRequest.provider, PaymentList.provider, PaymentList.status, PaymentRequest.provider, PaymentRequest.status, QueueAction.action, QueueActionRequest.action, Subscription.status, Subscription.tier, SubscriptionList.status, SubscriptionRequest.status, SubscriptionRequest.tier, Ticket.status, TicketRequest.status, Transaction.transaction_type, WebhookEvent.status, WebhookEventRequest.status, WorkerAction.action, WorkerActionRequest.action
 
 TOKEN_KEY = "auth_token"
 REFRESH_TOKEN_KEY = "refresh_token"
@@ -175,34 +177,44 @@ class API:
         return self._client.cfg_webhooks
 
     @property
-    def cfg_accounts(self) -> CfgAccountsAPI:
-        """Access django_cfg_accounts endpoints."""
-        return self._client.cfg_accounts
+    def cfg__accounts(self) -> CfgAccountsAPI:
+        """Access cfg__accounts endpoints."""
+        return self._client.cfg__accounts
 
     @property
-    def cfg_leads(self) -> CfgLeadsAPI:
-        """Access django_cfg_leads endpoints."""
-        return self._client.cfg_leads
+    def cfg__endpoints(self) -> CfgEndpointsAPI:
+        """Access cfg__endpoints endpoints."""
+        return self._client.cfg__endpoints
 
     @property
-    def cfg_newsletter(self) -> CfgNewsletterAPI:
-        """Access django_cfg_newsletter endpoints."""
-        return self._client.cfg_newsletter
+    def cfg__health(self) -> CfgHealthAPI:
+        """Access cfg__health endpoints."""
+        return self._client.cfg__health
 
     @property
-    def cfg_support(self) -> CfgSupportAPI:
-        """Access django_cfg_support endpoints."""
-        return self._client.cfg_support
+    def cfg__leads(self) -> CfgLeadsAPI:
+        """Access cfg__leads endpoints."""
+        return self._client.cfg__leads
 
     @property
-    def cfg_payments(self) -> CfgPaymentsAPI:
-        """Access payments endpoints."""
-        return self._client.cfg_payments
+    def cfg__newsletter(self) -> CfgNewsletterAPI:
+        """Access cfg__newsletter endpoints."""
+        return self._client.cfg__newsletter
 
     @property
-    def cfg_tasks(self) -> CfgTasksAPI:
-        """Access tasks endpoints."""
-        return self._client.cfg_tasks
+    def cfg__payments(self) -> CfgPaymentsAPI:
+        """Access cfg__payments endpoints."""
+        return self._client.cfg__payments
+
+    @property
+    def cfg__support(self) -> CfgSupportAPI:
+        """Access cfg__support endpoints."""
+        return self._client.cfg__support
+
+    @property
+    def cfg__tasks(self) -> CfgTasksAPI:
+        """Access cfg__tasks endpoints."""
+        return self._client.cfg__tasks
 
     def get_token(self) -> str | None:
         """Get current JWT token."""

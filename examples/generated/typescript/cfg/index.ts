@@ -43,22 +43,24 @@ import {
 import type { RetryConfig } from "./retry";
 import type { LoggerConfig } from "./logger";
 import { APILogger } from "./logger";
-export * as CfgAuthTypes from "./cfg__accounts__auth/models";
-export * as CfgBulkEmailTypes from "./cfg__newsletter__bulk_email/models";
-export * as CfgCampaignsTypes from "./cfg__newsletter__campaigns/models";
-export * as CfgLeadSubmissionTypes from "./cfg__leads__lead_submission/models";
-export * as CfgLogsTypes from "./cfg__newsletter__logs/models";
-export * as CfgNewslettersTypes from "./cfg__newsletter__newsletters/models";
-export * as CfgSubscriptionsTypes from "./cfg__newsletter__subscriptions/models";
-export * as CfgTestingTypes from "./cfg__newsletter__testing/models";
-export * as CfgUserProfileTypes from "./cfg__accounts__user_profile/models";
-export * as CfgWebhooksTypes from "./cfg__payments__webhooks/models";
-export * as CfgAccountsTypes from "./cfg__accounts/models";
-export * as CfgLeadsTypes from "./cfg__leads/models";
-export * as CfgNewsletterTypes from "./cfg__newsletter/models";
-export * as CfgSupportTypes from "./cfg__support/models";
-export * as CfgPaymentsTypes from "./cfg__payments/models";
-export * as CfgTasksTypes from "./cfg__tasks/models";
+export * as CfgAuthTypes from "./cfg__cfg__auth/models";
+export * as CfgBulkEmailTypes from "./cfg__cfg__bulk_email/models";
+export * as CfgCampaignsTypes from "./cfg__cfg__campaigns/models";
+export * as CfgLeadSubmissionTypes from "./cfg__cfg__lead_submission/models";
+export * as CfgLogsTypes from "./cfg__cfg__logs/models";
+export * as CfgNewslettersTypes from "./cfg__cfg__newsletters/models";
+export * as CfgSubscriptionsTypes from "./cfg__cfg__subscriptions/models";
+export * as CfgTestingTypes from "./cfg__cfg__testing/models";
+export * as CfgUserProfileTypes from "./cfg__cfg__user_profile/models";
+export * as CfgWebhooksTypes from "./cfg__cfg__webhooks/models";
+export * as CfgAccountsTypes from "./cfg__cfg__cfg__accounts/models";
+export * as CfgEndpointsTypes from "./cfg__cfg__cfg__endpoints/models";
+export * as CfgHealthTypes from "./cfg__cfg__cfg__health/models";
+export * as CfgLeadsTypes from "./cfg__cfg__cfg__leads/models";
+export * as CfgNewsletterTypes from "./cfg__cfg__cfg__newsletter/models";
+export * as CfgPaymentsTypes from "./cfg__cfg__cfg__payments/models";
+export * as CfgSupportTypes from "./cfg__cfg__cfg__support/models";
+export * as CfgTasksTypes from "./cfg__cfg__cfg__tasks/models";
 export * as Enums from "./enums";
 
 // Re-export Zod schemas for runtime validation
@@ -136,12 +138,14 @@ export class API {
   public cfg_testing!: APIClient['cfg_testing'];
   public cfg_user_profile!: APIClient['cfg_user_profile'];
   public cfg_webhooks!: APIClient['cfg_webhooks'];
-  public cfg_accounts!: APIClient['cfg_accounts'];
-  public cfg_leads!: APIClient['cfg_leads'];
-  public cfg_newsletter!: APIClient['cfg_newsletter'];
-  public cfg_support!: APIClient['cfg_support'];
-  public cfg_payments!: APIClient['cfg_payments'];
-  public cfg_tasks!: APIClient['cfg_tasks'];
+  public cfg__accounts!: APIClient['cfg__accounts'];
+  public cfg__endpoints!: APIClient['cfg__endpoints'];
+  public cfg__health!: APIClient['cfg__health'];
+  public cfg__leads!: APIClient['cfg__leads'];
+  public cfg__newsletter!: APIClient['cfg__newsletter'];
+  public cfg__payments!: APIClient['cfg__payments'];
+  public cfg__support!: APIClient['cfg__support'];
+  public cfg__tasks!: APIClient['cfg__tasks'];
 
   constructor(baseUrl: string, options?: APIOptions) {
     this.baseUrl = baseUrl;
@@ -184,12 +188,14 @@ export class API {
     this.cfg_testing = this._client.cfg_testing;
     this.cfg_user_profile = this._client.cfg_user_profile;
     this.cfg_webhooks = this._client.cfg_webhooks;
-    this.cfg_accounts = this._client.cfg_accounts;
-    this.cfg_leads = this._client.cfg_leads;
-    this.cfg_newsletter = this._client.cfg_newsletter;
-    this.cfg_support = this._client.cfg_support;
-    this.cfg_payments = this._client.cfg_payments;
-    this.cfg_tasks = this._client.cfg_tasks;
+    this.cfg__accounts = this._client.cfg__accounts;
+    this.cfg__endpoints = this._client.cfg__endpoints;
+    this.cfg__health = this._client.cfg__health;
+    this.cfg__leads = this._client.cfg__leads;
+    this.cfg__newsletter = this._client.cfg__newsletter;
+    this.cfg__payments = this._client.cfg__payments;
+    this.cfg__support = this._client.cfg__support;
+    this.cfg__tasks = this._client.cfg__tasks;
   }
 
   private _injectAuthHeader(): void {

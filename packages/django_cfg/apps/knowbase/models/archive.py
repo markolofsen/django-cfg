@@ -20,8 +20,8 @@ class ArchiveType(models.TextChoices):
     """Supported archive formats."""
     ZIP = "zip", "ZIP"
     TAR = "tar", "TAR"
-    TAR_GZ = "tar.gz", "TAR.GZ"
-    TAR_BZ2 = "tar.bz2", "TAR.BZ2"
+    TAR_GZ = "tar.gz", "TAR GZ"
+    TAR_BZ2 = "tar.bz2", "TAR BZ2"
 
 
 class ContentType(models.TextChoices):

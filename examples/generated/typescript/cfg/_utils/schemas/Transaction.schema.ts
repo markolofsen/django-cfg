@@ -22,7 +22,7 @@ export const TransactionSchema = z.object({
   transaction_type: z.nativeEnum(Enums.TransactionTransactionType),
   type_color: z.string(),
   description: z.string(),
-  payment_id: z.string().nullable(),
+  payment_id: z.string().optional(),
   metadata: z.string(),
   is_credit: z.boolean(),
   is_debit: z.boolean(),

@@ -1,0 +1,25 @@
+/**
+ * {{ operation.summary or 'API operation' }}
+ *
+ * @method {{ operation.http_method }}
+ * @path {{ operation.path }}
+ */
+export async function {{ func_name }}(
+{%- if func_params %}
+  {{ func_params }},
+{%- endif %}
+  client?: API
+): Promise<{{ response_type }}> {
+  const api = client || getAPIInstance()
+{% if api_call_params %}
+  const response = await {{ api_call }}({{ api_call_params }})
+{% else %}
+  const response = await {{ api_call }}()
+{% endif %}
+{% if response_schema %}
+  return {{ response_schema }}.parse(response)
+{% else %}
+  return response
+{% endif %}
+}
+

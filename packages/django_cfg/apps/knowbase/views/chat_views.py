@@ -111,6 +111,9 @@ class ChatSessionViewSet(BaseKnowledgeViewSet):
 class ChatViewSet(BaseKnowledgeViewSet):
     """Chat query endpoints."""
     
+    # This ViewSet doesn't use standard CRUD operations
+    # It only has custom actions (query, history)
+    queryset = ChatSession.objects.none()  # Empty queryset since we don't use list/retrieve/etc
     service_class = ChatService
     serializer_class = ChatResponseSerializer
     

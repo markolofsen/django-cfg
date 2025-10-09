@@ -60,15 +60,15 @@ class StaticFilesGenerator:
             "WHITENOISE_MAX_AGE": 0 if self.config.debug else 3600,  # No cache in debug, 1 hour in prod
         }
 
-        # Set paths relative to base directory
-        if self.config._base_dir:
-            settings.update({
-                "STATIC_ROOT": self.config._base_dir / "staticfiles",
-                "MEDIA_ROOT": self.config._base_dir / "media",
-                "STATICFILES_DIRS": [
-                    self.config._base_dir / "static",
-                ],
-            })
+        # Set paths relative to base directory (always set, auto-detects from manage.py)
+        base_dir = self.config.base_dir
+        settings.update({
+            "STATIC_ROOT": base_dir / "staticfiles",
+            "MEDIA_ROOT": base_dir / "media",
+            "STATICFILES_DIRS": [
+                base_dir / "static",
+            ],
+        })
 
         # Static files finders
         settings["STATICFILES_FINDERS"] = [

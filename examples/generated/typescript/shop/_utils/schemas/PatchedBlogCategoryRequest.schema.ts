@@ -15,7 +15,7 @@ export const PatchedBlogCategoryRequestSchema = z.object({
   color: z.string().min(1).max(7).optional(),
   meta_title: z.string().max(60).optional(),
   meta_description: z.string().max(160).optional(),
-  parent: z.number().int().optional().nullable(),
+  parent: z.number().int().optional(),
 })
 
 /**

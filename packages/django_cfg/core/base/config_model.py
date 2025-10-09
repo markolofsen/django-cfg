@@ -483,14 +483,14 @@ class DjangoConfig(BaseModel):
         """
         Get the base directory of the project.
 
-        Looks for manage.py in current directory and parents.
+        Looks for manage.py starting from current working directory and going up.
         Falls back to current working directory if not found.
+        
+        This ensures we find the Django project root, not the django-cfg package location.
         """
         if self._base_dir is None:
-            import os
-
-            # Start from current working directory
-            current_path = Path(os.path.dirname(os.path.abspath(__file__)))
+            # Start from current working directory (where Django runs)
+            current_path = Path.cwd().resolve()
 
             # Look for manage.py in current directory and parents
             for path in [current_path] + list(current_path.parents):
@@ -499,9 +499,9 @@ class DjangoConfig(BaseModel):
                     self._base_dir = path
                     break
 
-            # If still not found, use current directory
+            # If still not found, use current working directory
             if self._base_dir is None:
-                self._base_dir = Path.cwd()
+                self._base_dir = current_path
 
         return self._base_dir
 

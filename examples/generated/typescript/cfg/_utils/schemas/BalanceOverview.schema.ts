@@ -14,7 +14,7 @@ export const BalanceOverviewSchema = z.object({
   balance_display: z.string(),
   total_deposited: z.number(),
   total_spent: z.number(),
-  last_transaction_at: z.string().datetime().nullable(),
+  last_transaction_at: z.string().datetime().optional(),
   has_transactions: z.boolean(),
   is_empty: z.boolean(),
 })

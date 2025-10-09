@@ -19,7 +19,7 @@ from __future__ import annotations
 from jinja2 import Environment
 from ..base import BaseGenerator, GeneratedFile
 from ...ir import IROperationObject, IRContext
-
+from .naming import operation_to_method_name
 
 class HooksGenerator:
     """
@@ -39,7 +39,7 @@ class HooksGenerator:
 
     def generate_query_hook(self, operation: IROperationObject) -> str:
         """
-        Generate useSWR hook for GET operation.
+        Generate useSWR hook for GET operation using Jinja2 template.
 
         Examples:
             >>> generate_query_hook(users_list)
@@ -65,44 +65,21 @@ class HooksGenerator:
         # Get SWR key
         swr_key = self._generate_swr_key(operation)
 
-        # Build hook
-        lines = []
-
-        # JSDoc
-        lines.append("/**")
-        if operation.summary:
-            lines.append(f" * {operation.summary}")
-        lines.append(" *")
-        lines.append(f" * @method {operation.http_method}")
-        lines.append(f" * @path {operation.path}")
-        lines.append(" */")
-
-        # Hook signature
-        if param_info['func_params']:
-            lines.append(f"export function {hook_name}({param_info['func_params']}) {{")
-        else:
-            lines.append(f"export function {hook_name}() {{")
-
-        # useSWR call
-        fetcher_params = param_info['fetcher_params']
-        if fetcher_params:
-            lines.append(f"  return useSWR<{response_type}>(")
-            lines.append(f"    {swr_key},")
-            lines.append(f"    () => Fetchers.{fetcher_name}({fetcher_params})")
-            lines.append("  )")
-        else:
-            lines.append(f"  return useSWR<{response_type}>(")
-            lines.append(f"    {swr_key},")
-            lines.append(f"    () => Fetchers.{fetcher_name}()")
-            lines.append("  )")
-
-        lines.append("}")
-
-        return "\n".join(lines)
+        # Render template
+        template = self.jinja_env.get_template('hooks/query_hook.ts.jinja')
+        return template.render(
+            operation=operation,
+            hook_name=hook_name,
+            fetcher_name=fetcher_name,
+            func_params=param_info['func_params'],
+            fetcher_params=param_info['fetcher_params'],
+            response_type=response_type,
+            swr_key=swr_key
+        )
 
     def generate_mutation_hook(self, operation: IROperationObject) -> str:
         """
-        Generate mutation hook for POST/PUT/PATCH/DELETE.
+        Generate mutation hook for POST/PUT/PATCH/DELETE using Jinja2 template.
 
         Examples:
             >>> generate_mutation_hook(users_create)
@@ -131,114 +108,84 @@ class HooksGenerator:
         # Get revalidation keys
         revalidation_keys = self._get_revalidation_keys(operation)
 
-        # Build hook
-        lines = []
-
-        # JSDoc
-        lines.append("/**")
-        if operation.summary:
-            lines.append(f" * {operation.summary}")
-        lines.append(" *")
-        lines.append(f" * @method {operation.http_method}")
-        lines.append(f" * @path {operation.path}")
-        lines.append(" */")
-
-        # Hook signature
-        lines.append(f"export function {hook_name}() {{")
-        lines.append("  const { mutate } = useSWRConfig()")
-        lines.append("")
-
-        # Return async function
-        if param_info['func_params']:
-            lines.append(f"  return async ({param_info['func_params']}): Promise<{response_type}> => {{")
-        else:
-            lines.append(f"  return async (): Promise<{response_type}> => {{")
-
-        # Call fetcher
-        fetcher_params = param_info['fetcher_params']
-        if fetcher_params:
-            lines.append(f"    const result = await Fetchers.{fetcher_name}({fetcher_params})")
-        else:
-            lines.append(f"    const result = await Fetchers.{fetcher_name}()")
-
-        # Revalidate
-        if revalidation_keys:
-            lines.append("")
-            lines.append("    // Revalidate related queries")
-            for key in revalidation_keys:
-                lines.append(f"    mutate('{key}')")
-
-        lines.append("")
-        lines.append("    return result")
-        lines.append("  }")
-        lines.append("}")
-
-        return "\n".join(lines)
+        # Render template
+        template = self.jinja_env.get_template('hooks/mutation_hook.ts.jinja')
+        return template.render(
+            operation=operation,
+            hook_name=hook_name,
+            fetcher_name=fetcher_name,
+            func_params=param_info['func_params'],
+            fetcher_params=param_info['fetcher_params'],
+            response_type=response_type,
+            revalidation_keys=revalidation_keys
+        )
 
     def _operation_to_hook_name(self, operation: IROperationObject) -> str:
         """
         Convert operation to hook name.
-
+        
+        Hooks are organized into tag-specific files but also exported globally,
+        so we include the tag in the name to avoid collisions.
+        
         Examples:
-            users_list (GET) -> useUsersList
-            users_retrieve (GET) -> useUsersById
-            users_create (POST) -> useCreateUsers
-            users_update (PUT) -> useUpdateUsers
-            users_partial_update (PATCH) -> usePartialUpdateUsers
-            users_destroy (DELETE) -> useDeleteUsers
+            cfg_support_tickets_list -> useSupportTicketsList
+            cfg_health_drf_retrieve -> useHealthDrf
+            cfg_accounts_otp_request_create -> useCreateAccountsOtpRequest
         """
-        op_id = operation.operation_id
-
-        # Keep full resource name and add suffixes for uniqueness
-        if op_id.endswith("_list"):
-            resource = op_id.removesuffix("_list")
-            return f"use{self._to_pascal_case(resource)}List"
-        elif op_id.endswith("_retrieve"):
-            resource = op_id.removesuffix("_retrieve")
-            # Add ById suffix to distinguish from list
-            return f"use{self._to_pascal_case(resource)}ById"
-        elif op_id.endswith("_create"):
-            resource = op_id.removesuffix("_create")
-            return f"useCreate{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_partial_update"):
-            resource = op_id.removesuffix("_partial_update")
-            return f"usePartialUpdate{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_update"):
-            resource = op_id.removesuffix("_update")
-            return f"useUpdate{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_destroy"):
-            resource = op_id.removesuffix("_destroy")
-            return f"useDelete{self._to_pascal_case(resource)}"
+        
+        # Remove cfg_ prefix but keep tag + resource for uniqueness (same as fetchers)
+        operation_id = operation.operation_id
+        if operation_id.startswith('django_cfg_'):
+            operation_id = operation_id.replace('django_cfg_', '', 1)
+        elif operation_id.startswith('cfg_'):
+            operation_id = operation_id.replace('cfg_', '', 1)
+        
+        # Determine prefix based on HTTP method
+        if operation.http_method == 'GET':
+            prefix = 'use'
+        elif operation.http_method == 'POST':
+            prefix = 'useCreate'
+        elif operation.http_method in ('PUT', 'PATCH'):
+            if '_partial_update' in operation_id:
+                prefix = 'usePartialUpdate'
+            else:
+                prefix = 'useUpdate'
+        elif operation.http_method == 'DELETE':
+            prefix = 'useDelete'
         else:
-            # Custom action
-            return f"use{self._to_pascal_case(op_id)}"
+            prefix = 'use'
+        
+        # For hooks, path is not critical but pass for consistency
+        return operation_to_method_name(operation_id, operation.http_method, prefix, self.base, operation.path)
 
     def _operation_to_fetcher_name(self, operation: IROperationObject) -> str:
         """Get corresponding fetcher function name (must match fetchers_generator logic)."""
-        op_id = operation.operation_id
-
-        # Must match fetchers_generator._operation_to_function_name() exactly
-        if op_id.endswith("_list"):
-            resource = op_id.removesuffix("_list")
-            return f"get{self._to_pascal_case(resource)}List"
-        elif op_id.endswith("_retrieve"):
-            resource = op_id.removesuffix("_retrieve")
-            # Add ById suffix to match fetchers_generator
-            return f"get{self._to_pascal_case(resource)}ById"
-        elif op_id.endswith("_create"):
-            resource = op_id.removesuffix("_create")
-            return f"create{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_partial_update"):
-            resource = op_id.removesuffix("_partial_update")
-            return f"partialUpdate{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_update"):
-            resource = op_id.removesuffix("_update")
-            return f"update{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_destroy"):
-            resource = op_id.removesuffix("_destroy")
-            return f"delete{self._to_pascal_case(resource)}"
+        
+        
+        # Remove cfg_ prefix but keep tag + resource (must match fetchers_generator exactly)
+        operation_id = operation.operation_id
+        if operation_id.startswith('django_cfg_'):
+            operation_id = operation_id.replace('django_cfg_', '', 1)
+        elif operation_id.startswith('cfg_'):
+            operation_id = operation_id.replace('cfg_', '', 1)
+        
+        # Determine prefix (must match fetchers_generator exactly)
+        if operation.http_method == 'GET':
+            prefix = 'get'
+        elif operation.http_method == 'POST':
+            prefix = 'create'
+        elif operation.http_method in ('PUT', 'PATCH'):
+            if '_partial_update' in operation_id:
+                prefix = 'partialUpdate'
+            else:
+                prefix = 'update'
+        elif operation.http_method == 'DELETE':
+            prefix = 'delete'
         else:
-            return self._to_camel_case(op_id)
+            prefix = ''
+        
+        # Must match fetchers exactly, including path
+        return operation_to_method_name(operation_id, operation.http_method, prefix, self.base, operation.path)
 
     def _get_param_info(self, operation: IROperationObject) -> dict:
         """
@@ -260,7 +207,27 @@ class HooksGenerator:
                 func_params.append(f"{param.name}: {param_type}")
                 fetcher_params.append(param.name)
 
-        # Query parameters
+        # Request body (must come BEFORE query params to match fetcher signature!)
+        if operation.request_body:
+            schema_name = operation.request_body.schema_name
+            # Use schema only if it exists as a component (not inline)
+            if schema_name and schema_name in self.context.schemas:
+                body_type = schema_name
+            else:
+                body_type = "any"
+            func_params.append(f"data: {body_type}")
+            fetcher_params.append("data")
+        elif operation.patch_request_body:
+            # PATCH request body (optional)
+            schema_name = operation.patch_request_body.schema_name
+            if schema_name and schema_name in self.context.schemas:
+                func_params.append(f"data?: {schema_name}")
+                fetcher_params.append("data")
+            else:
+                func_params.append(f"data?: any")
+                fetcher_params.append("data")
+
+        # Query parameters (must come AFTER request body to match fetcher signature!)
         if operation.query_parameters:
             query_fields = []
             all_required = all(param.required for param in operation.query_parameters)
@@ -274,17 +241,6 @@ class HooksGenerator:
                 params_optional = "" if all_required else "?"
                 func_params.append(f"params{params_optional}: {{ {'; '.join(query_fields)} }}")
                 fetcher_params.append("params")
-
-        # Request body
-        if operation.request_body:
-            schema_name = operation.request_body.schema_name
-            # Use schema only if it exists as a component (not inline)
-            if schema_name and schema_name in self.context.schemas:
-                body_type = schema_name
-            else:
-                body_type = "any"
-            func_params.append(f"data: {body_type}")
-            fetcher_params.append("data")
 
         return {
             'func_params': ", ".join(func_params) if func_params else "",
@@ -385,22 +341,13 @@ class HooksGenerator:
 
         return keys
 
-    def _to_pascal_case(self, snake_str: str) -> str:
-        """Convert snake_case to PascalCase."""
-        return ''.join(word.capitalize() for word in snake_str.split('_'))
-
-    def _to_camel_case(self, snake_str: str) -> str:
-        """Convert snake_case to camelCase."""
-        components = snake_str.split('_')
-        return components[0] + ''.join(x.capitalize() for x in components[1:])
-
     def generate_tag_hooks_file(
         self,
         tag: str,
         operations: list[IROperationObject],
     ) -> GeneratedFile:
         """
-        Generate hooks file for a specific tag/resource.
+        Generate hooks file for a specific tag/resource using Jinja2 template.
 
         Args:
             tag: Tag name (e.g., "shop_products")
@@ -410,8 +357,7 @@ class HooksGenerator:
             GeneratedFile with hooks
         """
         # Separate queries and mutations & collect schema names
-        query_hooks = []
-        mutation_hooks = []
+        hooks = []
         schema_names = set()
 
         for operation in operations:
@@ -430,69 +376,28 @@ class HooksGenerator:
 
             # Generate hook
             if operation.http_method == "GET":
-                query_hooks.append(self.generate_query_hook(operation))
+                hooks.append(self.generate_query_hook(operation))
             else:
-                mutation_hooks.append(self.generate_mutation_hook(operation))
+                hooks.append(self.generate_mutation_hook(operation))
 
         # Get display name for documentation
         tag_display_name = self.base.tag_to_display_name(tag)
+        
+        # Get tag file name for fetchers import
+        folder_name = self.base.tag_and_app_to_folder_name(tag, operations)
+        tag_file = folder_name
 
-        # Build file content
-        lines = []
-
-        # Header
-        lines.append("/**")
-        lines.append(f" * SWR Hooks for {tag_display_name}")
-        lines.append(" *")
-        lines.append(" * Auto-generated React hooks for data fetching with SWR.")
-        lines.append(" *")
-        lines.append(" * Setup:")
-        lines.append(" * ```typescript")
-        lines.append(" * // Configure API once (in your app root)")
-        lines.append(" * import { configureAPI } from '../../api-instance'")
-        lines.append(" * configureAPI({ baseUrl: 'https://api.example.com' })")
-        lines.append(" * ```")
-        lines.append(" *")
-        lines.append(" * Usage:")
-        lines.append(" * ```typescript")
-        lines.append(" * // Query hook")
-        lines.append(" * const { data, error, mutate } = useShopProducts({ page: 1 })")
-        lines.append(" *")
-        lines.append(" * // Mutation hook")
-        lines.append(" * const createProduct = useCreateShopProduct()")
-        lines.append(" * await createProduct({ name: 'Product', price: 99 })")
-        lines.append(" * ```")
-        lines.append(" */")
-
-        # Import types from schemas
-        for schema_name in sorted(schema_names):
-            lines.append(f"import type {{ {schema_name} }} from '../schemas/{schema_name}.schema'")
-
-        lines.append("import useSWR from 'swr'")
-        lines.append("import { useSWRConfig } from 'swr'")
-        lines.append("import * as Fetchers from '../fetchers'")
-        lines.append("")
-
-        # Query hooks
-        if query_hooks:
-            lines.append("// ===== Query Hooks (GET) =====")
-            lines.append("")
-            for hook in query_hooks:
-                lines.append(hook)
-                lines.append("")
-
-        # Mutation hooks
-        if mutation_hooks:
-            lines.append("// ===== Mutation Hooks (POST/PUT/PATCH/DELETE) =====")
-            lines.append("")
-            for hook in mutation_hooks:
-                lines.append(hook)
-                lines.append("")
-
-        content = "\n".join(lines)
+        # Render template
+        template = self.jinja_env.get_template('hooks/hooks.ts.jinja')
+        content = template.render(
+            tag_display_name=tag_display_name,
+            tag_file=tag_file,
+            has_schemas=bool(schema_names),
+            schema_names=sorted(schema_names),
+            hooks=hooks
+        )
 
         # Get file path (use same naming as APIClient)
-        folder_name = self.base.tag_and_app_to_folder_name(tag, operations)
         file_path = f"_utils/hooks/{folder_name}.ts"
 
         return GeneratedFile(
@@ -502,35 +407,9 @@ class HooksGenerator:
         )
 
     def generate_hooks_index_file(self, module_names: list[str]) -> GeneratedFile:
-        """Generate index.ts for hooks folder."""
-        lines = []
-
-        lines.append("/**")
-        lines.append(" * SWR Hooks - React hooks for data fetching")
-        lines.append(" *")
-        lines.append(" * Auto-generated from OpenAPI specification.")
-        lines.append(" * These hooks use SWR for data fetching and caching.")
-        lines.append(" *")
-        lines.append(" * Usage:")
-        lines.append(" * ```typescript")
-        lines.append(" * import { useShopProducts } from './_utils/hooks'")
-        lines.append(" *")
-        lines.append(" * function ProductsPage() {")
-        lines.append(" *   const { data, error } = useShopProducts({ page: 1 })")
-        lines.append(" *   if (error) return <Error />")
-        lines.append(" *   if (!data) return <Loading />")
-        lines.append(" *   return <ProductList products={data.results} />")
-        lines.append(" * }")
-        lines.append(" * ```")
-        lines.append(" */")
-        lines.append("")
-
-        for module_name in module_names:
-            lines.append(f"export * from './{module_name}'")
-
-        lines.append("")
-
-        content = "\n".join(lines)
+        """Generate index.ts for hooks folder using Jinja2 template."""
+        template = self.jinja_env.get_template('hooks/index.ts.jinja')
+        content = template.render(modules=module_names)
 
         return GeneratedFile(
             path="_utils/hooks/index.ts",

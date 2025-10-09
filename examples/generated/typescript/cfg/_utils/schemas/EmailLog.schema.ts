@@ -12,17 +12,17 @@ import * as Enums from '../../enums'
  */
 export const EmailLogSchema = z.object({
   id: z.string().uuid(),
-  user: z.number().int().nullable(),
+  user: z.number().int().optional(),
   user_email: z.string(),
-  newsletter: z.number().int().nullable(),
+  newsletter: z.number().int().optional(),
   newsletter_title: z.string(),
   recipient: z.string(),
   subject: z.string(),
   body: z.string(),
   status: z.nativeEnum(Enums.EmailLogStatus),
   created_at: z.string().datetime(),
-  sent_at: z.string().datetime().nullable(),
-  error_message: z.string().nullable(),
+  sent_at: z.string().datetime().optional(),
+  error_message: z.string().optional(),
 })
 
 /**

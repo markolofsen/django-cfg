@@ -28,8 +28,8 @@ export const OrderDetailSchema = z.object({
   items: z.array(OrderItemSchema),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  shipped_at: z.string().datetime().optional().nullable(),
-  delivered_at: z.string().datetime().optional().nullable(),
+  shipped_at: z.string().datetime().optional(),
+  delivered_at: z.string().datetime().optional(),
 })
 
 /**

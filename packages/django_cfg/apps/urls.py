@@ -22,6 +22,9 @@ def get_enabled_cfg_apps() -> List[str]:
     
     if base_module.is_accounts_enabled():
         enabled_apps.append("django_cfg.apps.accounts")
+
+    if base_module.is_knowbase_enabled():
+        enabled_apps.append("django_cfg.apps.knowbase")
     
     if base_module.is_support_enabled():
         enabled_apps.append("django_cfg.apps.support")
@@ -31,9 +34,6 @@ def get_enabled_cfg_apps() -> List[str]:
     
     if base_module.is_leads_enabled():
         enabled_apps.append("django_cfg.apps.leads")
-    
-    if base_module.is_knowbase_enabled():
-        enabled_apps.append("django_cfg.apps.knowbase")
     
     if base_module.is_agents_enabled():
         enabled_apps.append("django_cfg.apps.agents")
@@ -114,6 +114,8 @@ APP_URL_MAP = {
     ],
     "django_cfg.apps.knowbase": [
         ("cfg/knowbase/", "django_cfg.apps.knowbase.urls"),
+        ("cfg/knowbase/admin/", "django_cfg.apps.knowbase.urls_admin"),
+        ("cfg/knowbase/system/", "django_cfg.apps.knowbase.urls_system"),
     ],
     "django_cfg.apps.agents": [
         ("cfg/agents/", "django_cfg.apps.agents.urls"),

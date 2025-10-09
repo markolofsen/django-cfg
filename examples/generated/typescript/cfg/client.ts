@@ -1,19 +1,21 @@
-import { CfgAuthAPI } from "./cfg__accounts__auth";
-import { CfgBulkEmailAPI } from "./cfg__newsletter__bulk_email";
-import { CfgCampaignsAPI } from "./cfg__newsletter__campaigns";
-import { CfgLeadSubmissionAPI } from "./cfg__leads__lead_submission";
-import { CfgLogsAPI } from "./cfg__newsletter__logs";
-import { CfgNewslettersAPI } from "./cfg__newsletter__newsletters";
-import { CfgSubscriptionsAPI } from "./cfg__newsletter__subscriptions";
-import { CfgTestingAPI } from "./cfg__newsletter__testing";
-import { CfgUserProfileAPI } from "./cfg__accounts__user_profile";
-import { CfgWebhooksAPI } from "./cfg__payments__webhooks";
-import { CfgAccountsAPI } from "./cfg__accounts";
-import { CfgLeadsAPI } from "./cfg__leads";
-import { CfgNewsletterAPI } from "./cfg__newsletter";
-import { CfgSupportAPI } from "./cfg__support";
-import { CfgPaymentsAPI } from "./cfg__payments";
-import { CfgTasksAPI } from "./cfg__tasks";
+import { CfgAuthAPI } from "./cfg__cfg__auth";
+import { CfgBulkEmailAPI } from "./cfg__cfg__bulk_email";
+import { CfgCampaignsAPI } from "./cfg__cfg__campaigns";
+import { CfgLeadSubmissionAPI } from "./cfg__cfg__lead_submission";
+import { CfgLogsAPI } from "./cfg__cfg__logs";
+import { CfgNewslettersAPI } from "./cfg__cfg__newsletters";
+import { CfgSubscriptionsAPI } from "./cfg__cfg__subscriptions";
+import { CfgTestingAPI } from "./cfg__cfg__testing";
+import { CfgUserProfileAPI } from "./cfg__cfg__user_profile";
+import { CfgWebhooksAPI } from "./cfg__cfg__webhooks";
+import { CfgAccountsAPI } from "./cfg__cfg__cfg__accounts";
+import { CfgEndpointsAPI } from "./cfg__cfg__cfg__endpoints";
+import { CfgHealthAPI } from "./cfg__cfg__cfg__health";
+import { CfgLeadsAPI } from "./cfg__cfg__cfg__leads";
+import { CfgNewsletterAPI } from "./cfg__cfg__cfg__newsletter";
+import { CfgPaymentsAPI } from "./cfg__cfg__cfg__payments";
+import { CfgSupportAPI } from "./cfg__cfg__cfg__support";
+import { CfgTasksAPI } from "./cfg__cfg__cfg__tasks";
 import { HttpClientAdapter, FetchAdapter } from "./http";
 import { APIError, NetworkError } from "./errors";
 import { APILogger, type LoggerConfig } from "./logger";
@@ -52,12 +54,14 @@ export class APIClient {
   public cfg_testing: CfgTestingAPI;
   public cfg_user_profile: CfgUserProfileAPI;
   public cfg_webhooks: CfgWebhooksAPI;
-  public cfg_accounts: CfgAccountsAPI;
-  public cfg_leads: CfgLeadsAPI;
-  public cfg_newsletter: CfgNewsletterAPI;
-  public cfg_support: CfgSupportAPI;
-  public cfg_payments: CfgPaymentsAPI;
-  public cfg_tasks: CfgTasksAPI;
+  public cfg__accounts: CfgAccountsAPI;
+  public cfg__endpoints: CfgEndpointsAPI;
+  public cfg__health: CfgHealthAPI;
+  public cfg__leads: CfgLeadsAPI;
+  public cfg__newsletter: CfgNewsletterAPI;
+  public cfg__payments: CfgPaymentsAPI;
+  public cfg__support: CfgSupportAPI;
+  public cfg__tasks: CfgTasksAPI;
 
   constructor(
     baseUrl: string,
@@ -91,12 +95,14 @@ export class APIClient {
     this.cfg_testing = new CfgTestingAPI(this);
     this.cfg_user_profile = new CfgUserProfileAPI(this);
     this.cfg_webhooks = new CfgWebhooksAPI(this);
-    this.cfg_accounts = new CfgAccountsAPI(this);
-    this.cfg_leads = new CfgLeadsAPI(this);
-    this.cfg_newsletter = new CfgNewsletterAPI(this);
-    this.cfg_support = new CfgSupportAPI(this);
-    this.cfg_payments = new CfgPaymentsAPI(this);
-    this.cfg_tasks = new CfgTasksAPI(this);
+    this.cfg__accounts = new CfgAccountsAPI(this);
+    this.cfg__endpoints = new CfgEndpointsAPI(this);
+    this.cfg__health = new CfgHealthAPI(this);
+    this.cfg__leads = new CfgLeadsAPI(this);
+    this.cfg__newsletter = new CfgNewsletterAPI(this);
+    this.cfg__payments = new CfgPaymentsAPI(this);
+    this.cfg__support = new CfgSupportAPI(this);
+    this.cfg__tasks = new CfgTasksAPI(this);
   }
 
   /**

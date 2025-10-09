@@ -21,8 +21,8 @@ export const APIKeyListSchema = z.object({
   is_expired: z.boolean(),
   is_valid: z.boolean(),
   total_requests: z.number().int(),
-  last_used_at: z.string().datetime().nullable(),
-  expires_at: z.string().datetime().nullable(),
+  last_used_at: z.string().datetime().optional(),
+  expires_at: z.string().datetime().optional(),
   created_at: z.string().datetime(),
 })
 

@@ -15,7 +15,7 @@ Validates input and delegates to SubscriptionService.
  */
 export const SubscriptionCreateRequestSchema = z.object({
   tariff_id: z.number().int().min(1.0),
-  endpoint_group_id: z.number().int().min(1.0).optional().nullable(),
+  endpoint_group_id: z.number().int().min(1.0).optional(),
   duration_days: z.number().int().min(1.0).max(365.0).optional(),
 })
 

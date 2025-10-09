@@ -77,9 +77,8 @@ class CoreSettingsGenerator:
             # Auto-use django-cfg accounts CustomUser if accounts is enabled
             settings["AUTH_USER_MODEL"] = "django_cfg_accounts.CustomUser"
 
-        # Add base directory
-        if self.config._base_dir:
-            settings["BASE_DIR"] = self.config._base_dir
+        # Add base directory (always set, auto-detects from manage.py location)
+        settings["BASE_DIR"] = self.config.base_dir
 
         # Add default auto field
         settings["DEFAULT_AUTO_FIELD"] = "django.db.models.BigAutoField"

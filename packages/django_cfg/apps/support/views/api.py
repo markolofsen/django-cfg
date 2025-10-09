@@ -12,10 +12,9 @@ from ..serializers import TicketSerializer, MessageSerializer, MessageCreateSeri
 
 class TicketViewSet(viewsets.ModelViewSet):
     """ViewSet for managing support tickets."""
-    
+
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
     lookup_field = 'uuid'
     lookup_url_kwarg = 'uuid'
 
@@ -34,10 +33,9 @@ class TicketViewSet(viewsets.ModelViewSet):
 
 class MessageViewSet(viewsets.ModelViewSet):
     """ViewSet for managing support messages."""
-    
+
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
     lookup_field = 'uuid'
     lookup_url_kwarg = 'uuid'
 

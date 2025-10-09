@@ -18,10 +18,10 @@ export const PaymentOverviewSchema = z.object({
   completed_amount_usd: z.number(),
   average_payment_usd: z.number(),
   success_rate: z.number(),
-  last_payment_at: z.string().datetime().nullable(),
+  last_payment_at: z.string().datetime().optional(),
   payments_this_month: z.number().int(),
   amount_this_month: z.number(),
-  top_currency: z.string().nullable(),
+  top_currency: z.string().optional(),
   top_currency_count: z.number().int(),
 })
 

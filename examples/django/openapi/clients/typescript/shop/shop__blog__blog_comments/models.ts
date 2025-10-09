@@ -16,9 +16,9 @@ export interface PaginatedCommentList {
   /** Whether there is a previous page */
   has_previous: boolean;
   /** Next page number (null if no next page) */
-  next_page?: number | null;
+  next_page?: number;
   /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
+  previous_page?: number;
   /** Array of items for current page */
   results: Array<Comment>;
 }
@@ -30,7 +30,7 @@ export interface PaginatedCommentList {
  */
 export interface CommentRequest {
   content: string;
-  parent?: number | null;
+  parent?: number;
 }
 
 /**
@@ -42,7 +42,7 @@ export interface Comment {
   id: number;
   content: string;
   author: Record<string, any>;
-  parent?: number | null;
+  parent?: number;
   is_approved: boolean;
   likes_count: number;
   replies: Array<Record<string, any>>;
@@ -58,7 +58,7 @@ export interface Comment {
  */
 export interface PatchedCommentRequest {
   content?: string;
-  parent?: number | null;
+  parent?: number;
 }
 
 /**
@@ -73,6 +73,6 @@ export interface Author {
   first_name?: string;
   last_name?: string;
   full_name: string;
-  avatar?: string | null;
+  avatar?: string;
 }
 

@@ -17,7 +17,7 @@ export const RecentTransactionSchema = z.object({
   balance_after: z.number(),
   description: z.string(),
   created_at: z.string().datetime(),
-  payment_id: z.string().nullable(),
+  payment_id: z.string().optional(),
   is_credit: z.boolean(),
   is_debit: z.boolean(),
   type_color: z.string(),

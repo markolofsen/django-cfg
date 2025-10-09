@@ -14,8 +14,8 @@ export const APIKeysOverviewSchema = z.object({
   active_keys: z.number().int(),
   expired_keys: z.number().int(),
   total_requests: z.number().int(),
-  last_used_at: z.string().datetime().nullable(),
-  most_used_key_name: z.string().nullable(),
+  last_used_at: z.string().datetime().optional(),
+  most_used_key_name: z.string().optional(),
   most_used_key_requests: z.number().int(),
   expiring_soon_count: z.number().int(),
 })

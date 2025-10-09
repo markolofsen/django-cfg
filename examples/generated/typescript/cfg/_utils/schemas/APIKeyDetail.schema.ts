@@ -23,8 +23,8 @@ export const APIKeyDetailSchema = z.object({
   is_valid: z.boolean(),
   days_until_expiry: z.number().int(),
   total_requests: z.number().int(),
-  last_used_at: z.string().datetime().nullable(),
-  expires_at: z.string().datetime().nullable(),
+  last_used_at: z.string().datetime().optional(),
+  expires_at: z.string().datetime().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 })
