@@ -1,0 +1,29 @@
+/**
+ * SWR Hooks - React data fetching hooks
+ *
+ * Auto-generated from OpenAPI specification.
+ * Powered by SWR for automatic caching and revalidation.
+ *
+ * Features:
+ * - Automatic caching and deduplication
+ * - Revalidation on focus/reconnect
+ * - Optimistic updates
+ * - Type-safe parameters and responses
+ *
+ * Usage:
+ * ```typescript
+ * import * as hooks from './hooks'
+ *
+ * // Query hooks (GET)
+ * const { data, error, isLoading } = hooks.useUsers({ page: 1 })
+ *
+ * // Mutation hooks (POST/PUT/PATCH/DELETE)
+ * const createUser = hooks.useCreateUser()
+ * await createUser({ name: 'John' })
+ * ```
+ */
+
+{% for module_name in modules %}
+export * from './{{ module_name }}'
+{% endfor %}
+

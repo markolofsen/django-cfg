@@ -17,7 +17,7 @@ export const BlogCategorySchema = z.object({
   color: z.string().max(7).optional(),
   meta_title: z.string().max(60).optional(),
   meta_description: z.string().max(160).optional(),
-  parent: z.number().int().optional().nullable(),
+  parent: z.number().int().optional(),
   posts_count: z.number().int(),
   children: z.array(z.record(z.string(), z.any())),
   created_at: z.string().datetime(),

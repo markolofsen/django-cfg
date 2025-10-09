@@ -29,12 +29,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
         }
     },
     "paths": {
-        "/django_cfg_accounts/otp/request/": {
+        "/cfg/accounts/otp/request/": {
             "post": {
-                "operationId": "django_cfg_accounts_otp_request_create",
+                "operationId": "cfg_accounts_otp_request_create",
                 "description": "Request OTP code to email or phone.",
                 "tags": [
-                    "django_cfg_accounts"
+                    "cfg__accounts"
                 ],
                 "requestBody": {
                     "content": {
@@ -100,12 +100,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_accounts/otp/verify/": {
+        "/cfg/accounts/otp/verify/": {
             "post": {
-                "operationId": "django_cfg_accounts_otp_verify_create",
+                "operationId": "cfg_accounts_otp_verify_create",
                 "description": "Verify OTP code and return JWT tokens.",
                 "tags": [
-                    "django_cfg_accounts"
+                    "cfg__accounts"
                 ],
                 "requestBody": {
                     "content": {
@@ -171,9 +171,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_accounts/profile/": {
+        "/cfg/accounts/profile/": {
             "get": {
-                "operationId": "django_cfg_accounts_profile_retrieve",
+                "operationId": "cfg_accounts_profile_retrieve",
                 "description": "Retrieve the current authenticated user's profile information.",
                 "summary": "Get current user profile",
                 "tags": [
@@ -212,9 +212,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_accounts/profile/avatar/": {
+        "/cfg/accounts/profile/avatar/": {
             "post": {
-                "operationId": "django_cfg_accounts_profile_avatar_create",
+                "operationId": "cfg_accounts_profile_avatar_create",
                 "description": "Upload avatar image for the current authenticated user. Accepts multipart/form-data with 'avatar' field.",
                 "summary": "Upload user avatar",
                 "tags": [
@@ -282,9 +282,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_accounts/profile/partial/": {
+        "/cfg/accounts/profile/partial/": {
             "put": {
-                "operationId": "django_cfg_accounts_profile_partial_update",
+                "operationId": "cfg_accounts_profile_partial_update",
                 "description": "Partially update the current authenticated user's profile information. Supports avatar upload.",
                 "summary": "Partial update user profile",
                 "tags": [
@@ -364,7 +364,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "django_cfg_accounts_profile_partial_partial_update",
+                "operationId": "cfg_accounts_profile_partial_partial_update",
                 "description": "Partially update the current authenticated user's profile information. Supports avatar upload.",
                 "summary": "Partial update user profile",
                 "tags": [
@@ -444,9 +444,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_accounts/profile/update/": {
+        "/cfg/accounts/profile/update/": {
             "put": {
-                "operationId": "django_cfg_accounts_profile_update_update",
+                "operationId": "cfg_accounts_profile_update_update",
                 "description": "Update the current authenticated user's profile information.",
                 "summary": "Update user profile",
                 "tags": [
@@ -526,7 +526,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "django_cfg_accounts_profile_update_partial_update",
+                "operationId": "cfg_accounts_profile_update_partial_update",
                 "description": "Update the current authenticated user's profile information.",
                 "summary": "Update user profile",
                 "tags": [
@@ -606,9 +606,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_accounts/token/refresh/": {
+        "/cfg/accounts/token/refresh/": {
             "post": {
-                "operationId": "django_cfg_accounts_token_refresh_create",
+                "operationId": "cfg_accounts_token_refresh_create",
                 "description": "Refresh JWT token.",
                 "tags": [
                     "Auth"
@@ -648,9 +648,102 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_leads/leads/": {
+        "/cfg/endpoints/drf/": {
             "get": {
-                "operationId": "django_cfg_leads_leads_list",
+                "operationId": "cfg_endpoints_drf_retrieve",
+                "description": "Return endpoints status data.",
+                "tags": [
+                    "cfg__endpoints"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EndpointsStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/health/drf/": {
+            "get": {
+                "operationId": "cfg_health_drf_retrieve",
+                "description": "Return comprehensive health check data.",
+                "tags": [
+                    "cfg__health"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthCheck"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/health/drf/quick/": {
+            "get": {
+                "operationId": "cfg_health_drf_quick_retrieve",
+                "description": "Return minimal health status.",
+                "tags": [
+                    "cfg__health"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuickHealth"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/leads/leads/": {
+            "get": {
+                "operationId": "cfg_leads_leads_list",
                 "description": "ViewSet for Lead model.\n\nProvides only submission functionality for leads from frontend forms.",
                 "parameters": [
                     {
@@ -673,7 +766,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "django_cfg_leads"
+                    "cfg__leads"
                 ],
                 "security": [
                     {
@@ -699,10 +792,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "django_cfg_leads_leads_create",
+                "operationId": "cfg_leads_leads_create",
                 "description": "ViewSet for Lead model.\n\nProvides only submission functionality for leads from frontend forms.",
                 "tags": [
-                    "django_cfg_leads"
+                    "cfg__leads"
                 ],
                 "requestBody": {
                     "content": {
@@ -748,9 +841,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_leads/leads/{id}/": {
+        "/cfg/leads/leads/{id}/": {
             "get": {
-                "operationId": "django_cfg_leads_leads_retrieve",
+                "operationId": "cfg_leads_leads_retrieve",
                 "description": "ViewSet for Lead model.\n\nProvides only submission functionality for leads from frontend forms.",
                 "parameters": [
                     {
@@ -764,7 +857,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "django_cfg_leads"
+                    "cfg__leads"
                 ],
                 "security": [
                     {
@@ -790,7 +883,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "django_cfg_leads_leads_update",
+                "operationId": "cfg_leads_leads_update",
                 "description": "ViewSet for Lead model.\n\nProvides only submission functionality for leads from frontend forms.",
                 "parameters": [
                     {
@@ -804,7 +897,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "django_cfg_leads"
+                    "cfg__leads"
                 ],
                 "requestBody": {
                     "content": {
@@ -850,7 +943,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "django_cfg_leads_leads_partial_update",
+                "operationId": "cfg_leads_leads_partial_update",
                 "description": "ViewSet for Lead model.\n\nProvides only submission functionality for leads from frontend forms.",
                 "parameters": [
                     {
@@ -864,7 +957,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "django_cfg_leads"
+                    "cfg__leads"
                 ],
                 "requestBody": {
                     "content": {
@@ -909,7 +1002,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "django_cfg_leads_leads_destroy",
+                "operationId": "cfg_leads_leads_destroy",
                 "description": "ViewSet for Lead model.\n\nProvides only submission functionality for leads from frontend forms.",
                 "parameters": [
                     {
@@ -923,7 +1016,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "django_cfg_leads"
+                    "cfg__leads"
                 ],
                 "security": [
                     {
@@ -942,9 +1035,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_leads/leads/submit/": {
+        "/cfg/leads/leads/submit/": {
             "post": {
-                "operationId": "django_cfg_leads_leads_submit_create",
+                "operationId": "cfg_leads_leads_submit_create",
                 "description": "Submit a new lead from frontend contact form with automatic Telegram notifications.",
                 "summary": "Submit Lead Form",
                 "tags": [
@@ -1020,9 +1113,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/bulk/": {
+        "/cfg/newsletter/bulk/": {
             "post": {
-                "operationId": "django_cfg_newsletter_bulk_create",
+                "operationId": "cfg_newsletter_bulk_create",
                 "description": "Send bulk emails to multiple recipients using base email template.",
                 "summary": "Send Bulk Email",
                 "tags": [
@@ -1081,9 +1174,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/campaigns/": {
+        "/cfg/newsletter/campaigns/": {
             "get": {
-                "operationId": "django_cfg_newsletter_campaigns_list",
+                "operationId": "cfg_newsletter_campaigns_list",
                 "description": "Get a list of all newsletter campaigns.",
                 "summary": "List Newsletter Campaigns",
                 "parameters": [
@@ -1132,7 +1225,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "django_cfg_newsletter_campaigns_create",
+                "operationId": "cfg_newsletter_campaigns_create",
                 "description": "Create a new newsletter campaign.",
                 "summary": "Create Newsletter Campaign",
                 "tags": [
@@ -1181,9 +1274,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/campaigns/{id}/": {
+        "/cfg/newsletter/campaigns/{id}/": {
             "get": {
-                "operationId": "django_cfg_newsletter_campaigns_retrieve",
+                "operationId": "cfg_newsletter_campaigns_retrieve",
                 "description": "Retrieve details of a specific newsletter campaign.",
                 "summary": "Get Campaign Details",
                 "parameters": [
@@ -1222,7 +1315,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "django_cfg_newsletter_campaigns_update",
+                "operationId": "cfg_newsletter_campaigns_update",
                 "description": "Update a newsletter campaign.",
                 "summary": "Update Campaign",
                 "parameters": [
@@ -1281,7 +1374,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "django_cfg_newsletter_campaigns_partial_update",
+                "operationId": "cfg_newsletter_campaigns_partial_update",
                 "description": "Retrieve, update, or delete a newsletter campaign.",
                 "parameters": [
                     {
@@ -1294,7 +1387,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "django_cfg_newsletter"
+                    "cfg__newsletter"
                 ],
                 "requestBody": {
                     "content": {
@@ -1338,7 +1431,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "django_cfg_newsletter_campaigns_destroy",
+                "operationId": "cfg_newsletter_campaigns_destroy",
                 "description": "Delete a newsletter campaign.",
                 "summary": "Delete Campaign",
                 "parameters": [
@@ -1370,9 +1463,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/campaigns/send/": {
+        "/cfg/newsletter/campaigns/send/": {
             "post": {
-                "operationId": "django_cfg_newsletter_campaigns_send_create",
+                "operationId": "cfg_newsletter_campaigns_send_create",
                 "description": "Send a newsletter campaign to all subscribers.",
                 "summary": "Send Newsletter Campaign",
                 "tags": [
@@ -1441,9 +1534,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/logs/": {
+        "/cfg/newsletter/logs/": {
             "get": {
-                "operationId": "django_cfg_newsletter_logs_list",
+                "operationId": "cfg_newsletter_logs_list",
                 "description": "Get a list of email sending logs.",
                 "summary": "List Email Logs",
                 "parameters": [
@@ -1492,9 +1585,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/newsletters/": {
+        "/cfg/newsletter/newsletters/": {
             "get": {
-                "operationId": "django_cfg_newsletter_newsletters_list",
+                "operationId": "cfg_newsletter_newsletters_list",
                 "description": "Get a list of all active newsletters available for subscription.",
                 "summary": "List Active Newsletters",
                 "parameters": [
@@ -1544,9 +1637,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/newsletters/{id}/": {
+        "/cfg/newsletter/newsletters/{id}/": {
             "get": {
-                "operationId": "django_cfg_newsletter_newsletters_retrieve",
+                "operationId": "cfg_newsletter_newsletters_retrieve",
                 "description": "Retrieve details of a specific newsletter.",
                 "summary": "Get Newsletter Details",
                 "parameters": [
@@ -1586,9 +1679,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/subscribe/": {
+        "/cfg/newsletter/subscribe/": {
             "post": {
-                "operationId": "django_cfg_newsletter_subscribe_create",
+                "operationId": "cfg_newsletter_subscribe_create",
                 "description": "Subscribe an email address to a newsletter.",
                 "summary": "Subscribe to Newsletter",
                 "tags": [
@@ -1658,9 +1751,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/subscriptions/": {
+        "/cfg/newsletter/subscriptions/": {
             "get": {
-                "operationId": "django_cfg_newsletter_subscriptions_list",
+                "operationId": "cfg_newsletter_subscriptions_list",
                 "description": "Get a list of current user's active newsletter subscriptions.",
                 "summary": "List User Subscriptions",
                 "parameters": [
@@ -1709,9 +1802,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/test/": {
+        "/cfg/newsletter/test/": {
             "post": {
-                "operationId": "django_cfg_newsletter_test_create",
+                "operationId": "cfg_newsletter_test_create",
                 "description": "Send a test email to verify mailer configuration.",
                 "summary": "Test Email Sending",
                 "tags": [
@@ -1771,9 +1864,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_newsletter/unsubscribe/": {
+        "/cfg/newsletter/unsubscribe/": {
             "post": {
-                "operationId": "django_cfg_newsletter_unsubscribe_create",
+                "operationId": "cfg_newsletter_unsubscribe_create",
                 "description": "Unsubscribe from a newsletter using subscription ID.",
                 "summary": "Unsubscribe from Newsletter",
                 "tags": [
@@ -1833,10 +1926,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "django_cfg_newsletter_unsubscribe_update",
+                "operationId": "cfg_newsletter_unsubscribe_update",
                 "description": "Handle newsletter unsubscriptions.",
                 "tags": [
-                    "django_cfg_newsletter"
+                    "cfg__newsletter"
                 ],
                 "requestBody": {
                     "content": {
@@ -1882,10 +1975,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "django_cfg_newsletter_unsubscribe_partial_update",
+                "operationId": "cfg_newsletter_unsubscribe_partial_update",
                 "description": "Handle newsletter unsubscriptions.",
                 "tags": [
-                    "django_cfg_newsletter"
+                    "cfg__newsletter"
                 ],
                 "requestBody": {
                     "content": {
@@ -1930,12 +2023,95 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_support/tickets/": {
+        "/cfg/payments/admin/api/payments/": {
             "get": {
-                "operationId": "django_cfg_support_tickets_list",
-                "description": "ViewSet for managing support tickets.",
+                "operationId": "cfg_payments_admin_api_payments_list",
+                "description": "Admin ViewSet for payment management.\n\nProvides full CRUD operations for payments with admin-specific features.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "currency__code",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": False,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": False,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": False,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "provider",
+                        "schema": {
+                            "type": "string",
+                            "x-spec-enum-id": "47694db6bd068cb3",
+                            "enum": [
+                                "nowpayments"
+                            ]
+                        },
+                        "description": "Payment provider\n\n* `nowpayments` - NowPayments"
+                    },
+                    {
+                        "name": "search",
+                        "required": False,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "x-spec-enum-id": "59d07a8608d1bdb9",
+                            "enum": [
+                                "cancelled",
+                                "completed",
+                                "confirmed",
+                                "confirming",
+                                "expired",
+                                "failed",
+                                "pending",
+                                "refunded"
+                            ]
+                        },
+                        "description": "Current payment status\n\n* `pending` - Pending\n* `confirming` - Confirming\n* `confirmed` - Confirmed\n* `completed` - Completed\n* `failed` - Failed\n* `expired` - Expired\n* `cancelled` - Cancelled\n* `refunded` - Refunded"
+                    },
+                    {
+                        "in": "query",
+                        "name": "user",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -1950,10 +2126,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Ticket"
-                                    }
+                                    "$ref": "#/components/schemas/PaginatedAdminPaymentListList"
                                 }
                             }
                         },
@@ -1963,26 +2136,26 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "django_cfg_support_tickets_create",
-                "description": "ViewSet for managing support tickets.",
+                "operationId": "cfg_payments_admin_api_payments_create",
+                "description": "Create payment with enhanced error handling.",
                 "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/TicketRequest"
+                                "$ref": "#/components/schemas/AdminPaymentCreateRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/TicketRequest"
+                                "$ref": "#/components/schemas/AdminPaymentCreateRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/TicketRequest"
+                                "$ref": "#/components/schemas/AdminPaymentCreateRequest"
                             }
                         }
                     },
@@ -2001,7 +2174,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Ticket"
+                                    "$ref": "#/components/schemas/AdminPaymentCreate"
                                 }
                             }
                         },
@@ -2011,24 +2184,24 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_support/tickets/{ticket_uuid}/messages/": {
+        "/cfg/payments/admin/api/payments/{id}/": {
             "get": {
-                "operationId": "django_cfg_support_tickets_messages_list",
-                "description": "ViewSet for managing support messages.",
+                "operationId": "cfg_payments_admin_api_payments_retrieve",
+                "description": "Admin ViewSet for payment management.\n\nProvides full CRUD operations for payments with admin-specific features.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "ticket_uuid",
+                        "name": "id",
                         "schema": {
                             "type": "string",
-                            "format": "uuid"
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
                         },
-                        "description": "UUID of the ticket",
                         "required": True
                     }
                 ],
                 "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2043,10 +2216,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Message"
-                                    }
+                                    "$ref": "#/components/schemas/AdminPaymentDetail"
                                 }
                             }
                         },
@@ -2055,39 +2225,969 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 },
                 "x-async-capable": False
             },
+            "put": {
+                "operationId": "cfg_payments_admin_api_payments_update",
+                "description": "Admin ViewSet for payment management.\n\nProvides full CRUD operations for payments with admin-specific features.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminPaymentUpdateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminPaymentUpdateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminPaymentUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentUpdate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "patch": {
+                "operationId": "cfg_payments_admin_api_payments_partial_update",
+                "description": "Admin ViewSet for payment management.\n\nProvides full CRUD operations for payments with admin-specific features.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminPaymentUpdateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminPaymentUpdateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminPaymentUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentUpdate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "delete": {
+                "operationId": "cfg_payments_admin_api_payments_destroy",
+                "description": "Admin ViewSet for payment management.\n\nProvides full CRUD operations for payments with admin-specific features.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/payments/{id}/cancel/": {
             "post": {
-                "operationId": "django_cfg_support_tickets_messages_create",
-                "description": "ViewSet for managing support messages.",
+                "operationId": "cfg_payments_admin_api_payments_cancel_create",
+                "description": "Cancel a payment.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "ticket_uuid",
+                        "name": "id",
                         "schema": {
                             "type": "string",
-                            "format": "uuid"
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
                         },
-                        "description": "UUID of the ticket",
                         "required": True
                     }
                 ],
                 "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/payments/{id}/refresh_status/": {
+            "post": {
+                "operationId": "cfg_payments_admin_api_payments_refresh_status_create",
+                "description": "Refresh payment status from provider via AJAX.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/payments/{id}/refund/": {
+            "post": {
+                "operationId": "cfg_payments_admin_api_payments_refund_create",
+                "description": "Refund a payment.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/payments/stats/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_payments_stats_retrieve",
+                "description": "Get comprehensive payment statistics.",
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/stats/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_stats_list",
+                "description": "Get overview statistics.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": False,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": False,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": False,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": False,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminPaymentStatsList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/stats/{id}/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_stats_retrieve",
+                "description": "Admin ViewSet for comprehensive system statistics.\n\nProvides aggregated statistics across all system components.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/stats/payments/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_stats_payments_retrieve",
+                "description": "Get detailed payment statistics.",
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/stats/system/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_stats_system_retrieve",
+                "description": "Get system health and performance statistics.",
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/stats/webhooks/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_stats_webhooks_retrieve",
+                "description": "Get detailed webhook statistics.",
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminPaymentStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/users/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_users_list",
+                "description": "Override list to limit results for dropdown.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "is_active",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "is_staff",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "is_superuser",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": False,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": False,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": False,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": False,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminUserList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/users/{id}/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_users_retrieve",
+                "description": "Admin ViewSet for user management.\n\nProvides read-only access to users for admin interface.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this User.",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUser"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/webhook-test/test/": {
+            "post": {
+                "operationId": "cfg_payments_admin_api_webhook_test_test_create",
+                "description": "Test webhook endpoint.\n\nSends a test webhook to the specified URL with the given event type.\nUseful for developers to test their webhook implementations.",
+                "tags": [
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/MessageCreateRequest"
+                                "$ref": "#/components/schemas/WebhookStatsRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/MessageCreateRequest"
+                                "$ref": "#/components/schemas/WebhookStatsRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/MessageCreateRequest"
+                                "$ref": "#/components/schemas/WebhookStatsRequest"
+                            }
+                        }
+                    },
+                    "required": True
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WebhookStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/webhooks/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_webhooks_list",
+                "description": "List webhook providers and configurations with real ngrok URLs.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": False,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": False,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": False,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": False,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedWebhookStatsList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/webhooks/{id}/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_webhooks_retrieve",
+                "description": "Admin ViewSet for webhook configuration management.\n\nRead-only view for webhook configurations and provider info.\nRequires admin permissions.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WebhookStats"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/webhooks/{webhook_pk}/events/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_webhooks_events_list",
+                "description": "List webhook events with filtering and pagination.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": False,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": False,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": False,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": False,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "webhook_pk",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedWebhookEventListList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/webhooks/{webhook_pk}/events/{id}/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_webhooks_events_retrieve",
+                "description": "Admin ViewSet for webhook events management.\n\nProvides listing, filtering, and actions for webhook events.\nRequires admin permissions.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    },
+                    {
+                        "in": "path",
+                        "name": "webhook_pk",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WebhookEventList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/payments/admin/api/webhooks/{webhook_pk}/events/{id}/retry/": {
+            "post": {
+                "operationId": "cfg_payments_admin_api_webhooks_events_retry_create",
+                "description": "Retry a failed webhook event.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Unique identifier for this record"
+                        },
+                        "required": True
+                    },
+                    {
+                        "in": "path",
+                        "name": "webhook_pk",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__payments"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         }
                     },
@@ -2102,11 +3202,11 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "responses": {
-                    "201": {
+                    "200": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/MessageCreate"
+                                    "$ref": "#/components/schemas/WebhookEventList"
                                 }
                             }
                         },
@@ -2116,100 +3216,38 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/django_cfg_support/tickets/{ticket_uuid}/messages/{uuid}/": {
-            "get": {
-                "operationId": "django_cfg_support_tickets_messages_retrieve",
-                "description": "ViewSet for managing support messages.",
+        "/cfg/payments/admin/api/webhooks/{webhook_pk}/events/clear_all/": {
+            "post": {
+                "operationId": "cfg_payments_admin_api_webhooks_events_clear_all_create",
+                "description": "Clear all webhook events.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "ticket_uuid",
+                        "name": "webhook_pk",
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         },
-                        "description": "UUID of the ticket",
-                        "required": True
-                    },
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the message",
                         "required": True
                     }
                 ],
                 "tags": [
-                    "django_cfg_support"
-                ],
-                "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Message"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                },
-                "x-async-capable": False
-            },
-            "put": {
-                "operationId": "django_cfg_support_tickets_messages_update",
-                "description": "ViewSet for managing support messages.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "ticket_uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the ticket",
-                        "required": True
-                    },
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the message",
-                        "required": True
-                    }
-                ],
-                "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/MessageRequest"
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/MessageRequest"
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/MessageRequest"
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         }
                     },
@@ -2228,202 +3266,48 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Message"
+                                    "$ref": "#/components/schemas/WebhookEventList"
                                 }
                             }
                         },
                         "description": ""
-                    }
-                },
-                "x-async-capable": False
-            },
-            "patch": {
-                "operationId": "django_cfg_support_tickets_messages_partial_update",
-                "description": "ViewSet for managing support messages.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "ticket_uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the ticket",
-                        "required": True
-                    },
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the message",
-                        "required": True
-                    }
-                ],
-                "tags": [
-                    "django_cfg_support"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedMessageRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedMessageRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedMessageRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Message"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                },
-                "x-async-capable": False
-            },
-            "delete": {
-                "operationId": "django_cfg_support_tickets_messages_destroy",
-                "description": "ViewSet for managing support messages.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "ticket_uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the ticket",
-                        "required": True
-                    },
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "UUID of the message",
-                        "required": True
-                    }
-                ],
-                "tags": [
-                    "django_cfg_support"
-                ],
-                "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
                     }
                 },
                 "x-async-capable": False
             }
         },
-        "/django_cfg_support/tickets/{uuid}/": {
-            "get": {
-                "operationId": "django_cfg_support_tickets_retrieve",
-                "description": "ViewSet for managing support tickets.",
+        "/cfg/payments/admin/api/webhooks/{webhook_pk}/events/retry_failed/": {
+            "post": {
+                "operationId": "cfg_payments_admin_api_webhooks_events_retry_failed_create",
+                "description": "Retry all failed webhook events.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "uuid",
+                        "name": "webhook_pk",
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         },
-                        "description": "A UUID string identifying this ticket.",
                         "required": True
                     }
                 ],
                 "tags": [
-                    "django_cfg_support"
-                ],
-                "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Ticket"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                },
-                "x-async-capable": False
-            },
-            "put": {
-                "operationId": "django_cfg_support_tickets_update",
-                "description": "ViewSet for managing support tickets.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "A UUID string identifying this ticket.",
-                        "required": True
-                    }
-                ],
-                "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/TicketRequest"
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/TicketRequest"
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/TicketRequest"
+                                "$ref": "#/components/schemas/WebhookEventListRequest"
                             }
                         }
                     },
@@ -2442,7 +3326,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Ticket"
+                                    "$ref": "#/components/schemas/WebhookEventList"
                                 }
                             }
                         },
@@ -2450,44 +3334,15 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 },
                 "x-async-capable": False
-            },
-            "patch": {
-                "operationId": "django_cfg_support_tickets_partial_update",
-                "description": "ViewSet for managing support tickets.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "A UUID string identifying this ticket.",
-                        "required": True
-                    }
-                ],
+            }
+        },
+        "/cfg/payments/admin/api/webhooks/stats/": {
+            "get": {
+                "operationId": "cfg_payments_admin_api_webhooks_stats_retrieve",
+                "description": "Get webhook statistics.",
                 "tags": [
-                    "django_cfg_support"
+                    "cfg__payments"
                 ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedTicketRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedTicketRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedTicketRequest"
-                            }
-                        }
-                    }
-                },
                 "security": [
                     {
                         "cookieAuth": []
@@ -2501,7 +3356,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Ticket"
+                                    "$ref": "#/components/schemas/WebhookStats"
                                 }
                             }
                         },
@@ -2509,44 +3364,11 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 },
                 "x-async-capable": False
-            },
-            "delete": {
-                "operationId": "django_cfg_support_tickets_destroy",
-                "description": "ViewSet for managing support tickets.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "uuid",
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "description": "A UUID string identifying this ticket.",
-                        "required": True
-                    }
-                ],
-                "tags": [
-                    "django_cfg_support"
-                ],
-                "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    }
-                },
-                "x-async-capable": False
             }
         },
-        "/payments/api-keys/": {
+        "/cfg/payments/api-keys/": {
             "get": {
-                "operationId": "payments_api_keys_list",
+                "operationId": "cfg_payments_api_keys_list",
                 "description": "Global API Key ViewSet: /api/api-keys/\n\nProvides admin-level access to all API keys with filtering and stats.",
                 "parameters": [
                     {
@@ -2601,7 +3423,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2626,10 +3448,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_api_keys_create",
+                "operationId": "cfg_payments_api_keys_create",
                 "description": "Global API Key ViewSet: /api/api-keys/\n\nProvides admin-level access to all API keys with filtering and stats.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -2674,9 +3496,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/{id}/": {
+        "/cfg/payments/api-keys/{id}/": {
             "get": {
-                "operationId": "payments_api_keys_retrieve",
+                "operationId": "cfg_payments_api_keys_retrieve",
                 "description": "Global API Key ViewSet: /api/api-keys/\n\nProvides admin-level access to all API keys with filtering and stats.",
                 "parameters": [
                     {
@@ -2691,7 +3513,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2716,7 +3538,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_api_keys_update",
+                "operationId": "cfg_payments_api_keys_update",
                 "description": "Global API Key ViewSet: /api/api-keys/\n\nProvides admin-level access to all API keys with filtering and stats.",
                 "parameters": [
                     {
@@ -2731,7 +3553,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -2776,7 +3598,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_api_keys_partial_update",
+                "operationId": "cfg_payments_api_keys_partial_update",
                 "description": "Global API Key ViewSet: /api/api-keys/\n\nProvides admin-level access to all API keys with filtering and stats.",
                 "parameters": [
                     {
@@ -2791,7 +3613,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -2835,7 +3657,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_api_keys_destroy",
+                "operationId": "cfg_payments_api_keys_destroy",
                 "description": "Global API Key ViewSet: /api/api-keys/\n\nProvides admin-level access to all API keys with filtering and stats.",
                 "parameters": [
                     {
@@ -2850,7 +3672,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2868,9 +3690,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/{id}/perform_action/": {
+        "/cfg/payments/api-keys/{id}/perform_action/": {
             "post": {
-                "operationId": "payments_api_keys_perform_action_create",
+                "operationId": "cfg_payments_api_keys_perform_action_create",
                 "description": "Perform action on API key.\n\nPOST /api/api-keys/{id}/perform_action/",
                 "parameters": [
                     {
@@ -2885,7 +3707,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2910,12 +3732,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/analytics/": {
+        "/cfg/payments/api-keys/analytics/": {
             "get": {
-                "operationId": "payments_api_keys_analytics_retrieve",
+                "operationId": "cfg_payments_api_keys_analytics_retrieve",
                 "description": "Get API key analytics.\n\nGET /api/api-keys/analytics/?days=30",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2940,12 +3762,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/by_user/": {
+        "/cfg/payments/api-keys/by_user/": {
             "get": {
-                "operationId": "payments_api_keys_by_user_retrieve",
+                "operationId": "cfg_payments_api_keys_by_user_retrieve",
                 "description": "Get API keys grouped by user.\n\nGET /api/api-keys/by_user/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -2970,12 +3792,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/create/": {
+        "/cfg/payments/api-keys/create/": {
             "post": {
-                "operationId": "payments_api_keys_create_create",
+                "operationId": "cfg_payments_api_keys_create_create",
                 "description": "Standalone API key creation endpoint: /api/api-keys/create/\n\nSimplified endpoint for API key creation.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -3020,12 +3842,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/expiring_soon/": {
+        "/cfg/payments/api-keys/expiring_soon/": {
             "get": {
-                "operationId": "payments_api_keys_expiring_soon_retrieve",
+                "operationId": "cfg_payments_api_keys_expiring_soon_retrieve",
                 "description": "Get API keys expiring soon.\n\nGET /api/api-keys/expiring_soon/?days=7",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3050,12 +3872,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/health/": {
+        "/cfg/payments/api-keys/health/": {
             "get": {
-                "operationId": "payments_api_keys_health_retrieve",
+                "operationId": "cfg_payments_api_keys_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3080,12 +3902,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/stats/": {
+        "/cfg/payments/api-keys/stats/": {
             "get": {
-                "operationId": "payments_api_keys_stats_retrieve",
+                "operationId": "cfg_payments_api_keys_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3110,13 +3932,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/validate/": {
+        "/cfg/payments/api-keys/validate/": {
             "post": {
-                "operationId": "payments_api_keys_validate_create",
+                "operationId": "cfg_payments_api_keys_validate_create",
                 "description": "Standalone endpoint to validate an API key and return key information",
                 "summary": "Validate API Key (Standalone)",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -3161,13 +3983,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/api-keys/validate_key/": {
+        "/cfg/payments/api-keys/validate_key/": {
             "post": {
-                "operationId": "payments_api_keys_validate_key_create",
+                "operationId": "cfg_payments_api_keys_validate_key_create",
                 "description": "Validate an API key and return key information",
                 "summary": "Validate API Key",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -3212,9 +4034,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/balances/": {
+        "/cfg/payments/balances/": {
             "get": {
-                "operationId": "payments_balances_list",
+                "operationId": "cfg_payments_balances_list",
                 "description": "User balance ViewSet: /api/balances/\n\nRead-only access to user balances with statistics.",
                 "parameters": [
                     {
@@ -3262,7 +4084,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3287,9 +4109,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/balances/{id}/": {
+        "/cfg/payments/balances/{id}/": {
             "get": {
-                "operationId": "payments_balances_retrieve",
+                "operationId": "cfg_payments_balances_retrieve",
                 "description": "User balance ViewSet: /api/balances/\n\nRead-only access to user balances with statistics.",
                 "parameters": [
                     {
@@ -3303,7 +4125,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3328,12 +4150,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/balances/analytics/": {
+        "/cfg/payments/balances/analytics/": {
             "get": {
-                "operationId": "payments_balances_analytics_retrieve",
+                "operationId": "cfg_payments_balances_analytics_retrieve",
                 "description": "Get balance analytics.\n\nGET /api/balances/analytics/?days=30",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3358,12 +4180,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/balances/health/": {
+        "/cfg/payments/balances/health/": {
             "get": {
-                "operationId": "payments_balances_health_retrieve",
+                "operationId": "cfg_payments_balances_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3388,12 +4210,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/balances/stats/": {
+        "/cfg/payments/balances/stats/": {
             "get": {
-                "operationId": "payments_balances_stats_retrieve",
+                "operationId": "cfg_payments_balances_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3418,12 +4240,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/balances/summary/": {
+        "/cfg/payments/balances/summary/": {
             "get": {
-                "operationId": "payments_balances_summary_retrieve",
+                "operationId": "cfg_payments_balances_summary_retrieve",
                 "description": "Get balance summary for all users.\n\nGET /api/balances/summary/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3448,9 +4270,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/": {
+        "/cfg/payments/currencies/": {
             "get": {
-                "operationId": "payments_currencies_list",
+                "operationId": "cfg_payments_currencies_list",
                 "description": "Currency ViewSet: /api/currencies/\n\nRead-only access to currency information with conversion capabilities.",
                 "parameters": [
                     {
@@ -3511,7 +4333,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3536,10 +4358,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_currencies_create",
+                "operationId": "cfg_payments_currencies_create",
                 "description": "Disable create action.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3564,9 +4386,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/{id}/": {
+        "/cfg/payments/currencies/{id}/": {
             "get": {
-                "operationId": "payments_currencies_retrieve",
+                "operationId": "cfg_payments_currencies_retrieve",
                 "description": "Currency ViewSet: /api/currencies/\n\nRead-only access to currency information with conversion capabilities.",
                 "parameters": [
                     {
@@ -3580,7 +4402,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3605,9 +4427,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/{id}/networks/": {
+        "/cfg/payments/currencies/{id}/networks/": {
             "get": {
-                "operationId": "payments_currencies_networks_retrieve",
+                "operationId": "cfg_payments_currencies_networks_retrieve",
                 "description": "Get networks for specific currency.\n\nGET /api/currencies/{id}/networks/",
                 "parameters": [
                     {
@@ -3621,7 +4443,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3646,9 +4468,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/{id}/providers/": {
+        "/cfg/payments/currencies/{id}/providers/": {
             "get": {
-                "operationId": "payments_currencies_providers_retrieve",
+                "operationId": "cfg_payments_currencies_providers_retrieve",
                 "description": "Get providers supporting specific currency.\n\nGET /api/currencies/{id}/providers/",
                 "parameters": [
                     {
@@ -3662,7 +4484,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3687,12 +4509,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/convert/": {
+        "/cfg/payments/currencies/convert/": {
             "post": {
-                "operationId": "payments_currencies_convert_create",
+                "operationId": "cfg_payments_currencies_convert_create",
                 "description": "Convert between currencies.\n\nPOST /api/currencies/convert/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3717,12 +4539,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/crypto/": {
+        "/cfg/payments/currencies/crypto/": {
             "get": {
-                "operationId": "payments_currencies_crypto_retrieve",
+                "operationId": "cfg_payments_currencies_crypto_retrieve",
                 "description": "Get only cryptocurrencies.\n\nGET /api/currencies/crypto/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3747,12 +4569,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/fiat/": {
+        "/cfg/payments/currencies/fiat/": {
             "get": {
-                "operationId": "payments_currencies_fiat_retrieve",
+                "operationId": "cfg_payments_currencies_fiat_retrieve",
                 "description": "Get only fiat currencies.\n\nGET /api/currencies/fiat/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3777,12 +4599,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/health/": {
+        "/cfg/payments/currencies/health/": {
             "get": {
-                "operationId": "payments_currencies_health_retrieve",
+                "operationId": "cfg_payments_currencies_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3807,9 +4629,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/rates/": {
+        "/cfg/payments/currencies/rates/": {
             "get": {
-                "operationId": "payments_currencies_rates_retrieve",
+                "operationId": "cfg_payments_currencies_rates_retrieve",
                 "description": "Get current exchange rates for specified currencies",
                 "summary": "Get exchange rates",
                 "parameters": [
@@ -3833,7 +4655,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3858,12 +4680,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/stable/": {
+        "/cfg/payments/currencies/stable/": {
             "get": {
-                "operationId": "payments_currencies_stable_retrieve",
+                "operationId": "cfg_payments_currencies_stable_retrieve",
                 "description": "Get only stablecoins.\n\nGET /api/currencies/stable/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3888,12 +4710,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/stats/": {
+        "/cfg/payments/currencies/stats/": {
             "get": {
-                "operationId": "payments_currencies_stats_retrieve",
+                "operationId": "cfg_payments_currencies_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3918,9 +4740,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/currencies/supported/": {
+        "/cfg/payments/currencies/supported/": {
             "get": {
-                "operationId": "payments_currencies_supported_retrieve",
+                "operationId": "cfg_payments_currencies_supported_retrieve",
                 "description": "Get list of supported currencies from payment providers",
                 "summary": "Get supported currencies",
                 "parameters": [
@@ -3947,7 +4769,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -3972,9 +4794,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/endpoint-groups/": {
+        "/cfg/payments/endpoint-groups/": {
             "get": {
-                "operationId": "payments_endpoint_groups_list",
+                "operationId": "cfg_payments_endpoint_groups_list",
                 "description": "Endpoint Group ViewSet: /api/endpoint-groups/\n\nRead-only access to endpoint group information.",
                 "parameters": [
                     {
@@ -4022,7 +4844,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4047,9 +4869,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/endpoint-groups/{id}/": {
+        "/cfg/payments/endpoint-groups/{id}/": {
             "get": {
-                "operationId": "payments_endpoint_groups_retrieve",
+                "operationId": "cfg_payments_endpoint_groups_retrieve",
                 "description": "Endpoint Group ViewSet: /api/endpoint-groups/\n\nRead-only access to endpoint group information.",
                 "parameters": [
                     {
@@ -4063,7 +4885,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4088,12 +4910,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/endpoint-groups/available/": {
+        "/cfg/payments/endpoint-groups/available/": {
             "get": {
-                "operationId": "payments_endpoint_groups_available_retrieve",
+                "operationId": "cfg_payments_endpoint_groups_available_retrieve",
                 "description": "Get available endpoint groups for subscription.\n\nGET /api/endpoint-groups/available/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4118,12 +4940,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/endpoint-groups/health/": {
+        "/cfg/payments/endpoint-groups/health/": {
             "get": {
-                "operationId": "payments_endpoint_groups_health_retrieve",
+                "operationId": "cfg_payments_endpoint_groups_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4148,12 +4970,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/endpoint-groups/stats/": {
+        "/cfg/payments/endpoint-groups/stats/": {
             "get": {
-                "operationId": "payments_endpoint_groups_stats_retrieve",
+                "operationId": "cfg_payments_endpoint_groups_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4178,12 +5000,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/health/": {
+        "/cfg/payments/health/": {
             "get": {
-                "operationId": "payments_health_retrieve",
+                "operationId": "cfg_payments_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4208,9 +5030,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/networks/": {
+        "/cfg/payments/networks/": {
             "get": {
-                "operationId": "payments_networks_list",
+                "operationId": "cfg_payments_networks_list",
                 "description": "Network ViewSet: /api/networks/\n\nRead-only access to blockchain network information.",
                 "parameters": [
                     {
@@ -4265,7 +5087,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4290,9 +5112,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/networks/{id}/": {
+        "/cfg/payments/networks/{id}/": {
             "get": {
-                "operationId": "payments_networks_retrieve",
+                "operationId": "cfg_payments_networks_retrieve",
                 "description": "Network ViewSet: /api/networks/\n\nRead-only access to blockchain network information.",
                 "parameters": [
                     {
@@ -4306,7 +5128,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4331,12 +5153,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/networks/by_currency/": {
+        "/cfg/payments/networks/by_currency/": {
             "get": {
-                "operationId": "payments_networks_by_currency_retrieve",
+                "operationId": "cfg_payments_networks_by_currency_retrieve",
                 "description": "Get networks grouped by currency.\n\nGET /api/networks/by_currency/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4361,12 +5183,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/networks/health/": {
+        "/cfg/payments/networks/health/": {
             "get": {
-                "operationId": "payments_networks_health_retrieve",
+                "operationId": "cfg_payments_networks_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4391,12 +5213,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/networks/stats/": {
+        "/cfg/payments/networks/stats/": {
             "get": {
-                "operationId": "payments_networks_stats_retrieve",
+                "operationId": "cfg_payments_networks_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4421,13 +5243,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/api_keys_overview/": {
+        "/cfg/payments/overview/dashboard/api_keys_overview/": {
             "get": {
-                "operationId": "payments_overview_dashboard_api_keys_overview_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_api_keys_overview_retrieve",
                 "description": "Get API keys overview",
                 "summary": "API Keys Overview",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4452,13 +5274,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/balance_overview/": {
+        "/cfg/payments/overview/dashboard/balance_overview/": {
             "get": {
-                "operationId": "payments_overview_dashboard_balance_overview_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_balance_overview_retrieve",
                 "description": "Get user balance overview",
                 "summary": "Balance Overview",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4483,9 +5305,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/chart_data/": {
+        "/cfg/payments/overview/dashboard/chart_data/": {
             "get": {
-                "operationId": "payments_overview_dashboard_chart_data_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_chart_data_retrieve",
                 "description": "Get chart data for payments visualization",
                 "summary": "Payments Chart Data",
                 "parameters": [
@@ -4506,7 +5328,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4531,13 +5353,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/metrics/": {
+        "/cfg/payments/overview/dashboard/metrics/": {
             "get": {
-                "operationId": "payments_overview_dashboard_metrics_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_metrics_retrieve",
                 "description": "Get payments dashboard metrics including balance, subscriptions, API keys, and payments",
                 "summary": "Payments Dashboard Metrics",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4562,13 +5384,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/overview/": {
+        "/cfg/payments/overview/dashboard/overview/": {
             "get": {
-                "operationId": "payments_overview_dashboard_overview_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_overview_retrieve",
                 "description": "Get complete payments dashboard overview with metrics, recent payments, and analytics",
                 "summary": "Payments Dashboard Overview",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4593,9 +5415,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/payment_analytics/": {
+        "/cfg/payments/overview/dashboard/payment_analytics/": {
             "get": {
-                "operationId": "payments_overview_dashboard_payment_analytics_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_payment_analytics_retrieve",
                 "description": "Get analytics for payments by currency and provider",
                 "summary": "Payment Analytics",
                 "parameters": [
@@ -4610,7 +5432,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4635,9 +5457,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/recent_payments/": {
+        "/cfg/payments/overview/dashboard/recent_payments/": {
             "get": {
-                "operationId": "payments_overview_dashboard_recent_payments_list",
+                "operationId": "cfg_payments_overview_dashboard_recent_payments_list",
                 "description": "Get recent payments for the user",
                 "summary": "Recent Payments",
                 "parameters": [
@@ -4670,7 +5492,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4695,9 +5517,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/recent_transactions/": {
+        "/cfg/payments/overview/dashboard/recent_transactions/": {
             "get": {
-                "operationId": "payments_overview_dashboard_recent_transactions_list",
+                "operationId": "cfg_payments_overview_dashboard_recent_transactions_list",
                 "description": "Get recent balance transactions for the user",
                 "summary": "Recent Transactions",
                 "parameters": [
@@ -4730,7 +5552,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4755,13 +5577,13 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/overview/dashboard/subscription_overview/": {
+        "/cfg/payments/overview/dashboard/subscription_overview/": {
             "get": {
-                "operationId": "payments_overview_dashboard_subscription_overview_retrieve",
+                "operationId": "cfg_payments_overview_dashboard_subscription_overview_retrieve",
                 "description": "Get current subscription overview",
                 "summary": "Subscription Overview",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4786,9 +5608,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/": {
+        "/cfg/payments/payments/": {
             "get": {
-                "operationId": "payments_payments_list",
+                "operationId": "cfg_payments_payments_list",
                 "description": "Global payment ViewSet: /api/v1/payments/\n\nProvides admin-level access to all payments with filtering and stats.",
                 "parameters": [
                     {
@@ -4874,7 +5696,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4899,10 +5721,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_payments_create",
+                "operationId": "cfg_payments_payments_create",
                 "description": "Global payment ViewSet: /api/v1/payments/\n\nProvides admin-level access to all payments with filtering and stats.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -4947,9 +5769,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/{id}/": {
+        "/cfg/payments/payments/{id}/": {
             "get": {
-                "operationId": "payments_payments_retrieve",
+                "operationId": "cfg_payments_payments_retrieve",
                 "description": "Global payment ViewSet: /api/v1/payments/\n\nProvides admin-level access to all payments with filtering and stats.",
                 "parameters": [
                     {
@@ -4964,7 +5786,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -4989,7 +5811,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_payments_update",
+                "operationId": "cfg_payments_payments_update",
                 "description": "Global payment ViewSet: /api/v1/payments/\n\nProvides admin-level access to all payments with filtering and stats.",
                 "parameters": [
                     {
@@ -5004,7 +5826,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5049,7 +5871,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_payments_partial_update",
+                "operationId": "cfg_payments_payments_partial_update",
                 "description": "Global payment ViewSet: /api/v1/payments/\n\nProvides admin-level access to all payments with filtering and stats.",
                 "parameters": [
                     {
@@ -5064,7 +5886,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5108,7 +5930,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_payments_destroy",
+                "operationId": "cfg_payments_payments_destroy",
                 "description": "Global payment ViewSet: /api/v1/payments/\n\nProvides admin-level access to all payments with filtering and stats.",
                 "parameters": [
                     {
@@ -5123,7 +5945,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5141,9 +5963,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/{id}/cancel/": {
+        "/cfg/payments/payments/{id}/cancel/": {
             "post": {
-                "operationId": "payments_payments_cancel_create",
+                "operationId": "cfg_payments_payments_cancel_create",
                 "description": "Cancel payment.\n\nPOST /api/v1/payments/{id}/cancel/",
                 "parameters": [
                     {
@@ -5158,7 +5980,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5203,9 +6025,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/{id}/check_status/": {
+        "/cfg/payments/payments/{id}/check_status/": {
             "post": {
-                "operationId": "payments_payments_check_status_create",
+                "operationId": "cfg_payments_payments_check_status_create",
                 "description": "Check payment status with provider.\n\nPOST /api/v1/payments/{id}/check_status/",
                 "parameters": [
                     {
@@ -5220,7 +6042,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5265,12 +6087,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/analytics/": {
+        "/cfg/payments/payments/analytics/": {
             "get": {
-                "operationId": "payments_payments_analytics_retrieve",
+                "operationId": "cfg_payments_payments_analytics_retrieve",
                 "description": "Get payment analytics.\n\nGET /api/v1/payments/analytics/?days=30",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5295,12 +6117,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/by_provider/": {
+        "/cfg/payments/payments/by_provider/": {
             "get": {
-                "operationId": "payments_payments_by_provider_retrieve",
+                "operationId": "cfg_payments_payments_by_provider_retrieve",
                 "description": "Get payments grouped by provider.\n\nGET /api/v1/payments/by_provider/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5325,12 +6147,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/create/": {
+        "/cfg/payments/payments/create/": {
             "post": {
-                "operationId": "payments_payments_create_create",
+                "operationId": "cfg_payments_payments_create_create",
                 "description": "Standalone payment creation endpoint: /api/v1/payments/create/\n\nSimplified endpoint for payment creation without full ViewSet overhead.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5375,12 +6197,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/health/": {
+        "/cfg/payments/payments/health/": {
             "get": {
-                "operationId": "payments_payments_health_retrieve",
+                "operationId": "cfg_payments_payments_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5405,12 +6227,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/stats/": {
+        "/cfg/payments/payments/stats/": {
             "get": {
-                "operationId": "payments_payments_stats_retrieve",
+                "operationId": "cfg_payments_payments_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5435,9 +6257,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/payments/status/{id}/": {
+        "/cfg/payments/payments/status/{id}/": {
             "get": {
-                "operationId": "payments_payments_status_retrieve",
+                "operationId": "cfg_payments_payments_status_retrieve",
                 "description": "Standalone payment status endpoint: /api/v1/payments/{id}/status/\n\nQuick status check without full ViewSet overhead.",
                 "parameters": [
                     {
@@ -5451,7 +6273,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5476,9 +6298,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/provider-currencies/": {
+        "/cfg/payments/provider-currencies/": {
             "get": {
-                "operationId": "payments_provider_currencies_list",
+                "operationId": "cfg_payments_provider_currencies_list",
                 "description": "Provider Currency ViewSet: /api/provider-currencies/\n\nRead-only access to provider-specific currency information.",
                 "parameters": [
                     {
@@ -5547,7 +6369,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5572,9 +6394,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/provider-currencies/{id}/": {
+        "/cfg/payments/provider-currencies/{id}/": {
             "get": {
-                "operationId": "payments_provider_currencies_retrieve",
+                "operationId": "cfg_payments_provider_currencies_retrieve",
                 "description": "Provider Currency ViewSet: /api/provider-currencies/\n\nRead-only access to provider-specific currency information.",
                 "parameters": [
                     {
@@ -5588,7 +6410,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5613,12 +6435,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/provider-currencies/by_provider/": {
+        "/cfg/payments/provider-currencies/by_provider/": {
             "get": {
-                "operationId": "payments_provider_currencies_by_provider_retrieve",
+                "operationId": "cfg_payments_provider_currencies_by_provider_retrieve",
                 "description": "Get provider currencies grouped by provider.\n\nGET /api/provider-currencies/by_provider/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5643,12 +6465,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/provider-currencies/health/": {
+        "/cfg/payments/provider-currencies/health/": {
             "get": {
-                "operationId": "payments_provider_currencies_health_retrieve",
+                "operationId": "cfg_payments_provider_currencies_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5673,12 +6495,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/provider-currencies/limits/": {
+        "/cfg/payments/provider-currencies/limits/": {
             "get": {
-                "operationId": "payments_provider_currencies_limits_retrieve",
+                "operationId": "cfg_payments_provider_currencies_limits_retrieve",
                 "description": "Get currency limits by provider.\n\nGET /api/provider-currencies/limits/?provider=nowpayments",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5703,12 +6525,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/provider-currencies/stats/": {
+        "/cfg/payments/provider-currencies/stats/": {
             "get": {
-                "operationId": "payments_provider_currencies_stats_retrieve",
+                "operationId": "cfg_payments_provider_currencies_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5733,9 +6555,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/": {
+        "/cfg/payments/subscriptions/": {
             "get": {
-                "operationId": "payments_subscriptions_list",
+                "operationId": "cfg_payments_subscriptions_list",
                 "description": "Global subscription ViewSet: /api/subscriptions/\n\nProvides admin-level access to all subscriptions with filtering and stats.",
                 "parameters": [
                     {
@@ -5814,7 +6636,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5839,10 +6661,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_subscriptions_create",
+                "operationId": "cfg_payments_subscriptions_create",
                 "description": "Global subscription ViewSet: /api/subscriptions/\n\nProvides admin-level access to all subscriptions with filtering and stats.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5887,9 +6709,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/{id}/": {
+        "/cfg/payments/subscriptions/{id}/": {
             "get": {
-                "operationId": "payments_subscriptions_retrieve",
+                "operationId": "cfg_payments_subscriptions_retrieve",
                 "description": "Global subscription ViewSet: /api/subscriptions/\n\nProvides admin-level access to all subscriptions with filtering and stats.",
                 "parameters": [
                     {
@@ -5904,7 +6726,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -5929,7 +6751,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_subscriptions_update",
+                "operationId": "cfg_payments_subscriptions_update",
                 "description": "Global subscription ViewSet: /api/subscriptions/\n\nProvides admin-level access to all subscriptions with filtering and stats.",
                 "parameters": [
                     {
@@ -5944,7 +6766,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -5989,7 +6811,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_subscriptions_partial_update",
+                "operationId": "cfg_payments_subscriptions_partial_update",
                 "description": "Global subscription ViewSet: /api/subscriptions/\n\nProvides admin-level access to all subscriptions with filtering and stats.",
                 "parameters": [
                     {
@@ -6004,7 +6826,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -6048,7 +6870,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_subscriptions_destroy",
+                "operationId": "cfg_payments_subscriptions_destroy",
                 "description": "Global subscription ViewSet: /api/subscriptions/\n\nProvides admin-level access to all subscriptions with filtering and stats.",
                 "parameters": [
                     {
@@ -6063,7 +6885,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6081,9 +6903,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/{id}/increment_usage/": {
+        "/cfg/payments/subscriptions/{id}/increment_usage/": {
             "post": {
-                "operationId": "payments_subscriptions_increment_usage_create",
+                "operationId": "cfg_payments_subscriptions_increment_usage_create",
                 "description": "Increment subscription usage.\n\nPOST /api/subscriptions/{id}/increment_usage/",
                 "parameters": [
                     {
@@ -6098,7 +6920,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -6143,9 +6965,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/{id}/update_status/": {
+        "/cfg/payments/subscriptions/{id}/update_status/": {
             "post": {
-                "operationId": "payments_subscriptions_update_status_create",
+                "operationId": "cfg_payments_subscriptions_update_status_create",
                 "description": "Update subscription status.\n\nPOST /api/subscriptions/{id}/update_status/",
                 "parameters": [
                     {
@@ -6160,7 +6982,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -6205,12 +7027,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/analytics/": {
+        "/cfg/payments/subscriptions/analytics/": {
             "get": {
-                "operationId": "payments_subscriptions_analytics_retrieve",
+                "operationId": "cfg_payments_subscriptions_analytics_retrieve",
                 "description": "Get subscription analytics.\n\nGET /api/subscriptions/analytics/?days=30",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6235,12 +7057,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/by_status/": {
+        "/cfg/payments/subscriptions/by_status/": {
             "get": {
-                "operationId": "payments_subscriptions_by_status_retrieve",
+                "operationId": "cfg_payments_subscriptions_by_status_retrieve",
                 "description": "Get subscriptions grouped by status.\n\nGET /api/subscriptions/by_status/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6265,12 +7087,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/by_tier/": {
+        "/cfg/payments/subscriptions/by_tier/": {
             "get": {
-                "operationId": "payments_subscriptions_by_tier_retrieve",
+                "operationId": "cfg_payments_subscriptions_by_tier_retrieve",
                 "description": "Get subscriptions grouped by tier.\n\nGET /api/subscriptions/by_tier/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6295,12 +7117,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/health/": {
+        "/cfg/payments/subscriptions/health/": {
             "get": {
-                "operationId": "payments_subscriptions_health_retrieve",
+                "operationId": "cfg_payments_subscriptions_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6325,12 +7147,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/subscriptions/stats/": {
+        "/cfg/payments/subscriptions/stats/": {
             "get": {
-                "operationId": "payments_subscriptions_stats_retrieve",
+                "operationId": "cfg_payments_subscriptions_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6355,9 +7177,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/": {
+        "/cfg/payments/tariffs/": {
             "get": {
-                "operationId": "payments_tariffs_list",
+                "operationId": "cfg_payments_tariffs_list",
                 "description": "Tariff ViewSet: /api/tariffs/\n\nRead-only access to tariff information for subscription selection.",
                 "parameters": [
                     {
@@ -6405,7 +7227,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6430,9 +7252,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/{id}/": {
+        "/cfg/payments/tariffs/{id}/": {
             "get": {
-                "operationId": "payments_tariffs_retrieve",
+                "operationId": "cfg_payments_tariffs_retrieve",
                 "description": "Tariff ViewSet: /api/tariffs/\n\nRead-only access to tariff information for subscription selection.",
                 "parameters": [
                     {
@@ -6446,7 +7268,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6471,9 +7293,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/{id}/endpoint_groups/": {
+        "/cfg/payments/tariffs/{id}/endpoint_groups/": {
             "get": {
-                "operationId": "payments_tariffs_endpoint_groups_retrieve",
+                "operationId": "cfg_payments_tariffs_endpoint_groups_retrieve",
                 "description": "Get endpoint groups for specific tariff.\n\nGET /api/tariffs/{id}/endpoint_groups/",
                 "parameters": [
                     {
@@ -6487,7 +7309,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6512,12 +7334,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/free/": {
+        "/cfg/payments/tariffs/free/": {
             "get": {
-                "operationId": "payments_tariffs_free_retrieve",
+                "operationId": "cfg_payments_tariffs_free_retrieve",
                 "description": "Get free tariffs.\n\nGET /api/tariffs/free/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6542,12 +7364,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/health/": {
+        "/cfg/payments/tariffs/health/": {
             "get": {
-                "operationId": "payments_tariffs_health_retrieve",
+                "operationId": "cfg_payments_tariffs_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6572,12 +7394,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/paid/": {
+        "/cfg/payments/tariffs/paid/": {
             "get": {
-                "operationId": "payments_tariffs_paid_retrieve",
+                "operationId": "cfg_payments_tariffs_paid_retrieve",
                 "description": "Get paid tariffs.\n\nGET /api/tariffs/paid/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6602,12 +7424,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/tariffs/stats/": {
+        "/cfg/payments/tariffs/stats/": {
             "get": {
-                "operationId": "payments_tariffs_stats_retrieve",
+                "operationId": "cfg_payments_tariffs_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6632,9 +7454,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/transactions/": {
+        "/cfg/payments/transactions/": {
             "get": {
-                "operationId": "payments_transactions_list",
+                "operationId": "cfg_payments_transactions_list",
                 "description": "Transaction ViewSet: /api/transactions/\n\nRead-only access to transaction history with filtering.",
                 "parameters": [
                     {
@@ -6707,7 +7529,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6732,9 +7554,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/transactions/{id}/": {
+        "/cfg/payments/transactions/{id}/": {
             "get": {
-                "operationId": "payments_transactions_retrieve",
+                "operationId": "cfg_payments_transactions_retrieve",
                 "description": "Transaction ViewSet: /api/transactions/\n\nRead-only access to transaction history with filtering.",
                 "parameters": [
                     {
@@ -6749,7 +7571,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6774,12 +7596,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/transactions/by_type/": {
+        "/cfg/payments/transactions/by_type/": {
             "get": {
-                "operationId": "payments_transactions_by_type_retrieve",
+                "operationId": "cfg_payments_transactions_by_type_retrieve",
                 "description": "Get transactions grouped by type.\n\nGET /api/transactions/by_type/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6804,12 +7626,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/transactions/health/": {
+        "/cfg/payments/transactions/health/": {
             "get": {
-                "operationId": "payments_transactions_health_retrieve",
+                "operationId": "cfg_payments_transactions_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6834,12 +7656,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/transactions/recent/": {
+        "/cfg/payments/transactions/recent/": {
             "get": {
-                "operationId": "payments_transactions_recent_retrieve",
+                "operationId": "cfg_payments_transactions_recent_retrieve",
                 "description": "Get recent transactions.\n\nGET /api/transactions/recent/?limit=10",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6864,12 +7686,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/transactions/stats/": {
+        "/cfg/payments/transactions/stats/": {
             "get": {
-                "operationId": "payments_transactions_stats_retrieve",
+                "operationId": "cfg_payments_transactions_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -6894,9 +7716,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/": {
+        "/cfg/payments/users/": {
             "get": {
-                "operationId": "payments_users_list",
+                "operationId": "cfg_payments_users_list",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -6975,7 +7797,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7000,10 +7822,10 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_users_create",
+                "operationId": "cfg_payments_users_create",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7048,9 +7870,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{id}/": {
+        "/cfg/payments/users/{id}/": {
             "get": {
-                "operationId": "payments_users_retrieve",
+                "operationId": "cfg_payments_users_retrieve",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -7065,7 +7887,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7090,7 +7912,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_users_update",
+                "operationId": "cfg_payments_users_update",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -7105,7 +7927,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7150,7 +7972,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_users_partial_update",
+                "operationId": "cfg_payments_users_partial_update",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -7165,7 +7987,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7209,7 +8031,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_users_destroy",
+                "operationId": "cfg_payments_users_destroy",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -7224,7 +8046,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7242,9 +8064,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{id}/cancel/": {
+        "/cfg/payments/users/{id}/cancel/": {
             "post": {
-                "operationId": "payments_users_cancel_create",
+                "operationId": "cfg_payments_users_cancel_create",
                 "description": "Cancel payment.\n\nPOST /api/v1/users/{user_id}/payments/{id}/cancel/",
                 "parameters": [
                     {
@@ -7259,7 +8081,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7304,9 +8126,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{id}/check_status/": {
+        "/cfg/payments/users/{id}/check_status/": {
             "post": {
-                "operationId": "payments_users_check_status_create",
+                "operationId": "cfg_payments_users_check_status_create",
                 "description": "Check payment status with provider.\n\nPOST /api/v1/users/{user_id}/payments/{id}/check_status/",
                 "parameters": [
                     {
@@ -7321,7 +8143,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7366,9 +8188,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/": {
+        "/cfg/payments/users/{user_pk}/api-keys/": {
             "get": {
-                "operationId": "payments_users_api_keys_list",
+                "operationId": "cfg_payments_users_api_keys_list",
                 "description": "User-specific API Key ViewSet: /api/users/{user_id}/api-keys/\n\nProvides user-scoped access to API keys with full CRUD operations.",
                 "parameters": [
                     {
@@ -7425,7 +8247,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7450,7 +8272,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_users_api_keys_create",
+                "operationId": "cfg_payments_users_api_keys_create",
                 "description": "User-specific API Key ViewSet: /api/users/{user_id}/api-keys/\n\nProvides user-scoped access to API keys with full CRUD operations.",
                 "parameters": [
                     {
@@ -7464,7 +8286,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7509,9 +8331,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/{id}/": {
+        "/cfg/payments/users/{user_pk}/api-keys/{id}/": {
             "get": {
-                "operationId": "payments_users_api_keys_retrieve",
+                "operationId": "cfg_payments_users_api_keys_retrieve",
                 "description": "User-specific API Key ViewSet: /api/users/{user_id}/api-keys/\n\nProvides user-scoped access to API keys with full CRUD operations.",
                 "parameters": [
                     {
@@ -7535,7 +8357,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7560,7 +8382,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_users_api_keys_update",
+                "operationId": "cfg_payments_users_api_keys_update",
                 "description": "User-specific API Key ViewSet: /api/users/{user_id}/api-keys/\n\nProvides user-scoped access to API keys with full CRUD operations.",
                 "parameters": [
                     {
@@ -7584,7 +8406,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7629,7 +8451,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_users_api_keys_partial_update",
+                "operationId": "cfg_payments_users_api_keys_partial_update",
                 "description": "User-specific API Key ViewSet: /api/users/{user_id}/api-keys/\n\nProvides user-scoped access to API keys with full CRUD operations.",
                 "parameters": [
                     {
@@ -7653,7 +8475,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -7697,7 +8519,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_users_api_keys_destroy",
+                "operationId": "cfg_payments_users_api_keys_destroy",
                 "description": "User-specific API Key ViewSet: /api/users/{user_id}/api-keys/\n\nProvides user-scoped access to API keys with full CRUD operations.",
                 "parameters": [
                     {
@@ -7721,7 +8543,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7739,9 +8561,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/{id}/perform_action/": {
+        "/cfg/payments/users/{user_pk}/api-keys/{id}/perform_action/": {
             "post": {
-                "operationId": "payments_users_api_keys_perform_action_create",
+                "operationId": "cfg_payments_users_api_keys_perform_action_create",
                 "description": "Perform action on API key.\n\nPOST /api/users/{user_id}/api-keys/{id}/perform_action/",
                 "parameters": [
                     {
@@ -7765,7 +8587,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7790,9 +8612,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/active/": {
+        "/cfg/payments/users/{user_pk}/api-keys/active/": {
             "get": {
-                "operationId": "payments_users_api_keys_active_retrieve",
+                "operationId": "cfg_payments_users_api_keys_active_retrieve",
                 "description": "Get user's active API keys.\n\nGET /api/users/{user_id}/api-keys/active/",
                 "parameters": [
                     {
@@ -7806,7 +8628,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7831,9 +8653,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/health/": {
+        "/cfg/payments/users/{user_pk}/api-keys/health/": {
             "get": {
-                "operationId": "payments_users_api_keys_health_retrieve",
+                "operationId": "cfg_payments_users_api_keys_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "parameters": [
                     {
@@ -7847,7 +8669,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7872,9 +8694,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/stats/": {
+        "/cfg/payments/users/{user_pk}/api-keys/stats/": {
             "get": {
-                "operationId": "payments_users_api_keys_stats_retrieve",
+                "operationId": "cfg_payments_users_api_keys_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "parameters": [
                     {
@@ -7888,7 +8710,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7913,9 +8735,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/api-keys/summary/": {
+        "/cfg/payments/users/{user_pk}/api-keys/summary/": {
             "get": {
-                "operationId": "payments_users_api_keys_summary_retrieve",
+                "operationId": "cfg_payments_users_api_keys_summary_retrieve",
                 "description": "Get user API key summary.\n\nGET /api/users/{user_id}/api-keys/summary/",
                 "parameters": [
                     {
@@ -7929,7 +8751,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -7954,9 +8776,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/": {
+        "/cfg/payments/users/{user_pk}/payments/": {
             "get": {
-                "operationId": "payments_users_payments_list",
+                "operationId": "cfg_payments_users_payments_list",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -8044,7 +8866,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8069,7 +8891,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_users_payments_create",
+                "operationId": "cfg_payments_users_payments_create",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -8083,7 +8905,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8128,9 +8950,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/{id}/": {
+        "/cfg/payments/users/{user_pk}/payments/{id}/": {
             "get": {
-                "operationId": "payments_users_payments_retrieve",
+                "operationId": "cfg_payments_users_payments_retrieve",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -8154,7 +8976,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8179,7 +9001,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_users_payments_update",
+                "operationId": "cfg_payments_users_payments_update",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -8203,7 +9025,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8248,7 +9070,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_users_payments_partial_update",
+                "operationId": "cfg_payments_users_payments_partial_update",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -8272,7 +9094,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8316,7 +9138,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_users_payments_destroy",
+                "operationId": "cfg_payments_users_payments_destroy",
                 "description": "User-specific payment ViewSet: /api/v1/users/{user_id}/payments/\n\nProvides user-scoped access to payments with full CRUD operations.",
                 "parameters": [
                     {
@@ -8340,7 +9162,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8358,9 +9180,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/{id}/cancel/": {
+        "/cfg/payments/users/{user_pk}/payments/{id}/cancel/": {
             "post": {
-                "operationId": "payments_users_payments_cancel_create",
+                "operationId": "cfg_payments_users_payments_cancel_create",
                 "description": "Cancel payment.\n\nPOST /api/v1/users/{user_id}/payments/{id}/cancel/",
                 "parameters": [
                     {
@@ -8384,7 +9206,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8429,9 +9251,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/{id}/check_status/": {
+        "/cfg/payments/users/{user_pk}/payments/{id}/check_status/": {
             "post": {
-                "operationId": "payments_users_payments_check_status_create",
+                "operationId": "cfg_payments_users_payments_check_status_create",
                 "description": "Check payment status with provider.\n\nPOST /api/v1/users/{user_id}/payments/{id}/check_status/",
                 "parameters": [
                     {
@@ -8455,7 +9277,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8500,9 +9322,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/health/": {
+        "/cfg/payments/users/{user_pk}/payments/health/": {
             "get": {
-                "operationId": "payments_users_payments_health_retrieve",
+                "operationId": "cfg_payments_users_payments_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "parameters": [
                     {
@@ -8516,7 +9338,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8541,9 +9363,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/stats/": {
+        "/cfg/payments/users/{user_pk}/payments/stats/": {
             "get": {
-                "operationId": "payments_users_payments_stats_retrieve",
+                "operationId": "cfg_payments_users_payments_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "parameters": [
                     {
@@ -8557,7 +9379,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8582,9 +9404,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/payments/summary/": {
+        "/cfg/payments/users/{user_pk}/payments/summary/": {
             "get": {
-                "operationId": "payments_users_payments_summary_retrieve",
+                "operationId": "cfg_payments_users_payments_summary_retrieve",
                 "description": "Get user payment summary.\n\nGET /api/v1/users/{user_id}/payments/summary/",
                 "parameters": [
                     {
@@ -8598,7 +9420,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8623,9 +9445,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/": {
             "get": {
-                "operationId": "payments_users_subscriptions_list",
+                "operationId": "cfg_payments_users_subscriptions_list",
                 "description": "User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/\n\nProvides user-scoped access to subscriptions with full CRUD operations.",
                 "parameters": [
                     {
@@ -8706,7 +9528,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8731,7 +9553,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_users_subscriptions_create",
+                "operationId": "cfg_payments_users_subscriptions_create",
                 "description": "User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/\n\nProvides user-scoped access to subscriptions with full CRUD operations.",
                 "parameters": [
                     {
@@ -8745,7 +9567,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8790,9 +9612,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/{id}/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/{id}/": {
             "get": {
-                "operationId": "payments_users_subscriptions_retrieve",
+                "operationId": "cfg_payments_users_subscriptions_retrieve",
                 "description": "User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/\n\nProvides user-scoped access to subscriptions with full CRUD operations.",
                 "parameters": [
                     {
@@ -8816,7 +9638,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -8841,7 +9663,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "put": {
-                "operationId": "payments_users_subscriptions_update",
+                "operationId": "cfg_payments_users_subscriptions_update",
                 "description": "User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/\n\nProvides user-scoped access to subscriptions with full CRUD operations.",
                 "parameters": [
                     {
@@ -8865,7 +9687,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8910,7 +9732,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "patch": {
-                "operationId": "payments_users_subscriptions_partial_update",
+                "operationId": "cfg_payments_users_subscriptions_partial_update",
                 "description": "User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/\n\nProvides user-scoped access to subscriptions with full CRUD operations.",
                 "parameters": [
                     {
@@ -8934,7 +9756,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -8978,7 +9800,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "delete": {
-                "operationId": "payments_users_subscriptions_destroy",
+                "operationId": "cfg_payments_users_subscriptions_destroy",
                 "description": "User-specific subscription ViewSet: /api/users/{user_id}/subscriptions/\n\nProvides user-scoped access to subscriptions with full CRUD operations.",
                 "parameters": [
                     {
@@ -9002,7 +9824,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9020,9 +9842,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/{id}/increment_usage/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/{id}/increment_usage/": {
             "post": {
-                "operationId": "payments_users_subscriptions_increment_usage_create",
+                "operationId": "cfg_payments_users_subscriptions_increment_usage_create",
                 "description": "Increment subscription usage.\n\nPOST /api/users/{user_id}/subscriptions/{id}/increment_usage/",
                 "parameters": [
                     {
@@ -9046,7 +9868,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -9091,9 +9913,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/{id}/update_status/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/{id}/update_status/": {
             "post": {
-                "operationId": "payments_users_subscriptions_update_status_create",
+                "operationId": "cfg_payments_users_subscriptions_update_status_create",
                 "description": "Update subscription status.\n\nPOST /api/users/{user_id}/subscriptions/{id}/update_status/",
                 "parameters": [
                     {
@@ -9117,7 +9939,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "requestBody": {
                     "content": {
@@ -9162,9 +9984,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/active/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/active/": {
             "get": {
-                "operationId": "payments_users_subscriptions_active_retrieve",
+                "operationId": "cfg_payments_users_subscriptions_active_retrieve",
                 "description": "Get user's active subscription.\n\nGET /api/users/{user_id}/subscriptions/active/",
                 "parameters": [
                     {
@@ -9178,7 +10000,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9203,9 +10025,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/health/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/health/": {
             "get": {
-                "operationId": "payments_users_subscriptions_health_retrieve",
+                "operationId": "cfg_payments_users_subscriptions_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "parameters": [
                     {
@@ -9219,7 +10041,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9244,9 +10066,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/stats/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/stats/": {
             "get": {
-                "operationId": "payments_users_subscriptions_stats_retrieve",
+                "operationId": "cfg_payments_users_subscriptions_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "parameters": [
                     {
@@ -9260,7 +10082,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9285,9 +10107,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/{user_pk}/subscriptions/summary/": {
+        "/cfg/payments/users/{user_pk}/subscriptions/summary/": {
             "get": {
-                "operationId": "payments_users_subscriptions_summary_retrieve",
+                "operationId": "cfg_payments_users_subscriptions_summary_retrieve",
                 "description": "Get user subscription summary.\n\nGET /api/users/{user_id}/subscriptions/summary/",
                 "parameters": [
                     {
@@ -9301,7 +10123,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 ],
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9326,12 +10148,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/health/": {
+        "/cfg/payments/users/health/": {
             "get": {
-                "operationId": "payments_users_health_retrieve",
+                "operationId": "cfg_payments_users_health_retrieve",
                 "description": "Health check for the ViewSet and related services.\n\nReturns service status and basic metrics.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9356,12 +10178,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/stats/": {
+        "/cfg/payments/users/stats/": {
             "get": {
-                "operationId": "payments_users_stats_retrieve",
+                "operationId": "cfg_payments_users_stats_retrieve",
                 "description": "Get statistics for the current queryset.\n\nReturns counts, aggregates, and breakdowns.",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9386,12 +10208,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/users/summary/": {
+        "/cfg/payments/users/summary/": {
             "get": {
-                "operationId": "payments_users_summary_retrieve",
+                "operationId": "cfg_payments_users_summary_retrieve",
                 "description": "Get user payment summary.\n\nGET /api/v1/users/{user_id}/payments/summary/",
                 "tags": [
-                    "payments"
+                    "cfg__payments"
                 ],
                 "security": [
                     {
@@ -9416,9 +10238,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/webhooks/{provider}/": {
+        "/cfg/payments/webhooks/{provider}/": {
             "get": {
-                "operationId": "payments_webhooks_retrieve",
+                "operationId": "cfg_payments_webhooks_retrieve",
                 "description": "Get webhook endpoint information for debugging and configuration",
                 "summary": "Webhook Endpoint Info",
                 "parameters": [
@@ -9459,7 +10281,7 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             },
             "post": {
-                "operationId": "payments_webhooks_create",
+                "operationId": "cfg_payments_webhooks_create",
                 "description": "Process incoming webhook from payment provider",
                 "summary": "Process Webhook",
                 "parameters": [
@@ -9520,9 +10342,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/webhooks/health/": {
+        "/cfg/payments/webhooks/health/": {
             "get": {
-                "operationId": "payments_webhooks_health_retrieve",
+                "operationId": "cfg_payments_webhooks_health_retrieve",
                 "description": "Check webhook service health status and recent activity metrics",
                 "summary": "Webhook Health Check",
                 "tags": [
@@ -9552,9 +10374,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/webhooks/providers/": {
+        "/cfg/payments/webhooks/providers/": {
             "get": {
-                "operationId": "payments_webhooks_providers_retrieve",
+                "operationId": "cfg_payments_webhooks_providers_retrieve",
                 "description": "Get list of supported webhook providers with configuration details",
                 "summary": "Supported Webhook Providers",
                 "tags": [
@@ -9584,9 +10406,9 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/payments/webhooks/stats/": {
+        "/cfg/payments/webhooks/stats/": {
             "get": {
-                "operationId": "payments_webhooks_stats_retrieve",
+                "operationId": "cfg_payments_webhooks_stats_retrieve",
                 "description": "Get webhook processing statistics for a given time period",
                 "summary": "Webhook Statistics",
                 "parameters": [
@@ -9627,12 +10449,626 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/clear/": {
+        "/cfg/support/tickets/": {
+            "get": {
+                "operationId": "cfg_support_tickets_list",
+                "description": "ViewSet for managing support tickets.",
+                "tags": [
+                    "cfg__support"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Ticket"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
             "post": {
-                "operationId": "tasks_api_clear_create",
+                "operationId": "cfg_support_tickets_create",
+                "description": "ViewSet for managing support tickets.",
+                "tags": [
+                    "cfg__support"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        }
+                    },
+                    "required": True
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ticket"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/support/tickets/{ticket_uuid}/messages/": {
+            "get": {
+                "operationId": "cfg_support_tickets_messages_list",
+                "description": "ViewSet for managing support messages.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "ticket_uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the ticket",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Message"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "post": {
+                "operationId": "cfg_support_tickets_messages_create",
+                "description": "ViewSet for managing support messages.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "ticket_uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the ticket",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageCreateRequest"
+                            }
+                        }
+                    },
+                    "required": True
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageCreate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/support/tickets/{ticket_uuid}/messages/{uuid}/": {
+            "get": {
+                "operationId": "cfg_support_tickets_messages_retrieve",
+                "description": "ViewSet for managing support messages.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "ticket_uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the ticket",
+                        "required": True
+                    },
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the message",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "put": {
+                "operationId": "cfg_support_tickets_messages_update",
+                "description": "ViewSet for managing support messages.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "ticket_uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the ticket",
+                        "required": True
+                    },
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the message",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageRequest"
+                            }
+                        }
+                    },
+                    "required": True
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "patch": {
+                "operationId": "cfg_support_tickets_messages_partial_update",
+                "description": "ViewSet for managing support messages.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "ticket_uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the ticket",
+                        "required": True
+                    },
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the message",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedMessageRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedMessageRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedMessageRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "delete": {
+                "operationId": "cfg_support_tickets_messages_destroy",
+                "description": "ViewSet for managing support messages.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "ticket_uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the ticket",
+                        "required": True
+                    },
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "UUID of the message",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/support/tickets/{uuid}/": {
+            "get": {
+                "operationId": "cfg_support_tickets_retrieve",
+                "description": "ViewSet for managing support tickets.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "A UUID string identifying this ticket.",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ticket"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "put": {
+                "operationId": "cfg_support_tickets_update",
+                "description": "ViewSet for managing support tickets.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "A UUID string identifying this ticket.",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        }
+                    },
+                    "required": True
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ticket"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "patch": {
+                "operationId": "cfg_support_tickets_partial_update",
+                "description": "ViewSet for managing support tickets.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "A UUID string identifying this ticket.",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedTicketRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedTicketRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedTicketRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ticket"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-async-capable": False
+            },
+            "delete": {
+                "operationId": "cfg_support_tickets_destroy",
+                "description": "ViewSet for managing support tickets.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "uuid",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "A UUID string identifying this ticket.",
+                        "required": True
+                    }
+                ],
+                "tags": [
+                    "cfg__support"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                },
+                "x-async-capable": False
+            }
+        },
+        "/cfg/tasks/api/clear/": {
+            "post": {
+                "operationId": "cfg_tasks_api_clear_create",
                 "description": "Clear all test data from Redis.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "requestBody": {
                     "content": {
@@ -9677,12 +11113,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/clear-queues/": {
+        "/cfg/tasks/api/clear-queues/": {
             "post": {
-                "operationId": "tasks_api_clear_queues_create",
+                "operationId": "cfg_tasks_api_clear_queues_create",
                 "description": "Clear all tasks from all Dramatiq queues.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "requestBody": {
                     "content": {
@@ -9727,12 +11163,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/purge-failed/": {
+        "/cfg/tasks/api/purge-failed/": {
             "post": {
-                "operationId": "tasks_api_purge_failed_create",
+                "operationId": "cfg_tasks_api_purge_failed_create",
                 "description": "Purge all failed tasks from queues.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "requestBody": {
                     "content": {
@@ -9777,12 +11213,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/queues/manage/": {
+        "/cfg/tasks/api/queues/manage/": {
             "post": {
-                "operationId": "tasks_api_queues_manage_create",
+                "operationId": "cfg_tasks_api_queues_manage_create",
                 "description": "Manage queue operations (clear, purge, etc.).",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "requestBody": {
                     "content": {
@@ -9827,12 +11263,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/queues/status/": {
+        "/cfg/tasks/api/queues/status/": {
             "get": {
-                "operationId": "tasks_api_queues_status_retrieve",
+                "operationId": "cfg_tasks_api_queues_status_retrieve",
                 "description": "Get current status of all queues.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "security": [
                     {
@@ -9857,12 +11293,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/simulate/": {
+        "/cfg/tasks/api/simulate/": {
             "post": {
-                "operationId": "tasks_api_simulate_create",
+                "operationId": "cfg_tasks_api_simulate_create",
                 "description": "Simulate test data for dashboard testing.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "requestBody": {
                     "content": {
@@ -9907,12 +11343,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/tasks/list/": {
+        "/cfg/tasks/api/tasks/list/": {
             "get": {
-                "operationId": "tasks_api_tasks_list_retrieve",
+                "operationId": "cfg_tasks_api_tasks_list_retrieve",
                 "description": "Get paginated task list with filtering.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "security": [
                     {
@@ -9937,12 +11373,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/tasks/stats/": {
+        "/cfg/tasks/api/tasks/stats/": {
             "get": {
-                "operationId": "tasks_api_tasks_stats_retrieve",
+                "operationId": "cfg_tasks_api_tasks_stats_retrieve",
                 "description": "Get task execution statistics.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "security": [
                     {
@@ -9967,12 +11403,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/workers/list/": {
+        "/cfg/tasks/api/workers/list/": {
             "get": {
-                "operationId": "tasks_api_workers_list_retrieve",
+                "operationId": "cfg_tasks_api_workers_list_retrieve",
                 "description": "Get detailed list of workers.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "security": [
                     {
@@ -9997,12 +11433,12 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "x-async-capable": False
             }
         },
-        "/tasks/api/workers/manage/": {
+        "/cfg/tasks/api/workers/manage/": {
             "post": {
-                "operationId": "tasks_api_workers_manage_create",
+                "operationId": "cfg_tasks_api_workers_manage_create",
                 "description": "Manage worker operations.",
                 "tags": [
-                    "tasks"
+                    "cfg__tasks"
                 ],
                 "requestBody": {
                     "content": {
@@ -10451,6 +11887,560 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     "success"
                 ]
             },
+            "AdminPaymentCreate": {
+                "type": "object",
+                "description": "Serializer for creating payments in admin interface.\nUses UniversalPayment only for data creation.",
+                "properties": {
+                    "user": {
+                        "type": "integer"
+                    },
+                    "amount_usd": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 100000.0,
+                        "minimum": 1.0
+                    },
+                    "provider": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "callback_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "cancel_url": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "required": [
+                    "amount_usd",
+                    "provider",
+                    "user"
+                ]
+            },
+            "AdminPaymentCreateRequest": {
+                "type": "object",
+                "description": "Serializer for creating payments in admin interface.\nUses UniversalPayment only for data creation.",
+                "properties": {
+                    "user": {
+                        "type": "integer"
+                    },
+                    "amount_usd": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 100000.0,
+                        "minimum": 1.0
+                    },
+                    "currency_code": {
+                        "type": "string",
+                        "writeOnly": True,
+                        "minLength": 1,
+                        "description": "Provider currency code (e.g., BTC, ZROERC20)",
+                        "maxLength": 20
+                    },
+                    "provider": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 50
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "callback_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "cancel_url": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "required": [
+                    "amount_usd",
+                    "currency_code",
+                    "provider",
+                    "user"
+                ]
+            },
+            "AdminPaymentDetail": {
+                "type": "object",
+                "description": "Detailed serializer for individual payment in admin interface.\nUses UniversalPayment only for data extraction.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": True
+                    },
+                    "user": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AdminUser"
+                            }
+                        ],
+                        "readOnly": True
+                    },
+                    "internal_payment_id": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "amount_usd": {
+                        "type": "number",
+                        "format": "double",
+                        "readOnly": True
+                    },
+                    "actual_amount_usd": {
+                        "type": "number",
+                        "format": "double",
+                        "readOnly": True
+                    },
+                    "fee_amount_usd": {
+                        "type": "number",
+                        "format": "double",
+                        "readOnly": True
+                    },
+                    "currency_code": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "currency_name": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "provider": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "provider_display": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "status_display": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "pay_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+                        "readOnly": True
+                    },
+                    "pay_address": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "payment_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": True
+                    },
+                    "transaction_hash": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "confirmations_count": {
+                        "type": "integer",
+                        "readOnly": True
+                    },
+                    "security_nonce": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "status_changed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "callback_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": True
+                    },
+                    "cancel_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": True
+                    },
+                    "provider_data": {
+                        "readOnly": True
+                    },
+                    "webhook_data": {
+                        "readOnly": True
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "age": {
+                        "type": "string",
+                        "readOnly": True
+                    }
+                },
+                "required": [
+                    "actual_amount_usd",
+                    "age",
+                    "amount_usd",
+                    "callback_url",
+                    "cancel_url",
+                    "completed_at",
+                    "confirmations_count",
+                    "created_at",
+                    "currency_code",
+                    "currency_name",
+                    "description",
+                    "expires_at",
+                    "fee_amount_usd",
+                    "id",
+                    "internal_payment_id",
+                    "pay_address",
+                    "pay_amount",
+                    "payment_url",
+                    "provider",
+                    "provider_data",
+                    "provider_display",
+                    "security_nonce",
+                    "status",
+                    "status_changed_at",
+                    "status_display",
+                    "transaction_hash",
+                    "updated_at",
+                    "user",
+                    "webhook_data"
+                ]
+            },
+            "AdminPaymentList": {
+                "type": "object",
+                "description": "Serializer for payment list in admin interface.\nUses UniversalPayment only for data extraction.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": True
+                    },
+                    "user": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AdminUser"
+                            }
+                        ],
+                        "readOnly": True
+                    },
+                    "amount_usd": {
+                        "type": "number",
+                        "format": "double",
+                        "readOnly": True
+                    },
+                    "currency_code": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "currency_name": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "provider": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "provider_display": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "status_display": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "pay_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+                        "readOnly": True
+                    },
+                    "pay_address": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "transaction_hash": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "age": {
+                        "type": "string",
+                        "readOnly": True
+                    }
+                },
+                "required": [
+                    "age",
+                    "amount_usd",
+                    "created_at",
+                    "currency_code",
+                    "currency_name",
+                    "description",
+                    "id",
+                    "pay_address",
+                    "pay_amount",
+                    "provider",
+                    "provider_display",
+                    "status",
+                    "status_display",
+                    "transaction_hash",
+                    "updated_at",
+                    "user"
+                ]
+            },
+            "AdminPaymentStats": {
+                "type": "object",
+                "description": "Serializer for payment statistics in admin interface.",
+                "properties": {
+                    "total_payments": {
+                        "type": "integer"
+                    },
+                    "total_amount_usd": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "successful_payments": {
+                        "type": "integer"
+                    },
+                    "failed_payments": {
+                        "type": "integer"
+                    },
+                    "pending_payments": {
+                        "type": "integer"
+                    },
+                    "success_rate": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "by_provider": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "Statistics by provider"
+                    },
+                    "by_currency": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "Statistics by currency"
+                    },
+                    "last_24h": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "description": "Payments in last 24 hours"
+                    },
+                    "last_7d": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "description": "Payments in last 7 days"
+                    },
+                    "last_30d": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "description": "Payments in last 30 days"
+                    }
+                },
+                "required": [
+                    "by_currency",
+                    "by_provider",
+                    "failed_payments",
+                    "last_24h",
+                    "last_30d",
+                    "last_7d",
+                    "pending_payments",
+                    "success_rate",
+                    "successful_payments",
+                    "total_amount_usd",
+                    "total_payments"
+                ]
+            },
+            "AdminPaymentUpdate": {
+                "type": "object",
+                "description": "Serializer for updating payments in admin interface.",
+                "properties": {
+                    "status": {
+                        "enum": [
+                            "pending",
+                            "confirming",
+                            "confirmed",
+                            "completed",
+                            "failed",
+                            "expired",
+                            "cancelled",
+                            "refunded"
+                        ],
+                        "type": "string",
+                        "x-spec-enum-id": "59d07a8608d1bdb9",
+                        "description": "Current payment status\n\n* `pending` - Pending\n* `confirming` - Confirming\n* `confirmed` - Confirmed\n* `completed` - Completed\n* `failed` - Failed\n* `expired` - Expired\n* `cancelled` - Cancelled\n* `refunded` - Refunded"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Payment description"
+                    },
+                    "callback_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": True,
+                        "description": "Success callback URL",
+                        "maxLength": 200
+                    },
+                    "cancel_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": True,
+                        "description": "Cancellation URL",
+                        "maxLength": 200
+                    },
+                    "provider_data": {
+                        "description": "Provider-specific data (validated by Pydantic)"
+                    },
+                    "webhook_data": {
+                        "description": "Webhook data (validated by Pydantic)"
+                    }
+                }
+            },
+            "AdminPaymentUpdateRequest": {
+                "type": "object",
+                "description": "Serializer for updating payments in admin interface.",
+                "properties": {
+                    "status": {
+                        "enum": [
+                            "pending",
+                            "confirming",
+                            "confirmed",
+                            "completed",
+                            "failed",
+                            "expired",
+                            "cancelled",
+                            "refunded"
+                        ],
+                        "type": "string",
+                        "x-spec-enum-id": "59d07a8608d1bdb9",
+                        "description": "Current payment status\n\n* `pending` - Pending\n* `confirming` - Confirming\n* `confirmed` - Confirmed\n* `completed` - Completed\n* `failed` - Failed\n* `expired` - Expired\n* `cancelled` - Cancelled\n* `refunded` - Refunded"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Payment description"
+                    },
+                    "callback_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": True,
+                        "description": "Success callback URL",
+                        "maxLength": 200
+                    },
+                    "cancel_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": True,
+                        "description": "Cancellation URL",
+                        "maxLength": 200
+                    },
+                    "provider_data": {
+                        "description": "Provider-specific data (validated by Pydantic)"
+                    },
+                    "webhook_data": {
+                        "description": "Webhook data (validated by Pydantic)"
+                    }
+                }
+            },
+            "AdminUser": {
+                "type": "object",
+                "description": "Simplified user serializer for admin interface.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": True
+                    },
+                    "username": {
+                        "type": "string",
+                        "readOnly": True,
+                        "description": "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": True
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "readOnly": True
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "readOnly": True,
+                        "title": "Active",
+                        "description": "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
+                    }
+                },
+                "required": [
+                    "email",
+                    "first_name",
+                    "id",
+                    "is_active",
+                    "last_name",
+                    "username"
+                ]
+            },
             "BalanceOverview": {
                 "type": "object",
                 "description": "User balance overview metrics",
@@ -10892,6 +12882,96 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     "user_email"
                 ]
             },
+            "Endpoint": {
+                "type": "object",
+                "description": "Serializer for single endpoint status.",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Resolved URL (for parametrized URLs) or URL pattern"
+                    },
+                    "url_pattern": {
+                        "type": "string",
+                        "nullable": True,
+                        "description": "Original URL pattern (for parametrized URLs)"
+                    },
+                    "url_name": {
+                        "type": "string",
+                        "nullable": True,
+                        "description": "Django URL name (if available)"
+                    },
+                    "namespace": {
+                        "type": "string",
+                        "description": "URL namespace"
+                    },
+                    "group": {
+                        "type": "string",
+                        "description": "URL group (up to 3 depth)"
+                    },
+                    "view": {
+                        "type": "string",
+                        "description": "View function/class name"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Status: healthy, unhealthy, warning, error, skipped, pending"
+                    },
+                    "status_code": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "HTTP status code"
+                    },
+                    "response_time_ms": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": True,
+                        "description": "Response time in milliseconds"
+                    },
+                    "is_healthy": {
+                        "type": "boolean",
+                        "nullable": True,
+                        "description": "Whether endpoint is healthy"
+                    },
+                    "error": {
+                        "type": "string",
+                        "description": "Error message if check failed"
+                    },
+                    "error_type": {
+                        "type": "string",
+                        "description": "Error type: database, general, etc."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Reason for warning/skip"
+                    },
+                    "last_checked": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": True,
+                        "description": "Timestamp of last check"
+                    },
+                    "has_parameters": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Whether URL has parameters that were resolved with test values"
+                    },
+                    "required_auth": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Whether endpoint required JWT authentication"
+                    },
+                    "rate_limited": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Whether endpoint returned 429 (rate limited)"
+                    }
+                },
+                "required": [
+                    "group",
+                    "status",
+                    "url"
+                ]
+            },
             "EndpointGroup": {
                 "type": "object",
                 "description": "Endpoint group serializer for API access management.\n\nUsed for subscription endpoint group configuration.",
@@ -10935,6 +13015,63 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     "updated_at"
                 ]
             },
+            "EndpointsStatus": {
+                "type": "object",
+                "description": "Serializer for overall endpoints status response.",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": "Overall status: healthy, degraded, or unhealthy"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Timestamp of the check"
+                    },
+                    "total_endpoints": {
+                        "type": "integer",
+                        "description": "Total number of endpoints checked"
+                    },
+                    "healthy": {
+                        "type": "integer",
+                        "description": "Number of healthy endpoints"
+                    },
+                    "unhealthy": {
+                        "type": "integer",
+                        "description": "Number of unhealthy endpoints"
+                    },
+                    "warnings": {
+                        "type": "integer",
+                        "description": "Number of endpoints with warnings"
+                    },
+                    "errors": {
+                        "type": "integer",
+                        "description": "Number of endpoints with errors"
+                    },
+                    "skipped": {
+                        "type": "integer",
+                        "description": "Number of skipped endpoints"
+                    },
+                    "endpoints": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Endpoint"
+                        },
+                        "description": "List of all endpoints with their status"
+                    }
+                },
+                "required": [
+                    "endpoints",
+                    "errors",
+                    "healthy",
+                    "skipped",
+                    "status",
+                    "timestamp",
+                    "total_endpoints",
+                    "unhealthy",
+                    "warnings"
+                ]
+            },
             "ErrorResponse": {
                 "type": "object",
                 "description": "Generic error response.",
@@ -10949,6 +13086,47 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 },
                 "required": [
                     "message"
+                ]
+            },
+            "HealthCheck": {
+                "type": "object",
+                "description": "Serializer for health check response.",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": "Overall health status: healthy, degraded, or unhealthy"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Timestamp of the health check"
+                    },
+                    "service": {
+                        "type": "string",
+                        "description": "Service name"
+                    },
+                    "version": {
+                        "type": "string",
+                        "description": "Django-CFG version"
+                    },
+                    "checks": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Detailed health checks for databases, cache, and system"
+                    },
+                    "environment": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Environment information"
+                    }
+                },
+                "required": [
+                    "checks",
+                    "environment",
+                    "service",
+                    "status",
+                    "timestamp",
+                    "version"
                 ]
             },
             "LeadSubmission": {
@@ -11666,6 +13844,195 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/APIKeyList"
+                        },
+                        "description": "Array of items for current page"
+                    }
+                }
+            },
+            "PaginatedAdminPaymentListList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "page_size",
+                    "has_next",
+                    "has_previous",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Total number of items across all pages",
+                        "example": 150
+                    },
+                    "page": {
+                        "type": "integer",
+                        "description": "Current page number (1-based)",
+                        "example": 2
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "description": "Total number of pages",
+                        "example": 15
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "example": 10
+                    },
+                    "has_next": {
+                        "type": "boolean",
+                        "description": "Whether there is a next page",
+                        "example": True
+                    },
+                    "has_previous": {
+                        "type": "boolean",
+                        "description": "Whether there is a previous page",
+                        "example": True
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Next page number (None if no next page)",
+                        "example": 3
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Previous page number (None if no previous page)",
+                        "example": 1
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminPaymentList"
+                        },
+                        "description": "Array of items for current page"
+                    }
+                }
+            },
+            "PaginatedAdminPaymentStatsList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "page_size",
+                    "has_next",
+                    "has_previous",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Total number of items across all pages",
+                        "example": 150
+                    },
+                    "page": {
+                        "type": "integer",
+                        "description": "Current page number (1-based)",
+                        "example": 2
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "description": "Total number of pages",
+                        "example": 15
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "example": 10
+                    },
+                    "has_next": {
+                        "type": "boolean",
+                        "description": "Whether there is a next page",
+                        "example": True
+                    },
+                    "has_previous": {
+                        "type": "boolean",
+                        "description": "Whether there is a previous page",
+                        "example": True
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Next page number (None if no next page)",
+                        "example": 3
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Previous page number (None if no previous page)",
+                        "example": 1
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminPaymentStats"
+                        },
+                        "description": "Array of items for current page"
+                    }
+                }
+            },
+            "PaginatedAdminUserList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "page_size",
+                    "has_next",
+                    "has_previous",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Total number of items across all pages",
+                        "example": 150
+                    },
+                    "page": {
+                        "type": "integer",
+                        "description": "Current page number (1-based)",
+                        "example": 2
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "description": "Total number of pages",
+                        "example": 15
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "example": 10
+                    },
+                    "has_next": {
+                        "type": "boolean",
+                        "description": "Whether there is a next page",
+                        "example": True
+                    },
+                    "has_previous": {
+                        "type": "boolean",
+                        "description": "Whether there is a previous page",
+                        "example": True
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Next page number (None if no next page)",
+                        "example": 3
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Previous page number (None if no previous page)",
+                        "example": 1
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminUser"
                         },
                         "description": "Array of items for current page"
                     }
@@ -12679,6 +15046,132 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 }
             },
+            "PaginatedWebhookEventListList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "page_size",
+                    "has_next",
+                    "has_previous",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Total number of items across all pages",
+                        "example": 150
+                    },
+                    "page": {
+                        "type": "integer",
+                        "description": "Current page number (1-based)",
+                        "example": 2
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "description": "Total number of pages",
+                        "example": 15
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "example": 10
+                    },
+                    "has_next": {
+                        "type": "boolean",
+                        "description": "Whether there is a next page",
+                        "example": True
+                    },
+                    "has_previous": {
+                        "type": "boolean",
+                        "description": "Whether there is a previous page",
+                        "example": True
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Next page number (None if no next page)",
+                        "example": 3
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Previous page number (None if no previous page)",
+                        "example": 1
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WebhookEventList"
+                        },
+                        "description": "Array of items for current page"
+                    }
+                }
+            },
+            "PaginatedWebhookStatsList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "page_size",
+                    "has_next",
+                    "has_previous",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Total number of items across all pages",
+                        "example": 150
+                    },
+                    "page": {
+                        "type": "integer",
+                        "description": "Current page number (1-based)",
+                        "example": 2
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "description": "Total number of pages",
+                        "example": 15
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "example": 10
+                    },
+                    "has_next": {
+                        "type": "boolean",
+                        "description": "Whether there is a next page",
+                        "example": True
+                    },
+                    "has_previous": {
+                        "type": "boolean",
+                        "description": "Whether there is a previous page",
+                        "example": True
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Next page number (None if no next page)",
+                        "example": 3
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": True,
+                        "description": "Previous page number (None if no previous page)",
+                        "example": 1
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WebhookStats"
+                        },
+                        "description": "Array of items for current page"
+                    }
+                }
+            },
             "PatchedAPIKeyUpdateRequest": {
                 "type": "object",
                 "description": "API key update serializer for modifying API key properties.\n\nAllows updating name and active status only.",
@@ -12692,6 +15185,51 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     "is_active": {
                         "type": "boolean",
                         "description": "Whether this API key is active"
+                    }
+                }
+            },
+            "PatchedAdminPaymentUpdateRequest": {
+                "type": "object",
+                "description": "Serializer for updating payments in admin interface.",
+                "properties": {
+                    "status": {
+                        "enum": [
+                            "pending",
+                            "confirming",
+                            "confirmed",
+                            "completed",
+                            "failed",
+                            "expired",
+                            "cancelled",
+                            "refunded"
+                        ],
+                        "type": "string",
+                        "x-spec-enum-id": "59d07a8608d1bdb9",
+                        "description": "Current payment status\n\n* `pending` - Pending\n* `confirming` - Confirming\n* `confirmed` - Confirmed\n* `completed` - Completed\n* `failed` - Failed\n* `expired` - Expired\n* `cancelled` - Cancelled\n* `refunded` - Refunded"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Payment description"
+                    },
+                    "callback_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": True,
+                        "description": "Success callback URL",
+                        "maxLength": 200
+                    },
+                    "cancel_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": True,
+                        "description": "Cancellation URL",
+                        "maxLength": 200
+                    },
+                    "provider_data": {
+                        "description": "Provider-specific data (validated by Pydantic)"
+                    },
+                    "webhook_data": {
+                        "description": "Webhook data (validated by Pydantic)"
                     }
                 }
             },
@@ -13874,6 +16412,29 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     "redis_connected",
                     "timestamp",
                     "workers"
+                ]
+            },
+            "QuickHealth": {
+                "type": "object",
+                "description": "Serializer for quick health check response.",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": "Quick health status: ok or error"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Timestamp of the health check"
+                    },
+                    "error": {
+                        "type": "string",
+                        "description": "Error message if health check failed"
+                    }
+                },
+                "required": [
+                    "status",
+                    "timestamp"
                 ]
             },
             "RecentPayment": {
@@ -15111,6 +17672,212 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     }
                 }
             },
+            "WebhookEvent": {
+                "type": "object",
+                "description": "Serializer for individual webhook event.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": True
+                    },
+                    "provider": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "event_type": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "status": {
+                        "enum": [
+                            "success",
+                            "failed",
+                            "pending",
+                            "retry"
+                        ],
+                        "type": "string",
+                        "description": "* `success` - Success\n* `failed` - Failed\n* `pending` - Pending\n* `retry` - Retry",
+                        "x-spec-enum-id": "4f58592e564fbff7"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "payload_size": {
+                        "type": "integer",
+                        "description": "Size in bytes"
+                    },
+                    "response_time": {
+                        "type": "integer",
+                        "description": "Response time in ms"
+                    },
+                    "retry_count": {
+                        "type": "integer",
+                        "default": 0
+                    },
+                    "error_message": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "payload_preview": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "response_status_code": {
+                        "type": "integer"
+                    },
+                    "webhook_url": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "required": [
+                    "event_type",
+                    "id",
+                    "payload_size",
+                    "provider",
+                    "response_time",
+                    "status",
+                    "timestamp"
+                ]
+            },
+            "WebhookEventList": {
+                "type": "object",
+                "description": "Serializer for paginated webhook events list.",
+                "properties": {
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WebhookEvent"
+                        }
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "per_page": {
+                        "type": "integer"
+                    },
+                    "has_next": {
+                        "type": "boolean"
+                    },
+                    "has_previous": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "events",
+                    "has_next",
+                    "has_previous",
+                    "page",
+                    "per_page",
+                    "total"
+                ]
+            },
+            "WebhookEventListRequest": {
+                "type": "object",
+                "description": "Serializer for paginated webhook events list.",
+                "properties": {
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WebhookEventRequest"
+                        }
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "per_page": {
+                        "type": "integer"
+                    },
+                    "has_next": {
+                        "type": "boolean"
+                    },
+                    "has_previous": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "events",
+                    "has_next",
+                    "has_previous",
+                    "page",
+                    "per_page",
+                    "total"
+                ]
+            },
+            "WebhookEventRequest": {
+                "type": "object",
+                "description": "Serializer for individual webhook event.",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 50
+                    },
+                    "event_type": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "status": {
+                        "enum": [
+                            "success",
+                            "failed",
+                            "pending",
+                            "retry"
+                        ],
+                        "type": "string",
+                        "description": "* `success` - Success\n* `failed` - Failed\n* `pending` - Pending\n* `retry` - Retry",
+                        "x-spec-enum-id": "4f58592e564fbff7"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "payload_size": {
+                        "type": "integer",
+                        "description": "Size in bytes"
+                    },
+                    "response_time": {
+                        "type": "integer",
+                        "description": "Response time in ms"
+                    },
+                    "retry_count": {
+                        "type": "integer",
+                        "default": 0
+                    },
+                    "error_message": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "payload_preview": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "response_status_code": {
+                        "type": "integer"
+                    },
+                    "webhook_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "event_type",
+                    "payload_size",
+                    "provider",
+                    "response_time",
+                    "status",
+                    "timestamp"
+                ]
+            },
             "WebhookHealth": {
                 "type": "object",
                 "description": "Serializer for webhook health check response.",
@@ -15133,6 +17900,64 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                     "providers",
                     "status",
                     "timestamp"
+                ]
+            },
+            "WebhookProviderStats": {
+                "type": "object",
+                "description": "Serializer for provider-specific webhook statistics.",
+                "properties": {
+                    "total": {
+                        "type": "integer"
+                    },
+                    "successful": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "pending": {
+                        "type": "integer",
+                        "default": 0
+                    },
+                    "success_rate": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "failed",
+                    "success_rate",
+                    "successful",
+                    "total"
+                ]
+            },
+            "WebhookProviderStatsRequest": {
+                "type": "object",
+                "description": "Serializer for provider-specific webhook statistics.",
+                "properties": {
+                    "total": {
+                        "type": "integer"
+                    },
+                    "successful": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "pending": {
+                        "type": "integer",
+                        "default": 0
+                    },
+                    "success_rate": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "failed",
+                    "success_rate",
+                    "successful",
+                    "total"
                 ]
             },
             "WebhookResponse": {
@@ -15208,35 +18033,110 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
             },
             "WebhookStats": {
                 "type": "object",
-                "description": "Serializer for webhook statistics response.",
+                "description": "Serializer for comprehensive webhook statistics.",
                 "properties": {
-                    "total_webhooks": {
-                        "type": "integer",
-                        "description": "Total webhooks processed"
+                    "total": {
+                        "type": "integer"
                     },
-                    "successful_webhooks": {
-                        "type": "integer",
-                        "description": "Successfully processed webhooks"
+                    "successful": {
+                        "type": "integer"
                     },
-                    "failed_webhooks": {
-                        "type": "integer",
-                        "description": "Failed webhook processing attempts"
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "pending": {
+                        "type": "integer"
                     },
                     "success_rate": {
                         "type": "number",
-                        "format": "double",
-                        "description": "Success rate percentage"
+                        "format": "double"
                     },
                     "providers": {
-                        "description": "Per-provider statistics"
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/WebhookProviderStats"
+                        },
+                        "description": "Statistics by provider"
+                    },
+                    "last_24h": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "description": "Events in last 24 hours"
+                    },
+                    "avg_response_time": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "max_response_time": {
+                        "type": "integer"
                     }
                 },
                 "required": [
-                    "failed_webhooks",
+                    "avg_response_time",
+                    "failed",
+                    "last_24h",
+                    "max_response_time",
+                    "pending",
                     "providers",
                     "success_rate",
-                    "successful_webhooks",
-                    "total_webhooks"
+                    "successful",
+                    "total"
+                ]
+            },
+            "WebhookStatsRequest": {
+                "type": "object",
+                "description": "Serializer for comprehensive webhook statistics.",
+                "properties": {
+                    "total": {
+                        "type": "integer"
+                    },
+                    "successful": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "pending": {
+                        "type": "integer"
+                    },
+                    "success_rate": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "providers": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/WebhookProviderStatsRequest"
+                        },
+                        "description": "Statistics by provider"
+                    },
+                    "last_24h": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "description": "Events in last 24 hours"
+                    },
+                    "avg_response_time": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "max_response_time": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "avg_response_time",
+                    "failed",
+                    "last_24h",
+                    "max_response_time",
+                    "pending",
+                    "providers",
+                    "success_rate",
+                    "successful",
+                    "total"
                 ]
             },
             "WorkerAction": {

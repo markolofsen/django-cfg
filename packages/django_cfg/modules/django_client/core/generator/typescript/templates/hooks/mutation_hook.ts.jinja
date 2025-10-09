@@ -1,0 +1,25 @@
+/**
+ * {{ operation.summary or 'API operation' }}
+ *
+ * @method {{ operation.http_method }}
+ * @path {{ operation.path }}
+ */
+export function {{ hook_name }}() {
+  const { mutate } = useSWRConfig()
+
+  return async ({% if func_params %}{{ func_params }}, client?: API{% else %}client?: API{% endif %}): Promise<{{ response_type }}> => {
+{% if fetcher_params %}
+    const result = await Fetchers.{{ fetcher_name }}({{ fetcher_params }}, client)
+{% else %}
+    const result = await Fetchers.{{ fetcher_name }}(client)
+{% endif %}
+{% if revalidation_keys %}
+    // Revalidate related queries
+{% for key in revalidation_keys %}
+    mutate('{{ key }}')
+{% endfor %}
+{% endif %}
+    return result
+  }
+}
+

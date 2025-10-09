@@ -14,7 +14,7 @@ export const PostCreateRequestSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1),
   excerpt: z.string().max(500).optional(),
-  category: z.number().int().optional().nullable(),
+  category: z.number().int().optional(),
   tags: z.array(z.number().int()).optional(),
   status: z.nativeEnum(Enums.PostCreateRequestStatus).optional(),
   is_featured: z.boolean().optional(),
@@ -22,7 +22,7 @@ export const PostCreateRequestSchema = z.object({
   meta_title: z.string().max(60).optional(),
   meta_description: z.string().max(160).optional(),
   meta_keywords: z.string().max(255).optional(),
-  featured_image: z.string().optional().nullable(),
+  featured_image: z.string().optional(),
   featured_image_alt: z.string().max(255).optional(),
 })
 

@@ -1,4 +1,48 @@
 /**
+ * Current payment status
+ * * `pending` - Pending
+ * * `confirming` - Confirming
+ * * `confirmed` - Confirmed
+ * * `completed` - Completed
+ * * `failed` - Failed
+ * * `expired` - Expired
+ * * `cancelled` - Cancelled
+ * * `refunded` - Refunded
+ */
+export enum AdminPaymentUpdateStatus {
+  PENDING = "pending",
+  CONFIRMING = "confirming",
+  CONFIRMED = "confirmed",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
+  REFUNDED = "refunded",
+}
+
+/**
+ * Current payment status
+ * * `pending` - Pending
+ * * `confirming` - Confirming
+ * * `confirmed` - Confirmed
+ * * `completed` - Completed
+ * * `failed` - Failed
+ * * `expired` - Expired
+ * * `cancelled` - Cancelled
+ * * `refunded` - Refunded
+ */
+export enum AdminPaymentUpdateRequestStatus {
+  PENDING = "pending",
+  CONFIRMING = "confirming",
+  CONFIRMED = "confirmed",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
+  REFUNDED = "refunded",
+}
+
+/**
  * Type of currency
  * * `fiat` - Fiat Currency
  * * `crypto` - Cryptocurrency
@@ -90,6 +134,28 @@ export enum OTPRequestRequestChannel {
 export enum OTPVerifyRequestChannel {
   EMAIL = "email",
   PHONE = "phone",
+}
+
+/**
+ * Current payment status
+ * * `pending` - Pending
+ * * `confirming` - Confirming
+ * * `confirmed` - Confirmed
+ * * `completed` - Completed
+ * * `failed` - Failed
+ * * `expired` - Expired
+ * * `cancelled` - Cancelled
+ * * `refunded` - Refunded
+ */
+export enum PatchedAdminPaymentUpdateRequestStatus {
+  PENDING = "pending",
+  CONFIRMING = "confirming",
+  CONFIRMED = "confirmed",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
+  REFUNDED = "refunded",
 }
 
 /**
@@ -488,6 +554,32 @@ export enum TransactionTransactionType {
   FEE = "fee",
   BONUS = "bonus",
   ADJUSTMENT = "adjustment",
+}
+
+/**
+ * * `success` - Success
+ * * `failed` - Failed
+ * * `pending` - Pending
+ * * `retry` - Retry
+ */
+export enum WebhookEventStatus {
+  SUCCESS = "success",
+  FAILED = "failed",
+  PENDING = "pending",
+  RETRY = "retry",
+}
+
+/**
+ * * `success` - Success
+ * * `failed` - Failed
+ * * `pending` - Pending
+ * * `retry` - Retry
+ */
+export enum WebhookEventRequestStatus {
+  SUCCESS = "success",
+  FAILED = "failed",
+  PENDING = "pending",
+  RETRY = "retry",
 }
 
 /**

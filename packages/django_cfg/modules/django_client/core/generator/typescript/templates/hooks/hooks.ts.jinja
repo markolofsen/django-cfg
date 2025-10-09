@@ -1,0 +1,31 @@
+/**
+ * SWR Hooks for {{ tag_display_name }}
+ *
+ * React hooks powered by SWR for data fetching with automatic caching,
+ * revalidation, and optimistic updates.
+ *
+ * Usage:
+ * ```typescript
+ * // Query hooks (GET)
+ * const { data, error, isLoading } = useUsers({ page: 1 })
+ *
+ * // Mutation hooks (POST/PUT/PATCH/DELETE)
+ * const createUser = useCreateUser()
+ * await createUser({ name: 'John', email: 'john@example.com' })
+ * ```
+ */
+import useSWR from 'swr'
+import { useSWRConfig } from 'swr'
+import * as Fetchers from '../fetchers/{{ tag_file }}'
+import type { API } from '../../index'
+{% if has_schemas %}
+{% for schema_name in schema_names %}
+import type { {{ schema_name }} } from '../schemas/{{ schema_name }}.schema'
+{% endfor %}
+{% endif %}
+
+{% for hook in hooks %}
+{{ hook }}
+
+{% endfor %}
+

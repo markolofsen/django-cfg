@@ -20,7 +20,7 @@ export const RecentPaymentSchema = z.object({
   status_color: z.string(),
   provider: z.string(),
   created_at: z.string().datetime(),
-  completed_at: z.string().datetime().nullable(),
+  completed_at: z.string().datetime().optional(),
   is_pending: z.boolean(),
   is_completed: z.boolean(),
   is_failed: z.boolean(),

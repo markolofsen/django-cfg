@@ -9,7 +9,7 @@ export const SenderSchema = z.object({
   id: z.number().int(),
   display_username: z.string(),
   email: z.string().email(),
-  avatar: z.string().nullable(),
+  avatar: z.string().optional(),
   initials: z.string(),
   is_staff: z.boolean(),
   is_superuser: z.boolean(),

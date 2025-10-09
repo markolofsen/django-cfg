@@ -18,9 +18,9 @@ export interface PaginatedOrderListList {
   /** Whether there is a previous page */
   has_previous: boolean;
   /** Next page number (null if no next page) */
-  next_page?: number | null;
+  next_page?: number;
   /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
+  previous_page?: number;
   /** Array of items for current page */
   results: Array<OrderList>;
 }
@@ -53,8 +53,8 @@ export interface OrderDetail {
   items: Array<OrderItem>;
   created_at: string;
   updated_at: string;
-  shipped_at?: string | null;
-  delivered_at?: string | null;
+  shipped_at?: string;
+  delivered_at?: string;
 }
 
 /**
@@ -107,12 +107,12 @@ export interface ProductList {
   slug?: string;
   short_description?: string;
   price: string;
-  sale_price?: string | null;
+  sale_price?: string;
   current_price: string;
   is_on_sale: boolean;
   discount_percentage: number;
   category: Record<string, any>;
-  image?: string | null;
+  image?: string;
   /** * `active` - Active
   * `inactive` - Inactive
   * `out_of_stock` - Out of Stock */
@@ -136,8 +136,8 @@ export interface ShopCategory {
   name: string;
   slug: string;
   description?: string;
-  image?: string | null;
-  parent?: number | null;
+  image?: string;
+  parent?: number;
   meta_title?: string;
   meta_description?: string;
   products_count: number;

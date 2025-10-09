@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from jinja2 import Environment
 from ...ir import IROperationObject
-
+from .naming import operation_to_method_name 
 
 class OperationsGenerator:
     """Generates TypeScript async operation methods."""
@@ -18,15 +18,19 @@ class OperationsGenerator:
 
     def generate_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False, in_subclient: bool = False) -> str:
         """Generate async method for operation."""
-        # Get method name
+        
+        
+        # Get method name using universal logic
+        # For client methods, we use empty prefix to get short names: list, create, retrieve
         operation_id = operation.operation_id
         if remove_tag_prefix and operation.tags:
             # Remove tag prefix using base class method
             tag = operation.tags[0]
             operation_id = self.base.remove_tag_prefix(operation_id, tag)
 
-        # Convert snake_case to camelCase
-        method_name = self._to_camel_case(operation_id)
+        # Use universal naming function with empty prefix for client methods
+        # Pass path to distinguish custom actions
+        method_name = operation_to_method_name(operation_id, operation.http_method, '', self.base, operation.path)
 
         # Request method prefix
         request_prefix = "this.client" if in_subclient else "this"
@@ -52,17 +56,31 @@ class OperationsGenerator:
                 schema_name = operation.request_body.schema_name
                 if schema_name and schema_name in self.context.schemas:
                     schema = self.context.schemas[schema_name]
+                    # Add required params first, then optional (TypeScript requirement)
+                    required_params = []
+                    optional_params = []
+                    
                     for prop_name, prop in schema.properties.items():
                         # Check if it's a file field (format: binary)
                         if prop.format == "binary":
-                            params.append(f"{prop_name}: File | Blob")
+                            param_str = f"{prop_name}: File | Blob"
                         else:
                             # Regular field in multipart
                             prop_type = self._map_param_type(prop.type)
                             if prop_name in schema.required:
-                                params.append(f"{prop_name}: {prop_type}")
+                                param_str = f"{prop_name}: {prop_type}"
                             else:
-                                params.append(f"{prop_name}?: {prop_type}")
+                                param_str = f"{prop_name}?: {prop_type}"
+                        
+                        # Separate required and optional
+                        if prop_name in schema.required:
+                            required_params.append(param_str)
+                        else:
+                            optional_params.append(param_str)
+                    
+                    # Add required first, then optional
+                    params.extend(required_params)
+                    params.extend(optional_params)
                 else:
                     # Inline schema - use FormData
                     params.append("data: FormData")
@@ -94,7 +112,9 @@ class OperationsGenerator:
         # Return type
         primary_response = operation.primary_success_response
         if primary_response and primary_response.schema_name:
-            if operation.is_list_operation:
+            # Check if response is paginated (has 'results' field)
+            is_paginated = primary_response.schema_name.startswith('Paginated')
+            if operation.is_list_operation and not is_paginated:
                 return_type = f"Models.{primary_response.schema_name}[]"
             else:
                 return_type = f"Models.{primary_response.schema_name}"
@@ -147,15 +167,37 @@ class OperationsGenerator:
         if use_rest_params and query_params_list:
             # Extract parameters from args array
             path_params_count = len(operation.path_parameters)
-            body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
+            
+            # For multipart, body params are unpacked as individual fields
+            if is_multipart and operation.request_body:
+                schema_name = operation.request_body.schema_name
+                if schema_name and schema_name in self.context.schemas:
+                    schema = self.context.schemas[schema_name]
+                    body_params_count = len(schema.properties)
+                else:
+                    body_params_count = 1  # data: FormData
+            else:
+                body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
+            
             first_query_pos = path_params_count + body_params_count
 
             # Extract path parameters
             for i, param in enumerate(operation.path_parameters):
                 body_lines.append(f"const {param.name} = args[{i}];")
 
-            # Extract body/data parameter
-            if operation.request_body or operation.patch_request_body:
+            # Extract body/data parameter(s)
+            if is_multipart and operation.request_body:
+                schema_name = operation.request_body.schema_name
+                if schema_name and schema_name in self.context.schemas:
+                    schema = self.context.schemas[schema_name]
+                    # Extract each property as separate variable
+                    arg_idx = path_params_count
+                    for prop_name in schema.properties.keys():
+                        body_lines.append(f"const {prop_name} = args[{arg_idx}];")
+                        arg_idx += 1
+                else:
+                    body_lines.append(f"const data = args[{path_params_count}];")
+            elif operation.request_body or operation.patch_request_body:
                 body_lines.append(f"const data = args[{path_params_count}];")
 
             # Check if first query arg is object (params style) or primitive (old style)
@@ -181,7 +223,18 @@ class OperationsGenerator:
             if use_rest_params:
                 # Extract params from args array - handle both calling styles
                 path_params_count = len(operation.path_parameters)
-                body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
+                
+                # For multipart, body params are unpacked as individual fields
+                if is_multipart and operation.request_body:
+                    schema_name = operation.request_body.schema_name
+                    if schema_name and schema_name in self.context.schemas:
+                        schema = self.context.schemas[schema_name]
+                        body_params_count = len(schema.properties)
+                    else:
+                        body_params_count = 1  # data: FormData
+                else:
+                    body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
+                
                 first_query_pos = path_params_count + body_params_count
 
                 body_lines.append("let params;")
@@ -238,8 +291,14 @@ class OperationsGenerator:
 
         # Handle response
         if operation.is_list_operation and primary_response:
-            # Extract results from paginated response
-            body_lines.append("return (response as any).results || [];")
+            # Check if response is paginated
+            is_paginated = primary_response.schema_name.startswith('Paginated')
+            if is_paginated:
+                # Return full paginated response object
+                body_lines.append("return response;")
+            else:
+                # Extract results from array response
+                body_lines.append("return (response as any).results || [];")
         elif return_type != "void":
             body_lines.append("return response;")
         else:

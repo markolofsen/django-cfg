@@ -80,11 +80,42 @@ class SecurityConfig(BaseConfig):
         self.session_cookie_secure = True
     
     def configure_for_development(self) -> None:
-        """Configure security settings for development."""
+        """
+        Configure security settings for development.
+        
+        In development:
+        - CORS allows all origins for convenience
+        - CSRF requires explicit trusted origins (CORS setting doesn't affect CSRF)
+        - Adds common dev ports + existing csrf_trusted_origins
+        """
         self.cors_allow_all_origins = True
         self.cors_allowed_origins = []
         self.csrf_cookie_secure = False
-        self.csrf_trusted_origins = []
+        
+        # Common development origins for CSRF
+        # Note: CORS_ALLOW_ALL_ORIGINS doesn't affect CSRF - it needs explicit origins
+
+        # function smart diapason for dev ports
+        def smart_diapason(start: int, end: int) -> List[str]:
+            return [f'http://localhost:{i}' for i in range(start, end)]
+        
+        dev_local_origins = [
+            'http://localhost:3000',
+            'http://localhost:8000',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:8000',
+        ] + smart_diapason(3000, 3010) + smart_diapason(8000, 8010)
+        
+        # Combine dev defaults with existing trusted origins (from security_domains)
+        # Remove duplicates while preserving order
+        combined = dev_local_origins + self.csrf_trusted_origins
+        
+        # unique and sorted
+        combined_unique = list(dict.fromkeys(combined))
+        combined_unique.sort()
+
+        self.csrf_trusted_origins = combined_unique
+        
         self.ssl_redirect = False
         self.hsts_enabled = False
         self.session_cookie_secure = False

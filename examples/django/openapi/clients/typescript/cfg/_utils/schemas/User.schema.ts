@@ -20,11 +20,11 @@ export const UserSchema = z.object({
   company: z.string().max(100).optional(),
   phone: z.string().max(20).optional(),
   position: z.string().max(100).optional(),
-  avatar: z.string().url().optional().nullable(),
+  avatar: z.string().url().optional(),
   is_staff: z.boolean(),
   is_superuser: z.boolean(),
   date_joined: z.string().datetime(),
-  last_login: z.string().datetime().nullable(),
+  last_login: z.string().datetime().optional(),
   unanswered_messages_count: z.number().int(),
 })
 

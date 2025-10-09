@@ -11,7 +11,7 @@ import { z } from 'zod'
  */
 export const PatchedCommentRequestSchema = z.object({
   content: z.string().min(1).optional(),
-  parent: z.number().int().optional().nullable(),
+  parent: z.number().int().optional(),
 })
 
 /**

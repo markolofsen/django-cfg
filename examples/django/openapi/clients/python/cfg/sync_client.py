@@ -4,22 +4,24 @@ from typing import Any, Optional
 
 import httpx
 
-from .cfg__accounts__auth.sync_client import SyncCfgAuthAPI
-from .cfg__newsletter__bulk_email.sync_client import SyncCfgBulkEmailAPI
-from .cfg__newsletter__campaigns.sync_client import SyncCfgCampaignsAPI
-from .cfg__leads__lead_submission.sync_client import SyncCfgLeadSubmissionAPI
-from .cfg__newsletter__logs.sync_client import SyncCfgLogsAPI
-from .cfg__newsletter__newsletters.sync_client import SyncCfgNewslettersAPI
-from .cfg__newsletter__subscriptions.sync_client import SyncCfgSubscriptionsAPI
-from .cfg__newsletter__testing.sync_client import SyncCfgTestingAPI
-from .cfg__accounts__user_profile.sync_client import SyncCfgUserProfileAPI
-from .cfg__payments__webhooks.sync_client import SyncCfgWebhooksAPI
-from .cfg__accounts.sync_client import SyncCfgAccountsAPI
-from .cfg__leads.sync_client import SyncCfgLeadsAPI
-from .cfg__newsletter.sync_client import SyncCfgNewsletterAPI
-from .cfg__support.sync_client import SyncCfgSupportAPI
-from .cfg__payments.sync_client import SyncCfgPaymentsAPI
-from .cfg__tasks.sync_client import SyncCfgTasksAPI
+from .cfg__cfg__auth.sync_client import SyncCfgAuthAPI
+from .cfg__cfg__bulk_email.sync_client import SyncCfgBulkEmailAPI
+from .cfg__cfg__campaigns.sync_client import SyncCfgCampaignsAPI
+from .cfg__cfg__lead_submission.sync_client import SyncCfgLeadSubmissionAPI
+from .cfg__cfg__logs.sync_client import SyncCfgLogsAPI
+from .cfg__cfg__newsletters.sync_client import SyncCfgNewslettersAPI
+from .cfg__cfg__subscriptions.sync_client import SyncCfgSubscriptionsAPI
+from .cfg__cfg__testing.sync_client import SyncCfgTestingAPI
+from .cfg__cfg__user_profile.sync_client import SyncCfgUserProfileAPI
+from .cfg__cfg__webhooks.sync_client import SyncCfgWebhooksAPI
+from .cfg__cfg__cfg__accounts.sync_client import SyncCfgAccountsAPI
+from .cfg__cfg__cfg__endpoints.sync_client import SyncCfgEndpointsAPI
+from .cfg__cfg__cfg__health.sync_client import SyncCfgHealthAPI
+from .cfg__cfg__cfg__leads.sync_client import SyncCfgLeadsAPI
+from .cfg__cfg__cfg__newsletter.sync_client import SyncCfgNewsletterAPI
+from .cfg__cfg__cfg__payments.sync_client import SyncCfgPaymentsAPI
+from .cfg__cfg__cfg__support.sync_client import SyncCfgSupportAPI
+from .cfg__cfg__cfg__tasks.sync_client import SyncCfgTasksAPI
 from .logger import APILogger, LoggerConfig
 from .retry import RetryConfig, RetryAsyncClient
 
@@ -71,12 +73,14 @@ class SyncAPIClient:
         self.cfg_testing = SyncCfgTestingAPI(self._client)
         self.cfg_user_profile = SyncCfgUserProfileAPI(self._client)
         self.cfg_webhooks = SyncCfgWebhooksAPI(self._client)
-        self.cfg_accounts = SyncCfgAccountsAPI(self._client)
-        self.cfg_leads = SyncCfgLeadsAPI(self._client)
-        self.cfg_newsletter = SyncCfgNewsletterAPI(self._client)
-        self.cfg_support = SyncCfgSupportAPI(self._client)
-        self.cfg_payments = SyncCfgPaymentsAPI(self._client)
-        self.cfg_tasks = SyncCfgTasksAPI(self._client)
+        self.cfg__accounts = SyncCfgAccountsAPI(self._client)
+        self.cfg__endpoints = SyncCfgEndpointsAPI(self._client)
+        self.cfg__health = SyncCfgHealthAPI(self._client)
+        self.cfg__leads = SyncCfgLeadsAPI(self._client)
+        self.cfg__newsletter = SyncCfgNewsletterAPI(self._client)
+        self.cfg__payments = SyncCfgPaymentsAPI(self._client)
+        self.cfg__support = SyncCfgSupportAPI(self._client)
+        self.cfg__tasks = SyncCfgTasksAPI(self._client)
 
     def __enter__(self) -> 'SyncAPIClient':
         return self

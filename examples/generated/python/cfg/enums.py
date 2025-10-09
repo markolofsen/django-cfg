@@ -1,6 +1,54 @@
 from enum import IntEnum, StrEnum
 
 
+class AdminPaymentUpdateStatus(StrEnum):
+    """
+    Current payment status
+    * `pending` - Pending
+    * `confirming` - Confirming
+    * `confirmed` - Confirmed
+    * `completed` - Completed
+    * `failed` - Failed
+    * `expired` - Expired
+    * `cancelled` - Cancelled
+    * `refunded` - Refunded
+    """
+
+    PENDING = "pending"
+    CONFIRMING = "confirming"
+    CONFIRMED = "confirmed"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
+
+class AdminPaymentUpdateRequestStatus(StrEnum):
+    """
+    Current payment status
+    * `pending` - Pending
+    * `confirming` - Confirming
+    * `confirmed` - Confirmed
+    * `completed` - Completed
+    * `failed` - Failed
+    * `expired` - Expired
+    * `cancelled` - Cancelled
+    * `refunded` - Refunded
+    """
+
+    PENDING = "pending"
+    CONFIRMING = "confirming"
+    CONFIRMED = "confirmed"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
+
 class CurrencyCurrencyType(StrEnum):
     """
     Type of currency
@@ -108,6 +156,30 @@ class OTPVerifyRequestChannel(StrEnum):
 
     EMAIL = "email"
     PHONE = "phone"
+
+
+
+class PatchedAdminPaymentUpdateRequestStatus(StrEnum):
+    """
+    Current payment status
+    * `pending` - Pending
+    * `confirming` - Confirming
+    * `confirmed` - Confirmed
+    * `completed` - Completed
+    * `failed` - Failed
+    * `expired` - Expired
+    * `cancelled` - Cancelled
+    * `refunded` - Refunded
+    """
+
+    PENDING = "pending"
+    CONFIRMING = "confirming"
+    CONFIRMED = "confirmed"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
 
 
 
@@ -558,6 +630,36 @@ class TransactionTransactionType(StrEnum):
     FEE = "fee"
     BONUS = "bonus"
     ADJUSTMENT = "adjustment"
+
+
+
+class WebhookEventStatus(StrEnum):
+    """
+    * `success` - Success
+    * `failed` - Failed
+    * `pending` - Pending
+    * `retry` - Retry
+    """
+
+    SUCCESS = "success"
+    FAILED = "failed"
+    PENDING = "pending"
+    RETRY = "retry"
+
+
+
+class WebhookEventRequestStatus(StrEnum):
+    """
+    * `success` - Success
+    * `failed` - Failed
+    * `pending` - Pending
+    * `retry` - Retry
+    """
+
+    SUCCESS = "success"
+    FAILED = "failed"
+    PENDING = "pending"
+    RETRY = "retry"
 
 
 

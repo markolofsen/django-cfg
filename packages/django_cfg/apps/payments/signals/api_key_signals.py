@@ -100,7 +100,7 @@ def handle_api_key_deletion(sender, instance: APIKey, **kwargs):
     logger.warning(f"API key deleted", extra={
         'api_key_id': str(instance.id),
         'user_id': instance.user.id,
-        'name': instance.name,
+        'key_name': instance.name,
         'total_requests': instance.total_requests,
         'deletion_timestamp': timezone.now().isoformat()
     })
@@ -129,7 +129,7 @@ def _handle_api_key_activated(api_key: APIKey):
         logger.info(f"API key activated", extra={
             'api_key_id': str(api_key.id),
             'user_id': api_key.user.id,
-            'name': api_key.name
+            'key_name': api_key.name
         })
         
         # Set activation notification in cache
@@ -153,7 +153,7 @@ def _handle_api_key_deactivated(api_key: APIKey):
         logger.warning(f"API key deactivated", extra={
             'api_key_id': str(api_key.id),
             'user_id': api_key.user.id,
-            'name': api_key.name,
+            'key_name': api_key.name,
             'total_requests': api_key.total_requests
         })
         

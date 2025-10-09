@@ -13,8 +13,8 @@ export const PaginatedCommentListSchema = z.object({
   page_size: z.number().int(),
   has_next: z.boolean(),
   has_previous: z.boolean(),
-  next_page: z.number().int().optional().nullable(),
-  previous_page: z.number().int().optional().nullable(),
+  next_page: z.number().int().optional(),
+  previous_page: z.number().int().optional(),
   results: z.array(CommentSchema),
 })
 

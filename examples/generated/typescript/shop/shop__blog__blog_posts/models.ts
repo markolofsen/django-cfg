@@ -18,9 +18,9 @@ export interface PaginatedPostListList {
   /** Whether there is a previous page */
   has_previous: boolean;
   /** Next page number (null if no next page) */
-  next_page?: number | null;
+  next_page?: number;
   /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
+  previous_page?: number;
   /** Array of items for current page */
   results: Array<PostList>;
 }
@@ -35,7 +35,7 @@ export interface PostCreateRequest {
   content: string;
   /** Brief description */
   excerpt?: string;
-  category?: number | null;
+  category?: number;
   tags?: Array<number>;
   /** * `draft` - Draft
   * `published` - Published
@@ -46,7 +46,7 @@ export interface PostCreateRequest {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
 }
 
@@ -60,7 +60,7 @@ export interface PostCreate {
   content: string;
   /** Brief description */
   excerpt?: string;
-  category?: number | null;
+  category?: number;
   tags?: Array<number>;
   /** * `draft` - Draft
   * `published` - Published
@@ -71,7 +71,7 @@ export interface PostCreate {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
 }
 
@@ -99,17 +99,17 @@ export interface PostDetail {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
   views_count?: number;
   likes_count?: number;
   comments_count?: number;
   shares_count?: number;
-  published_at?: string | null;
+  published_at?: string;
   created_at: string;
   updated_at: string;
   comments: Array<string>;
-  user_reaction: string | null;
+  user_reaction?: string;
   can_edit: boolean;
 }
 
@@ -123,7 +123,7 @@ export interface PostUpdateRequest {
   content: string;
   /** Brief description */
   excerpt?: string;
-  category?: number | null;
+  category?: number;
   tags?: Array<number>;
   /** * `draft` - Draft
   * `published` - Published
@@ -134,7 +134,7 @@ export interface PostUpdateRequest {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
 }
 
@@ -148,7 +148,7 @@ export interface PostUpdate {
   content: string;
   /** Brief description */
   excerpt?: string;
-  category?: number | null;
+  category?: number;
   tags?: Array<number>;
   /** * `draft` - Draft
   * `published` - Published
@@ -159,7 +159,7 @@ export interface PostUpdate {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
 }
 
@@ -183,13 +183,13 @@ export interface PostDetailRequest {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
   views_count?: number;
   likes_count?: number;
   comments_count?: number;
   shares_count?: number;
-  published_at?: string | null;
+  published_at?: string;
 }
 
 /**
@@ -210,9 +210,9 @@ export interface PaginatedPostLikeList {
   /** Whether there is a previous page */
   has_previous: boolean;
   /** Next page number (null if no next page) */
-  next_page?: number | null;
+  next_page?: number;
   /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
+  previous_page?: number;
   /** Array of items for current page */
   results: Array<PostLike>;
 }
@@ -254,13 +254,13 @@ export interface PostList {
   * `archived` - Archived */
   status?: Enums.PostListStatus;
   is_featured?: boolean;
-  featured_image?: string | null;
+  featured_image?: string;
   featured_image_alt?: string;
   views_count?: number;
   likes_count?: number;
   comments_count?: number;
   shares_count?: number;
-  published_at?: string | null;
+  published_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -277,7 +277,7 @@ export interface Author {
   first_name?: string;
   last_name?: string;
   full_name: string;
-  avatar?: string | null;
+  avatar?: string;
 }
 
 /**
@@ -294,7 +294,7 @@ export interface BlogCategory {
   color?: string;
   meta_title?: string;
   meta_description?: string;
-  parent?: number | null;
+  parent?: number;
   posts_count: number;
   children: Array<Record<string, any>>;
   created_at: string;

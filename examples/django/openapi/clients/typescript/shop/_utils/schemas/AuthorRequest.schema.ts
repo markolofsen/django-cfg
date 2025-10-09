@@ -13,7 +13,7 @@ export const AuthorRequestSchema = z.object({
   username: z.string().min(1).max(150).regex(/^[\\w.@+-]+$/),
   first_name: z.string().max(50).optional(),
   last_name: z.string().max(50).optional(),
-  avatar: z.string().optional().nullable(),
+  avatar: z.string().optional(),
 })
 
 /**

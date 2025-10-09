@@ -327,7 +327,7 @@ class TypeScriptGenerator(BaseGenerator):
 
         # Generate individual schema files
         for schema_name, schema in sorted(all_schemas.items()):
-            # Skip enum schemas (they use z.nativeEnum from enums.ts)
+            # Skip enum schemas (they use z.enum() with literal values)
             if schema.enum:
                 continue
 

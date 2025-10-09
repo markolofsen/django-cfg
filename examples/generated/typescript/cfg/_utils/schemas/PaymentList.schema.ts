@@ -23,7 +23,7 @@ export const PaymentListSchema = z.object({
   status_display: z.string(),
   amount_display: z.string(),
   created_at: z.string().datetime(),
-  expires_at: z.string().datetime().nullable(),
+  expires_at: z.string().datetime().optional(),
 })
 
 /**

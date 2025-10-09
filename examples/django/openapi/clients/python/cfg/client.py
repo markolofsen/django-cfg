@@ -4,22 +4,24 @@ from typing import Any, Optional
 
 import httpx
 
-from .cfg__accounts__auth import CfgAuthAPI
-from .cfg__newsletter__bulk_email import CfgBulkEmailAPI
-from .cfg__newsletter__campaigns import CfgCampaignsAPI
-from .cfg__leads__lead_submission import CfgLeadSubmissionAPI
-from .cfg__newsletter__logs import CfgLogsAPI
-from .cfg__newsletter__newsletters import CfgNewslettersAPI
-from .cfg__newsletter__subscriptions import CfgSubscriptionsAPI
-from .cfg__newsletter__testing import CfgTestingAPI
-from .cfg__accounts__user_profile import CfgUserProfileAPI
-from .cfg__payments__webhooks import CfgWebhooksAPI
-from .cfg__accounts import CfgAccountsAPI
-from .cfg__leads import CfgLeadsAPI
-from .cfg__newsletter import CfgNewsletterAPI
-from .cfg__support import CfgSupportAPI
-from .cfg__payments import CfgPaymentsAPI
-from .cfg__tasks import CfgTasksAPI
+from .cfg__cfg__auth import CfgAuthAPI
+from .cfg__cfg__bulk_email import CfgBulkEmailAPI
+from .cfg__cfg__campaigns import CfgCampaignsAPI
+from .cfg__cfg__lead_submission import CfgLeadSubmissionAPI
+from .cfg__cfg__logs import CfgLogsAPI
+from .cfg__cfg__newsletters import CfgNewslettersAPI
+from .cfg__cfg__subscriptions import CfgSubscriptionsAPI
+from .cfg__cfg__testing import CfgTestingAPI
+from .cfg__cfg__user_profile import CfgUserProfileAPI
+from .cfg__cfg__webhooks import CfgWebhooksAPI
+from .cfg__cfg__cfg__accounts import CfgAccountsAPI
+from .cfg__cfg__cfg__endpoints import CfgEndpointsAPI
+from .cfg__cfg__cfg__health import CfgHealthAPI
+from .cfg__cfg__cfg__leads import CfgLeadsAPI
+from .cfg__cfg__cfg__newsletter import CfgNewsletterAPI
+from .cfg__cfg__cfg__payments import CfgPaymentsAPI
+from .cfg__cfg__cfg__support import CfgSupportAPI
+from .cfg__cfg__cfg__tasks import CfgTasksAPI
 from .logger import APILogger, LoggerConfig
 from .retry import RetryConfig, RetryAsyncClient
 
@@ -88,12 +90,14 @@ class APIClient:
         self.cfg_testing = CfgTestingAPI(self._client)
         self.cfg_user_profile = CfgUserProfileAPI(self._client)
         self.cfg_webhooks = CfgWebhooksAPI(self._client)
-        self.cfg_accounts = CfgAccountsAPI(self._client)
-        self.cfg_leads = CfgLeadsAPI(self._client)
-        self.cfg_newsletter = CfgNewsletterAPI(self._client)
-        self.cfg_support = CfgSupportAPI(self._client)
-        self.cfg_payments = CfgPaymentsAPI(self._client)
-        self.cfg_tasks = CfgTasksAPI(self._client)
+        self.cfg__accounts = CfgAccountsAPI(self._client)
+        self.cfg__endpoints = CfgEndpointsAPI(self._client)
+        self.cfg__health = CfgHealthAPI(self._client)
+        self.cfg__leads = CfgLeadsAPI(self._client)
+        self.cfg__newsletter = CfgNewsletterAPI(self._client)
+        self.cfg__payments = CfgPaymentsAPI(self._client)
+        self.cfg__support = CfgSupportAPI(self._client)
+        self.cfg__tasks = CfgTasksAPI(self._client)
 
     async def __aenter__(self) -> 'APIClient':
         await self._client.__aenter__()

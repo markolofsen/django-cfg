@@ -16,9 +16,9 @@ export interface PaginatedShopCategoryList {
   /** Whether there is a previous page */
   has_previous: boolean;
   /** Next page number (null if no next page) */
-  next_page?: number | null;
+  next_page?: number;
   /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
+  previous_page?: number;
   /** Array of items for current page */
   results: Array<ShopCategory>;
 }
@@ -33,8 +33,8 @@ export interface ShopCategory {
   name: string;
   slug: string;
   description?: string;
-  image?: string | null;
-  parent?: number | null;
+  image?: string;
+  parent?: number;
   meta_title?: string;
   meta_description?: string;
   products_count: number;

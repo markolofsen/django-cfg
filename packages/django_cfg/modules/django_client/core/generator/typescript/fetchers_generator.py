@@ -13,6 +13,7 @@ from __future__ import annotations
 from jinja2 import Environment
 from ..base import GeneratedFile, BaseGenerator
 from ...ir import IRContext, IROperationObject
+from .naming import operation_to_method_name
 
 
 class FetchersGenerator:
@@ -33,7 +34,7 @@ class FetchersGenerator:
 
     def generate_fetcher_function(self, operation: IROperationObject) -> str:
         """
-        Generate a single fetcher function for an operation.
+        Generate a single fetcher function for an operation using Jinja2 template.
 
         Args:
             operation: IROperationObject to convert to fetcher
@@ -59,99 +60,60 @@ class FetchersGenerator:
 
         # Get API client call
         api_call = self._get_api_call(operation)
-
-        # Build JSDoc comment
-        jsdoc = self._generate_jsdoc(operation, func_name)
-
-        # Build function
-        lines = []
-
-        # JSDoc
-        if jsdoc:
-            lines.append(jsdoc)
-
-        # Function signature with optional client parameter
-        if param_info['func_params']:
-            lines.append(f"export async function {func_name}(")
-            lines.append(f"  {param_info['func_params']},")
-            lines.append(f"  client?: API")
-            lines.append(f"): Promise<{response_type}> {{")
-        else:
-            lines.append(f"export async function {func_name}(")
-            lines.append(f"  client?: API")
-            lines.append(f"): Promise<{response_type}> {{")
-
-        # Get client instance (either passed or global)
-        lines.append("  const api = client || getAPIInstance()")
-        lines.append("")
-
-        # Function body - build API call
-        api_call_params = param_info['api_call_params']
-        # Replace API. with api.
+        # Replace API. with api. for instance method
         api_call_instance = api_call.replace("API.", "api.")
 
-        if api_call_params:
-            lines.append(f"  const response = await {api_call_instance}({api_call_params})")
-        else:
-            lines.append(f"  const response = await {api_call_instance}()")
-
-        # Validation with Zod
-        if response_schema:
-            lines.append(f"  return {response_schema}.parse(response)")
-        else:
-            lines.append("  return response")
-
-        lines.append("}")
-
-        return "\n".join(lines)
+        # Render template
+        template = self.jinja_env.get_template('fetchers/function.ts.jinja')
+        return template.render(
+            operation=operation,
+            func_name=func_name,
+            func_params=param_info['func_params'],
+            response_type=response_type,
+            response_schema=response_schema,
+            api_call=api_call_instance,
+            api_call_params=param_info['api_call_params']
+        )
 
     def _operation_to_function_name(self, operation: IROperationObject) -> str:
         """
         Convert operation to function name.
-
+        
+        Fetchers are organized into tag-specific files but also exported globally,
+        so we include the tag in the name to avoid collisions.
+        
         Examples:
-            users_list (GET) -> getUsersList
-            users_retrieve (GET) -> getUsersById
-            users_create (POST) -> createUsers
-            users_update (PUT) -> updateUsers
-            users_partial_update (PATCH) -> partialUpdateUsers
-            users_destroy (DELETE) -> deleteUsers
+            cfg_support_tickets_list -> getSupportTicketsList
+            cfg_health_drf_retrieve -> getHealthDrf
+            cfg_accounts_otp_request_create -> createAccountsOtpRequest
+            cfg_accounts_profile_partial_update (PUT) -> partialUpdateAccountsProfilePut
         """
-        # Remove tag prefix from operation_id
-        op_id = operation.operation_id
-
-        # Handle common patterns - keep full resource name for uniqueness
-        if op_id.endswith("_list"):
-            resource = op_id.removesuffix("_list")
-            return f"get{self._to_pascal_case(resource)}List"
-        elif op_id.endswith("_retrieve"):
-            resource = op_id.removesuffix("_retrieve")
-            # Add ById suffix to distinguish from list
-            return f"get{self._to_pascal_case(resource)}ById"
-        elif op_id.endswith("_create"):
-            resource = op_id.removesuffix("_create")
-            return f"create{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_partial_update"):
-            resource = op_id.removesuffix("_partial_update")
-            return f"partialUpdate{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_update"):
-            resource = op_id.removesuffix("_update")
-            return f"update{self._to_pascal_case(resource)}"
-        elif op_id.endswith("_destroy"):
-            resource = op_id.removesuffix("_destroy")
-            return f"delete{self._to_pascal_case(resource)}"
+        
+        
+        # Remove cfg_ prefix but keep tag + resource for uniqueness
+        operation_id = operation.operation_id
+        # Remove only cfg_/django_cfg_ prefix
+        if operation_id.startswith('django_cfg_'):
+            operation_id = operation_id.replace('django_cfg_', '', 1)
+        elif operation_id.startswith('cfg_'):
+            operation_id = operation_id.replace('cfg_', '', 1)
+        
+        # Determine prefix based on HTTP method
+        if operation.http_method == 'GET':
+            prefix = 'get'
+        elif operation.http_method == 'POST':
+            prefix = 'create'
+        elif operation.http_method in ('PUT', 'PATCH'):
+            if '_partial_update' in operation_id:
+                prefix = 'partialUpdate'
+            else:
+                prefix = 'update'
+        elif operation.http_method == 'DELETE':
+            prefix = 'delete'
         else:
-            # Custom action - use operation_id as is
-            return self._to_camel_case(op_id)
-
-    def _to_pascal_case(self, snake_str: str) -> str:
-        """Convert snake_case to PascalCase."""
-        return ''.join(word.capitalize() for word in snake_str.split('_'))
-
-    def _to_camel_case(self, snake_str: str) -> str:
-        """Convert snake_case to camelCase."""
-        components = snake_str.split('_')
-        return components[0] + ''.join(x.capitalize() for x in components[1:])
+            prefix = ''
+        
+        return operation_to_method_name(operation_id, operation.http_method, prefix, self.base)
 
     def _get_param_structure(self, operation: IROperationObject) -> dict:
         """
@@ -197,7 +159,58 @@ class FetchersGenerator:
                 func_params.append(f"{param.name}: {param_type}")
                 api_call_params.append(param.name)
 
+        # Request body (passed as data or unpacked for multipart)
+        # NOTE: This must come BEFORE query params to match client method signature order!
+        if operation.request_body:
+            # Check if this is a file upload operation
+            is_multipart = operation.request_body.content_type == "multipart/form-data"
+            
+            if is_multipart:
+                # For multipart, unpack data properties to match client signature
+                schema_name = operation.request_body.schema_name
+                if schema_name and schema_name in self.context.schemas:
+                    schema = self.context.schemas[schema_name]
+                    # Add data parameter in func signature (keeps API simple)
+                    func_params.append(f"data: {schema_name}")
+                    # But unpack when calling client (which expects individual params)
+                    # IMPORTANT: Order must match client - required first, then optional
+                    required_props = []
+                    optional_props = []
+                    
+                    for prop_name, prop in schema.properties.items():
+                        if prop_name in schema.required:
+                            required_props.append(prop_name)
+                        else:
+                            optional_props.append(prop_name)
+                    
+                    # Add required first, then optional (matches client signature)
+                    for prop_name in required_props + optional_props:
+                        api_call_params.append(f"data.{prop_name}")
+                else:
+                    # Inline schema - use data as-is
+                    func_params.append(f"data: FormData")
+                    api_call_params.append("data")
+            else:
+                # JSON request body - pass data object
+                schema_name = operation.request_body.schema_name
+                if schema_name and schema_name in self.context.schemas:
+                    body_type = schema_name
+                else:
+                    body_type = "any"
+                func_params.append(f"data: {body_type}")
+                api_call_params.append("data")
+        elif operation.patch_request_body:
+            # PATCH request body (optional)
+            schema_name = operation.patch_request_body.schema_name
+            if schema_name and schema_name in self.context.schemas:
+                func_params.append(f"data?: {schema_name}")
+                api_call_params.append("data")
+            else:
+                func_params.append(f"data?: any")
+                api_call_params.append("data")
+
         # Query parameters (passed as params object, but unpacked when calling API)
+        # NOTE: This must come AFTER request body to match client method signature order!
         if operation.query_parameters:
             query_fields = []
             # params is required only if all parameters are required
@@ -214,17 +227,6 @@ class FetchersGenerator:
             if query_fields:
                 params_optional = "" if all_required else "?"
                 func_params.append(f"params{params_optional}: {{ {'; '.join(query_fields)} }}")
-
-        # Request body (passed as data)
-        if operation.request_body:
-            schema_name = operation.request_body.schema_name
-            # Use schema only if it exists as a component (not inline)
-            if schema_name and schema_name in self.context.schemas:
-                body_type = schema_name
-            else:
-                body_type = "any"
-            func_params.append(f"data: {body_type}")
-            api_call_params.append("data")
 
         return {
             'func_params': ", ".join(func_params) if func_params else "",
@@ -321,45 +323,26 @@ class FetchersGenerator:
     def _get_api_call(self, operation: IROperationObject) -> str:
         """
         Get API client method call path.
+        
+        Must match the naming logic in operations_generator to ensure correct method calls.
 
         Examples:
             API.users.list
             API.users.retrieve
             API.posts.create
+            API.accounts.otpRequest (custom action)
         """
-        # Get tag/resource name
+        
+        
         tag = operation.tags[0] if operation.tags else "default"
         tag_property = self.base.tag_to_property_name(tag)
 
-        # Get method name from operation_id
-        method_name = self.base.remove_tag_prefix(operation.operation_id, tag)
-        method_name = self._to_camel_case(method_name)
+        # Get method name using same logic as client generation (empty prefix)
+        operation_id = self.base.remove_tag_prefix(operation.operation_id, tag)
+        # Pass path to distinguish custom actions
+        method_name = operation_to_method_name(operation_id, operation.http_method, '', self.base, operation.path)
 
         return f"API.{tag_property}.{method_name}"
-
-    def _generate_jsdoc(self, operation: IROperationObject, func_name: str) -> str:
-        """Generate JSDoc comment for function."""
-        lines = ["/**"]
-
-        # Summary
-        if operation.summary:
-            lines.append(f" * {operation.summary}")
-        else:
-            lines.append(f" * {func_name}")
-
-        # Description
-        if operation.description:
-            lines.append(" *")
-            for desc_line in operation.description.split("\n"):
-                lines.append(f" * {desc_line}")
-
-        # HTTP method and path
-        lines.append(" *")
-        lines.append(f" * @method {operation.http_method}")
-        lines.append(f" * @path {operation.path}")
-
-        lines.append(" */")
-        return "\n".join(lines)
 
     def generate_tag_fetchers_file(
         self,
@@ -395,6 +378,12 @@ class FetchersGenerator:
                 # Only add if schema exists in components (not inline)
                 if operation.request_body.schema_name in self.context.schemas:
                     schema_names.add(operation.request_body.schema_name)
+            
+            # Add patch request body schemas
+            if operation.patch_request_body and operation.patch_request_body.schema_name:
+                # Only add if schema exists in components (not inline)
+                if operation.patch_request_body.schema_name in self.context.schemas:
+                    schema_names.add(operation.patch_request_body.schema_name)
 
         # Get display name and folder name (use same naming as APIClient)
         tag_display_name = self.base.tag_to_display_name(tag)
