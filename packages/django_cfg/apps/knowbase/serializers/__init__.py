@@ -4,11 +4,11 @@ Knowledge Base Serializers
 Pydantic v2 models for API request/response validation.
 """
 
-from .document_serializers import *
-from .chat_serializers import *
-from .public_serializers import *
 from .archive_serializers import *
+from .chat_serializers import *
+from .document_serializers import *
 from .external_data_serializers import *
+from .public_serializers import *
 
 __all__ = [
     # Document serializers
@@ -16,19 +16,19 @@ __all__ = [
     'DocumentSerializer',
     'DocumentStatsSerializer',
     'DocumentProcessingStatusSerializer',
-    
+
     # Public serializers
     'PublicCategorySerializer',
     'PublicDocumentListSerializer',
     'PublicDocumentSerializer',
-    
+
     # Chat serializers
     'ChatSessionCreateRequest',
     'ChatSessionResponse',
     'ChatQueryRequest',
     'ChatResponse',
     'ChatHistoryResponse',
-    
+
     # Archive serializers
     'DocumentArchiveCreateSerializer',
     'DocumentArchiveSerializer',
@@ -46,7 +46,7 @@ __all__ = [
     'ArchiveUploadSerializer',
     'ChunkRevectorizationRequestSerializer',
     'VectorizationResultSerializer',
-    
+
     # External data serializers
     'ExternalDataCreateRequest',
     'ExternalDataResponse',

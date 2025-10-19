@@ -4,14 +4,14 @@ Support Chat Views
 Beautiful chat interface for support tickets with Tailwind CSS.
 """
 
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib import messages as dj_messages
 import json
 
-from ..models import Ticket, Message
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_POST
+
+from ..models import Message, Ticket
 
 
 @login_required
@@ -23,23 +23,23 @@ def ticket_chat_view(request, ticket_uuid):
     with real-time messaging capabilities.
     """
     ticket = get_object_or_404(Ticket, uuid=ticket_uuid)
-    
+
     # Check permissions
     if not request.user.is_staff and ticket.user != request.user:
         return render(request, 'support/chat/access_denied.html', {
             'ticket': ticket
         })
-    
+
     # Get all messages for this ticket
     messages = ticket.messages.all().order_by('created_at')
-    
+
     context = {
         'ticket': ticket,
         'messages': messages,
         'user': request.user,
         'is_staff': request.user.is_staff,
     }
-    
+
     return render(request, 'support/chat/ticket_chat.html', context)
 
 
@@ -53,31 +53,31 @@ def send_message_ajax(request, ticket_uuid):
     """
     try:
         ticket = get_object_or_404(Ticket, uuid=ticket_uuid)
-        
+
         # Check permissions
         if not request.user.is_staff and ticket.user != request.user:
             return JsonResponse({
                 'success': False,
                 'error': 'Permission denied'
             }, status=403)
-        
+
         # Parse JSON data
         data = json.loads(request.body)
         message_text = data.get('text', '').strip()
-        
+
         if not message_text:
             return JsonResponse({
                 'success': False,
                 'error': 'Message text is required'
             }, status=400)
-        
+
         # Create message
         message = Message.objects.create(
             ticket=ticket,
             sender=request.user,
             text=message_text
         )
-        
+
         # Return message data
         return JsonResponse({
             'success': True,
@@ -95,7 +95,7 @@ def send_message_ajax(request, ticket_uuid):
                 }
             }
         })
-        
+
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,

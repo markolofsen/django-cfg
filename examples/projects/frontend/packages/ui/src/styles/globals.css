@@ -1,0 +1,12 @@
+/**
+ * @deprecated
+ * This file is kept for backward compatibility.
+ * Please import from './index.css' instead.
+ *
+ * The styles are now modular and split into:
+ * - theme.css (CSS variables)
+ * - base.css (base styles)
+ * - utilities.css (custom utilities)
+ */
+
+@import "./index.css";

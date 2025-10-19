@@ -1,20 +1,27 @@
 """
-Pydantic 2 models for configuration.
+Pydantic models for Django Admin configuration.
 """
 
-from .base import BaseConfig
-from .display_models import UserDisplayConfig, MoneyDisplayConfig, DateTimeDisplayConfig
-from .badge_models import BadgeConfig, BadgeVariant, StatusBadgeConfig
-from .action_models import ActionVariant, ActionConfig
+from .base import BaseConfig, BadgeVariant
+from .action_models import ActionConfig, ActionVariant
+from .badge_models import BadgeConfig, StatusBadgeConfig
+from .display_models import DateTimeDisplayConfig, MoneyDisplayConfig, UserDisplayConfig
 
 __all__ = [
+    # Base
     "BaseConfig",
-    "UserDisplayConfig",
-    "MoneyDisplayConfig", 
-    "DateTimeDisplayConfig",
-    "BadgeConfig",
     "BadgeVariant",
-    "StatusBadgeConfig",
-    "ActionVariant",
+
+    # Action models
     "ActionConfig",
+    "ActionVariant",
+
+    # Badge models
+    "BadgeConfig",
+    "StatusBadgeConfig",
+
+    # Display models
+    "UserDisplayConfig",
+    "MoneyDisplayConfig",
+    "DateTimeDisplayConfig",
 ]

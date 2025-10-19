@@ -5,8 +5,8 @@ Handles template configuration with auto-discovery of django-cfg app templates.
 Size: ~90 lines (focused on template settings)
 """
 
-from typing import Dict, Any, List, TYPE_CHECKING
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig

@@ -1,112 +1,194 @@
 """
-Registry admin interfaces using Django Admin Utilities.
+Registry Admin v2.0 - NEW Declarative Pydantic Approach
 
-Enhanced agent and template management with Material Icons and optimized queries.
+Enhanced agent and template management with Material Icons and clean declarative config.
 """
 
 from django.contrib import admin, messages
-from django.urls import reverse
-from django.utils.safestring import mark_safe
 from django.db import models
-from django.db.models import Count, Avg, Sum, Q
-from django.utils import timezone
 from django.db.models.fields.json import JSONField
-from datetime import timedelta
 from django_json_widget.widgets import JSONEditorWidget
-from unfold.admin import ModelAdmin, TabularInline
-from unfold.contrib.filters.admin import AutocompleteSelectFilter, AutocompleteSelectMultipleFilter
+from unfold.admin import ModelAdmin
+from unfold.contrib.filters.admin import AutocompleteSelectFilter
 from unfold.contrib.forms.widgets import WysiwygWidget
-from django_cfg import ExportMixin, ExportForm
 
+from django_cfg import ExportForm
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    MoneyDisplayConfig,
-    StatusBadgeConfig,
-    DateTimeDisplayConfig,
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    TextField,
+    UserField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    ActionVariant,
-    display,
-    action
+    computed_field,
 )
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from ..models.registry import AgentDefinition, AgentTemplate
+from .registry_actions import (
+    activate_agents,
+    deactivate_agents,
+    reset_stats,
+    make_public,
+    make_private,
+    duplicate_templates,
+)
+
+
+# ===== Agent Definition Admin Config =====
+
+agent_definition_config = AdminConfig(
+    model=AgentDefinition,
+
+    # Performance optimization
+    select_related=['created_by'],
+
+    # Import/Export
+    import_export_enabled=True,
+
+    # List display
+    list_display=[
+        "name_display",
+        "category_display",
+        "status_display",
+        "version_display",
+        "usage_stats_display",
+        "performance_metrics",
+        "created_by_display",
+        "created_at_display"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="name",
+            title="Agent Name",
+            variant="primary",
+            icon=Icons.SMART_TOY,
+            header=True
+        ),
+        BadgeField(
+            name="category",
+            title="Category",
+            variant="secondary",
+            icon=Icons.CATEGORY
+        ),
+        BadgeField(
+            name="status",
+            title="Status"
+        ),
+        TextField(
+            name="version",
+            title="Version"
+        ),
+        UserField(
+            name="created_by",
+            title="Created By"
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created",
+            ordering="created_at"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=["name", "description", "category"],
+    list_filter=[
+        "category",
+        "is_active",
+        "created_at",
+        ("created_by", AutocompleteSelectFilter)
+    ],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="activate_agents",
+            description="Activate agents",
+            variant="success",
+            icon=Icons.CHECK_CIRCLE,
+            handler=activate_agents
+        ),
+        ActionConfig(
+            name="deactivate_agents",
+            description="Deactivate agents",
+            variant="warning",
+            icon=Icons.CANCEL,
+            handler=deactivate_agents
+        ),
+        ActionConfig(
+            name="reset_stats",
+            description="Reset statistics",
+            variant="danger",
+            icon=Icons.REFRESH,
+            confirmation=True,
+            handler=reset_stats
+        ),
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
 
 
 @admin.register(AgentDefinition)
-class AgentDefinitionAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMixin):
-    """Enhanced admin for AgentDefinition model using Django Admin Utilities."""
-    
-    # Performance optimization
-    select_related_fields = ['created_by']
-    
-    # Export-only configuration
-    export_form_class = ExportForm
-    
-    list_display = [
-        'name_display', 'category_display', 'status_display', 'version_display',
-        'usage_stats_display', 'performance_metrics', 'created_by_display', 'created_at_display'
+class AgentDefinitionAdmin(PydanticAdmin):
+    """
+    Agent Definition admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Export functionality (via config)
+    - Custom actions for agent activation/deactivation
+    - Performance metrics display
+    """
+    config = agent_definition_config
+
+    # Readonly fields
+    readonly_fields = ["id", "created_at", "updated_at", "usage_count", "last_used_at"]
+
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Agent Info",
+            fields=['name', 'description', 'category', 'version']
+        ),
+        FieldsetConfig(
+            title="Configuration",
+            fields=['config', 'capabilities', 'requirements']
+        ),
+        FieldsetConfig(
+            title="Performance",
+            fields=['usage_count', 'success_rate', 'avg_execution_time', 'total_cost']
+        ),
+        FieldsetConfig(
+            title="Status",
+            fields=['status', 'is_active']
+        ),
+        FieldsetConfig(
+            title="Metadata",
+            fields=['created_by', 'updated_by', 'created_at', 'updated_at'],
+            collapsed=True
+        ),
     ]
-    list_display_links = ['name_display']
-    list_filter = [
-        'category', 'is_active', 'created_at',
-        ('created_by', AutocompleteSelectFilter)
-    ]
-    search_fields = ['name', 'description', 'category']
-    autocomplete_fields = ['created_by']
-    readonly_fields = [
-        'id', 'created_at', 'updated_at', 'usage_count', 'last_used_at'
-    ]
-    ordering = ['-created_at']
-    
-    # Unfold form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
-        JSONField: {"widget": JSONEditorWidget},
-    }
-    
-    fieldsets = (
-        ("🤖 Agent Info", {
-            'fields': ('id', 'name', 'description', 'category', 'version'),
-            'classes': ('tab',)
-        }),
-        ("⚙️ Configuration", {
-            'fields': ('config', 'capabilities', 'requirements'),
-            'classes': ('tab',)
-        }),
-        ("📊 Performance", {
-            'fields': ('usage_count', 'success_rate', 'avg_execution_time', 'total_cost'),
-            'classes': ('tab',)
-        }),
-        ("🔧 Status", {
-            'fields': ('status', 'is_active', 'last_used_at'),
-            'classes': ('tab',)
-        }),
-        ("👤 Metadata", {
-            'fields': ('created_by', 'updated_by', 'created_at', 'updated_at'),
-            'classes': ('tab', 'collapse')
-        }),
-    )
-    
-    actions = ['activate_agents', 'deactivate_agents', 'reset_stats']
-    
-    @display(description="Agent Name")
-    def name_display(self, obj):
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Agent Name")
+    def name_display(self, obj: AgentDefinition) -> str:
         """Enhanced agent name display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.SMART_TOY)
-        return StatusBadge.create(
-            text=obj.name,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Category")
-    def category_display(self, obj):
+        return self.html.badge(obj.name, variant="primary", icon=Icons.SMART_TOY)
+
+    @computed_field("Category")
+    def category_display(self, obj: AgentDefinition) -> str:
         """Category display with badge."""
         if not obj.category:
             return "—"
-        
+
         category_variants = {
             'automation': 'info',
             'analysis': 'success',
@@ -114,167 +196,213 @@ class AgentDefinitionAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, Export
             'data': 'primary'
         }
         variant = category_variants.get(obj.category.lower(), 'secondary')
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.CATEGORY)
-        return StatusBadge.create(
-            text=obj.category.title(),
-            variant=variant,
-            config=config
-        )
-    
-    @display(description="Status")
-    def status_display(self, obj):
+
+        return self.html.badge(obj.category.title(), variant=variant, icon=Icons.CATEGORY)
+
+    @computed_field("Status")
+    def status_display(self, obj: AgentDefinition) -> str:
         """Status display with appropriate icons."""
-        status_config = StatusBadgeConfig(
-            custom_mappings={
-                'draft': 'secondary',
-                'testing': 'warning',
-                'active': 'success',
-                'deprecated': 'danger',
-                'archived': 'info'
-            },
-            show_icons=True,
-            icon=Icons.CHECK_CIRCLE if obj.status == 'active' else Icons.WARNING if obj.status == 'testing' else Icons.ARCHIVE if obj.status == 'archived' else Icons.EDIT
-        )
-        return self.display_status_auto(obj, 'status', status_config)
-    
-    @display(description="Version")
-    def version_display(self, obj):
+        icon_map = {
+            'active': Icons.CHECK_CIRCLE,
+            'testing': Icons.WARNING,
+            'archived': Icons.ARCHIVE,
+            'draft': Icons.EDIT,
+            'deprecated': Icons.CANCEL
+        }
+
+        variant_map = {
+            'draft': 'secondary',
+            'testing': 'warning',
+            'active': 'success',
+            'deprecated': 'danger',
+            'archived': 'info'
+        }
+
+        icon = icon_map.get(obj.status, Icons.EDIT)
+        variant = variant_map.get(obj.status, 'secondary')
+        text = obj.get_status_display() if hasattr(obj, 'get_status_display') else obj.status.title()
+        return self.html.badge(text, variant=variant, icon=icon)
+
+    @computed_field("Version")
+    def version_display(self, obj: AgentDefinition) -> str:
         """Version display."""
         if not obj.version:
             return "—"
         return f"v{obj.version}"
-    
-    @display(description="Usage Stats")
-    def usage_stats_display(self, obj):
+
+    @computed_field("Usage Stats")
+    def usage_stats_display(self, obj: AgentDefinition) -> str:
         """Display usage statistics."""
         if not obj.usage_count:
             return "No usage"
-        
+
         success_rate = obj.success_rate or 0
         return f"{obj.usage_count} uses, {success_rate:.1f}% success"
-    
-    @display(description="Performance")
-    def performance_metrics(self, obj):
+
+    @computed_field("Performance")
+    def performance_metrics(self, obj: AgentDefinition) -> str:
         """Display performance metrics."""
         if not obj.avg_execution_time:
             return "No data"
-        
+
         avg_time = obj.avg_execution_time
         if obj.total_cost:
-            config = MoneyDisplayConfig(currency="USD", show_sign=False, smart_decimal_places=True)
-            cost = self.display_money_amount(obj, 'total_cost', config)
+            cost = MoneyDisplay.amount(obj.total_cost, config)
             return f"{avg_time:.2f}s avg, {cost} total"
-        
+
         return f"{avg_time:.2f}s avg"
-    
-    @display(description="Created By")
-    def created_by_display(self, obj):
+
+    @computed_field("Created By")
+    def created_by_display(self, obj: AgentDefinition) -> str:
         """Created by user display."""
         if not obj.created_by:
             return "—"
-        return self.display_user_simple(obj.created_by)
-    
-    @display(description="Created")
-    def created_at_display(self, obj):
+        # Simple username display, UserField handles avatar and styling
+        return obj.created_by.username
+
+    @computed_field("Created")
+    def created_at_display(self, obj: AgentDefinition) -> str:
         """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @action(description="Activate agents", variant=ActionVariant.SUCCESS)
-    def activate_agents(self, request, queryset):
-        """Activate selected agents."""
-        updated = queryset.update(is_active=True, status='active')
-        messages.success(request, f"Activated {updated} agents.")
-    
-    @action(description="Deactivate agents", variant=ActionVariant.WARNING)
-    def deactivate_agents(self, request, queryset):
-        """Deactivate selected agents."""
-        updated = queryset.update(is_active=False)
-        messages.warning(request, f"Deactivated {updated} agents.")
-    
-    @action(description="Reset statistics", variant=ActionVariant.INFO)
-    def reset_stats(self, request, queryset):
-        """Reset usage statistics."""
-        updated = queryset.update(
-            usage_count=0,
-            success_rate=0,
-            avg_execution_time=0,
-            total_cost=0,
-            last_used_at=None
-        )
-        messages.info(request, f"Reset statistics for {updated} agents.")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
+
+
+# ===== Agent Template Admin Config =====
+
+agent_template_config = AdminConfig(
+    model=AgentTemplate,
+
+    # Performance optimization
+    select_related=['created_by'],
+
+    # Import/Export
+    import_export_enabled=True,
+
+    # List display
+    list_display=[
+        "name_display",
+        "category_display",
+        "status_display",
+        "usage_count_display",
+        "created_by_display",
+        "created_at_display"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="name",
+            title="Template Name",
+            variant="primary",
+            icon=Icons.DESCRIPTION,
+            header=True
+        ),
+        BadgeField(
+            name="category",
+            title="Category",
+            variant="secondary",
+            icon=Icons.CATEGORY
+        ),
+        UserField(
+            name="created_by",
+            title="Created By"
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created",
+            ordering="created_at"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=["name", "description", "category"],
+    list_filter=[
+        "category",
+        "created_at",
+        ("created_by", AutocompleteSelectFilter)
+    ],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="make_public",
+            description="Make public",
+            variant="success",
+            icon=Icons.PUBLIC,
+            handler=make_public
+        ),
+        ActionConfig(
+            name="make_private",
+            description="Make private",
+            variant="warning",
+            icon=Icons.LOCK,
+            handler=make_private
+        ),
+        ActionConfig(
+            name="duplicate_templates",
+            description="Duplicate templates",
+            variant="primary",
+            icon=Icons.CONTENT_COPY,
+            handler=duplicate_templates
+        ),
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
 
 
 @admin.register(AgentTemplate)
-class AgentTemplateAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMixin):
-    """Enhanced admin for AgentTemplate model using Django Admin Utilities."""
-    
-    # Performance optimization
-    select_related_fields = ['created_by']
-    
-    # Export-only configuration
-    export_form_class = ExportForm
-    
-    list_display = [
-        'name_display', 'category_display', 'status_display', 'usage_count_display',
-        'created_by_display', 'created_at_display'
+class AgentTemplateAdmin(PydanticAdmin):
+    """
+    Agent Template admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Export functionality (via config)
+    - Custom actions for template visibility
+    - Usage tracking
+    """
+    config = agent_template_config
+
+    # Readonly fields
+    readonly_fields = ["id", "created_at", "updated_at"]
+
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Template Info",
+            fields=['name', 'description', 'category']
+        ),
+        FieldsetConfig(
+            title="Template Content",
+            fields=['template_config', 'use_cases']
+        ),
+        FieldsetConfig(
+            title="Settings",
+            fields=['is_public', 'usage_count']
+        ),
+        FieldsetConfig(
+            title="Metadata",
+            fields=['created_by', 'updated_by', 'created_at', 'updated_at'],
+            collapsed=True
+        ),
     ]
-    list_display_links = ['name_display']
-    list_filter = [
-        'category', 'created_at',
-        ('created_by', AutocompleteSelectFilter)
-    ]
-    search_fields = ['name', 'description', 'category']
-    autocomplete_fields = ['created_by']
-    readonly_fields = [
-        'id', 'created_at', 'updated_at'
-    ]
-    ordering = ['-created_at']
-    
-    # Unfold form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
-        JSONField: {"widget": JSONEditorWidget},
-    }
-    
-    fieldsets = (
-        ("📋 Template Info", {
-            'fields': ('id', 'name', 'description', 'category'),
-            'classes': ('tab',)
-        }),
-        ("⚙️ Template Content", {
-            'fields': ('template_config', 'use_cases'),
-            'classes': ('tab',)
-        }),
-        ("🔧 Settings", {
-            'fields': ('is_public', 'usage_count'),
-            'classes': ('tab',)
-        }),
-        ("👤 Metadata", {
-            'fields': ('created_by', 'updated_by', 'created_at', 'updated_at'),
-            'classes': ('tab', 'collapse')
-        }),
-    )
-    
-    actions = ['make_public', 'make_private', 'duplicate_templates']
-    
-    @display(description="Template Name")
-    def name_display(self, obj):
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Template Name")
+    def name_display(self, obj: AgentTemplate) -> str:
         """Enhanced template name display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.DESCRIPTION)
-        return StatusBadge.create(
-            text=obj.name,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Category")
-    def category_display(self, obj):
+        return self.html.badge(obj.name, variant="primary", icon=Icons.DESCRIPTION)
+
+    @computed_field("Category")
+    def category_display(self, obj: AgentTemplate) -> str:
         """Category display with badge."""
         if not obj.category:
             return "—"
-        
+
         category_variants = {
             'automation': 'info',
             'analysis': 'success',
@@ -282,62 +410,34 @@ class AgentTemplateAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMi
             'data': 'primary'
         }
         variant = category_variants.get(obj.category.lower(), 'secondary')
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.CATEGORY)
-        return StatusBadge.create(
-            text=obj.category.title(),
-            variant=variant,
-            config=config
-        )
-    
-    @display(description="Status")
-    def status_display(self, obj):
+
+        return self.html.badge(obj.category.title(), variant=variant, icon=Icons.CATEGORY)
+
+    @computed_field("Status")
+    def status_display(self, obj: AgentTemplate) -> str:
         """Status display based on public/private."""
         if obj.is_public:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.PUBLIC)
-            return StatusBadge.create(text="Public", variant="success", config=config)
+            return self.html.badge("Public", variant="success", icon=Icons.PUBLIC)
         else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.LOCK)
-            return StatusBadge.create(text="Private", variant="secondary", config=config)
-    
-    @display(description="Usage")
-    def usage_count_display(self, obj):
+            return self.html.badge("Private", variant="secondary", icon=Icons.LOCK)
+
+    @computed_field("Usage")
+    def usage_count_display(self, obj: AgentTemplate) -> str:
         """Usage count display."""
         if not obj.usage_count:
             return "Not used"
         return f"{obj.usage_count} times"
-    
-    @display(description="Created By")
-    def created_by_display(self, obj):
+
+    @computed_field("Created By")
+    def created_by_display(self, obj: AgentTemplate) -> str:
         """Created by user display."""
         if not obj.created_by:
             return "—"
-        return self.display_user_simple(obj.created_by)
-    
-    @display(description="Created")
-    def created_at_display(self, obj):
+        # Simple username display, UserField handles avatar and styling
+        return obj.created_by.username
+
+    @computed_field("Created")
+    def created_at_display(self, obj: AgentTemplate) -> str:
         """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @action(description="Make public", variant=ActionVariant.SUCCESS)
-    def make_public(self, request, queryset):
-        """Make selected templates public."""
-        updated = queryset.update(is_public=True)
-        messages.success(request, f"Made {updated} templates public.")
-    
-    @action(description="Make private", variant=ActionVariant.WARNING)
-    def make_private(self, request, queryset):
-        """Make selected templates private."""
-        updated = queryset.update(is_public=False)
-        messages.warning(request, f"Made {updated} templates private.")
-    
-    @action(description="Duplicate templates", variant=ActionVariant.INFO)
-    def duplicate_templates(self, request, queryset):
-        """Duplicate selected templates."""
-        duplicated = 0
-        for template in queryset:
-            # Create duplicate logic here
-            duplicated += 1
-        
-        messages.info(request, f"Duplicated {duplicated} templates.")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at

@@ -5,8 +5,9 @@ Quick actions callbacks.
 import logging
 from typing import List
 
-from ..models.dashboard import QuickAction
 from django_cfg.modules.django_admin.icons import Icons
+
+from ..models.dashboard import QuickAction
 from .base import get_user_admin_urls
 
 logger = logging.getLogger(__name__)
@@ -14,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 class ActionsCallbacks:
     """Quick actions callbacks."""
-    
+
     def get_quick_actions(self) -> List[QuickAction]:
         """Get quick action buttons as Pydantic models."""
         # Get user admin URLs dynamically based on AUTH_USER_MODEL
         user_admin_urls = get_user_admin_urls()
-        
+
         actions = [
             QuickAction(
                 title="Add User",
@@ -45,6 +46,6 @@ class ActionsCallbacks:
                 color="success",
                 category="system",
             ),
-        ] 
-        
+        ]
+
         return actions

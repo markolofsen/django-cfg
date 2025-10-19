@@ -2,14 +2,15 @@
 Document serializers for DRF API.
 """
 
+
 from rest_framework import serializers
-from typing import Dict, Any
-from ..models import Document, ProcessingStatus
+
+from ..models import Document
 
 
 class DocumentCreateSerializer(serializers.Serializer):
     """Document creation request serializer."""
-    
+
     title = serializers.CharField(
         max_length=512,
         help_text="Document title"
@@ -28,19 +29,19 @@ class DocumentCreateSerializer(serializers.Serializer):
         default=dict,
         help_text="Additional metadata"
     )
-    
+
     def validate_content(self, value):
         """Validate content for security."""
         dangerous_patterns = [
             '<script', 'javascript:', 'data:',
             'vbscript:', 'onload=', 'onerror='
         ]
-        
+
         if any(pattern in value.lower() for pattern in dangerous_patterns):
             raise serializers.ValidationError('Content contains potentially unsafe elements')
-        
+
         return value
-    
+
     def validate_title(self, value):
         """Validate title format."""
         if not value.strip():
@@ -50,7 +51,7 @@ class DocumentCreateSerializer(serializers.Serializer):
 
 class DocumentSerializer(serializers.ModelSerializer):
     """Document response serializer."""
-    
+
     id = serializers.UUIDField(read_only=True)
     processing_status = serializers.CharField(read_only=True)
     chunks_count = serializers.IntegerField(read_only=True)
@@ -61,7 +62,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     processing_started_at = serializers.DateTimeField(read_only=True)
     processing_completed_at = serializers.DateTimeField(read_only=True)
     processing_error = serializers.CharField(read_only=True)
-    
+
     class Meta:
         model = Document
         fields = [
@@ -74,7 +75,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 class DocumentStatsSerializer(serializers.Serializer):
     """Document processing statistics serializer."""
-    
+
     total_documents = serializers.IntegerField()
     completed_documents = serializers.IntegerField()
     processing_success_rate = serializers.FloatField()
@@ -86,7 +87,7 @@ class DocumentStatsSerializer(serializers.Serializer):
 
 class DocumentProcessingStatusSerializer(serializers.Serializer):
     """Document processing status serializer."""
-    
+
     id = serializers.UUIDField()
     status = serializers.CharField()
     progress = serializers.JSONField()

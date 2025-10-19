@@ -5,11 +5,12 @@ Chunks Python code by logical boundaries (classes, functions, imports).
 """
 
 import ast
-from typing import List, Optional, Dict, Any
-from .base import BaseChunker
-from ..context.models import ChunkData
-from ..context.builders import ChunkContextBuilder
+from typing import Any, Dict, List, Optional
+
 from ....models.archive import ArchiveItem, ChunkType
+from ..context.builders import ChunkContextBuilder
+from ..context.models import ChunkData
+from .base import BaseChunker
 
 
 class PythonChunker(BaseChunker):
@@ -97,7 +98,7 @@ class PythonChunker(BaseChunker):
         content = '\n'.join(lines[start_line:end_line])
 
         # Analyze code structure
-        from ..analyzers import ComplexityAnalyzer, QualityAnalyzer, PurposeDetector
+        from ..analyzers import ComplexityAnalyzer, PurposeDetector, QualityAnalyzer
         code_info = self._analyze_structure(
             node, content,
             ComplexityAnalyzer, QualityAnalyzer, PurposeDetector

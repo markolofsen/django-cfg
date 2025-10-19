@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-ipc"
-version = "1.0.5"
+version = "1.0.7"
 description = "🚀 Production-ready WebSocket RPC for Django - Auto-generated clients, 100% type-safe, 5-minute setup"
 readme = "README.md"
 keywords = [ "django", "websocket", "websocket-rpc", "django-websocket", "real-time", "django-real-time", "ipc", "redis", "pydantic", "type-safety", "django-ipc", "auto-generated-clients", "django-notifications", "websocket-server", "django-channels-alternative",]

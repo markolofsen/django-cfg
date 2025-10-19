@@ -1,0 +1,24 @@
+/**
+ * Type definitions for django-cfg API
+ * Auto-generated from OpenAPI schema
+ * @module types
+ */
+
+// This file contains JSDoc type definitions generated from the OpenAPI schema
+// These types can be used for better IDE support and documentation
+
+{% for typedef in typedefs %}
+/**
+ * @typedef {{ '{Object}' }} {{ typedef.name }}
+{%- if typedef.description %}
+ * @description {{ typedef.description }}
+{%- endif %}
+{%- for prop in typedef.properties %}
+ * @property {{ '{' }}{{ prop.type }}{{ '}' }} {% if not prop.required %}[{% endif %}{{ prop.name }}{% if not prop.required %}]{% endif %}{% if prop.description %} - {{ prop.description }}{% endif %}
+{%- endfor %}
+ */
+
+{% endfor %}
+
+// Export empty object to make this a module
+export {};

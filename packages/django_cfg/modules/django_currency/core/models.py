@@ -3,23 +3,24 @@ Data models for currency conversion and API responses.
 """
 
 from datetime import datetime
-from typing import Optional, List, Set, Dict, Any
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, RootModel
 
 
 class Rate(BaseModel):
     """Currency exchange rate model."""
-    
+
     source: str = Field(description="Data source (yahoo, coinpaprika)")
     base_currency: str = Field(description="Base currency code")
-    quote_currency: str = Field(description="Quote currency code") 
+    quote_currency: str = Field(description="Quote currency code")
     rate: float = Field(description="Exchange rate")
     timestamp: datetime = Field(default_factory=datetime.now, description="Rate timestamp")
 
 
 class ConversionRequest(BaseModel):
     """Currency conversion request model."""
-    
+
     amount: float = Field(gt=0, description="Amount to convert")
     from_currency: str = Field(description="Source currency code")
     to_currency: str = Field(description="Target currency code")
@@ -27,7 +28,7 @@ class ConversionRequest(BaseModel):
 
 class ConversionResult(BaseModel):
     """Currency conversion result model."""
-    
+
     request: ConversionRequest = Field(description="Original request")
     result: float = Field(description="Converted amount")
     rate: Rate = Field(description="Exchange rate used")
@@ -36,19 +37,19 @@ class ConversionResult(BaseModel):
 
 class YahooFinanceCurrencies(BaseModel):
     """Yahoo Finance supported currencies model."""
-    
+
     fiat: List[str] = Field(description="Supported fiat currencies")
 
 
 class CoinPaprikaCurrencies(BaseModel):
     """CoinPaprika supported currencies model."""
-    
+
     crypto: List[str] = Field(description="Supported cryptocurrencies")
 
 
 class SupportedCurrencies(BaseModel):
     """All supported currencies model."""
-    
+
     yahoo: YahooFinanceCurrencies = Field(description="Yahoo Finance currencies")
     coinpaprika: CoinPaprikaCurrencies = Field(description="CoinPaprika currencies")
 

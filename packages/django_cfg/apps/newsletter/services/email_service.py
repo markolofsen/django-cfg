@@ -5,12 +5,14 @@ Uses the built-in DjangoEmailService for sending emails with proper logging.
 """
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from django_cfg.modules.django_email import DjangoEmailService
-from ..models import Newsletter, NewsletterSubscription, EmailLog
+
+from ..models import EmailLog, Newsletter, NewsletterSubscription
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -18,16 +20,16 @@ logger = logging.getLogger(__name__)
 
 class NewsletterEmailService:
     """Email service for newsletter application using DjangoEmailService."""
-    
+
     def __init__(self):
         """Initialize the email service."""
         self.email_service = DjangoEmailService()
-    
+
     def _create_email_log(
-        self, 
-        recipient: str, 
-        subject: str, 
-        status: str, 
+        self,
+        recipient: str,
+        subject: str,
+        status: str,
         newsletter: Optional[Newsletter] = None,
         campaign = None
     ) -> EmailLog:
@@ -46,14 +48,14 @@ class NewsletterEmailService:
         """
         try:
             from django.utils import timezone
-            
+
             # Try to find user by email
             user = None
             try:
                 user = User.objects.get(email=recipient)
             except User.DoesNotExist:
                 pass
-            
+
             log_data = {
                 'user': user,
                 'newsletter': newsletter,
@@ -61,18 +63,18 @@ class NewsletterEmailService:
                 'recipient': recipient,
                 'subject': subject,
                 'status': status,
-                'body': f"Newsletter email sent via campaign"
+                'body': "Newsletter email sent via campaign"
             }
-            
+
             # Add sent_at for successful emails
             if status == EmailLog.EmailLogStatus.SENT:
                 log_data['sent_at'] = timezone.now()
-            
+
             return EmailLog.objects.create(**log_data)
         except Exception as e:
             logger.error(f"Failed to create email log: {e}")
             raise
-    
+
     def send_newsletter_email(
         self,
         newsletter: Newsletter,
@@ -133,7 +135,7 @@ class NewsletterEmailService:
                     'sent_count': 0,
                     'failed_count': 0
                 }
-            
+
             if not emails:
                 return {
                     'success': False,
@@ -141,7 +143,7 @@ class NewsletterEmailService:
                     'sent_count': 0,
                     'failed_count': 0
                 }
-            
+
             # Use the optimized send_bulk_email method with tracking
             result = self.send_bulk_email(
                 recipients=emails,
@@ -157,17 +159,17 @@ class NewsletterEmailService:
                 newsletter=newsletter,
                 campaign=campaign
             )
-            
+
             # Add newsletter-specific context to the result
             result.update({
                 'newsletter_id': newsletter.id,
                 'newsletter_title': newsletter.title
             })
-            
+
             logger.info(f"Newsletter '{newsletter.title}' sent to {len(emails)} recipients, {result['sent_count']} successful")
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Failed to send newsletter emails: {e}")
             return {
@@ -176,7 +178,7 @@ class NewsletterEmailService:
                 'sent_count': 0,
                 'failed_count': 0
             }
-    
+
     def send_subscription_welcome_email(self, subscription: NewsletterSubscription) -> bool:
         """
         Send welcome email to new newsletter subscriber.
@@ -190,7 +192,7 @@ class NewsletterEmailService:
         try:
             context = {
                 'email_title': f"Welcome to {subscription.newsletter.title}",
-                'greeting': f"Hello",
+                'greeting': "Hello",
                 'main_text': f"Thank you for subscribing to our newsletter <strong>{subscription.newsletter.title}</strong>!",
                 'main_html_content': f"""
                     <p>You'll receive updates and news directly to your inbox at <strong>{subscription.email}</strong>.</p>
@@ -199,7 +201,7 @@ class NewsletterEmailService:
                 """,
                 'secondary_text': f'If you no longer wish to receive these emails, you can <a href="/mailer/unsubscribe/{subscription.id}/">unsubscribe here</a>.'
             }
-            
+
             self.email_service.send_template(
                 subject=f"Welcome to {subscription.newsletter.title}",
                 template_name="emails/base_email",
@@ -207,14 +209,14 @@ class NewsletterEmailService:
                 recipient_list=[subscription.email],
                 fail_silently=False
             )
-            
+
             logger.info(f"Welcome email sent to {subscription.email}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send welcome email to {subscription.email}: {e}")
             return False
-    
+
     def send_unsubscribe_confirmation_email(self, subscription: NewsletterSubscription) -> bool:
         """
         Send unsubscribe confirmation email.
@@ -228,7 +230,7 @@ class NewsletterEmailService:
         try:
             context = {
                 'email_title': "Unsubscribe Confirmation",
-                'greeting': f"Hello",
+                'greeting': "Hello",
                 'main_text': f"You have been successfully unsubscribed from <strong>{subscription.newsletter.title}</strong>.",
                 'main_html_content': f"""
                     <p>Your email address <strong>{subscription.email}</strong> will no longer receive emails from this newsletter.</p>
@@ -236,7 +238,7 @@ class NewsletterEmailService:
                     <p>We're sorry to see you go!</p>
                 """
             }
-            
+
             self.email_service.send_template(
                 subject=f"Unsubscribed from {subscription.newsletter.title}",
                 template_name="emails/base_email",
@@ -244,14 +246,14 @@ class NewsletterEmailService:
                 recipient_list=[subscription.email],
                 fail_silently=False
             )
-            
+
             logger.info(f"Unsubscribe confirmation sent to {subscription.email}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send unsubscribe confirmation to {subscription.email}: {e}")
             return False
-    
+
     def send_bulk_email(
         self,
         recipients: List[str],
@@ -289,7 +291,7 @@ class NewsletterEmailService:
         """
         sent_count = 0
         failed_count = 0
-        
+
         try:
             for recipient in recipients:
                 try:
@@ -303,7 +305,7 @@ class NewsletterEmailService:
                             newsletter=newsletter,
                             campaign=campaign
                         )
-                    
+
                     context = {
                         'email_title': email_title,
                         'greeting': "Hello",
@@ -313,7 +315,7 @@ class NewsletterEmailService:
                         'button_url': button_url,
                         'secondary_text': secondary_text
                     }
-                    
+
                     # Send email with tracking if enabled
                     if enable_tracking and email_log:
                         success = self.email_service.send_template_with_tracking(
@@ -344,7 +346,7 @@ class NewsletterEmailService:
                                 recipient_list=[recipient],
                                 fail_silently=False
                             ) > 0
-                    
+
                     # Update email log status
                     if enable_tracking and email_log:
                         if success:
@@ -360,26 +362,26 @@ class NewsletterEmailService:
                             sent_count += 1
                         else:
                             failed_count += 1
-                            
+
                 except Exception as e:
                     logger.error(f"Failed to send email to {recipient}: {e}")
                     failed_count += 1
-                    
+
                     # Update email log if exists
                     if enable_tracking and email_log:
                         email_log.status = EmailLog.EmailLogStatus.FAILED
                         email_log.error_message = str(e)
                         email_log.save()
-            
+
             logger.info(f"Bulk email sent to {len(recipients)} recipients, {sent_count} successful")
-            
+
             return {
                 'success': sent_count > 0,
                 'sent_count': sent_count,
                 'failed_count': failed_count,
                 'total_recipients': len(recipients)
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to send bulk emails: {e}")
             return {

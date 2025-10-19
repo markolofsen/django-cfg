@@ -1,273 +1,416 @@
 """
-Newsletter admin interfaces using Django Admin Utilities.
+Newsletter admin interfaces using Django Admin Utilities v2.0.
 
 Enhanced newsletter management with Material Icons and optimized queries.
 """
 
 from django import forms
 from django.contrib import admin, messages
-from django.urls import reverse
-from django.http import HttpResponseRedirect
-from django.db import models
 from django.db.models import Count, Q
-from unfold.admin import ModelAdmin, TabularInline
+from unfold.admin import TabularInline
+from unfold.contrib.filters.admin import AutocompleteSelectFilter
 from unfold.contrib.forms.widgets import WysiwygWidget
-from django_cfg import ImportExportModelAdmin, ExportMixin, ImportForm, ExportForm
 
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    StatusBadgeConfig,
-    DateTimeDisplayConfig,
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    ActionVariant,
-    display,
-    action
+    TextField,
+    UserField,
+    computed_field
 )
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
-from ..models import EmailLog, Newsletter, NewsletterSubscription, NewsletterCampaign
-from .filters import UserEmailFilter, UserNameFilter, HasUserFilter, EmailOpenedFilter, EmailClickedFilter
-from .resources import NewsletterResource, NewsletterSubscriptionResource, EmailLogResource
+from ..models import EmailLog, Newsletter, NewsletterCampaign, NewsletterSubscription
+from .actions import (
+    activate_newsletters,
+    activate_subscriptions,
+    cancel_campaigns,
+    deactivate_newsletters,
+    deactivate_subscriptions,
+    enable_auto_subscribe,
+    schedule_campaigns,
+    send_campaigns,
+)
+from .filters import (
+    EmailClickedFilter,
+    EmailOpenedFilter,
+    HasUserFilter,
+    UserEmailFilter,
+    UserNameFilter,
+)
+from .resources import EmailLogResource, NewsletterResource, NewsletterSubscriptionResource
+
+
+# ===== EmailLog Admin Config =====
+
+emaillog_config = AdminConfig(
+    model=EmailLog,
+
+    # Performance optimization
+    select_related=['user', 'newsletter'],
+
+    # Import/Export
+    import_export_enabled=True,
+    resource_class=EmailLogResource,
+
+    # List display
+    list_display=[
+        "user_display",
+        "recipient_display",
+        "subject_display",
+        "newsletter_display",
+        "status_display",
+        "created_at_display",
+        "sent_at_display",
+        "tracking_display"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        UserField(
+            name="user",
+            title="User"
+        ),
+        BadgeField(
+            name="recipient",
+            title="Recipient",
+            variant="info",
+            icon=Icons.EMAIL
+        ),
+        BadgeField(
+            name="subject",
+            title="Subject",
+            variant="primary",
+            icon=Icons.MAIL
+        ),
+        BadgeField(
+            name="newsletter",
+            title="Newsletter",
+            variant="secondary",
+            icon=Icons.CAMPAIGN
+        ),
+        BadgeField(
+            name="status",
+            title="Status"
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created"
+        ),
+        DateTimeField(
+            name="sent_at",
+            title="Sent"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=[
+        "recipient",
+        "subject",
+        "body",
+        "error_message",
+        "user__username",
+        "user__email",
+        "newsletter__subject"
+    ],
+    list_filter=[
+        "status",
+        "created_at",
+        "sent_at",
+        "newsletter",
+        EmailOpenedFilter,
+        EmailClickedFilter,
+        HasUserFilter,
+        UserEmailFilter,
+        UserNameFilter
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
 
 
 @admin.register(EmailLog)
-class EmailLogAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMixin):
-    """Admin interface for EmailLog using Django Admin Utilities."""
-    
-    # Performance optimization
-    select_related_fields = ['user', 'newsletter']
-    
-    # Export-only configuration
-    resource_class = EmailLogResource
-    export_form_class = ExportForm
-    
-    list_display = [
-        'user_display', 'recipient_display', 'subject_display', 'newsletter_display', 
-        'status_display', 'created_at_display', 'sent_at_display', 'tracking_display'
-    ]
-    list_display_links = ['subject_display']
-    ordering = ['-created_at']
-    list_filter = [
-        'status', 'created_at', 'sent_at', 'newsletter', 
-        EmailOpenedFilter, EmailClickedFilter, HasUserFilter, UserEmailFilter, UserNameFilter
-    ]
-    autocomplete_fields = ['user']
-    search_fields = [
-        'recipient',
-        'subject',
-        'body',
-        'error_message',
-        'user__username',
-        'user__email',
-        'newsletter__subject'
-    ]
+class EmailLogAdmin(PydanticAdmin):
+    """Admin interface for EmailLog using Django Admin Utilities v2.0."""
+    config = emaillog_config
+
+    # Readonly fields
     readonly_fields = ['created_at', 'sent_at', 'newsletter']
-    raw_id_fields = ['user', 'newsletter']
-    
+
+    # Fieldsets
     fieldsets = [
-        ('📧 Email Information', {
-            'fields': ['recipient', 'subject', 'body'],
-            'classes': ('tab',)
-        }),
-        ('👤 User & Newsletter', {
-            'fields': ['user', 'newsletter'],
-            'classes': ('tab',)
-        }),
-        ('📊 Status & Tracking', {
-            'fields': ['status', 'is_opened', 'is_clicked'],
-            'classes': ('tab',)
-        }),
-        ('❌ Error Details', {
-            'fields': ['error_message'],
-            'classes': ('tab', 'collapse')
-        }),
-        ('⏰ Timestamps', {
-            'fields': ['created_at', 'sent_at'],
-            'classes': ('tab', 'collapse')
-        })
+        FieldsetConfig(
+            title="Email Information",
+            fields=['recipient', 'subject', 'body']
+        ),
+        FieldsetConfig(
+            title="User & Newsletter",
+            fields=['user', 'newsletter']
+        ),
+        FieldsetConfig(
+            title="Status & Tracking",
+            fields=['status', 'is_opened', 'is_clicked']
+        ),
+        FieldsetConfig(
+            title="Error Details",
+            fields=['error_message'],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=['created_at', 'sent_at'],
+            collapsed=True
+        )
     ]
-    
-    @display(description="User")
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("User")
     def user_display(self, obj: EmailLog) -> str:
         """Display user."""
         if not obj.user:
             return "—"
-        return self.display_user_simple(obj.user)
-    
-    @display(description="Recipient", ordering="recipient")
+        # Simple username display, UserField handles avatar and styling
+        return obj.user.username
+
+    @computed_field("Recipient")
     def recipient_display(self, obj: EmailLog) -> str:
         """Display recipient email."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.EMAIL)
-        return StatusBadge.create(
-            text=obj.recipient,
-            variant="info",
-            config=config
-        )
-    
-    @display(description="Subject", ordering="subject")
+        return self.html.badge(obj.recipient, variant="info", icon=Icons.EMAIL)
+
+    @computed_field("Subject")
     def subject_display(self, obj: EmailLog) -> str:
         """Display email subject."""
         if not obj.subject:
             return "—"
-        
+
         subject = obj.subject
         if len(subject) > 50:
             subject = subject[:47] + "..."
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.MAIL)
-        return StatusBadge.create(
-            text=subject,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Newsletter")
+
+        return self.html.badge(subject, variant="primary", icon=Icons.MAIL)
+
+    @computed_field("Newsletter")
     def newsletter_display(self, obj: EmailLog) -> str:
         """Display newsletter link."""
         if not obj.newsletter:
             return "—"
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.CAMPAIGN)
-        return StatusBadge.create(
-            text=obj.newsletter.title,
-            variant="secondary",
-            config=config
-        )
-    
-    @display(description="Status")
+
+        return self.html.badge(obj.newsletter.title, variant="secondary", icon=Icons.CAMPAIGN)
+
+    @computed_field("Status")
     def status_display(self, obj: EmailLog) -> str:
         """Display email status."""
-        status_config = StatusBadgeConfig(
-            custom_mappings={
-                'pending': 'warning',
-                'sent': 'success',
-                'failed': 'danger',
-                'bounced': 'secondary'
-            },
-            show_icons=True,
-            icon=Icons.SCHEDULE if obj.status == 'pending' else Icons.CHECK_CIRCLE if obj.status == 'sent' else Icons.ERROR if obj.status == 'failed' else Icons.BOUNCE_EMAIL
-        )
-        return self.display_status_auto(obj, 'status', status_config)
-    
-    @display(description="Created")
+        # Determine icon based on status
+        icon_map = {
+            'pending': Icons.SCHEDULE,
+            'sent': Icons.CHECK_CIRCLE,
+            'failed': Icons.ERROR,
+            'bounced': Icons.BOUNCE_EMAIL
+        }
+
+        # Determine variant based on status
+        variant_map = {
+            'pending': 'warning',
+            'sent': 'success',
+            'failed': 'danger',
+            'bounced': 'secondary'
+        }
+
+        icon = icon_map.get(obj.status, Icons.SCHEDULE)
+        variant = variant_map.get(obj.status, 'warning')
+
+        return self.html.badge(obj.get_status_display(), variant=variant, icon=icon)
+
+    @computed_field("Created")
     def created_at_display(self, obj: EmailLog) -> str:
         """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @display(description="Sent")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
+
+    @computed_field("Sent")
     def sent_at_display(self, obj: EmailLog) -> str:
         """Sent time with relative display."""
         if not obj.sent_at:
             return "Not sent"
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'sent_at', config)
-    
-    @display(description="Tracking")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.sent_at
+
+    @computed_field("Tracking")
     def tracking_display(self, obj: EmailLog) -> str:
         """Display tracking status with badges."""
         badges = []
-        
+
         if obj.is_opened:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.VISIBILITY)
-            badges.append(StatusBadge.create(text="Opened", variant="success", config=config))
+            badges.append(self.html.badge("Opened", variant="success", icon=Icons.VISIBILITY))
         else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.VISIBILITY_OFF)
-            badges.append(StatusBadge.create(text="Not Opened", variant="secondary", config=config))
-        
+            badges.append(self.html.badge("Not Opened", variant="secondary", icon=Icons.VISIBILITY_OFF))
+
         if obj.is_clicked:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.MOUSE)
-            badges.append(StatusBadge.create(text="Clicked", variant="info", config=config))
+            badges.append(self.html.badge("Clicked", variant="info", icon=Icons.MOUSE))
         else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.TOUCH_APP)
-            badges.append(StatusBadge.create(text="Not Clicked", variant="secondary", config=config))
-        
+            badges.append(self.html.badge("Not Clicked", variant="secondary", icon=Icons.TOUCH_APP))
+
         return " | ".join(badges)
 
 
+# ===== Newsletter Admin Config =====
+
+newsletter_config = AdminConfig(
+    model=Newsletter,
+
+    # Import/Export
+    import_export_enabled=True,
+    resource_class=NewsletterResource,
+
+    # List display
+    list_display=[
+        "title_display",
+        "description_display",
+        "active_display",
+        "auto_subscribe_display",
+        "subscribers_count_display",
+        "created_at_display"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="title",
+            title="Title",
+            variant="primary",
+            icon=Icons.CAMPAIGN
+        ),
+        TextField(
+            name="description",
+            title="Description"
+        ),
+        BadgeField(
+            name="is_active",
+            title="Active"
+        ),
+        BadgeField(
+            name="auto_subscribe",
+            title="Auto Subscribe",
+            variant="info",
+            icon=Icons.AUTO_AWESOME
+        ),
+        TextField(
+            name="subscribers_count",
+            title="Subscribers"
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=["title", "description"],
+    list_filter=["is_active", "auto_subscribe", "created_at"],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="activate_newsletters",
+            description="Activate newsletters",
+            variant="success",
+            icon=Icons.CHECK_CIRCLE,
+            handler=activate_newsletters
+        ),
+        ActionConfig(
+            name="deactivate_newsletters",
+            description="Deactivate newsletters",
+            variant="warning",
+            icon=Icons.CANCEL,
+            handler=deactivate_newsletters
+        ),
+        ActionConfig(
+            name="enable_auto_subscribe",
+            description="Enable auto subscribe",
+            variant="primary",
+            icon=Icons.AUTO_AWESOME,
+            handler=enable_auto_subscribe
+        ),
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
+
+
 @admin.register(Newsletter)
-class NewsletterAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportModelAdmin):
-    """Admin interface for Newsletter using Django Admin Utilities."""
-    
-    # Import/Export configuration
-    resource_class = NewsletterResource
-    import_form_class = ImportForm
-    export_form_class = ExportForm
-    
-    list_display = [
-        'title_display', 'description_display', 'active_display', 
-        'auto_subscribe_display', 'subscribers_count_display', 'created_at_display'
-    ]
-    list_display_links = ['title_display']
-    ordering = ['-created_at']
-    list_filter = ['is_active', 'auto_subscribe', 'created_at']
+class NewsletterAdmin(PydanticAdmin):
+    """Admin interface for Newsletter using Django Admin Utilities v2.0."""
+    config = newsletter_config
+
+    # Required for autocomplete (used by NewsletterSubscriptionAdmin and NewsletterCampaignAdmin)
     search_fields = ['title', 'description']
+
+    # Readonly fields
     readonly_fields = ['subscribers_count', 'created_at', 'updated_at']
-    
+
+    # Fieldsets
     fieldsets = [
-        ('📰 Newsletter Information', {
-            'fields': ['title', 'description'],
-            'classes': ('tab',)
-        }),
-        ('⚙️ Settings', {
-            'fields': ['is_active', 'auto_subscribe'],
-            'classes': ('tab',)
-        }),
-        ('📊 Statistics', {
-            'fields': ['subscribers_count'],
-            'classes': ('tab', 'collapse')
-        }),
-        ('⏰ Timestamps', {
-            'fields': ['created_at', 'updated_at'],
-            'classes': ('tab', 'collapse')
-        })
+        FieldsetConfig(
+            title="Newsletter Information",
+            fields=['title', 'description']
+        ),
+        FieldsetConfig(
+            title="Settings",
+            fields=['is_active', 'auto_subscribe']
+        ),
+        FieldsetConfig(
+            title="Statistics",
+            fields=['subscribers_count'],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=['created_at', 'updated_at'],
+            collapsed=True
+        )
     ]
-    
-    actions = ['activate_newsletters', 'deactivate_newsletters', 'enable_auto_subscribe']
-    
-    @display(description="Title", ordering="title")
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Title")
     def title_display(self, obj: Newsletter) -> str:
         """Display newsletter title."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.CAMPAIGN)
-        return StatusBadge.create(
-            text=obj.title,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Description")
+        return self.html.badge(obj.title, variant="primary", icon=Icons.CAMPAIGN)
+
+    @computed_field("Description")
     def description_display(self, obj: Newsletter) -> str:
         """Display newsletter description."""
         if not obj.description:
             return "—"
-        
+
         description = obj.description
         if len(description) > 100:
             description = description[:97] + "..."
-        
+
         return description
-    
-    @display(description="Active")
+
+    @computed_field("Active")
     def active_display(self, obj: Newsletter) -> str:
         """Display active status."""
         if obj.is_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CHECK_CIRCLE)
-            return StatusBadge.create(text="Active", variant="success", config=config)
+            return self.html.badge("Active", variant="success", icon=Icons.CHECK_CIRCLE)
         else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CANCEL)
-            return StatusBadge.create(text="Inactive", variant="secondary", config=config)
-    
-    @display(description="Auto Subscribe")
+            return self.html.badge("Inactive", variant="secondary", icon=Icons.CANCEL)
+
+    @computed_field("Auto Subscribe")
     def auto_subscribe_display(self, obj: Newsletter) -> str:
         """Display auto subscribe status."""
         if obj.auto_subscribe:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.AUTO_AWESOME)
-            return StatusBadge.create(text="Auto", variant="info", config=config)
+            return self.html.badge("Auto", variant="info", icon=Icons.AUTO_AWESOME)
         else:
             return "Manual"
-    
-    @display(description="Subscribers")
+
+    @computed_field("Subscribers")
     def subscribers_count_display(self, obj: Newsletter) -> str:
         """Display subscribers count."""
         count = obj.subscribers_count or 0
@@ -277,149 +420,177 @@ class NewsletterAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExpor
             return "1 subscriber"
         else:
             return f"{count} subscribers"
-    
-    @display(description="Created")
+
+    @computed_field("Created")
     def created_at_display(self, obj: Newsletter) -> str:
         """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @action(description="Activate newsletters", variant=ActionVariant.SUCCESS)
-    def activate_newsletters(self, request, queryset):
-        """Activate selected newsletters."""
-        count = queryset.update(is_active=True)
-        messages.success(request, f"Successfully activated {count} newsletters.")
-    
-    @action(description="Deactivate newsletters", variant=ActionVariant.DANGER)
-    def deactivate_newsletters(self, request, queryset):
-        """Deactivate selected newsletters."""
-        count = queryset.update(is_active=False)
-        messages.warning(request, f"Successfully deactivated {count} newsletters.")
-    
-    @action(description="Enable auto subscribe", variant=ActionVariant.INFO)
-    def enable_auto_subscribe(self, request, queryset):
-        """Enable auto subscribe for selected newsletters."""
-        count = queryset.update(auto_subscribe=True)
-        messages.info(request, f"Enabled auto subscribe for {count} newsletters.")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
 
+
+# ===== NewsletterSubscription Inline (unchanged) =====
 
 class NewsletterSubscriptionInline(TabularInline):
     """Inline for newsletter subscriptions."""
-    
+
     model = NewsletterSubscription
     fields = ['email', 'user', 'is_active', 'subscribed_at']
     readonly_fields = ['subscribed_at']
     extra = 0
 
 
-@admin.register(NewsletterSubscription)
-class NewsletterSubscriptionAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportModelAdmin):
-    """Admin interface for NewsletterSubscription using Django Admin Utilities."""
-    
+# ===== NewsletterSubscription Admin Config =====
+
+newslettersubscription_config = AdminConfig(
+    model=NewsletterSubscription,
+
     # Performance optimization
-    select_related_fields = ['user', 'newsletter']
-    
-    # Import/Export configuration
-    resource_class = NewsletterSubscriptionResource
-    import_form_class = ImportForm
-    export_form_class = ExportForm
-    
-    list_display = [
-        'email_display', 'newsletter_display', 'user_display', 'active_display', 
-        'subscribed_at_display', 'unsubscribed_at_display'
-    ]
-    list_display_links = ['email_display']
-    ordering = ['-subscribed_at']
-    list_filter = ['is_active', 'newsletter', 'subscribed_at']
-    search_fields = ['email', 'user__email', 'newsletter__title']
+    select_related=['user', 'newsletter'],
+
+    # Import/Export
+    import_export_enabled=True,
+    resource_class=NewsletterSubscriptionResource,
+
+    # List display
+    list_display=[
+        "email_display",
+        "newsletter_display",
+        "user_display",
+        "active_display",
+        "subscribed_at_display",
+        "unsubscribed_at_display"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="email",
+            title="Email",
+            variant="info",
+            icon=Icons.EMAIL
+        ),
+        BadgeField(
+            name="newsletter",
+            title="Newsletter",
+            variant="primary",
+            icon=Icons.CAMPAIGN
+        ),
+        UserField(
+            name="user",
+            title="User"
+        ),
+        BadgeField(
+            name="is_active",
+            title="Active"
+        ),
+        DateTimeField(
+            name="subscribed_at",
+            title="Subscribed"
+        ),
+        DateTimeField(
+            name="unsubscribed_at",
+            title="Unsubscribed"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=["email", "user__email", "newsletter__title"],
+    list_filter=["is_active", "newsletter", "subscribed_at"],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="activate_subscriptions",
+            description="Activate subscriptions",
+            variant="success",
+            icon=Icons.CHECK_CIRCLE,
+            handler=activate_subscriptions
+        ),
+        ActionConfig(
+            name="deactivate_subscriptions",
+            description="Deactivate subscriptions",
+            variant="warning",
+            icon=Icons.CANCEL,
+            handler=deactivate_subscriptions
+        ),
+    ],
+
+    # Ordering
+    ordering=["-subscribed_at"],
+)
+
+
+@admin.register(NewsletterSubscription)
+class NewsletterSubscriptionAdmin(PydanticAdmin):
+    """Admin interface for NewsletterSubscription using Django Admin Utilities v2.0."""
+    config = newslettersubscription_config
+
+    # Readonly fields
     readonly_fields = ['subscribed_at', 'unsubscribed_at']
-    autocomplete_fields = ['user', 'newsletter']
-    
+
+    # Fieldsets
     fieldsets = [
-        ('📧 Subscription Information', {
-            'fields': ['email', 'newsletter', 'user'],
-            'classes': ('tab',)
-        }),
-        ('⚙️ Status', {
-            'fields': ['is_active'],
-            'classes': ('tab',)
-        }),
-        ('⏰ Timestamps', {
-            'fields': ['subscribed_at', 'unsubscribed_at'],
-            'classes': ('tab',)
-        })
+        FieldsetConfig(
+            title="Subscription Information",
+            fields=['email', 'newsletter', 'user']
+        ),
+        FieldsetConfig(
+            title="Status",
+            fields=['is_active']
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=['subscribed_at', 'unsubscribed_at']
+        )
     ]
-    
-    actions = ['activate_subscriptions', 'deactivate_subscriptions']
-    
-    @display(description="Email", ordering="email")
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Email")
     def email_display(self, obj: NewsletterSubscription) -> str:
         """Display subscription email."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.EMAIL)
-        return StatusBadge.create(
-            text=obj.email,
-            variant="info",
-            config=config
-        )
-    
-    @display(description="Newsletter")
+        return self.html.badge(obj.email, variant="info", icon=Icons.EMAIL)
+
+    @computed_field("Newsletter")
     def newsletter_display(self, obj: NewsletterSubscription) -> str:
         """Display newsletter."""
         if not obj.newsletter:
             return "—"
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.CAMPAIGN)
-        return StatusBadge.create(
-            text=obj.newsletter.title,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="User")
+
+        return self.html.badge(obj.newsletter.title, variant="primary", icon=Icons.CAMPAIGN)
+
+    @computed_field("User")
     def user_display(self, obj: NewsletterSubscription) -> str:
         """Display user."""
         if not obj.user:
             return "—"
-        return self.display_user_simple(obj.user)
-    
-    @display(description="Active")
+        # Simple username display, UserField handles avatar and styling
+        return obj.user.username
+
+    @computed_field("Active")
     def active_display(self, obj: NewsletterSubscription) -> str:
         """Display active status."""
         if obj.is_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CHECK_CIRCLE)
-            return StatusBadge.create(text="Active", variant="success", config=config)
+            return self.html.badge("Active", variant="success", icon=Icons.CHECK_CIRCLE)
         else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CANCEL)
-            return StatusBadge.create(text="Inactive", variant="secondary", config=config)
-    
-    @display(description="Subscribed")
+            return self.html.badge("Inactive", variant="secondary", icon=Icons.CANCEL)
+
+    @computed_field("Subscribed")
     def subscribed_at_display(self, obj: NewsletterSubscription) -> str:
         """Subscribed time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'subscribed_at', config)
-    
-    @display(description="Unsubscribed")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.subscribed_at
+
+    @computed_field("Unsubscribed")
     def unsubscribed_at_display(self, obj: NewsletterSubscription) -> str:
         """Unsubscribed time with relative display."""
         if not obj.unsubscribed_at:
             return "—"
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'unsubscribed_at', config)
-    
-    @action(description="Activate subscriptions", variant=ActionVariant.SUCCESS)
-    def activate_subscriptions(self, request, queryset):
-        """Activate selected subscriptions."""
-        count = queryset.update(is_active=True)
-        messages.success(request, f"Successfully activated {count} subscriptions.")
-    
-    @action(description="Deactivate subscriptions", variant=ActionVariant.DANGER)
-    def deactivate_subscriptions(self, request, queryset):
-        """Deactivate selected subscriptions."""
-        count = queryset.update(is_active=False)
-        messages.warning(request, f"Successfully deactivated {count} subscriptions.")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.unsubscribed_at
 
 
-# Form for NewsletterCampaignAdmin with Unfold Wysiwyg
+# ===== NewsletterCampaign Form (unchanged) =====
+
 class NewsletterCampaignAdminForm(forms.ModelForm):
     main_html_content = forms.CharField(widget=WysiwygWidget(), required=False)
 
@@ -428,97 +599,170 @@ class NewsletterCampaignAdminForm(forms.ModelForm):
         fields = '__all__'
 
 
-@admin.register(NewsletterCampaign)
-class NewsletterCampaignAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportModelAdmin):
-    """Admin interface for NewsletterCampaign using Django Admin Utilities."""
-    
+# ===== NewsletterCampaign Admin Config =====
+
+newslettercampaign_config = AdminConfig(
+    model=NewsletterCampaign,
+
     # Performance optimization
-    select_related_fields = ['newsletter']
-    
+    select_related=['newsletter'],
+
+    # List display
+    list_display=[
+        "subject_display",
+        "newsletter_display",
+        "status_display",
+        "sent_at_display",
+        "recipient_count_display"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="subject",
+            title="Subject",
+            variant="primary",
+            icon=Icons.MAIL
+        ),
+        BadgeField(
+            name="newsletter",
+            title="Newsletter",
+            variant="secondary",
+            icon=Icons.CAMPAIGN
+        ),
+        BadgeField(
+            name="status",
+            title="Status"
+        ),
+        DateTimeField(
+            name="sent_at",
+            title="Sent"
+        ),
+        TextField(
+            name="recipient_count",
+            title="Recipients"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=["subject", "newsletter__title", "main_html_content"],
+    list_filter=["status", "newsletter", "sent_at"],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="send_campaigns",
+            description="Send campaigns",
+            variant="primary",
+            icon=Icons.SEND,
+            confirmation=True,
+            handler=send_campaigns
+        ),
+        ActionConfig(
+            name="schedule_campaigns",
+            description="Schedule campaigns",
+            variant="warning",
+            icon=Icons.SCHEDULE,
+            handler=schedule_campaigns
+        ),
+        ActionConfig(
+            name="cancel_campaigns",
+            description="Cancel campaigns",
+            variant="danger",
+            icon=Icons.CANCEL,
+            confirmation=True,
+            handler=cancel_campaigns
+        ),
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
+
+
+@admin.register(NewsletterCampaign)
+class NewsletterCampaignAdmin(PydanticAdmin):
+    """Admin interface for NewsletterCampaign using Django Admin Utilities v2.0."""
+    config = newslettercampaign_config
+
+    # Custom form
     form = NewsletterCampaignAdminForm
-    
-    list_display = [
-        'subject_display', 'newsletter_display', 'status_display', 
-        'sent_at_display', 'recipient_count_display'
-    ]
-    list_display_links = ['subject_display']
-    ordering = ['-created_at']
-    list_filter = ['status', 'newsletter', 'sent_at']
-    search_fields = ['subject', 'newsletter__title', 'main_html_content']
+
+    # Readonly fields
     readonly_fields = ['sent_at', 'recipient_count', 'created_at']
-    autocomplete_fields = ['newsletter']
-    
+
+    # Fieldsets
     fieldsets = [
-        ('📧 Campaign Information', {
-            'fields': ['subject', 'newsletter'],
-            'classes': ('tab',)
-        }),
-        ('📝 Content', {
-            'fields': ['main_html_content'],
-            'classes': ('tab',)
-        }),
-        ('📊 Status & Stats', {
-            'fields': ['status', 'recipient_count'],
-            'classes': ('tab',)
-        }),
-        ('⏰ Timestamps', {
-            'fields': ['sent_at', 'created_at'],
-            'classes': ('tab', 'collapse')
-        })
+        FieldsetConfig(
+            title="Campaign Information",
+            fields=['subject', 'newsletter']
+        ),
+        FieldsetConfig(
+            title="Content",
+            fields=['main_html_content']
+        ),
+        FieldsetConfig(
+            title="Status & Stats",
+            fields=['status', 'recipient_count']
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=['sent_at', 'created_at'],
+            collapsed=True
+        )
     ]
-    
-    actions = ['send_campaigns', 'schedule_campaigns', 'cancel_campaigns']
-    
-    @display(description="Subject", ordering="subject")
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Subject")
     def subject_display(self, obj: NewsletterCampaign) -> str:
         """Display campaign subject."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.MAIL)
-        return StatusBadge.create(
-            text=obj.subject,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Newsletter")
+        return self.html.badge(obj.subject, variant="primary", icon=Icons.MAIL)
+
+    @computed_field("Newsletter")
     def newsletter_display(self, obj: NewsletterCampaign) -> str:
         """Display newsletter."""
         if not obj.newsletter:
             return "—"
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.CAMPAIGN)
-        return StatusBadge.create(
-            text=obj.newsletter.title,
-            variant="secondary",
-            config=config
-        )
-    
-    @display(description="Status")
+
+        return self.html.badge(obj.newsletter.title, variant="secondary", icon=Icons.CAMPAIGN)
+
+    @computed_field("Status")
     def status_display(self, obj: NewsletterCampaign) -> str:
         """Display campaign status."""
-        status_config = StatusBadgeConfig(
-            custom_mappings={
-                'draft': 'secondary',
-                'scheduled': 'warning',
-                'sending': 'info',
-                'sent': 'success',
-                'failed': 'danger',
-                'cancelled': 'secondary'
-            },
-            show_icons=True,
-            icon=Icons.EDIT if obj.status == 'draft' else Icons.SCHEDULE if obj.status == 'scheduled' else Icons.SEND if obj.status == 'sending' else Icons.CHECK_CIRCLE if obj.status == 'sent' else Icons.ERROR if obj.status == 'failed' else Icons.CANCEL
-        )
-        return self.display_status_auto(obj, 'status', status_config)
-    
-    
-    @display(description="Sent")
+        # Determine icon based on status
+        icon_map = {
+            'draft': Icons.EDIT,
+            'scheduled': Icons.SCHEDULE,
+            'sending': Icons.SEND,
+            'sent': Icons.CHECK_CIRCLE,
+            'failed': Icons.ERROR,
+            'cancelled': Icons.CANCEL
+        }
+
+        # Determine variant based on status
+        variant_map = {
+            'draft': 'secondary',
+            'scheduled': 'warning',
+            'sending': 'info',
+            'sent': 'success',
+            'failed': 'danger',
+            'cancelled': 'secondary'
+        }
+
+        icon = icon_map.get(obj.status, Icons.EDIT)
+        variant = variant_map.get(obj.status, 'secondary')
+
+        return self.html.badge(obj.get_status_display(), variant=variant, icon=icon)
+
+    @computed_field("Sent")
     def sent_at_display(self, obj: NewsletterCampaign) -> str:
         """Sent time with relative display."""
         if not obj.sent_at:
             return "Not sent"
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'sent_at', config)
-    
-    @display(description="Recipients")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.sent_at
+
+    @computed_field("Recipients")
     def recipient_count_display(self, obj: NewsletterCampaign) -> str:
         """Display recipients count."""
         count = obj.recipient_count or 0
@@ -528,44 +772,11 @@ class NewsletterCampaignAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, Imp
             return "1 recipient"
         else:
             return f"{count} recipients"
-    
-    @action(description="Send campaigns", variant=ActionVariant.SUCCESS)
-    def send_campaigns(self, request, queryset):
-        """Send selected campaigns."""
-        sendable_count = queryset.filter(status__in=['draft', 'scheduled']).count()
-        if sendable_count == 0:
-            messages.error(request, "No sendable campaigns selected.")
-            return
-        
-        queryset.filter(status__in=['draft', 'scheduled']).update(status='sending')
-        messages.success(request, f"Started sending {sendable_count} campaigns.")
-    
-    @action(description="Schedule campaigns", variant=ActionVariant.WARNING)
-    def schedule_campaigns(self, request, queryset):
-        """Schedule selected campaigns."""
-        schedulable_count = queryset.filter(status='draft').count()
-        if schedulable_count == 0:
-            messages.error(request, "No draft campaigns selected.")
-            return
-        
-        queryset.filter(status='draft').update(status='scheduled')
-        messages.warning(request, f"Scheduled {schedulable_count} campaigns.")
-    
-    @action(description="Cancel campaigns", variant=ActionVariant.DANGER)
-    def cancel_campaigns(self, request, queryset):
-        """Cancel selected campaigns."""
-        cancelable_count = queryset.filter(status__in=['draft', 'scheduled']).count()
-        if cancelable_count == 0:
-            messages.error(request, "No cancelable campaigns selected.")
-            return
-        
-        queryset.filter(status__in=['draft', 'scheduled']).update(status='cancelled')
-        messages.error(request, f"Cancelled {cancelable_count} campaigns.")
-    
+
     def changelist_view(self, request, extra_context=None):
         """Add campaign statistics to changelist."""
         extra_context = extra_context or {}
-        
+
         queryset = self.get_queryset(request)
         stats = queryset.aggregate(
             total_campaigns=Count('id'),
@@ -574,7 +785,7 @@ class NewsletterCampaignAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, Imp
             sent_campaigns=Count('id', filter=Q(status='sent')),
             failed_campaigns=Count('id', filter=Q(status='failed'))
         )
-        
+
         extra_context['campaign_stats'] = {
             'total_campaigns': stats['total_campaigns'] or 0,
             'draft_campaigns': stats['draft_campaigns'] or 0,
@@ -582,5 +793,5 @@ class NewsletterCampaignAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, Imp
             'sent_campaigns': stats['sent_campaigns'] or 0,
             'failed_campaigns': stats['failed_campaigns'] or 0
         }
-        
+
         return super().changelist_view(request, extra_context)

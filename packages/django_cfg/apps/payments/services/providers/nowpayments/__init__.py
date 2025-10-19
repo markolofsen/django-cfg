@@ -1,31 +1,16 @@
 """
-NowPayments provider package for Universal Payment System v2.0.
+NowPayments provider for Payments v2.0.
 
-Comprehensive NowPayments integration with currency synchronization.
+Simplified provider implementation with polling-based flow.
 """
 
+from .config import NowPaymentsConfig, NowPaymentsConstants
+from .parser import NowPaymentsCurrencyParser
 from .provider import NowPaymentsProvider
-from .models import (
-    NowPaymentsProviderConfig,
-    NowPaymentsCurrency,
-    NowPaymentsFullCurrenciesResponse,
-    NowPaymentsPaymentRequest,
-    NowPaymentsPaymentResponse,
-    NowPaymentsWebhook,
-    NowPaymentsStatusResponse
-)
-from .sync import NowPaymentsCurrencySync
-from .config import NowPaymentsConfig
 
 __all__ = [
     'NowPaymentsProvider',
-    'NowPaymentsProviderConfig',
-    'NowPaymentsCurrency',
-    'NowPaymentsFullCurrenciesResponse',
-    'NowPaymentsPaymentRequest',
-    'NowPaymentsPaymentResponse',
-    'NowPaymentsWebhook',
-    'NowPaymentsStatusResponse',
-    'NowPaymentsCurrencySync',
-    'NowPaymentsConfig'
+    'NowPaymentsConfig',
+    'NowPaymentsConstants',
+    'NowPaymentsCurrencyParser',
 ]

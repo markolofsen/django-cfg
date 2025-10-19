@@ -5,36 +5,42 @@ Provides automatic URL registration for django_cfg endpoints and integrations.
 """
 
 from typing import List
-from django.urls import path, include, URLPattern
-from django_cfg.core.environment import EnvironmentDetector
+
 from django.conf import settings
+from django.conf.urls.static import static
+from django.urls import URLPattern, include, path
+from django.views.static import serve
 
 
 def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     """
     Automatically add django_cfg URLs and all integrations to the main URL configuration.
-    
+
     This function adds:
-    - Django CFG management URLs
+    - Django CFG management URLs (/cfg/, /health/, etc.)
     - Django Client URLs (if available)
+    - Static files serving (DEBUG mode only)
+    - Media files serving (all environments via serve view)
+    - Django Browser Reload (DEBUG mode, if installed)
     - Startup information display (based on config)
-    
+
     Args:
         urlpatterns: Existing URL patterns list
-        
+
     Returns:
         Updated URL patterns list with all URLs added
-        
+
     Example:
         # In your main urls.py
         from django_cfg import add_django_cfg_urls
-        
+
         urlpatterns = [
             path("", home_view, name="home"),
             path("admin/", admin.site.urls),
         ]
-        
+
         # Automatically adds django_cfg URLs with proper prefixes
+        # No need to manually configure static/media serving!
         urlpatterns = add_django_cfg_urls(urlpatterns)
     """
     # Add django_cfg API URLs
@@ -54,6 +60,19 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
             # django-browser-reload not installed - skip
             pass
 
+    # Add static files serving in development
+    if settings.DEBUG:
+        new_patterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+    # Add media files serving (both dev and prod)
+    # Using serve view for consistent behavior across environments
+    if hasattr(settings, 'MEDIA_URL') and hasattr(settings, 'MEDIA_ROOT'):
+        # Remove leading slash from MEDIA_URL for path()
+        media_prefix = settings.MEDIA_URL.lstrip('/')
+        new_patterns += [
+            path(f"{media_prefix}<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
+        ]
+
     # Show startup info based on config
     try:
         from . import print_startup_info
@@ -72,20 +91,20 @@ def get_django_cfg_urls_info() -> dict:
         Dictionary with complete URL integration info
     """
     from django_cfg.config import (
-        LIB_NAME,
-        LIB_SITE_URL,
         LIB_DOCS_URL,
         LIB_GITHUB_URL,
-        LIB_SUPPORT_URL,
         LIB_HEALTH_URL,
+        LIB_NAME,
+        LIB_SITE_URL,
+        LIB_SUPPORT_URL,
     )
-    
+
     try:
         from django_cfg import __version__
         version = __version__
     except ImportError:
         version = "unknown"
-    
+
     # Get current config directly from Pydantic
     config = None
     try:
@@ -93,8 +112,8 @@ def get_django_cfg_urls_info() -> dict:
         config = get_current_config()
     except Exception:
         pass
-    
-    
+
+
     info = {
         "django_cfg": {
             "version": version,
@@ -110,7 +129,7 @@ def get_django_cfg_urls_info() -> dict:
             "startup_info_mode": config.startup_info_mode if config else "full",
         }
     }
-    
+
     # Add Django Client info if available
     try:
         from django_cfg.modules.django_client.core.config.service import DjangoOpenAPI

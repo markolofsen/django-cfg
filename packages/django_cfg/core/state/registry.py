@@ -7,8 +7,8 @@ Extracted from original config.py for better organization.
 Size: ~60 lines (simple state management)
 """
 
-from typing import Optional, TYPE_CHECKING
 import threading
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig

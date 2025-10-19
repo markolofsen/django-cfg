@@ -4,13 +4,15 @@ Dashboard Callback System
 Provides callback utilities for Unfold dashboard integration.
 """
 
-from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime, timedelta
-from django.http import HttpRequest
+from typing import Any, Dict, List
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
-from django.conf import settings
+from django.http import HttpRequest
+
 from ..modules.base import BaseCfgModule
 
 
@@ -21,15 +23,15 @@ def dashboard_callback(request: HttpRequest, context: Dict[str, Any]) -> Dict[st
     Returns enhanced context with dashboard data.
     """
     User = get_user_model()
-    
+
     # Get basic stats
     user_count = User.objects.count()
-    
+
     # Database info
     with connection.cursor() as cursor:
         cursor.execute("SELECT COUNT(*) FROM django_session")
         session_count = cursor.fetchone()[0]
-    
+
     # Add dashboard data to context
     context.update({
         "dashboard": [
@@ -50,7 +52,7 @@ def dashboard_callback(request: HttpRequest, context: Dict[str, Any]) -> Dict[st
             }
         ]
     })
-    
+
     return context
 
 
@@ -61,11 +63,11 @@ def environment_callback(request: HttpRequest) -> Dict[str, Any]:
     Returns environment information and system status.
     """
 
-    
+
     # Use BaseCfgModule to get config
     base_module = BaseCfgModule()
     config = base_module.get_config()
-    
+
     return {
         "environment": getattr(config, 'environment', 'development'),
         "debug": getattr(config, 'debug', False),
@@ -93,10 +95,10 @@ def permission_callback(request: HttpRequest) -> Dict[str, Any]:
     """
     if not request.user.is_authenticated:
         return {"permissions": [], "groups": []}
-    
+
     user_permissions = list(request.user.get_all_permissions())
     user_groups = list(request.user.groups.values_list('name', flat=True))
-    
+
     return {
         "permissions": user_permissions,
         "groups": user_groups,
@@ -112,37 +114,37 @@ def search_callback(request: HttpRequest, query: str) -> List[Dict[str, Any]]:
     Provides search functionality across models.
     """
 
-    
+
     results = []
-    
+
     if len(query) < 2:
         return results
-    
+
     # Search users
     User = get_user_model()
     users = User.objects.filter(
         username__icontains=query
     ).values('id', 'username', 'email')[:5]
-    
+
     for user in users:
         results.append({
             "title": f"User: {user['username']}",
             "url": f"/admin/auth/user/{user['id']}/change/",
             "description": user.get('email', ''),
         })
-    
+
     # Search content types (as a proxy for apps/models)
     content_types = ContentType.objects.filter(
         model__icontains=query
     ).values('app_label', 'model')[:5]
-    
+
     for ct in content_types:
         results.append({
             "title": f"Model: {ct['app_label']}.{ct['model']}",
             "url": f"/admin/{ct['app_label']}/{ct['model']}/",
             "description": f"Manage {ct['model']} objects",
         })
-    
+
     return results
 
 
@@ -153,16 +155,15 @@ def badge_callback(request: HttpRequest) -> List[Dict[str, Any]]:
     Returns notification badges and counters.
     """
     from django.contrib.auth import get_user_model
-    
+
     User = get_user_model()
-    
+
     # Count new users in last 24 hours
-    from datetime import datetime, timedelta
     yesterday = datetime.now() - timedelta(days=1)
     new_users = User.objects.filter(date_joined__gte=yesterday).count()
-    
+
     badges = []
-    
+
     if new_users > 0:
         badges.append({
             "title": "New Users",
@@ -170,7 +171,7 @@ def badge_callback(request: HttpRequest) -> List[Dict[str, Any]]:
             "color": "primary",
             "url": "/admin/auth/user/?date_joined__gte=" + yesterday.strftime('%Y-%m-%d'),
         })
-    
+
     # Add system health badge
     badges.append({
         "title": "System",
@@ -178,7 +179,7 @@ def badge_callback(request: HttpRequest) -> List[Dict[str, Any]]:
         "color": "success",
         "url": "/admin/",
     })
-    
+
     return badges
 
 
@@ -191,7 +192,7 @@ def get_unfold_callbacks() -> Dict[str, str]:
     """
     return {
         "dashboard_callback": "django_cfg.routing.callbacks.dashboard_callback",
-        "environment_callback": "django_cfg.routing.callbacks.environment_callback", 
+        "environment_callback": "django_cfg.routing.callbacks.environment_callback",
         "permission_callback": "django_cfg.routing.callbacks.permission_callback",
         "search_callback": "django_cfg.routing.callbacks.search_callback",
         "badge_callback": "django_cfg.routing.callbacks.badge_callback",

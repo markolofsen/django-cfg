@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from ..models import OTPSecret
 from .profile import UserSerializer
 
@@ -33,11 +34,11 @@ class OTPRequestSerializer(serializers.Serializer):
         """Validate identifier format."""
         if not value:
             raise serializers.ValidationError("Identifier is required.")
-        
+
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Identifier cannot be empty.")
-            
+
         # Auto-detect if it's email or phone
         if '@' in value:
             # Basic email validation
@@ -81,11 +82,11 @@ class OTPVerifySerializer(serializers.Serializer):
         """Validate identifier format."""
         if not value:
             raise serializers.ValidationError("Identifier is required.")
-        
+
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Identifier cannot be empty.")
-            
+
         # Auto-detect if it's email or phone
         if '@' in value:
             # Basic email validation

@@ -1,0 +1,8 @@
+{
+  "label": "Sample Project",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "Complete walkthrough of the Django-CFG sample project demonstrating all features: multi-database setup, admin customization, API documentation, authentication, background tasks, and service integrations."
+  }
+}

@@ -5,9 +5,10 @@ Handles automatic email notifications and newsletter management.
 """
 
 import logging
+
+from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
-from django.contrib.auth import get_user_model
 
 from .models import Newsletter, NewsletterSubscription
 
@@ -59,7 +60,7 @@ def auto_subscribe_new_users(sender, instance, created, **kwargs):
         try:
             # Find newsletters with auto_subscribe enabled
             auto_newsletters = Newsletter.objects.filter(auto_subscribe=True, is_active=True)
-            
+
             for newsletter in auto_newsletters:
                 NewsletterSubscription.objects.get_or_create(
                     newsletter=newsletter,
@@ -70,6 +71,6 @@ def auto_subscribe_new_users(sender, instance, created, **kwargs):
                     }
                 )
                 logger.info(f"Auto-subscribed {instance.email} to {newsletter.title}")
-                
+
         except Exception as e:
             logger.error(f"Failed to auto-subscribe user {instance.email}: {e}")

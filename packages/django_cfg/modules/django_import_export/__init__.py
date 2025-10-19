@@ -6,10 +6,14 @@ Provides seamless integration without unnecessary wrappers.
 """
 
 # Re-export original classes through django-cfg registry
-from import_export.admin import ImportExportMixin as BaseImportExportMixin, ImportExportModelAdmin as BaseImportExportModelAdmin, ExportMixin as BaseExportMixin, ImportMixin as BaseImportMixin
+from import_export.admin import ExportMixin as BaseExportMixin
+from import_export.admin import ImportExportMixin as BaseImportExportMixin
+from import_export.admin import ImportExportModelAdmin as BaseImportExportModelAdmin
+from import_export.admin import ImportMixin as BaseImportMixin
 from import_export.resources import ModelResource as BaseResource
+
 # Use Unfold styled forms instead of default ones
-from unfold.contrib.import_export.forms import ImportForm, ExportForm, SelectableFieldsExportForm
+from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
 
 
 class ImportExportMixin(BaseImportExportMixin):

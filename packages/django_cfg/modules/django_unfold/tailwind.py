@@ -4,9 +4,7 @@ Tailwind CSS Configuration
 Configuration for Tailwind CSS with semantic colors for Django admin.
 """
 
-import json
-from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def get_tailwind_config() -> Dict[str, Any]:
@@ -19,7 +17,7 @@ def get_tailwind_config() -> Dict[str, Any]:
     return {
         # Dark mode support
         "darkMode": "class",
-        
+
         # Content paths for scanning
         "content": [
             "./django_cfg/templates/**/*.{html,py,js}",
@@ -27,7 +25,7 @@ def get_tailwind_config() -> Dict[str, Any]:
             "./**/*.py",
             "./**/*.html"
         ],
-        
+
         "theme": {
             "extend": {
                 # Semantic colors for Unfold
@@ -46,7 +44,7 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "900": "rgb(var(--color-base-900) / <alpha-value>)",
                         "950": "rgb(var(--color-base-950) / <alpha-value>)",
                     },
-                    
+
                     # Primary colors for accents
                     "primary": {
                         "50": "rgb(var(--color-primary-50) / <alpha-value>)",
@@ -61,7 +59,7 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "900": "rgb(var(--color-primary-900) / <alpha-value>)",
                         "950": "rgb(var(--color-primary-950) / <alpha-value>)",
                     },
-                    
+
                     # Font colors for text
                     "font": {
                         "subtle-light": "rgb(var(--color-font-subtle-light) / <alpha-value>)",
@@ -71,7 +69,7 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "important-light": "rgb(var(--color-font-important-light) / <alpha-value>)",
                         "important-dark": "rgb(var(--color-font-important-dark) / <alpha-value>)",
                     },
-                    
+
                     # Status colors
                     "success": {
                         "50": "rgb(240, 253, 244)",
@@ -86,7 +84,7 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "900": "rgb(20, 83, 45)",
                         "950": "rgb(5, 46, 22)",
                     },
-                    
+
                     "warning": {
                         "50": "rgb(255, 251, 235)",
                         "100": "rgb(254, 243, 199)",
@@ -100,7 +98,7 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "900": "rgb(120, 53, 15)",
                         "950": "rgb(69, 26, 3)",
                     },
-                    
+
                     "error": {
                         "50": "rgb(254, 242, 242)",
                         "100": "rgb(254, 226, 226)",
@@ -114,7 +112,7 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "900": "rgb(127, 29, 29)",
                         "950": "rgb(69, 10, 10)",
                     },
-                    
+
                     "info": {
                         "50": "rgb(239, 246, 255)",
                         "100": "rgb(219, 234, 254)",
@@ -129,18 +127,18 @@ def get_tailwind_config() -> Dict[str, Any]:
                         "950": "rgb(23, 37, 84)",
                     }
                 },
-                
+
                 # Additional utilities
                 "borderRadius": {
                     "default": "0.5rem",
                 },
-                
+
                 "boxShadow": {
                     "xs": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
                 }
             }
         },
-        
+
         "plugins": []
     }
 

@@ -7,9 +7,9 @@ Provides type-safe configuration for various services:
 - ServiceConfig: Generic service configuration
 """
 
+from .base import ServiceConfig
 from .email import EmailConfig
 from .telegram import TelegramConfig
-from .base import ServiceConfig
 
 __all__ = [
     "EmailConfig",

@@ -4,15 +4,15 @@ Management command to debug dashboard rendering.
 Renders all dashboard sections and saves them for inspection.
 """
 
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.test import RequestFactory
-from django.contrib.auth import get_user_model
 
+from django_cfg.modules.django_dashboard.debug import get_debugger
+from django_cfg.modules.django_dashboard.sections.commands import CommandsSection
 from django_cfg.modules.django_dashboard.sections.overview import OverviewSection
 from django_cfg.modules.django_dashboard.sections.stats import StatsSection
 from django_cfg.modules.django_dashboard.sections.system import SystemSection
-from django_cfg.modules.django_dashboard.sections.commands import CommandsSection
-from django_cfg.modules.django_dashboard.debug import get_debugger
 
 
 class Command(BaseCommand):

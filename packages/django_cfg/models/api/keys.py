@@ -9,7 +9,8 @@ Following CRITICAL_REQUIREMENTS.md:
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator, SecretStr
+
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
 
 class ApiKeys(BaseModel):
@@ -26,25 +27,25 @@ class ApiKeys(BaseModel):
         )
         ```
     """
-    
+
     model_config = {
         "validate_assignment": True,
         "extra": "forbid",
         "str_strip_whitespace": True,
         "validate_default": True,
     }
-    
+
     # === LLM Provider Keys ===
     openai: Optional[SecretStr] = Field(
         default=None,
         description="OpenAI API key for GPT models and embeddings"
     )
-    
+
     openrouter: Optional[SecretStr] = Field(
         default=None,
         description="OpenRouter API key for access to multiple LLM providers"
     )
-    
+
     @field_validator("openai")
     @classmethod
     def validate_openai_key(cls, v: Optional[SecretStr]) -> Optional[SecretStr]:
@@ -65,7 +66,7 @@ class ApiKeys(BaseModel):
             raise ValueError("OpenAI API key appears to be too short")
 
         return v
-    
+
     @field_validator("openrouter")
     @classmethod
     def validate_openrouter_key(cls, v: Optional[SecretStr]) -> Optional[SecretStr]:
@@ -86,23 +87,23 @@ class ApiKeys(BaseModel):
             raise ValueError("OpenRouter API key appears to be too short")
 
         return v
-    
+
     def get_openai_key(self) -> Optional[str]:
         """Get OpenAI API key as string."""
         return self.openai.get_secret_value() if self.openai else None
-    
+
     def get_openrouter_key(self) -> Optional[str]:
         """Get OpenRouter API key as string."""
         return self.openrouter.get_secret_value() if self.openrouter else None
-    
+
     def has_openai(self) -> bool:
         """Check if OpenAI key is configured."""
         return self.openai is not None
-    
+
     def has_openrouter(self) -> bool:
         """Check if OpenRouter key is configured."""
         return self.openrouter is not None
-    
+
     def get_preferred_provider(self) -> Optional[str]:
         """
         Get preferred provider based on availability.

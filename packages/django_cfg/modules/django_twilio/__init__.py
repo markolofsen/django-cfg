@@ -14,41 +14,40 @@ Features:
 """
 
 # Configuration
-from django_cfg.modules.django_twilio.models import TwilioConfig
-
 # Services
 from django_cfg.modules.django_twilio.base import BaseTwilioService, is_async_context
-from django_cfg.modules.django_twilio.whatsapp import WhatsAppOTPService
 from django_cfg.modules.django_twilio.email_otp import EmailOTPService
-from django_cfg.modules.django_twilio.sms import SMSOTPService
-from django_cfg.modules.django_twilio.unified import UnifiedOTPService, DjangoTwilioService
-
-# Simple messaging service
-from django_cfg.modules.django_twilio.simple_service import SimpleTwilioService
 
 # Exceptions
 from django_cfg.modules.django_twilio.exceptions import (
-    TwilioError,
     TwilioConfigurationError,
-    TwilioVerificationError,
+    TwilioError,
     TwilioSendError,
+    TwilioVerificationError,
 )
+from django_cfg.modules.django_twilio.models import TwilioConfig
+
+# Simple messaging service
+from django_cfg.modules.django_twilio.simple_service import SimpleTwilioService
+from django_cfg.modules.django_twilio.sms import SMSOTPService
+from django_cfg.modules.django_twilio.unified import DjangoTwilioService, UnifiedOTPService
 
 # Convenience functions
 from django_cfg.modules.django_twilio.utils import (
-    send_whatsapp_otp,
-    send_email_otp,
-    send_sms_otp,
-    verify_otp,
-    asend_whatsapp_otp,
     asend_email_otp,
     asend_sms_otp,
+    asend_whatsapp_otp,
     averify_otp,
+    send_email_otp,
+    send_sms_otp,
+    send_whatsapp_otp,
+    verify_otp,
 )
+from django_cfg.modules.django_twilio.whatsapp import WhatsAppOTPService
 
 # Simple messaging convenience functions
 try:
-    from django_cfg.modules.django_twilio.simple_service import send_whatsapp, send_sms
+    from django_cfg.modules.django_twilio.simple_service import send_sms, send_whatsapp
 except ImportError:
     send_whatsapp = None
     send_sms = None

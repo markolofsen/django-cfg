@@ -4,7 +4,6 @@ Prompt generation for translation.
 Builds prompts for text and JSON translation.
 """
 
-from typing import Dict
 
 
 class PromptBuilder:

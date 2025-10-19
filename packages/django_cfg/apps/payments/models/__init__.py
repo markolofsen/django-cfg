@@ -1,63 +1,23 @@
 """
-Universal Payment System v2.0 - Models Package.
+Payments v2.0 models.
 
-Simplified models focused on NowPayments with extensible architecture.
-All models follow the data typing requirements: Django ORM for database layer.
+Simplified payment system focused on NowPayments with ORM-based balance.
 """
 
-# Base models
-from .base import UUIDTimestampedModel
-
-# Currency models
-from .currencies import Currency, Network, ProviderCurrency
-
-# Payment models  
-from .payments import UniversalPayment
-
-# Balance models
-from .balance import UserBalance, Transaction
-
-# Subscription models
-from .subscriptions import Subscription, EndpointGroup
-
-# Tariff models
-from .tariffs import Tariff, TariffEndpointGroup
-
-# API Keys
-from .api_keys import APIKey
-
-# Export TextChoices for external use
-PaymentStatus = UniversalPayment.PaymentStatus
-PaymentProvider = UniversalPayment.PaymentProvider
-CurrencyType = Currency.CurrencyType
-TransactionType = Transaction.TransactionType
-SubscriptionStatus = Subscription.SubscriptionStatus
-SubscriptionTier = Subscription.SubscriptionTier
+from .balance import Transaction, UserBalance
+from .base import TimestampedModel, UUIDTimestampedModel
+from .currency import Currency
+from .payment import Payment
+from .withdrawal import WithdrawalRequest
 
 __all__ = [
-    # Base
+    # Base models
     'UUIDTimestampedModel',
-    
-    # Currencies
+    'TimestampedModel',
+    # Domain models
     'Currency',
-    'Network',
-    'ProviderCurrency',
-    
-    # Core Models
-    'UniversalPayment',
+    'Payment',
     'UserBalance',
-    'Transaction', 
-    'Subscription',
-    'EndpointGroup',
-    'Tariff',
-    'TariffEndpointGroup',
-    'APIKey',
-    
-    # TextChoices
-    'PaymentStatus',
-    'PaymentProvider',
-    'CurrencyType',
-    'TransactionType',
-    'SubscriptionStatus',
-    'SubscriptionTier',
+    'Transaction',
+    'WithdrawalRequest',
 ]

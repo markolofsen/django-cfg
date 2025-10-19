@@ -2,15 +2,17 @@
 Document models with pgvector support.
 """
 
+from typing import List, Optional
+
 from django.db import models
 from pgvector.django import VectorField
-from typing import Optional, List
-from .base import UserScopedModel, ProcessingStatus, TimestampedModel
+
+from .base import ProcessingStatus, TimestampedModel, UserScopedModel
 
 
 class DocumentCategory(TimestampedModel):
     """Document category for organization and access control."""
-    
+
     name = models.CharField(
         max_length=255,
         unique=True,
@@ -24,24 +26,24 @@ class DocumentCategory(TimestampedModel):
         default=True,
         help_text="Whether documents in this category are publicly accessible"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_document_categories'
         verbose_name = 'Document Category'
         verbose_name_plural = 'Document Categories'
         ordering = ['name']
-    
+
     def __str__(self) -> str:
         return f"{self.name} ({'Public' if self.is_public else 'Private'})"
 
 
 class Document(UserScopedModel):
     """Knowledge document with processing status tracking."""
-    
+
     # Custom managers
     from ..managers.document import DocumentManager
     objects = DocumentManager()
-    
+
     title = models.CharField(
         max_length=512,
         help_text="Document title"
@@ -74,7 +76,7 @@ class Document(UserScopedModel):
         default=0,
         help_text="Original file size in bytes"
     )
-    
+
     # Processing status
     processing_status = models.CharField(
         max_length=20,
@@ -85,17 +87,17 @@ class Document(UserScopedModel):
     processing_started_at = models.DateTimeField(null=True, blank=True)
     processing_completed_at = models.DateTimeField(null=True, blank=True)
     processing_error = models.TextField(blank=True, default="")
-    
+
     # Chunk statistics
     chunks_count = models.PositiveIntegerField(default=0)
     total_tokens = models.PositiveIntegerField(default=0)
-    
+
     # Cost tracking for monitoring
     total_cost_usd = models.FloatField(
         default=0.0,
         help_text="Total processing cost in USD"
     )
-    
+
     # Metadata
     metadata = models.JSONField(
         default=dict,
@@ -103,7 +105,7 @@ class Document(UserScopedModel):
         null=True,
         help_text="Additional document metadata"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_documents'
         indexes = [
@@ -118,27 +120,27 @@ class Document(UserScopedModel):
                 name='unique_user_document'
             )
         ]
-    
+
     def save(self, *args, **kwargs):
         """Override save to generate content_hash if not provided."""
         if not self.content_hash and self.content:
             import hashlib
             self.content_hash = hashlib.sha256(self.content.encode()).hexdigest()
-        
+
         # Set file_size if not provided
         if not self.file_size and self.content:
             self.file_size = len(self.content.encode('utf-8'))
-        
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         return f"{self.title} ({self.user.username})"
-    
+
     @property
     def is_processed(self) -> bool:
         """Check if document processing is completed."""
         return self.processing_status == ProcessingStatus.COMPLETED
-    
+
     @property
     def processing_duration(self) -> Optional[float]:
         """Calculate processing duration in seconds."""
@@ -146,32 +148,32 @@ class Document(UserScopedModel):
             delta = self.processing_completed_at - self.processing_started_at
             return delta.total_seconds()
         return None
-    
+
     @property
     def is_publicly_accessible(self) -> bool:
         """Check if document is publicly accessible (document and at least one category must be public)."""
         if not self.is_public:
             return False
-        
+
         # If document has categories, at least one must be public
         if self.categories.exists():
             return self.categories.filter(is_public=True).exists()
-        
+
         # If no categories assigned, document is public by default
         return True
-    
+
     def get_all_categories(self):
         """Get all categories for this document."""
         return list(self.categories.all())
-    
+
     def add_category(self, category):
         """Add a category to this document."""
         self.categories.add(category)
-    
+
     def remove_category(self, category):
         """Remove a category from this document."""
         self.categories.remove(category)
-    
+
     def set_categories(self, categories_list):
         """Set multiple categories for this document."""
         self.categories.set(categories_list)
@@ -179,11 +181,11 @@ class Document(UserScopedModel):
 
 class DocumentChunk(UserScopedModel):
     """Text chunk with vector embedding for semantic search."""
-    
+
     # Custom managers
     from ..managers.document import DocumentChunkManager
     objects = DocumentChunkManager()
-    
+
     document = models.ForeignKey(
         Document,
         on_delete=models.CASCADE,
@@ -196,13 +198,13 @@ class DocumentChunk(UserScopedModel):
     chunk_index = models.PositiveIntegerField(
         help_text="Sequential chunk number within document"
     )
-    
+
     # Vector embedding (1536 dimensions for OpenAI text-embedding-ada-002)
     embedding = VectorField(
         dimensions=1536,
         help_text="Vector embedding for semantic search"
     )
-    
+
     # Chunk statistics
     token_count = models.PositiveIntegerField(
         default=0,
@@ -212,7 +214,7 @@ class DocumentChunk(UserScopedModel):
         default=0,
         help_text="Number of characters in chunk"
     )
-    
+
     # Processing metadata
     embedding_model = models.CharField(
         max_length=100,
@@ -223,7 +225,7 @@ class DocumentChunk(UserScopedModel):
         default=0.0,
         help_text="Cost in USD for embedding generation"
     )
-    
+
     # Additional metadata
     metadata = models.JSONField(
         default=dict,
@@ -231,7 +233,7 @@ class DocumentChunk(UserScopedModel):
         null=True,
         help_text="Chunk-specific metadata"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_document_chunks'
         indexes = [
@@ -245,10 +247,10 @@ class DocumentChunk(UserScopedModel):
             )
         ]
         ordering = ['document', 'chunk_index']
-    
+
     def __str__(self) -> str:
         return f"Chunk {self.chunk_index} of {self.document.title}"
-    
+
     @classmethod
     def semantic_search(
         cls,
@@ -259,7 +261,7 @@ class DocumentChunk(UserScopedModel):
     ):
         """Perform semantic search using pgvector."""
         from pgvector.django import CosineDistance
-        
+
         return cls.objects.filter(user=user).annotate(
             similarity=1 - CosineDistance('embedding', query_embedding)
         ).filter(

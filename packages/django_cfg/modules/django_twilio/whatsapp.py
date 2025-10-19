@@ -7,15 +7,16 @@ Supports both sync and async operations.
 
 import logging
 from typing import Tuple
-from ._imports import Client, TwilioException
+
 from asgiref.sync import sync_to_async
 
+from ._imports import Client, TwilioException
 from .base import BaseTwilioService
-from .models import TwilioVerifyConfig
 from .exceptions import (
     TwilioConfigurationError,
     TwilioSendError,
 )
+from .models import TwilioVerifyConfig
 
 logger = logging.getLogger(__name__)
 

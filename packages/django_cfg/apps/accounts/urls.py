@@ -1,10 +1,15 @@
-from django.urls import path, include
+from django.urls import include, path
+from drf_spectacular.utils import extend_schema
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-from drf_spectacular.utils import extend_schema
 
 from .views import OTPViewSet
-from .views.profile import UserProfileView, UserProfileUpdateView, UserProfilePartialUpdateView, upload_avatar
+from .views.profile import (
+    UserProfilePartialUpdateView,
+    UserProfileUpdateView,
+    UserProfileView,
+    upload_avatar,
+)
 
 app_name = 'cfg_accounts'
 
@@ -35,10 +40,10 @@ profile_patterns = [
 urlpatterns = [
     # ViewSet-based endpoints
     path('', include(router.urls)),
-    
+
     # Token endpoints
     path('token/', include(token_patterns)),
-    
+
     # Profile endpoints
     path('profile/', include(profile_patterns)),
 ]

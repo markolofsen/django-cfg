@@ -7,8 +7,9 @@ operations with x-async-capable extension for dual client generation.
 
 import inspect
 import logging
-from typing import Dict, Any, Optional
-from django.urls import resolve, Resolver404
+from typing import Any, Dict, Optional
+
+from django.urls import Resolver404, resolve
 
 logger = logging.getLogger(__name__)
 

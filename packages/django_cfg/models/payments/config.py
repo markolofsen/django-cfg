@@ -1,258 +1,106 @@
 """
-Main payments configuration for django_cfg.
+Simplified payment configuration for Payments v2.0.
 
-Payments app configuration with middleware, rate limiting, and usage tracking.
+Only supports NowPayments provider - no complex polymorphism needed.
 """
 
 from pydantic import BaseModel, Field
-from typing import List, Dict
-from django_cfg.models.base import BaseCfgAutoModule
-from .api_keys import ProviderAPIKeysConfig
 
 
-class PaymentsConfig(BaseModel, BaseCfgAutoModule):
-    """
-    Payments app configuration for django-cfg.
+class NowPaymentsConfig(BaseModel):
+    """NowPayments provider configuration."""
 
-    Includes both static configuration and API keys.
-    API keys are now managed through BaseCfgAutoModule instead of Constance.
-    """
+    api_key: str = Field(
+        default="",
+        description="NowPayments API key"
+    )
 
-    # Core settings
+    ipn_secret: str = Field(
+        default="",
+        description="NowPayments IPN secret (for webhook validation)"
+    )
+
+    sandbox: bool = Field(
+        default=False,
+        description="Use sandbox API for testing"
+    )
+
     enabled: bool = Field(
-        default=False,
-        description="Enable payments app"
-    )
-
-    # API keys configuration
-    api_keys: ProviderAPIKeysConfig = Field(
-        default_factory=ProviderAPIKeysConfig,
-        description="API keys and secrets for payment providers"
-    )
-
-    # Middleware settings
-    middleware_enabled: bool = Field(
         default=True,
-        description="Enable payments middleware"
+        description="Whether NowPayments is enabled"
     )
 
-    # Whitelist approach - only these paths require API key
-    protected_paths: List[str] = Field(
-        default=[
-            '/api/admin/',  # Admin API endpoints
-            '/api/private/',  # Private API endpoints
-            '/api/secure/',  # Secure API endpoints
-        ],
-        description="Paths that require API key authentication (whitelist approach)"
-    )
+    @property
+    def api_url(self) -> str:
+        """Get API base URL based on sandbox mode."""
+        if self.sandbox:
+            return "https://api-sandbox.nowpayments.io/v1/"
+        return "https://api.nowpayments.io/v1/"
 
-    protected_patterns: List[str] = Field(
-        default=[
-            r'^/api/admin/.*$',  # All admin API endpoints
-            r'^/api/private/.*$',  # All private API endpoints
-            r'^/api/secure/.*$',  # All secure API endpoints
-        ],
-        description="Regex patterns for paths that require API key authentication"
-    )
+    @property
+    def api_key_str(self) -> str:
+        """Get API key as string."""
+        return self.api_key
 
-    # Rate limiting defaults
-    rate_limiting_enabled: bool = Field(
+    @property
+    def is_configured(self) -> bool:
+        """Check if provider is properly configured."""
+        return bool(self.api_key and self.api_key.strip())
+
+
+class PaymentsConfig(BaseModel):
+    """
+    Main payments configuration for Payments v2.0.
+
+    Simplified - only NowPayments is supported.
+    """
+
+    enabled: bool = Field(
         default=True,
-        description="Enable rate limiting middleware"
+        description="Enable payments system"
     )
 
-    default_rate_limits: Dict[str, int] = Field(
-        default={
-            'anonymous': 60,
-            'authenticated': 300,
-            'free': 100,
-            'basic': 500,
-            'premium': 2000,
-            'enterprise': 10000,
-        },
-        description="Default rate limits (requests per minute) by tier"
+    nowpayments: NowPaymentsConfig = Field(
+        default_factory=NowPaymentsConfig,
+        description="NowPayments provider configuration"
     )
 
-    # Usage tracking
-    usage_tracking_enabled: bool = Field(
-        default=True,
-        description="Enable usage tracking middleware"
-    )
-
-    track_anonymous_usage: bool = Field(
-        default=False,
-        description="Track anonymous user requests"
-    )
-
-    # Cache settings
-    cache_timeouts: Dict[str, int] = Field(
-        default={
-            'api_key': 300,      # 5 minutes
-            'rate_limit': 3600,  # 1 hour
-            'session': 1800,     # 30 minutes
-            'default': 600       # 10 minutes
-        },
-        description="Cache timeout settings in seconds"
-    )
-
-    def get_middleware_classes(self) -> List[str]:
+    def get_provider_config(self, provider: str = "nowpayments") -> NowPaymentsConfig:
         """
-        Get middleware classes to add to Django MIDDLEWARE setting.
+        Get provider configuration.
+
+        Args:
+            provider: Provider name (only "nowpayments" supported)
 
         Returns:
-            List of middleware class paths
+            NowPaymentsConfig instance
+
+        Raises:
+            ValueError: If provider is not supported
         """
-        if not self.enabled or not self.middleware_enabled:
-            return []
+        if provider.lower() == "nowpayments":
+            return self.nowpayments
 
-        middleware = []
+        raise ValueError(f"Provider '{provider}' not supported. Only 'nowpayments' is available in v2.0.")
 
-        # Always add API access middleware first
-        middleware.append('django_cfg.apps.payments.middleware.APIAccessMiddleware')
+    @property
+    def active_providers(self) -> list[str]:
+        """Get list of active provider names."""
+        providers = []
+        if self.nowpayments.enabled and self.nowpayments.is_configured:
+            providers.append("nowpayments")
+        return providers
 
-        # Add rate limiting if enabled
-        if self.rate_limiting_enabled:
-            middleware.append('django_cfg.apps.payments.middleware.RateLimitingMiddleware')
+    @property
+    def is_configured(self) -> bool:
+        """Check if at least one provider is configured."""
+        return bool(self.active_providers)
 
-        # Add usage tracking if enabled
-        if self.usage_tracking_enabled:
-            middleware.append('django_cfg.apps.payments.middleware.UsageTrackingMiddleware')
-
-        return middleware
-
-    def should_enable_tasks(self) -> bool:
+    def get_middleware_classes(self) -> list[str]:
         """
-        Check if payments app requires Celery tasks.
+        Get middleware classes for payments module.
 
         Returns:
-            True if tasks should be enabled
+            Empty list (v2.0 doesn't use middleware)
         """
-        return self.enabled  # Enable tasks if payments is enabled
-
-    # Navigation and UI feature checks
-    def show_webhook_dashboard(self) -> bool:
-        """Check if webhook dashboard should be shown in navigation."""
-        return self.enabled
-
-    def show_payment_creation(self) -> bool:
-        """Check if payment creation should be shown in navigation."""
-        return self.enabled
-
-    def show_currency_converter(self) -> bool:
-        """Check if currency converter should be shown in navigation."""
-        return self.enabled
-
-    def show_api_management(self) -> bool:
-        """Check if API key management should be shown in navigation."""
-        return self.enabled
-
-    def show_subscription_management(self) -> bool:
-        """Check if subscription management should be shown in navigation."""
-        return self.enabled
-
-    def show_balance_management(self) -> bool:
-        """Check if balance management should be shown in navigation."""
-        return self.enabled
-
-    def show_transaction_history(self) -> bool:
-        """Check if transaction history should be shown in navigation."""
-        return self.enabled
-
-    def show_currency_management(self) -> bool:
-        """Check if currency management should be shown in navigation."""
-        return self.enabled
-
-    def show_rate_limiting_features(self) -> bool:
-        """Check if rate limiting features should be shown."""
-        return self.enabled and self.rate_limiting_enabled
-
-    def show_usage_tracking_features(self) -> bool:
-        """Check if usage tracking features should be shown."""
-        return self.enabled and self.usage_tracking_enabled
-
-    def get_enabled_navigation_items(self) -> List[str]:
-        """
-        Get list of enabled navigation items for dynamic UI generation.
-
-        Returns:
-            List of enabled navigation item identifiers
-        """
-        items = []
-
-        if not self.enabled:
-            return items
-
-        # Core features (always enabled if payments is enabled)
-        items.extend([
-            'payment_dashboard',
-            'payments_admin',
-            'currencies_admin',
-            'networks_admin',
-            'provider_currencies_admin',
-        ])
-
-        # Optional features based on configuration
-        if self.show_webhook_dashboard():
-            items.append('webhook_dashboard')
-
-        if self.show_payment_creation():
-            items.append('payment_creation')
-
-        if self.show_currency_converter():
-            items.append('currency_converter')
-
-        if self.show_api_management():
-            items.extend(['api_keys_admin', 'endpoint_groups_admin'])
-
-        if self.show_subscription_management():
-            items.extend(['subscriptions_admin', 'tariffs_admin'])
-
-        if self.show_balance_management():
-            items.append('balances_admin')
-
-        if self.show_transaction_history():
-            items.append('transactions_admin')
-
-        return items
-
-    # API Keys access methods
-    def get_provider_api_config(self, provider: str) -> Dict[str, any]:
-        """Get provider-specific API configuration."""
-        return self.api_keys.get_provider_config(provider)
-
-    def get_enabled_providers(self) -> List[str]:
-        """Get list of enabled providers (those with API keys configured)."""
-        return self.api_keys.get_enabled_providers()
-
-    def is_provider_enabled(self, provider: str) -> bool:
-        """Check if a specific provider is enabled (has API keys configured)."""
-        config = self.api_keys.get_provider_config(provider)
-        return config.get('enabled', False)
-
-    # BaseCfgAutoModule implementation
-    def get_smart_defaults(self):
-        """Get smart default configuration for this module."""
-        return PaymentsConfig()
-
-    def get_module_config(self):
-        """Get the final configuration for this module."""
-        return self
-
-    @classmethod
-    def get_current_config(cls) -> 'PaymentsConfig':
-        """
-        Get current payments configuration from django-cfg.
-
-        Uses PaymentsConfigManager for consistent access.
-        """
-        try:
-            # Import here to avoid circular dependencies
-            from django_cfg.apps.payments.config.django_cfg_integration import PaymentsConfigManager
-            return PaymentsConfigManager.get_payments_config_safe()
-        except Exception:
-            return cls()
-
-
-__all__ = [
-    "PaymentsConfig",
-]
+        return []

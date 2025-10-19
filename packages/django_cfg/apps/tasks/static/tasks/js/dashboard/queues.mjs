@@ -10,13 +10,15 @@ export class QueuesModule {
 
     /**
      * Load queues data
+     * Using new MJS API method with JSDoc types
      */
     async loadData() {
         try {
             console.log('Loading queues data...');
-            
-            const response = await this.api.getQueueStatus();
-            const data = response.data || response;
+
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiQueuesStatusRetrieve();
+            const data = response?.data || response;
             
             this.renderQueuesData(data);
             

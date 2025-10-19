@@ -2,10 +2,10 @@
 Management command to test newsletter sending functionality.
 """
 
-from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand, CommandError
 
-from django_cfg.apps.newsletter.models import Newsletter, NewsletterSubscription, NewsletterCampaign
+from django_cfg.apps.newsletter.models import Newsletter, NewsletterCampaign, NewsletterSubscription
 from django_cfg.apps.newsletter.services.email_service import NewsletterEmailService
 
 User = get_user_model()
@@ -107,7 +107,7 @@ class Command(BaseCommand):
 
             # Send test email
             self.stdout.write("Sending test newsletter...")
-            
+
             email_service = NewsletterEmailService()
             result = email_service.send_newsletter_email(
                 newsletter=newsletter,

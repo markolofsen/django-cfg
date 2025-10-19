@@ -2,11 +2,10 @@
 Knowledge Base URL Configuration
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import (
-    DocumentArchiveViewSet, ArchiveItemViewSet, ArchiveItemChunkViewSet
-)
+
+from .views import ArchiveItemChunkViewSet, ArchiveItemViewSet, DocumentArchiveViewSet
 
 # Archive router for authenticated users
 archive_router = DefaultRouter()
@@ -19,7 +18,7 @@ urlpatterns = [
 
     # Archive API endpoints (require authentication)
     path('', include(archive_router.urls)),
-    
+
 ]
 
 # Add app name for namespacing

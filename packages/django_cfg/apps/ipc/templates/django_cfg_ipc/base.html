@@ -1,0 +1,71 @@
+{% extends 'django_tailwind/app.html' %}
+{% load static %}
+
+{% block title %}{% block page_title_text %}RPC Monitor{% endblock %} - Django-CFG{% endblock %}
+
+{# Navbar configuration #}
+{% block header %}
+{% with navbar_items=rpc_nav_items %}
+{% include 'django_tailwind/components/navbar.html' with title="RPC Monitor" icon='<span class="material-icons text-3xl text-blue-400">insights</span>' nav_items=navbar_items full_width=True %}
+{% endwith %}
+
+{# RPC-specific header info #}
+<div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div class="flex items-center justify-between text-sm">
+            <p class="text-gray-600 dark:text-gray-400">Real-time WebSocket & RPC Activity</p>
+
+            <div class="flex items-center space-x-4">
+                <!-- Health indicator -->
+                <div id="health-indicator" class="flex items-center space-x-2">
+                    <span class="pulse-dot w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span class="text-gray-700 dark:text-gray-300">Connected</span>
+                </div>
+
+                <!-- Auto-refresh toggle -->
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <span class="text-gray-700 dark:text-gray-300">Auto-refresh</span>
+                    <input type="checkbox" id="auto-refresh-toggle" checked
+                           class="toggle-checkbox rounded border-gray-400 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400">
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+    .stat-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .pulse-dot {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+    }
+</style>
+
+{% block extra_css %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+{{ block.super }}
+{% endblock %}

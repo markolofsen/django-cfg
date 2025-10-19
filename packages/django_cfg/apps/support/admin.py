@@ -1,30 +1,31 @@
 from django.contrib import admin
+from django.http import HttpRequest
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.timesince import timesince
+from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
-from django.utils.timesince import timesince
-from django.utils.html import format_html
-from django.urls import reverse
-from django.shortcuts import redirect
-from django.http import HttpRequest
-from django.utils.translation import gettext_lazy as _
-from .models import Ticket, Message
-from .admin_filters import TicketUserEmailFilter, TicketUserNameFilter, MessageSenderEmailFilter
-from django import forms
+
+from .admin_filters import MessageSenderEmailFilter, TicketUserEmailFilter, TicketUserNameFilter
+from .models import Message, Ticket
+
 
 class MessageInline(TabularInline):
     """Read-only inline for viewing messages. Use Chat interface for replies."""
-    
+
     model = Message
     extra = 0
     fields = ("sender_avatar", "created_at", "text")
     readonly_fields = ("sender_avatar", "created_at", "text")
     show_change_link = False
     classes = ('collapse',)
-    
+
     def has_add_permission(self, request, obj=None):
         """Disable adding messages through admin - use chat interface instead."""
         return False
-    
+
     def has_delete_permission(self, request, obj=None):
         """Disable deleting messages through admin."""
         return False
@@ -39,7 +40,7 @@ class MessageInline(TabularInline):
         else:
             initials = obj.sender.__class__.objects.get_initials(obj.sender)
             bg_color = '#0d6efd' if obj.sender.is_staff else '#6f42c1' if obj.sender.is_superuser else '#198754'
-            
+
             return format_html(
                 '<div style="width: 24px; height: 24px; border-radius: 50%; background: {}; '
                 'color: white; display: flex; align-items: center; justify-content: center; '
@@ -97,7 +98,7 @@ class TicketAdmin(ModelAdmin):
         else:
             initials = obj.user.__class__.objects.get_initials(obj.user)
             bg_color = '#0d6efd' if obj.user.is_staff else '#6f42c1' if obj.user.is_superuser else '#198754'
-            
+
             return format_html(
                 '<div style="width: 32px; height: 32px; border-radius: 50%; background: {}; '
                 'color: white; display: flex; align-items: center; justify-content: center; '
@@ -181,7 +182,7 @@ class MessageAdmin(ModelAdmin):
         else:
             initials = obj.sender.__class__.objects.get_initials(obj.sender)
             bg_color = '#0d6efd' if obj.sender.is_staff else '#6f42c1' if obj.sender.is_superuser else '#198754'
-            
+
             return format_html(
                 '<div style="width: 32px; height: 32px; border-radius: 50%; background: {}; '
                 'color: white; display: flex; align-items: center; justify-content: center; '

@@ -1,0 +1,9 @@
+{
+  "label": "Email System",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Advanced email functionality with templates, tracking, and multi-provider support."
+  },
+  "collapsed": true
+}

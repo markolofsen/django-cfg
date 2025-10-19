@@ -23,7 +23,7 @@ class Icons:
         icon = Icons.SETTINGS
         icon = Icons.PEOPLE
     """
-    
+
     _10K: Final[str] = "10k"
     _10MP: Final[str] = "10mp"
     _11MP: Final[str] = "11mp"
@@ -2275,7 +2275,7 @@ class Icons:
 # IDE-friendly icon categories for easy discovery
 class IconCategories:
     """Categorized icon collections for easy discovery."""
-    
+
     NAVIGATION: Dict[str, str] = {
         'add_home': Icons.ADD_HOME,
         'add_home_work': Icons.ADD_HOME_WORK,
@@ -2298,7 +2298,7 @@ class IconCategories:
         'arrow_circle_up': Icons.ARROW_CIRCLE_UP,
         'arrow_downward': Icons.ARROW_DOWNWARD,
     }
-    
+
     USERS: Dict[str, str] = {
         'account_balance': Icons.ACCOUNT_BALANCE,
         'account_balance_wallet': Icons.ACCOUNT_BALANCE_WALLET,
@@ -2321,7 +2321,7 @@ class IconCategories:
         'group_off': Icons.GROUP_OFF,
         'group_remove': Icons.GROUP_REMOVE,
     }
-    
+
     DOCUMENTS: Dict[str, str] = {
         'article': Icons.ARTICLE,
         'attach_file': Icons.ATTACH_FILE,
@@ -2344,7 +2344,7 @@ class IconCategories:
         'file_download_off': Icons.FILE_DOWNLOAD_OFF,
         'file_open': Icons.FILE_OPEN,
     }
-    
+
     COMMUNICATION: Dict[str, str] = {
         '3p': Icons._3P,
         'add_call': Icons.ADD_CALL,
@@ -2367,7 +2367,7 @@ class IconCategories:
         'call_missed': Icons.CALL_MISSED,
         'call_missed': Icons.CALL_MISSED,
     }
-    
+
     AI_AUTOMATION: Dict[str, str] = {
         'auto_awesome': Icons.AUTO_AWESOME,
         'auto_awesome_mosaic': Icons.AUTO_AWESOME_MOSAIC,
@@ -2390,7 +2390,7 @@ class IconCategories:
         'hdr_auto_select': Icons.HDR_AUTO_SELECT,
         'memory': Icons.MEMORY,
     }
-    
+
     ACTIONS: Dict[str, str] = {
         'add': Icons.ADD,
         'add_a_photo': Icons.ADD_A_PHOTO,
@@ -2413,7 +2413,7 @@ class IconCategories:
         'add_task': Icons.ADD_TASK,
         'add_to_drive': Icons.ADD_TO_DRIVE,
     }
-    
+
     STATUS: Dict[str, str] = {
         'check': Icons.CHECK,
         'check_box': Icons.CHECK_BOX,
@@ -2436,7 +2436,7 @@ class IconCategories:
         'pending': Icons.PENDING,
         'pending_actions': Icons.PENDING_ACTIONS,
     }
-    
+
     MEDIA: Dict[str, str] = {
         'assistant_photo': Icons.ASSISTANT_PHOTO,
         'audiotrack': Icons.AUDIOTRACK,
@@ -2459,7 +2459,7 @@ class IconCategories:
         'flip_camera_android': Icons.FLIP_CAMERA_ANDROID,
         'flip_camera_ios': Icons.FLIP_CAMERA_IOS,
     }
-    
+
     SETTINGS: Dict[str, str] = {
         'admin_panel_settings': Icons.ADMIN_PANEL_SETTINGS,
         'app_settings_alt': Icons.APP_SETTINGS_ALT,
@@ -2482,7 +2482,7 @@ class IconCategories:
         'settings_input_hdmi': Icons.SETTINGS_INPUT_HDMI,
         'settings_overscan': Icons.SETTINGS_OVERSCAN,
     }
-    
+
     COMMERCE: Dict[str, str] = {
         'attach_money': Icons.ATTACH_MONEY,
         'local_convenience_store': Icons.LOCAL_CONVENIENCE_STORE,
@@ -2503,7 +2503,7 @@ class IconCategories:
         'store_mall_directory': Icons.STORE_MALL_DIRECTORY,
         'storefront': Icons.STOREFRONT,
     }
-    
+
     TRAVEL: Dict[str, str] = {
         'car_crash': Icons.CAR_CRASH,
         'car_rental': Icons.CAR_RENTAL,
@@ -2526,7 +2526,7 @@ class IconCategories:
         'directions_railway': Icons.DIRECTIONS_RAILWAY,
         'directions_railway_filled': Icons.DIRECTIONS_RAILWAY_FILLED,
     }
-    
+
     SOCIAL: Dict[str, str] = {
         '18_up_rating': Icons._18_UP_RATING,
         '6_ft_apart': Icons._6_FT_APART,
@@ -2549,7 +2549,7 @@ class IconCategories:
         'compost': Icons.COMPOST,
         'connect_without_contact': Icons.CONNECT_WITHOUT_CONTACT,
     }
-    
+
     DEVICE: Dict[str, str] = {
         '1x_mobiledata': Icons._1X_MOBILEDATA,
         '30fps': Icons._30FPS,
@@ -2572,7 +2572,7 @@ class IconCategories:
         'battery_0_bar': Icons.BATTERY_0_BAR,
         'battery_1_bar': Icons.BATTERY_1_BAR,
     }
-    
+
     EDITOR: Dict[str, str] = {
         'add_chart': Icons.ADD_CHART,
         'add_comment': Icons.ADD_COMMENT,
@@ -2595,7 +2595,7 @@ class IconCategories:
         'bar_chart': Icons.BAR_CHART,
         'border_all': Icons.BORDER_ALL,
     }
-    
+
     MAPS: Dict[str, str] = {
         '360': Icons._360,
         'add_business': Icons.ADD_BUSINESS,
@@ -2618,7 +2618,7 @@ class IconCategories:
         'bus_alert': Icons.BUS_ALERT,
         'car_crash': Icons.CAR_CRASH,
     }
-    
+
     NOTIFICATION: Dict[str, str] = {
         'account_tree': Icons.ACCOUNT_TREE,
         'adb': Icons.ADB,
@@ -2641,7 +2641,7 @@ class IconCategories:
         'disc_full': Icons.DISC_FULL,
         'do_disturb': Icons.DO_DISTURB,
     }
-    
+
     CONTENT: Dict[str, str] = {
         '30fps_select': Icons._30FPS_SELECT,
         '60fps_select': Icons._60FPS_SELECT,
@@ -2664,7 +2664,7 @@ class IconCategories:
         'content_copy': Icons.CONTENT_COPY,
         'content_copy': Icons.CONTENT_COPY,
     }
-    
+
     HARDWARE: Dict[str, str] = {
         'adf_scanner': Icons.ADF_SCANNER,
         'battery_0_bar': Icons.BATTERY_0_BAR,
@@ -2687,7 +2687,7 @@ class IconCategories:
         'browser_updated': Icons.BROWSER_UPDATED,
         'cast': Icons.CAST,
     }
-    
+
     IMAGE: Dict[str, str] = {
         '10mp': Icons._10MP,
         '11mp': Icons._11MP,
@@ -2710,7 +2710,7 @@ class IconCategories:
         '4mp': Icons._4MP,
         '5mp': Icons._5MP,
     }
-    
+
     AV: Dict[str, str] = {
         '10k': Icons._10K,
         '1k': Icons._1K,
@@ -2733,7 +2733,7 @@ class IconCategories:
         '9k': Icons._9K,
         '9k_plus': Icons._9K_PLUS,
     }
-    
+
     PLACES: Dict[str, str] = {
         'ac_unit': Icons.AC_UNIT,
         'airport_shuttle': Icons.AIRPORT_SHUTTLE,
@@ -2756,7 +2756,7 @@ class IconCategories:
         'checkroom': Icons.CHECKROOM,
         'child_care': Icons.CHILD_CARE,
     }
-    
+
     FILE: Dict[str, str] = {
         'approval': Icons.APPROVAL,
         'archive': Icons.ARCHIVE,
@@ -2779,7 +2779,7 @@ class IconCategories:
         'download': Icons.DOWNLOAD,
         'download_done': Icons.DOWNLOAD_DONE,
     }
-    
+
     TOGGLE: Dict[str, str] = {
         '3d_rotation': Icons._3D_ROTATION,
         'airplanemode_off': Icons.AIRPLANEMODE_OFF,
@@ -2802,7 +2802,7 @@ class IconCategories:
         'calendar_month': Icons.CALENDAR_MONTH,
         'calendar_view_month': Icons.CALENDAR_VIEW_MONTH,
     }
-    
+
     OTHER: Dict[str, str] = {
         '10k': Icons._10K,
         '10mp': Icons._10MP,
@@ -2825,7 +2825,7 @@ class IconCategories:
         '22mp': Icons._22MP,
         '23mp': Icons._23MP,
     }
-    
+
 
 
 # Validation function for IDE
@@ -2846,6 +2846,6 @@ def validate_icon_constant(icon_name: str) -> bool:
 # Export commonly used icons for direct import
 __all__ = [
     'Icons',
-    'IconCategories', 
+    'IconCategories',
     'validate_icon_constant',
 ]

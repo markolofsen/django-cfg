@@ -5,11 +5,12 @@ Provides complete Unfold admin interface integration with dashboard,
 navigation, theming, and callback support.
 """
 
-from .dashboard import DashboardManager, get_dashboard_manager
 from .callbacks import UnfoldCallbacks
-from .system_monitor import SystemMonitor
-from .tailwind import get_unfold_colors, get_css_variables
+from .dashboard import DashboardManager, get_dashboard_manager
 from .models import *
+from .system_monitor import SystemMonitor
+from .tailwind import get_css_variables, get_unfold_colors
+
 
 # Lazy initialization functions to avoid circular imports
 def get_system_monitor() -> SystemMonitor:
@@ -30,7 +31,7 @@ def get_unfold_callbacks() -> UnfoldCallbacks:
 __all__ = [
     'DashboardManager',
     'get_dashboard_manager',
-    'UnfoldCallbacks', 
+    'UnfoldCallbacks',
     'get_unfold_callbacks',
     'SystemMonitor',
     'get_system_monitor',
@@ -38,7 +39,7 @@ __all__ = [
     'get_css_variables',
     # Models
     'UnfoldConfig',
-    'UnfoldTheme', 
+    'UnfoldTheme',
     'UnfoldColors',
     'UnfoldSidebar',
     'UnfoldThemeConfig',

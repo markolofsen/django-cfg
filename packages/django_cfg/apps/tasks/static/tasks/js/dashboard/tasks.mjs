@@ -47,13 +47,15 @@ export class TasksModule {
 
     /**
      * Load tasks data
+     * Using new MJS API method with JSDoc types
      */
     async loadData() {
         try {
             console.log('Loading tasks data...');
-            
-            const response = await this.api.getTaskList();
-            const data = response.data || response;
+
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiTasksListRetrieve();
+            const data = response?.data || response;
             
             if (data.tasks && data.tasks.length > 0) {
                 this.allTasks = data.tasks;

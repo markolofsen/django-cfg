@@ -5,7 +5,7 @@ Provides URL patterns for OpenAPI schema generation.
 Each configured group gets its own schema endpoint.
 """
 
-from typing import List, Any
+from typing import Any, List
 
 
 def _is_django_configured() -> bool:
@@ -30,6 +30,7 @@ def get_openapi_urls() -> List[Any]:
     try:
         from django.urls import path
         from drf_spectacular.views import SpectacularAPIView
+
         from django_cfg.modules.django_client.core import get_openapi_service
     except ImportError:
         return []
@@ -51,7 +52,7 @@ def get_openapi_urls() -> List[Any]:
             path(
                 f'{group_name}/schema/',
                 SpectacularAPIView.as_view(
-                    urlconf=f'openapi_group_{group_name}',
+                    urlconf=f'_django_client_urlconf_{group_name}',
                     api_version=group_config.version,
                 ),
                 name=f'openapi-schema-{group_name}',

@@ -1,77 +1,133 @@
 """
-User admin interface using Django Admin Utilities.
+User Admin v2.0 - Hybrid Pydantic Approach
 
-Enhanced user management with Material Icons, status badges, and optimized queries.
+Enhanced user management with Material Icons and clean declarative config.
+Note: Uses hybrid approach due to BaseUserAdmin requirement and standalone actions.
 """
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.shortcuts import redirect
 from django.urls import reverse
-from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
-from django_cfg import ImportExportModelAdmin
+
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    BadgeField,
+    DateTimeField,
+    FieldsetConfig,
+    Icons,
+    UserField,
+    computed_field,
+)
+from django_cfg.modules.django_admin.base import PydanticAdmin
+# TODO: Migrate standalone actions to new ActionConfig system
+# from django_cfg.modules.django_admin_old import (
+#     ActionVariant,
+#     StandaloneActionsMixin,
+#     standalone_action,
+# )
 
 from django_cfg.modules.base import BaseCfgModule
-from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    StandaloneActionsMixin,
-    standalone_action,
-    UserDisplayConfig,
-    DateTimeDisplayConfig,
-    StatusBadgeConfig,
-    Icons,
-    ActionVariant,
-    display,
-    action
-)
-from django_cfg.modules.django_admin.utils.displays import UserDisplay
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
 
 from ..models import CustomUser
 from .filters import UserStatusFilter
-from .inlines import UserRegistrationSourceInline, UserActivityInline, UserEmailLogInline, UserSupportTicketsInline
+from .inlines import (
+    UserActivityInline,
+    UserEmailLogInline,
+    UserRegistrationSourceInline,
+    UserSupportTicketsInline,
+)
 from .resources import CustomUserResource
 
 
+# ===== User Admin =====
+
+customuser_config = AdminConfig(
+    model=CustomUser,
+
+    # Performance optimization
+    prefetch_related=["groups", "user_permissions"],
+
+    # Import/Export
+    import_export_enabled=True,
+    resource_class=CustomUserResource,
+
+    # List display
+    list_display=[
+        "avatar",
+        "email",
+        "full_name",
+        "status",
+        "sources_count",
+        "activity_count",
+        "emails_count",
+        "tickets_count",
+        "last_login",
+        "date_joined"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        UserField(
+            name="avatar",
+            title="Avatar",
+            header=True
+        ),
+        BadgeField(
+            name="email",
+            title="Email",
+            variant="info",
+            icon=Icons.EMAIL
+        ),
+        DateTimeField(
+            name="last_login",
+            title="Last Login",
+            ordering="last_login"
+        ),
+        DateTimeField(
+            name="date_joined",
+            title="Joined",
+            ordering="date_joined"
+        ),
+    ],
+
+    # Filters and search
+    list_filter=[UserStatusFilter, "is_staff", "is_active", "date_joined"],
+    search_fields=["email", "first_name", "last_name"],
+
+    # Readonly fields
+    readonly_fields=["date_joined", "last_login"],
+
+    # Ordering
+    ordering=["-date_joined"],
+)
+
+
 @admin.register(CustomUser)
-class CustomUserAdmin(BaseUserAdmin, OptimizedModelAdmin, DisplayMixin, StandaloneActionsMixin, ModelAdmin, ImportExportModelAdmin):
-    """Enhanced user admin using Django Admin Utilities."""
-    
-    # Import/Export configuration
-    resource_class = CustomUserResource
-    
+class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
+    """
+    User admin using hybrid Pydantic approach.
+
+    Note: Extends BaseUserAdmin for Django user management functionality.
+    Uses PydanticAdmin for declarative config (import/export enabled via config).
+
+    Features:
+    - Clean declarative config
+    - Import/Export functionality (via import_export_enabled in config)
+    - Material Icons integration
+    - Dynamic inlines based on enabled apps
+
+    TODO: Migrate standalone actions to new ActionConfig system
+    """
+    config = customuser_config
+
     # Forms loaded from unfold.forms
     form = UserChangeForm
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
-    
-    # Performance optimization
-    select_related_fields = []
-    prefetch_related_fields = ['groups', 'user_permissions']
-    
-    list_display = [
-        'avatar_display',
-        'email_display',
-        'full_name_display',
-        'status_display',
-        'sources_count_display',
-        'activity_count_display',
-        'emails_count_display',
-        'tickets_count_display',
-        'last_login_display',
-        'date_joined_display',
-    ]
-    list_display_links = ['avatar_display', 'email_display', 'full_name_display']
-    search_fields = ['email', 'first_name', 'last_name']
-    list_filter = [UserStatusFilter, 'is_staff', 'is_active', 'date_joined']
-    ordering = ['-date_joined']
-    readonly_fields = ['date_joined', 'last_login']
-    
-    # Register standalone actions
-    actions_list = ['view_user_emails', 'view_user_tickets', 'export_user_data']
-    
+
+    # Fieldsets (required by BaseUserAdmin)
     fieldsets = (
         (
             "Personal Information",
@@ -120,11 +176,11 @@ class CustomUserAdmin(BaseUserAdmin, OptimizedModelAdmin, DisplayMixin, Standalo
             },
         ),
     )
-    
+
     def get_inlines(self, request, obj):
         """Get inlines based on enabled apps."""
         inlines = [UserRegistrationSourceInline, UserActivityInline]
-        
+
         # Add email log inline if newsletter app is enabled
         try:
             base_module = BaseCfgModule()
@@ -134,41 +190,29 @@ class CustomUserAdmin(BaseUserAdmin, OptimizedModelAdmin, DisplayMixin, Standalo
                 inlines.append(UserSupportTicketsInline)
         except Exception:
             pass
-            
+
         return inlines
-    
-    @display(description="Avatar", header=True)
-    def avatar_display(self, obj):
+
+    # Custom display methods using decorators
+    @computed_field("Avatar")
+    def avatar(self, obj):
         """Enhanced avatar display with fallback initials."""
-        config = UserDisplayConfig(
-            show_avatar=True,
-            avatar_size=32
-        )
-        return UserDisplay.with_avatar(obj, config)
-    
-    @display(description="Email")
-    def email_display(self, obj):
-        """Email display with user icon."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.EMAIL)
-        return StatusBadge.create(
-            text=obj.email,
-            variant="info",
-            config=config
-        )
-    
-    @display(description="Full Name")
-    def full_name_display(self, obj):
+        # Avatar is handled automatically by UserField in display_fields
+        # For custom avatar display, we would use self.html methods
+        # For now, return the user object and let the UserField handle it
+        return obj.get_full_name() or obj.email
+
+    @computed_field("Full Name")
+    def full_name(self, obj):
         """Full name display."""
         full_name = obj.__class__.objects.get_full_name(obj)
         if not full_name:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.PERSON)
-            return StatusBadge.create(text="No name", variant="secondary", config=config)
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.PERSON)
-        return StatusBadge.create(text=full_name, variant="primary", config=config)
-    
-    @display(description="Status", label=True)
-    def status_display(self, obj):
+            return self.html.badge("No name", variant="secondary", icon=Icons.PERSON)
+
+        return self.html.badge(full_name, variant="primary", icon=Icons.PERSON)
+
+    @computed_field("Status")
+    def status(self, obj):
         """Enhanced status display with appropriate icons and colors."""
         if obj.is_superuser:
             status = "Superuser"
@@ -186,200 +230,79 @@ class CustomUserAdmin(BaseUserAdmin, OptimizedModelAdmin, DisplayMixin, Standalo
             status = "Inactive"
             icon = Icons.CANCEL
             variant = "secondary"
-        
-        config = StatusBadgeConfig(
-            show_icons=True,
-            icon=icon,
-            custom_mappings={status: variant}
-        )
-        return self.display_status_auto(
-            type('obj', (), {'status': status})(),
-            'status',
-            config
-        )
-    
-    @display(description="Sources")
-    def sources_count_display(self, obj):
+
+        return self.html.badge(status, variant=variant, icon=icon)
+
+    @computed_field("Sources")
+    def sources_count(self, obj):
         """Show count of registration sources for user."""
         count = obj.user_registration_sources.count()
         if count == 0:
-            return "—"
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.SOURCE)
-        return StatusBadge.create(
-            text=f"{count} source{'s' if count != 1 else ''}",
+            return None
+
+        return self.html.badge(
+            f"{count} source{'s' if count != 1 else ''}",
             variant="info",
-            config=config
+            icon=Icons.SOURCE
         )
-    
-    @display(description="Activities")
-    def activity_count_display(self, obj):
+
+    @computed_field("Activities")
+    def activity_count(self, obj):
         """Show count of user activities."""
         count = obj.activities.count()
         if count == 0:
-            return "—"
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.HISTORY)
-        return StatusBadge.create(
-            text=f"{count} activit{'ies' if count != 1 else 'y'}",
+            return None
+
+        return self.html.badge(
+            f"{count} activit{'ies' if count != 1 else 'y'}",
             variant="info",
-            config=config
+            icon=Icons.HISTORY
         )
-    
-    @display(description="Emails")
-    def emails_count_display(self, obj):
+
+    @computed_field("Emails")
+    def emails_count(self, obj):
         """Show count of emails sent to user (if newsletter app is enabled)."""
         try:
             base_module = BaseCfgModule()
-            
+
             if not base_module.is_newsletter_enabled():
-                return "—"
-            
+                return None
+
             from django_cfg.apps.newsletter.models import EmailLog
             count = EmailLog.objects.filter(user=obj).count()
             if count == 0:
-                return "—"
-            
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.EMAIL)
-            return StatusBadge.create(
-                text=f"{count} email{'s' if count != 1 else ''}",
+                return None
+
+            return self.html.badge(
+                f"{count} email{'s' if count != 1 else ''}",
                 variant="success",
-                config=config
+                icon=Icons.EMAIL
             )
         except (ImportError, Exception):
-            return "—"
-    
-    @display(description="Tickets")
-    def tickets_count_display(self, obj):
+            return None
+
+    @computed_field("Tickets")
+    def tickets_count(self, obj):
         """Show count of support tickets for user (if support app is enabled)."""
         try:
-            from django_cfg.modules.base import BaseCfgModule
             base_module = BaseCfgModule()
-            
+
             if not base_module.is_support_enabled():
-                return "—"
-            
+                return None
+
             from django_cfg.apps.support.models import Ticket
             count = Ticket.objects.filter(user=obj).count()
             if count == 0:
-                return "—"
-            
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.SUPPORT_AGENT)
-            return StatusBadge.create(
-                text=f"{count} ticket{'s' if count != 1 else ''}",
+                return None
+
+            return self.html.badge(
+                f"{count} ticket{'s' if count != 1 else ''}",
                 variant="warning",
-                config=config
+                icon=Icons.SUPPORT_AGENT
             )
         except (ImportError, Exception):
-            return "—"
-    
-    @display(description="Last Login")
-    def last_login_display(self, obj):
-        """Last login with relative time."""
-        if not obj.last_login:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.LOGIN)
-            return StatusBadge.create(text="Never", variant="secondary", config=config)
-        
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'last_login', config)
-    
-    @display(description="Joined")
-    def date_joined_display(self, obj):
-        """Join date with relative time."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'date_joined', config)
-    
-    # Standalone Actions
-    @standalone_action(
-        description="📧 View Email History",
-        variant=ActionVariant.INFO,
-        icon="mail_outline",
-        success_message="Redirected to email history for {result}",
-        error_message="❌ Error accessing email history: {error}"
-    )
-    def view_user_emails(self, request):
-        """View all emails sent to this user."""
-        # Extract object_id from request path
-        # URL format: /admin/django_cfg_accounts/customuser/<object_id>/view-user-emails/
-        path_parts = request.path.strip('/').split('/')
-        try:
-            object_id = path_parts[-2]  # Get the ID before the action name
-        except IndexError:
-            raise Exception("Could not determine user ID from URL")
+            return None
 
-        # Get the user object
-        user = self.get_object(request, object_id)
-        if not user:
-            raise Exception("User not found")
-
-        # Check if newsletter app is enabled
-        from django_cfg.modules.base import BaseCfgModule
-        base_module = BaseCfgModule()
-
-        if not base_module.is_newsletter_enabled():
-            raise Exception("Newsletter app is not enabled")
-
-        # Redirect to EmailLog changelist filtered by this user
-        url = reverse('admin:django_cfg_newsletter_emaillog_changelist')
-        redirect_url = f"{url}?user__id__exact={user.id}"
-
-        # Return redirect (handled by standalone_action decorator)
-        return redirect(redirect_url)
-
-    @standalone_action(
-        description="🎫 View Support Tickets",
-        variant=ActionVariant.SUCCESS,
-        icon="support_agent",
-        success_message="Redirected to support tickets for {result}",
-        error_message="❌ Error accessing support tickets: {error}"
-    )
-    def view_user_tickets(self, request):
-        """View all support tickets for this user."""
-        # Extract object_id from request path
-        path_parts = request.path.strip('/').split('/')
-        try:
-            object_id = path_parts[-2]  # Get the ID before the action name
-        except IndexError:
-            raise Exception("Could not determine user ID from URL")
-
-        # Get the user object
-        user = self.get_object(request, object_id)
-        if not user:
-            raise Exception("User not found")
-
-        # Check if support app is enabled
-        from django_cfg.modules.base import BaseCfgModule
-        base_module = BaseCfgModule()
-
-        if not base_module.is_support_enabled():
-            raise Exception("Support app is not enabled")
-
-        # Redirect to Ticket changelist filtered by this user
-        url = reverse('admin:django_cfg_support_ticket_changelist')
-        redirect_url = f"{url}?user__id__exact={user.id}"
-
-        return redirect(redirect_url)
-
-    @standalone_action(
-        description="📊 Export User Data",
-        variant=ActionVariant.WARNING,
-        icon="download",
-        success_message="📊 User data export completed: {result}",
-        error_message="❌ Export failed: {error}"
-    )
-    def export_user_data(self, request):
-        """Export comprehensive user data."""
-        # Extract object_id from request path
-        path_parts = request.path.strip('/').split('/')
-        try:
-            object_id = path_parts[-2]  # Get the ID before the action name
-        except IndexError:
-            raise Exception("Could not determine user ID from URL")
-
-        user = self.get_object(request, object_id)
-        if not user:
-            raise Exception("User not found")
-
-        # Here you would implement actual export logic
-        # For now, just return a success message
-        return f"Data for {user.get_full_name() or user.email}"
+    # TODO: Migrate standalone actions to new ActionConfig system
+    # Standalone actions (view_user_emails, view_user_tickets, export_user_data)
+    # temporarily disabled during migration from django_admin_old

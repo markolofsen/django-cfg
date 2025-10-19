@@ -15,46 +15,43 @@ Organized by category:
 """
 
 # Base classes
-from .base.config import BaseConfig, BaseSettings
-from .base.module import BaseCfgAutoModule
-
-# Infrastructure
-from .infrastructure.database import DatabaseConfig
-from .infrastructure.cache import CacheConfig
-from .infrastructure.logging import LoggingConfig
-from .infrastructure.security import SecurityConfig
+# External modules (imported from other locations)
+from ..modules.django_unfold.models.config import UnfoldConfig
 
 # API & Authentication
 from .api.config import APIConfig
-from .api.keys import ApiKeys
-from .api.jwt import JWTConfig
 from .api.cors import CORSConfig
-from .api.limits import LimitsConfig
 from .api.drf.config import DRFConfig
+from .api.drf.redoc import RedocUISettings
 from .api.drf.spectacular import SpectacularConfig
 from .api.drf.swagger import SwaggerUISettings
-from .api.drf.redoc import RedocUISettings
+from .api.jwt import JWTConfig
+from .api.keys import ApiKeys
+from .api.limits import LimitsConfig
+from .base.config import BaseConfig, BaseSettings
+from .base.module import BaseCfgAutoModule
+from .django.constance import ConstanceConfig, ConstanceField
 
 # Django-specific
 from .django.environment import EnvironmentConfig
-from .django.constance import ConstanceConfig, ConstanceField
 from .django.openapi import OpenAPIClientConfig
+from .infrastructure.cache import CacheConfig
+
+# Infrastructure
+from .infrastructure.database import DatabaseConfig
+from .infrastructure.logging import LoggingConfig
+from .infrastructure.security import SecurityConfig
+from .ngrok.auth import NgrokAuthConfig
+from .ngrok.config import NgrokConfig
+from .ngrok.tunnel import NgrokTunnelConfig
+
+# Payments
+from .payments.config import PaymentsConfig, NowPaymentsConfig
+from .services.base import ServiceConfig
 
 # Services
 from .services.email import EmailConfig
 from .services.telegram import TelegramConfig
-from .services.base import ServiceConfig
-from .ngrok.config import NgrokConfig
-from .ngrok.auth import NgrokAuthConfig
-from .ngrok.tunnel import NgrokTunnelConfig
-
-# Payments
-from .payments.config import PaymentsConfig
-from .payments.providers.base import BaseProviderConfig
-from .payments.providers.nowpayments import NowPaymentsProviderConfig
-
-# External modules (imported from other locations)
-from ..modules.django_unfold.models.config import UnfoldConfig
 
 __all__ = [
     # Base
@@ -91,6 +88,5 @@ __all__ = [
     "NgrokTunnelConfig",
     # Payments
     "PaymentsConfig",
-    "BaseProviderConfig",
-    "NowPaymentsProviderConfig",
+    "NowPaymentsConfig",
 ]

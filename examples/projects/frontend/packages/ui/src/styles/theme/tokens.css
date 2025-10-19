@@ -1,0 +1,87 @@
+/**
+ * Tailwind CSS v4 Theme Tokens
+ *
+ * Defines custom properties that Tailwind utilities can use
+ * @theme directive registers these for Tailwind v4
+ */
+
+@theme {
+  /* Default breakpoints - mobile-first responsive design */
+  --breakpoint-sm: 40rem;    /* 640px */
+  --breakpoint-md: 48rem;    /* 768px */
+  --breakpoint-lg: 64rem;    /* 1024px */
+  --breakpoint-xl: 80rem;    /* 1280px */
+  --breakpoint-2xl: 96rem;   /* 1536px */
+
+  /* Register semantic color tokens for Tailwind utilities */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* Sidebar colors */
+  --color-sidebar-background: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* Spacing scale - required for all spacing utilities to work */
+  --spacing: 0.25rem; /* Base unit: 4px */
+  --spacing-9: 2.25rem; /* 36px */
+  --spacing-10: 2.5rem;  /* 40px */
+  --spacing-11: 2.75rem; /* 44px */
+  --spacing-12: 3rem;    /* 48px */
+  --spacing-14: 3.5rem;  /* 56px */
+  --spacing-16: 4rem;    /* 64px */
+  --spacing-20: 5rem;    /* 80px */
+  --spacing-24: 6rem;    /* 96px */
+
+  /* Gap utilities - required for gap-* classes to work */
+  --gap-9: 2.25rem; /* 36px */
+  --gap-10: 2.5rem;  /* 40px */
+  --gap-11: 2.75rem; /* 44px */
+  --gap-12: 3rem;    /* 48px */
+  --gap-14: 3.5rem;  /* 56px */
+  --gap-16: 4rem;    /* 64px */
+  --gap-20: 5rem;    /* 80px */
+  --gap-24: 6rem;    /* 96px */
+
+  /* Blur utilities - required for backdrop-blur-* classes to work */
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+  --blur-2xl: 40px;
+  --blur-3xl: 64px;
+
+  /* Custom width utilities */
+  --width-dropdown: 500px;
+
+  /* Custom animations for smooth floating effects */
+  --animate-float: float 20s ease-in-out infinite;
+  --animate-float-slow: float 25s ease-in-out infinite;
+  --animate-float-x: float-x 18s ease-in-out infinite;
+  --animate-float-diagonal: float-diagonal 22s ease-in-out infinite;
+  --animate-morph: morph 15s ease-in-out infinite;
+  --animate-gradient-shift: gradient-shift 10s ease-in-out infinite;
+}

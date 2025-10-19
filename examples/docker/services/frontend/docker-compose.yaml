@@ -1,0 +1,76 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Django-CFG Frontend - Service Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+# Turbo monorepo with Demo (3200) + other apps
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Demo - Next.js UI (port 3200)
+  # ───────────────────────────────────────────────────────────────────────────
+  frontend-demo:
+    build:
+      context: ../../../projects/frontend
+      dockerfile: ../../docker/services/frontend/Dockerfile
+      target: demo
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        VERSION: ${VERSION:-1.0.0}
+        DJANGO_API_URL: ${DJANGO_API_URL:-http://api.localhost:180}
+        IPC_WS_URL: ${IPC_WS_URL:-ws://ws.localhost:180}
+
+    image: djangocfg-frontend:demo
+    container_name: djangocfg_frontend_demo
+    restart: unless-stopped
+
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3200
+      - NEXT_TELEMETRY_DISABLED=1
+      # Site Configuration
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://demo.localhost:180}
+      # API Configuration
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-${DJANGO_API_URL:-http://api.localhost:180}}
+      # WebSocket Configuration
+      - NEXT_PUBLIC_WS_RPC_URL=${NEXT_PUBLIC_WS_RPC_URL:-${IPC_WS_URL:-ws://ws.localhost:180}}
+
+    ports:
+      - "3200:3200"
+
+    depends_on:
+      django:
+        condition: service_healthy
+      websocket:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3200/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          memory: 512M
+
+    networks:
+      - djangocfg-network
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend-demo.rule=Host(`demo.localhost`)"
+      - "traefik.http.routers.frontend-demo.entrypoints=web"
+      - "traefik.http.routers.frontend-demo.service=frontend-demo"
+      - "traefik.http.services.frontend-demo.loadbalancer.server.port=3200"
+      - "traefik.http.services.frontend-demo.loadbalancer.healthcheck.path=/api/health"
+      - "traefik.http.services.frontend-demo.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.middlewares.frontend-demo-headers.headers.frameDeny=false"
+      - "traefik.http.middlewares.frontend-demo-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.routers.frontend-demo.middlewares=frontend-demo-headers"

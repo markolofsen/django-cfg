@@ -30,9 +30,9 @@ Example:
     ```
 """
 
-from .config import TaskConfig, TaskBackend, QueuePriority
 from .backends import DramatiqConfig, WorkerConfig
-from .utils import get_default_task_config, validate_task_config, get_smart_queues
+from .config import QueuePriority, TaskBackend, TaskConfig
+from .utils import get_default_task_config, get_smart_queues, validate_task_config
 
 __all__ = [
     # Main configuration

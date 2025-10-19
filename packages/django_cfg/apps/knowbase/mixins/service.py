@@ -6,19 +6,21 @@ using the new mixin-based architecture internally.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from django.db import models, transaction
 from django.utils import timezone
 from pgvector.django import CosineDistance
 
 from django_cfg.modules.django_llm.llm.client import LLMClient
-from ..config.settings import get_openai_api_key, get_cache_settings
-from ..utils.validation import safe_float, validate_similarity_score
+
+from ..config.settings import get_cache_settings, get_openai_api_key
 from ..models.external_data import ExternalData, ExternalDataChunk, ExternalDataStatus
 from ..services.base import BaseService
 from ..services.embedding import process_external_data_chunks_optimized
-from .creator import ExternalDataCreator
+from ..utils.validation import safe_float
 from .config import ExternalDataMetaConfig
+from .creator import ExternalDataCreator
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class ExternalDataService(BaseService):
     This service provides backward compatibility with the old ExternalDataService
     while using the new mixin-based architecture internally.
     """
-    
+
     def __init__(self, user):
         super().__init__(user)
         cache_settings = get_cache_settings()
@@ -40,7 +42,7 @@ class ExternalDataService(BaseService):
             cache_ttl=cache_settings.cache_ttl,
             max_cache_size=cache_settings.max_cache_size
         )
-    
+
     def create_external_data(
         self,
         title: str,
@@ -75,11 +77,11 @@ class ExternalDataService(BaseService):
                 source_config=source_config or {},
                 tags=tags or []
             )
-            
+
             # Create using the new creator
             creator = ExternalDataCreator(self.user)
             result = creator.create_from_config(config)
-            
+
             if result['success']:
                 return {
                     'success': True,
@@ -91,14 +93,14 @@ class ExternalDataService(BaseService):
                     'success': False,
                     'error': result['error']
                 }
-                
+
         except Exception as e:
             logger.error(f"Error creating external data: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
-    
+
     @transaction.atomic
     def vectorize_external_data(self, external_data_id) -> Dict[str, Any]:
         """
@@ -119,15 +121,15 @@ class ExternalDataService(BaseService):
             else:
                 # It's an ID
                 external_data = ExternalData.objects.get(id=external_data_id, user=self.user)
-            
+
             # Mark as processing
             external_data.status = ExternalDataStatus.PROCESSING
             external_data.processing_error = ""
             external_data.save()
-            
+
             # Clear existing chunks
             external_data.chunks.all().delete()
-            
+
             # Generate chunks if content exists
             if not external_data.content.strip():
                 external_data.status = ExternalDataStatus.COMPLETED
@@ -138,13 +140,13 @@ class ExternalDataService(BaseService):
                     'processed_count': 0,
                     'cost': 0.0
                 }
-            
+
             # Use the existing chunking and embedding logic
             result = process_external_data_chunks_optimized(
                 external_data=external_data,
                 llm_client=self.llm_client
             )
-            
+
             if result.successful_chunks:
                 external_data.status = ExternalDataStatus.COMPLETED
                 external_data.processed_at = timezone.now()
@@ -152,15 +154,15 @@ class ExternalDataService(BaseService):
             else:
                 external_data.status = ExternalDataStatus.FAILED
                 external_data.processing_error = "No chunks were successfully processed"
-            
+
             external_data.save()
-            
+
             return {
                 'success': True,
                 'processed_count': len(result.successful_chunks),
                 'cost': result.total_cost
             }
-            
+
         except Exception as e:
             # Mark as failed
             if 'external_data' in locals():
@@ -172,7 +174,7 @@ class ExternalDataService(BaseService):
                 'success': False,
                 'error': str(e)
             }
-    
+
     def search_external_data(
         self,
         query: str,
@@ -197,36 +199,36 @@ class ExternalDataService(BaseService):
         try:
             # Generate query embedding
             query_embedding = self.llm_client.generate_embedding(query)
-            
+
             # Build query
             chunks_query = ExternalDataChunk.objects.filter(
                 external_data__user=self.user,
                 external_data__is_active=True,
                 embedding__isnull=False
             ).select_related('external_data')
-            
+
             # Apply filters
             if source_types:
                 chunks_query = chunks_query.filter(external_data__source_type__in=source_types)
-            
+
             if source_identifiers:
                 chunks_query = chunks_query.filter(external_data__source_identifier__in=source_identifiers)
-            
+
             # Calculate similarity and order by it
             chunks_with_similarity = chunks_query.annotate(
                 similarity=1 - CosineDistance('embedding', query_embedding.embedding)
             ).order_by('-similarity')[:limit * 2]  # Get more to filter by threshold
-            
+
             # Filter by threshold and format results
             results = []
             for chunk in chunks_with_similarity:
                 similarity_value = safe_float(chunk.similarity, 0.0)
-                
+
                 # Use per-object threshold if no global threshold provided
                 object_threshold = threshold if threshold is not None else chunk.external_data.similarity_threshold
                 if similarity_value < object_threshold:
                     continue
-                
+
                 results.append({
                     'type': 'external_data',
                     'chunk': chunk,
@@ -241,21 +243,21 @@ class ExternalDataService(BaseService):
                         **chunk.external_data.metadata
                     }
                 })
-                
+
                 if len(results) >= limit:
                     break
-            
+
             return results
-            
+
         except Exception as e:
             logger.error(f"Error searching external data: {e}")
             return []
-    
+
     def get_external_data_stats(self) -> Dict[str, Any]:
         """Get statistics about external data for the user."""
         try:
             queryset = ExternalData.objects.filter(user=self.user)
-            
+
             stats = {
                 'total_external_data': queryset.count(),
                 'by_status': {},
@@ -264,33 +266,33 @@ class ExternalDataService(BaseService):
                 'total_tokens': 0,
                 'total_cost': 0.0
             }
-            
+
             # Status breakdown
             for status in ExternalDataStatus:
                 count = queryset.filter(status=status).count()
                 stats['by_status'][status] = count
-            
+
             # Source type breakdown
             source_types = queryset.values_list('source_type', flat=True).distinct()
             for source_type in source_types:
                 count = queryset.filter(source_type=source_type).count()
                 stats['by_source_type'][source_type] = count
-            
+
             # Aggregate statistics
             aggregates = queryset.aggregate(
                 total_chunks=models.Sum('total_chunks'),
                 total_tokens=models.Sum('total_tokens'),
                 total_cost=models.Sum('processing_cost')
             )
-            
+
             stats.update({
                 'total_chunks': aggregates['total_chunks'] or 0,
                 'total_tokens': aggregates['total_tokens'] or 0,
                 'total_cost': float(aggregates['total_cost'] or 0.0)
             })
-            
+
             return stats
-            
+
         except Exception as e:
             logger.error(f"Error getting external data stats: {e}")
             return {
@@ -301,19 +303,19 @@ class ExternalDataService(BaseService):
                 'total_tokens': 0,
                 'total_cost': 0.0
             }
-    
+
     def delete_external_data(self, external_data_id) -> Dict[str, Any]:
         """Delete external data and all associated chunks."""
         try:
             external_data = ExternalData.objects.get(id=external_data_id, user=self.user)
             title = external_data.title
             external_data.delete()
-            
+
             return {
                 'success': True,
                 'message': f"External data '{title}' deleted successfully"
             }
-            
+
         except ExternalData.DoesNotExist:
             return {
                 'success': False,
@@ -325,7 +327,7 @@ class ExternalDataService(BaseService):
                 'success': False,
                 'error': str(e)
             }
-    
+
     def bulk_vectorize_pending(self) -> Dict[str, Any]:
         """Vectorize all pending external data for the user."""
         try:
@@ -333,14 +335,14 @@ class ExternalDataService(BaseService):
                 user=self.user,
                 status=ExternalDataStatus.PENDING
             )
-            
+
             stats = {
                 'total': pending_data.count(),
                 'processed': 0,
                 'failed': 0,
                 'total_cost': 0.0
             }
-            
+
             for external_data in pending_data:
                 result = self.vectorize_external_data(external_data)
                 if result.get('success', False):
@@ -348,12 +350,12 @@ class ExternalDataService(BaseService):
                     stats['total_cost'] += result.get('cost', 0.0)
                 else:
                     stats['failed'] += 1
-            
+
             return {
                 'success': True,
                 'stats': stats
             }
-            
+
         except Exception as e:
             logger.error(f"Error in bulk vectorization: {e}")
             return {

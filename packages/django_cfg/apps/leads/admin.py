@@ -1,9 +1,7 @@
-from django.contrib import admin, messages
-from django.urls import reverse
+from django.contrib import admin
 from django.utils.html import format_html
-from django.http import HttpResponseRedirect
 from unfold.admin import ModelAdmin
-from unfold.decorators import action
+
 from .models import Lead
 
 
@@ -18,13 +16,13 @@ class LeadAdmin(ModelAdmin):
         'status', 'contact_type', 'company', 'created_at'
     ]
     search_fields = [
-        'name', 'email', 'company', 'company_site', 
+        'name', 'email', 'company', 'company_site',
         'message', 'subject', 'admin_notes'
     ]
     readonly_fields = [
         'created_at', 'updated_at', 'ip_address', 'user_agent'
     ]
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'email', 'company', 'company_site')
@@ -47,7 +45,7 @@ class LeadAdmin(ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     def status_display(self, obj):
         status_colors = {
             'new': '#17a2b8',
@@ -62,9 +60,9 @@ class LeadAdmin(ModelAdmin):
             color, obj.get_status_display()
         )
     status_display.short_description = 'Status'
-    
+
     list_per_page = 50
     date_hierarchy = 'created_at'
-    
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')

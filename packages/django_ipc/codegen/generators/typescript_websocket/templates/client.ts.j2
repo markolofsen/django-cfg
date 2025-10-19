@@ -6,6 +6,7 @@
  */
 
 import type * as Types from './types';
+import { ClientLogger, type ClientLoggerConfig } from './logger';
 
 /**
  * Environment types
@@ -112,10 +113,17 @@ export class RPCClient {
     reject: (error: Error) => void;
   }>();
 
+  /** RPC call logger - accessible for debugging and log management */
+  public readonly logger?: ClientLogger;
+
+  private enableLogging: boolean;
+
   /**
    * Create RPC client.
    *
    * @param url - WebSocket URL (auto-detect from ENV if undefined)
+   * @param loggerConfig - Optional logger configuration
+   * @param enableLogging - Whether to enable RPC call logging (default: true)
    *
    * @example
    * // Auto-detect from NODE_ENV or DJANGO_ENV
@@ -124,11 +132,26 @@ export class RPCClient {
    * @example
    * // Explicit URL
    * const client = new RPCClient("ws://localhost:8001/ws");
+   *
+   * @example
+   * // With custom logger
+   * const client = new RPCClient(undefined, { level: 4, logRPCCalls: true });
+   *
+   * @example
+   * // Disable logging
+   * const client = new RPCClient(undefined, undefined, false);
    */
-  constructor(url?: string) {
+  constructor(url?: string, loggerConfig?: ClientLoggerConfig, enableLogging: boolean = true) {
+    this.enableLogging = enableLogging;
+
+    // Initialize logger first
+    if (enableLogging) {
+      this.logger = new ClientLogger(loggerConfig);
+    }
+
     if (!url) {
       url = RPCClientConfig.getUrl();
-      console.log(`[RPCClient] Auto-detected URL: ${url}`);
+      this.logger?.info(`Auto-detected URL: ${url}`);
     }
 
     this.url = url;
@@ -157,17 +180,23 @@ export class RPCClient {
    * Connect to WebSocket server.
    */
   async connect(): Promise<void> {
+    // Skip connection during SSR
+    if (typeof window === 'undefined') {
+      this.logger?.warning('Skipping connection during SSR');
+      return Promise.resolve();
+    }
+
     return new Promise((resolve, reject) => {
       this.authReceived = false;
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
-        console.log('[RPCClient] Connected');
+        this.logger?.info('Connected');
         resolve();
       };
 
       this.ws.onerror = (error) => {
-        console.error('[RPCClient] Connection error:', error);
+        this.logger?.error('Connection error:', error);
         reject(new Error('WebSocket connection failed'));
       };
 
@@ -176,7 +205,7 @@ export class RPCClient {
       };
 
       this.ws.onclose = () => {
-        console.log('[RPCClient] Disconnected');
+        this.logger?.info('Disconnected');
         this.ws = null;
       };
     });
@@ -196,6 +225,12 @@ export class RPCClient {
    * Handle incoming WebSocket message.
    */
   private handleMessage(data: string): void {
+    // Skip empty messages
+    if (!data || data.trim() === '') {
+      this.logger?.warning('Received empty message, skipping');
+      return;
+    }
+
     try {
       const message = JSON.parse(data);
 
@@ -203,7 +238,7 @@ export class RPCClient {
       if (!this.authReceived && message.type === 'auth' && message.status === 'ok') {
         this.authReceived = true;
         const serverVersion = message.server_version || 'unknown';
-        console.log(`[RPCClient] Server version: ${serverVersion}`);
+        this.logger?.info(`Server version: ${serverVersion}`);
         return;
       }
 
@@ -221,7 +256,7 @@ export class RPCClient {
         }
       }
     } catch (error) {
-      console.error('[RPCClient] Failed to parse message:', error);
+      this.logger?.error('Failed to parse message:', error);
     }
   }
 
@@ -239,6 +274,11 @@ export class RPCClient {
 
     const correlationId = `${++this.correlationId}`;
 
+    // Log request
+    if (this.logger) {
+      this.logger.logRequest(method, params, correlationId);
+    }
+
     const message = {
       type: 'rpc',
       method,
@@ -246,14 +286,46 @@ export class RPCClient {
       correlation_id: correlationId,
     };
 
+    // Track timing
+    const startTime = performance.now();
+
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(correlationId, { resolve, reject });
+      this.pendingRequests.set(correlationId, {
+        resolve: (value: any) => {
+          const duration = performance.now() - startTime;
+
+          // Log successful call
+          if (this.logger) {
+            this.logger.logRPCCall(method, params, value, duration, true, correlationId);
+          }
+
+          resolve(value);
+        },
+        reject: (error: Error) => {
+          const duration = performance.now() - startTime;
+
+          // Log failed call
+          if (this.logger) {
+            this.logger.logRPCCall(method, params, error.message, duration, false, correlationId);
+          }
+
+          reject(error);
+        }
+      });
+
       this.ws!.send(JSON.stringify(message));
 
       // Timeout after 30 seconds
       setTimeout(() => {
         if (this.pendingRequests.has(correlationId)) {
           this.pendingRequests.delete(correlationId);
+          const duration = performance.now() - startTime;
+
+          // Log timeout
+          if (this.logger) {
+            this.logger.logRPCCall(method, params, 'RPC timeout', duration, false, correlationId);
+          }
+
           reject(new Error('RPC timeout'));
         }
       }, 30000);

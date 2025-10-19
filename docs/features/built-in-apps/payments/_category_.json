@@ -1,0 +1,9 @@
+{
+  "label": "Universal Payments",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Universal payment system with multi-provider support, subscriptions, and automated billing."
+  },
+  "collapsed": true
+}

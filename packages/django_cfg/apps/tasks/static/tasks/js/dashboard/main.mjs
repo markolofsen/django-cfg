@@ -118,17 +118,19 @@ class TasksDashboard {
 
     /**
      * Management actions
+     * Using new MJS API with correct method names
      */
     async simulateData() {
         try {
             this.showManagementActionStatus('Simulating test data...', 'info');
-            const response = await this.api.simulateData();
-            
-            if (response.success) {
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiSimulateCreate({});
+
+            if (response && response.success) {
                 this.showManagementActionStatus('Test data simulation completed successfully', 'success');
                 await this.loadTabData(this.currentTab);
             } else {
-                this.showManagementActionStatus(`Simulation failed: ${response.error}`, 'error');
+                this.showManagementActionStatus(`Simulation failed: ${response?.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             this.showManagementActionStatus(`Simulation error: ${error.message}`, 'error');
@@ -138,13 +140,14 @@ class TasksDashboard {
     async clearData() {
         try {
             this.showManagementActionStatus('Clearing test data...', 'info');
-            const response = await this.api.clearData();
-            
-            if (response.success) {
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiClearCreate({});
+
+            if (response && response.success) {
                 this.showManagementActionStatus('Test data cleared successfully', 'success');
                 await this.loadTabData(this.currentTab);
             } else {
-                this.showManagementActionStatus(`Clear failed: ${response.error}`, 'error');
+                this.showManagementActionStatus(`Clear failed: ${response?.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             this.showManagementActionStatus(`Clear error: ${error.message}`, 'error');
@@ -155,12 +158,13 @@ class TasksDashboard {
         console.log('Clearing queues...');
         this.showManagementActionStatus('Clearing all queues...', 'info');
         try {
-            const response = await this.api.clearQueues();
-            if (response.success) {
-                this.showManagementActionStatus(response.message, 'success');
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiClearQueuesCreate({});
+            if (response && response.success) {
+                this.showManagementActionStatus(response.message || 'Queues cleared successfully', 'success');
                 this.loadTabData(this.currentTab);
             } else {
-                this.showManagementActionStatus(`Failed to clear queues: ${response.error}`, 'error');
+                this.showManagementActionStatus(`Failed to clear queues: ${response?.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             this.showManagementActionStatus(`Failed to clear queues: ${error.message}`, 'error');
@@ -171,12 +175,13 @@ class TasksDashboard {
         console.log('Purging failed tasks...');
         this.showManagementActionStatus('Purging failed tasks...', 'info');
         try {
-            const response = await this.api.purgeFailed();
-            if (response.success) {
-                this.showManagementActionStatus(response.message, 'success');
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiPurgeFailedCreate({});
+            if (response && response.success) {
+                this.showManagementActionStatus(response.message || 'Failed tasks purged successfully', 'success');
                 this.loadTabData(this.currentTab);
             } else {
-                this.showManagementActionStatus(`Failed to purge failed tasks: ${response.error}`, 'error');
+                this.showManagementActionStatus(`Failed to purge failed tasks: ${response?.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             this.showManagementActionStatus(`Failed to purge failed tasks: ${error.message}`, 'error');
@@ -237,9 +242,28 @@ class TasksDashboard {
     }
 }
 
-// Initialize dashboard when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing dashboard...');
+// Wait for both DOM and API to be ready
+async function initializeDashboard() {
+    console.log('DOM loaded, waiting for TasksAPI...');
+
+    // Wait for API to be available (max 5 seconds)
+    let attempts = 0;
+    const maxAttempts = 100; // 100 * 50ms = 5 seconds
+
+    while (!window.tasksAPI && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        attempts++;
+    }
+
+    if (!window.tasksAPI) {
+        console.error('❌ TasksAPI failed to load after 5 seconds');
+        return;
+    }
+
+    console.log('✅ TasksAPI ready, initializing dashboard...');
     window.dashboard = new TasksDashboard();
     window.dashboard.init();
-});
+}
+
+// Initialize dashboard when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeDashboard);

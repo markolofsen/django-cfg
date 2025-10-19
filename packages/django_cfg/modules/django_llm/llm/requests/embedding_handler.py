@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 from ..models import EmbeddingResponse
 
 if TYPE_CHECKING:
+    from ..embeddings import MockEmbedder, OpenAIEmbedder
     from ..providers import ProviderManager, ProviderSelector
-    from ..embeddings import OpenAIEmbedder, MockEmbedder
     from ..stats import StatsManager
     from .cache_manager import RequestCacheManager
 

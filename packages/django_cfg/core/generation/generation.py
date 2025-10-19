@@ -10,10 +10,8 @@ Following CRITICAL_REQUIREMENTS.md:
 - Performance-aware generation
 """
 
-from typing import Dict, List, Any, TYPE_CHECKING
 import logging
-
-from django_cfg.core.exceptions import ConfigurationError
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig

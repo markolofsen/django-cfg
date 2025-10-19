@@ -1,0 +1,11 @@
+{
+  "label": "Command Reference",
+  "position": 3,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "title": "CLI Command Reference",
+    "description": "Detailed reference for all Django-CFG management commands organized by category.",
+    "slug": "/cli/commands"
+  }
+}

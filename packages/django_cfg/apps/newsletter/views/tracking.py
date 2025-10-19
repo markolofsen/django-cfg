@@ -3,11 +3,12 @@ Email tracking views.
 """
 
 import uuid
+
 from django.http import HttpResponse, HttpResponseRedirect
-from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt
 
 from ..models import EmailLog
 
@@ -18,7 +19,7 @@ class TrackEmailOpenView(View):
     """
     Track email opens using a 1x1 pixel image.
     """
-    
+
     def get(self, request, email_log_id):
         """Handle tracking pixel request."""
         try:
@@ -37,7 +38,7 @@ class TrackEmailOpenView(View):
         except (ValueError, TypeError):
             # Silently fail for invalid UUID format
             pass
-        
+
         # Return 1x1 transparent pixel
         pixel_data = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x21\xF9\x04\x01\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x04\x01\x00\x3B'
         return HttpResponse(pixel_data, content_type='image/gif')
@@ -49,7 +50,7 @@ class TrackEmailClickView(View):
     """
     Track email link clicks and redirect to target URL.
     """
-    
+
     def get(self, request, email_log_id):
         """Handle click tracking and redirect."""
         redirect_url = request.GET.get('url', '/')

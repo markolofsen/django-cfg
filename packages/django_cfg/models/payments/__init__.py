@@ -1,20 +1,12 @@
 """
-Payment configuration models for django_cfg.
+Simplified payment configuration models for Payments v2.0.
 
-Provides type-safe configuration for payment providers and API keys:
-- PaymentsConfig: Main payments configuration
-- ProviderAPIKeysConfig: API keys management
-- BaseProviderConfig: Base provider configuration
-- NowPaymentsProviderConfig: NowPayments provider
+Only supports NowPayments provider.
 """
 
-from .config import PaymentsConfig
-from .api_keys import ProviderAPIKeysConfig
-from .providers import BaseProviderConfig, NowPaymentsProviderConfig
+from .config import NowPaymentsConfig, PaymentsConfig
 
 __all__ = [
     "PaymentsConfig",
-    "ProviderAPIKeysConfig",
-    "BaseProviderConfig",
-    "NowPaymentsProviderConfig",
+    "NowPaymentsConfig",
 ]

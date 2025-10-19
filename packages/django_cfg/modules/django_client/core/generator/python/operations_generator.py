@@ -131,7 +131,7 @@ class OperationsGenerator:
         if return_type != "None":
             if operation.is_list_operation:
                 # Paginated list response - extract results
-                body_lines.append(f"data = response.json()")
+                body_lines.append("data = response.json()")
                 body_lines.append(f'return [{primary_response.schema_name}.model_validate(item) for item in data.get("results", [])]')
             else:
                 body_lines.append(f"return {primary_response.schema_name}.model_validate(response.json())")
@@ -249,7 +249,7 @@ class OperationsGenerator:
             if operation.is_list_operation:
                 # List response - validate each item (paginated)
                 primary_schema = primary_response.schema_name
-                body_lines.append(f"data = response.json()")
+                body_lines.append("data = response.json()")
                 body_lines.append(f'return [{primary_schema}.model_validate(item) for item in data.get("results", [])]')
             else:
                 # Single object response

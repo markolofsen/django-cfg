@@ -5,8 +5,9 @@ Provides template-based dashboard views for task monitoring.
 """
 
 import logging
-from django.shortcuts import render
+
 from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def dashboard_view(request):
         # Use simulator to get data
         from ..utils.simulator import TaskSimulator
         simulator = TaskSimulator()
-        
+
         # Build navigation items for navbar
         tasks_nav_items = [
             {
@@ -49,10 +50,10 @@ def dashboard_view(request):
         }
 
         return render(request, 'tasks/pages/dashboard.html', context)
-        
+
     except Exception as e:
         logger.error(f"Dashboard view error: {e}")
-        
+
         # Build navigation items for navbar
         tasks_nav_items = [
             {

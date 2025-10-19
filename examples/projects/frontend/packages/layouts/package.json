@@ -1,0 +1,86 @@
+{
+  "name": "@djangocfg/layouts",
+  "version": "1.2.0",
+  "description": "Layout system and components for Unrealon applications",
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "license": "MIT",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./auth": {
+      "types": "./src/auth/index.ts",
+      "import": "./src/auth/index.ts",
+      "default": "./src/auth/index.ts"
+    },
+    "./layouts": {
+      "types": "./src/layouts/index.ts",
+      "import": "./src/layouts/index.ts",
+      "default": "./src/layouts/index.ts"
+    },
+    "./snippets": {
+      "types": "./src/snippets/index.ts",
+      "import": "./src/snippets/index.ts",
+      "default": "./src/snippets/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "import": "./src/types/index.ts",
+      "default": "./src/types/index.ts"
+    },
+    "./utils": {
+      "types": "./src/utils/index.ts",
+      "import": "./src/utils/index.ts",
+      "default": "./src/utils/index.ts"
+    },
+    "./styles": "./src/styles/index.css",
+    "./styles/dashboard": "./src/styles/dashboard.css"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/og-image": "workspace:*",
+    "@djangocfg/ui": "workspace:*",
+    "@hookform/resolvers": "^5.2.0",
+    "consola": "^3.4.2",
+    "lucide-react": "^0.468.0",
+    "next": "^15.4.4",
+    "p-retry": "^7.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "7.65.0",
+    "sonner": "2.0.6",
+    "swr": "^2.3.0",
+    "tailwindcss": "^4.0.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.0.10"
+  },
+  "dependencies": {
+    "@vidstack/react": "^0.6.15",
+    "maverick.js": "0.37.0",
+    "vidstack": "0.6.15"
+  },
+  "devDependencies": {
+    "@djangocfg/typescript-config": "workspace:*",
+    "@types/node": "^24.7.2",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "eslint": "^9.37.0",
+    "typescript": "^5.9.3"
+  }
+}

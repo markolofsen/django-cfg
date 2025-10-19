@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
 
 from ..ir import IRContext, IROperationObject, IRSchemaObject
 
@@ -401,8 +400,9 @@ class BaseGenerator(ABC):
             >>> generator.remove_tag_prefix("retrieve", "users")
             'retrieve'  # No prefix to remove
         """
-        from django.utils.text import slugify
         import re
+
+        from django.utils.text import slugify
 
         # First, strip common app label prefixes from operation_id
         # This handles cases like "django_cfg_newsletter_campaigns_list" or "cfg_support_tickets_list"

@@ -11,9 +11,11 @@ This generator creates universal TypeScript functions that:
 from __future__ import annotations
 
 from jinja2 import Environment
-from ..base import GeneratedFile, BaseGenerator
+
 from ...ir import IRContext, IROperationObject
+from ..base import BaseGenerator, GeneratedFile
 from .naming import operation_to_method_name
+from .params_builder import ParamsBuilder
 
 
 class FetchersGenerator:
@@ -31,6 +33,7 @@ class FetchersGenerator:
         self.jinja_env = jinja_env
         self.context = context
         self.base = base
+        self.params_builder = ParamsBuilder(context)
 
     def generate_fetcher_function(self, operation: IROperationObject) -> str:
         """
@@ -52,8 +55,11 @@ class FetchersGenerator:
         # Get function name (e.g., "getUsers", "createUser")
         func_name = self._operation_to_function_name(operation)
 
-        # Get parameters structure
-        param_info = self._get_param_structure(operation)
+        # Get parameters structure using universal builder
+        params_structure = self.params_builder.build_params_structure(
+            operation,
+            for_fetcher=True
+        )
 
         # Get response type and schema
         response_type, response_schema = self._get_response_info(operation)
@@ -68,11 +74,11 @@ class FetchersGenerator:
         return template.render(
             operation=operation,
             func_name=func_name,
-            func_params=param_info['func_params'],
+            func_params=params_structure.func_signature,
             response_type=response_type,
             response_schema=response_schema,
             api_call=api_call_instance,
-            api_call_params=param_info['api_call_params']
+            api_call_params=params_structure.api_call_args
         )
 
     def _operation_to_function_name(self, operation: IROperationObject) -> str:
@@ -88,8 +94,8 @@ class FetchersGenerator:
             cfg_accounts_otp_request_create -> createAccountsOtpRequest
             cfg_accounts_profile_partial_update (PUT) -> partialUpdateAccountsProfilePut
         """
-        
-        
+
+
         # Remove cfg_ prefix but keep tag + resource for uniqueness
         operation_id = operation.operation_id
         # Remove only cfg_/django_cfg_ prefix
@@ -97,7 +103,7 @@ class FetchersGenerator:
             operation_id = operation_id.replace('django_cfg_', '', 1)
         elif operation_id.startswith('cfg_'):
             operation_id = operation_id.replace('cfg_', '', 1)
-        
+
         # Determine prefix based on HTTP method
         if operation.http_method == 'GET':
             prefix = 'get'
@@ -112,187 +118,13 @@ class FetchersGenerator:
             prefix = 'delete'
         else:
             prefix = ''
-        
+
         return operation_to_method_name(operation_id, operation.http_method, prefix, self.base)
 
-    def _get_param_structure(self, operation: IROperationObject) -> dict:
-        """
-        Get structured parameter information for function generation.
+    # REMOVED: _get_param_structure - replaced by ParamsBuilder
 
-        Returns dict with:
-            - func_params: Function signature params (e.g., "slug: string, params?: { page?: number }")
-            - api_call_params: API call params (e.g., "slug, params" or "slug" or "params")
-
-        Examples:
-            GET /users/{id}/ -> {
-                func_params: "id: number",
-                api_call_params: "id"
-            }
-
-            GET /users/ with query params -> {
-                func_params: "params?: { page?: number }",
-                api_call_params: "params"
-            }
-
-            GET /users/{id}/ with query params -> {
-                func_params: "id: number, params?: { page?: number }",
-                api_call_params: "id, params"
-            }
-
-            POST /users/ -> {
-                func_params: "data: UserRequest",
-                api_call_params: "data"
-            }
-
-            POST /users/{id}/action/ -> {
-                func_params: "id: number, data: ActionRequest",
-                api_call_params: "id, data"
-            }
-        """
-        func_params = []
-        api_call_params = []
-
-        # Path parameters (always passed individually)
-        if operation.path_parameters:
-            for param in operation.path_parameters:
-                param_type = self._map_param_type(param.schema_type)
-                func_params.append(f"{param.name}: {param_type}")
-                api_call_params.append(param.name)
-
-        # Request body (passed as data or unpacked for multipart)
-        # NOTE: This must come BEFORE query params to match client method signature order!
-        if operation.request_body:
-            # Check if this is a file upload operation
-            is_multipart = operation.request_body.content_type == "multipart/form-data"
-            
-            if is_multipart:
-                # For multipart, unpack data properties to match client signature
-                schema_name = operation.request_body.schema_name
-                if schema_name and schema_name in self.context.schemas:
-                    schema = self.context.schemas[schema_name]
-                    # Add data parameter in func signature (keeps API simple)
-                    func_params.append(f"data: {schema_name}")
-                    # But unpack when calling client (which expects individual params)
-                    # IMPORTANT: Order must match client - required first, then optional
-                    required_props = []
-                    optional_props = []
-                    
-                    for prop_name, prop in schema.properties.items():
-                        if prop_name in schema.required:
-                            required_props.append(prop_name)
-                        else:
-                            optional_props.append(prop_name)
-                    
-                    # Add required first, then optional (matches client signature)
-                    for prop_name in required_props + optional_props:
-                        api_call_params.append(f"data.{prop_name}")
-                else:
-                    # Inline schema - use data as-is
-                    func_params.append(f"data: FormData")
-                    api_call_params.append("data")
-            else:
-                # JSON request body - pass data object
-                schema_name = operation.request_body.schema_name
-                if schema_name and schema_name in self.context.schemas:
-                    body_type = schema_name
-                else:
-                    body_type = "any"
-                func_params.append(f"data: {body_type}")
-                api_call_params.append("data")
-        elif operation.patch_request_body:
-            # PATCH request body (optional)
-            schema_name = operation.patch_request_body.schema_name
-            if schema_name and schema_name in self.context.schemas:
-                func_params.append(f"data?: {schema_name}")
-                api_call_params.append("data")
-            else:
-                func_params.append(f"data?: any")
-                api_call_params.append("data")
-
-        # Query parameters (passed as params object, but unpacked when calling API)
-        # NOTE: This must come AFTER request body to match client method signature order!
-        if operation.query_parameters:
-            query_fields = []
-            # params is required only if all parameters are required
-            all_required = all(param.required for param in operation.query_parameters)
-            params_accessor = "params." if all_required else "params?."
-
-            for param in operation.query_parameters:
-                param_type = self._map_param_type(param.schema_type)
-                optional = "?" if not param.required else ""
-                query_fields.append(f"{param.name}{optional}: {param_type}")
-                # Unpack from params object when calling API
-                api_call_params.append(f"{params_accessor}{param.name}")
-
-            if query_fields:
-                params_optional = "" if all_required else "?"
-                func_params.append(f"params{params_optional}: {{ {'; '.join(query_fields)} }}")
-
-        return {
-            'func_params': ", ".join(func_params) if func_params else "",
-            'api_call_params': ", ".join(api_call_params) if api_call_params else ""
-        }
-
-    def _get_params_type(self, operation: IROperationObject) -> tuple[str, bool]:
-        """
-        Get parameters type definition.
-
-        Returns:
-            (type_definition, has_params)
-
-        Examples:
-            ("params?: { page?: number; page_size?: number }", True)
-            ("id: number", True)
-            ("", False)
-        """
-        params = []
-
-        # Path parameters
-        if operation.path_parameters:
-            for param in operation.path_parameters:
-                param_type = self._map_param_type(param.schema_type)
-                params.append(f"{param.name}: {param_type}")
-
-        # Query parameters
-        if operation.query_parameters:
-            query_fields = []
-            all_required = all(param.required for param in operation.query_parameters)
-
-            for param in operation.query_parameters:
-                param_type = self._map_param_type(param.schema_type)
-                optional = "?" if not param.required else ""
-                query_fields.append(f"{param.name}{optional}: {param_type}")
-
-            if query_fields:
-                params_optional = "" if all_required else "?"
-                params.append(f"params{params_optional}: {{ {'; '.join(query_fields)} }}")
-
-        # Request body
-        if operation.request_body:
-            schema_name = operation.request_body.schema_name
-            # Use schema only if it exists as a component (not inline)
-            if schema_name and schema_name in self.context.schemas:
-                body_type = schema_name
-            else:
-                body_type = "any"
-            params.append(f"data: {body_type}")
-
-        if not params:
-            return ("", False)
-
-        return (", ".join(params), True)
-
-    def _map_param_type(self, param_type: str) -> str:
-        """Map OpenAPI param type to TypeScript type."""
-        type_map = {
-            "integer": "number",
-            "number": "number",
-            "string": "string",
-            "boolean": "boolean",
-            "array": "any[]",
-            "object": "any",
-        }
-        return type_map.get(param_type, "any")
+    # REMOVED: _get_params_type - replaced by ParamsBuilder
+    # REMOVED: _map_param_type - moved to ParamsBuilder
 
     def _get_response_info(self, operation: IROperationObject) -> tuple[str, str | None]:
         """
@@ -332,8 +164,8 @@ class FetchersGenerator:
             API.posts.create
             API.accounts.otpRequest (custom action)
         """
-        
-        
+
+
         tag = operation.tags[0] if operation.tags else "default"
         tag_property = self.base.tag_to_property_name(tag)
 
@@ -378,7 +210,7 @@ class FetchersGenerator:
                 # Only add if schema exists in components (not inline)
                 if operation.request_body.schema_name in self.context.schemas:
                     schema_names.add(operation.request_body.schema_name)
-            
+
             # Add patch request body schemas
             if operation.patch_request_body and operation.patch_request_body.schema_name:
                 # Only add if schema exists in components (not inline)

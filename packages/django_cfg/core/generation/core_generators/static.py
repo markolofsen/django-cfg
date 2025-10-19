@@ -5,7 +5,7 @@ Handles STATIC_*, MEDIA_*, and WhiteNoise configuration.
 Size: ~70 lines (focused on static files)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig
@@ -50,14 +50,20 @@ class StaticFilesGenerator:
             >>> "STATIC_URL" in settings
             True
         """
+        
+        is_development = self.config.debug or self.config.is_development
+        
         settings = {
             "STATIC_URL": "/static/",
             "MEDIA_URL": "/media/",
-            # WhiteNoise configuration
-            "STATICFILES_STORAGE": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            # WhiteNoise configuration - use simple storage in debug mode to avoid manifest caching
+            "STATICFILES_STORAGE": (
+                "whitenoise.storage.CompressedStaticFilesStorage" if is_development
+                else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            ),
             "WHITENOISE_USE_FINDERS": True,
-            "WHITENOISE_AUTOREFRESH": self.config.debug,
-            "WHITENOISE_MAX_AGE": 0 if self.config.debug else 3600,  # No cache in debug, 1 hour in prod
+            "WHITENOISE_AUTOREFRESH": is_development,
+            "WHITENOISE_MAX_AGE": 0 if is_development else 3600,  # No cache in debug, 1 hour in prod
         }
 
         # Set paths relative to base directory (always set, auto-detects from manage.py)

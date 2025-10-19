@@ -44,6 +44,28 @@ const client = new RPCClient('wss://custom.api.com/ws');
 await client.connect();
 ```
 
+### Custom Logger Configuration
+
+```typescript
+import { RPCClient, ClientLogger } from './index';
+
+// Configure logger
+const loggerConfig = {
+  level: 4, // DEBUG
+  logRPCCalls: true,
+  useSessionStorage: true,
+  maxLogs: 1000
+};
+
+// Create client with custom logger
+const client = new RPCClient(undefined, loggerConfig);
+await client.connect();
+
+// Or disable logging entirely
+const client = new RPCClient(undefined, undefined, false);
+await client.connect();
+```
+
 ## Environment Variables
 
 The client detects environment in this priority order:
@@ -58,17 +80,65 @@ The client detects environment in this priority order:
 - `stage` → `staging`
 - `test` → `testing`
 
+## Logging
+
+The client automatically logs all RPC calls with beautiful console output:
+
+- **🎨 Beautiful console output** powered by [consola](https://github.com/unjs/consola)
+- **📊 In-memory log storage** for debugging
+- **💾 SessionStorage persistence** (auto-clears on tab close)
+- **🔗 Request/response tracking** with correlation IDs
+- **⏱️ Performance metrics** (duration in milliseconds)
+- **✅/❌ Success/failure status** for each call
+
+### Logger Features
+
+```typescript
+// Access logger from client
+const client = new RPCClient();
+
+// View all logs in console
+client.logger?.printLogs();
+
+// Filter logs
+client.logger?.printLogs({ method: 'create_user', success: true });
+
+// Export logs
+const json = client.logger?.exportLogs();
+
+// Download logs as file
+client.logger?.downloadLogs('my-logs.json');
+
+// Clear logs
+client.logger?.clearLogs();
+```
+
+### Log Levels
+
+- `0` - Silent (no logs)
+- `1` - Error (errors only)
+- `2` - Warn (warnings and errors)
+- `3` - Info (default, general info + warnings + errors)
+- `4` - Debug (detailed RPC tracking)
+- `5` - Trace (everything)
+
 ## Example
 
 ```typescript
 // Set environment
 process.env.NODE_ENV = 'production';
 
+// Configure logger
+const loggerConfig = {
+  level: 3, // INFO
+  logRPCCalls: true
+};
+
 // Client auto-detects and uses production URL
-const client = new RPCClient();
+const client = new RPCClient(undefined, loggerConfig);
 await client.connect();
 
-// Call RPC methods
+// Call RPC methods - automatically logged with timing and status
 {% if methods %}
 {% for method in methods[:3] %}
 const result = await client.{{ method.name_camel }}(params);

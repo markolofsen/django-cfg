@@ -10,7 +10,9 @@ Usage:
     python manage.py runserver_ngrok --no-ngrok
 """
 
-from django_cfg.modules.django_ngrok.management.commands.runserver_ngrok import Command as NgrokCommand
+from django_cfg.modules.django_ngrok.management.commands.runserver_ngrok import (
+    Command as NgrokCommand,
+)
 
 
 class Command(NgrokCommand):

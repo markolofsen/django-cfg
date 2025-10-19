@@ -1,9 +1,16 @@
-from .profile import UserSerializer, UserProfileUpdateSerializer
-from .otp import OTPSerializer, OTPRequestSerializer, OTPVerifySerializer, OTPRequestResponseSerializer, OTPVerifyResponseSerializer, OTPErrorResponseSerializer
+from .otp import (
+    OTPErrorResponseSerializer,
+    OTPRequestResponseSerializer,
+    OTPRequestSerializer,
+    OTPSerializer,
+    OTPVerifyResponseSerializer,
+    OTPVerifySerializer,
+)
+from .profile import UserProfileUpdateSerializer, UserSerializer
 
 __all__ = [
     'UserSerializer',
-    'UserProfileUpdateSerializer', 
+    'UserProfileUpdateSerializer',
     'OTPSerializer',
     'OTPRequestSerializer',
     'OTPVerifySerializer',

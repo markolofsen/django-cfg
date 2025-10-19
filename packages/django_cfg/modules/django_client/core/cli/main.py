@@ -5,8 +5,6 @@ Provides intuitive CLI for client generation.
 """
 
 import sys
-from pathlib import Path
-from typing import Optional, List
 
 try:
     import click
@@ -208,7 +206,7 @@ def status(config):
         print(f"  TypeScript: {status_info.get('generate_typescript', False)}")
 
         if status_info.get('group_names'):
-            print(f"\n  Configured groups:")
+            print("\n  Configured groups:")
             for name in status_info['group_names']:
                 print(f"    • {name}")
 

@@ -4,8 +4,8 @@ Application Grouping Module.
 Smart grouping of Django apps into separate OpenAPI schemas.
 """
 
-from .manager import GroupManager
 from .detector import GroupDetector
+from .manager import GroupManager
 
 __all__ = [
     "GroupManager",

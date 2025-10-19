@@ -4,14 +4,15 @@ Dashboard Components Models for Unfold
 Pydantic models for dashboard components like stat cards, health items, etc.
 """
 
-from typing import List, Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field, ConfigDict, computed_field
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class StatCard(BaseModel):
     """Dashboard statistics card model."""
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     title: str = Field(..., description="Card title")
     value: str = Field(..., description="Main value to display")
     icon: str = Field(..., description="Material icon name")
@@ -19,7 +20,7 @@ class StatCard(BaseModel):
     change_type: Literal["positive", "negative", "neutral"] = Field(default="neutral", description="Change type")
     description: Optional[str] = Field(None, description="Additional description")
     color: str = Field("primary", description="Card color theme")
-    
+
     @computed_field
     @property
     def css_classes(self) -> Dict[str, str]:
@@ -29,7 +30,7 @@ class StatCard(BaseModel):
             "negative": "text-red-600 bg-red-100 dark:bg-red-900/20 dark:text-red-400",
             "neutral": "text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-400"
         }
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for Unfold dashboard widgets."""
         return {
@@ -46,33 +47,33 @@ class StatCard(BaseModel):
 class SystemHealthItem(BaseModel):
     """System health status item."""
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     component: str = Field(..., description="Component name")
     status: Literal["healthy", "warning", "error", "unknown"] = Field(..., description="Health status")
     description: str = Field(..., description="Status description")
     last_check: str = Field(..., description="Last check time")
     health_percentage: Optional[int] = Field(None, description="Health percentage (0-100)")
-    
+
     @computed_field
     @property
     def icon(self) -> str:
         """Get icon based on component type."""
         icons = {
             "database": "storage",
-            "cache": "memory", 
+            "cache": "memory",
             "queue": "queue",
             "storage": "folder",
             "api": "api",
         }
         return icons.get(self.component.lower(), "info")
-    
+
     @computed_field
     @property
     def status_icon(self) -> str:
         """Get status icon."""
         icons = {
             "healthy": "check_circle",
-            "warning": "warning", 
+            "warning": "warning",
             "error": "error",
             "unknown": "help"
         }
@@ -82,7 +83,7 @@ class SystemHealthItem(BaseModel):
 class QuickAction(BaseModel):
     """Quick action button model."""
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     title: str = Field(..., description="Action title")
     description: str = Field(..., description="Action description")
     icon: str = Field(..., description="Material icon name")
@@ -128,7 +129,7 @@ class DashboardWidget(BaseModel):
     callback: Optional[str] = Field(None, description="Callback function path")
     width: int = Field(12, description="Widget width (1-12)")
     order: int = Field(0, description="Widget order")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for Unfold dashboard widgets."""
         return {
@@ -143,11 +144,11 @@ class DashboardWidget(BaseModel):
 class StatsCardsWidget(BaseModel):
     """Stats cards widget for dashboard."""
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     type: Literal["stats_cards"] = Field(default="stats_cards", description="Widget type")
     title: str = Field(..., description="Widget title")
     cards: List[StatCard] = Field(default_factory=list, description="Statistics cards")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for Unfold dashboard widgets."""
         return {
@@ -179,20 +180,20 @@ class ChartData(BaseModel):
 class DashboardData(BaseModel):
     """Main dashboard data container."""
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     # Statistics cards
     stat_cards: List[StatCard] = Field(default_factory=list, description="Dashboard statistics cards")
-    
+
     # System health
     system_health: List[SystemHealthItem] = Field(default_factory=list, description="System health items")
-    
+
     # Quick actions
     quick_actions: List[QuickAction] = Field(default_factory=list, description="Quick action buttons")
-    
+
     # Additional data
     last_updated: str = Field(..., description="Last update timestamp")
     environment: str = Field("development", description="Current environment")
-    
+
     @computed_field
     @property
     def total_users(self) -> int:

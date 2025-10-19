@@ -4,8 +4,14 @@ Django CFG API URLs
 Built-in API endpoints for django_cfg functionality.
 """
 
-from django.urls import path, include
+import traceback
 from typing import List
+
+from django.urls import include, path
+
+from django_cfg.modules.django_logging import get_logger, sanitize_extra
+
+logger = get_logger(__name__)
 
 
 def get_enabled_cfg_apps() -> List[str]:
@@ -16,34 +22,37 @@ def get_enabled_cfg_apps() -> List[str]:
         List of enabled app paths (e.g., ['django_cfg.apps.accounts', ...])
     """
     from django_cfg.modules.base import BaseCfgModule
-    
+
     base_module = BaseCfgModule()
     enabled_apps = []
-    
+
     if base_module.is_accounts_enabled():
         enabled_apps.append("django_cfg.apps.accounts")
 
     if base_module.is_knowbase_enabled():
         enabled_apps.append("django_cfg.apps.knowbase")
-    
+
     if base_module.is_support_enabled():
         enabled_apps.append("django_cfg.apps.support")
-    
+
     if base_module.is_newsletter_enabled():
         enabled_apps.append("django_cfg.apps.newsletter")
-    
+
     if base_module.is_leads_enabled():
         enabled_apps.append("django_cfg.apps.leads")
-    
+
     if base_module.is_agents_enabled():
         enabled_apps.append("django_cfg.apps.agents")
-    
+
     if base_module.should_enable_tasks():
         enabled_apps.append("django_cfg.apps.tasks")
-    
+
     if base_module.is_payments_enabled():
         enabled_apps.append("django_cfg.apps.payments")
-    
+
+    if base_module.is_rpc_enabled():
+        enabled_apps.append("django_cfg.apps.ipc")
+
     return enabled_apps
 
 
@@ -70,7 +79,7 @@ def get_default_cfg_group():
         OpenAPIGroupConfig with enabled django-cfg apps
     """
     from django_cfg.modules.django_client.core.config import OpenAPIGroupConfig
-    
+
     return OpenAPIGroupConfig(
         name="cfg",
         apps=get_enabled_cfg_apps(),
@@ -81,10 +90,39 @@ def get_default_cfg_group():
 
 
 def _safe_include(pattern_path: str, module_path: str):
-    """Helper to safely include URL module if it exists."""
+    """
+    Helper to safely include URL module if it exists.
+
+    Args:
+        pattern_path: URL pattern (e.g., 'cfg/knowbase/')
+        module_path: Module path (e.g., 'django_cfg.apps.knowbase.urls')
+
+    Returns:
+        URLPattern if successful, None if import fails
+    """
     try:
         return path(pattern_path, include(module_path))
-    except ImportError:
+    except ImportError as e:
+        logger.warning(
+            f"Failed to import URL module '{module_path}' for pattern '{pattern_path}': {e}",
+            extra=sanitize_extra({
+                'pattern': pattern_path,
+                'module': module_path,
+                'error': str(e),
+            })
+        )
+        logger.debug(f"Traceback for '{module_path}':\n{traceback.format_exc()}")
+        return None
+    except Exception as e:
+        logger.error(
+            f"Unexpected error including URL module '{module_path}' for pattern '{pattern_path}': {e}",
+            extra=sanitize_extra({
+                'pattern': pattern_path,
+                'module': module_path,
+                'error': str(e),
+                'traceback': traceback.format_exc(),
+            })
+        )
         return None
 
 
@@ -126,7 +164,11 @@ APP_URL_MAP = {
     ],
     "django_cfg.apps.payments": [
         ("cfg/payments/", "django_cfg.apps.payments.urls"),
-        ("cfg/payments/admin/", "django_cfg.apps.payments.urls_admin"),
+        # Payments v2.0: No separate urls_admin (uses Django Admin only)
+    ],
+    "django_cfg.apps.ipc": [
+        ("cfg/ipc/", "django_cfg.apps.ipc.urls"),
+        ("cfg/ipc/admin/", "django_cfg.apps.ipc.urls_admin"),
     ],
 }
 
@@ -141,6 +183,7 @@ for app_path in enabled_apps:
 
 # Maintenance (special case - admin only)
 from django_cfg.modules.base import BaseCfgModule
+
 if BaseCfgModule().is_maintenance_enabled():
     cfg_app_urls.append(_safe_include('admin/django_cfg_maintenance/', 'django_cfg.apps.maintenance.urls_admin'))
 

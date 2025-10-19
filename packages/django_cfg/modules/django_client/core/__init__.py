@@ -8,19 +8,21 @@ No Django dependencies - can be used standalone or with any framework.
 __version__ = "1.0.0"
 
 # Configuration
+# Archive
+from .archive import ArchiveManager
 from .config import (
-    OpenAPIConfig,
-    OpenAPIGroupConfig,
     DjangoOpenAPI,
+    OpenAPIConfig,
     OpenAPIError,
+    OpenAPIGroupConfig,
     get_openapi_service,
 )
 
-# Groups
-from .groups import GroupManager, GroupDetector
+# Generators
+from .generator import PythonGenerator, TypeScriptGenerator
 
-# Archive
-from .archive import ArchiveManager
+# Groups
+from .groups import GroupDetector, GroupManager
 
 # IR Models
 from .ir import (
@@ -30,10 +32,7 @@ from .ir import (
 )
 
 # Parsers
-from .parser import parse_openapi, OpenAPI30Parser, OpenAPI31Parser
-
-# Generators
-from .generator import PythonGenerator, TypeScriptGenerator
+from .parser import OpenAPI30Parser, OpenAPI31Parser, parse_openapi
 
 __all__ = [
     "__version__",

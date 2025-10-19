@@ -4,11 +4,11 @@ Django CFG Default Pagination Classes
 Provides enhanced pagination classes with better response format and schema support.
 """
 
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-from typing import Dict, Any, Optional
+
 from django.core.paginator import InvalidPage
 from rest_framework.exceptions import NotFound
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 
 
 class DefaultPagination(PageNumberPagination):
@@ -21,15 +21,15 @@ class DefaultPagination(PageNumberPagination):
     - Better OpenAPI schema support
     - Consistent error handling
     """
-    
+
     # Page size configuration
     page_size = 100
     page_size_query_param = 'page_size'
     max_page_size = 1000
-    
+
     # Page number configuration
     page_query_param = 'page'
-    
+
     # Template for invalid page messages
     invalid_page_message = 'Invalid page "{page_number}": {message}.'
 
@@ -97,7 +97,7 @@ class DefaultPagination(PageNumberPagination):
                     'example': 2
                 },
                 'pages': {
-                    'type': 'integer', 
+                    'type': 'integer',
                     'description': 'Total number of pages',
                     'example': 15
                 },
@@ -251,7 +251,7 @@ class CursorPaginationEnhanced(PageNumberPagination):
 # Export all pagination classes
 __all__ = [
     'DefaultPagination',
-    'LargePagination', 
+    'LargePagination',
     'SmallPagination',
     'NoPagination',
     'CursorPaginationEnhanced',

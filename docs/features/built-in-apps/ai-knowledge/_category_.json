@@ -1,0 +1,9 @@
+{
+  "label": "AI & Knowledge",
+  "position": 2,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "AI agents, knowledge base, chat search, and intelligent data processing."
+  }
+}

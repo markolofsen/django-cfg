@@ -56,15 +56,16 @@ Usage:
             return ['my_model', self.name.lower()]
 """
 
-import logging
 import hashlib
-from typing import Optional, List, Dict, Any
-from django.db import models
-from django.db.models.signals import post_save, post_delete
+import logging
+from typing import Any, Dict, List, Optional
 
-from ..models.external_data import ExternalData, ExternalDataType, ExternalDataStatus
-from .creator import ExternalDataCreator
+from django.db import models
+from django.db.models.signals import post_delete, post_save
+
+from ..models.external_data import ExternalData, ExternalDataStatus, ExternalDataType
 from .config import ExternalDataMetaConfig, ExternalDataMetaParser
+from .creator import ExternalDataCreator
 from .generators import (
     ExternalDataContentGenerator,
     ExternalDataMetadataGenerator,

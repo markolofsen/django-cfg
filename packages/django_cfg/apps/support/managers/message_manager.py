@@ -1,7 +1,7 @@
-from django.db import models
 import threading
-
 from typing import TYPE_CHECKING
+
+from django.db import models
 
 if TYPE_CHECKING:
     # Only for type checking
@@ -12,10 +12,10 @@ class MessageManager(models.Manager):
     def send_support_reply_email(self, message: "Message"):
         """Send email notification when support replies to a ticket."""
         from ..utils.support_email_service import SupportEmailService
-        
+
         ticket = message.ticket
         user = ticket.user
-        
+
         # Don't send email to yourself
         if message.sender == ticket.user:
             return

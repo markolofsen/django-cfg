@@ -1,0 +1,65 @@
+/**
+ * Custom Animations
+ *
+ * Smooth, professional animations for UI elements
+ * Optimized for performance with transform and opacity only
+ */
+
+/* Smooth Floating Animation - Multi-directional movement */
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+/* Slow Vertical Float - Gentle up/down movement */
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(0, -50px); }
+}
+
+/* Horizontal Float with Rotation */
+@keyframes float-x {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(100px, 0) rotate(180deg); }
+}
+
+/* Diagonal Float - Complex multi-point movement */
+@keyframes float-diagonal {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(50px, 50px) scale(1.1); }
+  50% { transform: translate(100px, -50px) scale(0.9); }
+  75% { transform: translate(-50px, 50px) scale(1.05); }
+}
+
+/* Morph - Organic shape transformation */
+@keyframes morph {
+  0%, 100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    opacity: 0.3;
+  }
+  25% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    opacity: 0.5;
+  }
+  50% {
+    border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%;
+    opacity: 0.4;
+  }
+  75% {
+    border-radius: 60% 40% 60% 30% / 60% 30% 60% 40%;
+    opacity: 0.6;
+  }
+}
+
+/* Gradient Shift - Color animation with hue rotation */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: hue-rotate(45deg);
+  }
+}

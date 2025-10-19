@@ -6,6 +6,7 @@ Plain Django views for endpoints status checking.
 
 from django.http import JsonResponse
 from django.views import View
+
 from .checker import check_all_endpoints
 
 

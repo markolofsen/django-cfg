@@ -8,9 +8,13 @@ Usage:
     dramatiq django_cfg.modules.dramatiq_setup [task_modules...]
 """
 
-# Import django_dramatiq setup (handles Django initialization)
-import django_dramatiq.setup
+# CRITICAL: Initialize Django BEFORE any model imports in worker processes
+import django
+
+# Initialize Django app registry (DJANGO_SETTINGS_MODULE must be set by caller)
+django.setup()
 
 # Re-export the broker for Dramatiq CLI
 import dramatiq
+
 broker = dramatiq.get_broker()

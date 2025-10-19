@@ -17,9 +17,11 @@ Architecture:
 from __future__ import annotations
 
 from jinja2 import Environment
+
+from ...ir import IRContext, IROperationObject
 from ..base import BaseGenerator, GeneratedFile
-from ...ir import IROperationObject, IRContext
 from .naming import operation_to_method_name
+
 
 class HooksGenerator:
     """
@@ -132,14 +134,14 @@ class HooksGenerator:
             cfg_health_drf_retrieve -> useHealthDrf
             cfg_accounts_otp_request_create -> useCreateAccountsOtpRequest
         """
-        
+
         # Remove cfg_ prefix but keep tag + resource for uniqueness (same as fetchers)
         operation_id = operation.operation_id
         if operation_id.startswith('django_cfg_'):
             operation_id = operation_id.replace('django_cfg_', '', 1)
         elif operation_id.startswith('cfg_'):
             operation_id = operation_id.replace('cfg_', '', 1)
-        
+
         # Determine prefix based on HTTP method
         if operation.http_method == 'GET':
             prefix = 'use'
@@ -154,21 +156,21 @@ class HooksGenerator:
             prefix = 'useDelete'
         else:
             prefix = 'use'
-        
+
         # For hooks, path is not critical but pass for consistency
         return operation_to_method_name(operation_id, operation.http_method, prefix, self.base, operation.path)
 
     def _operation_to_fetcher_name(self, operation: IROperationObject) -> str:
         """Get corresponding fetcher function name (must match fetchers_generator logic)."""
-        
-        
+
+
         # Remove cfg_ prefix but keep tag + resource (must match fetchers_generator exactly)
         operation_id = operation.operation_id
         if operation_id.startswith('django_cfg_'):
             operation_id = operation_id.replace('django_cfg_', '', 1)
         elif operation_id.startswith('cfg_'):
             operation_id = operation_id.replace('cfg_', '', 1)
-        
+
         # Determine prefix (must match fetchers_generator exactly)
         if operation.http_method == 'GET':
             prefix = 'get'
@@ -183,7 +185,7 @@ class HooksGenerator:
             prefix = 'delete'
         else:
             prefix = ''
-        
+
         # Must match fetchers exactly, including path
         return operation_to_method_name(operation_id, operation.http_method, prefix, self.base, operation.path)
 
@@ -224,13 +226,15 @@ class HooksGenerator:
                 func_params.append(f"data?: {schema_name}")
                 fetcher_params.append("data")
             else:
-                func_params.append(f"data?: any")
+                func_params.append("data?: any")
                 fetcher_params.append("data")
 
         # Query parameters (must come AFTER request body to match fetcher signature!)
         if operation.query_parameters:
             query_fields = []
-            all_required = all(param.required for param in operation.query_parameters)
+            # Check if any query param is required (not all!)
+            # TypeScript doesn't allow required fields in optional objects
+            has_required = any(param.required for param in operation.query_parameters)
 
             for param in operation.query_parameters:
                 param_type = self._map_param_type(param.schema_type)
@@ -238,7 +242,7 @@ class HooksGenerator:
                 query_fields.append(f"{param.name}{optional}: {param_type}")
 
             if query_fields:
-                params_optional = "" if all_required else "?"
+                params_optional = "" if has_required else "?"
                 func_params.append(f"params{params_optional}: {{ {'; '.join(query_fields)} }}")
                 fetcher_params.append("params")
 
@@ -382,7 +386,7 @@ class HooksGenerator:
 
         # Get display name for documentation
         tag_display_name = self.base.tag_to_display_name(tag)
-        
+
         # Get tag file name for fetchers import
         folder_name = self.base.tag_and_app_to_folder_name(tag, operations)
         tag_file = folder_name

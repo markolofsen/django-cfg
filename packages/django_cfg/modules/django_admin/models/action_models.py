@@ -3,8 +3,10 @@ Action configuration models.
 """
 
 from enum import Enum
+from typing import List, Optional
+
 from pydantic import Field
-from typing import Optional, List
+
 from .base import BaseConfig
 
 

@@ -1,0 +1,168 @@
+{% extends 'tasks/layout/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Tab styling - важно для работы табов */
+    .tab-button.active {
+        border-color: #3b82f6 !important;
+        color: #3b82f6 !important;
+    }
+
+    .tab-panel {
+        display: none !important;
+    }
+
+    .tab-panel.active {
+        display: block !important;
+    }
+
+    /* Убираем все остальные табы кроме активного */
+    #queues-tab,
+    #workers-tab,
+    #tasks-tab {
+        display: none;
+    }
+
+    #overview-tab {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Management Actions -->
+{% include 'tasks/components/management_actions.html' %}
+
+<!-- Tab Navigation -->
+{% include 'tasks/components/tab_navigation.html' %}
+
+<!-- Tab Content -->
+<div class="tab-content mt-6">
+    <!-- Overview Tab -->
+    <div id="overview-tab" class="tab-panel active">
+        {% include 'tasks/components/overview_content.html' %}
+    </div>
+
+    <!-- Queues Tab -->
+    <div id="queues-tab" class="tab-panel">
+        {% include 'tasks/components/queues_content.html' %}
+    </div>
+
+    <!-- Workers Tab -->
+    <div id="workers-tab" class="tab-panel">
+        {% include 'tasks/components/workers_content.html' %}
+    </div>
+
+    <!-- Tasks Tab -->
+    <div id="tasks-tab" class="tab-panel">
+        {% include 'tasks/components/tasks_content.html' %}
+    </div>
+</div>
+
+<!-- Templates for JavaScript -->
+{% include 'tasks/partials/task_row_template.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Improved API Loading with centralized loader -->
+<script type="module">
+    // Import the API loader and task API
+    import { initializeAPIs, showNotification } from '{% static "js/api-loader.mjs" %}';
+    import { tasksAPI } from '{% static "api/tasks/index.mjs" %}';
+
+    // Initialize the API with error handling wrapper
+    async function setupAPIs() {
+        try {
+            // Load task API with automatic error handling
+            const apis = await initializeAPIs(['tasks']);
+
+            // Make available globally for dashboard modules
+            window.tasksAPI = apis.tasks || tasksAPI;
+
+            // Log successful loading
+            console.log('✅ Tasks API loaded with JSDoc types and error handling');
+            console.log('📚 Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(window.tasksAPI)));
+
+            // Show IDE hints example
+            console.log(`
+                💡 IDE Tip: Your editor now provides:
+                - Autocomplete for all API methods
+                - Parameter hints with types
+                - Return type information
+                - Inline documentation
+
+                Try typing: tasksAPI. (and see the suggestions!)
+            `);
+
+            // Test the API connection
+            const healthCheck = await window.tasksAPI.cfgTasksApiQueuesStatusRetrieve();
+            if (healthCheck) {
+                showNotification('API connected successfully', 'success');
+            }
+
+        } catch (error) {
+            console.error('❌ Failed to initialize APIs:', error);
+            showNotification('Failed to load API. Some features may not work.', 'error');
+
+            // Fallback to direct import
+            window.tasksAPI = tasksAPI;
+        }
+    }
+
+    // Setup APIs when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupAPIs);
+    } else {
+        setupAPIs();
+    }
+</script>
+
+<!-- Dashboard Modules (now with improved API) -->
+<script type="module" src="{% static 'tasks/js/dashboard/overview.mjs' %}"></script>
+<script type="module" src="{% static 'tasks/js/dashboard/queues.mjs' %}"></script>
+<script type="module" src="{% static 'tasks/js/dashboard/workers.mjs' %}"></script>
+<script type="module" src="{% static 'tasks/js/dashboard/tasks.mjs' %}"></script>
+
+<!-- Main Dashboard Controller -->
+<script type="module" src="{% static 'tasks/js/dashboard/main.mjs' %}"></script>
+
+<!-- Debug Helper -->
+<script type="module">
+    // Add debug helper to window for testing
+    window.debugAPI = {
+        // Test various API methods
+        testStats: async () => {
+            const stats = await window.tasksAPI.tasksApiTasksStatsRetrieve();
+            console.log('Task Statistics:', stats);
+            return stats;
+        },
+
+        testQueues: async () => {
+            const queues = await window.tasksAPI.tasksApiQueuesStatusRetrieve();
+            console.log('Queue Status:', queues);
+            return queues;
+        },
+
+        testWorkers: async () => {
+            const workers = await window.tasksAPI.tasksApiWorkersListRetrieve();
+            console.log('Workers List:', workers);
+            return workers;
+        },
+
+        // Show all available methods
+        showMethods: () => {
+            const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(window.tasksAPI))
+                .filter(m => typeof window.tasksAPI[m] === 'function')
+                .filter(m => !m.startsWith('_'));
+            console.log('📋 Available API Methods:', methods);
+            return methods;
+        }
+    };
+
+    console.log('🔧 Debug helpers available: window.debugAPI');
+</script>
+{% endblock %}

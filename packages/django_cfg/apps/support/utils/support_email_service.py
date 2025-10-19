@@ -3,7 +3,9 @@ Support Email Service - Email notifications for support operations
 """
 
 import logging
+
 from django.contrib.auth import get_user_model
+
 from django_cfg.modules.django_email import DjangoEmailService
 
 User = get_user_model()
@@ -15,7 +17,7 @@ class SupportEmailService:
 
     def __init__(self, user: User):
         self.user = user
-    
+
     def _get_ticket_url(self, ticket_uuid: str) -> str:
         """Get ticket URL from configuration."""
         try:
@@ -42,7 +44,7 @@ class SupportEmailService:
     ):
         """Private method for sending templated emails."""
         email_service = DjangoEmailService()
-        
+
         # Prepare context for template
         context = {
             "user": self.user,
@@ -54,7 +56,7 @@ class SupportEmailService:
             "button_text": button_text,
             "button_url": button_url,
         }
-        
+
         email_service.send_template(
             subject=subject,
             template_name=template_name,
@@ -76,11 +78,11 @@ class SupportEmailService:
     def send_support_reply_email(self, message):
         """Send email notification when support replies to a ticket."""
         ticket = message.ticket
-        
+
         # Don't send email to yourself
         if message.sender == ticket.user:
             return
-            
+
         self._send_email(
             subject=f"Support Reply: {ticket.subject}",
             main_text="You have received a reply from our support team.",
@@ -94,13 +96,13 @@ class SupportEmailService:
         """Send email notification when ticket status changes."""
         status_colors = {
             'open': '#28a745',
-            'in_progress': '#ffc107', 
+            'in_progress': '#ffc107',
             'resolved': '#17a2b8',
             'closed': '#6c757d',
         }
-        
+
         color = status_colors.get(new_status, '#6c757d')
-        
+
         self._send_email(
             subject=f"Ticket Status Updated: {ticket.subject}",
             main_text=f"Your ticket status has been updated from '{old_status}' to '{new_status}'.",
@@ -115,7 +117,7 @@ class SupportEmailService:
         self._send_email(
             subject=f"Ticket Resolved: {ticket.subject}",
             main_text="Great news! Your support ticket has been resolved.",
-            main_html_content=f'<div style="background: #e8f5e8; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;"><strong>✅ Ticket Resolved</strong><br>Your issue has been successfully resolved by our support team.</div>',
+            main_html_content='<div style="background: #e8f5e8; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;"><strong>✅ Ticket Resolved</strong><br>Your issue has been successfully resolved by our support team.</div>',
             secondary_text="If you're satisfied with the resolution, no further action is needed. If you need additional help, feel free to reply to reopen the ticket.",
             button_text="View Resolution",
             button_url=self._get_ticket_url(ticket.uuid),

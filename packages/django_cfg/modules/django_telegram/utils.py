@@ -2,7 +2,7 @@
 Telegram utilities and convenience functions.
 """
 
-from typing import Optional, Union, BinaryIO
+from typing import BinaryIO, Optional, Union
 
 from .service import DjangoTelegram, TelegramParseMode
 

@@ -1,0 +1,21 @@
+/**
+ * Global styles for @djangocfg/cloud app
+ * Single entry point for all styles
+ */
+
+/* Define source paths for Tailwind v4 to scan */
+@source "./";
+@source "../../packages/ui/src";
+@source "../../packages/layouts/src";
+
+/* 1. Import Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* 2. Import UI package styles (theme, colors, base) */
+@import "@djangocfg/ui/styles";
+
+/* 3. Load tailwindcss-animate plugin */
+@plugin "tailwindcss-animate";
+
+/* 4. Import layouts styles */
+@import "@djangocfg/layouts/styles";

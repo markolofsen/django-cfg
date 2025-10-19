@@ -4,7 +4,7 @@ Translation statistics tracking.
 Tracks translation usage, cache performance, and costs.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class StatsTracker:

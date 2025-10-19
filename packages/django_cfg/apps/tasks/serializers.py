@@ -4,13 +4,13 @@ Serializers for Django CFG Tasks app.
 Provides DRF serializers for task management API endpoints.
 """
 
+
 from rest_framework import serializers
-from typing import Dict, Any
 
 
 class QueueStatusSerializer(serializers.Serializer):
     """Serializer for queue status data."""
-    
+
     queues = serializers.DictField(
         child=serializers.DictField(
             child=serializers.IntegerField()
@@ -25,7 +25,7 @@ class QueueStatusSerializer(serializers.Serializer):
 
 class TaskStatisticsSerializer(serializers.Serializer):
     """Serializer for task statistics data."""
-    
+
     statistics = serializers.DictField(
         child=serializers.IntegerField(),
         help_text="Task count statistics"
@@ -40,7 +40,7 @@ class TaskStatisticsSerializer(serializers.Serializer):
 
 class WorkerActionSerializer(serializers.Serializer):
     """Serializer for worker management actions."""
-    
+
     action = serializers.ChoiceField(
         choices=['start', 'stop', 'restart'],
         help_text="Action to perform on workers"
@@ -61,7 +61,7 @@ class WorkerActionSerializer(serializers.Serializer):
 
 class QueueActionSerializer(serializers.Serializer):
     """Serializer for queue management actions."""
-    
+
     action = serializers.ChoiceField(
         choices=['clear', 'clear_all', 'purge', 'purge_failed', 'flush'],
         help_text="Action to perform on queues"
@@ -75,7 +75,7 @@ class QueueActionSerializer(serializers.Serializer):
 
 class APIResponseSerializer(serializers.Serializer):
     """Standard API response serializer."""
-    
+
     success = serializers.BooleanField(help_text="Operation success status")
     message = serializers.CharField(required=False, help_text="Success message")
     error = serializers.CharField(required=False, help_text="Error message")

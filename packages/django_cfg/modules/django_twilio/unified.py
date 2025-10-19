@@ -6,20 +6,21 @@ configuration and delivery success rates.
 """
 
 import logging
-from typing import Tuple, Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 from asgiref.sync import sync_to_async
 
 from .base import BaseTwilioService
-from .whatsapp import WhatsAppOTPService
 from .email_otp import EmailOTPService
-from .sms import SMSOTPService
-from .models import TwilioConfig, TwilioChannelType
 from .exceptions import (
     TwilioConfigurationError,
     TwilioSendError,
     TwilioVerificationError,
 )
+from .models import TwilioChannelType, TwilioConfig
+from .sms import SMSOTPService
+from .whatsapp import WhatsAppOTPService
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ class UnifiedOTPService(BaseTwilioService):
         config = self.get_twilio_config()
 
         # For Twilio Verify channels (WhatsApp, SMS), use Twilio verification
-        if not "@" in identifier and config.verify:
+        if "@" not in identifier and config.verify:
             return self._verify_twilio_otp(identifier, code, config)
 
         # For email or custom verification, use stored OTP

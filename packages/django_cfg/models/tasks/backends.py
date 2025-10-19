@@ -5,10 +5,11 @@ Contains Dramatiq and Worker configuration models.
 Size: ~200 lines (focused on backend settings)
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Literal
-import os
 import logging
+import os
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 

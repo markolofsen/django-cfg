@@ -2,53 +2,54 @@
 External Data managers for advanced querying and operations.
 """
 
-from django.db import models
-from django.db.models import Count, Q, Avg, Sum
-from django.utils import timezone
-from typing import Optional, List, Dict, Any
 from datetime import timedelta
+from typing import Any, Dict, List, Optional
+
+from django.db import models
+from django.db.models import Avg, Count, Q, Sum
+from django.utils import timezone
 
 from .base import BaseKnowbaseManager
 
 
 class ExternalDataQuerySet(models.QuerySet):
     """Custom QuerySet for ExternalData with advanced filtering."""
-    
+
     def active(self):
         """Filter to active external data sources."""
         return self.filter(is_active=True)
-    
+
     def public(self):
         """Filter to public external data sources."""
         return self.filter(is_public=True)
-    
+
     def processed(self):
         """Filter to successfully processed external data."""
         return self.filter(status='completed')
-    
+
     def failed(self):
         """Filter to failed external data."""
         return self.filter(status='failed')
-    
+
     def outdated(self):
         """Filter to outdated external data that needs reprocessing."""
         return self.filter(
             Q(status='outdated') |
             Q(source_updated_at__gt=models.F('processed_at'))
         )
-    
+
     def by_source_type(self, source_type: str):
         """Filter by source type."""
         return self.filter(source_type=source_type)
-    
+
     def by_status(self, status: str):
         """Filter by status."""
         return self.filter(status=status)
-    
+
     def get_processing_statistics(self):
         """Get processing statistics for external data."""
         from django.db.models import Count, Q
-        
+
         stats = self.aggregate(
             total=Count('id'),
             pending=Count('id', filter=Q(status='pending')),
@@ -56,7 +57,7 @@ class ExternalDataQuerySet(models.QuerySet):
             completed=Count('id', filter=Q(status='completed')),
             failed=Count('id', filter=Q(status='failed')),
         )
-        
+
         return {
             'total_external_data': stats['total'],
             'pending_processing': stats['pending'],
@@ -64,21 +65,21 @@ class ExternalDataQuerySet(models.QuerySet):
             'completed_processing': stats['completed'],
             'failed_processing': stats['failed'],
         }
-    
+
     def by_category(self, category):
         """Filter by category."""
         return self.filter(category=category)
-    
+
     def with_tags(self, tags: List[str]):
         """Filter external data that contains any of the specified tags."""
         if not tags:
             return self
-        
+
         q = Q()
         for tag in tags:
             q |= Q(tags__contains=[tag])
         return self.filter(q)
-    
+
     def search_content(self, query: str):
         """Search in title, description, and content."""
         return self.filter(
@@ -86,24 +87,24 @@ class ExternalDataQuerySet(models.QuerySet):
             Q(description__icontains=query) |
             Q(content__icontains=query)
         )
-    
+
     def recent(self, days: int = 7):
         """Filter to recently processed external data."""
         cutoff = timezone.now() - timedelta(days=days)
         return self.filter(processed_at__gte=cutoff)
-    
+
     def with_chunks(self):
         """Filter to external data that has chunks."""
         return self.filter(total_chunks__gt=0)
-    
+
     def without_chunks(self):
         """Filter to external data without chunks."""
         return self.filter(total_chunks=0)
-    
+
     def expensive(self, min_cost: float = 0.01):
         """Filter to external data with high processing costs."""
         return self.filter(processing_cost__gte=min_cost)
-    
+
     def with_statistics(self):
         """Annotate with chunk and cost statistics."""
         return self.annotate(
@@ -115,70 +116,70 @@ class ExternalDataQuerySet(models.QuerySet):
 
 class ExternalDataManager(BaseKnowbaseManager):
     """Manager for ExternalData with user scoping and advanced queries."""
-    
+
     def get_queryset(self):
         return ExternalDataQuerySet(self.model, using=self._db)
-    
+
     def active(self):
         """Get active external data sources."""
         return self.get_queryset().active()
-    
+
     def public(self):
         """Get public external data sources."""
         return self.get_queryset().public()
-    
+
     def processed(self):
         """Get successfully processed external data."""
         return self.get_queryset().processed()
-    
+
     def failed(self):
         """Get failed external data."""
         return self.get_queryset().failed()
-    
+
     def outdated(self):
         """Get outdated external data that needs reprocessing."""
         return self.get_queryset().outdated()
-    
+
     def by_source_type(self, source_type: str):
         """Get external data by source type."""
         return self.get_queryset().by_source_type(source_type)
-    
+
     def by_status(self, status: str):
         """Get external data by status."""
         return self.get_queryset().by_status(status)
-    
+
     def by_category(self, category):
         """Get external data by category."""
         return self.get_queryset().by_category(category)
-    
+
     def with_tags(self, tags: List[str]):
         """Get external data with specified tags."""
         return self.get_queryset().with_tags(tags)
-    
+
     def search_content(self, query: str):
         """Search external data content."""
         return self.get_queryset().search_content(query)
-    
+
     def recent(self, days: int = 7):
         """Get recently processed external data."""
         return self.get_queryset().recent(days)
-    
+
     def with_chunks(self):
         """Get external data that has chunks."""
         return self.get_queryset().with_chunks()
-    
+
     def without_chunks(self):
         """Get external data without chunks."""
         return self.get_queryset().without_chunks()
-    
+
     def expensive(self, min_cost: float = 0.01):
         """Get external data with high processing costs."""
         return self.get_queryset().expensive(min_cost)
-    
+
     def with_statistics(self):
         """Get external data with statistics."""
         return self.get_queryset().with_statistics()
-    
+
     def create_from_source(
         self,
         user,
@@ -216,7 +217,7 @@ class ExternalDataManager(BaseKnowbaseManager):
             metadata=metadata or {},
             **kwargs
         )
-    
+
     def get_or_create_from_source(
         self,
         user,
@@ -239,7 +240,7 @@ class ExternalDataManager(BaseKnowbaseManager):
             source_identifier=source_identifier,
             defaults=defaults or {}
         )
-    
+
     def bulk_update_status(self, external_data_ids: List[str], status: str):
         """
         Bulk update status for multiple external data sources.
@@ -255,7 +256,7 @@ class ExternalDataManager(BaseKnowbaseManager):
             status=status,
             updated_at=timezone.now()
         )
-    
+
     def get_processing_statistics(self, user=None) -> Dict[str, Any]:
         """
         Get processing statistics for external data.
@@ -269,7 +270,7 @@ class ExternalDataManager(BaseKnowbaseManager):
         queryset = self.get_queryset()
         if user:
             queryset = queryset.filter(user=user)
-        
+
         stats = queryset.aggregate(
             total_count=Count('id'),
             processed_count=Count('id', filter=Q(status='completed')),
@@ -281,7 +282,7 @@ class ExternalDataManager(BaseKnowbaseManager):
             total_cost=Sum('processing_cost'),
             avg_chunk_size=Avg('chunk_size'),
         )
-        
+
         # Calculate percentages
         total = stats['total_count'] or 0
         if total > 0:
@@ -294,9 +295,9 @@ class ExternalDataManager(BaseKnowbaseManager):
             stats['failed_percentage'] = 0
             stats['pending_percentage'] = 0
             stats['outdated_percentage'] = 0
-        
+
         return stats
-    
+
     def cleanup_failed(self, older_than_days: int = 7) -> int:
         """
         Clean up old failed external data sources.
@@ -312,7 +313,7 @@ class ExternalDataManager(BaseKnowbaseManager):
         count = failed_queryset.count()
         failed_queryset.delete()
         return count
-    
+
     def regenerate_external_data(self, external_data_ids: List[str]) -> Dict[str, Any]:
         """
         Regenerate embeddings for specified external data sources.
@@ -325,9 +326,9 @@ class ExternalDataManager(BaseKnowbaseManager):
         """
         from ..models.external_data import ExternalDataStatus
         from ..tasks.external_data_tasks import process_external_data_async
-        
+
         external_data_list = list(self.get_queryset().filter(id__in=external_data_ids))
-        
+
         if not external_data_list:
             return {
                 'success': False,
@@ -335,11 +336,11 @@ class ExternalDataManager(BaseKnowbaseManager):
                 'regenerated_count': 0,
                 'failed_count': 0
             }
-        
+
         regenerated_count = 0
         failed_count = 0
         errors = []
-        
+
         for external_data in external_data_list:
             try:
                 # Reset processing state
@@ -353,22 +354,22 @@ class ExternalDataManager(BaseKnowbaseManager):
                     'status', 'processing_error', 'processed_at',
                     'total_chunks', 'total_tokens', 'processing_cost'
                 ])
-                
+
                 # Clear existing chunks
                 external_data.chunks.all().delete()
-                
+
                 # Queue for reprocessing with force flag
                 process_external_data_async.send(
                     str(external_data.id),
                     force_reprocess=True
                 )
-                
+
                 regenerated_count += 1
-                
+
             except Exception as e:
                 failed_count += 1
                 errors.append(f"Failed to regenerate {external_data.title}: {str(e)}")
-        
+
         return {
             'success': regenerated_count > 0,
             'regenerated_count': regenerated_count,
@@ -380,31 +381,31 @@ class ExternalDataManager(BaseKnowbaseManager):
 
 class ExternalDataChunkQuerySet(models.QuerySet):
     """Custom QuerySet for ExternalDataChunk."""
-    
+
     def by_external_data(self, external_data):
         """Filter by external data."""
         return self.filter(external_data=external_data)
-    
+
     def by_embedding_model(self, model: str):
         """Filter by embedding model."""
         return self.filter(embedding_model=model)
-    
+
     def with_embeddings(self):
         """Filter to chunks that have embeddings."""
         return self.filter(embedding__isnull=False)
-    
+
     def without_embeddings(self):
         """Filter to chunks without embeddings."""
         return self.filter(embedding__isnull=True)
-    
+
     def large_chunks(self, min_tokens: int = 500):
         """Filter to large chunks."""
         return self.filter(token_count__gte=min_tokens)
-    
+
     def small_chunks(self, max_tokens: int = 100):
         """Filter to small chunks."""
         return self.filter(token_count__lte=max_tokens)
-    
+
     def expensive_chunks(self, min_cost: float = 0.001):
         """Filter to expensive chunks."""
         return self.filter(embedding_cost__gte=min_cost)
@@ -412,38 +413,38 @@ class ExternalDataChunkQuerySet(models.QuerySet):
 
 class ExternalDataChunkManager(models.Manager):
     """Manager for ExternalDataChunk."""
-    
+
     def get_queryset(self):
         return ExternalDataChunkQuerySet(self.model, using=self._db)
-    
+
     def by_external_data(self, external_data):
         """Get chunks for external data."""
         return self.get_queryset().by_external_data(external_data)
-    
+
     def by_embedding_model(self, model: str):
         """Get chunks by embedding model."""
         return self.get_queryset().by_embedding_model(model)
-    
+
     def with_embeddings(self):
         """Get chunks with embeddings."""
         return self.get_queryset().with_embeddings()
-    
+
     def without_embeddings(self):
         """Get chunks without embeddings."""
         return self.get_queryset().without_embeddings()
-    
+
     def large_chunks(self, min_tokens: int = 500):
         """Get large chunks."""
         return self.get_queryset().large_chunks(min_tokens)
-    
+
     def small_chunks(self, max_tokens: int = 100):
         """Get small chunks."""
         return self.get_queryset().small_chunks(max_tokens)
-    
+
     def expensive_chunks(self, min_cost: float = 0.001):
         """Get expensive chunks."""
         return self.get_queryset().expensive_chunks(min_cost)
-    
+
     def get_chunk_statistics(self, user=None) -> Dict[str, Any]:
         """
         Get chunk statistics.
@@ -457,7 +458,7 @@ class ExternalDataChunkManager(models.Manager):
         queryset = self.get_queryset()
         if user:
             queryset = queryset.filter(user=user)
-        
+
         return queryset.aggregate(
             total_chunks=Count('id'),
             total_tokens=Sum('token_count'),

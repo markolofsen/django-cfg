@@ -4,14 +4,15 @@ Endpoints Status Checker
 Utility for checking all registered Django URL endpoints.
 """
 
-import time
 import re
+import time
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
-from django.urls import get_resolver, URLPattern, URLResolver
-from django.test import Client
-from django.utils import timezone
+from typing import Any, Dict, List, Optional
+
 from django.contrib.auth import get_user_model
+from django.test import Client
+from django.urls import URLPattern, URLResolver, get_resolver
+from django.utils import timezone
 
 
 def get_url_group(url_pattern: str, depth: int = 3) -> str:

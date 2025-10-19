@@ -5,10 +5,9 @@ All dashboard data models with type safety.
 Following CRITICAL_REQUIREMENTS.md - NO raw dicts, ALL type-safe.
 """
 
-from typing import List, Optional, Any, Dict
-from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
-from django.urls import reverse
 
 
 class StatCard(BaseModel):

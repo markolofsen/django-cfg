@@ -8,9 +8,10 @@ Following CRITICAL_REQUIREMENTS.md:
 - Environment-aware backend selection
 """
 
-from typing import Dict, Optional, Any, Literal, Union
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Any, Dict, Literal, Optional
 from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class CacheConfig(BaseModel):
@@ -22,19 +23,19 @@ class CacheConfig(BaseModel):
     - Development: Local memory cache
     - Testing: Dummy cache with short timeouts
     """
-    
+
     model_config = {
         "str_strip_whitespace": True,
         "validate_assignment": True,
         "extra": "forbid",
     }
-    
+
     # Redis configuration
     redis_url: Optional[str] = Field(
         default=None,
         description="Redis connection URL (redis://host:port/db)",
     )
-    
+
     # Timeout settings
     timeout: int = Field(
         default=300,
@@ -42,7 +43,7 @@ class CacheConfig(BaseModel):
         ge=0,  # Allow 0 for no timeout
         le=86400 * 7,  # Max 7 days
     )
-    
+
     # Connection settings
     max_connections: int = Field(
         default=50,
@@ -50,68 +51,72 @@ class CacheConfig(BaseModel):
         ge=1,
         le=1000,
     )
-    
+
     # Cache key settings
     key_prefix: str = Field(
         default="",
         description="Prefix for all cache keys",
         max_length=100,
     )
-    
+
     version: int = Field(
         default=1,
         description="Cache key version for invalidation",
         ge=1,
     )
-    
+
     # Redis-specific settings
     connection_pool_kwargs: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional Redis connection pool parameters",
     )
-    
+
     # Compression settings
     compress: bool = Field(
         default=False,
         description="Enable cache value compression",
     )
-    
+
     # Serialization settings
     serializer: Literal["json", "pickle", "msgpack"] = Field(
         default="pickle",
         description="Cache value serializer",
     )
-    
+
     # Backend override (for testing)
     backend_override: Optional[str] = Field(
         default=None,
         description="Override automatic backend selection",
         exclude=True,
     )
-    
+
     @field_validator('redis_url')
     @classmethod
     def validate_redis_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Redis URL format."""
+        """Validate Redis URL format. Allows environment variable templates like ${VAR:-default}."""
         if v is None:
             return v
-        
+
+        # Skip validation for environment variable templates
+        if v.startswith("${") and "}" in v:
+            return v
+
         if not v.startswith(('redis://', 'rediss://')):
             raise ValueError(
                 "Redis URL must start with 'redis://' or 'rediss://' "
                 f"(got: '{v}')"
             )
-        
+
         try:
             parsed = urlparse(v)
-            
+
             # Validate components
             if not parsed.hostname:
                 raise ValueError("Redis URL must include hostname")
-            
+
             if parsed.port and (parsed.port < 1 or parsed.port > 65535):
                 raise ValueError(f"Invalid Redis port: {parsed.port}")
-            
+
             # Validate database number if present
             if parsed.path and parsed.path != '/':
                 db_path = parsed.path.lstrip('/')
@@ -124,14 +129,14 @@ class CacheConfig(BaseModel):
                         if "invalid literal" in str(e):
                             raise ValueError(f"Invalid Redis database path: {parsed.path}")
                         raise
-            
+
             return v
-            
+
         except Exception as e:
             if isinstance(e, ValueError):
                 raise
             raise ValueError(f"Invalid Redis URL format: {e}") from e
-    
+
     @field_validator('key_prefix')
     @classmethod
     def validate_key_prefix(cls, v: str) -> str:
@@ -141,9 +146,9 @@ class CacheConfig(BaseModel):
                 "Cache key prefix must contain only alphanumeric characters, "
                 "underscores, hyphens, and colons"
             )
-        
+
         return v
-    
+
     @field_validator('serializer')
     @classmethod
     def validate_serializer(cls, v: str) -> str:
@@ -154,9 +159,9 @@ class CacheConfig(BaseModel):
                 f"Invalid serializer '{v}'. "
                 f"Valid options: {', '.join(sorted(valid_serializers))}"
             )
-        
+
         return v
-    
+
     @model_validator(mode='after')
     def validate_configuration_consistency(self) -> 'CacheConfig':
         """Validate cache configuration consistency."""
@@ -164,7 +169,7 @@ class CacheConfig(BaseModel):
         if self.compress and self.serializer == "json":
             # JSON is already compact, compression might not help much
             pass  # Just a note, not an error
-        
+
         # Validate connection pool kwargs
         if self.connection_pool_kwargs:
             invalid_keys = set(self.connection_pool_kwargs.keys()) - {
@@ -176,9 +181,9 @@ class CacheConfig(BaseModel):
                 raise ValueError(
                     f"Invalid connection pool parameters: {', '.join(invalid_keys)}"
                 )
-        
+
         return self
-    
+
     def get_backend_type(self, environment: str, debug: bool) -> str:
         """
         Determine appropriate cache backend based on environment.
@@ -193,18 +198,18 @@ class CacheConfig(BaseModel):
         # Allow manual override for testing
         if self.backend_override:
             return self.backend_override
-        
+
         # Environment-based backend selection
         if environment == "testing":
             return "django.core.cache.backends.dummy.DummyCache"
-        
+
         elif environment == "development" or debug:
             # Use Redis if available, otherwise memory cache
             if self.redis_url:
                 return "django_redis.cache.RedisCache"
             else:
                 return "django.core.cache.backends.locmem.LocMemCache"
-        
+
         elif environment in ("production", "staging"):
             # Production should use Redis
             if self.redis_url:
@@ -212,14 +217,14 @@ class CacheConfig(BaseModel):
             else:
                 # Fallback to file cache for production without Redis
                 return "django.core.cache.backends.filebased.FileBasedCache"
-        
+
         else:
             # Unknown environment - use Redis if available
             if self.redis_url:
                 return "django_redis.cache.RedisCache"
             else:
                 return "django.core.cache.backends.locmem.LocMemCache"
-    
+
     def to_django_config(self, environment: str, debug: bool, cache_alias: str = "default") -> Dict[str, Any]:
         """
         Convert to Django cache configuration format.
@@ -240,14 +245,14 @@ class CacheConfig(BaseModel):
 
         try:
             backend = self.get_backend_type(environment, debug)
-            
+
             config = {
                 'BACKEND': backend,
                 'TIMEOUT': self.timeout,
                 'KEY_PREFIX': self.key_prefix,
                 'VERSION': self.version,
             }
-            
+
             # Backend-specific configuration
             if backend == "django_redis.cache.RedisCache":
                 if not self.redis_url:
@@ -256,7 +261,7 @@ class CacheConfig(BaseModel):
                         cache_alias=cache_alias,
                         backend_type="redis"
                     )
-                
+
                 config['LOCATION'] = self.redis_url
                 config['OPTIONS'] = {
                     'CONNECTION_POOL_KWARGS': {
@@ -264,25 +269,25 @@ class CacheConfig(BaseModel):
                         **self.connection_pool_kwargs,
                     }
                 }
-                
+
                 # Add compression if enabled
                 if self.compress:
                     config['OPTIONS']['COMPRESSOR'] = 'django_redis.compressors.zlib.ZlibCompressor'
-                
+
                 # Add serializer configuration
                 if self.serializer == "json":
                     config['OPTIONS']['SERIALIZER'] = 'django_redis.serializers.json.JSONSerializer'
                 elif self.serializer == "msgpack":
                     config['OPTIONS']['SERIALIZER'] = 'django_redis.serializers.msgpack.MSGPackSerializer'
                 # pickle is default, no need to specify
-            
+
             elif backend == "django.core.cache.backends.locmem.LocMemCache":
                 # Use unique location for each cache alias to avoid conflicts
                 config['LOCATION'] = f'{self.key_prefix or "django_cfg"}_{cache_alias}_{id(self)}'
                 config['OPTIONS'] = {
                     'MAX_ENTRIES': min(self.max_connections * 100, 10000),  # Reasonable default
                 }
-            
+
             elif backend == "django.core.cache.backends.filebased.FileBasedCache":
                 from pathlib import Path
                 cache_dir = Path("tmp") / "django_cache" / f"{self.key_prefix or 'default'}_{cache_alias}"
@@ -290,13 +295,13 @@ class CacheConfig(BaseModel):
                 config['OPTIONS'] = {
                     'MAX_ENTRIES': 1000,
                 }
-            
+
             elif backend == "django.core.cache.backends.dummy.DummyCache":
                 # Dummy cache for testing - no additional options needed
                 config['OPTIONS'] = {}
-            
+
             return config
-            
+
         except Exception as e:
             raise CacheError(
                 f"Failed to convert cache configuration: {e}",
@@ -308,7 +313,7 @@ class CacheConfig(BaseModel):
                     'config': self.model_dump(exclude={'backend_override'})
                 }
             ) from e
-    
+
     def test_connection(self) -> bool:
         """
         Test cache connection (placeholder for future implementation).
@@ -319,7 +324,7 @@ class CacheConfig(BaseModel):
         # TODO: Implement actual connection testing
         # This would require the cache backend to be configured
         return True
-    
+
     def get_memory_estimate_mb(self) -> float:
         """
         Estimate memory usage for this cache configuration.

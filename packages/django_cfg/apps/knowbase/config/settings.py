@@ -5,10 +5,10 @@ This module provides a clean, type-safe configuration system that replaces
 the removed Constance settings with sensible defaults and validation.
 """
 
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, field_validator
 from pathlib import Path
-import os
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 # Import environment configuration for API keys
 try:
@@ -20,18 +20,18 @@ except ImportError:
 
 class CacheSettings(BaseModel):
     """Cache settings for LLMClient."""
-    
+
     cache_dir: Path = Field(..., description="Cache directory path")
     cache_ttl: int = Field(..., description="Cache TTL in seconds")
     max_cache_size: int = Field(..., description="Maximum cache size")
-    
+
     class Config:
         arbitrary_types_allowed = True  # Allow Path type
 
 
 class EmbeddingConfig(BaseModel):
     """Configuration for embedding processing."""
-    
+
     model: str = Field(
         default="text-embedding-ada-002",
         description="OpenAI embedding model to use"
@@ -70,7 +70,7 @@ class EmbeddingConfig(BaseModel):
         le=10000,
         description="Maximum number of items in memory cache"
     )
-    
+
     # >> Old variant, should be imported from CfgConfig
     # # API Keys from environment
     # @property
@@ -80,7 +80,7 @@ class EmbeddingConfig(BaseModel):
     #         return settings.api_keys.openai
     #     except AttributeError:
     #         return os.getenv("OPENAI_API_KEY")
-    
+
     # @property
     # def openrouter_api_key(self) -> Optional[str]:
     #     """Get OpenRouter API key from environment configuration."""
@@ -92,7 +92,7 @@ class EmbeddingConfig(BaseModel):
 
 class ChunkingConfig(BaseModel):
     """Configuration for text chunking."""
-    
+
     document_chunk_size: int = Field(
         default=1000,
         ge=100,
@@ -117,14 +117,14 @@ class ChunkingConfig(BaseModel):
         le=1000,
         description="Overlap between archive chunks (characters)"
     )
-    
+
     @field_validator('document_chunk_overlap')
     @classmethod
     def validate_document_overlap(cls, v, info):
         if info.data and 'document_chunk_size' in info.data and v >= info.data['document_chunk_size']:
             raise ValueError('Document chunk overlap must be less than chunk size')
         return v
-    
+
     @field_validator('archive_chunk_overlap')
     @classmethod
     def validate_archive_overlap(cls, v, info):
@@ -135,14 +135,14 @@ class ChunkingConfig(BaseModel):
 
 class SearchConfig(BaseModel):
     """Configuration for search functionality."""
-    
+
     results_limit: int = Field(
         default=10,
         ge=1,
         le=100,
         description="Maximum number of search results to return"
     )
-    
+
     # Type-specific similarity thresholds for better multilingual and content-type support
     document_threshold: float = Field(
         default=0.7,
@@ -157,7 +157,7 @@ class SearchConfig(BaseModel):
         description="Similarity threshold for archive chunks (medium precision for code)"
     )
     # Note: external_data_threshold removed - now configured per-object in ExternalData.similarity_threshold
-    
+
     # Legacy field for backward compatibility
     similarity_threshold: float = Field(
         default=0.7,
@@ -169,7 +169,7 @@ class SearchConfig(BaseModel):
 
 class ChatConfig(BaseModel):
     """Configuration for chat functionality."""
-    
+
     context_chunks: int = Field(
         default=5,
         ge=1,
@@ -192,7 +192,7 @@ class ChatConfig(BaseModel):
 
 class ProcessingConfig(BaseModel):
     """Configuration for processing limits and timeouts."""
-    
+
     max_document_size_mb: int = Field(
         default=10,
         ge=1,
@@ -215,17 +215,17 @@ class ProcessingConfig(BaseModel):
 
 class KnowledgeBaseConfig(BaseModel):
     """Main configuration for the Knowledge Base app."""
-    
+
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     chat: ChatConfig = Field(default_factory=ChatConfig)
     processing: ProcessingConfig = Field(default_factory=ProcessingConfig)
-    
+
     class Config:
         env_prefix = "KNOWBASE_"
         case_sensitive = False
-        
+
     def get_chunking_params_for_type(self, content_type: str) -> Dict[str, Any]:
         """
         Get chunking parameters for SemanticChunker.
@@ -246,15 +246,15 @@ class KnowledgeBaseConfig(BaseModel):
                 'chunk_size': self.chunking.document_chunk_size,
                 'overlap': self.chunking.document_chunk_overlap
             }
-    
+
     def get_embedding_model(self) -> str:
         """Get the configured embedding model."""
         return self.embedding.model
-    
+
     def get_embedding_batch_size(self) -> int:
         """Get the configured embedding batch size."""
         return self.embedding.batch_size
-    
+
     def get_openai_api_key(self) -> Optional[str]:
         """Get OpenAI API key from django-cfg configuration."""
         try:
@@ -267,7 +267,7 @@ class KnowledgeBaseConfig(BaseModel):
 
         return None
 
-    
+
     def get_openrouter_api_key(self) -> Optional[str]:
         """Get OpenRouter API key from django-cfg configuration."""
         try:
@@ -277,20 +277,20 @@ class KnowledgeBaseConfig(BaseModel):
                 return config.api_keys.get_openrouter_key()
         except (ImportError, AttributeError):
             pass
-        
+
         return None
-    
+
     def get_cache_dir(self) -> Path:
         """Get cache directory path and ensure it exists."""
         from pathlib import Path
         cache_path = Path(self.embedding.cache_dir)
         if not cache_path.is_absolute():
             cache_path = Path.cwd() / cache_path
-        
+
         # Ensure cache directory exists
         cache_path.mkdir(parents=True, exist_ok=True)
         return cache_path
-    
+
     def get_cache_settings(self) -> CacheSettings:
         """Get cache settings for LLMClient."""
         return CacheSettings(
@@ -298,7 +298,7 @@ class KnowledgeBaseConfig(BaseModel):
             cache_ttl=self.embedding.cache_ttl,
             max_cache_size=self.embedding.cache_max_size
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary for easy access."""
         return self.dict()

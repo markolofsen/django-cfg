@@ -6,9 +6,11 @@ Enhanced inline classes with better organization and conditional loading.
 
 from unfold.admin import TabularInline
 
-from django_cfg.modules.base import BaseCfgModule    
 from django_cfg.apps.support.models import Ticket
-from ..models import UserRegistrationSource, UserActivity
+from django_cfg.modules.base import BaseCfgModule
+
+from ..models import UserActivity, UserRegistrationSource
+
 
 class UserRegistrationSourceInline(TabularInline):
     """Enhanced inline for user registration sources."""
@@ -54,7 +56,7 @@ class UserActivityInline(TabularInline):
     ordering = ["-created_at"]
     verbose_name = "Activity"
     verbose_name_plural = "Recent Activities"
-    
+
     # Show only recent activities to avoid performance issues
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -70,13 +72,13 @@ class UserActivityInline(TabularInline):
 
 class UserEmailLogInline(TabularInline):
     """Enhanced inline for viewing user's email logs."""
-    
+
     def __init__(self, *args, **kwargs):
         # Check if newsletter app is available and enabled
         self.model = None
         try:
             base_module = BaseCfgModule()
-            
+
             # Only import if newsletter is enabled
             if base_module.is_newsletter_enabled():
                 from django_cfg.apps.newsletter.models import EmailLog
@@ -84,11 +86,11 @@ class UserEmailLogInline(TabularInline):
         except (ImportError, Exception):
             # Newsletter app not available or not enabled
             pass
-        
+
         # Only call super if we have a valid model
         if self.model:
             super().__init__(*args, **kwargs)
-    
+
     extra = 0
     max_num = 15  # Limit to 15 most recent emails
     readonly_fields = ["newsletter", "campaign", "recipient", "subject", "status", "created_at", "sent_at"]
@@ -96,7 +98,7 @@ class UserEmailLogInline(TabularInline):
     ordering = ["-created_at"]
     verbose_name = "Email Log"
     verbose_name_plural = "Email History"
-    
+
     # Show only recent emails to avoid performance issues
     def get_queryset(self, request):
         if not self.model:
@@ -104,13 +106,13 @@ class UserEmailLogInline(TabularInline):
         qs = super().get_queryset(request)
         # Don't slice here - let Django handle formset filtering first
         return qs.order_by('-created_at')
-    
+
     def has_add_permission(self, request, obj=None):
         return False
-    
+
     def has_delete_permission(self, request, obj=None):
         return False
-    
+
     def has_view_permission(self, request, obj=None):
         # Only show if newsletter app is enabled and model exists
         if not self.model:
@@ -124,24 +126,24 @@ class UserEmailLogInline(TabularInline):
 
 class UserSupportTicketsInline(TabularInline):
     """Enhanced inline for viewing user's support tickets."""
-    
+
     def __init__(self, *args, **kwargs):
         # Check if support app is available and enabled
         self.model = None
         try:
             base_module = BaseCfgModule()
-            
+
             # Only import if support is enabled
             if base_module.is_support_enabled():
                 self.model = Ticket
         except (ImportError, Exception):
             # Support app not available or not enabled
             pass
-        
+
         # Only call super if we have a valid model
         if self.model:
             super().__init__(*args, **kwargs)
-    
+
     extra = 0
     max_num = 10  # Limit to 10 most recent tickets
     readonly_fields = ["uuid", "subject", "status", "created_at"]
@@ -149,7 +151,7 @@ class UserSupportTicketsInline(TabularInline):
     ordering = ["-created_at"]
     verbose_name = "Support Ticket"
     verbose_name_plural = "Support Tickets"
-    
+
     # Show only recent tickets to avoid performance issues
     def get_queryset(self, request):
         if not self.model:
@@ -157,13 +159,13 @@ class UserSupportTicketsInline(TabularInline):
         qs = super().get_queryset(request)
         # Don't slice here - let Django handle formset filtering first
         return qs.order_by('-created_at')
-    
+
     def has_add_permission(self, request, obj=None):
         return False
-    
+
     def has_delete_permission(self, request, obj=None):
         return False
-    
+
     def has_view_permission(self, request, obj=None):
         # Only show if support app is enabled and model exists
         if not self.model:

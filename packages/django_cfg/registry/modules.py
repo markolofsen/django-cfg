@@ -10,8 +10,8 @@ MODULES_REGISTRY = {
     # Configuration utilities
     "set_current_config": ("django_cfg.core.config", "set_current_config"),
 
-    # RPC Client module
-    "DjangoCfgRPCConfig": ("django_cfg.modules.django_ipc_client.config", "DjangoCfgRPCConfig"),
+    # IPC/RPC module
+    "DjangoCfgRPCConfig": ("django_cfg.apps.ipc", "DjangoCfgRPCConfig"),
 
     # Import/Export integration (simple re-exports)
     "ImportForm": ("django_cfg.modules.django_import_export", "ImportForm"),
@@ -22,4 +22,12 @@ MODULES_REGISTRY = {
     "ExportMixin": ("django_cfg.modules.django_import_export", "ExportMixin"),
     "ImportMixin": ("django_cfg.modules.django_import_export", "ImportMixin"),
     "BaseResource": ("django_cfg.modules.django_import_export", "BaseResource"),
+
+    # Django Admin - Declarative Pydantic2 Configuration
+    # Note: PydanticAdmin is not in registry - import directly from .base to avoid AppRegistryNotReady
+    "AdminConfig": ("django_cfg.modules.django_admin", "AdminConfig"),
+    "FieldConfig": ("django_cfg.modules.django_admin", "FieldConfig"),
+    "FieldsetConfig": ("django_cfg.modules.django_admin", "FieldsetConfig"),
+    "ActionConfig": ("django_cfg.modules.django_admin", "ActionConfig"),
+    "WidgetRegistry": ("django_cfg.modules.django_admin", "WidgetRegistry"),
 }

@@ -5,20 +5,22 @@ Manages dashboard configuration, widgets, and navigation
 based on the working configuration from the old version.
 """
 
-from typing import List, Dict, Any, Optional
-from django.templatetags.static import static
+from typing import Any, Dict, List
+
 from django.urls import reverse_lazy
-from ..base import BaseCfgModule
+
 from django_cfg.modules.django_admin.icons import Icons
-from .models.navigation import NavigationSection, NavigationItem
+
+from ..base import BaseCfgModule
 from .models.dashboard import StatCard, StatsCardsWidget
+from .models.navigation import NavigationItem, NavigationSection
 
 
 class DashboardManager(BaseCfgModule):
     """
-    Dashboard configuration manager for Unfold.    
+    Dashboard configuration manager for Unfold.
     """
-    
+
     def __init__(self, config=None):
         """Initialize dashboard manager."""
         super().__init__()
@@ -48,8 +50,8 @@ class DashboardManager(BaseCfgModule):
 
         # Convert SiteDropdownItem objects to dictionaries for Unfold
         return [item.to_dict() for item in dropdown_items]
-    
-    
+
+
     def get_navigation_config(self) -> List[Dict[str, Any]]:
         """Get complete default navigation configuration for Unfold sidebar."""
         navigation_sections = [
@@ -58,10 +60,10 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Overview", icon=Icons.DASHBOARD, link="/admin/"),
-                    NavigationItem(title="Settings", icon=Icons.SETTINGS, link="/admin/constance/config/"),
-                    NavigationItem(title="Health Check", icon=Icons.HEALTH_AND_SAFETY, link="/cfg/health/drf/"),
-                    NavigationItem(title="Endpoints Status", icon=Icons.API, link="/cfg/endpoints/drf/"),
+                    NavigationItem(title="Overview", icon=Icons.DASHBOARD, link=str(reverse_lazy("admin:index"))),
+                    NavigationItem(title="Settings", icon=Icons.SETTINGS, link=str(reverse_lazy("admin:constance_config_changelist"))),
+                    NavigationItem(title="Health Check", icon=Icons.HEALTH_AND_SAFETY, link=str(reverse_lazy("django_cfg_drf_health"))),
+                    NavigationItem(title="Endpoints Status", icon=Icons.API, link=str(reverse_lazy("endpoints_status_drf"))),
                 ]
             ),
         ]
@@ -72,20 +74,20 @@ class DashboardManager(BaseCfgModule):
         # RPC Dashboard (if enabled)
         if self.is_rpc_enabled():
             operations_items.append(
-                NavigationItem(title="RPC Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/rpc/")
+                NavigationItem(title="IPC/RPC Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/ipc/admin/")
             )
 
         # Background Tasks (if enabled)
         if self.should_enable_tasks():
             operations_items.extend([
-                NavigationItem(title="Background Tasks", icon=Icons.TASK, link="/admin/django_dramatiq/task/"),
-                NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/tasks/admin/dashboard/"),
+                NavigationItem(title="Background Tasks", icon=Icons.TASK, link=str(reverse_lazy("admin:django_dramatiq_task_changelist"))),
+                NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link=str(reverse_lazy("dashboard"))),
             ])
 
         # Maintenance Mode (if enabled)
         if self.is_maintenance_enabled():
             operations_items.append(
-                NavigationItem(title="Maintenance", icon=Icons.BUILD, link="/admin/maintenance/cloudflaresite/")
+                NavigationItem(title="Maintenance", icon=Icons.BUILD, link=str(reverse_lazy("admin:maintenance_cloudflaresite_changelist")))
             )
 
         # Add Operations section if there are any items
@@ -96,7 +98,7 @@ class DashboardManager(BaseCfgModule):
                 collapsible=True,
                 items=operations_items
             ))
-        
+
         # Add Accounts section if enabled
         if self.is_accounts_enabled():
             navigation_sections.append(NavigationSection(
@@ -104,13 +106,14 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Users", icon=Icons.PEOPLE, link="/admin/django_cfg_accounts/customuser/"),
-                    NavigationItem(title="User Groups", icon=Icons.GROUP, link="/admin/auth/group/"),
-                    NavigationItem(title="Registration Sources", icon=Icons.LINK, link="/admin/django_cfg_accounts/registrationsource/"),
-                    NavigationItem(title="User Registration Sources", icon=Icons.PERSON, link="/admin/django_cfg_accounts/userregistrationsource/"),
+                    NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),
+                    NavigationItem(title="User Groups", icon=Icons.GROUP, link=str(reverse_lazy("admin:auth_group_changelist"))),
+                    NavigationItem(title="OTP Secrets", icon=Icons.SECURITY, link=str(reverse_lazy("admin:django_cfg_accounts_otpsecret_changelist"))),
+                    NavigationItem(title="Registration Sources", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_registrationsource_changelist"))),
+                    NavigationItem(title="User Registration Sources", icon=Icons.PERSON, link=str(reverse_lazy("admin:django_cfg_accounts_userregistrationsource_changelist"))),
                 ]
             ))
-        
+
         # Add Support section if enabled
         if self.is_support_enabled():
             navigation_sections.append(NavigationSection(
@@ -118,11 +121,11 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Tickets", icon=Icons.SUPPORT_AGENT, link="/admin/django_cfg_support/ticket/"),
-                    NavigationItem(title="Messages", icon=Icons.CHAT, link="/admin/django_cfg_support/message/"),
+                    NavigationItem(title="Tickets", icon=Icons.SUPPORT_AGENT, link=str(reverse_lazy("admin:django_cfg_support_ticket_changelist"))),
+                    NavigationItem(title="Messages", icon=Icons.CHAT, link=str(reverse_lazy("admin:django_cfg_support_message_changelist"))),
                 ]
             ))
-        
+
         # Add Newsletter section if enabled
         if self.is_newsletter_enabled():
             navigation_sections.append(NavigationSection(
@@ -130,13 +133,13 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Newsletters", icon=Icons.EMAIL, link="/admin/django_cfg_newsletter/newsletter/"),
-                    NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link="/admin/django_cfg_newsletter/newslettersubscription/"),
-                    NavigationItem(title="Campaigns", icon=Icons.CAMPAIGN, link="/admin/django_cfg_newsletter/newslettercampaign/"),
-                    NavigationItem(title="Email Logs", icon=Icons.MAIL_OUTLINE, link="/admin/django_cfg_newsletter/emaillog/"),
+                    NavigationItem(title="Newsletters", icon=Icons.EMAIL, link=str(reverse_lazy("admin:django_cfg_newsletter_newsletter_changelist"))),
+                    NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link=str(reverse_lazy("admin:django_cfg_newsletter_newslettersubscription_changelist"))),
+                    NavigationItem(title="Campaigns", icon=Icons.CAMPAIGN, link=str(reverse_lazy("admin:django_cfg_newsletter_newslettercampaign_changelist"))),
+                    NavigationItem(title="Email Logs", icon=Icons.MAIL_OUTLINE, link=str(reverse_lazy("admin:django_cfg_newsletter_emaillog_changelist"))),
                 ]
             ))
-        
+
         # Add Leads section if enabled
         if self.is_leads_enabled():
             navigation_sections.append(NavigationSection(
@@ -144,10 +147,10 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Leads", icon=Icons.CONTACT_PAGE, link="/admin/django_cfg_leads/lead/"),
+                    NavigationItem(title="Leads", icon=Icons.CONTACT_PAGE, link=str(reverse_lazy("admin:django_cfg_leads_lead_changelist"))),
                 ]
             ))
-        
+
         # Add Agents section if enabled
         if self.is_agents_enabled():
             navigation_sections.append(NavigationSection(
@@ -155,15 +158,15 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Agent Definitions", icon=Icons.SMART_TOY, link="/admin/django_cfg_agents/agentdefinition/"),
-                    NavigationItem(title="Agent Templates", icon=Icons.DESCRIPTION, link="/admin/django_cfg_agents/agenttemplate/"),
-                    NavigationItem(title="Agent Executions", icon=Icons.PLAY_ARROW, link="/admin/django_cfg_agents/agentexecution/"),
-                    NavigationItem(title="Workflow Executions", icon=Icons.AUTORENEW, link="/admin/django_cfg_agents/workflowexecution/"),
-                    NavigationItem(title="Tool Executions", icon=Icons.BUILD, link="/admin/django_cfg_agents/toolexecution/"),
-                    NavigationItem(title="Toolset Configurations", icon=Icons.SETTINGS, link="/admin/django_cfg_agents/toolsetconfiguration/"),
+                    NavigationItem(title="Agent Definitions", icon=Icons.SMART_TOY, link=str(reverse_lazy("admin:django_cfg_agents_agentdefinition_changelist"))),
+                    NavigationItem(title="Agent Templates", icon=Icons.DESCRIPTION, link=str(reverse_lazy("admin:django_cfg_agents_agenttemplate_changelist"))),
+                    NavigationItem(title="Agent Executions", icon=Icons.PLAY_ARROW, link=str(reverse_lazy("admin:django_cfg_agents_agentexecution_changelist"))),
+                    NavigationItem(title="Workflow Executions", icon=Icons.AUTORENEW, link=str(reverse_lazy("admin:django_cfg_agents_workflowexecution_changelist"))),
+                    NavigationItem(title="Tool Executions", icon=Icons.BUILD, link=str(reverse_lazy("admin:django_cfg_agents_toolexecution_changelist"))),
+                    NavigationItem(title="Toolset Configurations", icon=Icons.SETTINGS, link=str(reverse_lazy("admin:django_cfg_agents_toolsetconfiguration_changelist"))),
                 ]
             ))
-        
+
         # Add Knowledge Base section if enabled
         if self.is_knowbase_enabled():
             navigation_sections.append(NavigationSection(
@@ -171,84 +174,29 @@ class DashboardManager(BaseCfgModule):
                 separator=True,
                 collapsible=True,
                 items=[
-                    NavigationItem(title="Document Categories", icon=Icons.FOLDER, link="/admin/django_cfg_knowbase/documentcategory/"),
-                    NavigationItem(title="Documents", icon=Icons.DESCRIPTION, link="/admin/django_cfg_knowbase/document/"),
-                    NavigationItem(title="Document Chunks", icon=Icons.TEXT_SNIPPET, link="/admin/django_cfg_knowbase/documentchunk/"),
-                    NavigationItem(title="Document Archives", icon=Icons.ARCHIVE, link="/admin/django_cfg_knowbase/documentarchive/"),
-                    NavigationItem(title="Archive Items", icon=Icons.FOLDER_OPEN, link="/admin/django_cfg_knowbase/archiveitem/"),
-                    NavigationItem(title="Archive Item Chunks", icon=Icons.SNIPPET_FOLDER, link="/admin/django_cfg_knowbase/archiveitemchunk/"),
-                    NavigationItem(title="External Data", icon=Icons.CLOUD_SYNC, link="/admin/django_cfg_knowbase/externaldata/"),
-                    NavigationItem(title="External Data Chunks", icon=Icons.AUTO_AWESOME_MOTION, link="/admin/django_cfg_knowbase/externaldatachunk/"),
-                    NavigationItem(title="Chat Sessions", icon=Icons.CHAT, link="/admin/django_cfg_knowbase/chatsession/"),
-                    NavigationItem(title="Chat Messages", icon=Icons.MESSAGE, link="/admin/django_cfg_knowbase/chatmessage/"),
+                    NavigationItem(title="Document Categories", icon=Icons.FOLDER, link=str(reverse_lazy("admin:django_cfg_knowbase_documentcategory_changelist"))),
+                    NavigationItem(title="Documents", icon=Icons.DESCRIPTION, link=str(reverse_lazy("admin:django_cfg_knowbase_document_changelist"))),
+                    NavigationItem(title="Document Chunks", icon=Icons.TEXT_SNIPPET, link=str(reverse_lazy("admin:django_cfg_knowbase_documentchunk_changelist"))),
+                    NavigationItem(title="Document Archives", icon=Icons.ARCHIVE, link=str(reverse_lazy("admin:django_cfg_knowbase_documentarchive_changelist"))),
+                    NavigationItem(title="Archive Items", icon=Icons.FOLDER_OPEN, link=str(reverse_lazy("admin:django_cfg_knowbase_archiveitem_changelist"))),
+                    NavigationItem(title="Archive Item Chunks", icon=Icons.SNIPPET_FOLDER, link=str(reverse_lazy("admin:django_cfg_knowbase_archiveitemchunk_changelist"))),
+                    NavigationItem(title="External Data", icon=Icons.CLOUD_SYNC, link=str(reverse_lazy("admin:django_cfg_knowbase_externaldata_changelist"))),
+                    NavigationItem(title="External Data Chunks", icon=Icons.AUTO_AWESOME_MOTION, link=str(reverse_lazy("admin:django_cfg_knowbase_externaldatachunk_changelist"))),
+                    NavigationItem(title="Chat Sessions", icon=Icons.CHAT, link=str(reverse_lazy("admin:django_cfg_knowbase_chatsession_changelist"))),
+                    NavigationItem(title="Chat Messages", icon=Icons.MESSAGE, link=str(reverse_lazy("admin:django_cfg_knowbase_chatmessage_changelist"))),
                 ]
             ))
 
-        # Add Payments section if enabled
+        # Add Payments section if enabled (v2.0)
         if self.is_payments_enabled():
-            try:
-                from django_cfg.models.payments import PaymentsConfig
-                config = PaymentsConfig.get_current_config()
-
-                payments_items = []
-
-                # Main dashboard (always show if payments app enabled)
-                payments_items.append(
-                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/payments/admin/")
-                )
-
-                # Always show basic admin models (even if payments functionality is disabled)
-                payments_items.extend([
-                    NavigationItem(title="Universal Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/payments/universalpayment/"),
-                    NavigationItem(title="Currencies", icon=Icons.CURRENCY_BITCOIN, link="/admin/payments/currency/"),
-                    NavigationItem(title="Networks", icon=Icons.LINK, link="/admin/payments/network/"),
-                    NavigationItem(title="Provider Currencies", icon=Icons.ACCOUNT_CIRCLE, link="/admin/payments/providercurrency/"),
-                ])
-
-                # Add advanced features only if payments functionality is enabled
-                if config.enabled:
-                    # payments_items.append(
-                    #     NavigationItem(title="Webhook Dashboard", icon=Icons.WEBHOOK, link="/cfg/payments/admin/webhooks/")
-                    # )
-                    # payments_items.append(
-                    #     NavigationItem(title="Create Payment", icon=Icons.ADD, link="/cfg/payments/admin/payments/create/")
-                    # )
-                    # payments_items.append(
-                    #     NavigationItem(title="Currency Converter", icon=Icons.CURRENCY_EXCHANGE, link="/cfg/payments/admin/tools/converter/")
-                    # )
-
-                    # Show subscription features only if enabled
-                    if config.show_subscription_management():
-                        payments_items.extend([
-                            NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link="/admin/payments/subscription/"),
-                            NavigationItem(title="Tariffs", icon=Icons.PRICE_CHANGE, link="/admin/payments/tariff/"),
-                            NavigationItem(title="Tariff Endpoint Groups", icon=Icons.GROUP, link="/admin/payments/tariffendpointgroup/"),
-                        ])
-
-                    # Show API management only if enabled
-                    if config.show_api_management():
-                        payments_items.extend([
-                            NavigationItem(title="API Keys", icon=Icons.KEY, link="/admin/payments/apikey/"),
-                            NavigationItem(title="Endpoint Groups", icon=Icons.GROUP, link="/admin/payments/endpointgroup/"),
-                        ])
-
-                    # Show balance/transaction features only if enabled
-                    if config.show_balance_management():
-                        payments_items.append(
-                            NavigationItem(title="Balances", icon=Icons.ACCOUNT_BALANCE_WALLET, link="/admin/payments/userbalance/")
-                        )
-
-                    if config.show_transaction_history():
-                        payments_items.append(
-                            NavigationItem(title="Transactions", icon=Icons.RECEIPT_LONG, link="/admin/payments/transaction/")
-                        )
-
-            except Exception:
-                # Fallback
-                payments_items = [
-                    NavigationItem(title="Payment Dashboard", icon=Icons.DASHBOARD, link="/cfg/payments/admin/"),
-                    NavigationItem(title="Universal Payments", icon=Icons.ACCOUNT_BALANCE, link="/admin/payments/universalpayment/"),
-                ]
+            payments_items = [
+                # Core payment models (v2.0)
+                NavigationItem(title="Payments", icon=Icons.ACCOUNT_BALANCE, link=str(reverse_lazy("admin:payments_payment_changelist"))),
+                NavigationItem(title="Currencies", icon=Icons.CURRENCY_BITCOIN, link=str(reverse_lazy("admin:payments_currency_changelist"))),
+                NavigationItem(title="User Balances", icon=Icons.ACCOUNT_BALANCE_WALLET, link=str(reverse_lazy("admin:payments_userbalance_changelist"))),
+                NavigationItem(title="Transactions", icon=Icons.RECEIPT_LONG, link=str(reverse_lazy("admin:payments_transaction_changelist"))),
+                NavigationItem(title="Withdrawal Requests", icon=Icons.DOWNLOAD, link=str(reverse_lazy("admin:payments_withdrawalrequest_changelist"))),
+            ]
 
             navigation_sections.append(NavigationSection(
                 title="Payments",
@@ -259,9 +207,9 @@ class DashboardManager(BaseCfgModule):
 
         # Convert all NavigationSection objects to dictionaries
         return [section.to_dict() for section in navigation_sections]
-        
-    
-    
+
+
+
     def get_unfold_config(self) -> Dict[str, Any]:
         """Get complete Unfold configuration based on working old version."""
         return {
@@ -271,23 +219,23 @@ class DashboardManager(BaseCfgModule):
             "SITE_SUBHEADER": "",
             "SITE_URL": "/",
             "SITE_SYMBOL": "dashboard",
-            
+
             # UI visibility controls
             "SHOW_HISTORY": True,
             "SHOW_VIEW_ON_SITE": True,
             "SHOW_BACK_BUTTON": False,
-            
+
             # Dashboard callback
             "DASHBOARD_CALLBACK": "api.dashboard.callbacks.main_dashboard_callback",
-            
+
             # Theme configuration
             "THEME": None,  # Auto-detect or force "dark"/"light"
-            
+
             # Login page customization
             "LOGIN": {
                 "redirect_after": lambda request: "/admin/",
             },
-            
+
             # Design system
             "BORDER_RADIUS": "8px",
             "COLORS": {
@@ -326,7 +274,7 @@ class DashboardManager(BaseCfgModule):
                     "important-dark": "var(--color-base-100)",
                 },
             },
-            
+
             # Sidebar navigation - KEY STRUCTURE!
             "SIDEBAR": {
                 "show_search": True,
@@ -334,20 +282,20 @@ class DashboardManager(BaseCfgModule):
                 "show_all_applications": True,
                 "navigation": self.get_navigation_config(),
             },
-            
+
             # Site dropdown menu - handled by config.py to allow extending
             # "SITE_DROPDOWN": self._get_default_dropdown_items(),
-            
+
             # Command interface
             "COMMAND": {
                 "search_models": True,
                 "show_history": True,
             },
-            
+
             # Multi-language support - DISABLED
             "SHOW_LANGUAGES": False,
         }
-    
+
     def get_widgets_config(self) -> List[Dict[str, Any]]:
         """Get dashboard widgets configuration using Pydantic models."""
         # Create system overview widget with StatCard models
@@ -374,7 +322,7 @@ class DashboardManager(BaseCfgModule):
                 ),
             ]
         )
-        
+
         # Convert to dictionaries for Unfold
         return [system_overview_widget.to_dict()]
 

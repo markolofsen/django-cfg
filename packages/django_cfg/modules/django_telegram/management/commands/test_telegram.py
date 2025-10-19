@@ -5,9 +5,8 @@ Tests Telegram notification functionality using django_cfg configuration.
 """
 
 from django.core.management.base import BaseCommand
+
 from django_cfg.modules.django_logging import get_logger
-
-
 
 logger = get_logger('test_telegram')
 
@@ -39,7 +38,7 @@ class Command(BaseCommand):
         try:
             from django_cfg.modules.django_telegram import DjangoTelegram
             telegram_service = DjangoTelegram()
-            
+
             self.stdout.write("\n📱 Sending test messages...")
 
             # Send info message (модуль сам знает настройки!)
@@ -48,7 +47,7 @@ class Command(BaseCommand):
                 message,
                 {
                     "Type": "System Test",
-                    "Status": "Running", 
+                    "Status": "Running",
                     "Environment": "Development"
                 }
             )

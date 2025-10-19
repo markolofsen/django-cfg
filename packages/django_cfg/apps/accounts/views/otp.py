@@ -1,21 +1,22 @@
-from rest_framework import status, permissions, viewsets
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema
 import logging
 import traceback
 
-from ..services import OTPService
+from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from ..serializers.otp import (
-    OTPRequestSerializer,
-    OTPVerifySerializer,
-    OTPRequestResponseSerializer,
-    OTPVerifyResponseSerializer,
     OTPErrorResponseSerializer,
+    OTPRequestResponseSerializer,
+    OTPRequestSerializer,
+    OTPVerifyResponseSerializer,
+    OTPVerifySerializer,
 )
 from ..serializers.profile import UserSerializer
-from django.contrib.auth import get_user_model
+from ..services import OTPService
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class OTPViewSet(viewsets.GenericViewSet):
 
     permission_classes = [permissions.AllowAny]
     serializer_class = OTPRequestSerializer  # Default serializer for the viewset
-    
+
     def get_serializer_class(self):
         """Return the appropriate serializer class based on the action."""
         if self.action == 'request_otp':
@@ -51,11 +52,11 @@ class OTPViewSet(viewsets.GenericViewSet):
         identifier = serializer.validated_data["identifier"]
         channel = serializer.validated_data.get("channel")
         source_url = serializer.validated_data.get("source_url")
-        
+
         # Auto-detect channel if not provided
         if not channel:
             channel = 'email' if '@' in identifier else 'phone'
-        
+
         logger.debug(f"Starting OTP request for {channel}: {identifier}, source: {source_url}")
 
         try:
@@ -121,7 +122,7 @@ class OTPViewSet(viewsets.GenericViewSet):
         otp = serializer.validated_data["otp"]
         channel = serializer.validated_data.get("channel")
         source_url = serializer.validated_data.get("source_url")
-        
+
         # Auto-detect channel if not provided
         if not channel:
             channel = 'email' if '@' in identifier else 'phone'
@@ -139,7 +140,7 @@ class OTPViewSet(viewsets.GenericViewSet):
                 {
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
-                    "user": UserSerializer(user).data,
+                    "user": UserSerializer(user, context={'request': request}).data,
                 },
                 status=status.HTTP_200_OK,
             )

@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from jinja2 import Environment
 
-from ..base import GeneratedFile
 from ...ir import IRSchemaObject
+from ..base import GeneratedFile
 
 
 class ModelsGenerator:

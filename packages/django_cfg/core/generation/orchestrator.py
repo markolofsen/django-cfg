@@ -5,8 +5,8 @@ Coordinates all specialized generators to produce complete Django settings.
 Size: ~200 lines (orchestration logic)
 """
 
-from typing import Dict, Any, List, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from django_cfg.core.exceptions import ConfigurationError
 

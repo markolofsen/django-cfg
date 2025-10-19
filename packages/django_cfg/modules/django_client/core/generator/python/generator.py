@@ -12,16 +12,16 @@ Coordinates all sub-generators:
 from __future__ import annotations
 
 import pathlib
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from ..base import BaseGenerator, GeneratedFile
 from ...ir import IROperationObject, IRSchemaObject
-
+from ..base import BaseGenerator, GeneratedFile
+from .async_client_gen import AsyncClientGenerator
+from .files_generator import FilesGenerator
 from .models_generator import ModelsGenerator
 from .operations_generator import OperationsGenerator
-from .async_client_gen import AsyncClientGenerator
 from .sync_client_gen import SyncClientGenerator
-from .files_generator import FilesGenerator
 
 
 class PythonGenerator(BaseGenerator):

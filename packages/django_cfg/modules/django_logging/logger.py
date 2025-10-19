@@ -4,19 +4,15 @@ Centralized Logger for Django Config Toolkit
 Provides configurable logging with different levels and formatters.
 """
 
+import json
 import logging
 import os
 import sys
-import json
-from typing import Optional, Dict, Any, Union, List
-from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 import yaml
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.panel import Panel
-from rich.text import Text
-from rich.table import Table
-from rich.syntax import Syntax
 
 
 class LoggerConfig:

@@ -32,12 +32,12 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "1.4.4"
+__version__ = "1.4.49"
 __license__ = "MIT"
 
 # Import registry for organized lazy loading
-from .registry import DJANGO_CFG_REGISTRY
 from .config import LIB_NAME
+from .registry import DJANGO_CFG_REGISTRY
 
 # Get author from library config
 __author__ = LIB_NAME
@@ -47,11 +47,11 @@ def __getattr__(name: str):
     """Lazy import mechanism using registry pattern."""
     if name in DJANGO_CFG_REGISTRY:
         module_path, class_name = DJANGO_CFG_REGISTRY[name]
-        
+
         import importlib
         module = importlib.import_module(module_path)
         return getattr(module, class_name)
-    
+
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 

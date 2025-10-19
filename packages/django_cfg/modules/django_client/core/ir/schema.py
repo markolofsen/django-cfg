@@ -13,7 +13,7 @@ Key Features:
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -307,9 +307,15 @@ class IRSchemaObject(BaseModel):
             ...     items=IRSchemaObject(name="User", type="object", ref="User")
             ... ).typescript_type
             'Array<User>'
+            >>> # Binary field (file upload)
+            >>> IRSchemaObject(name="file", type="string", format="binary").typescript_type
+            'File | Blob'
         """
+        # Handle binary type (file uploads)
+        if self.is_binary:
+            base_type = "File | Blob"
         # Handle array type with proper item type resolution
-        if self.type == "array":
+        elif self.type == "array":
             if self.items:
                 # If items is a $ref, use the ref name directly
                 if self.items.ref:

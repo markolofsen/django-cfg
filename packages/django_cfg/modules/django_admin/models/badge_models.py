@@ -2,9 +2,11 @@
 Badge configuration models.
 """
 
+from typing import Dict, Optional
+
 from pydantic import Field
-from typing import Optional, Dict
-from .base import BaseConfig, BadgeVariant
+
+from .base import BadgeVariant, BaseConfig
 
 
 class BadgeConfig(BaseConfig):

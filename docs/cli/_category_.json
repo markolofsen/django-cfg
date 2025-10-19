@@ -1,0 +1,9 @@
+{
+  "label": "CLI Tools",
+  "position": 6,
+  "link": {
+    "type": "generated-index",
+    "description": "Command-line interface: built-in commands, custom commands, and project management tools."
+  },
+  "collapsed": true
+}

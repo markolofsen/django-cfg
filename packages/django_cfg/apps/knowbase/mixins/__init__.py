@@ -2,15 +2,15 @@
 Mixins for knowbase integration.
 """
 
-from .external_data_mixin import ExternalDataMixin
-from .config import ExternalDataMetaConfig, ExternalDataMetaParser, ExternalDataDefaults
+from .config import ExternalDataDefaults, ExternalDataMetaConfig, ExternalDataMetaParser
 from .creator import ExternalDataCreator
-from .service import ExternalDataService
+from .external_data_mixin import ExternalDataMixin
 from .generators import (
     ExternalDataContentGenerator,
-    ExternalDataMetadataGenerator,
     ExternalDataFieldAnalyzer,
+    ExternalDataMetadataGenerator,
 )
+from .service import ExternalDataService
 
 __all__ = [
     # Core mixin

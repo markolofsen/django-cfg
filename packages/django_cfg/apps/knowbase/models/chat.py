@@ -3,16 +3,17 @@ Chat models for RAG-powered conversations.
 """
 
 from django.db import models
+
 from .base import UserScopedModel
 
 
 class ChatSession(UserScopedModel):
     """User chat session for conversation tracking."""
-    
+
     # Custom managers
     from ..managers.chat import ChatSessionManager
     objects = ChatSessionManager()
-    
+
     title = models.CharField(
         max_length=255,
         blank=True,
@@ -22,7 +23,7 @@ class ChatSession(UserScopedModel):
         default=True,
         help_text="Whether session accepts new messages"
     )
-    
+
     # Session statistics
     messages_count = models.PositiveIntegerField(default=0)
     total_tokens_used = models.PositiveIntegerField(default=0)
@@ -30,7 +31,7 @@ class ChatSession(UserScopedModel):
         default=0.0,
         help_text="Total session cost for monitoring"
     )
-    
+
     # Configuration
     model_name = models.CharField(
         max_length=100,
@@ -45,17 +46,17 @@ class ChatSession(UserScopedModel):
         default=5,
         help_text="Maximum chunks to include in context"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_chat_sessions'
         indexes = [
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['is_active']),
         ]
-    
+
     def __str__(self) -> str:
         return self.title or f"Session {self.id}"
-    
+
     def generate_title_if_empty(self) -> None:
         """Auto-generate title based on first message."""
         if not self.title and self.messages.exists():
@@ -66,17 +67,17 @@ class ChatSession(UserScopedModel):
                 # Take first 50 characters as title
                 self.title = first_message.content[:50] + "..."
                 self.save(update_fields=['title'])
-    
+
     def archive(self) -> None:
         """Archive (deactivate) this session."""
         self.is_active = False
         self.save(update_fields=['is_active'])
-    
+
     def activate(self) -> None:
         """Activate this session."""
         self.is_active = True
         self.save(update_fields=['is_active'])
-    
+
     @property
     def is_archived(self) -> bool:
         """Check if session is archived."""
@@ -85,23 +86,23 @@ class ChatSession(UserScopedModel):
 
 class ChatMessage(UserScopedModel):
     """Individual chat message with context tracking."""
-    
+
     # Custom managers
     from ..managers.chat import ChatMessageManager
     objects = ChatMessageManager()
-    
+
     class MessageRole(models.TextChoices):
         USER = 'user', 'User'
         ASSISTANT = 'assistant', 'Assistant'
         SYSTEM = 'system', 'System'
-    
+
     session = models.ForeignKey(
         ChatSession,
         on_delete=models.CASCADE,
         related_name='messages',
         help_text="Parent chat session"
     )
-    
+
     role = models.CharField(
         max_length=10,
         choices=MessageRole.choices,
@@ -110,13 +111,13 @@ class ChatMessage(UserScopedModel):
     content = models.TextField(
         help_text="Message content"
     )
-    
+
     # Context tracking
     context_chunks = models.JSONField(
         default=list,
         help_text="IDs of chunks used for context"
     )
-    
+
     # Usage tracking (for monitoring, not billing)
     tokens_used = models.PositiveIntegerField(
         default=0,
@@ -130,7 +131,7 @@ class ChatMessage(UserScopedModel):
         default=0,
         help_text="Processing time in milliseconds"
     )
-    
+
     # Response metadata
     model_name = models.CharField(
         max_length=100,
@@ -142,7 +143,7 @@ class ChatMessage(UserScopedModel):
         blank=True,
         help_text="Why the model stopped generating"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_chat_messages'
         indexes = [
@@ -151,7 +152,7 @@ class ChatMessage(UserScopedModel):
             models.Index(fields=['-created_at']),
         ]
         ordering = ['created_at']
-    
+
     def __str__(self) -> str:
         preview = self.content[:50] + "..." if len(self.content) > 50 else self.content
         return f"{self.role}: {preview}"

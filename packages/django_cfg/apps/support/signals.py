@@ -1,13 +1,15 @@
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-import traceback
 import logging
 import socket
+import traceback
 from smtplib import SMTPException
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from django_cfg.modules.django_telegram import DjangoTelegram
 
 from .models import Message, Ticket
 from .utils.support_email_service import SupportEmailService
-from django_cfg.modules.django_telegram import DjangoTelegram
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +17,14 @@ logger = logging.getLogger(__name__)
 def notify_on_message(sender, instance: Message, created: bool, **kwargs):
     """Send notifications when a new message is created."""
     logger.info(f"🔔 Signal triggered: Message {instance.uuid} created={created}")
-    
+
     if not created:
         logger.info("   ⏭️ Not a new message, skipping")
         return
 
     ticket = instance.ticket
     user = ticket.user
-    
+
     logger.info(f"   📝 Message from: {instance.sender.username} (is_staff: {instance.sender.is_staff})")
     logger.info(f"   🎫 Ticket author: {user.username}")
     logger.info(f"   📧 Is from author: {instance.is_from_author}")
@@ -33,10 +35,10 @@ def notify_on_message(sender, instance: Message, created: bool, **kwargs):
         try:
             email_service = SupportEmailService(user)
             email_service.send_support_reply_email(instance)
-            logger.info(f"   📬 Email sent successfully!")
+            logger.info("   📬 Email sent successfully!")
         except (socket.timeout, TimeoutError, SMTPException) as e:
             logger.warning(f"   ⚠️ Email service timeout/error: {e}")
-            logger.info(f"   📝 Message processed successfully, email notification failed")
+            logger.info("   📝 Message processed successfully, email notification failed")
             # Do not re-raise to prevent blocking the main process
         except Exception as e:
             logger.error(f"   ❌ Failed to send email notification: {e}")
@@ -75,10 +77,10 @@ def notify_on_ticket_created(sender, instance: Ticket, created: bool, **kwargs):
     try:
         email_service = SupportEmailService(instance.user)
         email_service.send_ticket_created_email(instance)
-        logger.info(f"   📬 Ticket creation email sent successfully!")
+        logger.info("   📬 Ticket creation email sent successfully!")
     except (socket.timeout, TimeoutError, SMTPException) as e:
         logger.warning(f"   ⚠️ Email service timeout/error for ticket creation: {e}")
-        logger.info(f"   📝 Ticket created successfully, email notification failed")
+        logger.info("   📝 Ticket created successfully, email notification failed")
     except Exception as e:
         logger.error(f"   ❌ Failed to send ticket creation email: {e}")
         logger.debug(f"   🔍 Exception details: {traceback.format_exc()}")

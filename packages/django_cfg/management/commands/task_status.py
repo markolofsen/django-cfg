@@ -10,7 +10,9 @@ Usage:
     python manage.py task_status --verbose
 """
 
-from django_cfg.modules.django_tasks.management.commands.task_status import Command as TaskStatusCommand
+from django_cfg.modules.django_tasks.management.commands.task_status import (
+    Command as TaskStatusCommand,
+)
 
 
 class Command(TaskStatusCommand):

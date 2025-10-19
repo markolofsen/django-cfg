@@ -5,6 +5,7 @@ Provides RESTful endpoints for task queue management and monitoring using ViewSe
 """
 
 from django.urls import path
+
 from .views import dashboard_view
 
 urlpatterns = [

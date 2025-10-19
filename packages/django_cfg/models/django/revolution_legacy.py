@@ -18,10 +18,11 @@ Solution: Make all fields in detail serializers read-only to prevent splitting:
 This ensures TypeScript generator creates a single type without Readable/Writable suffix.
 """
 
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, Optional
+
 from django_revolution.app_config import DjangoRevolutionConfig as BaseDjangoRevolutionConfig
 from django_revolution.app_config import ZoneConfig
+from pydantic import Field
 
 
 class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
@@ -31,18 +32,18 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
     This extends the base DjangoRevolutionConfig to include DRF-specific
     parameters that will be passed to create_drf_config automatically.
     """
-    
+
     # DRF Configuration parameters for create_drf_config
     drf_title: str = Field(
-        default="API", 
+        default="API",
         description="API title for DRF Spectacular"
     )
     drf_description: str = Field(
-        default="RESTful API", 
+        default="RESTful API",
         description="API description for DRF Spectacular"
     )
     drf_version: str = Field(
-        default="1.0.0", 
+        default="1.0.0",
         description="API version for DRF Spectacular"
     )
     drf_schema_path_prefix: Optional[str] = Field(
@@ -50,24 +51,24 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
         description="Schema path prefix for DRF Spectacular"
     )
     drf_enable_browsable_api: bool = Field(
-        default=False, 
+        default=False,
         description="Enable DRF browsable API"
     )
     drf_enable_throttling: bool = Field(
-        default=False, 
+        default=False,
         description="Enable DRF throttling"
     )
     drf_serve_include_schema: bool = Field(
         default=False,
         description="Include schema in Spectacular UI (should be False for Django Revolution)"
     )
-    
+
     def get_drf_schema_path_prefix(self) -> str:
         """Get the schema path prefix, defaulting to api_prefix if not set."""
         if self.drf_schema_path_prefix:
             return self.drf_schema_path_prefix
         return f"/{self.api_prefix}/"
-    
+
     def get_drf_config_kwargs(self) -> Dict[str, Any]:
         """
         Get kwargs for create_drf_config from this configuration.
@@ -84,7 +85,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             "enable_throttling": self.drf_enable_throttling,
             "serve_include_schema": self.drf_serve_include_schema,
         }
-    
+
     def get_zones_with_defaults(self) -> Dict[str, Any]:
         """
         Get zones with django-cfg default zones automatically added.
@@ -93,12 +94,12 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             Dict of zones including default django-cfg zones
         """
         zones = dict(self.zones) if hasattr(self, 'zones') and self.zones else {}
-        
+
         # Add default django-cfg zones if enabled
         try:
             from django_cfg.modules.base import BaseCfgModule
             base_module = BaseCfgModule()
-            
+
             support_enabled = base_module.is_support_enabled()
             accounts_enabled = base_module.is_accounts_enabled()
             newsletter_enabled = base_module.is_newsletter_enabled()
@@ -107,7 +108,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             agents_enabled = base_module.is_agents_enabled()
             tasks_enabled = base_module.should_enable_tasks()
             payments_enabled = base_module.is_payments_enabled()
-            
+
             # Add Support zone if enabled
             default_support_zone = 'cfg_support'
             if support_enabled and default_support_zone not in zones:
@@ -120,7 +121,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
                     group="cfg",
                     # version="v1",
                 )
-            
+
             # Add Accounts zone if enabled
             default_accounts_zone = 'cfg_accounts'
             if accounts_enabled and default_accounts_zone not in zones:
@@ -214,7 +215,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
 
         except Exception:
             pass
-            
+
         return zones
 
 

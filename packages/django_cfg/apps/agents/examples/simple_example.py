@@ -3,11 +3,16 @@ Simple example demonstrating Django Orchestrator usage.
 """
 
 import asyncio
-from dataclasses import dataclass
-from pydantic import BaseModel
-from django.contrib.auth.models import User
 
-from django_cfg.modules.django_orchestrator import DjangoAgent, SimpleOrchestrator, DjangoDeps, RunContext
+from django.contrib.auth.models import User
+from pydantic import BaseModel
+
+from django_cfg.modules.django_orchestrator import (
+    DjangoAgent,
+    DjangoDeps,
+    RunContext,
+    SimpleOrchestrator,
+)
 
 
 # Define output model
@@ -40,7 +45,7 @@ async def get_time_of_day(ctx: RunContext[DjangoDeps]) -> str:
     """Get current time of day for greeting."""
     from datetime import datetime
     hour = datetime.now().hour
-    
+
     if hour < 12:
         return "morning"
     elif hour < 17:
@@ -53,7 +58,7 @@ async def simple_example():
     """Run simple orchestrator example."""
     print("🤖 Django Orchestrator Simple Example")
     print("=" * 50)
-    
+
     # Create test user (in real app, get from request)
     try:
         user = await User.objects.aget(username='testuser')
@@ -64,14 +69,14 @@ async def simple_example():
             first_name='Test',
             last_name='User'
         )
-    
+
     # Create dependencies
     deps = DjangoDeps(user=user)
-    
+
     # Create orchestrator
     orchestrator = SimpleOrchestrator()
     orchestrator.register_agent(greeting_agent)
-    
+
     # Execute single agent
     print("\n1. Single Agent Execution:")
     results = await orchestrator.execute(
@@ -80,19 +85,19 @@ async def simple_example():
         prompt="Create a personalized greeting",
         deps=deps
     )
-    
+
     result = results[0]
     print(f"✅ Agent: {result.agent_name}")
     print(f"✅ Output: {result.output}")
     print(f"✅ Execution Time: {result.execution_time:.2f}s")
     print(f"✅ Tokens Used: {result.tokens_used}")
-    
+
     # Get metrics
     print("\n2. Agent Metrics:")
     metrics = greeting_agent.get_metrics()
     for key, value in metrics.items():
         print(f"📊 {key}: {value}")
-    
+
     # Get orchestrator metrics
     print("\n3. Orchestrator Metrics:")
     orch_metrics = orchestrator.get_metrics()
@@ -104,7 +109,7 @@ async def multi_agent_example():
     """Run multi-agent orchestrator example."""
     print("\n🤖 Multi-Agent Example")
     print("=" * 30)
-    
+
     # Create additional agents
     analyzer_agent = DjangoAgent[DjangoDeps, BaseModel](
         name="content_analyzer",
@@ -112,23 +117,23 @@ async def multi_agent_example():
         output_type=BaseModel,
         instructions="Analyze content sentiment and topics"
     )
-    
+
     formatter_agent = DjangoAgent[DjangoDeps, BaseModel](
         name="content_formatter",
         deps_type=DjangoDeps,
         output_type=BaseModel,
         instructions="Format content for display"
     )
-    
+
     # Create orchestrator
     orchestrator = SimpleOrchestrator()
     orchestrator.register_agent(analyzer_agent)
     orchestrator.register_agent(formatter_agent)
-    
+
     # Get user
     user = await User.objects.aget(username='testuser')
     deps = DjangoDeps(user=user)
-    
+
     # Execute sequential workflow
     print("\n1. Sequential Workflow:")
     results = await orchestrator.execute(
@@ -137,10 +142,10 @@ async def multi_agent_example():
         prompt="Analyze and format this content: Hello world!",
         deps=deps
     )
-    
+
     for i, result in enumerate(results, 1):
         print(f"Step {i} - {result.agent_name}: {result.success}")
-    
+
     # Execute parallel workflow
     print("\n2. Parallel Workflow:")
     results = await orchestrator.execute(
@@ -150,7 +155,7 @@ async def multi_agent_example():
         deps=deps,
         max_concurrent=2
     )
-    
+
     successful = sum(1 for r in results if r.success)
     print(f"✅ {successful}/{len(results)} agents completed successfully")
 

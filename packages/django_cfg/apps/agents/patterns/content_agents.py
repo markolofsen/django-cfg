@@ -2,12 +2,13 @@
 Pre-built content processing agents.
 """
 
+from typing import Any, Dict, List
+
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
 
 from ..core.agent import DjangoAgent
 from ..core.dependencies import ContentDeps, RunContext
-from ..core.models import AnalysisResult, ProcessResult, ValidationResult
+from ..core.models import ValidationResult
 
 
 class ContentAnalysisResult(BaseModel):
@@ -59,7 +60,7 @@ def ContentAnalyzerAgent() -> DjangoAgent[ContentDeps, ContentAnalysisResult]:
         Be thorough but concise in your analysis.
         """
     )
-    
+
     @agent.tool
     async def analyze_text_structure(ctx: RunContext[ContentDeps]) -> Dict[str, Any]:
         """Analyze text structure and formatting."""
@@ -70,7 +71,7 @@ def ContentAnalyzerAgent() -> DjangoAgent[ContentDeps, ContentAnalysisResult]:
             "avg_sentence_length": 0.0,
             "complexity_score": 0.0
         }
-    
+
     @agent.tool
     async def extract_entities(ctx: RunContext[ContentDeps]) -> List[Dict[str, str]]:
         """Extract named entities from content."""
@@ -78,7 +79,7 @@ def ContentAnalyzerAgent() -> DjangoAgent[ContentDeps, ContentAnalysisResult]:
         return [
             {"text": "example", "label": "PERSON", "confidence": 0.95}
         ]
-    
+
     @agent.tool
     async def get_content_metadata(ctx: RunContext[ContentDeps]) -> Dict[str, Any]:
         """Get content metadata from dependencies."""
@@ -88,7 +89,7 @@ def ContentAnalyzerAgent() -> DjangoAgent[ContentDeps, ContentAnalysisResult]:
             "target_audience": ctx.deps.target_audience,
             "user_id": ctx.deps.user.id
         }
-    
+
     return agent
 
 
@@ -123,7 +124,7 @@ def ContentGeneratorAgent() -> DjangoAgent[ContentDeps, ContentGenerationResult]
         - Optimized for readability
         """
     )
-    
+
     @agent.tool
     async def get_style_guidelines(ctx: RunContext[ContentDeps]) -> Dict[str, Any]:
         """Get style guidelines for content generation."""
@@ -134,7 +135,7 @@ def ContentGeneratorAgent() -> DjangoAgent[ContentDeps, ContentGenerationResult]
             "include_headers": True,
             "target_audience": ctx.deps.target_audience
         }
-    
+
     @agent.tool
     async def check_content_requirements(ctx: RunContext[ContentDeps]) -> Dict[str, Any]:
         """Check content requirements and constraints."""
@@ -145,19 +146,19 @@ def ContentGeneratorAgent() -> DjangoAgent[ContentDeps, ContentGenerationResult]
             "required_keywords": [],
             "forbidden_topics": []
         }
-    
+
     @agent.tool
     async def validate_generated_content(ctx: RunContext[ContentDeps], content: str) -> Dict[str, Any]:
         """Validate generated content quality."""
         word_count = len(content.split())
-        
+
         return {
             "word_count": word_count,
             "quality_score": 0.85,  # This would be calculated by quality metrics
             "passes_validation": word_count >= 100,
             "suggestions": []
         }
-    
+
     return agent
 
 
@@ -189,7 +190,7 @@ def ContentValidatorAgent() -> DjangoAgent[ContentDeps, ValidationResult]:
         Mark content as valid only if it meets all quality standards.
         """
     )
-    
+
     @agent.tool
     async def check_grammar_spelling(ctx: RunContext[ContentDeps], content: str) -> Dict[str, Any]:
         """Check grammar and spelling."""
@@ -200,7 +201,7 @@ def ContentValidatorAgent() -> DjangoAgent[ContentDeps, ValidationResult]:
             "grammar_score": 0.95,
             "suggestions": []
         }
-    
+
     @agent.tool
     async def check_style_consistency(ctx: RunContext[ContentDeps], content: str) -> Dict[str, Any]:
         """Check style consistency."""
@@ -210,7 +211,7 @@ def ContentValidatorAgent() -> DjangoAgent[ContentDeps, ValidationResult]:
             "tone_analysis": "consistent",
             "readability_grade": 8.5
         }
-    
+
     @agent.tool
     async def check_content_guidelines(ctx: RunContext[ContentDeps], content: str) -> Dict[str, Any]:
         """Check compliance with content guidelines."""
@@ -220,7 +221,7 @@ def ContentValidatorAgent() -> DjangoAgent[ContentDeps, ValidationResult]:
             "compliance_score": 0.98,
             "recommendations": []
         }
-    
+
     @agent.tool
     async def check_factual_accuracy(ctx: RunContext[ContentDeps], content: str) -> Dict[str, Any]:
         """Check factual accuracy of content."""
@@ -230,5 +231,5 @@ def ContentValidatorAgent() -> DjangoAgent[ContentDeps, ValidationResult]:
             "fact_check_results": [],
             "verification_needed": []
         }
-    
+
     return agent

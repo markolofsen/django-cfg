@@ -4,9 +4,8 @@ OpenAI embedder for real embedding generation.
 Uses OpenAI Embeddings API to generate high-quality embeddings.
 """
 
-import time
 import logging
-from typing import Optional
+import time
 
 from ..costs import calculate_embedding_cost
 from ..models import EmbeddingResponse

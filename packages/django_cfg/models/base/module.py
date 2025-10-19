@@ -4,8 +4,8 @@ Base Configuration Module for Django CFG
 Provides a unified base class for all auto-configuration modules.
 """
 
-from typing import Optional, TYPE_CHECKING
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from django_cfg.core.config import DjangoConfig
@@ -18,7 +18,7 @@ class BaseCfgAutoModule(ABC):
     Provides unified configuration access and smart defaults.
     Designed to be used in generation.py without circular imports.
     """
-    
+
     def __init__(self, config: Optional["DjangoConfig"] = None):
         """
         Initialize the auto-configuration module.
@@ -27,7 +27,7 @@ class BaseCfgAutoModule(ABC):
             config: DjangoConfig instance (passed from generation.py)
         """
         self._config = config
-    
+
     def set_config(self, config: "DjangoConfig") -> None:
         """
         Set the configuration instance.
@@ -36,11 +36,11 @@ class BaseCfgAutoModule(ABC):
             config: The DjangoConfig instance
         """
         self._config = config
-    
+
     def get_config(self) -> Optional["DjangoConfig"]:
         """Get the current configuration instance."""
         return self._config
-    
+
     def has_config_field(self, field_name: str) -> bool:
         """
         Check if config has a specific field with a non-None value.
@@ -54,7 +54,7 @@ class BaseCfgAutoModule(ABC):
         if not self._config:
             return False
         return hasattr(self._config, field_name) and getattr(self._config, field_name) is not None
-    
+
     def get_config_field(self, field_name: str, default=None):
         """
         Get a field value from config with fallback.
@@ -69,7 +69,7 @@ class BaseCfgAutoModule(ABC):
         if not self._config:
             return default
         return getattr(self._config, field_name, default)
-    
+
     @abstractmethod
     def get_smart_defaults(self):
         """
@@ -79,7 +79,7 @@ class BaseCfgAutoModule(ABC):
             Configuration object with intelligent defaults
         """
         pass
-    
+
     @abstractmethod
     def get_module_config(self):
         """

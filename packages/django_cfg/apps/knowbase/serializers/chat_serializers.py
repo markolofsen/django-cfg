@@ -3,13 +3,14 @@ Chat serializers for DRF API.
 """
 
 from rest_framework import serializers
-from ..models import ChatSession, ChatMessage
+
+from ..models import ChatMessage, ChatSession
 from ..utils.validation import is_valid_float, safe_float
 
 
 class ChatSessionCreateSerializer(serializers.Serializer):
     """Chat session creation request serializer."""
-    
+
     title = serializers.CharField(
         max_length=255,
         default="",
@@ -37,7 +38,7 @@ class ChatSessionCreateSerializer(serializers.Serializer):
 
 class ChatQuerySerializer(serializers.Serializer):
     """Chat query request serializer."""
-    
+
     session_id = serializers.UUIDField(
         required=False,
         allow_null=True,
@@ -58,7 +59,7 @@ class ChatQuerySerializer(serializers.Serializer):
         default=True,
         help_text="Include source documents in response"
     )
-    
+
     def validate_query(self, value):
         """Validate query content."""
         if not value.strip():
@@ -68,11 +69,11 @@ class ChatQuerySerializer(serializers.Serializer):
 
 class ChatSourceSerializer(serializers.Serializer):
     """Chat source document information serializer."""
-    
+
     document_title = serializers.CharField()
     chunk_content = serializers.CharField()
     similarity = serializers.FloatField()
-    
+
     def validate_similarity(self, value):
         """Validate similarity value to prevent NaN in JSON."""
         if not is_valid_float(value):
@@ -82,7 +83,7 @@ class ChatSourceSerializer(serializers.Serializer):
 
 class ChatResponseSerializer(serializers.Serializer):
     """Chat response serializer."""
-    
+
     message_id = serializers.UUIDField()
     content = serializers.CharField()
     tokens_used = serializers.IntegerField()
@@ -94,14 +95,14 @@ class ChatResponseSerializer(serializers.Serializer):
 
 class ChatSessionSerializer(serializers.ModelSerializer):
     """Chat session response serializer."""
-    
+
     id = serializers.UUIDField(read_only=True)
     total_cost_usd = serializers.FloatField(read_only=True)
-    
+
     def validate_total_cost_usd(self, value):
         """Validate cost value to prevent NaN in JSON."""
         return safe_float(value, 0.0)
-    
+
     class Meta:
         model = ChatSession
         fields = [
@@ -113,14 +114,14 @@ class ChatSessionSerializer(serializers.ModelSerializer):
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     """Chat message response serializer."""
-    
+
     id = serializers.UUIDField(read_only=True)
     cost_usd = serializers.FloatField(read_only=True)
-    
+
     def validate_cost_usd(self, value):
         """Validate cost value to prevent NaN in JSON."""
         return safe_float(value, 0.0)
-    
+
     class Meta:
         model = ChatMessage
         fields = [
@@ -131,7 +132,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
 class ChatHistorySerializer(serializers.Serializer):
     """Chat history response serializer."""
-    
+
     session_id = serializers.UUIDField()
     messages = ChatMessageSerializer(many=True)
     total_messages = serializers.IntegerField()

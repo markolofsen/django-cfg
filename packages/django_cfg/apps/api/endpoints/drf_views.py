@@ -4,10 +4,10 @@ Django CFG Endpoints Status DRF Views
 DRF browsable API views with Tailwind theme support.
 """
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .checker import check_all_endpoints
 from .serializers import EndpointsStatusSerializer

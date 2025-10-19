@@ -4,7 +4,6 @@ Simple naming strategy for TypeScript code generation.
 Strategy: Use full operation_id, remove tag prefix, convert to camelCase/PascalCase.
 """
 
-import re
 
 
 def to_camel_case(s: str) -> str:
@@ -73,11 +72,11 @@ def operation_to_method_name(
     """
     # Remove tag prefix
     clean_id = remove_tag_prefix(operation_id)
-    
+
     # For client methods (no prefix): camelCase
     if not prefix:
         return to_camel_case(clean_id)
-    
+
     # For fetchers/hooks (with prefix): prefix + PascalCase
     return f"{prefix}{to_pascal_case(clean_id)}"
 

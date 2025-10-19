@@ -1,0 +1,22 @@
+import * as Models from "./models";
+
+
+/**
+ * API endpoints for Endpoints.
+ */
+export class CfgEndpoints {
+  private client: any;
+
+  constructor(client: any) {
+    this.client = client;
+  }
+
+  /**
+   * Return endpoints status data.
+   */
+  async drfRetrieve(): Promise<Models.EndpointsStatus> {
+    const response = await this.client.request('GET', "/cfg/endpoints/drf/");
+    return response;
+  }
+
+}

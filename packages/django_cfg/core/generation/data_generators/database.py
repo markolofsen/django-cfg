@@ -5,8 +5,8 @@ Handles DATABASES configuration and routing.
 Size: ~100 lines (focused on database settings)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig

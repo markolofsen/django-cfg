@@ -1,0 +1,9 @@
+{
+  "label": "Features",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Django-CFG functionality: built-in applications, modules, and third-party integrations."
+  },
+  "collapsed": true
+}

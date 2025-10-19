@@ -9,9 +9,9 @@ Provides type-safe configuration for DRF and API documentation:
 """
 
 from .config import DRFConfig
+from .redoc import RedocUISettings
 from .spectacular import SpectacularConfig
 from .swagger import SwaggerUISettings
-from .redoc import RedocUISettings
 
 __all__ = [
     "DRFConfig",

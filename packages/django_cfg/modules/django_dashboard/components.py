@@ -5,7 +5,8 @@ Uses Unfold's Component Class system for data preprocessing.
 Separates business logic from presentation templates.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from unfold.components import BaseComponent, register_component
 
 
@@ -27,9 +28,10 @@ class SystemMetricsComponent(BaseComponent):
 
     def get_system_metrics(self) -> Dict[str, Any]:
         """Fetch system health metrics."""
-        from django.db import connection
-        from django.core.cache import cache
         import shutil
+
+        from django.core.cache import cache
+        from django.db import connection
 
         metrics = {}
 
@@ -100,7 +102,7 @@ class SystemMetricsComponent(BaseComponent):
                 "title": "REST API",
                 "description": f"{len(url_patterns)} URL patterns",
             }
-        except Exception as e:
+        except Exception:
             metrics["api"] = {
                 "value": 50,
                 "title": "REST API",
@@ -170,10 +172,11 @@ class ChartsComponent(BaseComponent):
         # Get time range from kwargs (default: 7 days)
         days = kwargs.get('days', 7)
 
-        from django.contrib.auth import get_user_model
-        from datetime import datetime, timedelta
-        from django.utils import timezone
         import json
+        from datetime import datetime, timedelta
+
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
 
         User = get_user_model()
 
@@ -251,8 +254,9 @@ class ActivityTrackerComponent(BaseComponent):
         """Prepare activity tracker data."""
         context = super().get_context_data(**kwargs)
 
-        from django.contrib.auth import get_user_model
         from datetime import timedelta
+
+        from django.contrib.auth import get_user_model
         from django.utils import timezone
 
         User = get_user_model()

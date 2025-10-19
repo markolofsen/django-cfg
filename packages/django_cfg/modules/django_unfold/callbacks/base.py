@@ -2,13 +2,14 @@
 Base utilities and helper functions for callbacks.
 """
 
-import logging
+import importlib
 import inspect
-from typing import Dict, Any, List, Set, Optional
+import logging
+from typing import Any, Dict, Set
+
 from django.contrib.auth import get_user_model
 from django.core.management import get_commands
 from django.core.management.base import BaseCommand
-import importlib
 
 logger = logging.getLogger(__name__)
 
@@ -242,14 +243,14 @@ def get_available_commands():
 def get_commands_by_category():
     """Get commands categorized by type."""
     commands = get_available_commands()
-    
+
     categorized = {
         'django_cfg': [],
         'django_core': [],
         'third_party': [],
         'project': [],
     }
-    
+
     for cmd in commands:
         if cmd['app'] == 'django_cfg':
             categorized['django_cfg'].append(cmd)
@@ -259,7 +260,7 @@ def get_commands_by_category():
             categorized['project'].append(cmd)
         else:
             categorized['third_party'].append(cmd)
-    
+
     return categorized
 
 
@@ -267,10 +268,10 @@ def get_user_admin_urls():
     """Get admin URLs for user model."""
     try:
         User = get_user_model()
-        
+
         app_label = User._meta.app_label
         model_name = User._meta.model_name
-        
+
         return {
             'changelist': f'admin:{app_label}_{model_name}_changelist',
             'add': f'admin:{app_label}_{model_name}_add',

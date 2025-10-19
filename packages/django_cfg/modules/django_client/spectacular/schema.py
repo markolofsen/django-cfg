@@ -5,6 +5,7 @@ Automatically determines tags based on URL paths for better API organization.
 """
 
 import re
+
 from drf_spectacular.openapi import AutoSchema
 
 
@@ -22,7 +23,7 @@ class PathBasedAutoSchema(AutoSchema):
     
     The TypeScript generator will use these tags to create properly structured folders.
     """
-    
+
     def get_tags(self):
         """
         Override tag determination to use path-based logic.
@@ -30,11 +31,10 @@ class PathBasedAutoSchema(AutoSchema):
         Returns:
             List of tags for this operation
         """
-        import re
-        
+
         # Get the path
         path = self.path
-        
+
         # For cfg URLs (/cfg/app_name/...), extract app_name as tag
         # The TypeScript generator will add the group prefix (cfg_) automatically
         cfg_pattern = re.compile(r"^/cfg/([^/]+)/")
@@ -44,7 +44,7 @@ class PathBasedAutoSchema(AutoSchema):
             # Return just the app_name (e.g., "support", "accounts", "payments")
             # Generator will create: cfg__support, cfg__accounts, etc.
             return [app_name]
-        
+
         # For other URLs, use default behavior (usually based on view name)
         return super().get_tags()
 

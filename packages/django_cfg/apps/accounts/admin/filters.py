@@ -4,11 +4,12 @@ Custom admin filters for Accounts app.
 Enhanced filters with better organization and performance.
 """
 
-from django.contrib import admin
-from django.utils import timezone
 from datetime import timedelta
+
+from django.contrib import admin
 from django.db import models
 from django.db.models import Count
+from django.utils import timezone
 
 
 class UserStatusFilter(admin.SimpleListFilter):
@@ -56,7 +57,7 @@ class OTPStatusFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         now = timezone.now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
+
         if self.value() == "valid":
             return queryset.filter(is_used=False, expires_at__gt=now)
         elif self.value() == "used":
@@ -115,7 +116,7 @@ class ActivityTypeFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         now = timezone.now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
+
         if self.value() == "recent":
             return queryset.filter(created_at__gte=now - timedelta(hours=24))
         elif self.value() == "today":
@@ -140,12 +141,12 @@ class TwilioResponseStatusFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         now = timezone.now()
-        
+
         if self.value() == "success":
             return queryset.filter(error_code__isnull=True, error_message__isnull=True)
         elif self.value() == "error":
             return queryset.filter(
-                models.Q(error_code__isnull=False) | 
+                models.Q(error_code__isnull=False) |
                 models.Q(error_message__isnull=False)
             )
         elif self.value() == "pending":

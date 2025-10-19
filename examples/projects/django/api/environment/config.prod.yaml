@@ -1,0 +1,28 @@
+# Production Environment Configuration
+# Only environment-specific overrides (all defaults in loader.py)
+
+# === Core Django Settings ===
+secret_key: "django-cfg-sample-prod-key-CHANGE-THIS-IN-PRODUCTION-this-is-long-enough-for-django-security-requirements-minimum-50-characters"
+debug: false
+
+# === Database ===
+database:
+  url: "postgresql://postgres:postgres@postgres:5432/djangocfg"
+
+# === Application URLs ===
+app:
+  domain: "djangocfg.com"
+  api_url: "https://api.djangocfg.com"
+  site_url: "https://djangocfg.com"
+
+# === Security Domains ===
+security_domains:
+  - "djangocfg.com"
+  - "api.djangocfg.com"
+
+# === Admin Configuration ===
+admin_emails:
+  - "info@djangocfg.com"
+
+# === Cache ===
+redis_url: "redis://redis:6379/1"

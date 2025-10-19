@@ -1,7 +1,9 @@
 from typing import Optional
-from rest_framework import serializers
+
 from django.contrib.auth import get_user_model
-from .models import Ticket, Message
+from rest_framework import serializers
+
+from .models import Message, Ticket
 
 User = get_user_model()
 

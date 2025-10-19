@@ -10,6 +10,6 @@ from .maintenance_log_manager import MaintenanceLogManager, MaintenanceLogQueryS
 __all__ = [
     'CloudflareSiteManager',
     'CloudflareSiteQuerySet',
-    'MaintenanceLogManager', 
+    'MaintenanceLogManager',
     'MaintenanceLogQuerySet',
 ]

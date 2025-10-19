@@ -6,7 +6,7 @@ Handles translation of JSON objects with smart caching and batch processing.
 
 import json
 import logging
-from typing import Dict, Any, List, Set, Optional
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 

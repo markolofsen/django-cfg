@@ -3,10 +3,11 @@
 import django.contrib.auth.validators
 import django.db.models.deletion
 import django.utils.timezone
-import django_cfg.apps.accounts.managers.user_manager
-import django_cfg.apps.accounts.models
 from django.conf import settings
 from django.db import migrations, models
+
+import django_cfg.apps.accounts.managers.user_manager
+import django_cfg.apps.accounts.models
 
 
 class Migration(migrations.Migration):

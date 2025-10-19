@@ -5,11 +5,12 @@ Contains TaskConfig class (main entry point) and related enums.
 Size: ~250 lines (focused on main configuration)
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict, Any
-from enum import Enum
-import os
 import logging
+import os
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 from django_cfg.models.base import BaseCfgAutoModule
 
@@ -303,6 +304,7 @@ class TaskConfig(BaseModel, BaseCfgAutoModule):
 
 # Resolve forward references for Pydantic v2
 from .backends import DramatiqConfig, WorkerConfig
+
 TaskConfig.model_rebuild()
 
 __all__ = [

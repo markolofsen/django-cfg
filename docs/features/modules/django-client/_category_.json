@@ -1,0 +1,8 @@
+{
+  "label": "Django Client",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Auto-generate type-safe API clients from your Django REST Framework API. Create TypeScript and Python clients with full type inference, Zod validation, and SWR hooks."
+  }
+}

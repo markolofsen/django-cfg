@@ -5,8 +5,8 @@ Manages caching of chat and embedding requests.
 """
 
 import logging
-from typing import Optional, Dict, Any, List
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from ..cache import LLMCache
 from ..models import ChatCompletionResponse, EmbeddingResponse

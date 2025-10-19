@@ -3,12 +3,12 @@ User Account Notification System
 Centralized email and telegram notifications for user account events
 """
 import logging
+
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-from django_cfg.modules.django_telegram import DjangoTelegram
-from django_cfg.modules.django_email import DjangoEmailService
-from django_cfg.modules.django_twilio import SimpleTwilioService
+
 from django_cfg.core.state import get_current_config
+from django_cfg.modules.django_email import DjangoEmailService
+from django_cfg.modules.django_telegram import DjangoTelegram
 
 # Get config once
 config = get_current_config()
@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 class AccountNotifications:
     """Centralized account notification system"""
-    
+
     # === PRIVATE EMAIL METHODS ===
-    
+
     @staticmethod
     def _send_email(
         user,
@@ -51,9 +51,9 @@ class AccountNotifications:
             context=context,
             recipient_list=[user.email],
         )
-    
+
     # === EMAIL NOTIFICATIONS ===
-    
+
     @staticmethod
     def send_welcome_email(user, send_email=True, send_telegram=True):
         """Send welcome email and telegram notification for new user"""
@@ -81,7 +81,7 @@ class AccountNotifications:
                 }
             )
             logger.info(f"Welcome telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_profile_update_notification(user, changes, send_email=True, send_telegram=True):
         """Send profile update notification"""
@@ -93,7 +93,7 @@ class AccountNotifications:
         if send_email:
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Security Alert: Profile Updated ⚠️",
+                subject="Security Alert: Profile Updated ⚠️",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Profile Updated</p>',
                 secondary_text=f"Details: Your {change_text} has been updated. If this wasn't you, please contact support immediately.",
@@ -112,7 +112,7 @@ class AccountNotifications:
                 }
             )
             logger.info(f"Profile update telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_account_status_change(user, status_type, reason=None, send_email=True, send_telegram=True):
         """Send account status change notification (activated/deactivated)"""
@@ -160,7 +160,7 @@ class AccountNotifications:
                 DjangoTelegram.send_warning(title, data)
 
             logger.info(f"Account status change telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_login_notification(user, ip_address=None, send_email=False, send_telegram=True):
         """Send login notification (usually only telegram for security monitoring)"""
@@ -189,7 +189,7 @@ class AccountNotifications:
                 }
             )
             logger.info(f"Login telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_otp_notification(user, otp_code, is_new_user=False, source_url=None, channel='email', send_email=True, send_telegram=True):
         """Send OTP notification via email"""
@@ -222,7 +222,7 @@ class AccountNotifications:
                 DjangoTelegram.send_info("🔑 OTP Login Request", notification_data)
 
             logger.info(f"OTP telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_phone_otp_notification(user, otp_code, phone_number, is_new_user=False, source_url=None):
         """Send OTP notification via SMS to client and system notification to Telegram"""
@@ -257,7 +257,7 @@ class AccountNotifications:
                 DjangoTelegram.send_info("🔑📱 Phone OTP Login Request", notification_data)
 
             logger.info(f"Phone OTP system notification sent to Telegram for {phone_number}")
-    
+
     @staticmethod
     def send_otp_verification_success(user, source_url=None, send_telegram=True):
         """Send successful OTP verification notification"""
@@ -272,9 +272,9 @@ class AccountNotifications:
 
             DjangoTelegram.send_success("✅ Successful OTP Login", verification_data)
             logger.info(f"OTP verification telegram notification sent for {user.email}")
-    
+
     # === SECURITY NOTIFICATIONS ===
-    
+
     @staticmethod
     def send_security_alert(user, alert_type, details, send_email=True, send_telegram=True):
         """Send security alert notification"""
@@ -300,7 +300,7 @@ class AccountNotifications:
 
             DjangoTelegram.send_warning(f"🚨 Security Alert: {alert_type}", alert_data)
             logger.info(f"Security alert telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_failed_otp_attempt(identifier, channel='email', ip_address=None, reason="Invalid OTP", send_telegram=True):
         """Send notification about failed OTP attempt"""
@@ -316,7 +316,7 @@ class AccountNotifications:
             channel_emoji = "📧" if channel == 'email' else "📱"
             DjangoTelegram.send_warning(f"❌ Failed {channel.title()} OTP Attempt {channel_emoji}", details)
             logger.info(f"Failed OTP attempt telegram notification sent for {identifier} ({channel})")
-    
+
     @staticmethod
     def send_suspicious_activity(user, activity_type, details, send_email=True, send_telegram=True):
         """Send suspicious activity notification"""
@@ -344,9 +344,9 @@ class AccountNotifications:
 
             DjangoTelegram.send_error(f"🚨 Suspicious Activity: {activity_type}", alert_data)
             logger.info(f"Suspicious activity telegram notification sent for {user.email}")
-    
+
     # === ADMIN NOTIFICATIONS ===
-    
+
     @staticmethod
     def send_admin_user_created(user, created_by=None, send_telegram=True):
         """Send notification when admin creates user"""
@@ -363,7 +363,7 @@ class AccountNotifications:
 
             DjangoTelegram.send_info("👨‍💼 Admin Created User", data)
             logger.info(f"Admin user creation telegram notification sent for {user.email}")
-    
+
     @staticmethod
     def send_bulk_operation_notification(operation_type, count, details=None, send_telegram=True):
         """Send notification about bulk operations"""

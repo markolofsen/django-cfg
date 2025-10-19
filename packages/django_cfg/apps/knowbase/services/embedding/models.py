@@ -5,9 +5,10 @@ This module defines the core data structures used throughout
 the embedding processing pipeline using Pydantic for type safety.
 """
 
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class ChunkType(str, Enum):
@@ -23,25 +24,25 @@ class ChunkData(BaseModel):
     id: str = Field(..., description="Unique chunk identifier")
     content: str = Field(..., min_length=1, description="Chunk content text")
     context_metadata: Optional[Dict[str, Any]] = Field(
-        default=None, 
+        default=None,
         description="Additional context metadata for the chunk"
     )
     parent_id: Optional[str] = Field(
-        default=None, 
+        default=None,
         description="ID of the parent document or archive"
     )
     parent_type: ChunkType = Field(
-        default=ChunkType.UNKNOWN, 
+        default=ChunkType.UNKNOWN,
         description="Type of parent content"
     )
-    
+
     @field_validator('content')
     @classmethod
     def content_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('Content cannot be empty')
         return v.strip()
-    
+
     class Config:
         use_enum_values = True
 
@@ -50,33 +51,33 @@ class EmbeddingResult(BaseModel):
     """Result of embedding generation."""
     chunk_id: str = Field(..., description="ID of the processed chunk")
     embedding: List[float] = Field(
-        default_factory=list, 
+        default_factory=list,
         description="Generated embedding vector"
     )
     tokens: int = Field(
-        default=0, 
-        ge=0, 
+        default=0,
+        ge=0,
         description="Number of tokens used"
     )
     cost: float = Field(
-        default=0.0, 
-        ge=0.0, 
+        default=0.0,
+        ge=0.0,
         description="Processing cost in USD"
     )
     success: bool = Field(
-        default=True, 
+        default=True,
         description="Whether embedding generation was successful"
     )
     error: Optional[str] = Field(
-        default=None, 
+        default=None,
         description="Error message if processing failed"
     )
     processing_time: Optional[float] = Field(
-        default=None, 
-        ge=0.0, 
+        default=None,
+        ge=0.0,
         description="Time taken to process this chunk in seconds"
     )
-    
+
     @field_validator('embedding')
     @classmethod
     def validate_embedding_dimension(cls, v):
@@ -84,7 +85,7 @@ class EmbeddingResult(BaseModel):
             # Warning, not error - allow different dimensions
             pass
         return v
-    
+
     class Config:
         validate_assignment = True
 
@@ -92,40 +93,40 @@ class EmbeddingResult(BaseModel):
 class BatchProcessingResult(BaseModel):
     """Result of batch processing."""
     total_chunks: int = Field(
-        ..., 
-        ge=0, 
+        ...,
+        ge=0,
         description="Total number of chunks processed"
     )
     successful_chunks: int = Field(
-        ..., 
-        ge=0, 
+        ...,
+        ge=0,
         description="Number of successfully processed chunks"
     )
     failed_chunks: int = Field(
-        ..., 
-        ge=0, 
+        ...,
+        ge=0,
         description="Number of failed chunks"
     )
     total_tokens: int = Field(
-        default=0, 
-        ge=0, 
+        default=0,
+        ge=0,
         description="Total tokens used across all chunks"
     )
     total_cost: float = Field(
-        default=0.0, 
-        ge=0.0, 
+        default=0.0,
+        ge=0.0,
         description="Total processing cost in USD"
     )
     processing_time: float = Field(
-        ..., 
-        ge=0.0, 
+        ...,
+        ge=0.0,
         description="Total processing time in seconds"
     )
     errors: List[str] = Field(
-        default_factory=list, 
+        default_factory=list,
         description="List of error messages"
     )
-    
+
     # Computed properties
     @property
     def success_rate(self) -> float:
@@ -133,28 +134,28 @@ class BatchProcessingResult(BaseModel):
         if self.total_chunks == 0:
             return 0.0
         return (self.successful_chunks / self.total_chunks) * 100.0
-    
+
     @property
     def chunks_per_second(self) -> float:
         """Calculate processing speed."""
         if self.processing_time == 0:
             return 0.0
         return self.total_chunks / self.processing_time
-    
+
     @property
     def average_cost_per_chunk(self) -> float:
         """Calculate average cost per successfully processed chunk."""
         if self.successful_chunks == 0:
             return 0.0
         return self.total_cost / self.successful_chunks
-    
+
     @property
     def average_tokens_per_chunk(self) -> float:
         """Calculate average tokens per successfully processed chunk."""
         if self.successful_chunks == 0:
             return 0.0
         return self.total_tokens / self.successful_chunks
-    
+
     @field_validator('successful_chunks', 'failed_chunks')
     @classmethod
     def validate_chunk_counts(cls, v, info: ValidationInfo):
@@ -175,10 +176,10 @@ class BatchProcessingResult(BaseModel):
                     f'must equal total chunks ({info.data["total_chunks"]})'
                 )
         return v
-    
+
     class Config:
         validate_assignment = True
-        
+
     def model_dump_summary(self) -> Dict[str, Any]:
         """Get a summary dict for logging."""
         return {
@@ -198,9 +199,9 @@ class BatchProcessingResult(BaseModel):
 class ProcessingConfig(BaseModel):
     """Configuration for embedding processing."""
     batch_size: int = Field(
-        default=100, 
-        ge=1, 
-        le=2048, 
+        default=100,
+        ge=1,
+        le=2048,
         description="Number of chunks to process in one batch"
     )
     embedding_model: str = Field(
@@ -208,26 +209,26 @@ class ProcessingConfig(BaseModel):
         description="OpenAI embedding model to use"
     )
     max_retries: int = Field(
-        default=3, 
-        ge=0, 
-        le=10, 
+        default=3,
+        ge=0,
+        le=10,
         description="Maximum number of retries for failed requests"
     )
     retry_delay: float = Field(
-        default=1.0, 
-        ge=0.0, 
+        default=1.0,
+        ge=0.0,
         description="Delay between retries in seconds"
     )
     rate_limit_delay: float = Field(
-        default=0.5, 
-        ge=0.0, 
+        default=0.5,
+        ge=0.0,
         description="Delay between batches to respect rate limits"
     )
     timeout_seconds: int = Field(
-        default=60, 
-        ge=1, 
+        default=60,
+        ge=1,
         description="Timeout for API requests in seconds"
     )
-    
+
     class Config:
         validate_assignment = True

@@ -5,11 +5,11 @@ Management command to test OTP functionality.
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
+from ...models import OTPSecret
 from ...services.otp_service import OTPService
-from ...models import CustomUser, OTPSecret
 
 
 class Command(BaseCommand):
@@ -50,11 +50,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Handle the command execution."""
-        
+
         if options['stats']:
             self.show_stats()
             return
-            
+
         if options['cleanup']:
             self.cleanup_expired()
             return
@@ -88,18 +88,18 @@ class Command(BaseCommand):
 
             if success:
                 self.console.print("[green]✅ OTP request successful![/green]")
-                
+
                 # Show the generated OTP for testing
                 otp = OTPSecret.objects.filter(
                     email=email.lower().strip(),
                     is_used=False,
                     expires_at__gt=timezone.now()
                 ).first()
-                
+
                 if otp:
                     self.console.print(f"[yellow]🔑 Generated OTP: {otp.secret}[/yellow]")
                     self.console.print(f"[dim]Expires at: {otp.expires_at}[/dim]")
-                    
+
             else:
                 self.console.print(f"[red]❌ OTP request failed: {error_type}[/red]")
 
@@ -143,7 +143,7 @@ class Command(BaseCommand):
 
         try:
             stats = OTPService.get_otp_stats()
-            
+
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("Metric", style="cyan")
             table.add_column("Count", justify="right", style="green")
@@ -193,10 +193,10 @@ class Command(BaseCommand):
                 is_used=False,
                 expires_at__lte=now
             )
-            
+
             count = expired_otps.count()
             expired_otps.delete()
-            
+
             self.console.print(f"[green]✅ Cleaned up {count} expired OTPs[/green]")
 
         except Exception as e:

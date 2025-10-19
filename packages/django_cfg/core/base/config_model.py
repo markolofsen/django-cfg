@@ -10,27 +10,28 @@ This module contains ONLY the data model definition:
 Total size: ~350 lines (down from 903 in original config.py)
 """
 
-from typing import Dict, List, Optional, Any
 from pathlib import Path
-from pydantic import BaseModel, Field, field_validator, model_validator, PrivateAttr
+from typing import Any, Dict, List, Optional
 
-from ..types.enums import EnvironmentMode, StartupInfoMode
-from ..exceptions import ConfigurationError, ValidationError
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
+
+from ...apps.ipc import DjangoCfgRPCConfig
 from ...models import (
-    DatabaseConfig,
+    ApiKeys,
     CacheConfig,
+    DatabaseConfig,
+    DRFConfig,
     EmailConfig,
+    LimitsConfig,
+    SpectacularConfig,
     TelegramConfig,
     UnfoldConfig,
-    DRFConfig,
-    SpectacularConfig,
-    LimitsConfig,
-    ApiKeys,
 )
-from ...models.tasks import TaskConfig
-from ...models.payments import PaymentsConfig
 from ...models.ngrok import NgrokConfig
-from ...modules.django_ipc_client.config import DjangoCfgRPCConfig
+from ...models.payments import PaymentsConfig
+from ...models.tasks import TaskConfig
+from ..exceptions import ConfigurationError
+from ..types.enums import EnvironmentMode, StartupInfoMode
 
 
 class DjangoConfig(BaseModel):
@@ -235,7 +236,11 @@ class DjangoConfig(BaseModel):
 
     ssl_redirect: Optional[bool] = Field(
         default=None,
-        description="Force SSL redirect on/off (None = auto based on domains and environment)",
+        description=(
+            "Force SSL redirect (SECURE_SSL_REDIRECT). "
+            "None (default) = disabled (assumes reverse proxy handles SSL termination). "
+            "Set to True only if Django handles SSL directly (rare: bare metal without proxy)."
+        ),
     )
 
     # === CORS Configuration ===

@@ -7,7 +7,8 @@ Detects which Django apps belong to which groups, with wildcard support.
 import fnmatch
 import logging
 from typing import Dict, List, Set
-from ..config import OpenAPIConfig, OpenAPIGroupConfig
+
+from ..config import OpenAPIConfig
 
 logger = logging.getLogger(__name__)
 

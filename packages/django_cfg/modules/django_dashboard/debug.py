@@ -4,12 +4,10 @@ Debug utilities for dashboard rendering.
 Saves rendered HTML to disk for inspection and comparison.
 """
 
-import os
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
-from django.conf import settings
+from typing import Any, Dict, Optional
 
 
 class DashboardDebugger:

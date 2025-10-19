@@ -3,9 +3,9 @@ Pydantic models for LLM client responses.
 """
 
 import math
-from typing import List, Optional, Dict, Any, Union
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field, validator
-from datetime import datetime
 
 
 class TokenUsage(BaseModel):
@@ -35,14 +35,14 @@ class ChatCompletionResponse(BaseModel):
     cost_usd: float = Field(default=0.0, description="Cost in USD")
     processing_time: float = Field(default=0.0, description="Processing time in seconds")
     extracted_json: Optional[Dict[str, Any]] = Field(default=None, description="Extracted JSON if any")
-    
+
     @validator('cost_usd')
     def validate_cost_usd(cls, v):
         """Validate cost_usd to prevent NaN values."""
         if v is None or math.isnan(v) or math.isinf(v):
             return 0.0
         return v
-    
+
     @validator('processing_time')
     def validate_processing_time(cls, v):
         """Validate processing_time to prevent NaN values."""
@@ -61,7 +61,7 @@ class EmbeddingResponse(BaseModel):
     dimension: int = Field(description="Embedding vector dimension")
     response_time: float = Field(description="Response time in seconds")
     warning: Optional[str] = Field(default=None, description="Warning message if any")
-    
+
     class Config:
         """Pydantic configuration."""
         json_encoders = {

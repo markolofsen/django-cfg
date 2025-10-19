@@ -1,0 +1,1 @@
+export type { PageConfig, PageWithConfig } from "./pageConfig";

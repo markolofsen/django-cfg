@@ -1,37 +1,42 @@
 """
-Document admin interfaces using Django Admin Utilities.
+Document admin interfaces using NEW Django Admin v2.0.
 
-Enhanced document management with Material Icons and optimized queries.
+Enhanced document management with Material Icons and clean declarative config.
 """
 
 from django.contrib import admin, messages
-from django.db import models, IntegrityError
+from django.db import IntegrityError, models
 from django.db.models.fields.json import JSONField
 from django_json_widget.widgets import JSONEditorWidget
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.filters.admin import AutocompleteSelectFilter, AutocompleteSelectMultipleFilter
 from unfold.contrib.forms.widgets import WysiwygWidget
-from django_cfg import ImportExportModelAdmin, ImportForm, ExportForm
 
+from django_cfg import ExportForm, ImportForm
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    BooleanField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    ActionVariant,
-    display,
-    action
+    TextField,
+    UserField,
+    computed_field,
 )
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
-from ..models import Document, DocumentChunk, DocumentCategory
-from .helpers import (
-    DocumentDisplayHelpers,
-    DocumentStatistics,
-    ChunkStatistics,
-    CategoryStatistics,
-    DocumentAdminConfigs
+from ..models import Document, DocumentCategory, DocumentChunk
+from .document_actions import (
+    clear_embeddings,
+    make_private,
+    make_public,
+    mark_as_private,
+    mark_as_public,
+    regenerate_embeddings,
+    reprocess_documents,
 )
-from .actions import VisibilityActions
 
 
 class DocumentChunkInline(TabularInline):
@@ -66,12 +71,17 @@ class DocumentChunkInline(TabularInline):
     hide_title = False
     classes = ['collapse']
 
-    @display(description="Content Preview")
+    @computed_field("Content Preview")
     def content_preview_inline(self, obj):
         """Shortened content preview for inline display."""
-        return DocumentDisplayHelpers.display_content_preview(obj, max_length=100)
+        if not obj.content:
+            return "—"
+        content = obj.content
+        if len(content) > 100:
+            return content[:100] + "..."
+        return content
 
-    @display(description="Has Embedding", boolean=True)
+    @computed_field("Has Embedding")
     def has_embedding_inline(self, obj):
         """Check if chunk has embedding vector for inline."""
         return obj.embedding is not None and len(obj.embedding) > 0
@@ -81,32 +91,99 @@ class DocumentChunkInline(TabularInline):
         return super().get_queryset(request).select_related('document', 'user')
 
 
-@admin.register(Document)
-class DocumentAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportModelAdmin):
-    """Admin interface for Document model using Django Admin Utilities."""
+# ===== Document Admin Config =====
+
+document_config = AdminConfig(
+    model=Document,
 
     # Performance optimization
-    select_related_fields = ['user']
+    select_related=['user'],
+    prefetch_related=['categories'],
 
-    # Import/Export configuration
-    import_form_class = ImportForm
-    export_form_class = ExportForm
+    # Import/Export
+    import_export_enabled=True,
 
-    list_display = [
-        'title_display', 'categories_display', 'user_display',
-        'visibility_display', 'status_display', 'chunks_count_display',
-        'vectorization_progress', 'tokens_display', 'cost_display', 'created_at_display'
-    ]
-    list_display_links = ['title_display']
-    ordering = ['-created_at']
-    inlines = [DocumentChunkInline]
-    list_filter = [
-        'processing_status', 'is_public', 'file_type', 'created_at',
+    # List display
+    list_display=[
+        'title_display',
+        'categories_display',
+        'user_display',
+        'visibility_display',
+        'status_display',
+        'chunks_count_display',
+        'vectorization_progress',
+        'tokens_display',
+        'cost_display',
+        'created_at_display'
+    ],
+    list_display_links=['title_display'],
+
+    # Autocomplete fields
+    autocomplete_fields=['user', 'categories'],
+
+    # Search and filters
+    search_fields=['title', 'user__username', 'user__email'],
+    list_filter=[
+        'processing_status',
+        'is_public',
+        'file_type',
+        'created_at',
         ('user', AutocompleteSelectFilter),
         ('categories', AutocompleteSelectMultipleFilter)
-    ]
-    search_fields = ['title', 'user__username', 'user__email']
-    autocomplete_fields = ['user', 'categories']
+    ],
+
+    # Form field overrides
+    formfield_overrides={
+        models.TextField: {"widget": WysiwygWidget},
+        JSONField: {"widget": JSONEditorWidget}
+    },
+
+    # Ordering
+    ordering=['-created_at'],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="reprocess_documents",
+            description="Reprocess documents",
+            variant="primary",
+            icon=Icons.REFRESH,
+            handler=reprocess_documents
+        ),
+        ActionConfig(
+            name="mark_as_public",
+            description="Mark as public",
+            variant="success",
+            icon=Icons.PUBLIC,
+            handler=mark_as_public
+        ),
+        ActionConfig(
+            name="mark_as_private",
+            description="Mark as private",
+            variant="danger",
+            icon=Icons.LOCK,
+            handler=mark_as_private
+        ),
+    ],
+)
+
+
+@admin.register(Document)
+class DocumentAdmin(PydanticAdmin):
+    """
+    Document admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Import/Export functionality (via config)
+    - Custom actions for document processing (using ActionConfig)
+    - Statistics in changelist_view
+    """
+    config = document_config
+
+    # Readonly fields
     readonly_fields = [
         'id', 'user', 'content_hash', 'file_size', 'processing_started_at',
         'processing_completed_at', 'chunks_count', 'total_tokens',
@@ -114,49 +191,45 @@ class DocumentAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportM
         'total_cost_usd', 'created_at', 'updated_at', 'duplicate_check'
     ]
 
-    fieldsets = (
-        ('📄 Basic Information', {
-            'fields': ('id', 'title', 'user', 'categories', 'is_public', 'file_type', 'file_size'),
-            'classes': ('tab',)
-        }),
-        ('📝 Content', {
-            'fields': ('content', 'content_hash', 'duplicate_check'),
-            'classes': ('tab',)
-        }),
-        ('⚙️ Processing Status', {
-            'fields': (
-                'processing_status', 'processing_started_at',
-                'processing_completed_at', 'processing_error'
-            ),
-            'classes': ('tab',)
-        }),
-        ('📊 Statistics', {
-            'fields': ('chunks_count', 'total_tokens', 'total_cost_usd'),
-            'classes': ('tab',)
-        }),
-        ('🔧 Metadata', {
-            'fields': ('metadata',),
-            'classes': ('tab', 'collapse'),
-            'description': 'Auto-generated metadata (read-only)'
-        }),
-        ('⏰ Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('tab', 'collapse')
-        })
-    )
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Basic Information",
+            fields=["title", "categories", "is_public", "file_type", "file_size"]
+        ),
+        FieldsetConfig(
+            title="Content",
+            fields=["content", "content_hash", "duplicate_check"]
+        ),
+        FieldsetConfig(
+            title="Processing Status",
+            fields=['processing_status', 'processing_error']
+        ),
+        FieldsetConfig(
+            title="Statistics",
+            fields=["chunks_count", "total_tokens", "total_cost_usd"]
+        ),
+        FieldsetConfig(
+            title="Metadata",
+            fields=["metadata"],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=["created_at", "updated_at"],
+            collapsed=True
+        )
+    ]
+
+    # Inline
+    inlines = [DocumentChunkInline]
+
+    # Filter horizontal
     filter_horizontal = ['categories']
 
     # Unfold configuration
     compressed_fields = True
     warn_unsaved_form = True
-
-    # Form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
-        JSONField: {"widget": JSONEditorWidget}
-    }
-
-    actions = ['reprocess_documents', 'mark_as_public', 'mark_as_private']
 
     def get_queryset(self, request):
         """Optimize queryset with select_related and prefetch_related."""
@@ -181,7 +254,7 @@ class DocumentAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportM
             if is_duplicate and existing_doc:
                 messages.error(
                     request,
-                    f'❌ A document with identical content already exists: "{existing_doc.title}" '
+                    f'A document with identical content already exists: "{existing_doc.title}" '
                     f'(created {existing_doc.created_at.strftime("%Y-%m-%d %H:%M")}). '
                     f'Please modify the content or update the existing document.'
                 )
@@ -200,37 +273,18 @@ class DocumentAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportM
                 messages.error(request, f'Database error: {str(e)}')
             raise
 
-    @display(description="Document Title", ordering="title")
-    def title_display(self, obj):
+    # Custom display methods using @computed_field decorator
+    @computed_field("Document Title")
+    def title_display(self, obj: Document) -> str:
         """Display document title with truncation."""
         title = obj.title or "Untitled Document"
         if len(title) > 50:
             title = title[:47] + "..."
 
-        return StatusBadge.create(
-            text=title,
-            variant="primary",
-            config=DocumentAdminConfigs.DOCUMENT_TITLE
-        )
+        return self.html.badge(title, variant="primary", icon=Icons.DESCRIPTION)
 
-    def user_display(self, obj):
-        """User display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_user(obj, self)
-
-    def visibility_display(self, obj):
-        """Visibility display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_visibility(obj)
-
-    @display(description="Status")
-    def status_display(self, obj):
-        """Display processing status."""
-        icon = DocumentAdminConfigs.get_processing_status_icon(obj.processing_status)
-        status_config = DocumentAdminConfigs.PROCESSING_STATUS
-        status_config.icon = icon
-        return self.display_status_auto(obj, 'processing_status', status_config)
-
-    @display(description="Categories")
-    def categories_display(self, obj):
+    @computed_field("Categories")
+    def categories_display(self, obj: Document) -> str:
         """Display categories count."""
         categories = obj.categories.all()
 
@@ -247,33 +301,79 @@ class DocumentAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportM
         else:
             return f"{public_count} public, {private_count} private"
 
-    @display(description="Chunks", ordering="chunks_count")
-    def chunks_count_display(self, obj):
+    @computed_field("Assigned User")
+    def user_display(self, obj: Document) -> str:
+        """Display user."""
+        if not obj.user:
+            return "—"
+        # Simple username display, UserField handles avatar and styling
+        return obj.user.username
+
+    @computed_field("Visibility")
+    def visibility_display(self, obj: Document) -> str:
+        """Display visibility status."""
+        if obj.is_public:
+            return self.html.badge("Public", variant="success")
+        return self.html.badge("Private", variant="danger")
+
+    @computed_field("Status")
+    def status_display(self, obj: Document) -> str:
+        """Display processing status."""
+        status_icons = {
+            'completed': Icons.CHECK_CIRCLE,
+            'failed': Icons.ERROR,
+            'processing': Icons.SCHEDULE,
+            'pending': Icons.SCHEDULE,
+            'cancelled': Icons.CANCEL
+        }
+        icon = status_icons.get(obj.processing_status, Icons.SCHEDULE)
+
+        status_map = {
+            'pending': 'info',
+            'processing': 'warning',
+            'completed': 'success',
+            'failed': 'danger'
+        }
+        variant = status_map.get(obj.processing_status, 'info')
+
+        return self.html.badge(obj.get_processing_status_display(), variant=variant, icon=icon)
+
+    @computed_field("Chunks")
+    def chunks_count_display(self, obj: Document) -> str:
         """Display chunks count."""
         count = obj.chunks_count
         if count > 0:
             return f"{count} chunks"
         return "0 chunks"
 
-    def tokens_display(self, obj):
-        """Token count display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_token_count(obj, 'total_tokens')
-
-    def cost_display(self, obj):
-        """Cost display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_cost_usd(obj, self, 'total_cost_usd')
-
-    @display(description="Vectorization")
-    def vectorization_progress(self, obj):
+    @computed_field("Vectorization")
+    def vectorization_progress(self, obj: Document) -> str:
         """Display vectorization progress."""
         return Document.objects.get_vectorization_status_display(obj)
 
-    def created_at_display(self, obj):
-        """Created time display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_created_at(obj, self)
+    @computed_field("Tokens")
+    def tokens_display(self, obj: Document) -> str:
+        """Display token count."""
+        tokens = obj.total_tokens or 0
+        if tokens > 1000:
+            return f"{tokens/1000:.1f}K"
+        return str(tokens)
 
-    @display(description="Processing Duration")
-    def processing_duration_display(self, obj):
+    @computed_field("Cost")
+    def cost_display(self, obj: Document) -> str:
+        """Display cost in USD."""
+        if not hasattr(obj, 'total_cost_usd') or obj.total_cost_usd is None:
+            return "—"
+        return f"${obj.total_cost_usd:.4f}"
+
+    @computed_field("Created")
+    def created_at_display(self, obj: Document) -> str:
+        """Created time with relative display."""
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
+
+    @computed_field("Processing Duration")
+    def processing_duration_display(self, obj: Document) -> str:
         """Display processing duration in readable format."""
         duration = obj.processing_duration
         if duration is None:
@@ -288,245 +388,319 @@ class DocumentAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportM
             hours = duration / 3600
             return f"{hours:.1f}h"
 
-    @display(description="Duplicate Check")
-    def duplicate_check(self, obj):
+    @computed_field("Duplicate Check")
+    def duplicate_check(self, obj: Document) -> str:
         """Check for duplicate documents with same content."""
         duplicate_info = Document.objects.get_duplicate_info(obj)
 
         if isinstance(duplicate_info, str):
             if "No duplicates found" in duplicate_info:
-                return "✓ No duplicates found"
+                return "No duplicates found"
             return duplicate_info
 
         duplicates_data = duplicate_info['duplicates']
         count = duplicate_info['count']
 
         duplicate_names = [dup.title for dup in duplicates_data[:3]]
-        result = f"⚠️ Found {count} duplicate(s): " + ", ".join(duplicate_names)
+        result = f"Found {count} duplicate(s): " + ", ".join(duplicate_names)
         if count > 3:
             result += f" and {count - 3} more"
 
         return result
 
-    @action(description="Reprocess documents", variant=ActionVariant.INFO)
-    def reprocess_documents(self, request, queryset):
-        """Reprocess selected documents."""
-        count = queryset.count()
-        messages.info(request, f"Reprocessing functionality not implemented yet. {count} documents selected.")
 
-    # Visibility actions (delegate to shared actions)
-    mark_as_public = VisibilityActions.mark_as_public
-    mark_as_private = VisibilityActions.mark_as_private
+# ===== Document Chunk Admin Config =====
 
-    def changelist_view(self, request, extra_context=None):
-        """Add summary statistics to changelist."""
-        extra_context = extra_context or {}
-        queryset = self.get_queryset(request)
-        extra_context['summary_stats'] = DocumentStatistics.get_document_stats(queryset)
-        return super().changelist_view(request, extra_context)
+chunk_config = AdminConfig(
+    model=DocumentChunk,
+
+    # Performance optimization
+    select_related=['document', 'user'],
+
+    # List display
+    list_display=[
+        'chunk_display',
+        'document_display',
+        'user_display',
+        'token_count_display',
+        'embedding_status',
+        'embedding_cost_display',
+        'created_at_display'
+    ],
+    list_display_links=['chunk_display'],
+
+    # Search and filters
+    search_fields=['document__title', 'user__username', 'content'],
+    list_filter=[
+        'embedding_model',
+        'created_at',
+        ('user', AutocompleteSelectFilter),
+        ('document', AutocompleteSelectFilter)
+    ],
+
+    # Form field overrides
+    formfield_overrides={
+        JSONField: {"widget": JSONEditorWidget}
+    },
+
+    # Ordering
+    ordering=['-created_at'],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="regenerate_embeddings",
+            description="Regenerate embeddings",
+            variant="primary",
+            icon=Icons.REFRESH,
+            handler=regenerate_embeddings
+        ),
+        ActionConfig(
+            name="clear_embeddings",
+            description="Clear embeddings",
+            variant="danger",
+            icon=Icons.DELETE,
+            confirmation=True,
+            handler=clear_embeddings
+        ),
+    ],
+)
 
 
 @admin.register(DocumentChunk)
-class DocumentChunkAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
-    """Admin interface for DocumentChunk model using Django Admin Utilities."""
+class DocumentChunkAdmin(PydanticAdmin):
+    """
+    Document Chunk admin using NEW Pydantic declarative approach.
 
-    # Performance optimization
-    select_related_fields = ['document', 'user']
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Custom actions for embedding management (using ActionConfig)
+    - Statistics in changelist_view
+    """
+    config = chunk_config
 
-    list_display = [
-        'chunk_display', 'document_display', 'user_display', 'token_count_display',
-        'embedding_status', 'embedding_cost_display', 'created_at_display'
-    ]
-    list_display_links = ['chunk_display']
-    ordering = ['-created_at']
-    list_filter = [
-        'embedding_model', 'created_at',
-        ('user', AutocompleteSelectFilter),
-        ('document', AutocompleteSelectFilter)
-    ]
-    search_fields = ['document__title', 'user__username', 'content']
+    # Readonly fields
     readonly_fields = [
         'id', 'embedding_info', 'token_count', 'character_count',
         'embedding_cost', 'created_at', 'updated_at', 'content_preview'
     ]
 
-    fieldsets = (
-        ('📄 Basic Information', {
-            'fields': ('id', 'document', 'user', 'chunk_index'),
-            'classes': ('tab',)
-        }),
-        ('📝 Content', {
-            'fields': ('content_preview', 'content'),
-            'classes': ('tab',)
-        }),
-        ('🔗 Embedding Information', {
-            'fields': ('embedding_model', 'token_count', 'character_count', 'embedding_cost'),
-            'classes': ('tab',)
-        }),
-        ('🧠 Vector Embedding', {
-            'fields': ('embedding',),
-            'classes': ('tab', 'collapse')
-        }),
-        ('🔧 Metadata', {
-            'fields': ('metadata',),
-            'classes': ('tab', 'collapse'),
-            'description': 'Auto-generated chunk metadata (read-only)'
-        }),
-        ('⏰ Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('tab', 'collapse')
-        })
-    )
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Basic Information",
+            fields=["document", "user", "chunk_index"]
+        ),
+        FieldsetConfig(
+            title="Content",
+            fields=["content_preview", "content"]
+        ),
+        FieldsetConfig(
+            title="Embedding Information",
+            fields=["embedding_model", "token_count", "character_count", "embedding_cost"]
+        ),
+        FieldsetConfig(
+            title="Vector Embedding",
+            fields=["embedding"],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Metadata",
+            fields=["metadata"],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=["created_at", "updated_at"],
+            collapsed=True
+        )
+    ]
 
     # Unfold configuration
     compressed_fields = True
     warn_unsaved_form = True
 
-    # Form field overrides
-    formfield_overrides = {
-        JSONField: {"widget": JSONEditorWidget}
-    }
-
-    actions = ['regenerate_embeddings', 'clear_embeddings']
-
-    @display(description="Chunk", ordering="chunk_index")
-    def chunk_display(self, obj):
+    # Custom display methods using @computed_field decorator
+    @computed_field("Chunk")
+    def chunk_display(self, obj: DocumentChunk) -> str:
         """Display chunk identifier."""
-        return StatusBadge.create(
-            text=f"Chunk {obj.chunk_index + 1}",
-            variant="info",
-            config=DocumentAdminConfigs.CHUNK
-        )
+        return self.html.badge(f"Chunk {obj.chunk_index + 1}", variant="info", icon=Icons.ARTICLE)
 
-    @display(description="Document", ordering="document__title")
-    def document_display(self, obj):
+    @computed_field("Document")
+    def document_display(self, obj: DocumentChunk) -> str:
         """Display document title."""
         return obj.document.title
 
-    def user_display(self, obj):
-        """User display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_user(obj, self)
+    @computed_field("Assigned User")
+    def user_display(self, obj: DocumentChunk) -> str:
+        """Display user."""
+        if not obj.user:
+            return "—"
+        # Simple username display, UserField handles avatar and styling
+        return obj.user.username
 
-    def token_count_display(self, obj):
-        """Token count display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_token_count(obj, 'token_count')
+    @computed_field("Tokens")
+    def token_count_display(self, obj: DocumentChunk) -> str:
+        """Display token count."""
+        tokens = obj.token_count or 0
+        if tokens > 1000:
+            return f"{tokens/1000:.1f}K"
+        return str(tokens)
 
-    def embedding_status(self, obj):
-        """Embedding status display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_embedding_status(obj)
+    @computed_field("Embedding Status")
+    def embedding_status(self, obj: DocumentChunk) -> str:
+        """Display embedding status."""
+        has_embedding = obj.embedding is not None and len(obj.embedding) > 0
+        if has_embedding:
+            return self.html.badge("✓ Vectorized", variant="success")
+        return self.html.badge("✗ Not vectorized", variant="danger")
 
-    def embedding_cost_display(self, obj):
-        """Embedding cost display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_cost_usd(obj, self, 'embedding_cost')
+    @computed_field("Embedding Cost")
+    def embedding_cost_display(self, obj: DocumentChunk) -> str:
+        """Display embedding cost."""
+        if not hasattr(obj, 'embedding_cost') or obj.embedding_cost is None:
+            return "—"
+        return f"${obj.embedding_cost:.6f}"
 
-    def created_at_display(self, obj):
-        """Created time display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_created_at(obj, self)
+    @computed_field("Created")
+    def created_at_display(self, obj: DocumentChunk) -> str:
+        """Created time with relative display."""
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
 
-    def content_preview(self, obj):
-        """Content preview display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_content_preview(obj, max_length=200)
+    @computed_field("Content Preview")
+    def content_preview(self, obj: DocumentChunk) -> str:
+        """Display content preview."""
+        if not obj.content:
+            return "—"
+        content = obj.content
+        if len(content) > 200:
+            return content[:200] + "..."
+        return content
 
-    @display(description="Embedding Info")
-    def embedding_info(self, obj):
+    @computed_field("Embedding Info")
+    def embedding_info(self, obj: DocumentChunk) -> str:
         """Display embedding information safely."""
         if obj.embedding is not None and len(obj.embedding) > 0:
-            return f"✓ Vector ({len(obj.embedding)} dimensions)"
-        return "✗ No embedding"
+            return f"Vector ({len(obj.embedding)} dimensions)"
+        return "No embedding"
 
-    @action(description="Regenerate embeddings", variant=ActionVariant.INFO)
-    def regenerate_embeddings(self, request, queryset):
-        """Regenerate embeddings for selected chunks."""
-        count = queryset.count()
-        messages.info(request, f"Regenerate embeddings functionality not implemented yet. {count} chunks selected.")
 
-    @action(description="Clear embeddings", variant=ActionVariant.WARNING)
-    def clear_embeddings(self, request, queryset):
-        """Clear embeddings for selected chunks."""
-        updated = queryset.update(embedding=None)
-        messages.warning(request, f"Cleared embeddings for {updated} chunks.")
+# ===== Document Category Admin Config =====
 
-    def changelist_view(self, request, extra_context=None):
-        """Add chunk statistics to changelist."""
-        extra_context = extra_context or {}
-        queryset = self.get_queryset(request)
-        extra_context['chunk_stats'] = ChunkStatistics.get_chunk_stats(queryset)
-        return super().changelist_view(request, extra_context)
+category_config = AdminConfig(
+    model=DocumentCategory,
+
+    # Performance optimization
+    prefetch_related=['documents'],
+
+    # Import/Export
+    import_export_enabled=True,
+
+    # List display
+    list_display=[
+        'short_uuid',
+        'name_display',
+        'visibility_display',
+        'document_count',
+        'created_at_display'
+    ],
+    list_display_links=['name_display'],
+
+    # Search and filters
+    search_fields=['name', 'description'],
+    list_filter=['is_public', 'created_at'],
+
+    # Form field overrides
+    formfield_overrides={
+        models.TextField: {"widget": WysiwygWidget}
+    },
+
+    # Ordering
+    ordering=['-created_at'],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="make_public",
+            description="Make public",
+            variant="success",
+            icon=Icons.PUBLIC,
+            handler=make_public
+        ),
+        ActionConfig(
+            name="make_private",
+            description="Make private",
+            variant="danger",
+            icon=Icons.LOCK,
+            handler=make_private
+        ),
+    ],
+)
 
 
 @admin.register(DocumentCategory)
-class DocumentCategoryAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ImportExportModelAdmin):
-    """Admin interface for DocumentCategory model using Django Admin Utilities."""
+class DocumentCategoryAdmin(PydanticAdmin):
+    """
+    Document Category admin using NEW Pydantic declarative approach.
 
-    # Import/Export configuration
-    import_form_class = ImportForm
-    export_form_class = ExportForm
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Import/Export functionality (via config)
+    - Custom actions for visibility management (using ActionConfig)
+    - Statistics in changelist_view
+    """
+    config = category_config
 
-    list_display = [
-        'short_uuid', 'name_display', 'visibility_display', 'document_count', 'created_at_display'
-    ]
-    list_display_links = ['name_display']
-    ordering = ['-created_at']
-    list_filter = ['is_public', 'created_at']
-    search_fields = ['name', 'description']
+    # Readonly fields
     readonly_fields = ['id', 'created_at', 'updated_at']
 
-    fieldsets = (
-        ('📁 Basic Information', {
-            'fields': ('id', 'name', 'description', 'is_public'),
-            'classes': ('tab',)
-        }),
-        ('⏰ Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('tab', 'collapse')
-        })
-    )
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Basic Information",
+            fields=["name", "description", "is_public"]
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=["created_at", "updated_at"],
+            collapsed=True
+        )
+    ]
 
     # Unfold configuration
     compressed_fields = True
     warn_unsaved_form = True
 
-    # Form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget}
-    }
-
-    actions = ['make_public', 'make_private']
-
-    @display(description="Category Name")
-    def name_display(self, obj):
+    # Custom display methods using @computed_field decorator
+    @computed_field("Category Name")
+    def name_display(self, obj: DocumentCategory) -> str:
         """Display category name."""
-        return StatusBadge.create(
-            text=obj.name,
-            variant="primary",
-            config=DocumentAdminConfigs.CATEGORY
-        )
+        return self.html.badge(obj.name, variant="primary", icon=Icons.FOLDER)
 
-    def visibility_display(self, obj):
-        """Visibility display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_visibility(obj)
+    @computed_field("Visibility")
+    def visibility_display(self, obj: DocumentCategory) -> str:
+        """Display visibility status."""
+        if obj.is_public:
+            return self.html.badge("Public", variant="success")
+        return self.html.badge("Private", variant="danger")
 
-    @display(description="Documents", ordering="document_count")
-    def document_count(self, obj):
+    @computed_field("Documents")
+    def document_count(self, obj: DocumentCategory) -> str:
         """Display count of documents in this category."""
         count = obj.documents.count()
         return f"{count} documents"
 
-    def created_at_display(self, obj):
-        """Created time display (delegates to helper)."""
-        return DocumentDisplayHelpers.display_created_at(obj, self)
-
-    # Visibility actions (delegate to shared actions, using make_* aliases)
-    make_public = VisibilityActions.mark_as_public
-    make_private = VisibilityActions.mark_as_private
+    @computed_field("Created")
+    def created_at_display(self, obj: DocumentCategory) -> str:
+        """Created time with relative display."""
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
 
     def get_queryset(self, request):
         """Optimize queryset with prefetch_related."""
         return super().get_queryset(request).prefetch_related('documents')
-
-    def changelist_view(self, request, extra_context=None):
-        """Add category statistics to changelist."""
-        extra_context = extra_context or {}
-        queryset = self.get_queryset(request)
-        extra_context['category_stats'] = CategoryStatistics.get_category_stats(queryset)
-        return super().changelist_view(request, extra_context)

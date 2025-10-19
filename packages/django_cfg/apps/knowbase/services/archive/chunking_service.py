@@ -7,20 +7,16 @@ Uses specialized chunkers for different content types.
 
 import logging
 from typing import List, Optional
+
 from django.contrib.auth import get_user_model
 
 from ...models.archive import ArchiveItem, ArchiveItemChunk
 from ...utils.chunk_settings import get_chunking_params_for_type
 from ..base import BaseService
-from .exceptions import ChunkingError
 
 # Import chunkers
-from .chunking import (
-    PythonChunker,
-    MarkdownChunker,
-    JsonChunker,
-    TextChunker
-)
+from .chunking import JsonChunker, MarkdownChunker, PythonChunker, TextChunker
+from .exceptions import ChunkingError
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

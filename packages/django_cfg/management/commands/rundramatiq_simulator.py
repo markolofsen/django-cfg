@@ -8,7 +8,9 @@ Usage:
     python manage.py rundramatiq_simulator
 """
 
-from django_cfg.modules.django_tasks.management.commands.rundramatiq_simulator import Command as SimulatorCommand
+from django_cfg.modules.django_tasks.management.commands.rundramatiq_simulator import (
+    Command as SimulatorCommand,
+)
 
 
 class Command(SimulatorCommand):

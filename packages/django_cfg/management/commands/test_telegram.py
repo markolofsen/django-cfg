@@ -9,7 +9,9 @@ Usage:
     python manage.py test_telegram --message "Test notification"
 """
 
-from django_cfg.modules.django_telegram.management.commands.test_telegram import Command as TestTelegramCommand
+from django_cfg.modules.django_telegram.management.commands.test_telegram import (
+    Command as TestTelegramCommand,
+)
 
 
 class Command(TestTelegramCommand):

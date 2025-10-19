@@ -5,9 +5,9 @@ Configuration settings for the django-cfg library itself.
 """
 
 from typing import List
+
 from .modules.django_admin.icons import Icons
 from .modules.django_unfold.models.dropdown import SiteDropdownItem
-
 
 # Library configuration
 LIB_NAME = "django-cfg"

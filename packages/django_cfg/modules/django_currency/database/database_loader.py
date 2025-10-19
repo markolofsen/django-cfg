@@ -4,15 +4,11 @@ Database loader for populating currency data using Yahoo Finance + CoinPaprika.
 
 import logging
 import time
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Set
-from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator
 from cachetools import TTLCache
-
-# Our new clients
-from ..clients import HybridCurrencyClient, CoinPaprikaClient
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -49,31 +45,31 @@ class CurrencyRateInfo(BaseModel):
 
 class RateLimiter:
     """Simple rate limiter for API calls."""
-    
+
     def __init__(self, max_requests_per_minute: int = 30):
         self.max_requests = max_requests_per_minute
         self.request_times = []
-        
+
     def __call__(self):
         """Wait if necessary to respect rate limits."""
         now = time.time()
-        
+
         # Remove requests older than 1 minute
         self.request_times = [t for t in self.request_times if now - t < 60]
-        
+
         # If we're at the limit, wait
         if len(self.request_times) >= self.max_requests:
             sleep_time = 60 - (now - self.request_times[0]) + 1
             if sleep_time > 0:
                 logger.debug(f"Rate limiting: sleeping for {sleep_time:.1f}s")
                 time.sleep(sleep_time)
-                
+
         self.request_times.append(now)
 
 
 class DatabaseLoaderConfig(BaseModel):
     """Configuration for database loader."""
-    
+
     yahoo_delay: float = Field(default=1.0, description="Delay between Yahoo requests")
     coinpaprika_delay: float = Field(default=0.5, description="Delay between CoinPaprika requests")
     max_requests_per_minute: int = Field(default=30, description="Max requests per minute")
@@ -88,26 +84,29 @@ class CurrencyDatabaseLoader:
     """
     Database loader for populating currency data from Yahoo Finance and CoinPaprika.
     """
-    
+
     def __init__(self, config: DatabaseLoaderConfig = None):
         """Initialize the database loader."""
+        # Lazy import to avoid circular dependency
+        from ..clients import CoinPaprikaClient, HybridCurrencyClient
+
         self.config = config or DatabaseLoaderConfig()
-        
+
         # Initialize clients
         self.hybrid = HybridCurrencyClient(cache_ttl=self.config.cache_ttl_hours * 3600)
         self.coinpaprika = CoinPaprikaClient(cache_ttl=self.config.cache_ttl_hours * 3600)
-        
+
         # Rate limiters
         self.yahoo_limiter = RateLimiter(self.config.max_requests_per_minute)
         self.coinpaprika_limiter = RateLimiter(self.config.max_requests_per_minute)
-        
+
         # Caches
         cache_ttl = self.config.cache_ttl_hours * 3600
         self.crypto_cache = TTLCache(maxsize=1000, ttl=cache_ttl)
         self.fiat_cache = TTLCache(maxsize=100, ttl=cache_ttl)
-        
+
         logger.info(f"Initialized CurrencyDatabaseLoader with config: {self.config}")
-    
+
     def get_hybrid_currency_list(self) -> List[HybridCurrencyInfo]:
         """
         Get list of supported currencies from hybrid client.
@@ -116,19 +115,19 @@ class CurrencyDatabaseLoader:
             List of currency info objects
         """
         cache_key = "hybrid_currencies"
-        
+
         if cache_key in self.fiat_cache:
             logger.debug("Retrieved hybrid currencies from cache")
             return self.fiat_cache[cache_key]
-        
+
         # Get supported currencies from Hybrid client
         supported_currencies = self.hybrid.get_all_supported_currencies()
-        
+
         # Convert to our format
         hybrid_currencies = []
         for code, name in supported_currencies.items():
             # Determine currency type based on code
-            if code in ['BTC', 'ETH', 'BNB', 'XRP', 'ADA', 'SOL', 'DOT', 'MATIC', 
+            if code in ['BTC', 'ETH', 'BNB', 'XRP', 'ADA', 'SOL', 'DOT', 'MATIC',
                        'LTC', 'BCH', 'LINK', 'UNI', 'ATOM', 'XLM', 'VET', 'FIL',
                        'TRX', 'ETC', 'THETA', 'AAVE', 'MKR', 'COMP', 'SUSHI',
                        'USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP']:
@@ -137,7 +136,7 @@ class CurrencyDatabaseLoader:
                 currency_type = "metal"
             else:
                 currency_type = "fiat"
-            
+
             currency_info = HybridCurrencyInfo(
                 code=code,
                 name=name,
@@ -145,12 +144,12 @@ class CurrencyDatabaseLoader:
                 currency_type=currency_type
             )
             hybrid_currencies.append(currency_info)
-        
+
         self.fiat_cache[cache_key] = hybrid_currencies
         logger.info(f"Loaded {len(hybrid_currencies)} currencies from hybrid client")
-        
+
         return hybrid_currencies
-    
+
     def get_cryptocurrency_list(self) -> List[CoinPaprikaCoinInfo]:
         """
         Get list of supported cryptocurrencies from CoinPaprika.
@@ -159,45 +158,45 @@ class CurrencyDatabaseLoader:
             List of cryptocurrency info objects
         """
         cache_key = "crypto_currencies"
-        
+
         if cache_key in self.crypto_cache:
             logger.debug("Retrieved cryptocurrencies from cache")
             return self.crypto_cache[cache_key]
-        
+
         try:
             # Get all tickers from CoinPaprika
             all_tickers = self.coinpaprika._fetch_all_tickers()
-            
+
             crypto_currencies = []
             for symbol, data in all_tickers.items():
                 # Skip if no price data
                 if data.get('price_usd') is None:
                     continue
-                
+
                 # Apply market cap filter if needed
                 # Note: CoinPaprika doesn't provide market cap in tickers endpoint
                 # We'd need to use a different endpoint for that
-                
+
                 coin_info = CoinPaprikaCoinInfo(
                     id=data['id'],
                     symbol=symbol,
                     name=data['name']
                 )
                 crypto_currencies.append(coin_info)
-                
+
                 # Limit count
                 if len(crypto_currencies) >= self.config.max_cryptocurrencies:
                     break
-            
+
             self.crypto_cache[cache_key] = crypto_currencies
             logger.info(f"Loaded {len(crypto_currencies)} cryptocurrencies")
-            
+
             return crypto_currencies
-            
+
         except Exception as e:
             logger.error(f"Failed to get cryptocurrency list: {e}")
             return []
-    
+
     def get_currency_rates(self, currency_ids: List[str], quote: str = 'usd') -> Dict[str, float]:
         """
         Get current rates for multiple cryptocurrencies.
@@ -210,24 +209,24 @@ class CurrencyDatabaseLoader:
             Dict mapping currency ID to rate
         """
         self.coinpaprika_limiter()
-        
+
         try:
             rates = {}
             all_tickers = self.coinpaprika._fetch_all_tickers()
-            
+
             for currency_id in currency_ids:
                 if currency_id.upper() in all_tickers:
                     price = all_tickers[currency_id.upper()].get('price_usd')
                     if price is not None:
                         rates[currency_id] = price
-            
+
             logger.debug(f"Retrieved rates for {len(rates)} currencies")
             return rates
-            
+
         except Exception as e:
             logger.error(f"Failed to get currency rates: {e}")
             return {}
-    
+
     def get_fiat_rate(self, base: str, quote: str) -> Optional[float]:
         """
         Get exchange rate for fiat currency pair.
@@ -242,16 +241,16 @@ class CurrencyDatabaseLoader:
         # Handle same currency
         if base.upper() == quote.upper():
             return 1.0
-        
+
         self.yahoo_limiter()
-        
+
         try:
             rate_obj = self.hybrid.fetch_rate(base, quote)
             return rate_obj.rate
         except Exception as e:
             logger.debug(f"Failed to get fiat rate {base}/{quote}: {e}")
             return None
-    
+
     def build_currency_database_data(self) -> List[CurrencyRateInfo]:
         """
         Build complete currency database data using hybrid client.
@@ -260,11 +259,11 @@ class CurrencyDatabaseLoader:
             List of currency rate info objects
         """
         currencies = []
-        
+
         # Get currencies from hybrid client
         logger.info("Loading currencies from hybrid client...")
         hybrid_currencies = self.get_hybrid_currency_list()
-        
+
         for currency in hybrid_currencies:
             # Get USD rate
             if currency.code == 'USD':
@@ -274,7 +273,7 @@ class CurrencyDatabaseLoader:
                 if usd_rate is None:
                     logger.warning(f"Could not get USD rate for {currency.code}")
                     continue
-            
+
             # Set decimal places based on currency type and value
             if currency.currency_type == "fiat":
                 decimal_places = 2
@@ -290,7 +289,7 @@ class CurrencyDatabaseLoader:
             else:  # metal
                 decimal_places = 4
                 min_payment = 0.001
-            
+
             currency_info = CurrencyRateInfo(
                 code=currency.code,
                 name=currency.name,
@@ -301,28 +300,28 @@ class CurrencyDatabaseLoader:
                 min_payment_amount=min_payment
             )
             currencies.append(currency_info)
-        
+
         # Get additional cryptocurrencies from CoinPaprika (for extended crypto coverage)
         logger.info("Loading additional cryptocurrencies from CoinPaprika...")
         crypto_currencies = self.get_cryptocurrency_list()
-        
+
         # Filter out cryptos that are already in hybrid client
         hybrid_crypto_codes = {c.code for c in hybrid_currencies if c.currency_type == "crypto"}
-        
+
         if crypto_currencies:
             # Get rates for all cryptos
-            crypto_symbols = [crypto.symbol for crypto in crypto_currencies 
+            crypto_symbols = [crypto.symbol for crypto in crypto_currencies
                             if crypto.symbol not in hybrid_crypto_codes]
             rates = self.get_currency_rates(crypto_symbols, 'usd')
-            
+
             for crypto in crypto_currencies:
                 # Skip if already covered by hybrid client
                 if crypto.symbol in hybrid_crypto_codes:
                     continue
-                    
+
                 if crypto.symbol in rates:
                     usd_rate = rates[crypto.symbol]
-                    
+
                     # Calculate appropriate decimal places based on USD value
                     if usd_rate >= 1:
                         decimal_places = 2
@@ -330,10 +329,10 @@ class CurrencyDatabaseLoader:
                         decimal_places = 4
                     else:
                         decimal_places = 8
-                    
+
                     # Calculate minimum payment amount (roughly $1 worth)
                     min_payment = max(1.0 / usd_rate, 0.000001)
-                    
+
                     currency_info = CurrencyRateInfo(
                         code=crypto.symbol,
                         name=crypto.name,
@@ -344,26 +343,26 @@ class CurrencyDatabaseLoader:
                         min_payment_amount=min_payment
                     )
                     currencies.append(currency_info)
-        
+
         logger.info(f"Built database data for {len(currencies)} currencies")
         return currencies
-    
+
     def get_statistics(self) -> Dict[str, int]:
         """Get loader statistics."""
         hybrid_currencies = self.get_hybrid_currency_list()
         coinpaprika_cryptos = self.get_cryptocurrency_list()
-        
+
         # Count by type from hybrid client
         fiat_count = len([c for c in hybrid_currencies if c.currency_type == "fiat"])
         hybrid_crypto_count = len([c for c in hybrid_currencies if c.currency_type == "crypto"])
         metal_count = len([c for c in hybrid_currencies if c.currency_type == "metal"])
-        
+
         # Additional cryptos from CoinPaprika (excluding duplicates)
         hybrid_crypto_codes = {c.code for c in hybrid_currencies if c.currency_type == "crypto"}
         additional_crypto_count = len([c for c in coinpaprika_cryptos if c.symbol not in hybrid_crypto_codes])
-        
+
         total_crypto_count = hybrid_crypto_count + additional_crypto_count
-        
+
         return {
             'total_fiat_currencies': fiat_count,
             'total_cryptocurrencies': total_crypto_count,
@@ -420,7 +419,7 @@ def load_currencies_to_database_format() -> List[Dict]:
     """
     loader = create_database_loader()
     currencies = loader.build_currency_database_data()
-    
+
     # Convert to dict format
     result = []
     for currency in currencies:
@@ -435,5 +434,5 @@ def load_currencies_to_database_format() -> List[Dict]:
             'rate_updated_at': datetime.now()
         }
         result.append(currency_dict)
-    
+
     return result

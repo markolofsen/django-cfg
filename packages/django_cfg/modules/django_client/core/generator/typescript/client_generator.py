@@ -5,8 +5,10 @@ TypeScript Client Generator - Generates TypeScript APIClient classes.
 from __future__ import annotations
 
 from jinja2 import Environment
+
 from ...ir import IROperationObject
 from ..base import GeneratedFile
+
 
 class ClientGenerator:
     """Generates TypeScript APIClient classes (flat and namespaced)."""
@@ -19,7 +21,7 @@ class ClientGenerator:
 
     def generate_client_file(self):
         """Generate client.ts with APIClient class."""
-        
+
 
         # Client class
         client_code = self._generate_client_class()
@@ -75,7 +77,7 @@ class ClientGenerator:
 
     def _generate_sub_client_class(self, tag: str, operations: list) -> str:
         """Generate sub-client class for a specific tag."""
-        class_name = self.base.tag_to_class_name(tag)
+        class_name = self.base.tag_to_class_name(tag, suffix="")
 
         # Generate methods for this tag
         method_codes = []
@@ -96,7 +98,7 @@ class ClientGenerator:
         # Prepare data for template
         tags_data = [
             {
-                "class_name": self.base.tag_to_class_name(tag),
+                "class_name": self.base.tag_to_class_name(tag, suffix=""),
                 "property": self.base.tag_to_property_name(tag),
                 "slug": self.base.tag_and_app_to_folder_name(tag, ops_by_tag[tag]),
             }
@@ -119,7 +121,7 @@ class ClientGenerator:
         # Prepare tags data for template
         tags_data = [
             {
-                "class_name": self.base.tag_to_class_name(tag),
+                "class_name": self.base.tag_to_class_name(tag, suffix=""),
                 "slug": self.base.tag_and_app_to_folder_name(tag, ops_by_tag[tag]),
             }
             for tag in tags
@@ -143,7 +145,7 @@ class ClientGenerator:
     def generate_app_client_file(self, tag: str, operations: list[IROperationObject]):
         """Generate client.ts for a specific app."""
 
-        class_name = self.base.tag_to_class_name(tag)
+        class_name = self.base.tag_to_class_name(tag, suffix="")
 
         # Generate methods
         method_codes = []

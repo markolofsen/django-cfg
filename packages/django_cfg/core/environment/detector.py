@@ -9,8 +9,7 @@ Following CRITICAL_REQUIREMENTS.md:
 """
 
 import os
-from typing import Optional, Dict, Any, List
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from django_cfg.core.exceptions import EnvironmentError
 
@@ -22,14 +21,14 @@ class EnvironmentDetector:
     Detects the current environment from various sources with a clear priority order.
     Provides consistent environment names and validation.
     """
-    
+
     # Environment detection priority (highest to lowest)
     ENV_VARIABLES: List[str] = [
         'DJANGO_ENV',
-        'ENVIRONMENT', 
+        'ENVIRONMENT',
         'ENV',
     ]
-    
+
     # Environment name normalization
     ENV_ALIASES: Dict[str, str] = {
         'dev': 'development',
@@ -43,15 +42,15 @@ class EnvironmentDetector:
         'stage': 'staging',
         'staging': 'staging',
     }
-    
+
     # Valid environment names
     VALID_ENVIRONMENTS: List[str] = [
         'development',
-        'production', 
+        'production',
         'testing',
         'staging',
     ]
-    
+
     @classmethod
     def detect_environment(cls) -> str:
         """
@@ -92,7 +91,7 @@ class EnvironmentDetector:
                                 f"Or use aliases: {', '.join(cls.ENV_ALIASES.keys())}"
                             ]
                         )
-            
+
             # Check DEBUG flag as fallback
             debug_value = os.environ.get('DEBUG', '').lower().strip()
             if debug_value:
@@ -100,10 +99,10 @@ class EnvironmentDetector:
                     return 'development'
                 elif debug_value in ('false', '0', 'no', 'off'):
                     return 'production'
-            
+
             # Default fallback
             return 'development'
-            
+
         except EnvironmentError:
             raise  # Re-raise our own exceptions
         except Exception as e:
@@ -115,7 +114,7 @@ class EnvironmentDetector:
                     "Check environment variable syntax"
                 ]
             ) from e
-    
+
     @classmethod
     def _normalize_environment(cls, env: str) -> Optional[str]:
         """
@@ -129,16 +128,16 @@ class EnvironmentDetector:
         """
         if not env:
             return None
-        
+
         env_clean = env.lower().strip()
-        
+
         # Direct match with valid environments
         if env_clean in cls.VALID_ENVIRONMENTS:
             return env_clean
-        
+
         # Alias match
         return cls.ENV_ALIASES.get(env_clean)
-    
+
     @classmethod
     def is_development(cls, environment: Optional[str] = None) -> bool:
         """
@@ -152,7 +151,7 @@ class EnvironmentDetector:
         """
         env = environment or cls.detect_environment()
         return env == 'development'
-    
+
     @classmethod
     def is_production(cls, environment: Optional[str] = None) -> bool:
         """
@@ -166,7 +165,7 @@ class EnvironmentDetector:
         """
         env = environment or cls.detect_environment()
         return env == 'production'
-    
+
     @classmethod
     def is_testing(cls, environment: Optional[str] = None) -> bool:
         """
@@ -180,7 +179,7 @@ class EnvironmentDetector:
         """
         env = environment or cls.detect_environment()
         return env == 'testing'
-    
+
     @classmethod
     def is_staging(cls, environment: Optional[str] = None) -> bool:
         """
@@ -194,7 +193,7 @@ class EnvironmentDetector:
         """
         env = environment or cls.detect_environment()
         return env == 'staging'
-    
+
     @classmethod
     def get_environment_info(cls) -> Dict[str, Any]:
         """
@@ -205,7 +204,7 @@ class EnvironmentDetector:
         """
         try:
             detected_env = cls.detect_environment()
-            
+
             return {
                 'environment': detected_env,
                 'is_development': cls.is_development(detected_env),
@@ -219,7 +218,7 @@ class EnvironmentDetector:
                 },
                 'detection_source': cls._get_detection_source(),
             }
-            
+
         except Exception as e:
             return {
                 'error': str(e),
@@ -229,7 +228,7 @@ class EnvironmentDetector:
                 },
                 'debug_flag': os.environ.get('DEBUG', 'not_set'),
             }
-    
+
     @classmethod
     def _get_detection_source(cls) -> str:
         """
@@ -243,14 +242,14 @@ class EnvironmentDetector:
             env_value = os.environ.get(env_var)
             if env_value and cls._normalize_environment(env_value):
                 return env_var
-        
+
         # Check DEBUG flag
         debug_value = os.environ.get('DEBUG', '').lower().strip()
         if debug_value in ('true', '1', 'yes', 'on', 'false', '0', 'no', 'off'):
             return 'DEBUG'
-        
+
         return 'default_fallback'
-    
+
     @classmethod
     def validate_environment(cls, environment: str) -> bool:
         """
@@ -263,7 +262,7 @@ class EnvironmentDetector:
             True if valid environment name
         """
         return environment in cls.VALID_ENVIRONMENTS
-    
+
     @classmethod
     def get_valid_environments(cls) -> List[str]:
         """
@@ -273,7 +272,7 @@ class EnvironmentDetector:
             List of valid environment names
         """
         return cls.VALID_ENVIRONMENTS.copy()
-    
+
     @classmethod
     def get_environment_aliases(cls) -> Dict[str, str]:
         """

@@ -1,446 +1,648 @@
 """
-Toolsets admin interfaces using Django Admin Utilities.
+Toolsets Admin v2.0 - NEW Declarative Pydantic Approach
 
-Enhanced toolset management with Material Icons and optimized queries.
+Enhanced toolset management with Material Icons and clean declarative config.
 """
 
-from django.contrib import admin, messages
-from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.contrib import admin
 from django.db import models
-from django.db.models import Count, Avg, Sum, Q
-from django.utils import timezone
 from django.db.models.fields.json import JSONField
-from datetime import timedelta
 from django_json_widget.widgets import JSONEditorWidget
-from unfold.admin import ModelAdmin, TabularInline
-from unfold.contrib.filters.admin import AutocompleteSelectFilter, AutocompleteSelectMultipleFilter
+from unfold.admin import ModelAdmin
+from unfold.contrib.filters.admin import AutocompleteSelectFilter
 from unfold.contrib.forms.widgets import WysiwygWidget
-from django_cfg import ExportMixin, ExportForm
 
+from django_cfg import ExportForm
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    MoneyDisplayConfig,
-    StatusBadgeConfig,
-    DateTimeDisplayConfig,
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    TextField,
+    UserField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    ActionVariant,
-    display,
-    action
+    computed_field,
 )
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
-from ..models.toolsets import ToolExecution, ApprovalLog, ToolsetConfiguration
+from ..models.toolsets import ApprovalLog, ToolExecution, ToolsetConfiguration
+from .toolsets_actions import (
+    retry_failed_executions,
+    clear_errors,
+    approve_pending,
+    reject_pending,
+    extend_expiry,
+    activate_configurations,
+    deactivate_configurations,
+    reset_usage,
+)
+
+
+# ===== Tool Execution Admin Config =====
+
+tool_execution_config = AdminConfig(
+    model=ToolExecution,
+
+    # Performance optimization
+    select_related=['agent_execution', 'user'],
+
+    # Import/Export
+    import_export_enabled=True,
+
+    # List display
+    list_display=[
+        'id_display',
+        'tool_name_display',
+        'toolset_display',
+        'status_display',
+        'duration_display',
+        'retry_count_display',
+        'created_at_display'
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="id",
+            title="ID",
+            variant="secondary",
+            icon=Icons.TAG,
+            header=True
+        ),
+        BadgeField(
+            name="tool_name",
+            title="Tool",
+            variant="primary",
+            icon=Icons.BUILD
+        ),
+        BadgeField(
+            name="toolset_class",
+            title="Toolset",
+            variant="info",
+            icon=Icons.EXTENSION
+        ),
+        BadgeField(
+            name="status",
+            title="Status"
+        ),
+        TextField(
+            name="execution_time",
+            title="Duration"
+        ),
+        BadgeField(
+            name="retry_count",
+            title="Retries",
+            variant="warning",
+            icon=Icons.REFRESH
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created",
+            ordering="created_at"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=['tool_name', 'toolset_name', 'arguments', 'result'],
+    list_filter=[
+        'status',
+        'tool_name',
+        'created_at',
+        ('agent_execution', AutocompleteSelectFilter)
+    ],
+
+    # List display links
+    list_display_links=['id_display', 'tool_name_display'],
+
+    # Autocomplete fields
+    autocomplete_fields=['agent_execution'],
+
+    # Form field overrides
+    formfield_overrides={
+        models.TextField: {"widget": WysiwygWidget},
+        JSONField: {"widget": JSONEditorWidget},
+    },
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="retry_failed_executions",
+            description="Retry failed executions",
+            variant="warning",
+            icon=Icons.REFRESH,
+            handler=retry_failed_executions
+        ),
+        ActionConfig(
+            name="clear_errors",
+            description="Clear error messages",
+            variant="primary",
+            icon=Icons.DELETE,
+            handler=clear_errors
+        ),
+    ],
+
+    # Ordering
+    ordering=['-created_at'],
+)
 
 
 @admin.register(ToolExecution)
-class ToolExecutionAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMixin):
-    """Enhanced admin for ToolExecution model using Django Admin Utilities."""
-    
-    # Performance optimization
-    select_related_fields = ['agent_execution', 'approval_log']
-    
-    # Export-only configuration
-    export_form_class = ExportForm
-    
-    list_display = [
-        'id_display', 'tool_name_display', 'toolset_display', 'status_display',
-        'duration_display', 'retry_count_display', 'created_at_display'
+class ToolExecutionAdmin(PydanticAdmin):
+    """
+    Tool Execution admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Export functionality (via config)
+    - Retry and error management actions
+    """
+    config = tool_execution_config
+
+    # Readonly fields
+    readonly_fields = ['id', 'execution_time', 'retry_count', 'created_at', 'started_at', 'completed_at']
+
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Tool Info",
+            fields=['tool_name', 'toolset_class', 'agent_execution']
+        ),
+        FieldsetConfig(
+            title="Execution Data",
+            fields=['arguments', 'result', 'error_message']
+        ),
+        FieldsetConfig(
+            title="Metrics",
+            fields=['execution_time', 'retry_count', 'status']
+        ),
+        FieldsetConfig(
+            title="Approval",
+            fields=['approval_log'],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=['created_at', 'started_at', 'completed_at'],
+            collapsed=True
+        ),
     ]
-    list_display_links = ['id_display', 'tool_name_display']
-    list_filter = [
-        'status', 'tool_name', 'created_at',
-        ('agent_execution', AutocompleteSelectFilter)
-    ]
-    search_fields = ['tool_name', 'toolset_name', 'arguments', 'result']
-    autocomplete_fields = ['agent_execution']
-    readonly_fields = [
-        'id', 'execution_time', 'retry_count', 'created_at', 'started_at', 'completed_at'
-    ]
-    ordering = ['-created_at']
-    
-    # Unfold form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
-        JSONField: {"widget": JSONEditorWidget},
-    }
-    
-    fieldsets = (
-        ("🔧 Tool Info", {
-            'fields': ('id', 'tool_name', 'toolset_class', 'agent_execution'),
-            'classes': ('tab',)
-        }),
-        ("📝 Execution Data", {
-            'fields': ('arguments', 'result', 'error_message'),
-            'classes': ('tab',)
-        }),
-        ("📊 Metrics", {
-            'fields': ('execution_time', 'retry_count', 'status'),
-            'classes': ('tab',)
-        }),
-        ("🔐 Approval", {
-            'fields': ('approval_log',),
-            'classes': ('tab', 'collapse')
-        }),
-        ("⏰ Timestamps", {
-            'fields': ('created_at', 'started_at', 'completed_at'),
-            'classes': ('tab', 'collapse')
-        }),
-    )
-    
-    actions = ['retry_failed_executions', 'clear_errors']
-    
-    @display(description="ID")
-    def id_display(self, obj):
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("ID")
+    def id_display(self, obj: ToolExecution) -> str:
         """Enhanced ID display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.TAG)
-        return StatusBadge.create(
-            text=f"#{str(obj.id)[:8]}",
-            variant="secondary",
-            config=config
-        )
-    
-    @display(description="Tool")
-    def tool_name_display(self, obj):
+        return self.html.badge(f"#{str(obj.id)[:8]}", variant="secondary", icon=Icons.TAG)
+
+    @computed_field("Tool")
+    def tool_name_display(self, obj: ToolExecution) -> str:
         """Enhanced tool name display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.BUILD)
-        return StatusBadge.create(
-            text=obj.tool_name,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Toolset")
-    def toolset_display(self, obj):
+        return self.html.badge(obj.tool_name, variant="primary", icon=Icons.BUILD)
+
+    @computed_field("Toolset")
+    def toolset_display(self, obj: ToolExecution) -> str:
         """Toolset class display with badge."""
         if not obj.toolset_class:
             return "—"
-        
+
         # Extract class name from full path
         class_name = obj.toolset_class.split('.')[-1] if '.' in obj.toolset_class else obj.toolset_class
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.EXTENSION)
-        return StatusBadge.create(
-            text=class_name,
-            variant="info",
-            config=config
-        )
-    
-    @display(description="Status")
-    def status_display(self, obj):
+
+        return self.html.badge(class_name, variant="info", icon=Icons.EXTENSION)
+
+    @computed_field("Status")
+    def status_display(self, obj: ToolExecution) -> str:
         """Status display with appropriate icons."""
-        status_config = StatusBadgeConfig(
-            custom_mappings={
-                'pending': 'warning',
-                'running': 'info',
-                'completed': 'success',
-                'failed': 'danger',
-                'cancelled': 'secondary'
-            },
-            show_icons=True,
-            icon=Icons.PLAY_ARROW if obj.status == 'running' else Icons.CHECK_CIRCLE if obj.status == 'completed' else Icons.ERROR if obj.status == 'failed' else Icons.SCHEDULE
-        )
-        return self.display_status_auto(obj, 'status', status_config)
-    
-    @display(description="Duration")
-    def duration_display(self, obj):
+        icon_map = {
+            'running': Icons.PLAY_ARROW,
+            'completed': Icons.CHECK_CIRCLE,
+            'failed': Icons.ERROR,
+            'pending': Icons.SCHEDULE,
+            'cancelled': Icons.CANCEL
+        }
+
+        variant_map = {
+            'pending': 'warning',
+            'running': 'info',
+            'completed': 'success',
+            'failed': 'danger',
+            'cancelled': 'secondary'
+        }
+
+        icon = icon_map.get(obj.status, Icons.SCHEDULE)
+        variant = variant_map.get(obj.status, 'warning')
+        text = obj.get_status_display() if hasattr(obj, 'get_status_display') else obj.status.title()
+        return self.html.badge(text, variant=variant, icon=icon)
+
+    @computed_field("Duration")
+    def duration_display(self, obj: ToolExecution) -> str:
         """Execution duration display."""
         if obj.execution_time:
             return f"{obj.execution_time:.3f}s"
         return "—"
-    
-    @display(description="Retries")
-    def retry_count_display(self, obj):
+
+    @computed_field("Retries")
+    def retry_count_display(self, obj: ToolExecution) -> str:
         """Retry count display with badge."""
         if obj.retry_count > 0:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.REFRESH)
             variant = "warning" if obj.retry_count > 2 else "info"
-            return StatusBadge.create(
-                text=str(obj.retry_count),
-                variant=variant,
-                config=config
+            return self.html.badge(str(obj.retry_count), variant=variant
             )
         return "0"
-    
-    @display(description="Created")
-    def created_at_display(self, obj):
+
+    @computed_field("Created")
+    def created_at_display(self, obj: ToolExecution) -> str:
         """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @action(description="Retry failed executions", variant=ActionVariant.WARNING)
-    def retry_failed_executions(self, request, queryset):
-        """Retry failed tool executions."""
-        failed_count = queryset.filter(status='failed').count()
-        messages.warning(request, f"Retry functionality not implemented yet. {failed_count} failed executions selected.")
-    
-    @action(description="Clear error messages", variant=ActionVariant.INFO)
-    def clear_errors(self, request, queryset):
-        """Clear error messages from executions."""
-        updated = queryset.update(error_message=None)
-        messages.info(request, f"Cleared error messages from {updated} executions.")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at
+
+
+# ===== Approval Log Admin Config =====
+
+approval_log_config = AdminConfig(
+    model=ApprovalLog,
+
+    # Performance optimization
+    select_related=['approved_by'],
+
+    # Import/Export
+    import_export_enabled=True,
+
+    # List display
+    list_display=[
+        'approval_id_display',
+        'tool_name_display',
+        'status_display',
+        'approved_by_display',
+        'decision_time_display',
+        'expires_at_display'
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="id",
+            title="Approval ID",
+            variant="secondary",
+            icon=Icons.VERIFIED,
+            header=True
+        ),
+        BadgeField(
+            name="tool_name",
+            title="Tool",
+            variant="primary",
+            icon=Icons.BUILD
+        ),
+        BadgeField(
+            name="status",
+            title="Status"
+        ),
+        UserField(
+            name="approved_by",
+            title="Approved By"
+        ),
+        TextField(
+            name="decision_time",
+            title="Decision Time"
+        ),
+        DateTimeField(
+            name="expires_at",
+            title="Expires"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=['tool_name', 'tool_args', 'justification'],
+    list_filter=[
+        'status',
+        'tool_name',
+        'requested_at',
+        'expires_at',
+        ('approved_by', AutocompleteSelectFilter)
+    ],
+
+    # List display links
+    list_display_links=['approval_id_display', 'tool_name_display'],
+
+    # Autocomplete fields
+    autocomplete_fields=['approved_by'],
+
+    # Form field overrides
+    formfield_overrides={
+        models.TextField: {"widget": WysiwygWidget},
+        JSONField: {"widget": JSONEditorWidget},
+    },
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="approve_pending",
+            description="Approve pending",
+            variant="success",
+            icon=Icons.CHECK_CIRCLE,
+            handler=approve_pending
+        ),
+        ActionConfig(
+            name="reject_pending",
+            description="Reject pending",
+            variant="danger",
+            icon=Icons.CANCEL,
+            confirmation=True,
+            handler=reject_pending
+        ),
+        ActionConfig(
+            name="extend_expiry",
+            description="Extend expiry",
+            variant="warning",
+            icon=Icons.TIMER,
+            handler=extend_expiry
+        ),
+    ],
+
+    # Ordering
+    ordering=['-requested_at'],
+)
 
 
 @admin.register(ApprovalLog)
-class ApprovalLogAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMixin):
-    """Enhanced admin for ApprovalLog model using Django Admin Utilities."""
-    
-    # Performance optimization
-    select_related_fields = ['approved_by']
-    
-    # Export-only configuration
-    export_form_class = ExportForm
-    
-    list_display = [
-        'approval_id_display', 'tool_name_display', 'status_display',
-        'approved_by_display', 'decision_time_display', 'expires_at_display'
+class ApprovalLogAdmin(PydanticAdmin):
+    """
+    Approval Log admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Export functionality (via config)
+    - Approval management actions
+    """
+    config = approval_log_config
+
+    # Readonly fields
+    readonly_fields = ['id', 'requested_at', 'decided_at', 'expires_at']
+
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Approval Info",
+            fields=['tool_name', 'status', 'approved_by']
+        ),
+        FieldsetConfig(
+            title="Request Details",
+            fields=['tool_arguments', 'justification']
+        ),
+        FieldsetConfig(
+            title="Timing",
+            fields=['decision_time', 'expires_at']
+        ),
     ]
-    list_display_links = ['approval_id_display', 'tool_name_display']
-    list_filter = [
-        'status', 'tool_name', 'requested_at', 'expires_at',
-        ('approved_by', AutocompleteSelectFilter)
-    ]
-    search_fields = ['tool_name', 'tool_args', 'justification']
-    autocomplete_fields = ['approved_by']
-    readonly_fields = [
-        'id', 'requested_at', 'decided_at', 'expires_at'
-    ]
-    ordering = ['-requested_at']
-    
-    # Unfold form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
-        JSONField: {"widget": JSONEditorWidget},
-    }
-    
-    fieldsets = (
-        ("🔐 Approval Info", {
-            'fields': ('id', 'tool_name', 'status', 'approved_by'),
-            'classes': ('tab',)
-        }),
-        ("📝 Request Details", {
-            'fields': ('tool_arguments', 'justification'),
-            'classes': ('tab',)
-        }),
-        ("⏰ Timing", {
-            'fields': ('created_at', 'decision_time', 'expires_at'),
-            'classes': ('tab',)
-        }),
-    )
-    
-    actions = ['approve_pending', 'reject_pending', 'extend_expiry']
-    
-    @display(description="Approval ID")
-    def approval_id_display(self, obj):
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Approval ID")
+    def approval_id_display(self, obj: ApprovalLog) -> str:
         """Enhanced approval ID display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.VERIFIED)
-        return StatusBadge.create(
-            text=f"#{str(obj.id)[:8]}",
-            variant="secondary",
-            config=config
-        )
-    
-    @display(description="Tool")
-    def tool_name_display(self, obj):
+        return self.html.badge(f"#{str(obj.id)[:8]}", variant="secondary", icon=Icons.VERIFIED)
+
+    @computed_field("Tool")
+    def tool_name_display(self, obj: ApprovalLog) -> str:
         """Enhanced tool name display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.BUILD)
-        return StatusBadge.create(
-            text=obj.tool_name,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Status")
-    def status_display(self, obj):
+        return self.html.badge(obj.tool_name, variant="primary", icon=Icons.BUILD)
+
+    @computed_field("Status")
+    def status_display(self, obj: ApprovalLog) -> str:
         """Status display with appropriate icons."""
-        status_config = StatusBadgeConfig(
-            custom_mappings={
-                'pending': 'warning',
-                'approved': 'success',
-                'rejected': 'danger',
-                'expired': 'secondary'
-            },
-            show_icons=True,
-            icon=Icons.CHECK_CIRCLE if obj.status == 'approved' else Icons.CANCEL if obj.status == 'rejected' else Icons.SCHEDULE if obj.status == 'pending' else Icons.TIMER_OFF
-        )
-        return self.display_status_auto(obj, 'status', status_config)
-    
-    @display(description="Approved By")
-    def approved_by_display(self, obj):
+        icon_map = {
+            'approved': Icons.CHECK_CIRCLE,
+            'rejected': Icons.CANCEL,
+            'pending': Icons.SCHEDULE,
+            'expired': Icons.TIMER_OFF
+        }
+
+        variant_map = {
+            'pending': 'warning',
+            'approved': 'success',
+            'rejected': 'danger',
+            'expired': 'secondary'
+        }
+
+        icon = icon_map.get(obj.status, Icons.SCHEDULE)
+        variant = variant_map.get(obj.status, 'warning')
+        text = obj.get_status_display() if hasattr(obj, 'get_status_display') else obj.status.title()
+        return self.html.badge(text, variant=variant, icon=icon)
+
+    @computed_field("Approved By")
+    def approved_by_display(self, obj: ApprovalLog) -> str:
         """Approved by user display."""
         if not obj.approved_by:
             return "—"
-        return self.display_user_simple(obj.approved_by)
-    
-    @display(description="Decision Time")
-    def decision_time_display(self, obj):
+        # Simple username display, UserField handles avatar and styling
+        return obj.approved_by.username
+
+    @computed_field("Decision Time")
+    def decision_time_display(self, obj: ApprovalLog) -> str:
         """Decision time display."""
         if obj.decision_time:
             return f"{obj.decision_time:.2f}s"
         return "—"
-    
-    @display(description="Expires")
-    def expires_at_display(self, obj):
+
+    @computed_field("Expires")
+    def expires_at_display(self, obj: ApprovalLog) -> str:
         """Expiry time with relative display."""
         if not obj.expires_at:
             return "—"
-        
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'expires_at', config)
-    
-    @action(description="Approve pending", variant=ActionVariant.SUCCESS)
-    def approve_pending(self, request, queryset):
-        """Approve pending approvals."""
-        updated = queryset.filter(status='pending').update(
-            status='approved',
-            approved_by=request.user,
-            decision_time=timezone.now()
-        )
-        messages.success(request, f"Approved {updated} pending requests.")
-    
-    @action(description="Reject pending", variant=ActionVariant.DANGER)
-    def reject_pending(self, request, queryset):
-        """Reject pending approvals."""
-        updated = queryset.filter(status='pending').update(
-            status='rejected',
-            approved_by=request.user,
-            decision_time=timezone.now()
-        )
-        messages.warning(request, f"Rejected {updated} pending requests.")
-    
-    @action(description="Extend expiry", variant=ActionVariant.INFO)
-    def extend_expiry(self, request, queryset):
-        """Extend expiry time for pending approvals."""
-        from datetime import timedelta
-        new_expiry = timezone.now() + timedelta(hours=24)
-        updated = queryset.filter(status='pending').update(expires_at=new_expiry)
-        messages.info(request, f"Extended expiry for {updated} approvals by 24 hours.")
+
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.expires_at
+
+
+# ===== Toolset Configuration Admin Config =====
+
+toolset_config_config = AdminConfig(
+    model=ToolsetConfiguration,
+
+    # Performance optimization
+    select_related=['created_by'],
+
+    # Import/Export
+    import_export_enabled=True,
+
+    # List display
+    list_display=[
+        'name_display',
+        'toolset_class_display',
+        'status_display',
+        'usage_count_display',
+        'created_by_display',
+        'created_at_display'
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="name",
+            title="Configuration Name",
+            variant="primary",
+            icon=Icons.SETTINGS,
+            header=True
+        ),
+        BadgeField(
+            name="toolset_class",
+            title="Toolset Class",
+            variant="info",
+            icon=Icons.EXTENSION
+        ),
+        BadgeField(
+            name="is_active",
+            title="Status"
+        ),
+        TextField(
+            name="usage_count",
+            title="Usage"
+        ),
+        UserField(
+            name="created_by",
+            title="Created By"
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created",
+            ordering="created_at"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=['name', 'description', 'toolset_class'],
+    list_filter=[
+        'is_active',
+        'toolset_class',
+        'created_at',
+        ('created_by', AutocompleteSelectFilter)
+    ],
+
+    # List display links
+    list_display_links=['name_display'],
+
+    # Autocomplete fields
+    autocomplete_fields=['created_by'],
+
+    # Form field overrides
+    formfield_overrides={
+        models.TextField: {"widget": WysiwygWidget},
+        JSONField: {"widget": JSONEditorWidget},
+    },
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="activate_configurations",
+            description="Activate configurations",
+            variant="success",
+            icon=Icons.CHECK_CIRCLE,
+            handler=activate_configurations
+        ),
+        ActionConfig(
+            name="deactivate_configurations",
+            description="Deactivate configurations",
+            variant="warning",
+            icon=Icons.PAUSE_CIRCLE,
+            handler=deactivate_configurations
+        ),
+        ActionConfig(
+            name="reset_usage",
+            description="Reset usage count",
+            variant="primary",
+            icon=Icons.REFRESH,
+            handler=reset_usage
+        ),
+    ],
+
+    # Ordering
+    ordering=['-created_at'],
+)
 
 
 @admin.register(ToolsetConfiguration)
-class ToolsetConfigurationAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin, ExportMixin):
-    """Enhanced admin for ToolsetConfiguration model using Django Admin Utilities."""
-    
-    # Performance optimization
-    select_related_fields = ['created_by']
-    
-    # Export-only configuration
-    export_form_class = ExportForm
-    
-    list_display = [
-        'name_display', 'toolset_class_display', 'status_display',
-        'usage_count_display', 'created_by_display', 'created_at_display'
+class ToolsetConfigurationAdmin(PydanticAdmin):
+    """
+    Toolset Configuration admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Material Icons integration
+    - Export functionality (via config)
+    - Configuration management actions
+    """
+    config = toolset_config_config
+
+    # Readonly fields
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+    # Fieldsets
+    fieldsets = [
+        FieldsetConfig(
+            title="Configuration Info",
+            fields=['name', 'description', 'toolset_class']
+        ),
+        FieldsetConfig(
+            title="Settings",
+            fields=['configuration', 'is_active']
+        ),
+        FieldsetConfig(
+            title="Usage",
+            fields=['usage_count']
+        ),
+        FieldsetConfig(
+            title="Metadata",
+            fields=['created_by', 'updated_by', 'created_at', 'updated_at'],
+            collapsed=True
+        ),
     ]
-    list_display_links = ['name_display']
-    list_filter = [
-        'is_active', 'toolset_class', 'created_at',
-        ('created_by', AutocompleteSelectFilter)
-    ]
-    search_fields = ['name', 'description', 'toolset_class']
-    autocomplete_fields = ['created_by']
-    readonly_fields = [
-        'id', 'created_at', 'updated_at'
-    ]
-    ordering = ['-created_at']
-    
-    # Unfold form field overrides
-    formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
-        JSONField: {"widget": JSONEditorWidget},
-    }
-    
-    fieldsets = (
-        ("⚙️ Configuration Info", {
-            'fields': ('id', 'name', 'description', 'toolset_class'),
-            'classes': ('tab',)
-        }),
-        ("🔧 Settings", {
-            'fields': ('configuration', 'is_active'),
-            'classes': ('tab',)
-        }),
-        ("📊 Usage", {
-            'fields': ('usage_count',),
-            'classes': ('tab',)
-        }),
-        ("👤 Metadata", {
-            'fields': ('created_by', 'updated_by', 'created_at', 'updated_at'),
-            'classes': ('tab', 'collapse')
-        }),
-    )
-    
-    actions = ['activate_configurations', 'deactivate_configurations', 'reset_usage']
-    
-    @display(description="Configuration Name")
-    def name_display(self, obj):
+
+    # Custom display methods using @computed_field decorator
+    @computed_field("Configuration Name")
+    def name_display(self, obj: ToolsetConfiguration) -> str:
         """Enhanced configuration name display."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.SETTINGS)
-        return StatusBadge.create(
-            text=obj.name,
-            variant="primary",
-            config=config
-        )
-    
-    @display(description="Toolset Class")
-    def toolset_class_display(self, obj):
+        return self.html.badge(obj.name, variant="primary", icon=Icons.SETTINGS)
+
+    @computed_field("Toolset Class")
+    def toolset_class_display(self, obj: ToolsetConfiguration) -> str:
         """Toolset class display with badge."""
         if not obj.toolset_class:
             return "—"
-        
+
         # Extract class name from full path
         class_name = obj.toolset_class.split('.')[-1] if '.' in obj.toolset_class else obj.toolset_class
-        
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.EXTENSION)
-        return StatusBadge.create(
-            text=class_name,
-            variant="info",
-            config=config
-        )
-    
-    @display(description="Status")
-    def status_display(self, obj):
+
+        return self.html.badge(class_name, variant="info", icon=Icons.EXTENSION)
+
+    @computed_field("Status")
+    def status_display(self, obj: ToolsetConfiguration) -> str:
         """Status display based on active state."""
         if obj.is_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CHECK_CIRCLE)
-            return StatusBadge.create(text="Active", variant="success", config=config)
+            return self.html.badge("Active", variant="success", icon=Icons.CHECK_CIRCLE)
         else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.PAUSE_CIRCLE)
-            return StatusBadge.create(text="Inactive", variant="secondary", config=config)
-    
-    @display(description="Usage")
-    def usage_count_display(self, obj):
+            return self.html.badge("Inactive", variant="secondary", icon=Icons.PAUSE_CIRCLE)
+
+    @computed_field("Usage")
+    def usage_count_display(self, obj: ToolsetConfiguration) -> str:
         """Usage count display."""
         if not obj.usage_count:
             return "Not used"
         return f"{obj.usage_count} times"
-    
-    @display(description="Created By")
-    def created_by_display(self, obj):
+
+    @computed_field("Created By")
+    def created_by_display(self, obj: ToolsetConfiguration) -> str:
         """Created by user display."""
         if not obj.created_by:
             return "—"
-        return self.display_user_simple(obj.created_by)
-    
-    @display(description="Created")
-    def created_at_display(self, obj):
+        # Simple username display, UserField handles avatar and styling
+        return obj.created_by.username
+
+    @computed_field("Created")
+    def created_at_display(self, obj: ToolsetConfiguration) -> str:
         """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @action(description="Activate configurations", variant=ActionVariant.SUCCESS)
-    def activate_configurations(self, request, queryset):
-        """Activate selected configurations."""
-        updated = queryset.update(is_active=True)
-        messages.success(request, f"Activated {updated} configurations.")
-    
-    @action(description="Deactivate configurations", variant=ActionVariant.WARNING)
-    def deactivate_configurations(self, request, queryset):
-        """Deactivate selected configurations."""
-        updated = queryset.update(is_active=False)
-        messages.warning(request, f"Deactivated {updated} configurations.")
-    
-    @action(description="Reset usage count", variant=ActionVariant.INFO)
-    def reset_usage(self, request, queryset):
-        """Reset usage count for selected configurations."""
-        updated = queryset.update(usage_count=0)
-        messages.info(request, f"Reset usage count for {updated} configurations.")
+        # DateTimeField in display_fields handles formatting automatically
+        return obj.created_at

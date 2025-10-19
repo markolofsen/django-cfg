@@ -7,4 +7,6 @@ django_cfg.modules.django_client.management.commands.validate_openapi
 For backward compatibility and discoverability.
 """
 
-from django_cfg.modules.django_client.management.commands.validate_openapi import Command  # noqa: F401
+from django_cfg.modules.django_client.management.commands.validate_openapi import (
+    Command,  # noqa: F401
+)

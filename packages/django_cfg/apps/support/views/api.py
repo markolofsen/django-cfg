@@ -4,10 +4,11 @@ Support API Views
 REST API ViewSets for tickets and messages.
 """
 
-from rest_framework import viewsets, permissions
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
-from ..models import Ticket, Message
-from ..serializers import TicketSerializer, MessageSerializer, MessageCreateSerializer
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from rest_framework import permissions, viewsets
+
+from ..models import Message, Ticket
+from ..serializers import MessageCreateSerializer, MessageSerializer, TicketSerializer
 
 
 class TicketViewSet(viewsets.ModelViewSet):
@@ -22,7 +23,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         # Handle swagger fake view
         if getattr(self, 'swagger_fake_view', False):
             return Ticket.objects.none()
-        
+
         if self.request.user.is_staff:
             return Ticket.objects.all().order_by('-created_at')
         return Ticket.objects.filter(user=self.request.user).order_by('-created_at')
@@ -145,16 +146,16 @@ class MessageViewSet(viewsets.ModelViewSet):
         # Handle swagger fake view
         if getattr(self, 'swagger_fake_view', False):
             return Message.objects.none()
-        
+
         ticket_uuid = self.kwargs.get('ticket_uuid')
-        
+
         # Base queryset filtered by ticket
         queryset = Message.objects.filter(ticket__uuid=ticket_uuid)
-        
+
         # Additional permission filtering
         if not self.request.user.is_staff:
             queryset = queryset.filter(ticket__user=self.request.user)
-        
+
         return queryset.order_by('created_at')
 
     def get_serializer_class(self):

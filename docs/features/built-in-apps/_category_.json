@@ -1,0 +1,9 @@
+{
+  "label": "Built-in Apps",
+  "position": 1,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "Ready-to-use Django applications organized by category: User Management, AI & Knowledge, and Operations."
+  }
+}

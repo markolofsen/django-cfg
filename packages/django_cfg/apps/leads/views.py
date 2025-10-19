@@ -2,17 +2,17 @@
 Lead Views - API views for Lead model.
 """
 
-from rest_framework import viewsets, status
+from drf_spectacular.utils import OpenApiExample, extend_schema
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from rest_framework.response import Response
 
 from .models import Lead
 from .serializers import (
-    LeadSubmissionSerializer, 
-    LeadSubmissionResponseSerializer, 
-    LeadSubmissionErrorSerializer
+    LeadSubmissionErrorSerializer,
+    LeadSubmissionResponseSerializer,
+    LeadSubmissionSerializer,
 )
 
 
@@ -65,9 +65,9 @@ class LeadViewSet(viewsets.ModelViewSet):
                 ip_address = x_forwarded_for.split(',')[0]
             else:
                 ip_address = request.META.get('REMOTE_ADDR')
-            
+
             user_agent = request.META.get('HTTP_USER_AGENT', '')
-            
+
             # Create lead with metadata
             lead_data = serializer.validated_data
             lead_data.update({
@@ -75,15 +75,15 @@ class LeadViewSet(viewsets.ModelViewSet):
                 'user_agent': user_agent,
                 'status': Lead.StatusChoices.NEW
             })
-            
+
             lead = Lead.objects.create(**lead_data)
-            
+
             return Response({
                 'success': True,
                 'message': 'Lead submitted successfully',
                 'lead_id': lead.id
             }, status=status.HTTP_201_CREATED)
-        
+
         return Response({
             'success': False,
             'error': 'Invalid data',

@@ -1,55 +1,52 @@
 """
-CloudflareSite admin using Django Admin Utilities.
+CloudflareSite Admin v2.0 - NEW Declarative Pydantic Approach
 
-Enhanced site management with Material Icons and optimized queries.
+Enhanced site management with Material Icons and auto-generated displays.
 """
 
-from django.contrib import admin, messages
-from django.urls import reverse
-from django.http import HttpRequest
-from django.shortcuts import redirect
-from django.db import models
+from django.contrib import admin
 from django.db.models import Count, Q
-from typing import Any
-from unfold.admin import ModelAdmin, TabularInline
+from unfold.admin import TabularInline
 
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    StatusBadgeConfig,
-    DateTimeDisplayConfig,
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    BooleanField,
+    CurrencyField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    ActionVariant,
-    display,
-    action
+    TextField,
+    UserField,
+    computed_field
 )
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from ..models import CloudflareSite, MaintenanceLog
-from ..services import MaintenanceService
 
 
 class MaintenanceLogInline(TabularInline):
     """Inline for recent maintenance logs."""
-    
+
     model = MaintenanceLog
     verbose_name = "Recent Log"
-    verbose_name_plural = "📋 Recent Maintenance Logs"
+    verbose_name_plural = "Recent Maintenance Logs"
     extra = 0
     max_num = 5
     can_delete = False
     show_change_link = True
-    
+
     fields = ['status_display', 'action', 'created_at', 'duration_seconds', 'error_preview']
     readonly_fields = ['status_display', 'action', 'created_at', 'duration_seconds', 'error_preview']
-    
+
     def has_add_permission(self, request, obj=None):
         return False
-    
+
     def has_change_permission(self, request, obj=None):
         return False
-    
-    @display(description="Status")
+
+    @computed_field("Status")
     def status_display(self, obj):
         """Display status with badge."""
         status_variants = {
@@ -58,278 +55,219 @@ class MaintenanceLogInline(TabularInline):
             MaintenanceLog.Status.PENDING: 'warning'
         }
         variant = status_variants.get(obj.status, 'secondary')
-        
+
         status_icons = {
             MaintenanceLog.Status.SUCCESS: Icons.CHECK_CIRCLE,
             MaintenanceLog.Status.FAILED: Icons.CANCEL,
             MaintenanceLog.Status.PENDING: Icons.SCHEDULE
         }
         icon = status_icons.get(obj.status, Icons.HELP)
-        
-        config = StatusBadgeConfig(show_icons=True, icon=icon)
-        return StatusBadge.create(
-            text=obj.get_status_display(),
-            variant=variant,
-            config=config
-        )
-    
-    @display(description="Error")
+
+        return self.html.badge(obj.get_status_display(), variant=variant, icon=icon)
+
+    @computed_field("Error")
     def error_preview(self, obj):
         """Show error message preview."""
         if not obj.error_message:
             return "—"
-        
+
         preview = obj.error_message[:50]
         if len(obj.error_message) > 50:
             preview += "..."
-        
+
         return preview
 
 
-@admin.register(CloudflareSite)
-class CloudflareSiteAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
-    """Admin for CloudflareSite using Django Admin Utilities."""
-    
+# ===== CloudflareSite Admin Config =====
+
+cloudflare_site_config = AdminConfig(
+    model=CloudflareSite,
+
     # Performance optimization
-    select_related_fields = ['api_key']
-    
-    list_display = [
-        'status_display',
-        'name_display', 
-        'domain_display',
-        'subdomain_config_display',
-        'maintenance_display',
-        'active_display',
-        'last_maintenance_display',
+    select_related=['api_key'],
+
+    # List display
+    list_display=[
+        'status',
+        'name',
+        'domain',
+        'subdomain_config',
+        'maintenance_active',
+        'is_active',
+        'last_maintenance_at',
         'logs_count',
-        'api_key_display'
-    ]
-    list_display_links = ['name_display', 'domain_display']
-    ordering = ['-created_at']
-    search_fields = ['name', 'domain', 'zone_id']
-    list_filter = [
+        'api_key'
+    ],
+
+    # Display fields with UI widgets (auto-generates display methods)
+    display_fields=[
+        BadgeField(
+            name="status",
+            title="Status",
+            label_map={
+                "maintenance": "warning",
+                "active": "success",
+                "inactive": "secondary"
+            },
+            icon=Icons.LANGUAGE
+        ),
+        BadgeField(
+            name="name",
+            title="Name",
+            variant="primary",
+            icon=Icons.LANGUAGE,
+            ordering="name",
+            header=True
+        ),
+        BadgeField(
+            name="domain",
+            title="Domain",
+            variant="info",
+            icon=Icons.PUBLIC,
+            ordering="domain"
+        ),
+        TextField(
+            name="subdomain_config",
+            title="Subdomains"
+        ),
+        BooleanField(
+            name="maintenance_active",
+            title="Maintenance"
+        ),
+        BooleanField(
+            name="is_active",
+            title="Active"
+        ),
+        DateTimeField(
+            name="last_maintenance_at",
+            title="Last Maintenance",
+            empty_value="Never"
+        ),
+        TextField(
+            name="logs_count",
+            title="Logs"
+        ),
+        TextField(
+            name="api_key",
+            title="API Key",
+            empty_value="—"
+        ),
+    ],
+
+    # Search and filters
+    search_fields=['name', 'domain', 'zone_id'],
+    list_filter=[
         'maintenance_active',
         'is_active',
         'include_subdomains',
         'created_at',
         'last_maintenance_at'
-    ]
-    readonly_fields = [
+    ],
+
+    # Readonly fields
+    readonly_fields=[
         'created_at',
         'updated_at',
         'last_maintenance_at',
         'logs_preview'
-    ]
-    
-    fieldsets = [
-        ('🌐 Site Information', {
-            'fields': ['name', 'domain', 'zone_id'],
-            'classes': ('tab',)
-        }),
-        ('🔧 Maintenance Configuration', {
-            'fields': ['maintenance_url', 'include_subdomains'],
-            'classes': ('tab',)
-        }),
-        ('☁️ Cloudflare Settings', {
-            'fields': ['api_key'],
-            'classes': ('tab',)
-        }),
-        ('⚙️ Status', {
-            'fields': ['is_active', 'maintenance_active'],
-            'classes': ('tab',)
-        }),
-        ('⏰ Timestamps', {
-            'fields': ['created_at', 'updated_at', 'last_maintenance_at'],
-            'classes': ('tab', 'collapse')
-        }),
-        ('📋 Recent Logs', {
-            'fields': ['logs_preview'],
-            'classes': ('tab', 'collapse')
-        })
-    ]
-    
-    inlines = [MaintenanceLogInline]
-    
-    actions = [
-        'enable_maintenance_action',
-        'disable_maintenance_action',
-        'activate_sites_action',
-        'deactivate_sites_action',
-        'sync_with_cloudflare_action'
-    ]
-    
-    @display(description="Status")
-    def status_display(self, obj: CloudflareSite) -> str:
-        """Display site status with maintenance indicator."""
-        if obj.maintenance_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.BUILD)
-            return StatusBadge.create(
-                text=f"{obj.name} (Maintenance)",
-                variant="warning",
-                config=config
-            )
-        elif obj.is_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CHECK_CIRCLE)
-            return StatusBadge.create(
-                text=obj.name,
-                variant="success",
-                config=config
-            )
-        else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CANCEL)
-            return StatusBadge.create(
-                text=obj.name,
-                variant="secondary",
-                config=config
-            )
-    
-    @display(description="Name", ordering="name")
-    def name_display(self, obj: CloudflareSite) -> str:
-        """Display site name."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.LANGUAGE)
-        return StatusBadge.create(
-            text=obj.name,
-            variant="primary",
-            config=config
+    ],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title='Site Information',
+            fields=['name', 'domain', 'zone_id']
+        ),
+        FieldsetConfig(
+            title='Maintenance Configuration',
+            fields=['maintenance_url', 'include_subdomains']
+        ),
+        FieldsetConfig(
+            title='Cloudflare Settings',
+            fields=['api_key']
+        ),
+        FieldsetConfig(
+            title='Status',
+            fields=['is_active', 'maintenance_active']
+        ),
+        FieldsetConfig(
+            title='Timestamps',
+            fields=['created_at', 'updated_at', 'last_maintenance_at'],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title='Recent Logs',
+            fields=['logs_preview'],
+            collapsed=True
         )
-    
-    @display(description="Domain", ordering="domain")
-    def domain_display(self, obj: CloudflareSite) -> str:
-        """Display domain."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.PUBLIC)
-        return StatusBadge.create(
-            text=obj.domain,
+    ],
+
+    # Actions
+    actions=[
+        ActionConfig(
+            name="enable_maintenance",
+            description="Enable maintenance mode",
+            variant="warning",
+            handler="django_cfg.apps.maintenance.admin.actions.enable_maintenance_mode"
+        ),
+        ActionConfig(
+            name="disable_maintenance",
+            description="Disable maintenance mode",
+            variant="success",
+            handler="django_cfg.apps.maintenance.admin.actions.disable_maintenance_mode"
+        ),
+        ActionConfig(
+            name="activate_sites",
+            description="Activate sites",
+            variant="success",
+            handler="django_cfg.apps.maintenance.admin.actions.activate_sites"
+        ),
+        ActionConfig(
+            name="deactivate_sites",
+            description="Deactivate sites",
+            variant="warning",
+            handler="django_cfg.apps.maintenance.admin.actions.deactivate_sites"
+        ),
+        ActionConfig(
+            name="sync_with_cloudflare",
+            description="Sync with Cloudflare",
             variant="info",
-            config=config
-        )
-    
-    @display(description="Subdomains")
-    def subdomain_config_display(self, obj: CloudflareSite) -> str:
-        """Display subdomain configuration."""
-        if obj.include_subdomains:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.ACCOUNT_TREE)
-            return StatusBadge.create(text="Includes Subdomains", variant="info", config=config)
-        else:
-            return "Domain Only"
-    
-    @display(description="Maintenance")
-    def maintenance_display(self, obj: CloudflareSite) -> str:
-        """Display maintenance status."""
-        if obj.maintenance_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.BUILD)
-            return StatusBadge.create(text="Active", variant="warning", config=config)
-        else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CHECK_CIRCLE)
-            return StatusBadge.create(text="Inactive", variant="success", config=config)
-    
-    @display(description="Active")
-    def active_display(self, obj: CloudflareSite) -> str:
-        """Display active status."""
-        if obj.is_active:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CHECK_CIRCLE)
-            return StatusBadge.create(text="Active", variant="success", config=config)
-        else:
-            config = StatusBadgeConfig(show_icons=True, icon=Icons.CANCEL)
-            return StatusBadge.create(text="Inactive", variant="secondary", config=config)
-    
-    @display(description="Last Maintenance")
-    def last_maintenance_display(self, obj: CloudflareSite) -> str:
-        """Display last maintenance time."""
-        if not obj.last_maintenance_at:
-            return "Never"
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'last_maintenance_at', config)
-    
-    @display(description="Logs")
-    def logs_count(self, obj: CloudflareSite) -> str:
-        """Display count of maintenance logs."""
-        count = obj.maintenancelog_set.count()
-        if count > 0:
-            return f"{count} logs"
-        return "No logs"
-    
-    @display(description="API Key")
-    def api_key_display(self, obj: CloudflareSite) -> str:
-        """Display API key."""
-        if not obj.api_key:
-            return "—"
-        return self.display_user_simple(obj.api_key, field_name='name')
-    
+            handler="django_cfg.apps.maintenance.admin.actions.sync_with_cloudflare"
+        ),
+    ],
+
+    # Ordering
+    ordering=['-created_at'],
+)
+
+
+@admin.register(CloudflareSite)
+class CloudflareSiteAdmin(PydanticAdmin):
+    """Admin for CloudflareSite using Django Admin Utilities v2.0."""
+    config = cloudflare_site_config
+
+    inlines = [MaintenanceLogInline]
+
+    # Custom readonly methods for detail view
     def logs_preview(self, obj: CloudflareSite) -> str:
         """Show recent maintenance logs."""
         logs = obj.maintenancelog_set.all()[:5]
-        
+
         if not logs:
             return "No maintenance logs yet"
-        
+
         log_list = []
         for log in logs:
-            status_emoji = "✅" if log.status == MaintenanceLog.Status.SUCCESS else "❌" if log.status == MaintenanceLog.Status.FAILED else "⏳"
-            log_list.append(f"{status_emoji} {log.action} - {log.created_at.strftime('%Y-%m-%d %H:%M')}")
-        
+            status_text = "Success" if log.status == MaintenanceLog.Status.SUCCESS else "Failed" if log.status == MaintenanceLog.Status.FAILED else "Pending"
+            log_list.append(f"{status_text} {log.action} - {log.created_at.strftime('%Y-%m-%d %H:%M')}")
+
         return "\n".join(log_list)
-    
-    @action(description="Enable maintenance mode", variant=ActionVariant.WARNING)
-    def enable_maintenance_action(self, request: HttpRequest, queryset) -> None:
-        """Enable maintenance mode for selected sites."""
-        service = MaintenanceService()
-        success_count = 0
-        error_count = 0
-        
-        for site in queryset:
-            try:
-                service.enable_maintenance(site)
-                success_count += 1
-            except Exception as e:
-                error_count += 1
-                messages.error(request, f"Failed to enable maintenance for {site.name}: {str(e)}")
-        
-        if success_count > 0:
-            messages.success(request, f"Successfully enabled maintenance for {success_count} sites.")
-        if error_count > 0:
-            messages.error(request, f"Failed to enable maintenance for {error_count} sites.")
-    
-    @action(description="Disable maintenance mode", variant=ActionVariant.SUCCESS)
-    def disable_maintenance_action(self, request: HttpRequest, queryset) -> None:
-        """Disable maintenance mode for selected sites."""
-        service = MaintenanceService()
-        success_count = 0
-        error_count = 0
-        
-        for site in queryset:
-            try:
-                service.disable_maintenance(site)
-                success_count += 1
-            except Exception as e:
-                error_count += 1
-                messages.error(request, f"Failed to disable maintenance for {site.name}: {str(e)}")
-        
-        if success_count > 0:
-            messages.success(request, f"Successfully disabled maintenance for {success_count} sites.")
-        if error_count > 0:
-            messages.error(request, f"Failed to disable maintenance for {error_count} sites.")
-    
-    @action(description="Activate sites", variant=ActionVariant.SUCCESS)
-    def activate_sites_action(self, request: HttpRequest, queryset) -> None:
-        """Activate selected sites."""
-        count = queryset.update(is_active=True)
-        messages.success(request, f"Successfully activated {count} sites.")
-    
-    @action(description="Deactivate sites", variant=ActionVariant.DANGER)
-    def deactivate_sites_action(self, request: HttpRequest, queryset) -> None:
-        """Deactivate selected sites."""
-        count = queryset.update(is_active=False)
-        messages.warning(request, f"Successfully deactivated {count} sites.")
-    
-    @action(description="Sync with Cloudflare", variant=ActionVariant.INFO)
-    def sync_with_cloudflare_action(self, request: HttpRequest, queryset) -> None:
-        """Sync selected sites with Cloudflare."""
-        messages.info(request, f"Cloudflare sync initiated for {queryset.count()} sites.")
-    
+    logs_preview.short_description = "Recent Logs"
+
     def changelist_view(self, request, extra_context=None):
         """Add site statistics to changelist."""
         extra_context = extra_context or {}
-        
+
         queryset = self.get_queryset(request)
         stats = queryset.aggregate(
             total_sites=Count('id'),
@@ -337,12 +275,12 @@ class CloudflareSiteAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
             maintenance_sites=Count('id', filter=Q(maintenance_active=True)),
             subdomain_sites=Count('id', filter=Q(include_subdomains=True))
         )
-        
+
         extra_context['site_stats'] = {
             'total_sites': stats['total_sites'] or 0,
             'active_sites': stats['active_sites'] or 0,
             'maintenance_sites': stats['maintenance_sites'] or 0,
             'subdomain_sites': stats['subdomain_sites'] or 0
         }
-        
+
         return super().changelist_view(request, extra_context)

@@ -1,6 +1,8 @@
 import uuid
-from django.db import models
+
 from django.conf import settings
+from django.db import models
+
 from .managers.message_manager import MessageManager
 from .managers.ticket_manager import TicketManager
 

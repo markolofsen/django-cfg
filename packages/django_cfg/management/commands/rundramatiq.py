@@ -10,7 +10,9 @@ Usage:
     python manage.py rundramatiq --queues default high_priority
 """
 
-from django_cfg.modules.django_tasks.management.commands.rundramatiq import Command as DramatiqCommand
+from django_cfg.modules.django_tasks.management.commands.rundramatiq import (
+    Command as DramatiqCommand,
+)
 
 
 class Command(DramatiqCommand):

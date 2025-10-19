@@ -9,17 +9,21 @@ import asyncio
 import logging
 import random
 import string
-from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
-
-# Third-party imports (optional)
-from ._imports import Client, TwilioException, SendGridAPIClient, TWILIO_AVAILABLE, SENDGRID_AVAILABLE
+from typing import Any, Dict, Optional
 
 # Django CFG imports
 from django_cfg.modules.base import BaseCfgModule
-from django_cfg.modules.django_twilio.models import TwilioConfig
 from django_cfg.modules.django_twilio.exceptions import (
     TwilioConfigurationError,
+)
+from django_cfg.modules.django_twilio.models import TwilioConfig
+
+# Third-party imports (optional)
+from ._imports import (
+    Client,
+    SendGridAPIClient,
+    TwilioException,
 )
 
 logger = logging.getLogger(__name__)
