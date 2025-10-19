@@ -21,7 +21,7 @@ class DatabaseRouter:
         return rules.get(model._meta.app_label)
 
     def db_for_write(self, model, **hints):
-        """Route writes to correct database.""" 
+        """Route writes to correct database."""
         rules = getattr(settings, 'DATABASE_ROUTING_RULES', {})
         return rules.get(model._meta.app_label)
 
@@ -56,6 +56,6 @@ class DatabaseRouter:
         elif db in rules.values():
             # This app is NOT configured, but the target DB is used by other apps
             return db == 'default'
-        
+
         # Allow migration to default
         return None

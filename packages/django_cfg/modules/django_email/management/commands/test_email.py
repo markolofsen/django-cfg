@@ -4,8 +4,9 @@ Test Email Command
 Tests email sending functionality using django_cfg configuration.
 """
 
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
 from django_cfg.modules.django_logging import get_logger
 
 User = get_user_model()
@@ -61,14 +62,14 @@ class Command(BaseCommand):
         try:
             from django_cfg.modules.django_email import DjangoEmailService
             email_service = DjangoEmailService()
-            
+
             # Показать информацию о backend
             backend_info = email_service.get_backend_info()
             self.stdout.write(f"\n📧 Backend: {backend_info['backend']}")
             self.stdout.write(f"📧 Configured: {backend_info['configured']}")
-            
+
             self.stdout.write("\n📧 Sending test email with HTML template...")
-            
+
             # Отправить письмо с HTML шаблоном
             result = email_service.send_template(
                 subject=subject,
@@ -86,8 +87,8 @@ class Command(BaseCommand):
                 },
                 recipient_list=[email]
             )
-            
+
             self.stdout.write(self.style.SUCCESS(f"✅ Email sent successfully! Result: {result}"))
-            
+
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"❌ Failed to send email: {e}"))

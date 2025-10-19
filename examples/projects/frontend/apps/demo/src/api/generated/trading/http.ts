@@ -1,0 +1,98 @@
+/**
+ * HTTP Client Adapter Pattern
+ *
+ * Allows switching between fetch/axios/httpx without changing generated code.
+ * Provides unified interface for making HTTP requests.
+ */
+
+export interface HttpRequest {
+  method: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: any;
+  params?: Record<string, any>;
+  /** FormData for file uploads (multipart/form-data) */
+  formData?: FormData;
+}
+
+export interface HttpResponse<T = any> {
+  data: T;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+}
+
+/**
+ * HTTP Client Adapter Interface.
+ * Implement this to use custom HTTP clients (axios, httpx, etc.)
+ */
+export interface HttpClientAdapter {
+  request<T = any>(request: HttpRequest): Promise<HttpResponse<T>>;
+}
+
+/**
+ * Default Fetch API adapter.
+ * Uses native browser fetch() with proper error handling.
+ */
+export class FetchAdapter implements HttpClientAdapter {
+  async request<T = any>(request: HttpRequest): Promise<HttpResponse<T>> {
+    const { method, url, headers, body, params, formData } = request;
+
+    // Build URL with query params
+    const finalUrl = new URL(url);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          finalUrl.searchParams.append(key, String(value));
+        }
+      });
+    }
+
+    // Build headers
+    const finalHeaders: Record<string, string> = { ...headers };
+
+    // Determine body and content-type
+    let requestBody: string | FormData | undefined;
+
+    if (formData) {
+      // For multipart/form-data, let browser set Content-Type with boundary
+      requestBody = formData;
+      // Don't set Content-Type - browser will set it with boundary
+    } else if (body) {
+      // JSON request
+      finalHeaders['Content-Type'] = 'application/json';
+      requestBody = JSON.stringify(body);
+    }
+
+    // Make request
+    const response = await fetch(finalUrl.toString(), {
+      method,
+      headers: finalHeaders,
+      body: requestBody,
+      credentials: 'include',  // Include Django session cookies
+    });
+
+    // Parse response
+    let data: any = null;
+    const contentType = response.headers.get('content-type');
+
+    if (response.status !== 204 && contentType?.includes('application/json')) {
+      data = await response.json();
+    } else if (response.status !== 204) {
+      data = await response.text();
+    }
+
+    // Convert Headers to plain object
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    };
+  }
+}

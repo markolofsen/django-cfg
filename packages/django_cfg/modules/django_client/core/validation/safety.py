@@ -9,11 +9,11 @@ Ensures all code modifications are:
 """
 
 import ast
+import logging
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class SafetyManager:
         self.transaction_id = f"fix_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         self.backed_up_files = {}
 
-        logger.info(f"Started transaction: {self.transaction_id}")
+        logger.debug(f"Started transaction: {self.transaction_id}")
         return self.transaction_id
 
     def backup_file(self, file_path: Path) -> Path:
@@ -136,7 +136,7 @@ class SafetyManager:
 
         try:
             shutil.copy2(backup_path, file_path)
-            logger.info(f"Rolled back: {file_path}")
+            logger.debug(f"Rolled back: {file_path}")
             return True
         except Exception as e:
             logger.error(f"Error rolling back {file_path}: {e}")
@@ -155,7 +155,7 @@ class SafetyManager:
             logger.warning("No active transaction to commit")
             return False
 
-        logger.info(f"Committed transaction: {self.transaction_id}")
+        logger.debug(f"Committed transaction: {self.transaction_id}")
 
         # Schedule cleanup (delete backups after 7 days)
         self._schedule_cleanup(days=7)
@@ -229,7 +229,7 @@ class SafetyManager:
                 if datetime.now() >= cleanup_date:
                     shutil.rmtree(transaction_dir)
                     removed += 1
-                    logger.info(f"Removed old backup: {transaction_dir.name}")
+                    logger.debug(f"Removed old backup: {transaction_dir.name}")
 
         return removed
 

@@ -1,10 +1,12 @@
 """Documentation section for dashboard."""
 
-import os
 import inspect
+import os
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from django.core.management import get_commands, load_command_class
+
 from .base import DataSection
 
 
@@ -45,7 +47,7 @@ class DocumentationSection(DataSection):
             for readme_path in possible_paths:
                 if readme_path.exists():
                     logger.info(f"Found module README at: {readme_path}")
-                    with open(readme_path, 'r', encoding='utf-8') as f:
+                    with open(readme_path, encoding='utf-8') as f:
                         return f.read()
         except Exception as e:
             logger.debug(f"Could not find README for module {module_name}: {e}")
@@ -142,7 +144,7 @@ class DocumentationSection(DataSection):
 
             if main_readme_path.exists():
                 logger.info("Found main management README.md, using it as primary documentation")
-                with open(main_readme_path, 'r', encoding='utf-8') as f:
+                with open(main_readme_path, encoding='utf-8') as f:
                     return f.read()  # Use existing README if it exists
         except Exception as e:
             logger.debug(f"No main README found, continuing with auto-generation: {e}")
@@ -352,7 +354,7 @@ class DocumentationSection(DataSection):
             try:
                 if readme_path and readme_path.exists():
                     logger.info(f"Reading README from: {readme_path}")
-                    with open(readme_path, 'r', encoding='utf-8') as f:
+                    with open(readme_path, encoding='utf-8') as f:
                         readme_content = f.read()
                     logger.info(f"README content loaded: {len(readme_content)} characters")
 
@@ -377,7 +379,7 @@ class DocumentationSection(DataSection):
                     readme_exists = True
                 else:
                     logger.error(f"README.md not found at: {readme_path}")
-                    readme_content = f"README.md not found. Searched paths:\n" + "\n".join(str(p) for p in possible_paths)
+                    readme_content = "README.md not found. Searched paths:\n" + "\n".join(str(p) for p in possible_paths)
 
             except Exception as e:
                 logger.error(f"Error loading documentation: {e}", exc_info=True)

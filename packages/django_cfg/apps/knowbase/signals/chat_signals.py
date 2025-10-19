@@ -2,12 +2,13 @@
 Chat and messaging related signals.
 """
 
-from django.db.models.signals import post_save, post_delete
-from django.db import models
-from django.dispatch import receiver
 import logging
 
-from ..models import ChatSession, ChatMessage
+from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
+
+from ..models import ChatMessage, ChatSession
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def message_post_save(sender, instance, created, **kwargs):
     """Handle chat message creation."""
     if created:
         logger.debug(f"💬 New message: {instance.session.title} - {instance.role}")
-        
+
         # Update session statistics
         session = instance.session
         session.messages_count = session.messages.count()
@@ -27,7 +28,7 @@ def message_post_save(sender, instance, created, **kwargs):
         session.total_cost_usd = session.messages.aggregate(
             total=models.Sum('cost_usd')
         )['total'] or 0
-        
+
         session.save(update_fields=['messages_count', 'total_tokens_used', 'total_cost_usd'])
 
 

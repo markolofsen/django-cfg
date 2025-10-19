@@ -5,8 +5,9 @@ Auto-configuring LLM and translation service that integrates with DjangoConfig.
 """
 
 # from .service import DjangoLLM, LLMError, LLMConfigError  # Removed - using LLMClient directly
+from .llm import LLMCache, LLMClient
 from .translator import DjangoTranslator, TranslationError
-from .llm import LLMClient, LLMCache
+
 
 # Convenience functions
 def chat_completion(
@@ -62,7 +63,7 @@ def get_available_models() -> list:
 
 # Export public API
 __all__ = [
-    'DjangoTranslator', 
+    'DjangoTranslator',
     'LLMClient',
     'LLMCache',
     'TranslationError',

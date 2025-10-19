@@ -4,9 +4,11 @@ Main OpenAPI configuration for django_cfg.
 Replaces django-revolution with integrated django_openapi module.
 """
 
-from typing import Dict, Optional, Literal, List
 from pathlib import Path
+from typing import List, Literal
+
 from pydantic import BaseModel, Field, field_validator
+
 from .group import OpenAPIGroupConfig
 
 

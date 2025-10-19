@@ -4,7 +4,8 @@ Base dashboard section classes.
 Provides foundation for dashboard sections following Unfold's pattern.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from django.http import HttpRequest
 from django.template.loader import render_to_string
 

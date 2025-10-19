@@ -1,14 +1,21 @@
 from django import forms
 from django.contrib import admin, messages
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
-from django.http import HttpResponseRedirect
 from unfold.admin import ModelAdmin
-from unfold.decorators import action
 from unfold.contrib.forms.widgets import WysiwygWidget
+from unfold.decorators import action
 from unfold.enums import ActionVariant
-from .models import EmailLog, Newsletter, NewsletterSubscription, NewsletterCampaign
-from .admin_filters import UserEmailFilter, UserNameFilter, HasUserFilter, EmailOpenedFilter, EmailClickedFilter
+
+from .admin_filters import (
+    EmailClickedFilter,
+    EmailOpenedFilter,
+    HasUserFilter,
+    UserEmailFilter,
+    UserNameFilter,
+)
+from .models import EmailLog, Newsletter, NewsletterCampaign, NewsletterSubscription
 
 
 @admin.register(EmailLog)
@@ -34,15 +41,15 @@ class EmailLogAdmin(ModelAdmin):
             return format_html('<a href="{}">{}</a>', link, obj.newsletter.title)
         return "-"
     newsletter_link.short_description = 'Newsletter'
-    
+
     def tracking_status(self, obj):
         """Show clean tracking status."""
         opened_status = "Opened" if obj.is_opened else "Not opened"
         clicked_status = "Clicked" if obj.is_clicked else "Not clicked"
-        
+
         opened_color = "#28a745" if obj.is_opened else "#dc3545"
         clicked_color = "#007bff" if obj.is_clicked else "#6c757d"
-        
+
         return format_html(
             '<div style="display: flex; gap: 8px;">'
             '<span style="background: {}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">{}</span>'
@@ -119,10 +126,10 @@ class NewsletterCampaignAdmin(ModelAdmin):
     readonly_fields = ('status', 'created_at', 'sent_at', 'recipient_count')
     search_fields = ('subject', 'email_title', 'main_text')
     autocomplete_fields = ('newsletter',)
-    
+
     # Django admin actions
     actions = ["send_selected_campaigns"]
-    
+
     # Unfold actions configuration
     actions_list = []  # Changelist actions (removed send_selected_campaigns)
     actions_detail = ["send_campaign"]  # Detail page actions
@@ -141,29 +148,29 @@ class NewsletterCampaignAdmin(ModelAdmin):
             if not campaign:
                 self.message_user(request, "Campaign not found.", messages.ERROR)
                 return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-                
+
             if campaign.status != NewsletterCampaign.CampaignStatus.DRAFT:
                 self.message_user(
-                    request, 
-                    f"Campaign '{campaign.subject}' is not in draft status.", 
+                    request,
+                    f"Campaign '{campaign.subject}' is not in draft status.",
                     messages.WARNING
                 )
                 return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-            
+
             success = campaign.send_campaign()
             if success:
                 self.message_user(
-                    request, 
-                    f"Campaign '{campaign.subject}' sent successfully.", 
+                    request,
+                    f"Campaign '{campaign.subject}' sent successfully.",
                     messages.SUCCESS
                 )
             else:
                 self.message_user(
-                    request, 
-                    f"Campaign '{campaign.subject}' failed to send.", 
+                    request,
+                    f"Campaign '{campaign.subject}' failed to send.",
                     messages.ERROR
                 )
-                
+
         except Exception as e:
             self.message_user(request, f"An error occurred: {e}", messages.ERROR)
 
@@ -173,7 +180,7 @@ class NewsletterCampaignAdmin(ModelAdmin):
         """Send multiple campaigns (standard Django admin action)."""
         sent_count = 0
         skipped_count = 0
-        
+
         for campaign in queryset:
             if campaign.status == NewsletterCampaign.CampaignStatus.DRAFT:
                 success = campaign.send_campaign()
@@ -184,24 +191,24 @@ class NewsletterCampaignAdmin(ModelAdmin):
             else:
                 skipped_count += 1
                 messages.warning(
-                    request, 
+                    request,
                     f"Campaign '{campaign.subject}' skipped (not in Draft status)."
                 )
 
         if sent_count > 0:
             self.message_user(
-                request, 
-                f"Successfully sent {sent_count} campaigns.", 
+                request,
+                f"Successfully sent {sent_count} campaigns.",
                 messages.SUCCESS
             )
-        
+
         if skipped_count > 0:
             self.message_user(
-                request, 
-                f"{skipped_count} campaigns were skipped.", 
+                request,
+                f"{skipped_count} campaigns were skipped.",
                 messages.WARNING
             )
-    
+
     send_selected_campaigns.short_description = "Send selected campaigns"
 
     @action(
@@ -216,19 +223,19 @@ class NewsletterCampaignAdmin(ModelAdmin):
             success = obj.send_campaign()
             if success:
                 self.message_user(
-                    request, 
-                    f"Campaign '{obj.subject}' sent successfully.", 
+                    request,
+                    f"Campaign '{obj.subject}' sent successfully.",
                     messages.SUCCESS
                 )
             else:
                 self.message_user(
-                    request, 
-                    f"Campaign '{obj.subject}' failed to send.", 
+                    request,
+                    f"Campaign '{obj.subject}' failed to send.",
                     messages.ERROR
                 )
         else:
             self.message_user(
-                request, 
-                f"Campaign '{obj.subject}' is not in draft status.", 
+                request,
+                f"Campaign '{obj.subject}' is not in draft status.",
                 messages.WARNING
             )

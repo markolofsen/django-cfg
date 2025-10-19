@@ -3,19 +3,18 @@ Simple cache manager for currency rates.
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from cachetools import TTLCache
 
 from ..core.models import Rate
-from ..core.exceptions import CacheError
 
 logger = logging.getLogger(__name__)
 
 
 class CacheManager:
     """Simple TTL cache for currency rates."""
-    
+
     def __init__(self, ttl: int = 300, maxsize: int = 1000):
         """
         Initialize cache manager.
@@ -26,7 +25,7 @@ class CacheManager:
         """
         self.cache = TTLCache(maxsize=maxsize, ttl=ttl)
         self.ttl = ttl
-        
+
     def get_rate(self, base: str, quote: str, source: str) -> Optional[Rate]:
         """
         Get cached rate.
@@ -40,7 +39,7 @@ class CacheManager:
             Cached Rate or None
         """
         key = self._make_key(base, quote, source)
-        
+
         try:
             cached_rate = self.cache.get(key)
             if cached_rate:
@@ -52,7 +51,7 @@ class CacheManager:
         except Exception as e:
             logger.error(f"Cache get error: {e}")
             return None
-    
+
     def set_rate(self, rate: Rate) -> bool:
         """
         Cache rate.
@@ -64,7 +63,7 @@ class CacheManager:
             True if cached successfully
         """
         key = self._make_key(rate.base_currency, rate.quote_currency, rate.source)
-        
+
         try:
             self.cache[key] = rate
             logger.debug(f"Cached rate for {key}")
@@ -72,16 +71,16 @@ class CacheManager:
         except Exception as e:
             logger.error(f"Cache set error: {e}")
             return False
-    
+
     def _make_key(self, base: str, quote: str, source: str) -> str:
         """Make cache key."""
         return f"{source}:{base}:{quote}".upper()
-    
+
     def clear(self) -> None:
         """Clear all cached rates."""
         self.cache.clear()
         logger.info("Cache cleared")
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         return {

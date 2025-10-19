@@ -6,10 +6,11 @@ Chunks JSON by object structure.
 
 import json
 from typing import List
-from .base import BaseChunker
-from ..context.models import ChunkData
-from ..context.builders import ChunkContextBuilder
+
 from ....models.archive import ArchiveItem, ChunkType
+from ..context.builders import ChunkContextBuilder
+from ..context.models import ChunkData
+from .base import BaseChunker
 
 
 class JsonChunker(BaseChunker):

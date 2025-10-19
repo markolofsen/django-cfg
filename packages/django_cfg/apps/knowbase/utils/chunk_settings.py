@@ -6,8 +6,10 @@ settings with type safety and validation.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict
+
 from pydantic import BaseModel, Field, validator
+
 from ..config.constance_settings import ConstanceSettings
 
 logger = logging.getLogger(__name__)
@@ -15,29 +17,29 @@ logger = logging.getLogger(__name__)
 
 class ChunkSettings(BaseModel):
     """Pydantic model for chunk processing settings."""
-    
+
     chunk_size: int = Field(
         ge=100,
         le=8000,
         description="Size of each chunk in characters"
     )
-    
+
     chunk_overlap: int = Field(
         ge=0,
         description="Overlap between chunks in characters"
     )
-    
+
     embedding_batch_size: int = Field(
         ge=1,
         le=100,
         description="Number of chunks to process in one embedding batch"
     )
-    
+
     embedding_model: str = Field(
         min_length=1,
         description="OpenAI embedding model name"
     )
-    
+
     @validator('chunk_overlap')
     def validate_overlap(cls, v, values):
         """Ensure overlap is less than chunk_size."""
@@ -45,7 +47,7 @@ class ChunkSettings(BaseModel):
         if chunk_size and v >= chunk_size:
             raise ValueError(f"Chunk overlap ({v}) must be less than chunk size ({chunk_size})")
         return v
-    
+
     class Config:
         """Pydantic configuration."""
         validate_assignment = True
@@ -53,7 +55,7 @@ class ChunkSettings(BaseModel):
 
 class ChunkSettingsManager:
     """Manager for dynamic chunk settings using Pydantic configuration."""
-    
+
     @classmethod
     def get_document_settings(cls) -> ChunkSettings:
         """Get chunk settings for document processing."""
@@ -65,7 +67,7 @@ class ChunkSettingsManager:
             embedding_batch_size=ConstanceSettings.get_embedding_batch_size(),
             embedding_model=ConstanceSettings.get_embedding_model()
         )
-    
+
     @classmethod
     def get_archive_settings(cls) -> ChunkSettings:
         """Get chunk settings for archive processing."""
@@ -77,7 +79,7 @@ class ChunkSettingsManager:
             embedding_batch_size=ConstanceSettings.get_embedding_batch_size(),
             embedding_model=ConstanceSettings.get_embedding_model()
         )
-    
+
     @classmethod
     def get_settings_for_type(cls, content_type: str) -> ChunkSettings:
         """
@@ -96,7 +98,7 @@ class ChunkSettingsManager:
         else:
             logger.warning(f"Unknown content type: {content_type}, using document settings")
             return cls.get_document_settings()
-    
+
     @classmethod
     def get_all_settings(cls) -> Dict[str, ChunkSettings]:
         """Get all chunk settings as dictionary."""
@@ -104,7 +106,7 @@ class ChunkSettingsManager:
             'document': cls.get_document_settings(),
             'archive': cls.get_archive_settings()
         }
-    
+
     @classmethod
     def validate_settings(cls, settings: ChunkSettings) -> bool:
         """
@@ -119,37 +121,37 @@ class ChunkSettingsManager:
         if settings.chunk_size <= 0:
             logger.error(f"Invalid chunk_size: {settings.chunk_size}")
             return False
-        
+
         if settings.chunk_overlap < 0:
             logger.error(f"Invalid chunk_overlap: {settings.chunk_overlap}")
             return False
-        
+
         if settings.chunk_overlap >= settings.chunk_size:
             logger.error(f"Chunk overlap ({settings.chunk_overlap}) must be less than chunk size ({settings.chunk_size})")
             return False
-        
+
         if settings.embedding_batch_size <= 0 or settings.embedding_batch_size > 2048:
             logger.error(f"Invalid embedding_batch_size: {settings.embedding_batch_size} (must be 1-2048)")
             return False
-        
+
         if not settings.embedding_model or not settings.embedding_model.strip():
             logger.error("Embedding model cannot be empty")
             return False
-        
+
         return True
-    
+
     @classmethod
     def log_current_settings(cls) -> None:
         """Log current settings for debugging."""
         try:
             doc_settings = cls.get_document_settings()
             archive_settings = cls.get_archive_settings()
-            
+
             logger.info("📊 Current Chunk Settings:")
             logger.info(f"  📄 Documents: size={doc_settings.chunk_size}, overlap={doc_settings.chunk_overlap}")
             logger.info(f"  📦 Archives: size={archive_settings.chunk_size}, overlap={archive_settings.chunk_overlap}")
             logger.info(f"  🔮 Embedding: batch_size={doc_settings.embedding_batch_size}, model={doc_settings.embedding_model}")
-            
+
         except Exception as e:
             logger.error(f"Failed to log current settings: {e}")
 

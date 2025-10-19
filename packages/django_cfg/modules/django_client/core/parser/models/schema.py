@@ -9,7 +9,7 @@ Reference: https://spec.openapis.org/oas/v3.1.0#schema-object
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 

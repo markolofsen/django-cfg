@@ -1,0 +1,9 @@
+{
+  "label": "Guides & Examples",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Practical guides and real-world examples: setup, configuration, migration, and integration patterns."
+  },
+  "collapsed": true
+}

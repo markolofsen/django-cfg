@@ -2,16 +2,17 @@
 Document management service.
 """
 
-from typing import List, Optional, Dict, Any
-from django.db import transaction, models
-from django.utils import timezone
+from typing import Any, Dict, List, Optional
+
+from django.db import models, transaction
+
 from ..models import Document, DocumentChunk, ProcessingStatus
 from .base import BaseService
 
 
 class DocumentService(BaseService):
     """Service for document management and processing."""
-    
+
     def create_document(
         self,
         title: str,
@@ -20,19 +21,19 @@ class DocumentService(BaseService):
         metadata: Optional[Dict[str, Any]] = None
     ) -> Document:
         """Create document and trigger async processing."""
-        
+
         # Generate content hash for duplicate detection
         content_hash = self._generate_content_hash(content)
-        
+
         # Check for duplicates
         existing = Document.objects.filter(
             user=self.user,
             content_hash=content_hash
         ).first()
-        
+
         if existing:
             raise ValueError(f"Document with same content already exists: {existing.title}")
-        
+
         # Create document (async processing will be triggered by post_save signal)
         document = Document.objects.create(
             user=self.user,
@@ -44,9 +45,9 @@ class DocumentService(BaseService):
             metadata=metadata or {},
             processing_status=ProcessingStatus.PENDING
         )
-        
+
         return document
-    
+
     def get_document(self, document_id: str) -> Optional[Document]:
         """Get document by ID with user access check."""
         try:
@@ -57,16 +58,16 @@ class DocumentService(BaseService):
             return document
         except Document.DoesNotExist:
             return None
-    
+
     def get_user_documents(self, status: Optional[str] = None):
         """Get user documents queryset with filtering."""
         queryset = Document.objects.filter(user=self.user)
-        
+
         if status:
             queryset = queryset.filter(processing_status=status)
-        
+
         return queryset.order_by('-created_at')
-    
+
     def list_documents(
         self,
         status: Optional[str] = None,
@@ -76,7 +77,7 @@ class DocumentService(BaseService):
         """List user documents with filtering."""
         queryset = self.get_user_documents(status)
         return list(queryset[offset:offset + limit])
-    
+
     def delete_document(self, document_id: str) -> bool:
         """Delete document and all associated chunks."""
         try:
@@ -85,22 +86,22 @@ class DocumentService(BaseService):
                     id=document_id,
                     user=self.user
                 )
-                
+
                 # Delete associated chunks first
                 DocumentChunk.objects.filter(document=document).delete()
-                
+
                 # Delete document
                 document.delete()
-                
+
                 return True
         except Document.DoesNotExist:
             return False
-    
+
     def get_processing_stats(self) -> Dict[str, Any]:
         """Get user's document processing statistics."""
-        
-        from django.db.models import Count, Sum, Avg
-        
+
+        from django.db.models import Count, Sum
+
         stats = Document.objects.filter(user=self.user).aggregate(
             total_documents=Count('id'),
             completed_documents=Count('id', filter=models.Q(processing_status=ProcessingStatus.COMPLETED)),
@@ -108,7 +109,7 @@ class DocumentService(BaseService):
             total_tokens=Sum('total_tokens'),
             total_cost=Sum('total_cost_usd'),
         )
-        
+
         return {
             'total_documents': stats['total_documents'] or 0,
             'completed_documents': stats['completed_documents'] or 0,
@@ -121,7 +122,7 @@ class DocumentService(BaseService):
             'total_cost_usd': float(stats['total_cost'] or 0),
             'avg_processing_time_seconds': 0.0  # Calculated separately if needed
         }
-    
+
     def reprocess_document(self, document_id: str) -> bool:
         """Trigger document reprocessing."""
         try:
@@ -129,16 +130,16 @@ class DocumentService(BaseService):
                 id=document_id,
                 user=self.user
             )
-            
+
             # Reset processing status
             document.processing_status = ProcessingStatus.PENDING
             document.processing_error = ""
             document.save()
-            
+
             # Trigger async reprocessing
             from ..tasks import reprocess_document_chunks
             reprocess_document_chunks.send(str(document.id))
-            
+
             return True
         except Document.DoesNotExist:
             return False

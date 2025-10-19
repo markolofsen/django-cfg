@@ -4,9 +4,9 @@ Chat request handler for LLM client.
 Handles chat completion requests with caching and response building.
 """
 
-import time
 import logging
-from typing import List, Dict, Optional, TYPE_CHECKING
+import time
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from ..models import ChatCompletionResponse
 from ..providers import ConfigBuilder

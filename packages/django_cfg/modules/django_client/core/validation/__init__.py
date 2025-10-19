@@ -8,8 +8,8 @@ to improve OpenAPI schema quality.
 from .checker import ValidationChecker
 from .fixer import SafeFixer
 from .reporter import IssueReporter
-from .safety import SafetyManager
 from .rules.base import Issue, Severity, ValidationRule
+from .safety import SafetyManager
 
 __all__ = [
     'ValidationChecker',

@@ -1,7 +1,6 @@
 """Safe auto-fixer with rollback support."""
 
-from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from .rules import Issue
 from .rules.type_hints import TypeHintRule

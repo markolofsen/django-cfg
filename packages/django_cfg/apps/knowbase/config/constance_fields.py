@@ -9,7 +9,9 @@ to ensure consistency across the application.
 """
 
 from typing import List
+
 from django_cfg.models.django.constance import ConstanceField
+
 from .settings import KnowledgeBaseConfig, get_openai_api_key, get_openrouter_api_key
 
 
@@ -25,7 +27,7 @@ def get_django_cfg_knowbase_constance_fields() -> List[ConstanceField]:
     """
     # Get default values from Pydantic config
     default_config = KnowledgeBaseConfig()
-    
+
     return [
         # === Core Processing Settings ===
         ConstanceField(
@@ -42,7 +44,7 @@ def get_django_cfg_knowbase_constance_fields() -> List[ConstanceField]:
             field_type="int",
             group="Knowledge Base",
         ),
-        
+
         # === Embedding Settings ===
         ConstanceField(
             name="EMBEDDING_MODEL",
@@ -58,7 +60,7 @@ def get_django_cfg_knowbase_constance_fields() -> List[ConstanceField]:
             field_type="int",
             group="Knowledge Base",
         ),
-        
+
         # === Search Threshold Settings ===
         ConstanceField(
             name="DOCUMENT_THRESHOLD",
@@ -68,14 +70,14 @@ def get_django_cfg_knowbase_constance_fields() -> List[ConstanceField]:
             group="Knowledge Base",
         ),
         ConstanceField(
-            name="ARCHIVE_THRESHOLD", 
+            name="ARCHIVE_THRESHOLD",
             default=default_config.search.archive_threshold,
             help_text=f"Similarity threshold for archive/code chunks (0.0-1.0). Default: {default_config.search.archive_threshold}. Medium precision for code similarity.",
             field_type="float",
             group="Knowledge Base",
         ),
         # Note: EXTERNAL_DATA_THRESHOLD removed - now configured per-object in ExternalData.similarity_threshold
-        
+
         # === AI Assistant Settings ===
         ConstanceField(
             name="BOT_IDENTITY",
@@ -105,7 +107,7 @@ def get_django_cfg_knowbase_field_validation_rules() -> dict:
     """
     # Get constraints from Pydantic config
     default_config = KnowledgeBaseConfig()
-    
+
     def validate_chunk_size(value):
         """Validate chunk size values using Pydantic constraints."""
         if not isinstance(value, int):
@@ -115,7 +117,7 @@ def get_django_cfg_knowbase_field_validation_rules() -> dict:
         if value > 8000:
             return False, "Chunk size should not exceed 8000 characters"
         return True, ""
-    
+
     def validate_batch_size(value):
         """Validate embedding batch size using Pydantic constraints."""
         if not isinstance(value, int):
@@ -125,7 +127,7 @@ def get_django_cfg_knowbase_field_validation_rules() -> dict:
         if value > 100:
             return False, "Batch size should not exceed 100 for stability"
         return True, ""
-    
+
     def validate_embedding_model(value):
         """Validate embedding model name."""
         if not isinstance(value, str):
@@ -134,13 +136,13 @@ def get_django_cfg_knowbase_field_validation_rules() -> dict:
             return False, "Embedding model cannot be empty"
         valid_models = [
             "text-embedding-ada-002",
-            "text-embedding-3-small", 
+            "text-embedding-3-small",
             "text-embedding-3-large"
         ]
         if value not in valid_models:
             return True, f"Warning: '{value}' is not a standard OpenAI model. Valid options: {', '.join(valid_models)}"
         return True, ""
-    
+
     def validate_bot_identity(value):
         """Validate bot identity text."""
         if not isinstance(value, str):
@@ -152,7 +154,7 @@ def get_django_cfg_knowbase_field_validation_rules() -> dict:
         if len(value) > 1000:
             return False, "Bot identity should not exceed 1000 characters"
         return True, ""
-    
+
     def validate_bot_message(value):
         """Validate bot message text."""
         if not isinstance(value, str):
@@ -164,7 +166,7 @@ def get_django_cfg_knowbase_field_validation_rules() -> dict:
         if len(value) > 500:
             return False, "Bot message should not exceed 500 characters"
         return True, ""
-    
+
     return {
         "DOCUMENT_CHUNK_SIZE": validate_chunk_size,
         "ARCHIVE_CHUNK_SIZE": validate_chunk_size,

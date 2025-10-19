@@ -4,12 +4,13 @@ Django CFG Create Project Command
 Creates a new Django project by downloading from GitHub.
 """
 
-import click
 import shutil
-import urllib.request
-from pathlib import Path
 import tempfile
+import urllib.request
 import zipfile
+from pathlib import Path
+
+import click
 
 # GitHub template URL
 TEMPLATE_URL = "https://github.com/markolofsen/django-cfg/archive/refs/heads/main.zip"
@@ -109,7 +110,7 @@ def extract_template(archive_path: Path, target_path: Path) -> None:
         click.echo(f"✅ Template extracted successfully ({extracted_files} files)")
 
     except zipfile.BadZipFile:
-        raise ValueError(f"Invalid template archive")
+        raise ValueError("Invalid template archive")
     except Exception as e:
         raise RuntimeError(f"Failed to extract template: {e}")
 
@@ -164,7 +165,7 @@ def create_project(path: str, force: bool):
     temp_archive = None
 
     try:
-        click.echo(f"🚀 Creating Django project from GitHub")
+        click.echo("🚀 Creating Django project from GitHub")
         click.echo(f"📁 Target location: {target_path}")
         click.echo()
 
@@ -178,7 +179,7 @@ def create_project(path: str, force: bool):
         extract_template(temp_archive, target_path)
 
         click.echo()
-        click.echo(f"✅ Project created successfully!")
+        click.echo("✅ Project created successfully!")
         click.echo(f"📁 Location: {target_path}")
 
         # Show next steps

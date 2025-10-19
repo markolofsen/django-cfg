@@ -4,8 +4,8 @@ Database configuration validators.
 Field validators for DatabaseConfig model.
 """
 
-from typing import Dict, List, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from .parsers import detect_engine_from_url, parse_connection_string
@@ -49,7 +49,11 @@ def validate_engine(v: Optional[str]) -> Optional[str]:
 
 
 def validate_name(v: str) -> str:
-    """Validate database name or parse connection string."""
+    """Validate database name or parse connection string. Allows environment variable templates like ${VAR:-default}."""
+    # Skip validation for environment variable templates
+    if v.startswith("${") and "}" in v:
+        return v
+
     # Check if it's a connection string
     if "://" in v:
         try:

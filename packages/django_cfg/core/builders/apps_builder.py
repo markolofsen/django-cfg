@@ -7,7 +7,7 @@ Extracted from original config.py (903 lines) for better maintainability.
 Size: ~220 lines (focused on one task)
 """
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from ..constants import DEFAULT_APPS
 
@@ -134,7 +134,7 @@ class InstalledAppsBuilder:
             apps.append("django_cfg.apps.payments")
 
         if self.config.django_ipc and self.config.django_ipc.enabled:
-            apps.append("django_cfg.modules.django_ipc_client.dashboard")
+            apps.append("django_cfg.apps.ipc")
 
         return apps
 

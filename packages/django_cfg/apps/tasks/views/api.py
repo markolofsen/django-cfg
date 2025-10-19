@@ -5,23 +5,25 @@ Provides DRF ViewSets for task management with nested router structure.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import status, viewsets
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
 
 from django_cfg.modules.django_tasks import DjangoTasks
+
 from ..serializers import (
+    APIResponseSerializer,
+    QueueActionSerializer,
     QueueStatusSerializer,
     TaskStatisticsSerializer,
     WorkerActionSerializer,
-    QueueActionSerializer,
-    APIResponseSerializer
 )
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,11 +33,11 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
     
     Provides all task-related operations in a single ViewSet with nested actions.
     """
-    
+
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAdminUser]
     serializer_class = APIResponseSerializer  # Default serializer for the viewset
-    
+
     def get_serializer_class(self):
         """Return the appropriate serializer class based on the action."""
         if self.action == 'queue_status':
@@ -47,7 +49,7 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
         elif self.action == 'task_statistics':
             return TaskStatisticsSerializer
         return APIResponseSerializer
-    
+
     @action(detail=False, methods=['get'], url_path='queues/status')
     @extend_schema(
         summary="Get queue status",
@@ -64,19 +66,19 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
             from ..utils.simulator import TaskSimulator
             simulator = TaskSimulator()
             status_data = simulator.get_current_queue_status()
-            
+
             return Response({
                 'success': True,
                 'data': status_data
             })
-            
+
         except Exception as e:
             logger.error(f"Queue status API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['post'], url_path='queues/manage')
     @extend_schema(
         summary="Manage queues",
@@ -99,12 +101,12 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                     'error': 'Invalid request data',
                     'details': serializer.errors
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             action_type = serializer.validated_data['action']
             queue_name = serializer.validated_data.get('queue_name')
-            
+
             tasks_service = DjangoTasks()
-            
+
             if action_type == 'clear_all':
                 result = self._clear_all_queues(tasks_service)
             elif action_type == 'clear_queue' and queue_name:
@@ -116,19 +118,19 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                     'success': False,
                     'error': 'Invalid action or missing queue_name'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             return Response({
                 'success': True,
                 'data': result
             })
-            
+
         except Exception as e:
             logger.error(f"Queue management API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['get'], url_path='tasks/stats')
     @extend_schema(
         summary="Get task statistics",
@@ -145,19 +147,19 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
             from ..utils.simulator import TaskSimulator
             simulator = TaskSimulator()
             stats_data = simulator.get_current_task_statistics()
-            
+
             return Response({
                 'success': True,
                 'data': stats_data
             })
-            
+
         except Exception as e:
             logger.error(f"Task statistics API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['get'], url_path='tasks/list')
     @extend_schema(
         summary="Get task list",
@@ -179,7 +181,7 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
         try:
             from ..utils.simulator import TaskSimulator
             simulator = TaskSimulator()
-            
+
             # For now, return mock task data since we don't have real task list in simulator
             # This could be enhanced later to support real task data
             mock_data = {
@@ -231,19 +233,19 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                 },
                 'simulated': True
             }
-            
+
             return Response({
                 'success': True,
                 'data': mock_data
             })
-            
+
         except Exception as e:
             logger.error(f"Task list API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['get'], url_path='workers/list')
     @extend_schema(
         summary="Get workers list",
@@ -260,12 +262,12 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
             from ..utils.simulator import TaskSimulator
             simulator = TaskSimulator()
             workers_data = simulator.get_current_workers_list()
-            
+
             return Response({
                 'success': True,
                 'data': workers_data
             })
-            
+
         except Exception as e:
             logger.error(f"Workers list API error: {e}")
             return Response({
@@ -295,10 +297,10 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                     'error': 'Invalid request data',
                     'details': serializer.errors
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             action_type = serializer.validated_data['action']
             worker_id = serializer.validated_data.get('worker_id')
-            
+
             # Worker management operations would go here
             # For now, return a placeholder response
             return Response({
@@ -309,14 +311,14 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                     'action': action_type
                 }
             })
-            
+
         except Exception as e:
             logger.error(f"Worker management API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['post'], url_path='simulate')
     @extend_schema(
         summary="Simulate test data",
@@ -332,10 +334,10 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
         """Simulate test data for dashboard testing."""
         try:
             from ..utils.simulator import TaskSimulator
-            
+
             simulator = TaskSimulator()
             result = simulator.run_simulation(workers=3, clear_first=True)
-            
+
             return Response({
                 'success': True,
                 'data': {
@@ -343,14 +345,14 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                     'details': result
                 }
             })
-            
+
         except Exception as e:
             logger.error(f"Simulation API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['post'], url_path='clear')
     @extend_schema(
         summary="Clear test data",
@@ -366,24 +368,24 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
         """Clear all test data from Redis."""
         try:
             from ..utils.simulator import TaskSimulator
-            
+
             simulator = TaskSimulator()
             simulator.clear_all_data()
-            
+
             return Response({
                 'success': True,
                 'data': {
                     'message': 'All test data cleared successfully'
                 }
             })
-            
+
         except Exception as e:
             logger.error(f"Clear data API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['post'], url_path='clear-queues')
     @extend_schema(
         summary="Clear all queues",
@@ -399,50 +401,50 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
         """Clear all tasks from all Dramatiq queues."""
         try:
             from django_cfg.modules.django_tasks import DjangoTasks
-            
+
             tasks_service = DjangoTasks()
             redis_client = tasks_service.get_redis_client()
-            
+
             if not redis_client:
                 return Response({
                     'success': False,
                     'error': 'Redis connection not available'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+
             # Get all Dramatiq queue keys
             queue_keys = redis_client.keys('dramatiq:*.msgs')  # Main queues
             failed_keys = redis_client.keys('dramatiq:*.DQ')   # Failed queues
             ack_keys = redis_client.keys('dramatiq:__acks__*') # Acknowledgments
-            
+
             cleared_count = 0
-            
+
             # Clear main queues
             for key in queue_keys:
                 redis_client.delete(key)
                 cleared_count += 1
-                
-            # Clear failed queues  
+
+            # Clear failed queues
             for key in failed_keys:
                 redis_client.delete(key)
                 cleared_count += 1
-                
+
             # Clear acknowledgments
             for key in ack_keys:
                 redis_client.delete(key)
                 cleared_count += 1
-            
+
             return Response({
                 'success': True,
                 'message': f'Cleared {cleared_count} Dramatiq keys from Redis'
             })
-            
+
         except Exception as e:
             logger.error(f"Clear queues API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @action(detail=False, methods=['post'], url_path='purge-failed')
     @extend_schema(
         summary="Purge failed tasks",
@@ -458,40 +460,40 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
         """Purge all failed tasks from queues."""
         try:
             from django_cfg.modules.django_tasks import DjangoTasks
-            
+
             tasks_service = DjangoTasks()
             redis_client = tasks_service.get_redis_client()
-            
+
             if not redis_client:
                 return Response({
                     'success': False,
                     'error': 'Redis connection not available'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+
             # Get only failed queue keys (DQ = Dead Queue)
             failed_keys = redis_client.keys('dramatiq:*.DQ')
-            
+
             cleared_count = 0
-            
+
             # Clear only failed queues
             for key in failed_keys:
                 failed_count = redis_client.llen(key)
                 if failed_count > 0:
                     redis_client.delete(key)
                     cleared_count += failed_count
-            
+
             return Response({
                 'success': True,
                 'message': f'Purged {cleared_count} failed tasks from queues'
             })
-            
+
         except Exception as e:
             logger.error(f"Purge failed tasks API error: {e}")
             return Response({
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     # Helper methods
     def _clear_all_queues(self, tasks_service: DjangoTasks) -> Dict[str, Any]:
         """Clear all queues."""
@@ -499,49 +501,49 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
             redis_client = tasks_service.get_redis_client()
             if not redis_client:
                 return {'error': 'Redis connection not available'}
-            
+
             # Get all queue keys and clear them
             queue_keys = redis_client.keys("dramatiq:queue:*")
             cleared_count = 0
-            
+
             for key in queue_keys:
                 redis_client.delete(key)
                 cleared_count += 1
-            
+
             return {
                 'message': f'Cleared {cleared_count} queues',
                 'cleared_count': cleared_count
             }
-            
+
         except Exception as e:
             return {'error': str(e)}
-    
+
     def _clear_queue(self, tasks_service: DjangoTasks, queue_name: str) -> Dict[str, Any]:
         """Clear specific queue."""
         try:
             redis_client = tasks_service.get_redis_client()
             if not redis_client:
                 return {'error': 'Redis connection not available'}
-            
+
             queue_key = f"dramatiq:queue:{queue_name}"
             cleared_count = redis_client.delete(queue_key)
-            
+
             return {
                 'message': f'Cleared queue {queue_name}',
                 'queue_name': queue_name,
                 'cleared': cleared_count > 0
             }
-            
+
         except Exception as e:
             return {'error': str(e)}
-    
+
     def _purge_failed_tasks(self, tasks_service: DjangoTasks, queue_name: str = None) -> Dict[str, Any]:
         """Purge failed tasks."""
         try:
             redis_client = tasks_service.get_redis_client()
             if not redis_client:
                 return {'error': 'Redis connection not available'}
-            
+
             if queue_name:
                 # Clear specific queue's failed tasks
                 failed_key = f"dramatiq:queue:{queue_name}.DLQ"
@@ -555,15 +557,15 @@ class TaskManagementViewSet(viewsets.GenericViewSet):
                 # Clear all failed task queues
                 failed_keys = redis_client.keys("dramatiq:queue:*.DLQ")
                 cleared_count = 0
-                
+
                 for key in failed_keys:
                     redis_client.delete(key)
                     cleared_count += 1
-                
+
                 return {
                     'message': f'Purged failed tasks from {cleared_count} queues',
                     'cleared_count': cleared_count
                 }
-            
+
         except Exception as e:
             return {'error': str(e)}

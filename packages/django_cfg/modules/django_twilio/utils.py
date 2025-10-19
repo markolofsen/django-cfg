@@ -5,13 +5,12 @@ Provides simple function-based API for sending and verifying OTPs
 without manually instantiating service classes.
 """
 
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
-from .whatsapp import WhatsAppOTPService
 from .email_otp import EmailOTPService
 from .sms import SMSOTPService
 from .unified import UnifiedOTPService
-
+from .whatsapp import WhatsAppOTPService
 
 # Sync convenience functions
 

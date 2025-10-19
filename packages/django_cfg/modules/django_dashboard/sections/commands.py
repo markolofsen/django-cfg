@@ -1,6 +1,7 @@
 """Commands section for dashboard."""
 
-from typing import Dict, Any, List
+from typing import Any, Dict
+
 from .base import DataSection
 
 
@@ -17,7 +18,7 @@ class CommandsSection(DataSection):
         """Get commands data."""
         from django_cfg.modules.django_unfold.callbacks.base import (
             get_available_commands,
-            get_commands_by_category
+            get_commands_by_category,
         )
 
         commands = get_available_commands()

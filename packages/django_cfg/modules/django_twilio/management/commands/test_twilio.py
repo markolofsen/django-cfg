@@ -5,9 +5,8 @@ Tests Twilio messaging functionality using django_cfg configuration.
 """
 
 from django.core.management.base import BaseCommand
+
 from django_cfg.modules.django_logging import get_logger
-
-
 
 logger = get_logger('test_twilio')
 
@@ -57,10 +56,10 @@ class Command(BaseCommand):
         try:
             from django_cfg.modules.django_twilio import SimpleTwilioService
             twilio_service = SimpleTwilioService()
-            
+
             if is_whatsapp:
                 self.stdout.write(f"\n📱 Sending WhatsApp message to {to_number}...")
-                
+
                 if content_sid:
                     # Send with template
                     result = twilio_service.send_whatsapp_message(
@@ -86,13 +85,13 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS("✅ SMS message sent!"))
 
             # Show result details
-            self.stdout.write(f"\n📊 Message Details:")
+            self.stdout.write("\n📊 Message Details:")
             self.stdout.write(f"  SID: {result['sid']}")
             self.stdout.write(f"  Status: {result['status']}")
             self.stdout.write(f"  To: {result['to']}")
             self.stdout.write(f"  From: {result['from']}")
             self.stdout.write(f"  Created: {result['date_created']}")
-            
+
             if result.get('price'):
                 self.stdout.write(f"  Price: {result['price']} {result['price_unit']}")
 
@@ -101,7 +100,7 @@ class Command(BaseCommand):
         except ImportError as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Twilio dependencies not installed: {e}"))
             self.stdout.write("💡 Install with: pip install twilio")
-            
+
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Failed to send message: {e}"))
             self.stdout.write("\n💡 Troubleshooting:")

@@ -3,27 +3,27 @@ Statistics callbacks for dashboard.
 """
 
 import logging
-from typing import List, Dict, Any
 from datetime import timedelta
+from typing import Any, Dict, List
 
-from django.db.models import Count
-from django.utils import timezone
-from django.contrib.auth import get_user_model
 from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+from django_cfg.modules.django_admin.icons import Icons
 
 from ..models.dashboard import StatCard
-from django_cfg.modules.django_admin.icons import Icons
 
 logger = logging.getLogger(__name__)
 
 
 class StatisticsCallbacks:
     """Statistics-related callbacks."""
-    
+
     def _get_user_model(self):
         """Get the user model safely."""
         return get_user_model()
-    
+
     def get_user_statistics(self) -> List[StatCard]:
         """Get user-related statistics as Pydantic models."""
         try:
@@ -94,16 +94,16 @@ class StatisticsCallbacks:
             # Check if support is enabled
             if not self.is_support_enabled():
                 return []
-                
+
             from django_cfg.apps.support.models import Ticket
-            
+
             total_tickets = Ticket.objects.count()
             open_tickets = Ticket.objects.filter(status='open').count()
             resolved_tickets = Ticket.objects.filter(status='resolved').count()
             new_tickets_7d = Ticket.objects.filter(
                 created_at__gte=timezone.now() - timedelta(days=7)
             ).count()
-            
+
             return [
                 StatCard(
                     title="Total Tickets",
@@ -123,8 +123,8 @@ class StatisticsCallbacks:
                         else "0%"
                     ),
                     change_type=(
-                        "negative" if open_tickets > total_tickets * 0.3 
-                        else "positive" if open_tickets == 0 
+                        "negative" if open_tickets > total_tickets * 0.3
+                        else "positive" if open_tickets == 0
                         else "neutral"
                     ),
                     description="Awaiting response",

@@ -5,27 +5,23 @@ Refactored admin interfaces with Material Icons and optimized queries.
 """
 
 from .newsletter_admin import (
-    EmailLogAdmin, 
-    NewsletterAdmin, 
-    NewsletterSubscriptionAdmin, 
-    NewsletterCampaignAdmin
+    EmailLogAdmin,
+    NewsletterAdmin,
+    NewsletterCampaignAdmin,
+    NewsletterSubscriptionAdmin,
 )
 from .filters import (
-    UserEmailFilter, 
-    UserNameFilter, 
-    HasUserFilter, 
-    EmailOpenedFilter, 
-    EmailClickedFilter
+    EmailClickedFilter,
+    EmailOpenedFilter,
+    HasUserFilter,
+    UserEmailFilter,
+    UserNameFilter,
 )
-from .resources import (
-    NewsletterResource, 
-    NewsletterSubscriptionResource, 
-    EmailLogResource
-)
+from .resources import EmailLogResource, NewsletterResource, NewsletterSubscriptionResource
 
 __all__ = [
     'EmailLogAdmin',
-    'NewsletterAdmin', 
+    'NewsletterAdmin',
     'NewsletterSubscriptionAdmin',
     'NewsletterCampaignAdmin',
     'UserEmailFilter',

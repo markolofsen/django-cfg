@@ -2,38 +2,38 @@
 Chat API views for RAG-powered conversations.
 """
 
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_ratelimit.decorators import ratelimit
-from django.utils.decorators import method_decorator
-from drf_spectacular.utils import extend_schema, OpenApiExample
 
 from ..models import ChatSession
-from ..services import ChatService
 from ..serializers import (
-    ChatSessionCreateSerializer,
-    ChatSessionSerializer,
+    ChatHistorySerializer,
     ChatQuerySerializer,
     ChatResponseSerializer,
-    ChatHistorySerializer
+    ChatSessionCreateSerializer,
+    ChatSessionSerializer,
 )
+from ..services import ChatService
 from .base import BaseKnowledgeViewSet
 
 
 class ChatSessionViewSet(BaseKnowledgeViewSet):
     """Chat session management endpoints."""
-    
+
     queryset = ChatSession.objects.all()
     serializer_class = ChatSessionSerializer
     service_class = ChatService
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action == 'create':
             return ChatSessionCreateSerializer
         return ChatSessionSerializer
-    
+
     @extend_schema(
         summary="Create new chat session",
         responses={201: ChatSessionSerializer}
@@ -42,7 +42,7 @@ class ChatSessionViewSet(BaseKnowledgeViewSet):
         """Create new chat session."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         service = self.get_service()
         session = service.create_session(
             title=serializer.validated_data['title'],
@@ -50,10 +50,10 @@ class ChatSessionViewSet(BaseKnowledgeViewSet):
             temperature=serializer.validated_data['temperature'],
             max_context_chunks=serializer.validated_data['max_context_chunks']
         )
-        
+
         response_serializer = ChatSessionSerializer(session)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-    
+
     @extend_schema(
         summary="List user chat sessions",
         responses={200: ChatSessionSerializer(many=True)}
@@ -62,25 +62,25 @@ class ChatSessionViewSet(BaseKnowledgeViewSet):
         """List user chat sessions with filtering."""
         # Add filtering by is_active
         queryset = self.get_queryset()
-        
+
         # Filter by active status if requested
         is_active = request.query_params.get('is_active')
         if is_active is not None:
             is_active_bool = is_active.lower() in ('true', '1', 'yes')
             queryset = queryset.filter(is_active=is_active_bool)
-        
+
         # Order by updated_at to avoid pagination warning
         queryset = queryset.order_by('-updated_at')
-        
+
         # Apply pagination
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Archive chat session",
         responses={200: ChatSessionSerializer}
@@ -90,10 +90,10 @@ class ChatSessionViewSet(BaseKnowledgeViewSet):
         """Archive (deactivate) chat session."""
         session = self.get_object()
         session.archive()
-        
+
         serializer = self.get_serializer(session)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Activate chat session",
         responses={200: ChatSessionSerializer}
@@ -103,20 +103,20 @@ class ChatSessionViewSet(BaseKnowledgeViewSet):
         """Activate chat session."""
         session = self.get_object()
         session.activate()
-        
+
         serializer = self.get_serializer(session)
         return Response(serializer.data)
 
 
 class ChatViewSet(BaseKnowledgeViewSet):
     """Chat query endpoints."""
-    
+
     # This ViewSet doesn't use standard CRUD operations
     # It only has custom actions (query, history)
     queryset = ChatSession.objects.none()  # Empty queryset since we don't use list/retrieve/etc
     service_class = ChatService
     serializer_class = ChatResponseSerializer
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action == 'query':
@@ -124,7 +124,7 @@ class ChatViewSet(BaseKnowledgeViewSet):
         elif self.action == 'history':
             return ChatHistorySerializer
         return ChatResponseSerializer
-    
+
     @extend_schema(
         summary="Process chat query with RAG",
         request=ChatQuerySerializer,
@@ -146,17 +146,27 @@ class ChatViewSet(BaseKnowledgeViewSet):
         """Process chat query with RAG context."""
         serializer = ChatQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         service = self.get_service()
-        
-        # Create session if not provided
+
+        # Create session if not provided or doesn't exist
         session_id = serializer.validated_data.get('session_id')
         if not session_id:
+            # No session_id provided - create new session
             session = service.create_session()
             session_id = str(session.id)
         else:
+            # Verify session exists and belongs to user, or create new one
             session_id = str(session_id)
-        
+            if not ChatSession.objects.filter(
+                id=session_id,
+                user=request.user,
+                is_active=True
+            ).exists():
+                # Session doesn't exist or doesn't belong to user - create new one
+                session = service.create_session()
+                session_id = str(session.id)
+
         # Process query
         result = service.process_query(
             session_id=session_id,
@@ -164,9 +174,9 @@ class ChatViewSet(BaseKnowledgeViewSet):
             max_tokens=serializer.validated_data['max_tokens'],
             include_sources=serializer.validated_data['include_sources']
         )
-        
+
         return Response(result)
-    
+
     @extend_schema(
         summary="Get chat history",
         responses={200: ChatHistorySerializer}
@@ -176,12 +186,12 @@ class ChatViewSet(BaseKnowledgeViewSet):
         """Get chat session history."""
         service = self.get_service()
         messages = service.get_session_history(session_id=pk)
-        
+
         data = {
             'session_id': pk,
             'messages': messages,
             'total_messages': len(messages)
         }
-        
+
         serializer = ChatHistorySerializer(data)
         return Response(serializer.data)

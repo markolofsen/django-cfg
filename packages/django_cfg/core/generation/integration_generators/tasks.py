@@ -5,8 +5,8 @@ Handles Dramatiq task queue configuration.
 Size: ~100 lines (focused on task processing)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig

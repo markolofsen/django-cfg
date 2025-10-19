@@ -6,13 +6,13 @@ Usage:
 """
 
 from .base.config_model import DjangoConfig
-from .types.enums import EnvironmentMode, StartupInfoMode
 from .constants import DEFAULT_APPS, DEFAULT_MIDDLEWARE
 from .state.registry import (
+    clear_current_config,
     get_current_config,
     set_current_config,
-    clear_current_config,
 )
+from .types.enums import EnvironmentMode, StartupInfoMode
 
 # Public API
 __all__ = [

@@ -2,10 +2,10 @@
 DRF Serializers for newsletter application.
 """
 
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 
-from .models import Newsletter, NewsletterSubscription, NewsletterCampaign, EmailLog
+from .models import EmailLog, Newsletter, NewsletterCampaign, NewsletterSubscription
 
 User = get_user_model()
 
@@ -14,7 +14,7 @@ class NewsletterSerializer(serializers.ModelSerializer):
     """Serializer for Newsletter model."""
 
     subscribers_count = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = Newsletter
         fields = [
@@ -26,10 +26,10 @@ class NewsletterSerializer(serializers.ModelSerializer):
 
 class NewsletterSubscriptionSerializer(serializers.ModelSerializer):
     """Serializer for NewsletterSubscription model."""
-    
+
     newsletter_title = serializers.CharField(source='newsletter.title', read_only=True)
     user_email = serializers.CharField(source='user.email', read_only=True)
-    
+
     class Meta:
         model = NewsletterSubscription
         fields = [
@@ -43,20 +43,20 @@ class NewsletterSubscriptionSerializer(serializers.ModelSerializer):
 
 class SubscribeSerializer(serializers.Serializer):
     """Simple serializer for newsletter subscription."""
-    
+
     newsletter_id = serializers.IntegerField()
     email = serializers.EmailField()
 
 
 class UnsubscribeSerializer(serializers.Serializer):
     """Simple serializer for unsubscribe."""
-    
+
     subscription_id = serializers.IntegerField()
 
 
 class TestEmailSerializer(serializers.Serializer):
     """Simple serializer for test email."""
-    
+
     email = serializers.EmailField()
     subject = serializers.CharField(max_length=255, default="Django CFG Newsletter Test")
     message = serializers.CharField(default="This is a test email from Django CFG Newsletter.")
@@ -64,9 +64,9 @@ class TestEmailSerializer(serializers.Serializer):
 
 class NewsletterCampaignSerializer(serializers.ModelSerializer):
     """Serializer for NewsletterCampaign model."""
-    
+
     newsletter_title = serializers.CharField(source='newsletter.title', read_only=True)
-    
+
     class Meta:
         model = NewsletterCampaign
         fields = [
@@ -81,16 +81,16 @@ class NewsletterCampaignSerializer(serializers.ModelSerializer):
 
 class SendCampaignSerializer(serializers.Serializer):
     """Simple serializer for sending campaign."""
-    
+
     campaign_id = serializers.IntegerField()
 
 
 class EmailLogSerializer(serializers.ModelSerializer):
     """Serializer for EmailLog model."""
-    
+
     user_email = serializers.CharField(source='user.email', read_only=True)
     newsletter_title = serializers.CharField(source='newsletter.title', read_only=True)
-    
+
     class Meta:
         model = EmailLog
         fields = [

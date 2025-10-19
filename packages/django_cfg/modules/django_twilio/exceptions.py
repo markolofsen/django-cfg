@@ -5,7 +5,7 @@ Following CRITICAL_REQUIREMENTS.md - proper exception handling with specific typ
 No exception suppression, all errors must be properly typed and handled.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 
 class TwilioError(Exception):
@@ -15,10 +15,10 @@ class TwilioError(Exception):
     All Twilio module exceptions inherit from this base class to allow
     for specific exception handling patterns.
     """
-    
+
     def __init__(
-        self, 
-        message: str, 
+        self,
+        message: str,
         error_code: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         suggestions: Optional[List[str]] = None
@@ -37,22 +37,22 @@ class TwilioError(Exception):
         self.error_code = error_code
         self.context = context or {}
         self.suggestions = suggestions or []
-    
+
     def __str__(self) -> str:
         """Return formatted error message with context."""
         parts = [self.message]
-        
+
         if self.error_code:
             parts.append(f"Error Code: {self.error_code}")
-        
+
         if self.context:
             context_str = ", ".join(f"{k}={v}" for k, v in self.context.items())
             parts.append(f"Context: {context_str}")
-        
+
         if self.suggestions:
             suggestions_str = "; ".join(self.suggestions)
             parts.append(f"Suggestions: {suggestions_str}")
-        
+
         return " | ".join(parts)
 
 
@@ -66,7 +66,7 @@ class TwilioConfigurationError(TwilioError):
     - Missing environment variables
     - Incorrect service setup
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -84,23 +84,23 @@ class TwilioConfigurationError(TwilioError):
             **kwargs: Additional context passed to base class
         """
         context = kwargs.get("context", {})
-        
+
         if missing_fields:
             context["missing_fields"] = missing_fields
         if invalid_fields:
             context["invalid_fields"] = invalid_fields
-        
+
         kwargs["context"] = context
-        
+
         # Add default suggestions for configuration errors
         suggestions = kwargs.get("suggestions", [])
         if missing_fields:
             suggestions.append(f"Set environment variables: {', '.join(missing_fields)}")
         if invalid_fields:
             suggestions.append(f"Check configuration for fields: {', '.join(invalid_fields)}")
-        
+
         kwargs["suggestions"] = suggestions
-        
+
         super().__init__(message, **kwargs)
 
 
@@ -114,7 +114,7 @@ class TwilioVerificationError(TwilioError):
     - Too many verification attempts
     - Verification service unavailable
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -136,7 +136,7 @@ class TwilioVerificationError(TwilioError):
             **kwargs: Additional context passed to base class
         """
         context = kwargs.get("context", {})
-        
+
         if verification_sid:
             context["verification_sid"] = verification_sid
         if phone_number:
@@ -151,9 +151,9 @@ class TwilioVerificationError(TwilioError):
                 context["email"] = masked_email
         if attempts_remaining is not None:
             context["attempts_remaining"] = attempts_remaining
-        
+
         kwargs["context"] = context
-        
+
         super().__init__(message, **kwargs)
 
 
@@ -168,7 +168,7 @@ class TwilioSendError(TwilioError):
     - Network connectivity issues
     - Service rate limits exceeded
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -190,7 +190,7 @@ class TwilioSendError(TwilioError):
             **kwargs: Additional context passed to base class
         """
         context = kwargs.get("context", {})
-        
+
         if channel:
             context["channel"] = channel
         if recipient:
@@ -207,9 +207,9 @@ class TwilioSendError(TwilioError):
             context["twilio_error_code"] = twilio_error_code
         if twilio_error_message:
             context["twilio_error_message"] = twilio_error_message
-        
+
         kwargs["context"] = context
-        
+
         # Add channel-specific suggestions
         suggestions = kwargs.get("suggestions", [])
         if channel == "whatsapp":
@@ -230,9 +230,9 @@ class TwilioSendError(TwilioError):
                 "Check if sender email is verified in SendGrid",
                 "Verify recipient email format"
             ])
-        
+
         kwargs["suggestions"] = suggestions
-        
+
         super().__init__(message, **kwargs)
 
 
@@ -245,7 +245,7 @@ class TwilioRateLimitError(TwilioSendError):
     - SendGrid rate limits are exceeded
     - Too many requests in a time window
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -261,12 +261,12 @@ class TwilioRateLimitError(TwilioSendError):
             **kwargs: Additional context passed to base class
         """
         context = kwargs.get("context", {})
-        
+
         if retry_after:
             context["retry_after_seconds"] = retry_after
-        
+
         kwargs["context"] = context
-        
+
         suggestions = kwargs.get("suggestions", [])
         suggestions.extend([
             f"Wait {retry_after} seconds before retrying" if retry_after else "Wait before retrying",
@@ -274,7 +274,7 @@ class TwilioRateLimitError(TwilioSendError):
             "Consider upgrading Twilio plan for higher limits"
         ])
         kwargs["suggestions"] = suggestions
-        
+
         super().__init__(message, **kwargs)
 
 
@@ -288,7 +288,7 @@ class TwilioNetworkError(TwilioError):
     - DNS resolution failures
     - Timeout errors
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -306,14 +306,14 @@ class TwilioNetworkError(TwilioError):
             **kwargs: Additional context passed to base class
         """
         context = kwargs.get("context", {})
-        
+
         if service:
             context["service"] = service
         if timeout:
             context["timeout_seconds"] = timeout
-        
+
         kwargs["context"] = context
-        
+
         suggestions = kwargs.get("suggestions", [])
         suggestions.extend([
             "Check internet connectivity",
@@ -322,7 +322,7 @@ class TwilioNetworkError(TwilioError):
             "Check Twilio/SendGrid service status"
         ])
         kwargs["suggestions"] = suggestions
-        
+
         super().__init__(message, **kwargs)
 
 
@@ -330,7 +330,7 @@ class TwilioNetworkError(TwilioError):
 __all__ = [
     "TwilioError",
     "TwilioConfigurationError",
-    "TwilioVerificationError", 
+    "TwilioVerificationError",
     "TwilioSendError",
     "TwilioRateLimitError",
     "TwilioNetworkError",

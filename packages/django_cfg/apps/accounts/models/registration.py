@@ -2,8 +2,9 @@
 Registration and source tracking models.
 """
 
-from django.db import models
 from urllib.parse import urlparse
+
+from django.db import models
 
 
 class RegistrationSource(models.Model):
@@ -43,7 +44,7 @@ class UserRegistrationSource(models.Model):
     source = models.ForeignKey(RegistrationSource, on_delete=models.CASCADE, related_name='user_registration_sources')
     first_registration = models.BooleanField(default=True, help_text="Whether this was the first registration from this source")
     registration_date = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         app_label = 'django_cfg_accounts'
         unique_together = ['user', 'source']

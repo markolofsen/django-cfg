@@ -8,14 +8,15 @@ including Pydantic-based settings and optional Constance field definitions.
 # Import the main Pydantic configuration
 from .settings import (
     KnowledgeBaseConfig,
-    get_config,
-    reload_config,
-    get_document_chunk_size,
     get_archive_chunk_size,
-    get_embedding_model,
-    get_embedding_batch_size,
     get_chunking_params_for_type,
+    get_config,
+    get_document_chunk_size,
+    get_embedding_batch_size,
+    get_embedding_model,
+    reload_config,
 )
+
 
 # Constance-related imports are optional and only loaded when needed
 # to avoid django_cfg dependency issues
@@ -40,12 +41,12 @@ __all__ = [
     "get_config",
     "reload_config",
     "get_document_chunk_size",
-    "get_archive_chunk_size", 
+    "get_archive_chunk_size",
     "get_embedding_model",
     "get_embedding_batch_size",
     "get_chunking_params_for_type",
     # Constance configuration (lazy loaded)
     "get_django_cfg_knowbase_constance_fields",
-    "get_django_cfg_knowbase_field_validation_rules", 
+    "get_django_cfg_knowbase_field_validation_rules",
     "get_all_django_cfg_knowbase_constance_config",
 ]

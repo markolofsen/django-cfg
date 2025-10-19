@@ -1,0 +1,116 @@
+/**
+ * API Error Classes
+ *
+ * Typed error classes with Django REST Framework support.
+ */
+
+/**
+ * HTTP API Error with DRF field-specific validation errors.
+ *
+ * Usage:
+ * ```typescript
+ * try {
+ *   await api.users.create(userData);
+ * } catch (error) {
+ *   if (error instanceof APIError) {
+ *     if (error.isValidationError) {
+ *       console.log('Field errors:', error.fieldErrors);
+ *       // { "email": ["Email already exists"], "username": ["Required"] }
+ *     }
+ *   }
+ * }
+ * ```
+ */
+export class APIError extends Error {
+  constructor(
+    public statusCode: number,
+    public statusText: string,
+    public response: any,
+    public url: string,
+    message?: string
+  ) {
+    super(message || `HTTP ${statusCode}: ${statusText}`);
+    this.name = 'APIError';
+  }
+
+  /**
+   * Get error details from response.
+   * DRF typically returns: { "detail": "Error message" } or { "field": ["error1", "error2"] }
+   */
+  get details(): Record<string, any> | null {
+    if (typeof this.response === 'object' && this.response !== null) {
+      return this.response;
+    }
+    return null;
+  }
+
+  /**
+   * Get field-specific validation errors from DRF.
+   * Returns: { "field_name": ["error1", "error2"], ... }
+   */
+  get fieldErrors(): Record<string, string[]> | null {
+    const details = this.details;
+    if (!details) return null;
+
+    // DRF typically returns: { "field": ["error1", "error2"] }
+    const fieldErrors: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(details)) {
+      if (Array.isArray(value)) {
+        fieldErrors[key] = value;
+      }
+    }
+
+    return Object.keys(fieldErrors).length > 0 ? fieldErrors : null;
+  }
+
+  /**
+   * Get single error message from DRF.
+   * Checks for "detail", "message", or first field error.
+   */
+  get errorMessage(): string {
+    const details = this.details;
+    if (!details) return this.message;
+
+    // Check for "detail" field (common in DRF)
+    if (details.detail) {
+      return Array.isArray(details.detail) ? details.detail.join(', ') : String(details.detail);
+    }
+
+    // Check for "message" field
+    if (details.message) {
+      return String(details.message);
+    }
+
+    // Return first field error
+    const fieldErrors = this.fieldErrors;
+    if (fieldErrors) {
+      const firstField = Object.keys(fieldErrors)[0];
+      if (firstField) {
+        return `${firstField}: ${fieldErrors[firstField]?.join(', ')}`;
+      }
+    }
+
+    return this.message;
+  }
+
+  // Helper methods for common HTTP status codes
+  get isValidationError(): boolean { return this.statusCode === 400; }
+  get isAuthError(): boolean { return this.statusCode === 401; }
+  get isPermissionError(): boolean { return this.statusCode === 403; }
+  get isNotFoundError(): boolean { return this.statusCode === 404; }
+  get isServerError(): boolean { return this.statusCode >= 500 && this.statusCode < 600; }
+}
+
+/**
+ * Network Error (connection failed, timeout, etc.)
+ */
+export class NetworkError extends Error {
+  constructor(
+    message: string,
+    public url: string,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}

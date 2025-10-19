@@ -5,16 +5,16 @@ Provides functionality to extract structured JSON data from LLM text responses.
 """
 
 import json
-import re
 import logging
-from typing import Dict, Any, Optional
+import re
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class JSONExtractor:
     """Utility for extracting JSON from LLM responses."""
-    
+
     @staticmethod
     def extract_json_from_response(content: str) -> Optional[Dict[str, Any]]:
         """
@@ -36,7 +36,7 @@ class JSONExtractor:
                 r'```\s*(\{.*?\})\s*```',
                 r'(\{.*?\})',
             ]
-            
+
             for pattern in json_patterns:
                 matches = re.findall(pattern, content, re.DOTALL)
                 for match in matches:
@@ -44,10 +44,10 @@ class JSONExtractor:
                         return json.loads(match)
                     except json.JSONDecodeError:
                         continue
-            
+
             logger.debug(f"No valid JSON found in response: {content[:100]}...")
             return None
-    
+
     @staticmethod
     def extract_code_blocks(content: str, language: Optional[str] = None) -> list[str]:
         """
@@ -64,10 +64,10 @@ class JSONExtractor:
             pattern = rf'```{language}\s*(.*?)\s*```'
         else:
             pattern = r'```(?:\w+)?\s*(.*?)\s*```'
-        
+
         matches = re.findall(pattern, content, re.DOTALL)
         return [match.strip() for match in matches]
-    
+
     @staticmethod
     def extract_markdown_sections(content: str, section_title: str) -> list[str]:
         """

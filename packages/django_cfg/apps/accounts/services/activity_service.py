@@ -3,7 +3,8 @@ User activity logging service.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from django.utils import timezone
 
 from ..models import CustomUser, UserActivity
@@ -49,10 +50,10 @@ class ActivityService:
                 object_id=object_id,
                 object_type=object_type,
             )
-            
+
             logger.debug(f"Logged activity '{activity_type}' for user {user.email}")
             return activity
-            
+
         except Exception as e:
             logger.error(f"Failed to log activity '{activity_type}' for user {user.email}: {e}")
             return None
@@ -75,10 +76,10 @@ class ActivityService:
             List of UserActivity instances
         """
         queryset = user.activities.all()
-        
+
         if activity_type:
             queryset = queryset.filter(activity_type=activity_type)
-            
+
         return list(queryset.order_by('-created_at')[:limit])
 
     @staticmethod
@@ -93,9 +94,9 @@ class ActivityService:
             Dictionary with activity statistics
         """
         now = timezone.now()
-        
+
         activities = user.activities.all()
-        
+
         stats = {
             "total_activities": activities.count(),
             "recent_24h": activities.filter(
@@ -108,15 +109,15 @@ class ActivityService:
                 created_at__gte=now - timezone.timedelta(days=30)
             ).count(),
         }
-        
+
         # Activity type breakdown
         activity_types = activities.values_list('activity_type', flat=True)
         type_counts = {}
         for activity_type in activity_types:
             type_counts[activity_type] = type_counts.get(activity_type, 0) + 1
-        
+
         stats["by_type"] = type_counts
-        
+
         return stats
 
     @staticmethod
@@ -131,10 +132,10 @@ class ActivityService:
             Number of activities deleted
         """
         cutoff_date = timezone.now() - timezone.timedelta(days=days)
-        
+
         deleted_count, _ = UserActivity.objects.filter(
             created_at__lt=cutoff_date
         ).delete()
-        
+
         logger.info(f"Cleaned up {deleted_count} old activities older than {days} days")
         return deleted_count

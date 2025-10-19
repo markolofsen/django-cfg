@@ -3,7 +3,7 @@ Users data callbacks.
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from django.contrib.auth import get_user_model
 
@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 
 class UsersCallbacks:
     """Users data callbacks."""
-    
+
     def _get_user_model(self):
         """Get the user model safely."""
         return get_user_model()
-    
+
     def get_recent_users(self) -> List[Dict[str, Any]]:
         """Get recent users data for template."""
         try:
@@ -26,7 +26,7 @@ class UsersCallbacks:
             from django.apps import apps
             if not apps.ready:
                 return []
-                
+
             User = self._get_user_model()
             recent_users = User.objects.select_related().order_by("-date_joined")[:10]
 

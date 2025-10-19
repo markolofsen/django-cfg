@@ -68,8 +68,27 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- API Client (не модуль) -->
-<script src="{% static 'tasks/js/api.js' %}"></script>
+<!-- Load and initialize Tasks API -->
+<script type="module">
+try {
+    console.log('🔄 Starting TasksAPI module import...');
+    const { loadAPI, showNotification } = await import('/static/js/api-loader.mjs');
+
+    // Load tasks API
+    const tasksAPI = await loadAPI('tasks');
+    console.log('✅ TasksAPI module imported successfully:', tasksAPI);
+
+    // Make it available globally as tasksAPI
+    window.tasksAPI = tasksAPI;
+    window.showNotification = showNotification;
+
+    console.log('✅ TasksAPI loaded from generated MJS client');
+} catch (error) {
+    console.error('❌ Failed to load TasksAPI module:', error);
+    console.error('Error stack:', error.stack);
+    window.tasksAPI = null;
+}
+</script>
 
 <!-- Dashboard Modules -->
 <script type="module" src="{% static 'tasks/js/dashboard/overview.mjs' %}"></script>

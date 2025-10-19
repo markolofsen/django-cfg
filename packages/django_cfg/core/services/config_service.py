@@ -7,7 +7,7 @@ to specialized builders for actual work.
 Size: ~100 lines (pure coordination, no business logic)
 """
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig
@@ -43,9 +43,9 @@ class ConfigService:
         self.config = config
 
         # Lazy initialization of builders
-        self._apps_builder: Optional["InstalledAppsBuilder"] = None
-        self._middleware_builder: Optional["MiddlewareBuilder"] = None
-        self._security_builder: Optional["SecurityBuilder"] = None
+        self._apps_builder: Optional[InstalledAppsBuilder] = None
+        self._middleware_builder: Optional[MiddlewareBuilder] = None
+        self._security_builder: Optional[SecurityBuilder] = None
 
     @property
     def apps_builder(self) -> "InstalledAppsBuilder":

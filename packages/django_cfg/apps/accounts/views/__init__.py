@@ -1,5 +1,5 @@
 from .otp import OTPViewSet
-from .profile import UserProfileView, UserProfileUpdateView, UserProfilePartialUpdateView
+from .profile import UserProfilePartialUpdateView, UserProfileUpdateView, UserProfileView
 
 __all__ = [
     'OTPViewSet',

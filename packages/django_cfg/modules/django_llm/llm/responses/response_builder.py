@@ -4,14 +4,14 @@ Response builder for LLM client.
 Builds Pydantic response objects from API responses.
 """
 
-import time
 import logging
 from datetime import datetime
 from typing import Optional
+
 from openai.types.chat import ChatCompletion
 
 from ..costs import calculate_chat_cost
-from ..models import ChatCompletionResponse, ChatChoice, TokenUsage
+from ..models import ChatChoice, ChatCompletionResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
 

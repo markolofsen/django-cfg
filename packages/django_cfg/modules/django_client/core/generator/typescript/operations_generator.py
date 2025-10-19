@@ -5,8 +5,10 @@ TypeScript Operations Generator - Generates TypeScript async operation methods.
 from __future__ import annotations
 
 from jinja2 import Environment
+
 from ...ir import IROperationObject
-from .naming import operation_to_method_name 
+from .naming import operation_to_method_name
+
 
 class OperationsGenerator:
     """Generates TypeScript async operation methods."""
@@ -18,8 +20,8 @@ class OperationsGenerator:
 
     def generate_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False, in_subclient: bool = False) -> str:
         """Generate async method for operation."""
-        
-        
+
+
         # Get method name using universal logic
         # For client methods, we use empty prefix to get short names: list, create, retrieve
         operation_id = operation.operation_id
@@ -51,46 +53,15 @@ class OperationsGenerator:
 
         # Add request body parameter
         if operation.request_body:
-            if is_multipart:
-                # For multipart, get schema properties and add as individual File parameters
-                schema_name = operation.request_body.schema_name
-                if schema_name and schema_name in self.context.schemas:
-                    schema = self.context.schemas[schema_name]
-                    # Add required params first, then optional (TypeScript requirement)
-                    required_params = []
-                    optional_params = []
-                    
-                    for prop_name, prop in schema.properties.items():
-                        # Check if it's a file field (format: binary)
-                        if prop.format == "binary":
-                            param_str = f"{prop_name}: File | Blob"
-                        else:
-                            # Regular field in multipart
-                            prop_type = self._map_param_type(prop.type)
-                            if prop_name in schema.required:
-                                param_str = f"{prop_name}: {prop_type}"
-                            else:
-                                param_str = f"{prop_name}?: {prop_type}"
-                        
-                        # Separate required and optional
-                        if prop_name in schema.required:
-                            required_params.append(param_str)
-                        else:
-                            optional_params.append(param_str)
-                    
-                    # Add required first, then optional
-                    params.extend(required_params)
-                    params.extend(optional_params)
-                else:
-                    # Inline schema - use FormData
-                    params.append("data: FormData")
+            # For both JSON and multipart, accept data as typed object
+            schema_name = operation.request_body.schema_name
+            if schema_name and schema_name in self.context.schemas:
+                params.append(f"data: Models.{schema_name}")
             else:
-                # JSON request body
-                schema_name = operation.request_body.schema_name
-                if schema_name and schema_name in self.context.schemas:
-                    params.append(f"data: Models.{schema_name}")
+                # Inline schema
+                if is_multipart:
+                    params.append("data: FormData")
                 else:
-                    # Inline schema - use any
                     params.append("data: any")
         elif operation.patch_request_body:
             schema_name = operation.patch_request_body.schema_name
@@ -100,25 +71,42 @@ class OperationsGenerator:
                 params.append("data?: any")
 
         # Add query parameters (old style - separate params)
+        # TypeScript requires: required params first, then optional params
         query_params_list = []
+        required_query_params = []
+        optional_query_params = []
+
         for param in operation.query_parameters:
             param_type = self._map_param_type(param.schema_type)
-            if not param.required:
-                params.append(f"{param.name}?: {param_type}")
-            else:
-                params.append(f"{param.name}: {param_type}")
             query_params_list.append((param.name, param_type, param.required))
+
+            if param.required:
+                required_query_params.append(f"{param.name}: {param_type}")
+            else:
+                optional_query_params.append(f"{param.name}?: {param_type}")
+
+        # Add required first, then optional
+        params.extend(required_query_params)
+        params.extend(optional_query_params)
 
         # Return type
         primary_response = operation.primary_success_response
-        if primary_response and primary_response.schema_name:
-            # Check if response is paginated (has 'results' field)
+        if primary_response and primary_response.status_code == 204:
+            # 204 No Content - void response
+            return_type = "void"
+        elif primary_response and primary_response.schema_name:
+            # Named schema - typed response
             is_paginated = primary_response.schema_name.startswith('Paginated')
             if operation.is_list_operation and not is_paginated:
                 return_type = f"Models.{primary_response.schema_name}[]"
             else:
                 return_type = f"Models.{primary_response.schema_name}"
+        elif primary_response and primary_response.content_type:
+            # Has response content but no named schema - generic object
+            # Use 'any' to allow returning response data
+            return_type = "any"
         else:
+            # No response
             return_type = "void"
 
         # Build overload signatures if has query params
@@ -137,7 +125,11 @@ class OperationsGenerator:
                 optional = "?" if not required else ""
                 query_fields.append(f"{param_name}{optional}: {param_type}")
             if query_fields:
-                params_obj.append(f"params?: {{ {'; '.join(query_fields)} }}")
+                # Check if any query param is required
+                # TypeScript doesn't allow required fields in optional objects
+                has_required = any(required for _, _, required in query_params_list)
+                params_optional = "" if has_required else "?"
+                params_obj.append(f"params{params_optional}: {{ {'; '.join(query_fields)} }}")
             overload_signatures.append(f"async {method_name}({', '.join(params_obj)}): Promise<{return_type}>")
 
             # Implementation signature - use rest params for compatibility
@@ -167,37 +159,15 @@ class OperationsGenerator:
         if use_rest_params and query_params_list:
             # Extract parameters from args array
             path_params_count = len(operation.path_parameters)
-            
-            # For multipart, body params are unpacked as individual fields
-            if is_multipart and operation.request_body:
-                schema_name = operation.request_body.schema_name
-                if schema_name and schema_name in self.context.schemas:
-                    schema = self.context.schemas[schema_name]
-                    body_params_count = len(schema.properties)
-                else:
-                    body_params_count = 1  # data: FormData
-            else:
-                body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
-            
+            body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
             first_query_pos = path_params_count + body_params_count
 
             # Extract path parameters
             for i, param in enumerate(operation.path_parameters):
                 body_lines.append(f"const {param.name} = args[{i}];")
 
-            # Extract body/data parameter(s)
-            if is_multipart and operation.request_body:
-                schema_name = operation.request_body.schema_name
-                if schema_name and schema_name in self.context.schemas:
-                    schema = self.context.schemas[schema_name]
-                    # Extract each property as separate variable
-                    arg_idx = path_params_count
-                    for prop_name in schema.properties.keys():
-                        body_lines.append(f"const {prop_name} = args[{arg_idx}];")
-                        arg_idx += 1
-                else:
-                    body_lines.append(f"const data = args[{path_params_count}];")
-            elif operation.request_body or operation.patch_request_body:
+            # Extract body/data parameter
+            if operation.request_body or operation.patch_request_body:
                 body_lines.append(f"const data = args[{path_params_count}];")
 
             # Check if first query arg is object (params style) or primitive (old style)
@@ -223,18 +193,7 @@ class OperationsGenerator:
             if use_rest_params:
                 # Extract params from args array - handle both calling styles
                 path_params_count = len(operation.path_parameters)
-                
-                # For multipart, body params are unpacked as individual fields
-                if is_multipart and operation.request_body:
-                    schema_name = operation.request_body.schema_name
-                    if schema_name and schema_name in self.context.schemas:
-                        schema = self.context.schemas[schema_name]
-                        body_params_count = len(schema.properties)
-                    else:
-                        body_params_count = 1  # data: FormData
-                else:
-                    body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
-                
+                body_params_count = 1 if (operation.request_body or operation.patch_request_body) else 0
                 first_query_pos = path_params_count + body_params_count
 
                 body_lines.append("let params;")
@@ -266,17 +225,17 @@ class OperationsGenerator:
                     for prop_name, prop in schema.properties.items():
                         if prop.format == "binary":
                             # Append file
-                            body_lines.append(f"formData.append('{prop_name}', {prop_name});")
+                            body_lines.append(f"formData.append('{prop_name}', data.{prop_name});")
                         elif prop_name in schema.required or True:  # Append all non-undefined fields
                             # Append other fields (wrap in if check for optional)
                             if prop_name not in schema.required:
-                                body_lines.append(f"if ({prop_name} !== undefined) formData.append('{prop_name}', String({prop_name}));")
+                                body_lines.append(f"if (data.{prop_name} !== undefined) formData.append('{prop_name}', String(data.{prop_name}));")
                             else:
-                                body_lines.append(f"formData.append('{prop_name}', String({prop_name}));")
+                                body_lines.append(f"formData.append('{prop_name}', String(data.{prop_name}));")
                     request_opts.append("formData")
                 else:
                     # Inline schema - data is already FormData
-                    request_opts.append("body: data")
+                    request_opts.append("formData: data")
             else:
                 # JSON body
                 request_opts.append("body: data")
@@ -299,10 +258,12 @@ class OperationsGenerator:
             else:
                 # Extract results from array response
                 body_lines.append("return (response as any).results || [];")
-        elif return_type != "void":
-            body_lines.append("return response;")
-        else:
+        elif return_type == "void":
+            # No content response (204 No Content or truly void)
             body_lines.append("return;")
+        else:
+            # Return response data
+            body_lines.append("return response;")
 
         # Build method with proper class-level indentation (2 spaces)
         lines = []

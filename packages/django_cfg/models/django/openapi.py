@@ -7,8 +7,10 @@ TypeScript and Python client generation from Django REST Framework endpoints.
 This replaces django-revolution with a cleaner, faster, type-safe implementation.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from pydantic import Field
+
 from django_cfg.modules.django_client.core.config import OpenAPIConfig, OpenAPIGroupConfig
 
 
@@ -103,23 +105,11 @@ class OpenAPIClientConfig(OpenAPIConfig):
 
     def get_groups_with_defaults(self) -> Dict[str, OpenAPIGroupConfig]:
         """
-        Get groups with django-cfg default groups automatically added.
-        
-        Automatically adds the 'cfg' group with all django-cfg apps if not explicitly defined.
+        Get groups as a dictionary.
 
         Returns:
-            Dict of groups including default django-cfg groups
+            Dict of groups from configuration
         """
         # Convert list to dict for compatibility
-        groups_dict = {group.name: group for group in self.groups}
-
-        # Add default 'cfg' group if not explicitly defined
-        if 'cfg' not in groups_dict:
-            try:
-                from django_cfg.apps.urls import get_default_cfg_group
-                groups_dict['cfg'] = get_default_cfg_group()
-            except Exception:
-                pass
-
-        return groups_dict
+        return {group.name: group for group in self.groups}
 

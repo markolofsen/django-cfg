@@ -11,7 +11,7 @@ _LAZY_IMPORTS = {
     'SiteSyncService': ('django_cfg.apps.maintenance.services.site_sync_service', 'SiteSyncService'),
     'BulkOperationsService': ('django_cfg.apps.maintenance.services.bulk_operations_service', 'BulkOperationsService'),
     'ScheduledMaintenanceService': ('django_cfg.apps.maintenance.services.scheduled_maintenance_service', 'ScheduledMaintenanceService'),
-    
+
     # Service functions
     'enable_maintenance_for_domain': ('django_cfg.apps.maintenance.services.maintenance_service', 'enable_maintenance_for_domain'),
     'disable_maintenance_for_domain': ('django_cfg.apps.maintenance.services.maintenance_service', 'disable_maintenance_for_domain'),
@@ -31,11 +31,11 @@ def __getattr__(name: str):
     """Lazy import mechanism to avoid Django initialization issues."""
     if name in _LAZY_IMPORTS:
         module_path, attr_name = _LAZY_IMPORTS[name]
-        
+
         import importlib
         module = importlib.import_module(module_path)
         return getattr(module, attr_name)
-    
+
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 

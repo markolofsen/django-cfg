@@ -8,6 +8,7 @@ import logging
 import sys
 from types import ModuleType
 from typing import Dict, List, Optional
+
 from ..config import OpenAPIConfig
 from .detector import GroupDetector
 
@@ -205,7 +206,7 @@ class GroupManager:
 
         # Check if this is django-cfg built-in apps group
         is_django_cfg_group = all(
-            app_name.startswith("django_cfg.apps.") 
+            app_name.startswith("django_cfg.apps.")
             for app_name in apps
         )
 

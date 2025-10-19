@@ -12,18 +12,19 @@ This generator creates a complete TypeScript API client from IR:
 from __future__ import annotations
 
 import pathlib
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from ..base import BaseGenerator, GeneratedFile
 from ...ir import IROperationObject, IRSchemaObject
-
+from ..base import BaseGenerator, GeneratedFile
+from .client_generator import ClientGenerator
+from .fetchers_generator import FetchersGenerator
+from .files_generator import FilesGenerator
+from .hooks_generator import HooksGenerator
 from .models_generator import ModelsGenerator
 from .operations_generator import OperationsGenerator
-from .client_generator import ClientGenerator
-from .files_generator import FilesGenerator
 from .schemas_generator import SchemasGenerator
-from .fetchers_generator import FetchersGenerator
-from .hooks_generator import HooksGenerator
+from .validator import TypeScriptValidator
 
 
 class TypeScriptGenerator(BaseGenerator):
@@ -122,6 +123,9 @@ class TypeScriptGenerator(BaseGenerator):
                     print("⚠️  Warning: SWR hooks require fetchers. Enable generate_fetchers.")
                 else:
                     files.extend(self._generate_swr_hooks())
+
+            # Validate generated TypeScript code
+            self._validate_typescript_files(files)
         else:
             # Flat structure (original logic)
             files.append(self.models_gen.generate_models_file())
@@ -167,6 +171,9 @@ class TypeScriptGenerator(BaseGenerator):
                     print("⚠️  Warning: SWR hooks require fetchers. Enable generate_fetchers.")
                 else:
                     files.extend(self._generate_swr_hooks())
+
+            # Validate generated TypeScript code
+            self._validate_typescript_files(files)
 
         # Generate package files if requested
         if self.generate_package_files:
@@ -430,3 +437,55 @@ class TypeScriptGenerator(BaseGenerator):
             files.append(self.hooks_gen.generate_hooks_index_file(module_names))
 
         return files
+
+    # ===== TypeScript Validation =====
+
+    def _validate_typescript_files(self, files: list[GeneratedFile]) -> None:
+        """
+        Validate generated TypeScript files for common errors.
+
+        This method performs fast regex-based checks on generated TypeScript code
+        to catch common issues before they cause compilation errors:
+        - Required parameters after optional parameters
+        - Required fields in optional objects
+        - Invalid TypeScript syntax patterns
+
+        Args:
+            files: List of generated files to validate
+
+        Raises:
+            SystemExit: If validation errors are found (stops generation)
+        """
+        validator = TypeScriptValidator()
+        all_errors = {}
+
+        # Validate only TypeScript files
+        for file in files:
+            if file.path.endswith('.ts'):
+                errors = validator.validate_file(file.path, file.content)
+                if errors:
+                    all_errors[file.path] = errors
+
+        # If errors found, print and exit
+        if all_errors:
+            print("\n" + "=" * 60)
+            print("⚠️  TypeScript Validation Errors Found")
+            print("=" * 60)
+
+            total_errors = 0
+            for file_path, errors in all_errors.items():
+                print(f"\n📄 {file_path}")
+                for error in errors:
+                    print(f"   {error}")
+                    total_errors += 1
+
+            print("\n" + "=" * 60)
+            print(f"❌ Found {total_errors} validation error(s) in {len(all_errors)} file(s)")
+            print("=" * 60 + "\n")
+
+            # Exit to prevent writing invalid files
+            import sys
+            sys.exit(1)
+
+        # Success - no errors found
+        print("✅ TypeScript validation passed")

@@ -1,64 +1,136 @@
 """
-Django Admin Utilities - Universal HTML Builder System
+Django Admin - Declarative Configuration with Pydantic 2.x
 
-Clean, type-safe admin utilities with no HTML duplication.
+Type-safe, reusable admin configurations using Pydantic models.
+
+Example:
+    ```python
+    from django_cfg.modules.django_admin import (
+        PydanticAdmin, AdminConfig, FieldConfig, FieldsetConfig
+    )
+
+    user_balance_config = AdminConfig(
+        model=UserBalance,
+        list_display=["user", "balance_usd", "status"],
+        display_fields=[
+            FieldConfig(
+                name="user",
+                title="User",
+                ui_widget="user_avatar",
+                header=True
+            ),
+            FieldConfig(
+                name="balance_usd",
+                title="Balance (USD)",
+                ui_widget="currency",
+                currency="USD",
+                precision=2
+            ),
+        ],
+        fieldsets=[
+            FieldsetConfig(
+                title="Balance Details",
+                fields=["balance_usd", "total_deposited"]
+            ),
+        ],
+        select_related=["user"],
+    )
+
+    @admin.register(UserBalance)
+    class UserBalanceAdmin(PydanticAdmin):
+        config = user_balance_config
+    ```
 """
 
-# Core utilities
-from .utils.displays import UserDisplay, MoneyDisplay, StatusDisplay, DateTimeDisplay
-from .utils.badges import StatusBadge, ProgressBadge, CounterBadge
+# Core config models
+from .config import (
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    BooleanField,
+    CurrencyField,
+    DateTimeField,
+    FieldConfig,
+    FieldsetConfig,
+    ImageField,
+    TextField,
+    UserField,
+)
 
-# Icons
-from .icons import Icons, IconCategories
+# Widget registry
+from .widgets import WidgetRegistry
 
-# Admin mixins
-from .mixins.display_mixin import DisplayMixin
-from .mixins.optimization_mixin import OptimizedModelAdmin
-from .mixins.standalone_actions_mixin import StandaloneActionsMixin, standalone_action
+# Base admin class - NOT imported here to avoid AppRegistryNotReady
+# Import PydanticAdmin directly in your admin.py files:
+# from django_cfg.modules.django_admin.base import PydanticAdmin
 
-# Configuration models
-from .models.display_models import UserDisplayConfig, MoneyDisplayConfig, DateTimeDisplayConfig
-from .models.badge_models import BadgeConfig, BadgeVariant, StatusBadgeConfig
-from .models.action_models import ActionVariant, ActionConfig
+# Icons (optional)
+from .icons import IconCategories, Icons
 
-# Decorators
-from .decorators import display, action
+# Display utilities (for custom widgets)
+from .utils import (
+    CounterBadge,
+    DateTimeDisplay,
+    MoneyDisplay,
+    ProgressBadge,
+    StatusBadge,
+    UserDisplay,
+    # Decorators
+    annotated_field,
+    badge_field,
+    computed_field,
+    currency_field,
+)
 
-__version__ = "1.0.0"
+# Pydantic models (for advanced usage)
+from .models import (
+    BadgeConfig,
+    BadgeVariant,
+    DateTimeDisplayConfig,
+    MoneyDisplayConfig,
+    StatusBadgeConfig,
+    UserDisplayConfig,
+)
+
+__version__ = "2.0.0"
 
 __all__ = [
-    # Display utilities
-    "UserDisplay",
-    "MoneyDisplay", 
-    "StatusDisplay",
-    "DateTimeDisplay",
-    
-    # Badge utilities
-    "StatusBadge",
-    "ProgressBadge",
-    "CounterBadge",
-    
+    # Core - Primary API
+    # "PydanticAdmin",  # Import directly from .base to avoid AppRegistryNotReady
+    "AdminConfig",
+    "FieldConfig",
+    "FieldsetConfig",
+    "ActionConfig",
+    # Specialized Field Types
+    "BadgeField",
+    "BooleanField",
+    "CurrencyField",
+    "DateTimeField",
+    "ImageField",
+    "TextField",
+    "UserField",
+    # Advanced
+    "WidgetRegistry",
     # Icons
     "Icons",
     "IconCategories",
-    
-    # Admin mixins
-    "OptimizedModelAdmin",
-    "DisplayMixin",
-    "StandaloneActionsMixin",
-    "standalone_action",
-    
-    # Configuration models
+    # Display utilities (for custom widgets)
+    "UserDisplay",
+    "MoneyDisplay",
+    "DateTimeDisplay",
+    "StatusBadge",
+    "ProgressBadge",
+    "CounterBadge",
+    # Decorators
+    "computed_field",
+    "badge_field",
+    "currency_field",
+    "annotated_field",
+    # Pydantic models (for advanced widget config)
     "UserDisplayConfig",
     "MoneyDisplayConfig",
     "DateTimeDisplayConfig",
     "BadgeConfig",
-    "BadgeVariant",
     "StatusBadgeConfig",
-    "ActionVariant",
-    "ActionConfig",
-    
-    # Decorators
-    "display",
-    "action",
+    "BadgeVariant",
 ]

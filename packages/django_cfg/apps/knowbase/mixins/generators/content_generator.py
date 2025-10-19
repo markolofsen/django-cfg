@@ -4,7 +4,7 @@ Content and title generation for ExternalData.
 Handles automatic generation of titles and markdown content from model instances.
 """
 
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class ExternalDataContentGenerator:
@@ -104,7 +104,7 @@ class ExternalDataContentGenerator:
             f"This data is automatically synchronized from the {self.model_class.__name__} "
             f"model using ExternalDataMixin."
         )
-        content_parts.append(f"")
+        content_parts.append("")
         content_parts.append(f"**Model**: {self.model_class._meta.label}")
         content_parts.append(f"**ID**: {self.instance.pk}")
 

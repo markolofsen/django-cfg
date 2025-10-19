@@ -6,8 +6,9 @@ comprehensive deliverability optimization.
 """
 
 import logging
-from typing import Optional, Tuple, Dict, Any
-from django_cfg.modules.django_twilio._imports import SendGridAPIClient, SENDGRID_AVAILABLE
+from typing import Any, Dict, Optional, Tuple
+
+from django_cfg.modules.django_twilio._imports import SendGridAPIClient
 
 # Import Mail helper conditionally
 try:
@@ -18,11 +19,11 @@ except ImportError:
 from asgiref.sync import sync_to_async
 
 from .base import BaseTwilioService
-from .models import SendGridConfig
 from .exceptions import (
     TwilioConfigurationError,
     TwilioSendError,
 )
+from .models import SendGridConfig
 
 logger = logging.getLogger(__name__)
 

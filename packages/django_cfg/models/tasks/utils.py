@@ -9,8 +9,8 @@ Contains utility functions for task configuration:
 Size: ~120 lines (focused on utilities)
 """
 
-from typing import List, Optional, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from .config import TaskConfig
@@ -87,8 +87,8 @@ def get_default_task_config(debug: bool = False) -> 'TaskConfig':
         >>> config.dramatiq.processes
         2
     """
-    from .config import TaskConfig
     from .backends import DramatiqConfig, WorkerConfig
+    from .config import TaskConfig
 
     smart_queues = get_smart_queues(debug)
 
@@ -158,8 +158,8 @@ def validate_task_config(config: 'TaskConfig', redis_url: Optional[str] = None) 
 
     # Check if Dramatiq is available
     try:
-        import dramatiq
         import django_dramatiq
+        import dramatiq
     except ImportError as e:
         logger.error(f"Dramatiq dependencies not available: {e}")
         return False

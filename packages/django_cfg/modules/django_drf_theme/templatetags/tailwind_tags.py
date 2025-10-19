@@ -12,10 +12,18 @@ register = template.Library()
 
 @register.simple_tag
 def tailwind_css():
-    """Load Tailwind CSS from CDN."""
-    return mark_safe(
-        '<script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>'
-    )
+    """Load Tailwind CSS from CDN with dark mode configuration."""
+    return mark_safe('''
+        <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {}
+                }
+            }
+        </script>
+    ''')
 
 
 @register.filter

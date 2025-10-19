@@ -5,7 +5,7 @@ Handles parsing and processing of ExternalDataMeta configuration from model clas
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from ...models.external_data import ExternalDataType
 from ..generators import ExternalDataFieldAnalyzer

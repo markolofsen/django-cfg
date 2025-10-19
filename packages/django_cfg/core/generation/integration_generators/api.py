@@ -5,8 +5,8 @@ Handles JWT, DRF, Spectacular, and Django Client (OpenAPI) configuration.
 Size: ~250 lines (focused on API frameworks)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig
@@ -110,7 +110,11 @@ class APIFrameworksGenerator:
             # Extract DRF parameters from OpenAPIClientConfig
             openapi_config = self.config.openapi_client
 
-            # Build REST_FRAMEWORK settings
+            # Get smart defaults for DRF
+            from django_cfg.utils.smart_defaults import SmartDefaults
+            drf_defaults = SmartDefaults.get_rest_framework_defaults()
+
+            # Build REST_FRAMEWORK settings with smart defaults
             rest_framework = {
                 "DEFAULT_SCHEMA_CLASS": "django_cfg.modules.django_client.spectacular.schema.PathBasedAutoSchema",
                 "DEFAULT_PAGINATION_CLASS": "django_cfg.middleware.pagination.DefaultPagination",
@@ -119,7 +123,13 @@ class APIFrameworksGenerator:
                     "rest_framework.renderers.JSONRenderer",
                     "django_cfg.modules.django_drf_theme.renderers.TailwindBrowsableAPIRenderer",
                 ],
+                # Add authentication classes from smart defaults
+                "DEFAULT_AUTHENTICATION_CLASSES": drf_defaults["DEFAULT_AUTHENTICATION_CLASSES"],
             }
+
+            # Note: We don't set DEFAULT_PERMISSION_CLASSES here to allow public endpoints
+            # Users can override with explicit DRFConfig if they want IsAuthenticated globally
+            logger.info("🔐 Auto-configured JWT authentication for DRF (from smart defaults)")
 
             # Add authentication classes if not browsable
             if not openapi_config.drf_enable_browsable_api:

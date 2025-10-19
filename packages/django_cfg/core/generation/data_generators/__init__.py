@@ -6,8 +6,8 @@ Contains generators for data-related Django settings:
 - Cache backends
 """
 
-from .database import DatabaseSettingsGenerator
 from .cache import CacheSettingsGenerator
+from .database import DatabaseSettingsGenerator
 
 __all__ = [
     "DatabaseSettingsGenerator",

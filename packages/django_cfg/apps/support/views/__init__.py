@@ -7,13 +7,13 @@ Decomposed views for better organization:
 - admin.py: Admin-specific views
 """
 
-from .api import TicketViewSet, MessageViewSet
-from .chat import ticket_chat_view, send_message_ajax
 from .admin import ticket_admin_chat_view
+from .api import MessageViewSet, TicketViewSet
+from .chat import send_message_ajax, ticket_chat_view
 
 __all__ = [
     'TicketViewSet',
-    'MessageViewSet', 
+    'MessageViewSet',
     'ticket_chat_view',
     'send_message_ajax',
     'ticket_admin_chat_view',

@@ -6,9 +6,9 @@ Provides URL integration and startup information display.
 
 import os
 
-from .url_integration import add_django_cfg_urls, get_django_cfg_urls_info
-from .display.startup import StartupDisplayManager
 from .display.ngrok import NgrokDisplayManager
+from .display.startup import StartupDisplayManager
+from .url_integration import add_django_cfg_urls, get_django_cfg_urls_info
 
 # Module-level flag that persists across hot reloads
 _startup_info_shown = False
@@ -43,17 +43,17 @@ def print_ngrok_tunnel_info(tunnel_url: str):
     manager = NgrokDisplayManager()
     manager.display_tunnel_info(tunnel_url)
 
-from .version_checker import get_version_info, get_latest_version, get_current_version
 from .commands_collector import get_all_commands, get_command_count, get_commands_with_descriptions
+from .version_checker import get_current_version, get_latest_version, get_version_info
 
 __all__ = [
     "add_django_cfg_urls",
-    "get_django_cfg_urls_info", 
+    "get_django_cfg_urls_info",
     "print_startup_info",
     "reset_startup_info_flag",
     "print_ngrok_tunnel_info",
     "get_version_info",
-    "get_latest_version", 
+    "get_latest_version",
     "get_current_version",
     "get_all_commands",
     "get_command_count",

@@ -4,34 +4,36 @@ Logging Configuration Model
 Django logging settings with Pydantic 2.
 """
 
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from pydantic import Field, field_validator
+
 from ..base import BaseConfig
 
 
 class LoggerConfig(BaseConfig):
     """Configuration for a single logger."""
-    
+
     name: str = Field(
         description="Logger name"
     )
-    
+
     level: str = Field(
         default="INFO",
         description="Log level"
     )
-    
+
     handlers: List[str] = Field(
         default_factory=list,
         description="Handler names for this logger"
     )
-    
+
     propagate: bool = Field(
         default=True,
         description="Whether to propagate to parent loggers"
     )
-    
+
     @field_validator('level')
     @classmethod
     def validate_level(cls, v: str) -> str:
@@ -44,40 +46,40 @@ class LoggerConfig(BaseConfig):
 
 class HandlerConfig(BaseConfig):
     """Configuration for a log handler."""
-    
+
     name: str = Field(
         description="Handler name"
     )
-    
+
     class_name: str = Field(
         description="Handler class"
     )
-    
+
     level: str = Field(
-        default="INFO", 
+        default="INFO",
         description="Handler log level"
     )
-    
+
     formatter: str = Field(
         default="verbose",
         description="Formatter name"
     )
-    
+
     filename: Optional[str] = Field(
         default=None,
         description="Log file path (for file handlers)"
     )
-    
+
     max_bytes: int = Field(
         default=10485760,  # 10MB
         description="Max bytes for rotating file handler"
     )
-    
+
     backup_count: int = Field(
         default=5,
         description="Backup count for rotating file handler"
     )
-    
+
     @field_validator('level')
     @classmethod
     def validate_level(cls, v: str) -> str:
@@ -90,15 +92,15 @@ class HandlerConfig(BaseConfig):
 
 class FormatterConfig(BaseConfig):
     """Configuration for a log formatter."""
-    
+
     name: str = Field(
         description="Formatter name"
     )
-    
+
     format_string: str = Field(
         description="Log format string"
     )
-    
+
     date_format: Optional[str] = Field(
         default=None,
         description="Date format string"
@@ -112,79 +114,79 @@ class LoggingConfig(BaseConfig):
     Complete logging configuration with formatters, handlers,
     and loggers for Django applications.
     """
-    
+
     # Global settings
     version: int = Field(
         default=1,
         description="Logging config version"
     )
-    
+
     disable_existing_loggers: bool = Field(
         default=False,
         description="Disable existing loggers"
     )
-    
+
     # Log level settings
     root_level: str = Field(
         default="INFO",
         description="Root logger level"
     )
-    
+
     django_level: str = Field(
         default="INFO",
         description="Django logger level"
     )
-    
+
     # File settings
     log_dir: Optional[str] = Field(
         default=None,
         description="Directory for log files"
     )
-    
+
     # Console settings
     console_enabled: bool = Field(
         default=True,
         description="Enable console logging"
     )
-    
+
     # File logging settings
     file_enabled: bool = Field(
         default=True,
         description="Enable file logging"
     )
-    
+
     # Rotating file settings
     rotating_enabled: bool = Field(
         default=True,
         description="Enable rotating file logging"
     )
-    
+
     max_file_size: int = Field(
         default=10485760,  # 10MB
         description="Maximum log file size in bytes"
     )
-    
+
     backup_count: int = Field(
         default=5,
         description="Number of backup log files to keep"
     )
-    
+
     # Custom loggers, handlers, formatters
     custom_loggers: List[LoggerConfig] = Field(
         default_factory=list,
         description="Custom logger configurations"
     )
-    
+
     custom_handlers: List[HandlerConfig] = Field(
         default_factory=list,
         description="Custom handler configurations"
     )
-    
+
     custom_formatters: List[FormatterConfig] = Field(
         default_factory=list,
         description="Custom formatter configurations"
     )
-    
+
     @field_validator('root_level', 'django_level')
     @classmethod
     def validate_levels(cls, v: str) -> str:
@@ -193,15 +195,15 @@ class LoggingConfig(BaseConfig):
         if v.upper() not in valid_levels:
             raise ValueError(f"Log level must be one of: {valid_levels}")
         return v.upper()
-    
+
     def get_log_directory(self) -> Path:
         """Get log directory path."""
         if self.log_dir:
             return Path(self.log_dir)
-        
+
         # Default to logs/ in current directory
         return Path.cwd() / "logs"
-    
+
     def get_default_formatters(self) -> Dict[str, Any]:
         """Get default log formatters."""
         formatters = {
@@ -220,7 +222,7 @@ class LoggingConfig(BaseConfig):
                 'datefmt': '%Y-%m-%d %H:%M:%S',
             },
         }
-        
+
         # Add custom formatters
         for formatter in self.custom_formatters:
             formatters[formatter.name] = {
@@ -229,13 +231,13 @@ class LoggingConfig(BaseConfig):
             }
             if formatter.date_format:
                 formatters[formatter.name]['datefmt'] = formatter.date_format
-        
+
         return formatters
-    
+
     def get_default_handlers(self) -> Dict[str, Any]:
         """Get default log handlers."""
         handlers = {}
-        
+
         # Console handler
         if self.console_enabled:
             handlers['console'] = {
@@ -243,24 +245,24 @@ class LoggingConfig(BaseConfig):
                 'class': 'logging.StreamHandler',
                 'formatter': 'simple',
             }
-        
+
         # File handler
         if self.file_enabled:
             log_dir = self.get_log_directory()
             log_dir.mkdir(exist_ok=True)
-            
+
             handlers['file'] = {
                 'level': 'INFO',
                 'class': 'logging.FileHandler',
                 'filename': str(log_dir / 'django.log'),
                 'formatter': 'verbose',
             }
-        
+
         # Rotating file handler
         if self.rotating_enabled:
             log_dir = self.get_log_directory()
             log_dir.mkdir(exist_ok=True)
-            
+
             handlers['rotating_file'] = {
                 'level': 'INFO',
                 'class': 'logging.handlers.RotatingFileHandler',
@@ -269,19 +271,19 @@ class LoggingConfig(BaseConfig):
                 'backupCount': self.backup_count,
                 'formatter': 'verbose',
             }
-        
+
         # Error file handler
         if self.file_enabled:
             log_dir = self.get_log_directory()
             log_dir.mkdir(exist_ok=True)
-            
+
             handlers['error_file'] = {
                 'level': 'ERROR',
                 'class': 'logging.FileHandler',
                 'filename': str(log_dir / 'django_errors.log'),
                 'formatter': 'verbose',
             }
-        
+
         # Add custom handlers
         for handler in self.custom_handlers:
             handler_config = {
@@ -289,18 +291,18 @@ class LoggingConfig(BaseConfig):
                 'class': handler.class_name,
                 'formatter': handler.formatter,
             }
-            
+
             if handler.filename:
                 handler_config['filename'] = handler.filename
-            
+
             if 'RotatingFileHandler' in handler.class_name:
                 handler_config['maxBytes'] = handler.max_bytes
                 handler_config['backupCount'] = handler.backup_count
-            
+
             handlers[handler.name] = handler_config
-        
+
         return handlers
-    
+
     def get_default_loggers(self) -> Dict[str, Any]:
         """Get default logger configurations."""
         # Determine available handlers
@@ -311,7 +313,7 @@ class LoggingConfig(BaseConfig):
             available_handlers.extend(['file', 'error_file'])
         if self.rotating_enabled:
             available_handlers.append('rotating_file')
-        
+
         loggers = {
             'django': {
                 'handlers': available_handlers,
@@ -329,7 +331,7 @@ class LoggingConfig(BaseConfig):
                 'propagate': False,
             },
         }
-        
+
         # Add custom loggers
         for logger in self.custom_loggers:
             loggers[logger.name] = {
@@ -337,9 +339,9 @@ class LoggingConfig(BaseConfig):
                 'level': logger.level,
                 'propagate': logger.propagate,
             }
-        
+
         return loggers
-    
+
     def to_django_settings(self) -> Dict[str, Any]:
         """Convert to Django LOGGING setting."""
         # Determine root handlers
@@ -348,7 +350,7 @@ class LoggingConfig(BaseConfig):
             root_handlers.append('console')
         if self.file_enabled:
             root_handlers.append('file')
-        
+
         logging_config = {
             'version': self.version,
             'disable_existing_loggers': self.disable_existing_loggers,
@@ -360,7 +362,7 @@ class LoggingConfig(BaseConfig):
             },
             'loggers': self.get_default_loggers(),
         }
-        
+
         return {
             'LOGGING': logging_config
         }

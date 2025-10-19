@@ -5,6 +5,7 @@ Defines application grouping (cfg/custom) for separate schema generation.
 """
 
 from typing import List
+
 from pydantic import BaseModel, Field, field_validator
 
 

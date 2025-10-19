@@ -1,0 +1,269 @@
+<!-- Example of MJS API client integration in Django template -->
+{% load static %}
+
+<div id="tasks-dashboard" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Tasks Dashboard (MJS)</h2>
+            <button id="refresh-btn" class="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700">
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="task-stats" class="p-6">
+        <div class="grid grid-cols-4 gap-4">
+            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="text-sm text-gray-600 dark:text-gray-400">Total Tasks</div>
+                <div id="total-tasks" class="text-2xl font-bold text-gray-900 dark:text-white">-</div>
+            </div>
+            <div class="bg-green-50 dark:bg-green-900 p-4 rounded-lg">
+                <div class="text-sm text-green-600 dark:text-green-400">Completed</div>
+                <div id="completed-tasks" class="text-2xl font-bold text-green-900 dark:text-green-100">-</div>
+            </div>
+            <div class="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-lg">
+                <div class="text-sm text-yellow-600 dark:text-yellow-400">Running</div>
+                <div id="running-tasks" class="text-2xl font-bold text-yellow-900 dark:text-yellow-100">-</div>
+            </div>
+            <div class="bg-red-50 dark:bg-red-900 p-4 rounded-lg">
+                <div class="text-sm text-red-600 dark:text-red-400">Failed</div>
+                <div id="failed-tasks" class="text-2xl font-bold text-red-900 dark:text-red-100">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task List -->
+    <div class="p-6 border-t border-gray-200 dark:border-gray-700">
+        <h3 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Recent Tasks</h3>
+        <div id="task-list" class="space-y-2">
+            <!-- Tasks will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="hidden p-6 text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">Loading tasks...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="hidden p-6 text-center">
+        <div class="text-red-600 dark:text-red-400">
+            <span class="material-icons text-5xl">error</span>
+            <p class="mt-2">Failed to load tasks</p>
+            <p id="error-message" class="text-sm mt-1"></p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+// Import the MJS API client
+import { tasksAPI } from '{% static "api/tasks.mjs" %}';
+
+// State management
+let currentTasks = [];
+let autoRefreshInterval = null;
+
+// DOM elements
+const elements = {
+    totalTasks: document.getElementById('total-tasks'),
+    completedTasks: document.getElementById('completed-tasks'),
+    runningTasks: document.getElementById('running-tasks'),
+    failedTasks: document.getElementById('failed-tasks'),
+    taskList: document.getElementById('task-list'),
+    loading: document.getElementById('loading'),
+    error: document.getElementById('error'),
+    errorMessage: document.getElementById('error-message'),
+    refreshBtn: document.getElementById('refresh-btn')
+};
+
+// Show loading state
+function showLoading() {
+    elements.loading.classList.remove('hidden');
+    elements.error.classList.add('hidden');
+}
+
+// Hide loading state
+function hideLoading() {
+    elements.loading.classList.add('hidden');
+}
+
+// Show error
+function showError(message) {
+    elements.error.classList.remove('hidden');
+    elements.errorMessage.textContent = message;
+    hideLoading();
+}
+
+// Update statistics
+async function updateStats() {
+    try {
+        const stats = await tasksAPI.cfgTasksApiTasksStatsRetrieve();
+
+        elements.totalTasks.textContent = stats.total || 0;
+        elements.completedTasks.textContent = stats.completed || 0;
+        elements.runningTasks.textContent = stats.running || 0;
+        elements.failedTasks.textContent = stats.failed || 0;
+    } catch (error) {
+        console.error('Failed to fetch stats:', error);
+    }
+}
+
+// Render task item
+function renderTaskItem(task) {
+    const statusColors = {
+        'completed': 'text-green-600 bg-green-100',
+        'running': 'text-yellow-600 bg-yellow-100',
+        'failed': 'text-red-600 bg-red-100',
+        'pending': 'text-gray-600 bg-gray-100'
+    };
+
+    const statusColor = statusColors[task.status] || 'text-gray-600 bg-gray-100';
+
+    return `
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div class="flex items-center space-x-3">
+                <span class="px-2 py-1 text-xs font-medium rounded ${statusColor}">
+                    ${task.status}
+                </span>
+                <div>
+                    <div class="font-medium text-gray-900 dark:text-white">${task.name}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        ${task.queue || 'default'} • ${new Date(task.created_at).toLocaleString()}
+                    </div>
+                </div>
+            </div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                ${task.duration || '-'} ms
+            </div>
+        </div>
+    `;
+}
+
+// Load tasks
+async function loadTasks() {
+    showLoading();
+
+    try {
+        // Fetch tasks list
+        const response = await tasksAPI.cfgTasksApiTasksListRetrieve();
+        currentTasks = response.tasks || [];
+
+        // Update stats
+        await updateStats();
+
+        // Render task list
+        if (currentTasks.length > 0) {
+            elements.taskList.innerHTML = currentTasks
+                .slice(0, 10)  // Show only first 10 tasks
+                .map(task => renderTaskItem(task))
+                .join('');
+        } else {
+            elements.taskList.innerHTML = `
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No tasks found
+                </div>
+            `;
+        }
+
+        hideLoading();
+    } catch (error) {
+        console.error('Failed to load tasks:', error);
+        showError(error.message || 'Failed to load tasks');
+    }
+}
+
+// Clear all tasks
+async function clearAllTasks() {
+    if (!confirm('Are you sure you want to clear all tasks?')) {
+        return;
+    }
+
+    try {
+        await tasksAPI.cfgTasksApiClearCreate({});
+        await loadTasks();
+        alert('All tasks cleared successfully');
+    } catch (error) {
+        console.error('Failed to clear tasks:', error);
+        alert('Failed to clear tasks: ' + error.message);
+    }
+}
+
+// Simulate tasks
+async function simulateTasks(count = 5) {
+    try {
+        await tasksAPI.cfgTasksApiSimulateCreate({
+            count: count,
+            queue: 'default',
+            task_type: 'test'
+        });
+        await loadTasks();
+    } catch (error) {
+        console.error('Failed to simulate tasks:', error);
+        alert('Failed to simulate tasks: ' + error.message);
+    }
+}
+
+// Setup auto-refresh
+function startAutoRefresh(interval = 5000) {
+    stopAutoRefresh();
+    autoRefreshInterval = setInterval(() => {
+        loadTasks();
+    }, interval);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// Event listeners
+elements.refreshBtn.addEventListener('click', () => {
+    loadTasks();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ctrl+R or Cmd+R to refresh
+    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        loadTasks();
+    }
+
+    // Ctrl+Shift+C to clear tasks
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        clearAllTasks();
+    }
+
+    // Ctrl+Shift+S to simulate tasks
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        simulateTasks();
+    }
+});
+
+// Initialize on page load
+loadTasks();
+
+// Start auto-refresh (update every 5 seconds)
+startAutoRefresh(5000);
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    stopAutoRefresh();
+});
+
+// Export functions for external use
+window.tasksDashboard = {
+    loadTasks,
+    clearAllTasks,
+    simulateTasks,
+    startAutoRefresh,
+    stopAutoRefresh
+};
+</script>

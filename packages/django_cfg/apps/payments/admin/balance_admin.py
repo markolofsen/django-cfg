@@ -1,117 +1,171 @@
 """
-Balance Admin interfaces using Django Admin Utilities.
+Balance Admin v2.0 - NEW Declarative Pydantic Approach
 
-Clean, modern admin interfaces with no HTML duplication.
+Clean, modern balance and transaction management using Unfold Admin with declarative config.
 """
 
 from django.contrib import admin
-from django.db.models import Count, Sum, Q, Avg
-from django.utils import timezone
-from datetime import timedelta
-from decimal import Decimal
-
-from unfold.admin import ModelAdmin
+from django.db.models import Count
 
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    UserDisplayConfig,
-    MoneyDisplayConfig,
-    StatusBadgeConfig,
-    DateTimeDisplayConfig,
+    ActionConfig,
+    AdminConfig,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    display,
-    action,
-    ActionVariant
+    UserField,
+    annotated_field,
+    computed_field,
 )
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
-from ..models import UserBalance, Transaction
-from .filters import BalanceRangeFilter, RecentActivityFilter
+from ..models import Transaction, UserBalance
+from .balance_actions import reset_zero_balances
+from .filters import BalanceRangeFilter, RecentActivityFilter, TransactionTypeFilter
 
-logger = get_logger("balance_admin")
+
+# ===== UserBalance Admin =====
+
+userbalance_config = AdminConfig(
+    model=UserBalance,
+
+    # Performance optimization
+    select_related=["user"],
+    annotations={
+        'transaction_count': Count('user__payment_transactions_v2')
+    },
+
+    # List display
+    list_display=[
+        "user",
+        "balance_usd",
+        "status",
+        "total_deposited",
+        "total_withdrawn",
+        "transaction_count",
+        "updated_at"
+    ],
+
+    # Display fields with NEW specialized classes
+    display_fields=[
+        UserField(
+            name="user",
+            title="User",
+            header=True
+        ),
+        CurrencyField(
+            name="balance_usd",
+            title="Balance",
+            currency="USD",
+            precision=2,
+            ordering="balance_usd"
+        ),
+        CurrencyField(
+            name="total_deposited",
+            title="Total Deposited",
+            currency="USD",
+            precision=2
+        ),
+        CurrencyField(
+            name="total_withdrawn",
+            title="Total Withdrawn",
+            currency="USD",
+            precision=2
+        ),
+        DateTimeField(
+            name="updated_at",
+            title="Updated",
+            ordering="updated_at"
+        ),
+    ],
+
+    # Filters and search
+    list_filter=[
+        BalanceRangeFilter,
+        RecentActivityFilter,
+        "created_at",
+        "updated_at",
+    ],
+
+    search_fields=[
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name"
+    ],
+
+    # Readonly fields
+    readonly_fields=[
+        "created_at",
+        "updated_at",
+        "last_transaction_at",
+        "balance_breakdown_display"
+    ],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="User Information",
+            fields=["user"]
+        ),
+        FieldsetConfig(
+            title="Balance Details",
+            fields=[
+                "balance_usd",
+                "total_deposited",
+                "total_withdrawn"
+            ]
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=[
+                "last_transaction_at",
+                "created_at",
+                "updated_at"
+            ],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Balance Breakdown",
+            fields=["balance_breakdown_display"],
+            collapsed=True
+        )
+    ],
+
+    # Actions with direct function references
+    actions=[
+        ActionConfig(
+            name="reset_zero_balances",
+            description="Reset zero balances",
+            variant="warning",
+            handler=reset_zero_balances
+        ),
+    ],
+
+    # Ordering
+    ordering=["-updated_at"],
+)
 
 
 @admin.register(UserBalance)
-class UserBalanceAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
+class UserBalanceAdmin(PydanticAdmin):
     """
-    UserBalance admin using Django Admin Utilities.
-    
+    UserBalance admin for Payments v2.0 using NEW Pydantic declarative approach.
+
     Features:
-    - Clean display utilities with no HTML duplication
-    - Automatic query optimization
-    - Type-safe configuration
-    - Unfold integration
+    - Declarative configuration with type safety
+    - Automatic display method generation
+    - Clean UI with Unfold theme
+    - Custom readonly fields for detail view
     """
-    
-    # Performance optimization
-    select_related_fields = ['user']
-    annotations = {
-        'transaction_count': Count('user__payment_transactions')
-    }
-    
-    # List configuration
-    list_display = [
-        'user_display',
-        'balance_display',
-        'status_display',
-        'transaction_count_display',
-        'updated_display'
-    ]
-    
-    list_filter = [
-        BalanceRangeFilter,
-        RecentActivityFilter,
-        'created_at',
-        'updated_at',
-    ]
-    
-    search_fields = [
-        'user__username',
-        'user__email',
-        'user__first_name',
-        'user__last_name'
-    ]
-    
-    readonly_fields = [
-        'created_at',
-        'updated_at',
-        'balance_breakdown_display'
-    ]
-    
-    # Register actions
-    actions = ['reset_zero_balances']
-    
-    # Display methods using Unfold features
-    @display(description="User", header=True)
-    def user_display(self, obj):
-        """User display with avatar using Unfold header feature."""
-        if not obj.user:
-            return ["No user", "", ""]
-        
-        return [
-            obj.user.get_full_name() or obj.user.username,
-            obj.user.email,
-            obj.user.get_full_name()[:2].upper() if obj.user.get_full_name() else obj.user.username[:2].upper()
-        ]
-    
-    @display(description="Balance", ordering="balance_usd")
-    def balance_display(self, obj):
-        """Balance display using utilities."""
-        return self.display_money_amount(
-            obj, 
-            'balance_usd',
-            MoneyDisplayConfig(currency="USD", show_sign=False)
-        )
-    
-    @display(description="Status", label={
-        "Empty": "danger",
-        "Low Balance": "warning", 
-        "Active": "success",
-        "High Balance": "info"
-    })
-    def status_display(self, obj):
-        """Status display using Unfold label feature."""
+    config = userbalance_config
+
+    # Custom display methods using decorators
+    @computed_field("Status")
+    def status(self, obj):
+        """Status display based on balance."""
         if obj.balance_usd <= 0:
             return "Empty"
         elif obj.balance_usd < 10:
@@ -120,144 +174,212 @@ class UserBalanceAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
             return "Active"
         else:
             return "High Balance"
-    
-    @display(description="Transactions")
-    def transaction_count_display(self, obj):
-        """Transaction count using utilities."""
+
+    @annotated_field("Transactions", annotation_name="transaction_count")
+    def transaction_count(self, obj):
+        """Transaction count display."""
         count = getattr(obj, 'transaction_count', 0)
-        return self.display_count_simple(
-            obj, 
-            'transaction_count', 
-            'transactions'
-        )
-    
-    @display(description="Updated")
-    def updated_display(self, obj):
-        """Updated time using utilities."""
-        return self.display_datetime_relative(
-            obj, 
-            'updated_at',
-            DateTimeDisplayConfig(show_relative=True, show_seconds=False)
-        )
-    
-    # Readonly field displays
+        return f"{count} transactions"
+
+    # Readonly field displays using self.html
     def balance_breakdown_display(self, obj):
-        """Detailed balance breakdown for detail view."""
+        """Detailed balance breakdown for detail view using self.html."""
         if not obj.pk:
             return "Save to see breakdown"
-        
-        breakdown_items = []
-        
-        # Main balance
-        if hasattr(obj, 'reserved_usd') and obj.reserved_usd:
-            available = obj.balance_usd - obj.reserved_usd
-            breakdown_items = [
-                {'label': 'Reserved', 'amount': obj.reserved_usd, 'color': 'warning'},
-                {'label': 'Available', 'amount': available, 'color': 'success'}
-            ]
-        
-        from django_cfg.modules.django_admin.utils.displays import MoneyDisplay
-        return MoneyDisplay.with_breakdown(
-            obj.balance_usd,
-            breakdown_items,
-            MoneyDisplayConfig(currency="USD")
-        )
-    
+
+        # Build breakdown list
+        details = []
+
+        # Current Balance
+        details.append(self.html.inline([
+            self.html.span("Current Balance:", "font-semibold"),
+            self.html.span(f"${obj.balance_usd:.2f} USD", "")
+        ], separator=" "))
+
+        # Total Deposited
+        details.append(self.html.inline([
+            self.html.span("Total Deposited:", "font-semibold"),
+            self.html.span(f"${obj.total_deposited:.2f} USD", "")
+        ], separator=" "))
+
+        # Total Withdrawn
+        details.append(self.html.inline([
+            self.html.span("Total Withdrawn:", "font-semibold"),
+            self.html.span(f"${obj.total_withdrawn:.2f} USD", "")
+        ], separator=" "))
+
+        # Calculate net
+        net = obj.total_deposited - obj.total_withdrawn
+        details.append(self.html.inline([
+            self.html.span("Net Deposits:", "font-semibold"),
+            self.html.span(f"${net:.2f} USD", "")
+        ], separator=" "))
+
+        if obj.last_transaction_at:
+            details.append(self.html.inline([
+                self.html.span("Last Transaction:", "font-semibold"),
+                self.html.span(str(obj.last_transaction_at), "")
+            ], separator=" "))
+
+        # Transaction count
+        txn_count = Transaction.objects.filter(user=obj.user).count()
+        details.append(self.html.inline([
+            self.html.span("Total Transactions:", "font-semibold"),
+            self.html.span(str(txn_count), "")
+        ], separator=" "))
+
+        return "<br>".join(details)
+
     balance_breakdown_display.short_description = "Balance Breakdown"
-    
-    # Actions using utilities
-    @action(description="Reset zero balances", variant=ActionVariant.WARNING)
-    def reset_zero_balances(self, request, queryset):
-        """Reset balances that are zero."""
-        updated = queryset.filter(balance_usd=0).update(reserved_usd=0)
-        self.message_user(
-            request,
-            f"Successfully reset {updated} zero balance(s).",
-            level='WARNING'
+
+
+# ===== Transaction Admin =====
+
+transaction_config = AdminConfig(
+    model=Transaction,
+
+    # Performance optimization
+    select_related=["user"],
+
+    # List display
+    list_display=[
+        "id",
+        "user",
+        "transaction_type",
+        "amount_usd",
+        "balance_after",
+        "created_at"
+    ],
+
+    # Display fields with NEW specialized classes
+    display_fields=[
+        BadgeField(
+            name="id",
+            title="ID",
+            variant="info",
+            icon=Icons.TAG
+        ),
+        UserField(
+            name="user",
+            title="User"
+        ),
+        BadgeField(
+            name="transaction_type",
+            title="Type",
+            label_map={
+                "deposit": "success",
+                "withdrawal": "warning",
+                "payment": "primary",
+                "refund": "info",
+                "fee": "secondary",
+                "bonus": "success",
+                "adjustment": "secondary"
+            }
+        ),
+        CurrencyField(
+            name="amount_usd",
+            title="Amount",
+            currency="USD",
+            precision=2
+        ),
+        CurrencyField(
+            name="balance_after",
+            title="Balance After",
+            currency="USD",
+            precision=2
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created",
+            ordering="created_at"
+        ),
+    ],
+
+    # Filters and search
+    list_filter=[
+        "transaction_type",
+        TransactionTypeFilter,
+        RecentActivityFilter,
+        "created_at"
+    ],
+
+    search_fields=[
+        "id",
+        "user__username",
+        "user__email",
+        "description",
+        "payment_id",
+        "withdrawal_request_id"
+    ],
+
+    # Readonly fields
+    readonly_fields=[
+        "id",
+        "user",
+        "transaction_type",
+        "amount_usd",
+        "balance_after",
+        "payment_id",
+        "withdrawal_request_id",
+        "description",
+        "metadata",
+        "created_at",
+        "updated_at"
+    ],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="Transaction Information",
+            fields=[
+                "id",
+                "user",
+                "transaction_type",
+                "amount_usd",
+                "balance_after",
+                "description"
+            ]
+        ),
+        FieldsetConfig(
+            title="References",
+            fields=[
+                "payment_id",
+                "withdrawal_request_id"
+            ]
+        ),
+        FieldsetConfig(
+            title="Metadata",
+            fields=["metadata"],
+            collapsed=True
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=[
+                "created_at",
+                "updated_at"
+            ],
+            collapsed=True
         )
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
 
 
 @admin.register(Transaction)
-class TransactionAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
+class TransactionAdmin(PydanticAdmin):
     """
-    Transaction admin using Django Admin Utilities.
-    
+    Transaction admin for Payments v2.0 using NEW Pydantic declarative approach.
+
     Clean interface for transaction management.
     """
-    
-    # Performance optimization
-    select_related_fields = ['user']
-    
-    # List configuration
-    list_display = [
-        'transaction_id_display',
-        'user_display',
-        'amount_display',
-        'type_display',
-        'status_display',
-        'created_display'
-    ]
-    
-    list_filter = [
-        'transaction_type',
-        RecentActivityFilter,
-        'created_at'
-    ]
-    
-    search_fields = [
-        'id',
-        'user__username',
-        'user__email',
-        'description'
-    ]
-    
-    readonly_fields = [
-        'id',
-        'created_at',
-        'updated_at'
-    ]
-    
-    # Display methods
-    @display(description="ID")
-    def transaction_id_display(self, obj):
-        """Transaction ID display."""
-        return StatusBadge.create(
-            text=str(obj.id)[:8] + "...",
-            variant="info"
-        )
-    
-    @display(description="User")
-    def user_display(self, obj):
-        """User display."""
-        return self.display_user_simple(obj, 'user')
-    
-    @display(description="Amount")
-    def amount_display(self, obj):
-        """Amount display with sign."""
-        return self.display_money_amount(
-            obj,
-            'amount_usd',
-            MoneyDisplayConfig(currency="USD", show_sign=True)
-        )
-    
-    @display(description="Type", label=True)
-    def type_display(self, obj):
-        """Transaction type display."""
-        return self.display_status_auto(
-            type('obj', (), {'status': obj.transaction_type})(),
-            'status'
-        )
-    
-    @display(description="Status", label=True)
-    def status_display(self, obj):
-        """Status display."""
-        # Transaction model doesn't have status field, show type instead
-        return self.display_status_auto(
-            type('obj', (), {'status': obj.transaction_type})(),
-            'status'
-        )
-    
-    @display(description="Created")
-    def created_display(self, obj):
-        """Created time display."""
-        return self.display_datetime_compact(obj, 'created_at')
+    config = transaction_config
+
+    def has_add_permission(self, request):
+        """Disable manual transaction creation (use managers instead)."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Disable transaction deletion (immutable records)."""
+        return False

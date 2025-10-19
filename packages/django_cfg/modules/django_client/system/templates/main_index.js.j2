@@ -1,0 +1,80 @@
+/**
+ * Django CFG API Clients
+ * Lightweight ES Modules with JSDoc type annotations
+ * Organized by Django apps
+ *
+ * @module django-cfg-api
+ *
+ * @example
+ * // Import specific app API
+ * import { tasksAPI } from '/static/api/tasks/index.mjs';
+ * const stats = await tasksAPI.cfgTasksApiTasksStatsRetrieve();
+ *
+ * @example
+ * // Import multiple APIs from main index
+ * import { tasksAPI, paymentsAPI } from '/static/api/index.mjs';
+ *
+ * @example
+ * // Import with custom base URL
+ * import { TasksAPI } from '/static/api/tasks/index.mjs';
+ * const api = new TasksAPI('https://api.example.com');
+ */
+
+import { BaseAPIClient } from './base.mjs';
+{% for app in apps %}
+import { {{ app.class_name }}, {{ app.instance_name }} } from './{{ app.app_name }}/index.mjs';
+{% endfor %}
+
+/**
+ * Export all API classes for custom instantiation
+ * @exports
+ */
+export {
+    BaseAPIClient,
+{% for app in apps %}
+    {{ app.class_name }},
+{% endfor %}
+};
+
+/**
+ * Export all default instances for convenience
+ * These instances use the current origin as base URL
+ * @exports
+ */
+export {
+{% for app in apps %}
+    {{ app.instance_name }},
+{% endfor %}
+};
+
+/**
+ * Grouped exports by functionality
+ * Access APIs by app name: apis.tasks, apis.payments, etc.
+ * @type {Object.<string, BaseAPIClient>}
+ */
+export const apis = {
+{% for app in apps %}
+    {{ app.app_name }}: {{ app.instance_name }},
+{% endfor %}
+};
+
+/**
+ * Helper function to get API by app name
+ * @param {string} appName - Name of the Django app
+ * @returns {BaseAPIClient|undefined} API instance for the app
+ * @example
+ * const tasksAPI = getAPI('tasks');
+ */
+export function getAPI(appName) {
+    return apis[appName];
+}
+
+/**
+ * List of all available apps
+ * @type {string[]}
+ */
+export const availableApps = [
+{% for app in apps %}
+    '{{ app.app_name }}',
+{% endfor %}
+];

@@ -8,10 +8,9 @@ Following CRITICAL_REQUIREMENTS.md:
 - No string manipulation for paths (use pathlib)
 """
 
-import os
 import sys
-from typing import Optional, List, Dict, Any
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from django_cfg.core.exceptions import ConfigurationError
 
@@ -26,7 +25,7 @@ class PathResolver:
     - WSGI application module
     - Project structure and apps
     """
-    
+
     @classmethod
     def find_project_root(cls, start_path: Optional[Path] = None) -> Path:
         """
@@ -44,13 +43,13 @@ class PathResolver:
         try:
             # Start from provided path or current working directory
             current_path = start_path or Path.cwd()
-            
+
             # Look for manage.py in current directory and parents
             for path in [current_path] + list(current_path.parents):
                 manage_py = path / "manage.py"
                 if manage_py.exists() and manage_py.is_file():
                     return path
-            
+
             # If not found, check if we're in a subdirectory of a Django project
             # Look for common Django project indicators
             for path in [current_path] + list(current_path.parents):
@@ -64,7 +63,7 @@ class PathResolver:
                             manage_py = path / "manage.py"
                             if manage_py.exists():
                                 return path
-            
+
             raise ConfigurationError(
                 "Cannot find Django project root directory",
                 context={
@@ -77,7 +76,7 @@ class PathResolver:
                     "Specify project root explicitly if needed"
                 ]
             )
-            
+
         except ConfigurationError:
             raise  # Re-raise our own exceptions
         except Exception as e:
@@ -85,7 +84,7 @@ class PathResolver:
                 f"Failed to find project root: {e}",
                 context={'start_path': str(start_path) if start_path else str(Path.cwd())}
             ) from e
-    
+
     @classmethod
     def detect_root_urlconf(cls, project_root: Optional[Path] = None) -> Optional[str]:
         """
@@ -100,38 +99,38 @@ class PathResolver:
         try:
             if project_root is None:
                 project_root = cls.find_project_root()
-            
+
             # Look for common URL configuration patterns
             candidates = [
                 "urls.py",  # Root level urls.py
                 "config/urls.py",  # Config directory
                 "core/urls.py",  # Core directory
             ]
-            
+
             # Also check for directories that might contain urls.py
             for item in project_root.iterdir():
                 if item.is_dir() and not item.name.startswith('.'):
                     urls_py = item / "urls.py"
                     if urls_py.exists():
                         candidates.append(f"{item.name}/urls.py")
-            
+
             # Check each candidate
             for candidate in candidates:
                 urls_file = project_root / candidate
                 if urls_file.exists() and urls_file.is_file():
                     # Convert file path to module path
                     module_path = candidate.replace('/', '.').replace('.py', '')
-                    
+
                     # Verify it's a valid URL configuration by checking content
                     if cls._is_valid_urlconf(urls_file):
                         return module_path
-            
+
             return None
-            
-        except Exception as e:
+
+        except Exception:
             # Don't raise exception for auto-detection failures
             return None
-    
+
     @classmethod
     def detect_wsgi_application(cls, project_root: Optional[Path] = None) -> Optional[str]:
         """
@@ -146,38 +145,38 @@ class PathResolver:
         try:
             if project_root is None:
                 project_root = cls.find_project_root()
-            
+
             # Look for common WSGI application patterns
             candidates = [
                 "wsgi.py",  # Root level wsgi.py
                 "config/wsgi.py",  # Config directory
                 "core/wsgi.py",  # Core directory
             ]
-            
+
             # Also check for directories that might contain wsgi.py
             for item in project_root.iterdir():
                 if item.is_dir() and not item.name.startswith('.'):
                     wsgi_py = item / "wsgi.py"
                     if wsgi_py.exists():
                         candidates.append(f"{item.name}/wsgi.py")
-            
+
             # Check each candidate
             for candidate in candidates:
                 wsgi_file = project_root / candidate
                 if wsgi_file.exists() and wsgi_file.is_file():
                     # Convert file path to module path with application
                     module_path = candidate.replace('/', '.').replace('.py', '')
-                    
+
                     # Verify it's a valid WSGI application by checking content
                     if cls._is_valid_wsgi(wsgi_file):
                         return f"{module_path}.application"
-            
+
             return None
-            
-        except Exception as e:
+
+        except Exception:
             # Don't raise exception for auto-detection failures
             return None
-    
+
     @classmethod
     def discover_project_apps(cls, project_root: Optional[Path] = None) -> List[str]:
         """
@@ -192,9 +191,9 @@ class PathResolver:
         try:
             if project_root is None:
                 project_root = cls.find_project_root()
-            
+
             apps = []
-            
+
             # Look for directories with apps.py or models.py
             for item in project_root.iterdir():
                 if item.is_dir() and not item.name.startswith('.'):
@@ -205,14 +204,14 @@ class PathResolver:
                         item / "views.py",
                         item / "__init__.py",
                     ]
-                    
+
                     # Must have __init__.py and at least one other indicator
                     has_init = (item / "__init__.py").exists()
                     has_indicator = any(indicator.exists() for indicator in app_indicators[:-1])
-                    
+
                     if has_init and has_indicator:
                         apps.append(item.name)
-            
+
             # Also look for nested apps (e.g., src/myapp/)
             common_app_dirs = ["src", "apps", "modules"]
             for app_dir_name in common_app_dirs:
@@ -223,23 +222,23 @@ class PathResolver:
                             # Check for Django app indicators
                             app_indicators = [
                                 item / "apps.py",
-                                item / "models.py", 
+                                item / "models.py",
                                 item / "views.py",
                                 item / "__init__.py",
                             ]
-                            
+
                             has_init = (item / "__init__.py").exists()
                             has_indicator = any(indicator.exists() for indicator in app_indicators[:-1])
-                            
+
                             if has_init and has_indicator:
                                 apps.append(f"{app_dir_name}.{item.name}")
-            
+
             return sorted(apps)
-            
-        except Exception as e:
+
+        except Exception:
             # Don't raise exception for discovery failures
             return []
-    
+
     @classmethod
     def get_project_structure_info(cls, project_root: Optional[Path] = None) -> Dict[str, Any]:
         """
@@ -254,7 +253,7 @@ class PathResolver:
         try:
             if project_root is None:
                 project_root = cls.find_project_root()
-            
+
             return {
                 'project_root': str(project_root),
                 'root_urlconf': cls.detect_root_urlconf(project_root),
@@ -273,13 +272,13 @@ class PathResolver:
                 ]),
                 'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
             }
-            
+
         except Exception as e:
             raise ConfigurationError(
                 f"Failed to analyze project structure: {e}",
                 context={'project_root': str(project_root) if project_root else 'unknown'}
             ) from e
-    
+
     @classmethod
     def _is_valid_urlconf(cls, urls_file: Path) -> bool:
         """
@@ -293,7 +292,7 @@ class PathResolver:
         """
         try:
             content = urls_file.read_text(encoding='utf-8')
-            
+
             # Look for common URL configuration patterns
             indicators = [
                 'urlpatterns',
@@ -303,12 +302,12 @@ class PathResolver:
                 'django.urls',
                 'from django.urls',
             ]
-            
+
             return any(indicator in content for indicator in indicators)
-            
+
         except Exception:
             return False
-    
+
     @classmethod
     def _is_valid_wsgi(cls, wsgi_file: Path) -> bool:
         """
@@ -322,7 +321,7 @@ class PathResolver:
         """
         try:
             content = wsgi_file.read_text(encoding='utf-8')
-            
+
             # Look for common WSGI application patterns
             indicators = [
                 'application',
@@ -331,12 +330,12 @@ class PathResolver:
                 'from django.core.wsgi',
                 'WSGI_APPLICATION',
             ]
-            
+
             return any(indicator in content for indicator in indicators)
-            
+
         except Exception:
             return False
-    
+
     @classmethod
     def resolve_relative_path(cls, path: str, project_root: Optional[Path] = None) -> Path:
         """
@@ -352,14 +351,14 @@ class PathResolver:
         try:
             if project_root is None:
                 project_root = cls.find_project_root()
-            
+
             path_obj = Path(path)
-            
+
             if path_obj.is_absolute():
                 return path_obj
             else:
                 return project_root / path_obj
-                
+
         except Exception as e:
             raise ConfigurationError(
                 f"Failed to resolve path '{path}': {e}",

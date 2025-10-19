@@ -1,0 +1,1447 @@
+---
+title: Sample Project - Complete Django-CFG Walkthrough
+description: Comprehensive guide to the Django-CFG sample project demonstrating all features and best practices
+sidebar_label: Sample Project Guide
+sidebar_position: 1
+---
+
+# Sample Project - Complete Django-CFG Walkthrough
+
+The **Django-CFG Sample Project** is a comprehensive demonstration of all Django-CFG features and capabilities. This guide walks you through every aspect of the project, from setup to advanced features.
+
+## What You'll Learn
+
+- **🚀 Project Creation** - Using `django-cfg create-project`
+- **⚙️ Configuration Management** - Type-safe settings with Pydantic v2
+- **🗄️ Multi-Database Setup** - Automatic routing and migrations
+- **🎨 Admin Customization** - Modern Unfold interface with dashboards
+- **📊 API Documentation** - Auto-generated OpenAPI/Swagger
+- **🔐 Authentication System** - OTP-based user management
+- **⚡ Background Tasks** - Dramatiq integration
+- **📱 Service Integrations** - Twilio, SendGrid, Telegram
+- **🐳 Docker Deployment** - Production-ready containerization
+
+## Quick Start
+
+### 1. Create the Sample Project
+
+```bash
+# Create new project
+django-cfg create-project "My Django-CFG Demo"
+
+# Navigate to project
+cd my_django_cfg_demo
+
+# The project is ready to run!
+poetry run python manage.py runserver
+```
+
+### 2. Explore the Admin Interface
+
+Visit `http://127.0.0.1:8000/admin/` and login with:
+- **Email**: `admin@example.com`
+- **Password**: `admin123`
+
+### 3. Check API Documentation
+
+Visit `http://127.0.0.1:8000/api/schema/swagger-ui/` for interactive API docs.
+
+### 4. Monitor System Health
+
+Visit `http://127.0.0.1:8000/cfg/status/` for system health checks.
+
+## 📁 Project Structure Deep Dive
+
+```
+my_django_cfg_demo/
+├── 📁 api/                          # Configuration & Settings
+│   ├── 🔧 config.py                 # Main Django-CFG configuration
+│   ├── ⚙️ settings.py               # Auto-generated Django settings
+│   ├── 🔗 urls.py                   # Root URL configuration
+│   └── 📁 environment/              # Environment-specific configs
+│       ├── 🛠️ config.dev.yaml       # Development settings
+│       ├── 🚀 config.prod.yaml      # Production settings
+│       ├── 🧪 config.test.yaml      # Testing settings
+│       └── 📥 loader.py             # Configuration loader
+├── 📁 apps/                         # Django Applications
+│   ├── 📝 blog/                     # Blog with posts & comments
+│   ├── 🛒 shop/                     # E-commerce with products & orders
+│   └── 👥 profiles/                 # User profiles & preferences
+├── 📁 core/                         # Core utilities
+│   └── 📁 management/commands/      # Custom CLI commands
+├── 📁 db/                           # Database files (SQLite)
+│   ├── 🗄️ db.sqlite3               # Main database
+│   ├── 📝 blog.sqlite3             # Blog database (routed)
+│   └── 🛒 shop.sqlite3             # Shop database (routed)
+├── 📁 docker/                       # Docker configuration
+├── 📁 static/                       # Static files
+├── 📁 templates/                    # Django templates
+├── 🎛️ manage.py                    # Django management script
+├── 📋 pyproject.toml               # Poetry dependencies
+├── 📋 requirements.txt             # Pip dependencies
+└── 📖 README.md                    # Project documentation
+```
+
+## Configuration Architecture
+
+### Main Configuration (`api/config.py`)
+
+The heart of the project is the type-safe configuration:
+
+```python
+from django_cfg import (
+    DjangoConfig, env,
+    DatabaseConfig, EmailConfig, TwilioConfig,
+    TelegramConfig, UnfoldConfig, DRFConfig
+)
+
+class SampleProjectConfig(DjangoConfig):
+    """Complete Django-CFG sample configuration."""
+    
+    # Project metadata
+    project_name: str = "Django CFG Sample"
+    debug: bool = env.debug
+    secret_key: str = env.secret_key
+    
+    # Multi-database configuration
+    databases: Dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.sqlite3",
+            name="db/db.sqlite3",
+            # Main database for users, sessions, admin
+        ),
+        "blog_db": DatabaseConfig(
+            engine="django.db.backends.sqlite3",
+            name="db/blog.sqlite3",
+            # Routed database for blog app
+            apps=["apps.blog"],
+            operations=["read", "write"],
+            migrate_to="default",  # Migrations go to main DB
+        ),
+        "shop_db": DatabaseConfig(
+            engine="django.db.backends.sqlite3", 
+            name="db/shop.sqlite3",
+            # Routed database for shop app
+            apps=["apps.shop"],
+            operations=["read", "write", "migrate"],
+        )
+    }
+    
+    # Email configuration
+    email: EmailConfig = EmailConfig(
+        backend="sendgrid" if env.is_prod else "console",
+        sendgrid_api_key=env.email.sendgrid_api_key,
+        from_email="noreply@djangocfg.com",
+        from_name="Django-CFG Sample"
+    )
+    
+    # Twilio integration
+    twilio: TwilioConfig = TwilioConfig(
+        account_sid=env.twilio.account_sid,
+        auth_token=env.twilio.auth_token,
+        verify_service_sid=env.twilio.verify_service_sid,
+        phone_number=env.twilio.phone_number
+    )
+    
+    # Telegram notifications
+    telegram: TelegramConfig = TelegramConfig(
+        bot_token=env.telegram.bot_token,
+        chat_id=env.telegram.chat_id,
+        enabled=env.is_prod
+    )
+    
+    # Modern admin interface
+    unfold: UnfoldConfig = UnfoldConfig(
+        site_title="Django-CFG Sample Admin",
+        site_header="Django-CFG Sample",
+        dashboard_callback="api.config.dashboard_callback",
+        navigation=[
+            {
+                "title": "Content Management",
+                "items": [
+                    {"title": "Blog Posts", "link": "/admin/blog/post/"},
+                    {"title": "Comments", "link": "/admin/blog/comment/"},
+                ]
+            },
+            {
+                "title": "E-Commerce", 
+                "items": [
+                    {"title": "Products", "link": "/admin/shop/product/"},
+                    {"title": "Orders", "link": "/admin/shop/order/"},
+                ]
+            },
+            {
+                "title": "User Management",
+                "items": [
+                    {"title": "Users", "link": "/admin/auth/user/"},
+                    {"title": "Profiles", "link": "/admin/profiles/profile/"},
+                ]
+            }
+        ]
+    )
+    
+    # API configuration
+    drf: DRFConfig = DRFConfig(
+        default_authentication_classes=[
+            "rest_framework_simplejwt.authentication.JWTAuthentication",
+        ],
+        default_permission_classes=[
+            "rest_framework.permissions.IsAuthenticated",
+        ],
+        spectacular_settings={
+            "TITLE": "Django-CFG Sample API",
+            "DESCRIPTION": "Complete API for Django-CFG sample project",
+            "VERSION": "1.0.0",
+            "SERVE_INCLUDE_SCHEMA": False,
+        }
+    )
+
+# Create global config instance
+config = SampleProjectConfig()
+
+# Dashboard callback for admin metrics
+def dashboard_callback(request, context):
+    """Custom dashboard with real-time metrics."""
+    from apps.blog.models import Post
+    from apps.shop.models import Product, Order
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    User = get_user_model()
+    
+    # Calculate metrics
+    total_users = User.objects.count()
+    total_posts = Post.objects.count()
+    total_products = Product.objects.count()
+    recent_orders = Order.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=7)
+    ).count()
+    
+    # Add custom cards to dashboard
+    custom_cards = [
+        {
+            "title": "Total Users",
+            "value": str(total_users),
+            "description": "Registered users",
+            "icon": "people"
+        },
+        {
+            "title": "Blog Posts", 
+            "value": str(total_posts),
+            "description": "Published articles",
+            "icon": "article"
+        },
+        {
+            "title": "Products",
+            "value": str(total_products), 
+            "description": "Available products",
+            "icon": "inventory"
+        },
+        {
+            "title": "Orders (7d)",
+            "value": str(recent_orders),
+            "description": "Recent orders",
+            "icon": "shopping_cart"
+        }
+    ]
+    
+    context["cards"].extend(custom_cards)
+    return context
+```
+
+### Environment Configuration (`api/environment/config.dev.yaml`)
+
+Environment-specific settings in YAML:
+
+```yaml
+# Development configuration
+secret_key: "django-cfg-sample-dev-key-change-in-production"
+debug: true
+is_prod: false
+
+# Database URLs
+database:
+  url: "sqlite:///db/db.sqlite3"
+  url_blog: "sqlite:///db/blog.sqlite3" 
+  url_shop: "sqlite:///db/shop.sqlite3"
+
+# Application settings
+app:
+  name: "Django CFG Sample"
+  domain: "localhost:8000"
+
+security_domains: ["localhost", "127.0.0.1"]
+
+# Email configuration (development)
+email:
+  sendgrid_api_key: ""  # Empty for console backend
+
+# Twilio configuration (optional in dev)
+twilio:
+  account_sid: ""
+  auth_token: ""
+  verify_service_sid: ""
+  phone_number: ""
+
+# Telegram configuration (optional in dev)
+telegram:
+  bot_token: ""
+  chat_id: ""
+
+# Cache configuration
+cache:
+  backend: "django.core.cache.backends.locmem.LocMemCache"
+  location: "sample-cache"
+
+# Static files
+static:
+  url: "/static/"
+  root: "static/"
+
+# Media files
+media:
+  url: "/media/"
+  root: "media/"
+
+# Logging
+logging:
+  level: "DEBUG"
+  format: "verbose"
+```
+
+## Multi-Database Architecture
+
+### Database Routing
+
+The sample project demonstrates sophisticated database routing:
+
+```python
+# Automatic routing configuration
+databases = {
+    "default": {
+        # Main database: users, sessions, admin, auth
+        "apps": ["auth", "sessions", "admin", "contenttypes"],
+    },
+    "blog_db": {
+        # Blog database: posts, comments, categories
+        "apps": ["apps.blog"],
+        "operations": ["read", "write"],
+        "migrate_to": "default",  # Migrations stored in main DB
+    },
+    "shop_db": {
+        # Shop database: products, orders, inventory
+        "apps": ["apps.shop"], 
+        "operations": ["read", "write", "migrate"],
+    }
+}
+```
+
+### Migration Strategy
+
+```bash
+# Migrate all databases automatically
+poetry run cli migrator --auto
+
+# Migrate specific database
+poetry run cli migrator --database blog_db
+
+# Check migration status
+poetry run cli show-config --section databases
+```
+
+### Database Usage Examples
+
+```python
+# Automatic routing - no manual database selection needed!
+
+# Blog operations (automatically use blog_db)
+from apps.blog.models import Post, Comment
+
+post = Post.objects.create(
+    title="My First Post",
+    content="Hello Django-CFG!"
+)
+
+# Shop operations (automatically use shop_db)  
+from apps.shop.models import Product, Order
+
+product = Product.objects.create(
+    name="Django-CFG Book",
+    price=29.99
+)
+
+# User operations (automatically use default)
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+user = User.objects.create_user(
+    email="user@example.com",
+    password="secure_password"
+)
+```
+
+## Admin Interface Customization
+
+### Unfold Theme Integration
+
+The sample project showcases a modern admin interface:
+
+```python
+# Custom admin configuration
+UNFOLD = {
+    "SITE_TITLE": "Django-CFG Sample Admin",
+    "SITE_HEADER": "Django-CFG Sample", 
+    "SITE_URL": "/",
+    "SITE_ICON": {
+        "light": "/static/icon-light.svg",
+        "dark": "/static/icon-dark.svg",
+    },
+    
+    # Custom navigation
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "Dashboard",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Overview", 
+                        "icon": "dashboard",
+                        "link": "/admin/",
+                    },
+                ]
+            },
+            {
+                "title": "Content Management",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Blog Posts",
+                        "icon": "article", 
+                        "link": "/admin/blog/post/",
+                    },
+                    {
+                        "title": "Comments",
+                        "icon": "comment",
+                        "link": "/admin/blog/comment/",
+                    },
+                ]
+            },
+            {
+                "title": "E-Commerce",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Products",
+                        "icon": "inventory",
+                        "link": "/admin/shop/product/",
+                    },
+                    {
+                        "title": "Orders", 
+                        "icon": "shopping_cart",
+                        "link": "/admin/shop/order/",
+                    },
+                ]
+            }
+        ]
+    },
+    
+    # Dashboard customization
+    "DASHBOARD_CALLBACK": "api.config.dashboard_callback",
+    
+    # Theme settings
+    "COLORS": {
+        "primary": {
+            "50": "250 245 255",
+            "100": "243 232 255", 
+            "200": "233 213 255",
+            "300": "196 181 253",
+            "400": "147 51 234",
+            "500": "124 58 237",
+            "600": "109 40 217",
+        }
+    }
+}
+```
+
+### Custom Dashboard Metrics
+
+Real-time dashboard with business metrics:
+
+```python
+def dashboard_callback(request, context):
+    """Enhanced dashboard with charts and metrics."""
+    from django.db.models import Count, Sum
+    from django.utils import timezone
+    from datetime import timedelta, date
+    
+    # Time periods
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    
+    # User metrics
+    total_users = User.objects.count()
+    new_users_week = User.objects.filter(date_joined__gte=week_ago).count()
+    
+    # Content metrics
+    total_posts = Post.objects.count()
+    published_posts = Post.objects.filter(status='published').count()
+    
+    # E-commerce metrics
+    total_products = Product.objects.count()
+    total_orders = Order.objects.count()
+    revenue_month = Order.objects.filter(
+        created_at__gte=month_ago
+    ).aggregate(Sum('total'))['total__sum'] or 0
+    
+    # Add metrics cards
+    context["cards"].extend([
+        {
+            "title": "Total Users",
+            "value": f"{total_users:,}",
+            "description": f"+{new_users_week} this week",
+            "icon": "people",
+            "color": "primary"
+        },
+        {
+            "title": "Blog Posts", 
+            "value": f"{published_posts}/{total_posts}",
+            "description": "Published/Total",
+            "icon": "article",
+            "color": "success"
+        },
+        {
+            "title": "Products",
+            "value": f"{total_products:,}",
+            "description": "Available products", 
+            "icon": "inventory",
+            "color": "info"
+        },
+        {
+            "title": "Revenue (30d)",
+            "value": f"${revenue_month:,.2f}",
+            "description": "Monthly revenue",
+            "icon": "attach_money",
+            "color": "warning"
+        }
+    ])
+    
+    return context
+```
+
+## API Documentation & Integration
+
+### Auto-Generated OpenAPI Schema
+
+The sample project includes comprehensive API documentation:
+
+```python
+# DRF Spectacular configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Django-CFG Sample API',
+    'DESCRIPTION': 'Complete REST API for Django-CFG sample project',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    
+    # Authentication
+    'COMPONENT_SPLIT_REQUEST': True,
+    'COMPONENT_NO_READ_ONLY_REQUIRED': True,
+    
+    # Schema customization
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    
+    # UI customization
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
+    
+    # Security schemes
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'jwtAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
+    'SECURITY': [{'jwtAuth': []}],
+}
+```
+
+### API Endpoints Overview
+
+```python
+# Blog API
+GET    /api/blog/posts/              # List blog posts
+POST   /api/blog/posts/              # Create blog post
+GET    /api/blog/posts/{id}/         # Get specific post
+PUT    /api/blog/posts/{id}/         # Update post
+DELETE /api/blog/posts/{id}/         # Delete post
+GET    /api/blog/posts/{id}/comments/ # Get post comments
+POST   /api/blog/posts/{id}/comments/ # Add comment
+
+# Shop API
+GET    /api/shop/products/           # List products
+POST   /api/shop/products/           # Create product
+GET    /api/shop/products/{id}/      # Get specific product
+PUT    /api/shop/products/{id}/      # Update product
+DELETE /api/shop/products/{id}/      # Delete product
+POST   /api/shop/orders/             # Create order
+GET    /api/shop/orders/             # List user orders
+GET    /api/shop/orders/{id}/        # Get specific order
+
+# Authentication API
+POST   /api/auth/otp/request/        # Request OTP
+POST   /api/auth/otp/verify/         # Verify OTP
+POST   /api/auth/token/refresh/      # Refresh JWT token
+POST   /api/auth/logout/             # Logout user
+
+# Profile API
+GET    /api/profile/                 # Get user profile
+PUT    /api/profile/                 # Update profile
+POST   /api/profile/avatar/          # Upload avatar
+DELETE /api/profile/avatar/          # Remove avatar
+
+# System API
+GET    /api/health/                  # Health check
+GET    /api/metrics/                 # System metrics
+```
+
+### API Usage Examples
+
+```python
+# Authentication flow
+import requests
+
+# 1. Request OTP
+response = requests.post('http://localhost:8000/api/auth/otp/request/', {
+    'identifier': 'user@example.com',
+    'channel': 'email'
+})
+
+# 2. Verify OTP (user receives code via email)
+response = requests.post('http://localhost:8000/api/auth/otp/verify/', {
+    'identifier': 'user@example.com', 
+    'otp_code': '123456'
+})
+
+tokens = response.json()['tokens']
+access_token = tokens['access']
+
+# 3. Use API with authentication
+headers = {'Authorization': f'Bearer {access_token}'}
+
+# Create blog post
+response = requests.post('http://localhost:8000/api/blog/posts/', {
+    'title': 'My API Post',
+    'content': 'Created via API!',
+    'status': 'published'
+}, headers=headers)
+
+# Get user profile
+response = requests.get('http://localhost:8000/api/profile/', headers=headers)
+profile = response.json()
+```
+
+## Authentication & User Management
+
+### OTP Authentication System
+
+The sample project demonstrates secure OTP-based authentication:
+
+```python
+# OTP flow implementation
+from django_cfg.apps.accounts.services import OTPService
+
+# 1. User requests OTP
+success, error = OTPService.request_otp(
+    email="user@example.com",
+    source_url="https://myapp.com"
+)
+
+if success:
+    print("OTP sent to email")
+else:
+    print(f"Failed to send OTP: {error}")
+
+# 2. User verifies OTP
+user = OTPService.verify_otp(
+    email="user@example.com",
+    otp_code="123456",
+    source_url="https://myapp.com"
+)
+
+if user:
+    print(f"User authenticated: {user.email}")
+    # Generate JWT tokens
+    from rest_framework_simplejwt.tokens import RefreshToken
+    refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+else:
+    print("Invalid OTP code")
+```
+
+### User Registration Tracking
+
+Track user acquisition sources for analytics:
+
+```python
+# Registration source tracking
+from django_cfg.apps.accounts.models import RegistrationSource, UserRegistrationSource
+
+# Automatic source creation during OTP verification
+user, created = CustomUser.objects.register_user(
+    email="user@example.com",
+    source_url="https://dashboard.myapp.com"
+)
+
+if created:
+    # New user registered
+    source_link = user.userregistrationsource_set.first()
+    print(f"New user from: {source_link.source.get_display_name()}")
+
+# Analytics queries
+from django.db.models import Count
+
+# Top acquisition sources
+top_sources = RegistrationSource.objects.annotate(
+    user_count=Count('userregistrationsource')
+).order_by('-user_count')[:10]
+
+for source in top_sources:
+    print(f"{source.get_display_name()}: {source.user_count} users")
+```
+
+## Background Tasks & Services
+
+### Dramatiq Integration
+
+The sample project includes background task processing:
+
+```python
+# Task definitions
+import dramatiq
+from django_cfg import DjangoEmailService
+
+@dramatiq.actor
+def send_welcome_email(user_id):
+    """Send welcome email to new user."""
+    from django.contrib.auth import get_user_model
+    
+    User = get_user_model()
+    user = User.objects.get(id=user_id)
+    
+    email = DjangoEmailService()
+    email.send_template(
+        template_name="emails/welcome.html",
+        context={
+            "user_name": user.get_full_name() or user.email,
+            "login_url": "https://myapp.com/login"
+        },
+        recipient_list=[user.email],
+        subject="Welcome to Django-CFG Sample!"
+    )
+    
+    return f"Welcome email sent to {user.email}"
+
+@dramatiq.actor
+def process_order(order_id):
+    """Process e-commerce order."""
+    from apps.shop.models import Order
+    
+    order = Order.objects.get(id=order_id)
+    
+    # Process payment
+    # Update inventory
+    # Send confirmation email
+    
+    order.status = 'processed'
+    order.save()
+    
+    return f"Order {order_id} processed successfully"
+
+@dramatiq.actor
+def cleanup_old_data():
+    """Periodic cleanup task."""
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Clean up old OTP codes
+    from django_cfg.apps.accounts.models import OTPSecret
+    
+    cutoff = timezone.now() - timedelta(hours=1)
+    deleted_count = OTPSecret.objects.filter(created_at__lt=cutoff).delete()[0]
+    
+    return f"Cleaned up {deleted_count} old OTP codes"
+
+# Task scheduling
+from django_cfg.modules.django_tasks import DjangoTasks
+
+tasks = DjangoTasks()
+
+# Schedule tasks
+def handle_user_registration(user):
+    """Handle new user registration."""
+    # Send welcome email (async)
+    send_welcome_email.send(user.id)
+    
+    # Create user profile (async)
+    create_user_profile.send(user.id)
+
+def handle_order_creation(order):
+    """Handle new order creation."""
+    # Process order (async)
+    process_order.send(order.id)
+    
+    # Send confirmation email (async)
+    send_order_confirmation.send(order.id)
+
+# Periodic tasks (configured in settings)
+DRAMATIQ_CRON_JOBS = [
+    {
+        'actor_name': 'cleanup_old_data',
+        'cron': '0 2 * * *',  # Daily at 2 AM
+    }
+]
+```
+
+## Service Integrations
+
+### Twilio Integration
+
+SMS and WhatsApp messaging:
+
+```python
+from django_cfg.modules.django_twilio.service import UnifiedOTPService
+
+twilio = UnifiedOTPService()
+
+# Send SMS OTP
+def send_sms_otp(phone_number, otp_code):
+    message = twilio.send_sms(
+        to=phone_number,
+        body=f"Your verification code is: {otp_code}"
+    )
+    return message.sid
+
+# Send WhatsApp message
+def send_whatsapp_notification(phone_number, message):
+    response = twilio.send_whatsapp(
+        to=f"whatsapp:{phone_number}",
+        body=message
+    )
+    return response.sid
+
+# Voice call for critical alerts
+def make_alert_call(phone_number, alert_message):
+    call = twilio.make_call(
+        to=phone_number,
+        twiml_url=f"https://myapp.com/voice/alert?message={alert_message}"
+    )
+    return call.sid
+```
+
+### SendGrid Email Integration
+
+Professional email delivery:
+
+```python
+from django_cfg import DjangoEmailService
+
+email = DjangoEmailService()
+
+# Template-based emails
+def send_order_confirmation(order):
+    email.send_template(
+        template_name="emails/order_confirmation.html",
+        context={
+            "order": order,
+            "customer_name": order.user.get_full_name(),
+            "order_items": order.items.all(),
+            "total_amount": order.total
+        },
+        recipient_list=[order.user.email],
+        subject=f"Order Confirmation #{order.id}"
+    )
+
+# Bulk marketing emails
+def send_newsletter(subscribers, newsletter_data):
+    email.send_bulk_sendgrid(
+        template_id="d-newsletter-template-id",
+        recipients=[
+            {"email": sub.email, "name": sub.name} 
+            for sub in subscribers
+        ],
+        template_data=newsletter_data
+    )
+```
+
+### Telegram Notifications
+
+Real-time notifications and monitoring:
+
+```python
+from django_cfg import DjangoTelegram
+
+telegram = DjangoTelegram()
+
+# System alerts
+def send_system_alert(message, level="info"):
+    emoji = {"info": "ℹ️", "warning": "⚠️", "error": "🚨"}
+    
+    telegram.send_message(
+        chat_id="@system_alerts",
+        text=f"{emoji[level]} *System Alert*\n\n{message}",
+        parse_mode="Markdown"
+    )
+
+# Order notifications
+def notify_new_order(order):
+    message = f"""
+🛒 *New Order Received*
+
+Order ID: `{order.id}`
+Customer: {order.user.get_full_name()}
+Total: ${order.total}
+Items: {order.items.count()}
+
+[View Order](https://admin.myapp.com/admin/shop/order/{order.id}/)
+    """
+    
+    telegram.send_message(
+        chat_id="@order_notifications",
+        text=message,
+        parse_mode="Markdown"
+    )
+
+# Bot commands for admin
+@telegram.command("status")
+def handle_status_command(update, context):
+    from django_cfg.modules.django_health import SimpleHealthView
+    # Note: Health checks are views, not services
+    
+    health = DjangoHealthService()
+    status = health.check_all()
+    
+    return f"🏥 System Status: {status['status'].upper()}"
+
+@telegram.command("stats")
+def handle_stats_command(update, context):
+    from django.contrib.auth import get_user_model
+    from apps.shop.models import Order
+    
+    User = get_user_model()
+    
+    stats = f"""
+📊 *Quick Stats*
+
+👥 Users: {User.objects.count()}
+🛒 Orders: {Order.objects.count()}
+💰 Revenue: ${Order.objects.aggregate(Sum('total'))['total__sum'] or 0}
+    """
+    
+    return stats
+```
+
+## Docker Deployment
+
+### Production Docker Setup
+
+The sample project includes production-ready Docker configuration:
+
+```dockerfile
+# Dockerfile
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=api.settings
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project
+COPY . .
+
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/cfg/status/ || exit 1
+
+# Start application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "api.wsgi:application"]
+```
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=api.settings
+      - IS_PROD=true
+    volumes:
+      - ./media:/app/media
+      - ./static:/app/static
+    depends_on:
+      - db
+      - redis
+    
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: djangocfg_sample
+      POSTGRES_USER: djangocfg
+      POSTGRES_PASSWORD: secure_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    
+  dramatiq:
+    build: .
+    command: python manage.py rundramatiq
+    environment:
+      - DJANGO_SETTINGS_MODULE=api.settings
+      - IS_PROD=true
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./media:/app/media
+    
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/app/static
+      - ./media:/app/media
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+### Production Configuration
+
+```yaml
+# api/environment/config.prod.yaml
+secret_key: "<from-yaml-config>"  # Set via environment/config.yaml
+debug: false
+is_prod: true
+
+# Database configuration
+database:
+  url: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
+# Application settings
+app:
+  name: "Django CFG Sample"
+  domain: "<from-yaml-config>"  # Set via environment/config.yaml
+
+security_domains: ["<from-yaml-config>"  # Set via environment/config.yaml, "www.${DOMAIN}"]
+
+# Email configuration
+email:
+  sendgrid_api_key: "<from-yaml-config>"  # Set via environment/config.yaml
+  from_email: "noreply@${DOMAIN}"
+
+# Twilio configuration
+twilio:
+  account_sid: "<from-yaml-config>"  # Set via environment/config.yaml
+  auth_token: "<from-yaml-config>"  # Set via environment/config.yaml
+  verify_service_sid: "<from-yaml-config>"  # Set via environment/config.yaml
+
+# Telegram configuration
+telegram:
+  bot_token: "<from-yaml-config>"  # Set via environment/config.yaml
+  chat_id: "<from-yaml-config>"  # Set via environment/config.yaml
+
+# Cache configuration
+cache:
+  backend: "django_redis.cache.RedisCache"
+  location: "redis://redis:6379/1"
+
+# Static files (served by nginx)
+static:
+  url: "/static/"
+  root: "/app/static/"
+
+# Media files (served by nginx)
+media:
+  url: "/media/"
+  root: "/app/media/"
+
+# Security settings
+security:
+  secure_ssl_redirect: true
+  session_cookie_secure: true
+  csrf_cookie_secure: true
+  secure_browser_xss_filter: true
+  secure_content_type_nosniff: true
+```
+
+## 🧪 Testing & Quality Assurance
+
+### Comprehensive Test Suite
+
+```python
+# tests/test_api.py
+from django.test import TestCase
+from rest_framework.test import APITestCase
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class AuthenticationAPITest(APITestCase):
+    def test_otp_flow(self):
+        """Test complete OTP authentication flow."""
+        # Request OTP
+        response = self.client.post('/api/auth/otp/request/', {
+            'identifier': 'test@example.com',
+            'channel': 'email'
+        })
+        self.assertEqual(response.status_code, 200)
+        
+        # Get OTP from database
+        from django_cfg.apps.accounts.models import OTPSecret
+        otp = OTPSecret.objects.get(email='test@example.com')
+        
+        # Verify OTP
+        response = self.client.post('/api/auth/otp/verify/', {
+            'identifier': 'test@example.com',
+            'otp_code': otp.secret
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tokens', response.data)
+
+class BlogAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+    
+    def test_create_blog_post(self):
+        """Test blog post creation via API."""
+        response = self.client.post('/api/blog/posts/', {
+            'title': 'Test Post',
+            'content': 'Test content',
+            'status': 'published'
+        })
+        self.assertEqual(response.status_code, 201)
+        
+        from apps.blog.models import Post
+        post = Post.objects.get(title='Test Post')
+        self.assertEqual(post.author, self.user)
+
+class ShopAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+    
+    def test_create_order(self):
+        """Test order creation via API."""
+        from apps.shop.models import Product
+        
+        product = Product.objects.create(
+            name='Test Product',
+            price=29.99,
+            stock=10
+        )
+        
+        response = self.client.post('/api/shop/orders/', {
+            'items': [
+                {'product_id': product.id, 'quantity': 2}
+            ]
+        })
+        self.assertEqual(response.status_code, 201)
+```
+
+### Performance Testing
+
+```python
+# tests/test_performance.py
+from django.test import TestCase
+from django.test.utils import override_settings
+from django.core.cache import cache
+import time
+
+class PerformanceTest(TestCase):
+    def test_database_routing_performance(self):
+        """Test multi-database routing performance."""
+        from apps.blog.models import Post
+        from apps.shop.models import Product
+        
+        start_time = time.time()
+        
+        # Create objects in different databases
+        for i in range(100):
+            Post.objects.create(title=f'Post {i}', content='Test')
+            Product.objects.create(name=f'Product {i}', price=10.00)
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        # Should complete within reasonable time
+        self.assertLess(duration, 5.0)
+    
+    @override_settings(CACHES={
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    })
+    def test_caching_performance(self):
+        """Test caching system performance."""
+        # Test cache operations
+        start_time = time.time()
+        
+        for i in range(1000):
+            cache.set(f'key_{i}', f'value_{i}')
+            cache.get(f'key_{i}')
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        # Cache operations should be fast
+        self.assertLess(duration, 1.0)
+```
+
+## Monitoring & Analytics
+
+### Health Checks
+
+```python
+# Custom health checks
+from django_cfg.modules.django_health import SimpleHealthView
+    # Note: Health checks are views, not services
+
+health = DjangoHealthService()
+
+@health.register_check("blog_database")
+def check_blog_database():
+    """Check blog database connectivity."""
+    try:
+        from apps.blog.models import Post
+        Post.objects.using('blog_db').count()
+        return {"status": "healthy", "details": "Blog database accessible"}
+    except Exception as e:
+        return {"status": "unhealthy", "details": str(e)}
+
+@health.register_check("shop_database") 
+def check_shop_database():
+    """Check shop database connectivity."""
+    try:
+        from apps.shop.models import Product
+        Product.objects.using('shop_db').count()
+        return {"status": "healthy", "details": "Shop database accessible"}
+    except Exception as e:
+        return {"status": "unhealthy", "details": str(e)}
+
+@health.register_check("email_service")
+def check_email_service():
+    """Check email service availability."""
+    try:
+        from django_cfg import DjangoEmailService
+        email = DjangoEmailService()
+        # Test email configuration
+        return {"status": "healthy", "details": "Email service configured"}
+    except Exception as e:
+        return {"status": "unhealthy", "details": str(e)}
+
+# Health check endpoint: GET /cfg/status/
+```
+
+### Metrics Collection
+
+```python
+# Custom metrics for monitoring
+from django.db.models import Count, Sum, Avg
+from django.utils import timezone
+from datetime import timedelta
+
+def get_business_metrics():
+    """Collect business metrics for monitoring."""
+    now = timezone.now()
+    
+    # Time periods
+    today = now.date()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    # User metrics
+    total_users = User.objects.count()
+    active_users_week = User.objects.filter(
+        last_login__gte=week_ago
+    ).count()
+    
+    # Content metrics
+    total_posts = Post.objects.count()
+    posts_this_month = Post.objects.filter(
+        created_at__gte=month_ago
+    ).count()
+    
+    # E-commerce metrics
+    total_orders = Order.objects.count()
+    revenue_month = Order.objects.filter(
+        created_at__gte=month_ago
+    ).aggregate(Sum('total'))['total__sum'] or 0
+    
+    avg_order_value = Order.objects.aggregate(
+        Avg('total')
+    )['total__avg'] or 0
+    
+    return {
+        "users": {
+            "total": total_users,
+            "active_week": active_users_week,
+            "retention_rate": (active_users_week / total_users * 100) if total_users > 0 else 0
+        },
+        "content": {
+            "total_posts": total_posts,
+            "posts_month": posts_this_month
+        },
+        "ecommerce": {
+            "total_orders": total_orders,
+            "revenue_month": float(revenue_month),
+            "avg_order_value": float(avg_order_value)
+        }
+    }
+
+# Metrics endpoint: GET /api/metrics/
+```
+
+## Best Practices Demonstrated
+
+### 1. Configuration Management
+
+```python
+# ✅ Good: Type-safe configuration
+class MyProjectConfig(DjangoConfig):
+    email: EmailConfig = EmailConfig(...)
+    
+# ❌ Bad: Raw Django settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Hard-coded values
+```
+
+### 2. Database Operations
+
+```python
+# ✅ Good: Automatic routing
+post = Post.objects.create(title="My Post")  # Goes to blog_db automatically
+
+# ❌ Bad: Manual database selection
+post = Post.objects.using('blog_db').create(title="My Post")
+```
+
+### 3. Service Integration
+
+```python
+# ✅ Good: Module-based services
+email = DjangoEmailService()  # Auto-configured
+email.send_simple("Test", "Hello!", ["user@example.com"])
+
+# ❌ Bad: Manual configuration
+from django.core.mail import send_mail
+send_mail("Test", "Hello!", "from@example.com", ["user@example.com"])
+```
+
+### 4. Error Handling
+
+```python
+# ✅ Good: Graceful degradation
+try:
+    telegram = DjangoTelegramService()
+    telegram.send_message(chat_id, message)
+except Exception as e:
+    logger.warning(f"Telegram notification failed: {e}")
+    # Continue without failing
+
+# ❌ Bad: Failing hard
+telegram.send_message(chat_id, message)  # Crashes if not configured
+```
+
+### 5. Testing
+
+```python
+# ✅ Good: Comprehensive testing
+class APITestCase(TestCase):
+    def test_authentication_flow(self):
+        # Test complete flow
+        pass
+    
+    def test_error_handling(self):
+        # Test error cases
+        pass
+
+# ❌ Bad: No testing or minimal testing
+```
+
+## Next Steps
+
+After exploring the sample project, you can:
+
+1. **🔧 Customize Configuration** - Modify `api/config.py` for your needs
+2. **📱 Add Integrations** - Connect additional services (Stripe, AWS, etc.)
+3. **🎨 Customize Admin** - Modify dashboard and navigation
+4. **📊 Add Analytics** - Implement custom metrics and monitoring
+5. **🚀 Deploy to Production** - Use Docker configuration for deployment
+6. **🧪 Extend Testing** - Add more comprehensive test coverage
+7. **📚 Read Documentation** - Explore other Django-CFG features
+
+## Related Documentation
+
+- [**CLI Tools**](/cli/introduction) - Manage your project via CLI
+- [**Configuration Guide**](/fundamentals/configuration) - Advanced configuration
+- [**Modules System**](/features/modules/overview) - Available modules
+- [**Built-in Apps**](/features/built-in-apps/user-management/accounts) - Authentication and more
+- [**Integrations**](/features/integrations/patterns) - External services
+
+The sample project demonstrates the full power of Django-CFG - from simple setup to production deployment! 🚀

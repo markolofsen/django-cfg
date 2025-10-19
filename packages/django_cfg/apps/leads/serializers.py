@@ -3,19 +3,20 @@ Lead Serializers - API serializers for Lead model.
 """
 
 from rest_framework import serializers
+
 from .models import Lead
 
 
 class LeadSubmissionSerializer(serializers.ModelSerializer):
     """Serializer for lead form submission from frontend."""
-    
+
     class Meta:
         model = Lead
         fields = [
             'name', 'email', 'company', 'company_site',
             'contact_type', 'contact_value', 'subject', 'message', 'extra', 'site_url'
         ]
-    
+
     def validate_email(self, value):
         """Validate email format."""
         import re
@@ -23,7 +24,7 @@ class LeadSubmissionSerializer(serializers.ModelSerializer):
         if not re.match(email_pattern, value):
             raise serializers.ValidationError("Invalid email format")
         return value
-    
+
     def validate(self, data):
         """Validate required fields."""
         required_fields = ['name', 'email', 'message']
@@ -44,4 +45,4 @@ class LeadSubmissionErrorSerializer(serializers.Serializer):
     """Response serializer for lead submission errors."""
     success = serializers.BooleanField()
     error = serializers.CharField()
-    details = serializers.DictField(required=False) 
+    details = serializers.DictField(required=False)

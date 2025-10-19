@@ -28,7 +28,7 @@ THIRD_PARTY_REGISTRY = {
     "ChartData": ("django_cfg.modules.django_unfold.models.dashboard", "ChartData"),
     "TabConfiguration": ("django_cfg.modules.django_unfold.models.tabs", "TabConfiguration"),
     "TabItem": ("django_cfg.modules.django_unfold.models.tabs", "TabItem"),
-    
+
     # Django REST Framework
     "DRFConfig": ("django_cfg.models.api.drf", "DRFConfig"),
     "SpectacularConfig": ("django_cfg.models.api.drf", "SpectacularConfig"),
@@ -38,12 +38,12 @@ THIRD_PARTY_REGISTRY = {
     # Constance
     "ConstanceConfig": ("django_cfg.models.django.constance", "ConstanceConfig"),
     "ConstanceField": ("django_cfg.models.django.constance", "ConstanceField"),
-    
+
     # Ngrok
     "NgrokConfig": ("django_cfg.models.ngrok", "NgrokConfig"),
     "NgrokAuthConfig": ("django_cfg.models.ngrok", "NgrokAuthConfig"),
     "NgrokTunnelConfig": ("django_cfg.models.ngrok", "NgrokTunnelConfig"),
-    
+
     # Material Icons
     "Icons": ("django_cfg.modules.django_admin.icons", "Icons"),
     "IconCategories": ("django_cfg.modules.django_admin.icons", "IconCategories"),

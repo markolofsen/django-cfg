@@ -11,8 +11,9 @@ This generator creates Zod schemas for runtime validation:
 from __future__ import annotations
 
 from jinja2 import Environment
-from ..base import GeneratedFile, BaseGenerator
+
 from ...ir import IRContext, IRSchemaObject
+from ..base import BaseGenerator, GeneratedFile
 
 
 class SchemasGenerator:
@@ -123,7 +124,7 @@ class SchemasGenerator:
         # - not required: field can be undefined (use .optional())
         if schema.nullable:
             zod_type = f"{zod_type}.nullable()"
-        
+
         if not is_required:
             zod_type = f"{zod_type}.optional()"
 
@@ -154,10 +155,8 @@ class SchemasGenerator:
         schema_format = schema.format
 
         # Binary type (File/Blob for file uploads)
-        # NOTE: Skip binary validation for PATCH models (they use JSON, not multipart)
-        # PATCH models typically don't allow file uploads
-        parent_is_patch = parent_schema and parent_schema.is_patch_model if parent_schema else False
-        if schema.is_binary and not parent_is_patch:
+        # Both regular and PATCH models can use multipart/form-data
+        if schema.is_binary:
             # For multipart/form-data file uploads, use z.instanceof()
             # This works for both File and Blob in browser/React Native
             return "z.union([z.instanceof(File), z.instanceof(Blob)])"
@@ -185,11 +184,14 @@ class SchemasGenerator:
                 if schema.max_length is not None:
                     base_type = f"{base_type}.max({schema.max_length})"
 
-                # Add pattern validation
-                if schema.pattern:
-                    # Escape forward slashes for JS regex literal
-                    escaped_pattern = schema.pattern.replace('/', r'\/')
-                    base_type = f"{base_type}.regex(/{escaped_pattern}/)"
+                # Skip pattern validation - patterns from DRF can be too strict
+                # for real-world data (e.g., SlugField pattern ^[-a-zA-Z0-9_]+$
+                # doesn't handle special chars that may exist in legacy data)
+                # The maxLength constraint is sufficient for basic validation
+                # if schema.pattern:
+                #     # Escape forward slashes for JS regex literal
+                #     escaped_pattern = schema.pattern.replace('/', r'\/')
+                #     base_type = f"{base_type}.regex(/{escaped_pattern}/)"
 
             return base_type
 
@@ -239,8 +241,9 @@ class SchemasGenerator:
                 # Inline object with properties - shouldn't reach here, but use z.object
                 return "z.object({})"
             else:
-                # Object with no properties (like additionalProperties: {})
+                # Object with no properties (like JSONField or additionalProperties: {})
                 # Use z.record(z.string(), z.any()) for dynamic objects
+                # Note: z.any() alone would be more permissive but less type-safe
                 return "z.record(z.string(), z.any())"
 
         # Fallback to any

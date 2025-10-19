@@ -10,18 +10,20 @@ export class OverviewModule {
 
     /**
      * Load overview data
+     * Using new MJS API methods with JSDoc types
      */
     async loadData() {
         try {
             console.log('Loading overview data...');
-            
+
+            // Using the new API method names from MJS client
             const [queueData, taskStats] = await Promise.all([
-                this.api.getQueueStatus(),
-                this.api.getTaskStatistics()
+                this.api.tasksApiQueuesStatusRetrieve(),
+                this.api.tasksApiTasksStatsRetrieve()
             ]);
 
-            const queueInfo = queueData.data || queueData;
-            const taskInfo = taskStats.data || taskStats;
+            const queueInfo = queueData?.data || queueData;
+            const taskInfo = taskStats?.data || taskStats;
 
             this.updateStatusCards(queueInfo, taskInfo);
             this.updateSystemStatus(queueInfo);

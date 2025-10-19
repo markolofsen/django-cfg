@@ -4,7 +4,7 @@ Helper utilities for settings generation.
 Common functions used across multiple generators.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def merge_settings(*settings_dicts: Dict[str, Any]) -> Dict[str, Any]:

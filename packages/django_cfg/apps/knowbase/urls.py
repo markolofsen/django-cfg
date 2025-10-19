@@ -2,9 +2,10 @@
 Knowledge Base URL Configuration
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views.public_views import PublicDocumentViewSet, PublicCategoryViewSet
+
+from .views.public_views import PublicCategoryViewSet, PublicDocumentViewSet
 
 # Public router for client access
 public_router = DefaultRouter()

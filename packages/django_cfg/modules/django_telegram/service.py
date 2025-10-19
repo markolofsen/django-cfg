@@ -5,12 +5,13 @@ Auto-configuring Telegram notification service that integrates with DjangoConfig
 """
 
 import logging
-from typing import Optional, Dict, Any, Union, BinaryIO
 from enum import Enum
-import yaml
-from ..base import BaseCfgModule
-from django_cfg.core.exceptions import ConfigurationError
+from typing import Any, BinaryIO, Dict, Optional, Union
+
 import telebot
+import yaml
+
+from ..base import BaseCfgModule
 
 logger = logging.getLogger(__name__)
 

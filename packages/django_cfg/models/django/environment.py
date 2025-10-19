@@ -6,8 +6,10 @@ Core Django environment settings with Pydantic 2.
 
 import os
 from pathlib import Path
-from typing import List, Dict, Any
-from pydantic import Field, field_validator, computed_field
+from typing import Any, Dict, List
+
+from pydantic import Field, computed_field, field_validator
+
 from ..base import BaseConfig
 
 
@@ -71,7 +73,7 @@ class EnvironmentConfig(BaseConfig):
         for insecure in insecure_keys:
             if insecure in v.lower():
                 raise ValueError(
-                    f"Please change the secret key from default/example value"
+                    "Please change the secret key from default/example value"
                 )
 
         return v

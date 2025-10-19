@@ -4,8 +4,8 @@ Task service factory and utilities.
 Provides singleton instance and utility functions.
 """
 
-from typing import Optional, Dict, Any
 import logging
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 

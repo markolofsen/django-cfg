@@ -2,16 +2,17 @@
 Tests for Django CFG Endpoints Status API
 """
 
-from django.test import TestCase, Client
-from django.urls import reverse, path
 from django.http import JsonResponse
+from django.test import Client, TestCase
+from django.urls import path, reverse
 from django.views import View
+
 from .checker import (
+    check_all_endpoints,
+    check_endpoint,
+    collect_endpoints,
     get_url_group,
     should_check_endpoint,
-    collect_endpoints,
-    check_endpoint,
-    check_all_endpoints,
 )
 
 

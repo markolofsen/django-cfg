@@ -3,13 +3,13 @@ ExternalData creator for the mixin.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils import timezone
 
-from .config import ExternalDataMetaConfig
 from ..models.external_data import ExternalData, ExternalDataStatus
+from .config import ExternalDataMetaConfig
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +18,13 @@ class ExternalDataCreator:
     """
     Creator class for ExternalData objects with validation.
     """
-    
+
     def __init__(self, user=None):
         if user is None:
             self.user = self._get_default_user()
         else:
             self.user = user
-    
+
     def create_from_config(self, config: ExternalDataMetaConfig) -> Dict[str, Any]:
         """
         Create an ExternalData object from a Pydantic configuration.
@@ -54,7 +54,7 @@ class ExternalDataCreator:
                     processed_at=None,
                     processing_error="",
                 )
-                
+
                 logger.info(f"Created ExternalData: {external_data.title} (ID: {external_data.id})")
                 return {
                     'success': True,
@@ -68,7 +68,7 @@ class ExternalDataCreator:
                 'error': f"Failed to create ExternalData: {e}",
                 'external_data': None
             }
-    
+
     def _get_default_user(self):
         """Get default user for ExternalData ownership."""
         User = get_user_model()

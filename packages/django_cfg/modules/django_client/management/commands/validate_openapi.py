@@ -9,9 +9,10 @@ Usage:
     python manage.py validate_openapi --report html          # Generate HTML report
 """
 
-from django.core.management.base import BaseCommand, CommandError
 from pathlib import Path
-from typing import List, Optional
+from typing import List
+
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
@@ -119,10 +120,8 @@ class Command(BaseCommand):
         try:
             # Import validation components
             from django_cfg.modules.django_client.core.validation import (
-                ValidationChecker,
-                SafeFixer,
                 IssueReporter,
-                SafetyManager,
+                ValidationChecker,
             )
 
             # List rules
@@ -225,7 +224,6 @@ class Command(BaseCommand):
 
     def _check_files(self, checker, workspace: Path, options) -> List:
         """Check files for issues."""
-        from django_cfg.modules.django_client.core.validation import Issue
 
         if options["file"]:
             # Check specific file

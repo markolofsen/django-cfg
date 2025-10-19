@@ -3,9 +3,9 @@ Django signals for orchestrator integration.
 """
 
 import logging
-from django.db.models.signals import post_save, post_delete
+
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
 
 from ..models.registry import AgentDefinition
 from .registry import get_registry
@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 async def agent_definition_saved(sender, instance: AgentDefinition, created, **kwargs):
     """Handle agent definition save."""
     registry = get_registry()
-    
+
     if created:
         logger.info(f"New agent definition created: {instance.name}")
     else:
         logger.info(f"Agent definition updated: {instance.name}")
-        
+
         # Reload agent if it exists in runtime
         if instance.name in registry.get_runtime_agents():
             try:
@@ -36,7 +36,7 @@ async def agent_definition_saved(sender, instance: AgentDefinition, created, **k
 def agent_definition_deleted(sender, instance: AgentDefinition, **kwargs):
     """Handle agent definition deletion."""
     registry = get_registry()
-    
+
     # Remove from runtime if exists
     if instance.name in registry.get_runtime_agents():
         del registry._runtime_agents[instance.name]

@@ -2,7 +2,8 @@
 User model and related functionality.
 """
 
-from typing import Optional, List
+from typing import List, Optional
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -69,7 +70,7 @@ class CustomUser(AbstractUser):
         """Get the first source where user registered."""
         from .registration import UserRegistrationSource
         user_source = UserRegistrationSource.objects.filter(
-            user=self, 
+            user=self,
             first_registration=True
         ).first()
         return user_source.source if user_source else None

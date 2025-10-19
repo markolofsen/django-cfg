@@ -2,10 +2,12 @@
 DRF Spectacular configuration for OpenAPI/Swagger documentation.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from .swagger import SwaggerUISettings
+
 from .redoc import RedocUISettings
+from .swagger import SwaggerUISettings
 
 
 class SpectacularConfig(BaseModel):

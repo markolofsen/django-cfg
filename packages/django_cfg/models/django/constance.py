@@ -5,9 +5,10 @@ Type-safe configuration for django-constance with automatic
 Unfold admin integration and smart field grouping.
 """
 
-from typing import Dict, List, Optional, Any, Union, Literal
+from typing import Any, Dict, List, Literal, Optional, Union
+
 from pydantic import BaseModel, Field, field_validator
-import traceback
+
 from django_cfg.models.base import BaseCfgAutoModule
 
 
@@ -150,16 +151,16 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
         default_factory=list,
         description="List of Constance fields",
     )
-    
+
     # Cache for app fields to avoid multiple calls
     _app_fields_cache: Optional[List[ConstanceField]] = None
- 
+
     def _get_app_constance_fields(self) -> List[ConstanceField]:
         """Automatically collect constance fields from django-cfg apps."""
         # Return cached result if available
         if self._app_fields_cache is not None:
             return self._app_fields_cache
-            
+
         app_fields = []
         config = self.get_config()
 
@@ -171,7 +172,7 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
                 app_fields.extend(tasks_fields)
             except (ImportError, Exception):
                 pass
-        
+
         # Get fields from knowbase app (only if enabled)
         if config and config.enable_knowbase:
             try:
@@ -180,7 +181,7 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
                 app_fields.extend(knowbase_fields)
             except (ImportError, Exception):
                 pass
-        
+
         # Cache the result
         self._app_fields_cache = app_fields
         return app_fields

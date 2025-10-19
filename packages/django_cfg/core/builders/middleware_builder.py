@@ -7,7 +7,7 @@ Extracted from original config.py for better maintainability.
 Size: ~120 lines (focused on middleware logic)
 """
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from ..constants import DEFAULT_MIDDLEWARE
 
@@ -56,20 +56,8 @@ class MiddlewareBuilder:
             >>> "corsheaders.middleware.CorsMiddleware" in middleware
             True
         """
-        # Start with default middleware
+        # Start with default middleware (already includes CorsMiddleware)
         middleware = list(DEFAULT_MIDDLEWARE)
-
-        # Add CORS middleware if security domains configured
-        # Insert after WhiteNoise but before Session middleware
-        if self.config.security_domains:
-            # Find WhiteNoise position
-            try:
-                whitenoise_index = middleware.index("whitenoise.middleware.WhiteNoiseMiddleware")
-                # Insert CORS after WhiteNoise
-                middleware.insert(whitenoise_index + 1, "corsheaders.middleware.CorsMiddleware")
-            except ValueError:
-                # If WhiteNoise not found, insert at beginning
-                middleware.insert(0, "corsheaders.middleware.CorsMiddleware")
 
         # Add django-cfg feature-specific middleware
         feature_middleware = self._get_feature_middleware()

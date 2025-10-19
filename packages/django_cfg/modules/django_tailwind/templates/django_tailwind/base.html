@@ -9,10 +9,10 @@
     <!-- Tailwind CSS (compiled via django-tailwind) -->
     {% tailwind_css %}
 
+    {% block extra_head %}{% endblock %}
+
     <!-- Alpine.js for interactivity -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    {% block extra_head %}{% endblock %}
 
     <style>
         /* Prevent flash of unstyled content */
@@ -21,40 +21,8 @@
         /* Override Tailwind's media-query dark mode with class-based dark mode */
         /* This ensures dark: classes work when .dark is on <html>, not just media queries */
 
-        /* Force light mode when NOT in dark mode - override media queries */
-        @media (prefers-color-scheme: dark) {
-            html:not(.dark) body,
-            html:not(.dark) .dark\:bg-gray-900,
-            html:not(.dark) .dark\:bg-gray-800,
-            html:not(.dark) .dark\:bg-gray-700,
-            html:not(.dark) .dark\:bg-gray-600 {
-                background-color: inherit !important;
-            }
-
-            html:not(.dark) .dark\:text-gray-100,
-            html:not(.dark) .dark\:text-white,
-            html:not(.dark) .dark\:text-gray-300,
-            html:not(.dark) .dark\:text-gray-400,
-            html:not(.dark) .dark\:text-gray-500 {
-                color: inherit !important;
-            }
-
-            html:not(.dark) .dark\:border-gray-700,
-            html:not(.dark) .dark\:border-gray-600,
-            html:not(.dark) .dark\:border-gray-800 {
-                border-color: inherit !important;
-            }
-
-            html:not(.dark) .dark\:hover\:bg-gray-700:hover,
-            html:not(.dark) .dark\:hover\:bg-gray-800:hover {
-                background-color: inherit !important;
-            }
-
-            html:not(.dark) .dark\:hover\:text-white:hover,
-            html:not(.dark) .dark\:hover\:text-blue-400:hover {
-                color: inherit !important;
-            }
-        }
+        /* Tailwind CDN dark mode support */
+        /* Ensure dark: classes only apply when .dark is on html */
     </style>
 
     <!-- Dark mode initialization (prevents flash) -->

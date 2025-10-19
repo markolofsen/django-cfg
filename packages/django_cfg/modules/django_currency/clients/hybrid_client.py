@@ -10,15 +10,16 @@ All supported currencies are dynamically fetched and cached.
 """
 
 import logging
-import requests
-import time
 import random
-from datetime import datetime, timedelta
-from typing import Dict, Set, Optional, List, Tuple
+import time
+from datetime import datetime
+from typing import Dict, Set
+
+import requests
 from cachetools import TTLCache
 
-from ..core.models import Rate
 from ..core.exceptions import RateFetchError
+from ..core.models import Rate
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class HybridCurrencyClient:
         """Initialize hybrid client with multiple data sources."""
         self._rate_cache = TTLCache(maxsize=1000, ttl=cache_ttl)
         self._session = requests.Session()
-        
+
         # User-Agent rotation for better reliability
         self._user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -39,7 +40,7 @@ class HybridCurrencyClient:
             'curl/7.68.0',
             'python-requests/2.31.0'
         ]
-        
+
         # Data sources configuration (ordered by priority)
         self._sources = {
             'fawaz_currency': {
@@ -83,7 +84,7 @@ class HybridCurrencyClient:
                 'get_supported': self._get_cbr_supported_currencies
             }
         }
-        
+
         self._last_request_times = {}
         self._max_retries = 2
 
@@ -95,14 +96,14 @@ class HybridCurrencyClient:
         """Make HTTP request with exponential backoff retry logic."""
         source_config = self._sources[source]
         rate_limit = source_config['rate_limit']
-        
+
         # Rate limiting
         last_request = self._last_request_times.get(source, 0)
         time_since_last = time.time() - last_request
         if time_since_last < rate_limit:
             sleep_time = rate_limit - time_since_last + random.uniform(0, 0.5)
             time.sleep(sleep_time)
-        
+
         for attempt in range(self._max_retries + 1):
             try:
                 request_headers = {
@@ -112,10 +113,10 @@ class HybridCurrencyClient:
                 }
                 if headers:
                     request_headers.update(headers)
-                
+
                 response = self._session.get(url, headers=request_headers, timeout=10)
                 self._last_request_times[source] = time.time()
-                
+
                 if response.status_code == 429:
                     if attempt < self._max_retries:
                         backoff = (2 ** attempt) * 3 + random.uniform(1, 2)
@@ -124,10 +125,10 @@ class HybridCurrencyClient:
                         continue
                     else:
                         raise requests.exceptions.HTTPError(f"429 Too Many Requests from {source}")
-                
+
                 response.raise_for_status()
                 return response
-                
+
             except requests.exceptions.RequestException as e:
                 if attempt < self._max_retries:
                     backoff = (2 ** attempt) * 2 + random.uniform(0.5, 1)
@@ -136,7 +137,7 @@ class HybridCurrencyClient:
                     continue
                 else:
                     raise RateFetchError(f"{source} request failed: {e}")
-        
+
         raise RateFetchError(f"{source}: Failed after {self._max_retries + 1} attempts")
 
     # ============================================================================
@@ -146,26 +147,26 @@ class HybridCurrencyClient:
     def _get_fawaz_supported_currencies(self) -> Set[str]:
         """Get list of supported currencies from Fawaz API with caching."""
         cache_key = "fawaz_supported_currencies"
-        
+
         if cache_key in self._rate_cache:
             return self._rate_cache[cache_key]
-        
+
         try:
             url = f"{self._sources['fawaz_currency']['url']}/usd.json"
             response = self._make_request_with_retry(url, 'fawaz_currency')
             data = response.json()
-            
+
             if 'usd' in data:
                 supported = set(data['usd'].keys())
                 supported.add('usd')  # Add USD itself
                 logger.info(f"Fawaz API supports {len(supported)} currencies")
-                
+
                 self._rate_cache[cache_key] = supported
                 return supported
             else:
                 logger.warning("Fawaz API response format unexpected")
                 return set()
-                
+
         except Exception as e:
             logger.warning(f"Failed to get Fawaz supported currencies: {e}")
             # Minimal fallback
@@ -186,16 +187,16 @@ class HybridCurrencyClient:
         url = f"{self._sources['fawaz_currency']['url']}/{base_lower}.json"
         response = self._make_request_with_retry(url, 'fawaz_currency')
         data = response.json()
-        
+
         if base_lower not in data:
             raise RateFetchError(f"Fawaz API doesn't have base currency {base}")
-        
+
         rates = data[base_lower]
         quote_lower = quote.lower()
-        
+
         if quote_lower not in rates:
             raise RateFetchError(f"Fawaz API doesn't have {base}/{quote} rate")
-        
+
         return Rate(
             source="fawaz_currency",
             base_currency=base.upper(),
@@ -211,30 +212,30 @@ class HybridCurrencyClient:
     def _get_prebid_supported_currencies(self) -> Set[str]:
         """Get list of supported currencies from Prebid Currency API with caching."""
         cache_key = "prebid_supported_currencies"
-        
+
         if cache_key in self._rate_cache:
             return self._rate_cache[cache_key]
-        
+
         try:
             url = self._sources['prebid_currency']['url']
             response = self._make_request_with_retry(url, 'prebid_currency')
             data = response.json()
-            
+
             if 'conversions' in data:
                 supported = set()
                 # Prebid has conversions from multiple base currencies
                 for base_currency, rates in data['conversions'].items():
                     supported.add(base_currency.upper())
                     supported.update(rate.upper() for rate in rates.keys())
-                
+
                 logger.info(f"Prebid Currency API supports {len(supported)} currencies")
-                
+
                 self._rate_cache[cache_key] = supported
                 return supported
             else:
                 logger.warning("Prebid Currency API response format unexpected")
                 return set()
-                
+
         except Exception as e:
             logger.warning(f"Failed to get Prebid supported currencies: {e}")
             # Fallback to major currencies
@@ -252,10 +253,10 @@ class HybridCurrencyClient:
         url = self._sources['prebid_currency']['url']
         response = self._make_request_with_retry(url, 'prebid_currency')
         data = response.json()
-        
+
         base_upper = base.upper()
         quote_upper = quote.upper()
-        
+
         # Check if we have direct conversion from base to quote
         if 'conversions' in data and base_upper in data['conversions']:
             rates = data['conversions'][base_upper]
@@ -267,7 +268,7 @@ class HybridCurrencyClient:
                     rate=float(rates[quote_upper]),
                     timestamp=datetime.now()
                 )
-        
+
         # Try reverse conversion (quote to base)
         if 'conversions' in data and quote_upper in data['conversions']:
             rates = data['conversions'][quote_upper]
@@ -281,7 +282,7 @@ class HybridCurrencyClient:
                         rate=1.0 / reverse_rate,
                         timestamp=datetime.now()
                     )
-        
+
         raise RateFetchError(f"Prebid Currency API doesn't have {base}/{quote} rate")
 
     # ============================================================================
@@ -291,26 +292,26 @@ class HybridCurrencyClient:
     def _get_frankfurter_supported_currencies(self) -> Set[str]:
         """Get list of supported currencies from Frankfurter API with caching."""
         cache_key = "frankfurter_supported_currencies"
-        
+
         if cache_key in self._rate_cache:
             return self._rate_cache[cache_key]
-        
+
         try:
             url = f"{self._sources['frankfurter']['url']}"
             response = self._make_request_with_retry(url, 'frankfurter')
             data = response.json()
-            
+
             if 'rates' in data:
                 supported = set(data['rates'].keys())
                 supported.add('EUR')  # Add EUR itself (base currency)
                 logger.info(f"Frankfurter API supports {len(supported)} currencies")
-                
+
                 self._rate_cache[cache_key] = supported
                 return supported
             else:
                 logger.warning("Frankfurter API response format unexpected")
                 return set()
-                
+
         except Exception as e:
             logger.warning(f"Failed to get Frankfurter supported currencies: {e}")
             # Fallback to major fiat currencies
@@ -328,10 +329,10 @@ class HybridCurrencyClient:
         url = f"{self._sources['frankfurter']['url']}?from={base}&to={quote}"
         response = self._make_request_with_retry(url, 'frankfurter')
         data = response.json()
-        
+
         if 'rates' not in data or quote.upper() not in data['rates']:
             raise RateFetchError(f"Frankfurter doesn't have {base}/{quote} rate")
-        
+
         return Rate(
             source="frankfurter",
             base_currency=base.upper(),
@@ -347,26 +348,26 @@ class HybridCurrencyClient:
     def _get_exchangerate_supported_currencies(self) -> Set[str]:
         """Get list of supported currencies from ExchangeRate-API with caching."""
         cache_key = "exchangerate_supported_currencies"
-        
+
         if cache_key in self._rate_cache:
             return self._rate_cache[cache_key]
-        
+
         try:
             url = f"{self._sources['exchangerate_api']['url']}/USD"
             response = self._make_request_with_retry(url, 'exchangerate_api')
             data = response.json()
-            
+
             if data.get('result') == 'success' and 'rates' in data:
                 supported = set(data['rates'].keys())
                 supported.add('USD')  # Add USD itself (base currency)
                 logger.info(f"ExchangeRate-API supports {len(supported)} currencies")
-                
+
                 self._rate_cache[cache_key] = supported
                 return supported
             else:
                 logger.warning("ExchangeRate-API response format unexpected")
                 return set()
-                
+
         except Exception as e:
             logger.warning(f"Failed to get ExchangeRate-API supported currencies: {e}")
             # Fallback to major currencies
@@ -384,14 +385,14 @@ class HybridCurrencyClient:
         url = f"{self._sources['exchangerate_api']['url']}/{base.upper()}"
         response = self._make_request_with_retry(url, 'exchangerate_api')
         data = response.json()
-        
+
         if data.get('result') != 'success':
             raise RateFetchError(f"ExchangeRate-API error: {data.get('error-type', 'Unknown error')}")
-        
+
         rates = data.get('rates', {})
         if quote.upper() not in rates:
             raise RateFetchError(f"ExchangeRate-API doesn't have {quote} rate")
-        
+
         return Rate(
             source="exchangerate_api",
             base_currency=base.upper(),
@@ -407,26 +408,26 @@ class HybridCurrencyClient:
     def _get_cbr_supported_currencies(self) -> Set[str]:
         """Get list of supported currencies from CBR API with caching."""
         cache_key = "cbr_supported_currencies"
-        
+
         if cache_key in self._rate_cache:
             return self._rate_cache[cache_key]
-        
+
         try:
             url = self._sources['cbr']['url']
             response = self._make_request_with_retry(url, 'cbr')
             data = response.json()
-            
+
             if 'Valute' in data:
                 supported = set(data['Valute'].keys())
                 supported.add('RUB')  # Add RUB itself
                 logger.info(f"CBR API supports {len(supported)} currencies")
-                
+
                 self._rate_cache[cache_key] = supported
                 return supported
             else:
                 logger.warning("CBR API response format unexpected")
                 return set()
-                
+
         except Exception as e:
             logger.warning(f"Failed to get CBR supported currencies: {e}")
             # Fallback to major currencies that CBR typically supports
@@ -438,7 +439,7 @@ class HybridCurrencyClient:
         """CBR supports conversions to/from RUB."""
         if 'RUB' not in [base.upper(), quote.upper()]:
             return False
-        
+
         supported_currencies = self._get_cbr_supported_currencies()
         return base.upper() in supported_currencies and quote.upper() in supported_currencies
 
@@ -447,9 +448,9 @@ class HybridCurrencyClient:
         url = self._sources['cbr']['url']
         response = self._make_request_with_retry(url, 'cbr')
         data = response.json()
-        
+
         base, quote = base.upper(), quote.upper()
-        
+
         if base == 'RUB' and quote in data.get('Valute', {}):
             # RUB to other currency
             currency_data = data['Valute'][quote]
@@ -460,7 +461,7 @@ class HybridCurrencyClient:
             rate_value = currency_data['Value'] / currency_data['Nominal']
         else:
             raise RateFetchError(f"CBR doesn't support {base}/{quote}")
-        
+
         return Rate(
             source="cbr",
             base_currency=base,
@@ -486,56 +487,56 @@ class HybridCurrencyClient:
         """
         base, quote = base.upper(), quote.upper()
         cache_key = f"{base}_{quote}"
-        
+
         # Check cache first
         if cache_key in self._rate_cache:
             logger.debug(f"Retrieved rate {base}/{quote} from cache")
             return self._rate_cache[cache_key]
-        
+
         # Try sources in priority order
         sources_to_try = []
         for source_name, config in self._sources.items():
             if config['supports_check'](base, quote):
                 sources_to_try.append((config['priority'], source_name))
-        
+
         sources_to_try.sort(key=lambda x: x[0])  # Sort by priority
-        
+
         last_error = None
         for priority, source_name in sources_to_try:
             try:
                 logger.debug(f"Trying {source_name} for {base}/{quote}")
-                
+
                 config = self._sources[source_name]
                 rate = config['fetch_method'](base, quote)
-                
+
                 # Cache successful result
                 self._rate_cache[cache_key] = rate
                 logger.info(f"Fetched {base}/{quote} = {rate.rate} from {source_name}")
                 return rate
-                
+
             except Exception as e:
                 logger.warning(f"{source_name} failed for {base}/{quote}: {e}")
                 last_error = e
                 continue
-        
+
         raise RateFetchError(f"All sources failed for {base}/{quote}. Last error: {last_error}")
 
     def supports_pair(self, base: str, quote: str) -> bool:
         """Check if any source supports the currency pair."""
         base, quote = base.upper(), quote.upper()
         return any(
-            config['supports_check'](base, quote) 
+            config['supports_check'](base, quote)
             for config in self._sources.values()
         )
 
     def get_all_supported_currencies(self) -> Dict[str, str]:
         """Get all supported currencies across all sources dynamically."""
         cache_key = "all_supported_currencies"
-        
+
         # Check cache first
         if cache_key in self._rate_cache:
             return self._rate_cache[cache_key]
-        
+
         # Collect all currencies from all sources
         all_currencies = set()
         for source_name, config in self._sources.items():
@@ -545,7 +546,7 @@ class HybridCurrencyClient:
                 logger.debug(f"Added {len(supported)} currencies from {source_name}")
             except Exception as e:
                 logger.warning(f"Failed to get supported currencies from {source_name}: {e}")
-        
+
         # Currency names mapping
         currency_names = {
             # Major Fiat
@@ -558,7 +559,7 @@ class HybridCurrencyClient:
             'KRW': 'South Korean Won', 'SGD': 'Singapore Dollar', 'HKD': 'Hong Kong Dollar',
             'THB': 'Thai Baht', 'MXN': 'Mexican Peso', 'BRL': 'Brazilian Real',
             'ZAR': 'South African Rand', 'TRY': 'Turkish Lira', 'ILS': 'Israeli Shekel',
-            
+
             # Cryptocurrencies
             'BTC': 'Bitcoin', 'ETH': 'Ethereum', 'BNB': 'Binance Coin',
             'XRP': 'Ripple', 'ADA': 'Cardano', 'SOL': 'Solana',
@@ -566,12 +567,12 @@ class HybridCurrencyClient:
             'BCH': 'Bitcoin Cash', 'LINK': 'Chainlink', 'UNI': 'Uniswap',
             'ATOM': 'Cosmos', 'XLM': 'Stellar', 'VET': 'VeChain',
             'USDT': 'Tether USD', 'USDC': 'USD Coin', 'DAI': 'Dai Stablecoin',
-            
+
             # Precious Metals
             'XAU': 'Gold Ounce', 'XAG': 'Silver Ounce',
             'XPT': 'Platinum Ounce', 'XPD': 'Palladium Ounce'
         }
-        
+
         # Create result with proper names
         result = {}
         for currency in sorted(all_currencies):
@@ -579,9 +580,9 @@ class HybridCurrencyClient:
             # Test if currency actually works with USD (basic validation)
             if self.supports_pair(currency_upper, 'USD'):
                 result[currency_upper] = currency_names.get(currency_upper, f"{currency_upper} Currency")
-        
+
         # Cache the result
         self._rate_cache[cache_key] = result
         logger.info(f"Collected {len(result)} supported currencies from all sources")
-        
+
         return result

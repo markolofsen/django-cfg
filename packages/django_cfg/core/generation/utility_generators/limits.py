@@ -5,7 +5,7 @@ Handles request limits and rate limiting configuration.
 Size: ~50 lines (focused on limits settings)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig

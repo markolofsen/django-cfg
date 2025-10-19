@@ -5,11 +5,12 @@ These tasks are used to generate test data for the dashboard
 and demonstrate different queue behaviors and execution times.
 """
 
-import dramatiq
-import time
-import random
 import logging
+import random
+import time
 from datetime import datetime
+
+import dramatiq
 
 logger = logging.getLogger(__name__)
 
@@ -88,46 +89,46 @@ def generate_demo_tasks() -> int:
         Number of tasks created
     """
     tasks_count = 0
-    
+
     # Quick tasks (3-5 tasks)
     for i in range(random.randint(3, 5)):
         quick_task.send(f'quick_{i+1}', random.randint(2, 3))
         tasks_count += 1
-    
+
     # Medium tasks (2-4 tasks)
     for i in range(random.randint(2, 4)):
         medium_task.send(f'medium_{i+1}', random.randint(5, 8))
         tasks_count += 1
-    
+
     # Slow tasks (1-2 tasks)
     for i in range(random.randint(1, 2)):
         slow_task.send(f'slow_{i+1}', random.randint(10, 15))
         tasks_count += 1
-    
+
     # Critical tasks (2-3 tasks)
     for i in range(random.randint(2, 3)):
         critical_task.send(f'critical_{i+1}', random.randint(2, 4))
         tasks_count += 1
-    
+
     # Payment tasks (1-3 tasks)
     for i in range(random.randint(1, 3)):
         amount = round(random.uniform(10.0, 500.0), 2)
         payment_task.send(f'payment_{i+1}', amount)
         tasks_count += 1
-    
+
     # Agent tasks (1-2 tasks)
     for i in range(random.randint(1, 2)):
         queries = ['analyze data', 'generate report', 'process document', 'classify content']
         query = random.choice(queries)
         agent_task.send(f'agent_{i+1}', query)
         tasks_count += 1
-    
+
     # Priority tasks (1-2 tasks)
     for i in range(random.randint(1, 2)):
         priority_levels = ['urgent', 'high', 'critical']
         priority = random.choice(priority_levels)
         priority_task.send(f'priority_{i+1}', priority)
         tasks_count += 1
-    
+
     logger.info(f"Generated {tasks_count} demo tasks across all queues")
     return tasks_count

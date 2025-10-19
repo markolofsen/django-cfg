@@ -4,7 +4,7 @@ Tailwind CSS settings generator for django-cfg.
 Generates Django settings for django-tailwind integration.
 """
 
-from typing import Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from django_cfg.core.base.config_model import DjangoConfig

@@ -2,34 +2,34 @@
 Document management API views.
 """
 
-from rest_framework import status, viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
-from django.db import models
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
+from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.types import OpenApiTypes
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 
 from ..models import Document
-from ..services import DocumentService
 from ..serializers import (
     DocumentCreateSerializer,
+    DocumentProcessingStatusSerializer,
     DocumentSerializer,
     DocumentStatsSerializer,
-    DocumentProcessingStatusSerializer
 )
+from ..services import DocumentService
 from .base import BaseKnowledgeViewSet
 
 
 class DocumentViewSet(BaseKnowledgeViewSet):
     """Document management endpoints - Admin only."""
-    
+
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     service_class = DocumentService
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action == 'create':
@@ -39,15 +39,15 @@ class DocumentViewSet(BaseKnowledgeViewSet):
         elif self.action == 'status':
             return DocumentProcessingStatusSerializer
         return DocumentSerializer
-    
+
     @extend_schema(
         summary="Upload new document",
         description="Upload and process a new knowledge document",
         responses={
             201: DocumentSerializer,
-            400: "Validation errors",
-            413: "File too large",
-            429: "Rate limit exceeded"
+            400: OpenApiResponse(description="Validation errors"),
+            413: OpenApiResponse(description="File too large"),
+            429: OpenApiResponse(description="Rate limit exceeded")
         },
         examples=[
             OpenApiExample(
@@ -65,7 +65,7 @@ class DocumentViewSet(BaseKnowledgeViewSet):
         """Create new document with async processing."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         # Use service layer for business logic
         service = self.get_service()
         document = service.create_document(
@@ -74,10 +74,10 @@ class DocumentViewSet(BaseKnowledgeViewSet):
             file_type=serializer.validated_data['file_type'],
             metadata=serializer.validated_data['metadata']
         )
-        
+
         response_serializer = DocumentSerializer(document)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-    
+
     @extend_schema(
         summary="List user documents",
         parameters=[
@@ -93,41 +93,41 @@ class DocumentViewSet(BaseKnowledgeViewSet):
     def list(self, request, *args, **kwargs):
         """List user documents with filtering and pagination."""
         status_filter = request.query_params.get('status')
-        
+
         service = self.get_service()
         queryset = service.get_user_documents(status=status_filter)
-        
+
         # Use DRF pagination
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Get document details",
         responses={
             200: DocumentSerializer,
-            404: "Document not found"
+            404: OpenApiResponse(description="Document not found")
         }
     )
     def retrieve(self, request, *args, **kwargs):
         """Get document by ID."""
         return super().retrieve(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Delete document",
         responses={
-            204: "Document deleted successfully",
-            404: "Document not found"
+            204: OpenApiResponse(description="Document deleted successfully"),
+            404: OpenApiResponse(description="Document not found")
         }
     )
     def destroy(self, request, *args, **kwargs):
         """Delete document and all associated chunks."""
         return super().destroy(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get document processing status",
         responses={200: DocumentProcessingStatusSerializer}
@@ -136,7 +136,7 @@ class DocumentViewSet(BaseKnowledgeViewSet):
     def status(self, request, pk=None):
         """Get document processing status."""
         document = self.get_object()
-        
+
         data = {
             'id': document.id,
             'status': document.processing_status,
@@ -148,10 +148,10 @@ class DocumentViewSet(BaseKnowledgeViewSet):
             'error': document.processing_error if document.processing_error else None,
             'processing_time_seconds': document.processing_duration
         }
-        
+
         serializer = self.get_serializer(data)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Reprocess document",
         description="Trigger reprocessing of document chunks and embeddings"
@@ -160,15 +160,15 @@ class DocumentViewSet(BaseKnowledgeViewSet):
     def reprocess(self, request, pk=None):
         """Trigger document reprocessing."""
         document = self.get_object()
-        
+
         service = self.get_service()
         service.reprocess_document(str(document.id))
-        
+
         return Response({
             'message': 'Document reprocessing started',
             'document_id': str(document.id)
         })
-    
+
     @extend_schema(
         summary="Get processing statistics",
         responses={200: DocumentStatsSerializer}
@@ -178,6 +178,6 @@ class DocumentViewSet(BaseKnowledgeViewSet):
         """Get user's document processing statistics."""
         service = self.get_service()
         stats = service.get_processing_stats()
-        
+
         serializer = self.get_serializer(stats)
         return Response(serializer.data)

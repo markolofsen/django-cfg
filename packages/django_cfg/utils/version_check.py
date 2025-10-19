@@ -21,7 +21,7 @@ def check_python_version(context: str = "django-cfg") -> None:
     """
     if sys.version_info >= (3, 12):
         return  # Version is OK
-    
+
     _show_version_error(context)
 
 
@@ -30,11 +30,11 @@ def _show_version_error(context: str) -> NoReturn:
     try:
         from rich.console import Console
         from rich.panel import Panel
-        from rich.text import Text
         from rich.table import Table
-        
+        from rich.text import Text
+
         console = Console()
-        
+
         # Create main error message
         error_text = Text()
         error_text.append("🐍 Python Version Incompatible\n\n", style="bold red")
@@ -42,19 +42,19 @@ def _show_version_error(context: str) -> NoReturn:
         error_text.append("Python 3.12+", style="bold green")
         error_text.append(" but you're using ", style="white")
         error_text.append(f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}", style="bold red")
-        
+
         # Create upgrade instructions table
         upgrade_table = Table(show_header=True, header_style="bold cyan", show_lines=True)
         upgrade_table.add_column("Platform", style="bold blue", width=12)
         upgrade_table.add_column("Command", style="green", width=35)
         upgrade_table.add_column("Notes", style="dim", width=20)
-        
+
         upgrade_table.add_row("macOS", "brew install python@3.12", "Homebrew")
         upgrade_table.add_row("Ubuntu", "sudo apt install python3.12", "22.04+")
         upgrade_table.add_row("Windows", "Download from python.org", "Official")
         upgrade_table.add_row("pyenv", "pyenv install 3.12.0", "Recommended")
         upgrade_table.add_row("conda", "conda install python=3.12", "Anaconda/Miniconda")
-        
+
         # Create benefits text
         benefits_text = Text()
         benefits_text.append("✨ Python 3.12 Benefits:\n", style="bold yellow")
@@ -62,7 +62,7 @@ def _show_version_error(context: str) -> NoReturn:
         benefits_text.append("• Better error messages\n", style="green")
         benefits_text.append("• Modern syntax features\n", style="green")
         benefits_text.append("• Enhanced type checking", style="green")
-        
+
         console.print()
         console.print(Panel(
             error_text,
@@ -71,16 +71,16 @@ def _show_version_error(context: str) -> NoReturn:
             border_style="bright_red",
             padding=(1, 2)
         ))
-        
+
         console.print()
         console.print(Panel(
             upgrade_table,
             title="🔧 Upgrade Instructions",
-            title_align="center", 
+            title_align="center",
             border_style="bright_blue",
             padding=(1, 2)
         ))
-        
+
         console.print()
         console.print(Panel(
             benefits_text,
@@ -89,14 +89,14 @@ def _show_version_error(context: str) -> NoReturn:
             border_style="bright_yellow",
             padding=(1, 2)
         ))
-        
+
         # Footer
         footer_text = Text()
         footer_text.append("📚 Learn more: ", style="dim")
         footer_text.append("https://docs.python.org/3.12/whatsnew/", style="blue underline")
         console.print(footer_text)
         console.print()
-        
+
     except ImportError:
         # Fallback if rich is not available
         print(f"❌ Error: {context} requires Python 3.12 or higher", file=sys.stderr)
@@ -109,7 +109,7 @@ def _show_version_error(context: str) -> NoReturn:
         print("   • Windows: Download from python.org", file=sys.stderr)
         print("   • pyenv: pyenv install 3.12.0 && pyenv global 3.12.0", file=sys.stderr)
         print("", file=sys.stderr)
-    
+
     sys.exit(1)
 
 

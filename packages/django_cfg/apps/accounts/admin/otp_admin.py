@@ -1,81 +1,105 @@
 """
-OTP admin interface using Django Admin Utilities.
+OTP Admin v2.0 - NEW Declarative Pydantic Approach
 
-Enhanced OTP management with status indicators and time displays.
+Enhanced OTP management with Material Icons and clean declarative config.
 """
 
 from django.contrib import admin
-from unfold.admin import ModelAdmin
 
 from django_cfg.modules.django_admin import (
-    OptimizedModelAdmin,
-    DisplayMixin,
-    DateTimeDisplayConfig,
-    StatusBadgeConfig,
+    AdminConfig,
+    BadgeField,
+    DateTimeField,
+    FieldsetConfig,
     Icons,
-    display
+    computed_field,
 )
-from django_cfg.modules.django_admin.utils.badges import StatusBadge
+from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from ..models import OTPSecret
 from .filters import OTPStatusFilter
 
 
-@admin.register(OTPSecret)
-class OTPSecretAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
-    """Enhanced OTP admin using Django Admin Utilities."""
-    
-    list_display = [
-        'email_display',
-        'secret_display',
-        'status_display',
-        'created_display',
-        'expires_display'
-    ]
-    list_display_links = ['email_display', 'secret_display']
-    list_filter = [OTPStatusFilter, 'is_used', 'created_at']
-    search_fields = ['email', 'secret']
-    readonly_fields = ['created_at', 'expires_at']
-    ordering = ['-created_at']
+# ===== OTP Admin =====
 
-    fieldsets = (
-        (
-            "OTP Details",
-            {
-                "fields": ("email", "secret", "is_used"),
-            },
-        ),
-        (
-            "Timestamps",
-            {
-                "fields": ("created_at", "expires_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-    
-    @display(description="Email")
-    def email_display(self, obj):
-        """Email display with email icon."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.EMAIL)
-        return StatusBadge.create(
-            text=obj.email,
+otpsecret_config = AdminConfig(
+    model=OTPSecret,
+
+    # List display
+    list_display=[
+        "email",
+        "secret",
+        "status",
+        "created_at",
+        "expires_at"
+    ],
+
+    # Display fields with UI widgets
+    display_fields=[
+        BadgeField(
+            name="email",
+            title="Email",
             variant="info",
-            config=config
-        )
-    
-    @display(description="Secret")
-    def secret_display(self, obj):
-        """Secret display with key icon."""
-        config = StatusBadgeConfig(show_icons=True, icon=Icons.KEY)
-        return StatusBadge.create(
-            text=obj.secret,
+            icon=Icons.EMAIL
+        ),
+        BadgeField(
+            name="secret",
+            title="Secret",
             variant="secondary",
-            config=config
-        )
-    
-    @display(description="Status", label=True)
-    def status_display(self, obj):
+            icon=Icons.KEY
+        ),
+        DateTimeField(
+            name="created_at",
+            title="Created",
+            ordering="created_at"
+        ),
+        DateTimeField(
+            name="expires_at",
+            title="Expires",
+            ordering="expires_at"
+        ),
+    ],
+
+    # Filters and search
+    list_filter=[OTPStatusFilter, "is_used", "created_at"],
+    search_fields=["email", "secret"],
+
+    # Readonly fields
+    readonly_fields=["created_at", "expires_at"],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="OTP Details",
+            fields=["email", "secret", "is_used"]
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=["created_at", "expires_at"],
+            collapsed=True
+        ),
+    ],
+
+    # Ordering
+    ordering=["-created_at"],
+)
+
+
+@admin.register(OTPSecret)
+class OTPSecretAdmin(PydanticAdmin):
+    """
+    OTPSecret admin using NEW Pydantic declarative approach.
+
+    Features:
+    - Clean declarative config
+    - Status with dynamic icons
+    - Material Icons integration
+    """
+    config = otpsecret_config
+
+    # Custom display methods using decorators
+    @computed_field("Status")
+    def status(self, obj):
         """Enhanced OTP status with appropriate icons and colors."""
         if obj.is_used:
             status = "Used"
@@ -89,27 +113,5 @@ class OTPSecretAdmin(OptimizedModelAdmin, DisplayMixin, ModelAdmin):
             status = "Expired"
             icon = Icons.SCHEDULE
             variant = "warning"
-        
-        config = StatusBadgeConfig(
-            show_icons=True,
-            icon=icon,
-            custom_mappings={status: variant}
-        )
-        
-        return self.display_status_auto(
-            type('obj', (), {'status': status})(),
-            'status',
-            config
-        )
-    
-    @display(description="Created")
-    def created_display(self, obj):
-        """Created time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'created_at', config)
-    
-    @display(description="Expires")
-    def expires_display(self, obj):
-        """Expires time with relative display."""
-        config = DateTimeDisplayConfig(show_relative=True)
-        return self.display_datetime_relative(obj, 'expires_at', config)
+
+        return self.html.badge(status, variant=variant, icon=icon)

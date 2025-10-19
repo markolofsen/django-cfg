@@ -1,0 +1,26 @@
+{
+  "name": "@djangocfg/typescript-config",
+  "version": "1.2.0",
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "license": "MIT",
+  "description": "Shared TypeScript configurations for Unrealon projects",
+  "main": "base.json",
+  "exports": {
+    "./base.json": "./base.json",
+    "./nextjs.json": "./nextjs.json",
+    "./react-library.json": "./react-library.json"
+  },
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "react-library.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

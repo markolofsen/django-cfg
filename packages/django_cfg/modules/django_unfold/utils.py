@@ -2,8 +2,9 @@
 Utility functions for Django Unfold integration.
 """
 
-from typing import Callable, Union
 import logging
+from typing import Callable, Union
+
 from django.http import HttpRequest
 
 logger = logging.getLogger(__name__)
@@ -25,10 +26,10 @@ def auto_resolve_url(url_name_or_path: str) -> Union[str, Callable[[HttpRequest]
     if not url_name_or_path or url_name_or_path.startswith(("/", "http")):
         # It's already a direct URL, return as is
         return url_name_or_path
-    
+
     # It's a URL name, create a resolver function
     url_name = url_name_or_path
-    
+
     def resolve_url(request: HttpRequest) -> str:
         try:
             from django.urls import reverse
@@ -39,7 +40,7 @@ def auto_resolve_url(url_name_or_path: str) -> Union[str, Callable[[HttpRequest]
         except (NoReverseMatch, Exception) as e:
             logger.warning(f"Could not resolve URL '{url_name}': {e}")
             return url_name
-    
+
     return resolve_url
 
 
@@ -123,7 +124,7 @@ def create_navigation_item(title: str, icon: str, model_class=None, url_name: st
         NavigationItem with proper URL resolution
     """
     from .models.navigation import NavigationItem
-    
+
     if model_class:
         # Use model admin changelist
         link = admin_model_url(model_class, "changelist")
@@ -136,5 +137,5 @@ def create_navigation_item(title: str, icon: str, model_class=None, url_name: st
     else:
         # Fallback
         link = "#"
-    
+
     return NavigationItem(title=title, icon=icon, link=link)

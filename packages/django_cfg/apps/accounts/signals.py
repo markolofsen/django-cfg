@@ -3,13 +3,15 @@ Django signals for automatic email notifications on user account changes.
 """
 
 import logging
+
+from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .utils.notifications import AccountNotifications
 from django_cfg.modules.django_telegram import DjangoTelegram
+
+from .utils.notifications import AccountNotifications
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -30,7 +32,7 @@ def send_user_status_change_emails(sender, instance, **kwargs):
         # Get the old instance from database
         if instance.pk:
             old_instance = User.objects.get(pk=instance.pk)
-            
+
             # Check if user was activated
             if not old_instance.is_active and instance.is_active:
                 AccountNotifications.send_account_status_change(instance, "activated")
@@ -40,7 +42,7 @@ def send_user_status_change_emails(sender, instance, **kwargs):
             elif old_instance.is_active and not instance.is_active:
                 AccountNotifications.send_account_status_change(instance, "deactivated", reason="Account deactivated by administrator")
                 logger.info(f"Account deactivation email sent to {instance.email}")
-                
+
     except User.DoesNotExist:
         # New user, no old instance to compare
         pass
@@ -55,24 +57,24 @@ def send_user_profile_update_email(sender, instance, **kwargs):
         # Get the old instance from database
         if instance.pk:
             old_instance = User.objects.get(pk=instance.pk)
-            
+
             # Check for important changes
             changes = []
-            
+
             if old_instance.email != instance.email:
                 changes.append("email address")
-            
+
             if old_instance.username != instance.username:
                 changes.append("username")
-            
+
             if old_instance.first_name != instance.first_name or old_instance.last_name != instance.last_name:
                 changes.append("name")
-            
+
             # Send notification if there were important changes
             if changes:
                 AccountNotifications.send_profile_update_notification(instance, changes, send_email=True, send_telegram=True)
                 logger.info(f"Profile update notification sent to {instance.email}")
-                
+
     except User.DoesNotExist:
         pass
     except Exception as e:
@@ -112,17 +114,17 @@ def trigger_login_notification(user, ip_address=None):
 def send_security_telegram_alert(title: str, user_email: str, details: dict):
     """Send security alert via Telegram."""
     try:
-        
+
         alert_data = {
             "User": user_email,
             "Alert Type": title,
             "Timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
             **details
         }
-        
+
         DjangoTelegram.send_warning(f"Security Alert: {title}", alert_data)
         logger.info(f"Security Telegram alert sent: {title} for {user_email}")
-        
+
     except ImportError:
         logger.warning("django_cfg DjangoTelegram not available for security alerts")
     except Exception as e:
@@ -138,8 +140,8 @@ def notify_failed_otp_attempt(email: str, ip_address: str = None, reason: str = 
             "IP Address": ip_address or "Unknown",
             "Attempt Time": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
         }
-        
+
         send_security_telegram_alert("Failed OTP Attempt", email, details)
-        
+
     except Exception as e:
-        logger.error(f"Failed to send failed OTP notification: {e}") 
+        logger.error(f"Failed to send failed OTP notification: {e}")

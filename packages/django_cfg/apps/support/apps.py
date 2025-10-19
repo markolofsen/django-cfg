@@ -8,4 +8,4 @@ class SupportConfig(AppConfig):
     verbose_name = 'Django CFG Support'
 
     def ready(self):
-        import django_cfg.apps.support.signals
+        pass

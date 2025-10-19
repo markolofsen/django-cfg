@@ -8,14 +8,11 @@ Decomposed into separate modules for better organization:
 """
 
 # Import all signal modules to ensure they are registered
-from . import document_signals
-from . import archive_signals
-from . import chat_signals
-from . import external_data_signals
+from . import archive_signals, chat_signals, document_signals, external_data_signals
 
 __all__ = [
     'document_signals',
-    'archive_signals', 
+    'archive_signals',
     'chat_signals',
     'external_data_signals',
 ]

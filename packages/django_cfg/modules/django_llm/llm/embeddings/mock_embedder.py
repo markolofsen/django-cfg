@@ -4,10 +4,9 @@ Mock embedder for providers without embedding support.
 Generates mock embeddings using MD5 hash for OpenRouter and similar providers.
 """
 
-import time
 import hashlib
 import logging
-from typing import Optional
+import time
 
 from ..costs import calculate_embedding_cost
 from ..models import EmbeddingResponse

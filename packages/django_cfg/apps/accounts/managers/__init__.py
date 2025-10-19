@@ -1,1 +1,1 @@
-# Managers package for user account functionality 
+# Managers package for user account functionality

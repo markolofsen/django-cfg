@@ -10,7 +10,9 @@ Usage:
     python manage.py test_email --subject "Test Subject" --message "Test Message"
 """
 
-from django_cfg.modules.django_email.management.commands.test_email import Command as TestEmailCommand
+from django_cfg.modules.django_email.management.commands.test_email import (
+    Command as TestEmailCommand,
+)
 
 
 class Command(TestEmailCommand):

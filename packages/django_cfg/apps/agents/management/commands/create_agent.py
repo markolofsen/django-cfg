@@ -3,22 +3,23 @@ Management command to create agent definitions.
 """
 
 import asyncio
-from django.core.management.base import BaseCommand, CommandError
+
 from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand, CommandError
 
 from django_cfg.apps.agents.models.registry import AgentDefinition
 
 
 class Command(BaseCommand):
     """Create agent definition from command line."""
-    
+
     help = 'Create a new agent definition'
-    
+
     def add_arguments(self, parser):
         """Add command arguments."""
         parser.add_argument('name', type=str, help='Agent name (unique identifier)')
         parser.add_argument('instructions', type=str, help='Agent instructions/system prompt')
-        
+
         parser.add_argument(
             '--deps-type',
             type=str,
@@ -82,24 +83,24 @@ class Command(BaseCommand):
             nargs='*',
             help='Agent tags (space-separated)'
         )
-    
+
     def handle(self, *args, **options):
         """Handle command execution."""
         # Run async operations
         asyncio.run(self._create_agent(options))
-    
+
     async def _create_agent(self, options):
         """Create agent definition."""
         name = options['name']
         instructions = options['instructions']
-        
+
         # Validate name
         if await AgentDefinition.objects.filter(name=name).aexists():
             raise CommandError(f"Agent '{name}' already exists")
-        
+
         # Get creator user
         creator = await self._get_creator_user(options.get('creator'))
-        
+
         # Prepare agent data
         agent_data = {
             'name': name,
@@ -115,19 +116,19 @@ class Command(BaseCommand):
             'created_by': creator,
             'description': options['description'],
         }
-        
+
         # Add tags if provided
         if options['tags']:
             agent_data['tags'] = options['tags']
-        
+
         # Create agent definition
         try:
             agent_def = await AgentDefinition.objects.acreate(**agent_data)
-            
+
             self.stdout.write(
                 self.style.SUCCESS(f"✅ Created agent definition: {agent_def.name}")
             )
-            
+
             # Show agent details
             self.stdout.write("\nAgent Details:")
             self.stdout.write(f"  Name: {agent_def.name}")
@@ -141,23 +142,23 @@ class Command(BaseCommand):
             self.stdout.write(f"  Public: {agent_def.is_public}")
             self.stdout.write(f"  Caching: {agent_def.enable_caching}")
             self.stdout.write(f"  Created by: {agent_def.created_by.username}")
-            
+
             if agent_def.tags:
                 self.stdout.write(f"  Tags: {', '.join(agent_def.tags)}")
-            
+
             if agent_def.description:
                 self.stdout.write(f"  Description: {agent_def.description}")
-            
+
             # Instructions preview
             instructions_preview = agent_def.instructions[:200]
             if len(agent_def.instructions) > 200:
                 instructions_preview += "..."
-            
+
             self.stdout.write(f"  Instructions: {instructions_preview}")
-            
+
         except Exception as e:
             raise CommandError(f"Failed to create agent: {e}")
-    
+
     async def _get_creator_user(self, username):
         """Get creator user."""
         if username:
@@ -175,9 +176,9 @@ class Command(BaseCommand):
 
 class Command(BaseCommand):
     """Load agent definitions from templates."""
-    
+
     help = 'Load pre-built agent templates'
-    
+
     def add_arguments(self, parser):
         """Add command arguments."""
         parser.add_argument(
@@ -201,7 +202,7 @@ class Command(BaseCommand):
             type=str,
             help='Username of agent creator (defaults to first superuser)'
         )
-    
+
     def handle(self, *args, **options):
         """Handle command execution."""
         if options['list']:
@@ -212,24 +213,24 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.ERROR('Please specify --list, --load, or --load-all')
             )
-    
+
     def _list_templates(self):
         """List available templates."""
         templates = self._get_available_templates()
-        
+
         self.stdout.write(self.style.SUCCESS('📋 Available Agent Templates:'))
         self.stdout.write('=' * 40)
-        
+
         for category, agents in templates.items():
             self.stdout.write(f"\n{category.upper()}:")
             for agent_name, agent_info in agents.items():
                 self.stdout.write(f"  • {agent_name}: {agent_info['description']}")
-    
+
     async def _load_templates(self, options):
         """Load templates."""
         creator = await self._get_creator_user(options.get('creator'))
         templates = self._get_available_templates()
-        
+
         if options['load_all']:
             # Load all templates
             to_load = []
@@ -237,9 +238,9 @@ class Command(BaseCommand):
                 to_load.extend(category_templates.keys())
         else:
             to_load = options['load']
-        
+
         loaded_count = 0
-        
+
         for template_name in to_load:
             # Find template
             template_info = None
@@ -247,42 +248,42 @@ class Command(BaseCommand):
                 if template_name in category_templates:
                     template_info = category_templates[template_name]
                     break
-            
+
             if not template_info:
                 self.stdout.write(
                     self.style.WARNING(f"Template '{template_name}' not found")
                 )
                 continue
-            
+
             # Check if agent already exists
             if await AgentDefinition.objects.filter(name=template_name).aexists():
                 self.stdout.write(
                     self.style.WARNING(f"Agent '{template_name}' already exists, skipping")
                 )
                 continue
-            
+
             # Create agent
             try:
                 agent_data = template_info.copy()
                 agent_data['name'] = template_name
                 agent_data['created_by'] = creator
-                
+
                 await AgentDefinition.objects.acreate(**agent_data)
-                
+
                 self.stdout.write(
                     self.style.SUCCESS(f"✅ Loaded template: {template_name}")
                 )
                 loaded_count += 1
-                
+
             except Exception as e:
                 self.stdout.write(
                     self.style.ERROR(f"Failed to load template '{template_name}': {e}")
                 )
-        
+
         self.stdout.write(
             self.style.SUCCESS(f"\n🎉 Loaded {loaded_count} agent templates")
         )
-    
+
     def _get_available_templates(self):
         """Get available agent templates."""
         return {
@@ -349,7 +350,7 @@ class Command(BaseCommand):
                 },
             }
         }
-    
+
     async def _get_creator_user(self, username):
         """Get creator user."""
         if username:

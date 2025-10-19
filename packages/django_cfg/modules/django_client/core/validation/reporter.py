@@ -3,7 +3,7 @@
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from .rules import Issue, Severity
 
@@ -90,7 +90,7 @@ class IssueReporter:
 
         stats = self._get_statistics(issues)
 
-        print(f"\n📊 Validation Summary")
+        print("\n📊 Validation Summary")
         print(f"   Total: {stats['total']} issue(s)")
         print(f"   Errors: {stats['by_severity']['error']} | "
               f"Warnings: {stats['by_severity']['warning']} | "

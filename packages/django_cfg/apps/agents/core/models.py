@@ -4,14 +4,15 @@ Data models for Django Orchestrator.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 @dataclass
 class ExecutionResult:
     """Result from agent execution with metadata."""
-    
+
     agent_name: str
     output: Any
     execution_time: float
@@ -20,7 +21,7 @@ class ExecutionResult:
     cached: bool = False
     error: Optional[str] = None
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     @property
     def success(self) -> bool:
         """Check if execution was successful."""
@@ -29,9 +30,9 @@ class ExecutionResult:
 
 class WorkflowConfig(BaseModel):
     """Configuration for workflow execution."""
-    
+
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     name: str = Field(..., description="Workflow identifier")
     timeout: int = Field(default=300, ge=1, le=3600, description="Timeout in seconds")
     max_retries: int = Field(default=3, ge=0, le=10, description="Maximum retry attempts")
@@ -44,9 +45,9 @@ class WorkflowConfig(BaseModel):
 
 class AgentDefinition(BaseModel):
     """Agent definition for registry storage."""
-    
+
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     name: str = Field(..., description="Agent identifier")
     instructions: str = Field(..., description="Agent instructions")
     deps_type: str = Field(..., description="Dependencies type name")
@@ -61,9 +62,9 @@ class AgentDefinition(BaseModel):
 
 class ProcessResult(BaseModel):
     """Standard processing result model."""
-    
+
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     success: bool = Field(..., description="Whether processing was successful")
     message: str = Field(..., description="Result message")
     data: Dict[str, Any] = Field(default_factory=dict, description="Additional data")
@@ -72,9 +73,9 @@ class ProcessResult(BaseModel):
 
 class AnalysisResult(BaseModel):
     """Standard analysis result model."""
-    
+
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     sentiment: str = Field(..., description="Sentiment analysis result")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
     topics: List[str] = Field(default_factory=list, description="Extracted topics")
@@ -84,9 +85,9 @@ class AnalysisResult(BaseModel):
 
 class ValidationResult(BaseModel):
     """Standard validation result model."""
-    
+
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
-    
+
     is_valid: bool = Field(..., description="Whether input is valid")
     errors: List[str] = Field(default_factory=list, description="Validation errors")
     warnings: List[str] = Field(default_factory=list, description="Validation warnings")
@@ -96,7 +97,7 @@ class ValidationResult(BaseModel):
 @dataclass
 class ErrorContext:
     """Error context information."""
-    
+
     agent_name: str
     prompt: str
     error_type: str

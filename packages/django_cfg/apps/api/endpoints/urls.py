@@ -3,7 +3,8 @@ Django CFG Endpoints Status URLs.
 """
 
 from django.urls import path
-from . import views, drf_views
+
+from . import drf_views, views
 
 urlpatterns = [
     # Original JSON endpoint

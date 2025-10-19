@@ -5,7 +5,7 @@ Provides accurate cost calculation using models cache and fallback pricing.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 
 from .models_cache import ModelsCache
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class CostCalculator:
     """Calculate costs for LLM operations using models cache and fallback pricing."""
-    
+
     def __init__(self, models_cache: Optional[ModelsCache] = None):
         """
         Initialize cost calculator.
@@ -23,7 +23,7 @@ class CostCalculator:
             models_cache: ModelsCache instance for dynamic pricing
         """
         self.models_cache = models_cache
-        
+
         # Fallback pricing for common models (per 1M tokens)
         self.fallback_chat_prices = {
             "gpt-4o-mini": {"prompt": 0.15, "completion": 0.6},
@@ -33,14 +33,14 @@ class CostCalculator:
             "claude-3-sonnet": {"prompt": 3.0, "completion": 15.0},
             "claude-3-opus": {"prompt": 15.0, "completion": 75.0}
         }
-        
+
         # Fallback embedding pricing (per 1K tokens)
         self.fallback_embedding_prices = {
             "text-embedding-ada-002": 0.0001 / 1000,
             "text-embedding-3-small": 0.00002 / 1000,
             "text-embedding-3-large": 0.00013 / 1000,
         }
-    
+
     def calculate_chat_cost(self, usage: Dict[str, int], model: str) -> float:
         """
         Calculate cost for chat completion.
@@ -63,10 +63,10 @@ class CostCalculator:
                     logger.debug(f"Model {model} not found in models cache, using fallback pricing")
             except Exception as e:
                 logger.warning(f"Failed to calculate chat cost from models cache: {e}")
-        
+
         # Fallback to hardcoded pricing
         return self._calculate_chat_cost_fallback(usage, model)
-    
+
     def calculate_embedding_cost(self, tokens: int, model: str) -> float:
         """
         Calculate cost for embedding generation.
@@ -94,16 +94,16 @@ class CostCalculator:
                     logger.debug(f"Embedding model {model} not found in models cache, using fallback pricing")
             except Exception as e:
                 logger.warning(f"Failed to calculate embedding cost from models cache: {e}")
-        
+
         # Fallback to hardcoded pricing
         return self._calculate_embedding_cost_fallback(tokens, model)
-    
+
     def _calculate_chat_cost_fallback(self, usage: Dict[str, int], model: str) -> float:
         """Calculate chat cost using fallback pricing."""
         total_tokens = usage.get('total_tokens', 0)
         prompt_tokens = usage.get('prompt_tokens', 0)
         completion_tokens = usage.get('completion_tokens', 0)
-        
+
         # Find matching model cost
         for model_pattern, costs in self.fallback_chat_prices.items():
             if model_pattern in model.lower():
@@ -112,19 +112,19 @@ class CostCalculator:
                 total_cost = prompt_cost + completion_cost
                 logger.debug(f"Using fallback chat pricing for {model}: ${total_cost:.6f}")
                 return total_cost
-        
+
         # Default cost (using total tokens with average rate)
         default_cost = (total_tokens / 1_000_000) * 0.5
         logger.debug(f"Using default chat pricing for {model}: ${default_cost:.6f}")
         return default_cost
-    
+
     def _calculate_embedding_cost_fallback(self, tokens: int, model: str) -> float:
         """Calculate embedding cost using fallback pricing."""
         price_per_token = self.fallback_embedding_prices.get(model, 0.0001 / 1000)
         cost = tokens * price_per_token
         logger.debug(f"Using fallback embedding pricing for {model}: ${cost:.6f}")
         return cost
-    
+
     def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
         """
         Estimate cost for a model.
@@ -148,7 +148,7 @@ class CostCalculator:
                     logger.debug(f"Model {model} not found in models cache for cost estimation, using fallback")
             except Exception as e:
                 logger.warning(f"Failed to estimate cost from models cache: {e}")
-        
+
         # Fallback to internal calculation
         usage_dict = {
             'total_tokens': input_tokens + output_tokens,

@@ -22,10 +22,10 @@ Usage:
 from pathlib import Path
 from typing import Literal
 
+from ..ir import IRContext
 from .base import GeneratedFile
 from .python import PythonGenerator
 from .typescript import TypeScriptGenerator
-from ..ir import IRContext
 
 __all__ = [
     "PythonGenerator",

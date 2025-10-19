@@ -1,0 +1,8 @@
+{
+  "label": "Docker",
+  "position": 8,
+  "link": {
+    "type": "generated-index",
+    "description": "Complete guide to deploying Django-CFG with Docker. Learn development setup, production deployment, configuration strategies, build optimization, and troubleshooting."
+  }
+}

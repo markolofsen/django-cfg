@@ -1,0 +1,9 @@
+{
+  "label": "Currency Conversion",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Universal currency conversion with multi-threading, retry logic, and comprehensive fiat/crypto support."
+  },
+  "collapsed": true
+}

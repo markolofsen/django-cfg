@@ -1,13 +1,12 @@
-from django.contrib.auth.models import UserManager
-from django.contrib.auth.hashers import make_password
-from django.utils import timezone
-from urllib.parse import urlparse
-import random
-import string
 import logging
-import traceback
-from coolname import generate_slug
+import random
 import re
+import traceback
+from urllib.parse import urlparse
+
+from coolname import generate_slug
+from django.contrib.auth.models import UserManager
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -228,9 +227,20 @@ class UserManager(UserManager):
         Returns:
             int: Count of unanswered messages
         """
-        from django_cfg.apps.support.models import Ticket
-        count = Ticket.objects.get_unanswered_messages_count(user)
-        return count
+        from django_cfg.modules.base import BaseCfgModule
+
+        # Get config and check if support app is enabled
+        config = BaseCfgModule.get_config()
+        if not config or not getattr(config, 'enable_support', False):
+            return 0
+
+        try:
+            from django_cfg.apps.support.models import Ticket
+            count = Ticket.objects.get_unanswered_messages_count(user)
+            return count
+        except (ImportError, Exception):
+            # If support app is not installed or any error occurs, return 0
+            return 0
 
     def get_full_name(self, user) -> str:
         """

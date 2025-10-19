@@ -4,7 +4,7 @@ Django-CFG Core Exceptions
 Custom exception classes for django-cfg with enhanced error context.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 
 class DjangoCfgException(Exception):

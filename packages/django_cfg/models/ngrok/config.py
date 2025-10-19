@@ -5,9 +5,10 @@ Simplified flat structure - only essential fields.
 Domain and schemes are auto-determined from api_url in config.
 """
 
-from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
 import os
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class NgrokConfig(BaseModel):

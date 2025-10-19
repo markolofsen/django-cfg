@@ -4,67 +4,68 @@ Import/Export resources for Accounts app.
 Enhanced resources with better data validation and export optimization.
 """
 
-from import_export import resources, fields
-from import_export.widgets import ForeignKeyWidget, DateTimeWidget, BooleanWidget, ManyToManyWidget
-from django.contrib.auth.models import Group
-from django.utils import timezone
 from datetime import timedelta
 
-from ..models import CustomUser, UserActivity, RegistrationSource, TwilioResponse
+from django.contrib.auth.models import Group
+from django.utils import timezone
+from import_export import fields, resources
+from import_export.widgets import BooleanWidget, DateTimeWidget, ManyToManyWidget
+
+from ..models import CustomUser, RegistrationSource, TwilioResponse, UserActivity
 
 
 class CustomUserResource(resources.ModelResource):
     """Enhanced resource for importing/exporting users."""
-    
+
     # Custom fields for better export/import
     full_name = fields.Field(
         column_name='full_name',
         attribute='get_full_name',
         readonly=True
     )
-    
+
     groups = fields.Field(
         column_name='groups',
         attribute='groups',
         widget=ManyToManyWidget(Group, field='name', separator='|')
     )
-    
+
     last_login = fields.Field(
         column_name='last_login',
         attribute='last_login',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     date_joined = fields.Field(
         column_name='date_joined',
         attribute='date_joined',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     is_active = fields.Field(
         column_name='is_active',
         attribute='is_active',
         widget=BooleanWidget()
     )
-    
+
     is_staff = fields.Field(
         column_name='is_staff',
         attribute='is_staff',
         widget=BooleanWidget()
     )
-    
+
     phone_verified = fields.Field(
         column_name='phone_verified',
         attribute='phone_verified',
         widget=BooleanWidget()
     )
-    
+
     # Additional computed fields
     registration_sources = fields.Field(
         column_name='registration_sources',
         readonly=True
     )
-    
+
     activities_count = fields.Field(
         column_name='activities_count',
         readonly=True
@@ -75,7 +76,7 @@ class CustomUserResource(resources.ModelResource):
         fields = (
             'id',
             'email',
-            'first_name', 
+            'first_name',
             'last_name',
             'full_name',
             'company',
@@ -95,16 +96,16 @@ class CustomUserResource(resources.ModelResource):
         import_id_fields = ('email',)  # Use email as unique identifier
         skip_unchanged = True
         report_skipped = True
-        
+
     def dehydrate_registration_sources(self, user):
         """Get registration sources for export."""
         sources = user.user_registration_sources.select_related('source').all()
         return '|'.join([source.source.name for source in sources])
-    
+
     def dehydrate_activities_count(self, user):
         """Get activities count for export."""
         return user.activities.count()
-        
+
     def before_import_row(self, row, **kwargs):
         """Process row before import with enhanced validation."""
         # Ensure email is lowercase and valid
@@ -113,12 +114,12 @@ class CustomUserResource(resources.ModelResource):
             if '@' not in email:
                 raise ValueError(f"Invalid email format: {email}")
             row['email'] = email
-        
+
         # Clean phone number
         if 'phone' in row and row['phone']:
             phone = ''.join(filter(str.isdigit, str(row['phone'])))
             row['phone'] = phone if phone else None
-            
+
     def skip_row(self, instance, original, row, import_validation_errors=None):
         """Skip rows with validation errors."""
         if import_validation_errors:
@@ -128,31 +129,31 @@ class CustomUserResource(resources.ModelResource):
 
 class UserActivityResource(resources.ModelResource):
     """Enhanced resource for exporting user activity (export only)."""
-    
+
     user_email = fields.Field(
         column_name='user_email',
         attribute='user__email',
         readonly=True
     )
-    
+
     user_full_name = fields.Field(
         column_name='user_full_name',
         attribute='user__get_full_name',
         readonly=True
     )
-    
+
     activity_type_display = fields.Field(
         column_name='activity_type_display',
         attribute='get_activity_type_display',
         readonly=True
     )
-    
+
     created_at = fields.Field(
         column_name='created_at',
         attribute='created_at',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     # Additional context fields
     user_agent_browser = fields.Field(
         column_name='user_agent_browser',
@@ -177,12 +178,12 @@ class UserActivityResource(resources.ModelResource):
         )
         export_order = fields
         # No import - this is export only
-    
+
     def dehydrate_user_agent_browser(self, activity):
         """Extract browser info from user agent."""
         if not activity.user_agent:
             return "Unknown"
-        
+
         user_agent = activity.user_agent.lower()
         if 'chrome' in user_agent:
             return "Chrome"
@@ -194,7 +195,7 @@ class UserActivityResource(resources.ModelResource):
             return "Edge"
         else:
             return "Other"
-        
+
     def get_queryset(self):
         """Optimize queryset for export."""
         return super().get_queryset().select_related('user')
@@ -202,30 +203,30 @@ class UserActivityResource(resources.ModelResource):
 
 class RegistrationSourceResource(resources.ModelResource):
     """Enhanced resource for importing/exporting registration sources."""
-    
+
     is_active = fields.Field(
         column_name='is_active',
         attribute='is_active',
         widget=BooleanWidget()
     )
-    
+
     created_at = fields.Field(
         column_name='created_at',
         attribute='created_at',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     updated_at = fields.Field(
         column_name='updated_at',
         attribute='updated_at',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     users_count = fields.Field(
         column_name='users_count',
         readonly=True
     )
-    
+
     recent_registrations = fields.Field(
         column_name='recent_registrations_7d',
         readonly=True
@@ -247,19 +248,19 @@ class RegistrationSourceResource(resources.ModelResource):
         import_id_fields = ('name',)  # Use name as unique identifier
         skip_unchanged = True
         report_skipped = True
-        
+
     def dehydrate_users_count(self, registration_source):
         """Calculate total users count for export."""
         return registration_source.user_registration_sources.count()
-    
+
     def dehydrate_recent_registrations(self, registration_source):
         """Calculate recent registrations count."""
-        
+
         week_ago = timezone.now() - timedelta(days=7)
         return registration_source.user_registration_sources.filter(
             created_at__gte=week_ago
         ).count()
-        
+
     def before_import_row(self, row, **kwargs):
         """Process row before import with validation."""
         # Clean and validate name
@@ -271,51 +272,51 @@ class RegistrationSourceResource(resources.ModelResource):
 
 class TwilioResponseResource(resources.ModelResource):
     """Enhanced resource for exporting Twilio responses (export only)."""
-    
+
     otp_recipient = fields.Field(
         column_name='otp_recipient',
         attribute='otp_secret__email',
         readonly=True
     )
-    
+
     created_at = fields.Field(
         column_name='created_at',
         attribute='created_at',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     updated_at = fields.Field(
         column_name='updated_at',
         attribute='updated_at',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     twilio_created_at = fields.Field(
         column_name='twilio_created_at',
         attribute='twilio_created_at',
         widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
     )
-    
+
     has_error = fields.Field(
         column_name='has_error',
         attribute='has_error',
         widget=BooleanWidget(),
         readonly=True
     )
-    
+
     is_successful = fields.Field(
         column_name='is_successful',
         attribute='is_successful',
         widget=BooleanWidget(),
         readonly=True
     )
-    
+
     # Additional computed fields
     response_time_ms = fields.Field(
         column_name='response_time_ms',
         readonly=True
     )
-    
+
     masked_recipient = fields.Field(
         column_name='masked_recipient',
         readonly=True
@@ -347,19 +348,19 @@ class TwilioResponseResource(resources.ModelResource):
         )
         export_order = fields
         # No import - this is export only
-    
+
     def dehydrate_response_time_ms(self, twilio_response):
         """Calculate response time if available."""
         if twilio_response.twilio_created_at and twilio_response.created_at:
             delta = twilio_response.twilio_created_at - twilio_response.created_at
             return int(delta.total_seconds() * 1000)
         return None
-    
+
     def dehydrate_masked_recipient(self, twilio_response):
         """Mask recipient for privacy."""
         if not twilio_response.to_number:
             return "—"
-        
+
         recipient = twilio_response.to_number
         if '@' in recipient:
             # Email masking
@@ -369,7 +370,7 @@ class TwilioResponseResource(resources.ModelResource):
         else:
             # Phone masking
             return f"***{recipient[-4:]}" if len(recipient) > 4 else "***"
-        
+
     def get_queryset(self):
         """Optimize queryset for export."""
         return super().get_queryset().select_related('otp_secret')

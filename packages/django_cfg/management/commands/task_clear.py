@@ -11,7 +11,9 @@ Usage:
     python manage.py task_clear --confirm
 """
 
-from django_cfg.modules.django_tasks.management.commands.task_clear import Command as TaskClearCommand
+from django_cfg.modules.django_tasks.management.commands.task_clear import (
+    Command as TaskClearCommand,
+)
 
 
 class Command(TaskClearCommand):

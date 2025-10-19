@@ -4,13 +4,11 @@ Database configuration model for django_cfg.
 Type-safe database connection configuration with validation.
 """
 
-from typing import Dict, List, Optional, Any, Literal
-from pydantic import BaseModel, Field, field_validator, model_validator, PrivateAttr
+from typing import Any, Dict, List, Literal, Optional
 
-from . import validators
-from . import converters
-from . import routing
-from .parsers import detect_engine_from_url
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
+
+from . import converters, routing, validators
 
 
 class DatabaseConfig(BaseModel):

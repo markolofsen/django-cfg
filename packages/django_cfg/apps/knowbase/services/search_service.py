@@ -1,24 +1,45 @@
 """
-Semantic search service with pgvector.
+Semantic search service with pgvector (PostgreSQL) and text search fallback (SQLite).
 """
 
-from typing import List, Optional, Dict, Any
-from pgvector.django import CosineDistance
+from typing import Any, Dict, List, Optional
+import logging
+
+from django.db import connection
+
 from django_cfg.modules.django_llm.llm.client import LLMClient
-from ..models import DocumentChunk, Document, ArchiveItemChunk
-from ..config.settings import get_openai_api_key, get_cache_settings, get_threshold_for_type
-from ..utils.validation import validate_similarity_score
+
+from ..config.settings import get_cache_settings, get_threshold_for_type
+from ..models import ArchiveItemChunk, Document, DocumentChunk
 from ..utils.chunk_settings import get_embedding_model
+from ..utils.validation import validate_similarity_score
 from .base import BaseService
+
+logger = logging.getLogger(__name__)
+
+
+def _supports_vector_search() -> bool:
+    """Check if current database supports vector search (pgvector)."""
+    db_vendor = connection.vendor
+    return db_vendor == 'postgresql'
+
+
+def _get_cosine_distance():
+    """Lazy import of CosineDistance to avoid import errors on SQLite."""
+    try:
+        from pgvector.django import CosineDistance
+        return CosineDistance
+    except ImportError:
+        return None
 
 
 class SearchService(BaseService):
     """Semantic search service with pgvector."""
-    
+
     def __init__(self, user):
         """Initialize with OpenAI-only client for embeddings."""
         super().__init__(user)
-        
+
         # Override with auto-configured client with explicit OpenAI preference for embeddings
         cache_settings = get_cache_settings()
         self.llm_client = LLMClient(
@@ -27,7 +48,7 @@ class SearchService(BaseService):
             cache_ttl=cache_settings.cache_ttl,
             max_cache_size=cache_settings.max_cache_size
         )
-    
+
     def semantic_search_universal(
         self,
         query: str,
@@ -41,7 +62,33 @@ class SearchService(BaseService):
         external_model_names: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """Perform semantic search across all user's content (documents + archives)."""
-        
+
+        # Check if database supports vector search
+        if not _supports_vector_search():
+            logger.warning(
+                f"Vector search not supported on {connection.vendor}. "
+                "Falling back to text search. For semantic search, use PostgreSQL with pgvector."
+            )
+            # Fallback to text search for SQLite and other databases
+            return self.search_by_text_universal(
+                query=query,
+                limit=limit,
+                include_documents=include_documents,
+                include_archives=include_archives
+            )
+
+        # Get CosineDistance function (lazy import)
+        CosineDistance = _get_cosine_distance()
+        if CosineDistance is None:
+            logger.error("pgvector not installed. Install with: pip install pgvector")
+            # Fallback to text search
+            return self.search_by_text_universal(
+                query=query,
+                limit=limit,
+                include_documents=include_documents,
+                include_archives=include_archives
+            )
+
         # Generate query embedding with specified model
         embedding_model = get_embedding_model()
         embedding_result = self.llm_client.generate_embedding(
@@ -49,33 +96,33 @@ class SearchService(BaseService):
             model=embedding_model
         )
         query_embedding = embedding_result.embedding
-        
+
         results = []
-        
+
         # Search in document chunks
         if include_documents:
             doc_threshold = threshold if threshold is not None else get_threshold_for_type('document')
-            
+
             doc_queryset = DocumentChunk.objects.filter(
                 user=self.user,
                 embedding__isnull=False  # Ensure embedding exists
             )
-            
+
             if document_ids:
                 doc_queryset = doc_queryset.filter(document_id__in=document_ids)
-            
+
             doc_results = doc_queryset.annotate(
                 similarity=1 - CosineDistance('embedding', query_embedding)
             ).filter(
                 similarity__gte=doc_threshold
             ).select_related('document').order_by('-similarity')
-            
+
             for chunk in doc_results:
                 # Validate similarity score using utility function
                 similarity_value = validate_similarity_score(chunk.similarity)
                 if similarity_value is None:
                     continue  # Skip chunks with invalid similarity
-                
+
                 results.append({
                     'type': 'document',
                     'chunk': chunk,
@@ -88,31 +135,31 @@ class SearchService(BaseService):
                         'token_count': chunk.token_count
                     }
                 })
-        
+
         # Search in archive chunks
         if include_archives:
             archive_threshold = threshold if threshold is not None else get_threshold_for_type('archive')
-            
+
             archive_queryset = ArchiveItemChunk.objects.filter(
                 user=self.user,
                 embedding__isnull=False  # Ensure embedding exists
             )
-            
+
             if archive_ids:
                 archive_queryset = archive_queryset.filter(archive_id__in=archive_ids)
-            
+
             archive_results = archive_queryset.annotate(
                 similarity=1 - CosineDistance('embedding', query_embedding)
             ).filter(
                 similarity__gte=archive_threshold
             ).select_related('archive', 'item').order_by('-similarity')
-            
+
             for chunk in archive_results:
                 # Validate similarity score using utility function
                 similarity_value = validate_similarity_score(chunk.similarity)
                 if similarity_value is None:
                     continue  # Skip chunks with invalid similarity
-                
+
                 results.append({
                     'type': 'archive',
                     'chunk': chunk,
@@ -128,12 +175,12 @@ class SearchService(BaseService):
                         'context_metadata': chunk.context_metadata
                     }
                 })
-        
+
         # Search in external data
         if include_external:
             from ..mixins.service import ExternalDataService
             external_service = ExternalDataService(self.user)
-            
+
             # Pass threshold=None to use per-object thresholds, or explicit threshold if provided
             external_results = external_service.search_external_data(
                 query=query,
@@ -141,13 +188,13 @@ class SearchService(BaseService):
                 threshold=threshold,  # None = use per-object thresholds, explicit value = global override
                 source_identifiers=external_model_names
             )
-            
+
             results.extend(external_results)
-        
+
         # Sort all results by similarity and limit
         results.sort(key=lambda x: x['similarity'], reverse=True)
         return results[:limit]
-    
+
     def semantic_search(
         self,
         query: str,
@@ -156,7 +203,22 @@ class SearchService(BaseService):
         document_ids: Optional[List[str]] = None
     ) -> List[DocumentChunk]:
         """Perform semantic search across user's documents (legacy method for backward compatibility)."""
-        
+
+        # Check if database supports vector search
+        if not _supports_vector_search():
+            logger.warning(
+                f"Vector search not supported on {connection.vendor}. "
+                "Falling back to text search."
+            )
+            # Fallback to text search
+            return self.search_by_text(query=query, limit=limit)
+
+        # Get CosineDistance function (lazy import)
+        CosineDistance = _get_cosine_distance()
+        if CosineDistance is None:
+            logger.error("pgvector not installed. Falling back to text search.")
+            return self.search_by_text(query=query, limit=limit)
+
         # Generate query embedding with specified model
         embedding_model = get_embedding_model()
         embedding_result = self.llm_client.generate_embedding(
@@ -164,22 +226,22 @@ class SearchService(BaseService):
             model=embedding_model
         )
         query_embedding = embedding_result.embedding  # Extract the actual embedding array
-        
+
         # Build queryset
         queryset = DocumentChunk.objects.filter(user=self.user)
-        
+
         if document_ids:
             queryset = queryset.filter(document_id__in=document_ids)
-        
+
         # Perform similarity search
         results = queryset.annotate(
             similarity=1 - CosineDistance('embedding', query_embedding)
         ).filter(
             similarity__gte=threshold
         ).order_by('-similarity')[:limit]
-        
+
         return list(results)
-    
+
     def search_by_text_universal(
         self,
         query: str,
@@ -187,21 +249,25 @@ class SearchService(BaseService):
         include_documents: bool = True,
         include_archives: bool = True
     ) -> List[Dict[str, Any]]:
-        """Universal text search across documents and archives."""
-        
+        """Universal text search across documents and archives.
+
+        Used as fallback when vector search is not available (SQLite, etc).
+        """
+
         results = []
-        
+
         # Search in documents
         if include_documents:
             doc_results = DocumentChunk.objects.filter(
                 user=self.user,
                 content__icontains=query
             ).select_related('document')[:limit//2 if include_archives else limit]
-            
+
             for chunk in doc_results:
                 results.append({
                     'type': 'document',
                     'chunk': chunk,
+                    'similarity': 1.0,  # Placeholder for compatibility with vector search results
                     'source_title': chunk.document.title,
                     'content': chunk.content,
                     'metadata': {
@@ -210,18 +276,19 @@ class SearchService(BaseService):
                         'token_count': chunk.token_count
                     }
                 })
-        
+
         # Search in archives
         if include_archives:
             archive_results = ArchiveItemChunk.objects.filter(
                 user=self.user,
                 content__icontains=query
             ).select_related('archive', 'item')[:limit//2 if include_documents else limit]
-            
+
             for chunk in archive_results:
                 results.append({
                     'type': 'archive',
                     'chunk': chunk,
+                    'similarity': 1.0,  # Placeholder for compatibility with vector search results
                     'source_title': f"{chunk.archive.title} / {chunk.item.item_name}",
                     'content': chunk.content,
                     'metadata': {
@@ -233,40 +300,54 @@ class SearchService(BaseService):
                         'context_metadata': chunk.context_metadata
                     }
                 })
-        
+
         return results[:limit]
-    
+
     def search_by_text(
         self,
         query: str,
         limit: int = 10
     ) -> List[DocumentChunk]:
         """Traditional text search as fallback (legacy method)."""
-        
+
         results = DocumentChunk.objects.filter(
             user=self.user,
             content__icontains=query
         ).order_by('-created_at')[:limit]
-        
+
         return list(results)
-    
+
     def get_similar_documents(
         self,
         document_id: str,
         limit: int = 5
     ) -> List[DocumentChunk]:
         """Find similar documents to given document."""
-        
+
+        # Check if database supports vector search
+        if not _supports_vector_search():
+            logger.warning(
+                f"Vector search not supported on {connection.vendor}. "
+                "Returning empty results. Use PostgreSQL with pgvector for this feature."
+            )
+            return []
+
+        # Get CosineDistance function (lazy import)
+        CosineDistance = _get_cosine_distance()
+        if CosineDistance is None:
+            logger.error("pgvector not installed. Returning empty results.")
+            return []
+
         # Get document's first chunk as reference
         reference_chunk = DocumentChunk.objects.filter(
             document_id=document_id,
             user=self.user,
             chunk_index=0
         ).first()
-        
+
         if not reference_chunk:
             return []
-        
+
         # Find similar chunks
         results = DocumentChunk.objects.filter(
             user=self.user
@@ -275,19 +356,19 @@ class SearchService(BaseService):
         ).annotate(
             similarity=1 - CosineDistance('embedding', reference_chunk.embedding)
         ).order_by('-similarity')[:limit]
-        
+
         return list(results)
-    
+
     def search_documents_by_title(
         self,
         query: str,
         limit: int = 10
     ) -> List[Document]:
         """Search documents by title."""
-        
+
         results = Document.objects.filter(
             user=self.user,
             title__icontains=query
         ).order_by('-created_at')[:limit]
-        
+
         return list(results)

@@ -6,10 +6,9 @@ Modern, clean admin interfaces with Material Icons and consistent styling.
 
 from django.contrib import admin
 
-# Import all admin classes
 from .execution_admin import AgentExecutionAdmin, WorkflowExecutionAdmin
 from .registry_admin import AgentDefinitionAdmin, AgentTemplateAdmin
-from .toolsets_admin import ToolExecutionAdmin, ApprovalLogAdmin, ToolsetConfigurationAdmin
+from .toolsets_admin import ApprovalLogAdmin, ToolExecutionAdmin, ToolsetConfigurationAdmin
 
 # All models are registered in their respective admin files using @admin.register
 # This provides:

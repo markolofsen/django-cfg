@@ -5,9 +5,9 @@ Provides simplified interface to query models cache.
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
-from ..models_cache import ModelsCache, ModelInfo
+from ..models_cache import ModelInfo, ModelsCache
 
 logger = logging.getLogger(__name__)
 

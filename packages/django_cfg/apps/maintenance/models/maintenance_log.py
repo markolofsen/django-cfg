@@ -5,6 +5,7 @@ Simple log of all maintenance operations.
 """
 
 from django.db import models
+
 from .cloudflare_site import CloudflareSite
 
 
@@ -14,18 +15,18 @@ class MaintenanceLog(models.Model):
     
     Tracks enable/disable operations with success/failure status.
     """
-    
+
     class Action(models.TextChoices):
         ENABLE = "enable", "Enable Maintenance"
         DISABLE = "disable", "Disable Maintenance"
         ERROR = "error", "Error"
         SYNC = "sync", "Sync from Cloudflare"
-    
+
     class Status(models.TextChoices):
         SUCCESS = "success", "Success"
         FAILED = "failed", "Failed"
         PENDING = "pending", "Pending"
-    
+
     # Related site
     site = models.ForeignKey(
         CloudflareSite,
@@ -33,7 +34,7 @@ class MaintenanceLog(models.Model):
         related_name='logs',
         help_text="Site this log entry belongs to"
     )
-    
+
     # Operation details
     action = models.CharField(
         max_length=20,
@@ -45,7 +46,7 @@ class MaintenanceLog(models.Model):
         choices=Status.choices,
         help_text="Result of the operation"
     )
-    
+
     # Additional info
     reason = models.TextField(
         blank=True,
@@ -60,7 +61,7 @@ class MaintenanceLog(models.Model):
         blank=True,
         help_text="Full Cloudflare API response for debugging"
     )
-    
+
     # Timing
     created_at = models.DateTimeField(auto_now_add=True)
     duration_seconds = models.IntegerField(
@@ -68,11 +69,11 @@ class MaintenanceLog(models.Model):
         blank=True,
         help_text="How long the operation took"
     )
-    
+
     # Custom manager
     from ..managers.maintenance_log_manager import MaintenanceLogManager
     objects = MaintenanceLogManager()
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = "Maintenance Log"
@@ -82,18 +83,18 @@ class MaintenanceLog(models.Model):
             models.Index(fields=['action', '-created_at']),
             models.Index(fields=['status', '-created_at']),
         ]
-    
+
     def __str__(self) -> str:
         status_emoji = {
             self.Status.SUCCESS: "✅",
             self.Status.FAILED: "❌",
             self.Status.PENDING: "⏳"
         }.get(self.status, "❓")
-        
+
         return f"{status_emoji} {self.get_action_display()} - {self.site.domain}"
-    
+
     @classmethod
-    def log_success(cls, site: CloudflareSite, action: str, reason: str = "", 
+    def log_success(cls, site: CloudflareSite, action: str, reason: str = "",
                    duration_seconds: int = None, cloudflare_response: dict = None) -> 'MaintenanceLog':
         """Log successful operation."""
         return cls.objects.create(
@@ -104,7 +105,7 @@ class MaintenanceLog(models.Model):
             duration_seconds=duration_seconds,
             cloudflare_response=cloudflare_response
         )
-    
+
     @classmethod
     def log_failure(cls, site: CloudflareSite, action: str, error_message: str,
                    reason: str = "", cloudflare_response: dict = None) -> 'MaintenanceLog':
@@ -117,7 +118,7 @@ class MaintenanceLog(models.Model):
             error_message=error_message,
             cloudflare_response=cloudflare_response
         )
-    
+
     @classmethod
     def log_pending(cls, site: CloudflareSite, action: str, reason: str = "") -> 'MaintenanceLog':
         """Log pending operation."""

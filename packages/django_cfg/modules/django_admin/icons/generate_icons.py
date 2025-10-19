@@ -6,13 +6,13 @@ This script automatically downloads the latest Material Icons from Google
 and generates IDE-friendly constants for better autocompletion.
 """
 
-import os
-import sys
 import json
-import requests
-from pathlib import Path
-from typing import Dict, List, Set
 import logging
+import sys
+from pathlib import Path
+from typing import Dict, List
+
+import requests
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -21,27 +21,27 @@ logger = logging.getLogger(__name__)
 
 class MaterialIconsGenerator:
     """Generator for Material Icons constants."""
-    
+
     # URLs for different sources
     SOURCES = {
         'codepoints': 'https://raw.githubusercontent.com/google/material-design-icons/master/font/MaterialIcons-Regular.codepoints',
         'metadata': 'https://fonts.google.com/metadata/icons',
         'github_api': 'https://api.github.com/repos/google/material-design-icons/contents/symbols'
     }
-    
+
     def __init__(self, output_dir: Path):
         self.output_dir = Path(output_dir)
         self.icons_data: Dict[str, str] = {}
         self.categories: Dict[str, List[str]] = {}
-        
+
     def download_codepoints(self) -> Dict[str, str]:
         """Download Material Icons codepoints from GitHub."""
         logger.info("📥 Downloading Material Icons codepoints...")
-        
+
         try:
             response = requests.get(self.SOURCES['codepoints'], timeout=30)
             response.raise_for_status()
-            
+
             icons = {}
             for line in response.text.strip().split('\n'):
                 if line.strip() and not line.startswith('#'):
@@ -50,29 +50,29 @@ class MaterialIconsGenerator:
                         name = parts[0]
                         codepoint = parts[1]
                         icons[name] = codepoint
-            
+
             logger.info(f"✅ Downloaded {len(icons)} icons from codepoints")
             return icons
-            
+
         except Exception as e:
             logger.error(f"❌ Failed to download codepoints: {e}")
             return {}
-    
+
     def download_metadata(self) -> Dict[str, any]:
         """Download Material Icons metadata from Google Fonts."""
         logger.info("📥 Downloading Material Icons metadata...")
-        
+
         try:
             response = requests.get(self.SOURCES['metadata'], timeout=30)
             response.raise_for_status()
-            
+
             # Remove the first line (it's not JSON)
             content = response.text
             if content.startswith(")]}'"):
                 content = content[4:]
-            
+
             metadata = json.loads(content)
-            
+
             # Extract icons from metadata
             icons_metadata = {}
             if 'icons' in metadata:
@@ -85,14 +85,14 @@ class MaterialIconsGenerator:
                             'version': icon.get('version', 1),
                             'popularity': icon.get('popularity', 0)
                         }
-            
+
             logger.info(f"✅ Downloaded metadata for {len(icons_metadata)} icons")
             return icons_metadata
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Failed to download metadata: {e}")
             return {}
-    
+
     def categorize_icons(self, metadata: Dict[str, any]) -> Dict[str, List[str]]:
         """Categorize icons based on metadata."""
         categories = {
@@ -120,7 +120,7 @@ class MaterialIconsGenerator:
             'file': [],
             'toggle': [],
         }
-        
+
         # Keywords for categorization
         category_keywords = {
             'navigation': ['dashboard', 'menu', 'home', 'apps', 'navigate', 'arrow', 'chevron', 'expand', 'more'],
@@ -147,7 +147,7 @@ class MaterialIconsGenerator:
             'file': ['folder', 'file', 'upload', 'download', 'attach', 'archive'],
             'toggle': ['toggle', 'switch', 'radio', 'checkbox', 'on', 'off'],
         }
-        
+
         for icon_name in self.icons_data.keys():
             # Use metadata categories if available
             if icon_name in metadata and metadata[icon_name].get('categories'):
@@ -156,7 +156,7 @@ class MaterialIconsGenerator:
                     if cat_key in categories:
                         categories[cat_key].append(icon_name)
                         continue
-            
+
             # Fallback to keyword matching
             categorized = False
             for category, keywords in category_keywords.items():
@@ -164,29 +164,29 @@ class MaterialIconsGenerator:
                     categories[category].append(icon_name)
                     categorized = True
                     break
-            
+
             # Default category for uncategorized icons
             if not categorized:
                 categories.setdefault('other', []).append(icon_name)
-        
+
         # Remove empty categories and sort icons
         return {k: sorted(v) for k, v in categories.items() if v}
-    
+
     def generate_constants_file(self):
         """Generate the constants.py file with all icons."""
         logger.info("📝 Generating constants.py...")
-        
+
         # Sort icons alphabetically
         sorted_icons = sorted(self.icons_data.keys())
-        
-        content = '''"""
+
+        content = f'''"""
 Material Icons constants for IDE autocompletion.
 
 This file is auto-generated by generate_icons.py script.
 DO NOT EDIT MANUALLY - run the script to update.
 
 Generated from Google Material Design Icons.
-Total icons: {total_icons}
+Total icons: {len(sorted_icons)}
 """
 
 from typing import Dict, Final
@@ -205,8 +205,8 @@ class Icons:
         icon = Icons.PEOPLE
     """
     
-'''.format(total_icons=len(sorted_icons))
-        
+'''
+
         # Generate icon constants
         for icon_name in sorted_icons:
             # Convert to valid Python identifier
@@ -215,7 +215,7 @@ class Icons:
             if const_name[0].isdigit():
                 const_name = f'_{const_name}'
             content += f'    {const_name}: Final[str] = "{icon_name}"\n'
-        
+
         # Add common aliases
         content += '''
     # Common aliases for better IDE experience
@@ -232,14 +232,14 @@ class Icons:
 
 
 '''
-        
+
         # Generate categories
         content += '''# IDE-friendly icon categories for easy discovery
 class IconCategories:
     """Categorized icon collections for easy discovery."""
     
 '''
-        
+
         for category, icons in self.categories.items():
             if len(icons) > 0:
                 category_name = category.upper()
@@ -251,7 +251,7 @@ class IconCategories:
                         const_name = f'_{const_name}'
                     content += f"        '{icon}': Icons.{const_name},\n"
                 content += '    }\n    \n'
-        
+
         # Add validation function
         content += '''
 
@@ -277,18 +277,18 @@ __all__ = [
     'validate_icon_constant',
 ]
 '''
-        
+
         # Write to file
         output_file = self.output_dir / 'constants.py'
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(content)
-        
+
         logger.info(f"✅ Generated {output_file} with {len(sorted_icons)} icons")
-    
+
     def generate_readme(self):
         """Generate README.md for the icons module."""
         logger.info("📝 Generating README.md...")
-        
+
         content = f'''# Material Icons for Django CFG Unfold
 
 This module provides Material Design Icons integration for Django CFG Unfold admin interface.
@@ -412,14 +412,14 @@ print(f"Did you mean: {{suggestions}}")
 
 *This file is auto-generated. Last updated: {self._get_current_timestamp()}*
 '''
-        
+
         # Write to file
         output_file = self.output_dir / 'README.md'
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(content)
-        
+
         logger.info(f"✅ Generated {output_file}")
-    
+
     def _generate_categories_list(self) -> str:
         """Generate markdown list of categories."""
         lines = []
@@ -428,37 +428,37 @@ print(f"Did you mean: {{suggestions}}")
             example_icons = ', '.join(icons[:5])
             if len(icons) > 5:
                 example_icons += f", ... (+{len(icons) - 5} more)"
-            
+
             lines.append(f"- **{category.title()}** ({icon_count} icons): {example_icons}")
-        
+
         return '\n'.join(lines)
-    
+
     def _get_current_timestamp(self) -> str:
         """Get current timestamp for documentation."""
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     def run(self):
         """Run the complete icon generation process."""
         logger.info("🚀 Starting Material Icons generation...")
-        
+
         # Download icons data
         self.icons_data = self.download_codepoints()
         if not self.icons_data:
             logger.error("❌ Failed to download icons data")
             return False
-        
+
         # Download metadata for categorization
         metadata = self.download_metadata()
-        
+
         # Categorize icons
         self.categories = self.categorize_icons(metadata)
         logger.info(f"📂 Categorized icons into {len(self.categories)} categories")
-        
+
         # Generate files
         self.generate_constants_file()
         self.generate_readme()
-        
+
         logger.info("🎉 Icon generation completed successfully!")
         return True
 
@@ -467,10 +467,10 @@ def main():
     """Main entry point."""
     # Get the directory where this script is located
     script_dir = Path(__file__).parent
-    
+
     generator = MaterialIconsGenerator(script_dir)
     success = generator.run()
-    
+
     if success:
         print("\n✅ Material Icons updated successfully!")
         print("📝 Files generated:")

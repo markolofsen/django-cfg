@@ -3,7 +3,7 @@ Django commands callbacks.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from .base import get_available_commands, get_commands_by_category
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class CommandsCallbacks:
     """Django commands callbacks."""
-    
+
     def get_django_commands(self) -> Dict[str, Any]:
         """Get Django management commands information."""
         try:

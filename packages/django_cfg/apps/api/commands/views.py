@@ -5,18 +5,15 @@ Web interface for executing Django management commands.
 """
 
 import json
-import subprocess
-import threading
-import time
 import logging
-from typing import Dict, Any, List
+import time
+
+from django.contrib.auth.decorators import user_passes_test
+from django.core.management import call_command, get_commands
 from django.http import JsonResponse, StreamingHttpResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import user_passes_test
-from django.core.management import get_commands, call_command
-from django.conf import settings
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +35,7 @@ def list_commands_view(request):
     try:
         # Get all available commands
         commands_dict = get_commands()
-        
+
         # Categorize commands
         categorized_commands = {
             "django_cfg": [],
@@ -46,14 +43,14 @@ def list_commands_view(request):
             "third_party": [],
             "project": [],
         }
-        
+
         for command_name, app_name in commands_dict.items():
             command_info = {
                 "name": command_name,
                 "app": app_name,
                 "description": _get_command_description(command_name),
             }
-            
+
             if app_name == "django_cfg":
                 categorized_commands["django_cfg"].append(command_info)
             elif app_name.startswith("django."):
@@ -62,14 +59,14 @@ def list_commands_view(request):
                 categorized_commands["project"].append(command_info)
             else:
                 categorized_commands["third_party"].append(command_info)
-        
+
         return JsonResponse({
             "status": "success",
             "commands": categorized_commands,
             "total_commands": len(commands_dict),
             "timestamp": timezone.now().isoformat(),
         })
-        
+
     except Exception as e:
         logger.error(f"Error listing commands: {e}")
         return JsonResponse({
@@ -102,13 +99,13 @@ def execute_command_view(request):
         command_name = data.get("command")
         args = data.get("args", [])
         options = data.get("options", {})
-        
+
         if not command_name:
             return JsonResponse({
                 "status": "error",
                 "error": "Command name is required",
             }, status=400)
-        
+
         # Validate command exists
         available_commands = get_commands()
         if command_name not in available_commands:
@@ -128,7 +125,7 @@ def execute_command_view(request):
                 "error": f"Command '{command_name}' is not allowed via web interface for security reasons",
                 "suggestion": "Only safe django_cfg commands and whitelisted utilities can be executed via web.",
             }, status=403)
-        
+
         # Create streaming response generator
         def stream_command_execution():
             """Generator that yields command output in SSE format."""
@@ -139,8 +136,8 @@ def execute_command_view(request):
 
             try:
                 # Capture command output using StringIO
-                from io import StringIO
                 import sys
+                from io import StringIO
 
                 # Create output buffer
                 output_buffer = StringIO()
@@ -200,7 +197,7 @@ def execute_command_view(request):
 
                 # Send error event
                 yield f"data: {json.dumps({'type': 'error', 'message': str(cmd_error), 'execution_time': round(execution_time, 2)})}\n\n"
-        
+
         # Return streaming response
         response = StreamingHttpResponse(
             stream_command_execution(),
@@ -208,9 +205,9 @@ def execute_command_view(request):
         )
         response['Cache-Control'] = 'no-cache'
         response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
-        
+
         return response
-        
+
     except json.JSONDecodeError:
         return JsonResponse({
             "status": "error",
@@ -236,16 +233,16 @@ def command_help_view(request, command_name):
     """
     try:
         available_commands = get_commands()
-        
+
         if command_name not in available_commands:
             return JsonResponse({
                 "status": "error",
                 "error": f"Command '{command_name}' not found",
             }, status=404)
-        
+
         # Get command help
         help_text = _get_command_help(command_name)
-        
+
         return JsonResponse({
             "status": "success",
             "command": command_name,
@@ -253,7 +250,7 @@ def command_help_view(request, command_name):
             "help": help_text,
             "timestamp": timezone.now().isoformat(),
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting help for command {command_name}: {e}")
         return JsonResponse({
@@ -278,11 +275,11 @@ def _get_command_help(command_name: str) -> str:
     try:
         from django.core.management import load_command_class
         command_class = load_command_class(get_commands()[command_name], command_name)
-        
+
         # Create command instance to get help
         command_instance = command_class()
         parser = command_instance.create_parser('manage.py', command_name)
-        
+
         return parser.format_help()
     except Exception as e:
         return f"Could not retrieve help for command '{command_name}': {str(e)}"

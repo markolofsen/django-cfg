@@ -1,0 +1,20 @@
+/**
+ * Base Styles
+ * Foundation styles that apply to the entire application
+ * Compatible with Tailwind CSS v4
+ */
+
+/* Base element styles */
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  font-weight: 500;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
+}

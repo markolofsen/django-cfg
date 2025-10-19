@@ -15,8 +15,8 @@ import re
 
 from jinja2 import Environment
 
-from ..base import GeneratedFile
 from ...ir import IROperationObject
+from ..base import GeneratedFile
 
 
 class FilesGenerator:

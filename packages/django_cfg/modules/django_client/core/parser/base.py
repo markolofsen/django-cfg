@@ -9,9 +9,7 @@ Version-specific logic (nullable handling, etc.) is delegated to subclasses.
 
 from __future__ import annotations
 
-import re
 from abc import ABC, abstractmethod
-from typing import Any
 
 from ..ir import (
     DjangoGlobalMetadata,
@@ -280,7 +278,11 @@ class BaseParser(ABC):
                     ref_from_combinator = self._extract_ref_from_combinators(prop_schema_or_ref)
                     if ref_from_combinator:
                         # Found $ref in allOf/anyOf/oneOf - resolve it
-                        properties[prop_name] = self._resolve_ref(ref_from_combinator)
+                        resolved_schema = self._resolve_ref(ref_from_combinator)
+                        # Preserve nullable attribute from parent schema
+                        if self._detect_nullable(prop_schema_or_ref):
+                            resolved_schema.nullable = True
+                        properties[prop_name] = resolved_schema
                     else:
                         # No combinator $ref - parse normally
                         properties[prop_name] = self._parse_schema(
@@ -441,6 +443,10 @@ class BaseParser(ABC):
             return "object"
         if schema.items is not None:
             return "array"
+
+        # Special case: JSONField from Django has no type but description mentions JSON
+        if schema.description and 'JSON' in schema.description:
+            return "object"
 
         return "string"  # Default
 

@@ -6,21 +6,21 @@ DRF browsable API views with Tailwind theme support.
 
 import os
 import time
-import psutil
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
 
+import psutil
 from django.conf import settings
-from django.db import connections
 from django.core.cache import cache
+from django.db import connections
 from django.utils import timezone
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from django_cfg.core.integration import get_current_version
+
 from .serializers import HealthCheckSerializer, QuickHealthSerializer
 
 

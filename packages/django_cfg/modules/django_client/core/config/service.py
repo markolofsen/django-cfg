@@ -6,8 +6,9 @@ Replaces django-revolution with faster, cleaner implementation.
 """
 
 import logging
-from typing import Optional, Dict, List
 from pathlib import Path
+from typing import Dict, List, Optional
+
 from .config import OpenAPIConfig
 from .group import OpenAPIGroupConfig
 
@@ -139,7 +140,7 @@ class DjangoOpenAPI:
             if not group.title:
                 raise OpenAPIError(f"Group '{group.name}' has no title")
 
-        logger.info(f"OpenAPI configuration validated: {len(self.config.groups)} groups")
+        logger.debug(f"OpenAPI configuration validated: {len(self.config.groups)} groups")
         return True
 
     def get_status(self) -> Dict:

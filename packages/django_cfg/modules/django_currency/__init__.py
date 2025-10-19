@@ -6,31 +6,30 @@ Uses YFinance for fiat/major crypto pairs and CoinGecko for broad crypto coverag
 """
 
 # Core functionality
+# Clients
+from .clients import CoinPaprikaClient, HybridCurrencyClient
 from .core import (
-    CurrencyConverter,
-    Rate,
+    CacheError,
+    ConversionError,
     ConversionRequest,
     ConversionResult,
+    CurrencyConverter,
     CurrencyError,
     CurrencyNotFoundError,
+    Rate,
     RateFetchError,
-    ConversionError,
-    CacheError
 )
-
-# Utilities
-from .utils import CacheManager
-
-# Clients
-from .clients import HybridCurrencyClient, CoinPaprikaClient
 
 # Database tools
 from .database import (
     CurrencyDatabaseLoader,
     DatabaseLoaderConfig,
     create_database_loader,
-    load_currencies_to_database_format
+    load_currencies_to_database_format,
 )
+
+# Utilities
+from .utils import CacheManager
 
 # Shared global converter instance for caching efficiency
 _global_converter = None
@@ -80,30 +79,30 @@ def get_exchange_rate(base: str, quote: str) -> float:
 __all__ = [
     # Core converter and models
     "CurrencyConverter",
-    "Rate", 
+    "Rate",
     "ConversionRequest",
     "ConversionResult",
-    
+
     # Exceptions
     "CurrencyError",
     "CurrencyNotFoundError",
-    "RateFetchError", 
+    "RateFetchError",
     "ConversionError",
     "CacheError",
-    
+
     # Utilities
     "CacheManager",
-    
+
     # Clients
     "HybridCurrencyClient",
     "CoinPaprikaClient",
-    
+
     # Database tools
     "CurrencyDatabaseLoader",
     "DatabaseLoaderConfig",
     "create_database_loader",
     "load_currencies_to_database_format",
-    
+
     # Public API
     "convert_currency",
     "get_exchange_rate"

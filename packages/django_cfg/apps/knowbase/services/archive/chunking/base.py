@@ -6,6 +6,7 @@ Abstract base class for content-specific chunking strategies.
 
 from abc import ABC, abstractmethod
 from typing import List
+
 from ....models.archive import ArchiveItem
 from ..context.models import ChunkData
 

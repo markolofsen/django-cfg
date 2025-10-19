@@ -4,8 +4,8 @@ Dramatiq settings generation.
 Functions to generate Dramatiq settings from DjangoConfig.
 """
 
-from typing import Optional, Dict, Any
 import logging
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

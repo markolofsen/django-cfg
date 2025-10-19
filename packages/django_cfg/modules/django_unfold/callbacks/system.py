@@ -4,11 +4,11 @@ System health and metrics callbacks.
 
 import logging
 import shutil
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from django.utils import timezone
-from django.db import connection
 from django.core.cache import cache
+from django.db import connection
+from django.utils import timezone
 
 from ..models.dashboard import SystemHealthItem
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class SystemCallbacks:
     """System health and metrics callbacks."""
-    
+
     def get_system_health(self) -> List[SystemHealthItem]:
         """Get system health status as Pydantic models."""
         health_items = []
@@ -105,7 +105,7 @@ class SystemCallbacks:
                     health_percentage=int(free_percentage),
                 )
             )
-        except Exception as e:
+        except Exception:
             health_items.append(
                 SystemHealthItem(
                     component="storage",

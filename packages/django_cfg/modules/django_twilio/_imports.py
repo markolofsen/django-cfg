@@ -6,8 +6,8 @@ Makes twilio and sendgrid imports optional for testing and when not using Twilio
 
 # Third-party imports (optional - only required when using Twilio functionality)
 try:
-    from twilio.rest import Client
     from twilio.base.exceptions import TwilioException
+    from twilio.rest import Client
     TWILIO_AVAILABLE = True
 except ImportError:
     Client = None  # type: ignore

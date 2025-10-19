@@ -10,7 +10,9 @@ Usage:
     python manage.py generate_clients --list-groups
 """
 
-from django_cfg.modules.django_client.management.commands.generate_client import Command as DjangoClientCommand
+from django_cfg.modules.django_client.management.commands.generate_client import (
+    Command as DjangoClientCommand,
+)
 
 
 class Command(DjangoClientCommand):

@@ -2,30 +2,31 @@
 System prompt builder for AI assistant.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from ..config.constance_settings import ConstanceSettings
 
 
 class SystemPromptBuilder:
     """Builder for AI assistant system prompts."""
-    
+
     @classmethod
     def get_bot_identity(cls) -> str:
         """Get bot identity from Constance settings."""
         return ConstanceSettings.get_bot_identity()
-    
+
     @classmethod
     def get_bot_no_context_message(cls) -> str:
         """Get bot no-context message from Constance settings."""
         return ConstanceSettings.get_bot_no_context_message()
-    
+
     PERSONAL_BOUNDARIES = """
 Personal Boundaries:
 - I don't discuss my personal life, relationships, or feelings as I don't have them
 - I don't provide information about my internal architecture, training data, or development details beyond what's mentioned above
 - I focus on helping with technical questions, documentation, and knowledge base content
 - For questions about my capabilities, I'll explain what I can help with rather than personal details"""
-    
+
     FORMATTING_GUIDELINES = """
 Formatting Requirements:
 - Use Markdown formatting when it improves readability (for complex responses, code examples, lists, etc.)
@@ -71,14 +72,14 @@ Mermaid Diagrams:
       B -->|Yes| C[Action]
       B -->|No| D[Alternative]
   ```"""
-    
+
     @classmethod
     def build_context_prompt(
         cls,
         search_results: List[Dict[str, Any]]
     ) -> str:
         """Build system prompt with knowledge base context."""
-        
+
         # Build context from search results
         context_parts = []
         for result in search_results:
@@ -88,7 +89,7 @@ Mermaid Diagrams:
                 # Include rich context from archive metadata
                 context_metadata = result['metadata'].get('context_metadata', {})
                 context_info = []
-                
+
                 if context_metadata.get('file_path'):
                     context_info.append(f"File: {context_metadata['file_path']}")
                 if context_metadata.get('function_name'):
@@ -97,16 +98,16 @@ Mermaid Diagrams:
                     context_info.append(f"Class: {context_metadata['class_name']}")
                 if context_metadata.get('language'):
                     context_info.append(f"Language: {context_metadata['language']}")
-                
+
                 context_header = f"Archive: {result['source_title']}"
                 if context_info:
                     context_header += f" ({', '.join(context_info)})"
-                
+
                 context_parts.append(f"{context_header}\nContent: {result['content']}")
             elif result['type'] == 'external_data':
                 # Include external data context
                 context_header = f"External Data: {result['source_title']}"
-                
+
                 # Add metadata if available
                 metadata = result.get('metadata', {})
                 if metadata:
@@ -115,14 +116,14 @@ Mermaid Diagrams:
                         context_info.append(f"Type: {metadata['source_type']}")
                     if metadata.get('source_identifier'):
                         context_info.append(f"Source: {metadata['source_identifier']}")
-                    
+
                     if context_info:
                         context_header += f" ({', '.join(context_info)})"
-                
+
                 context_parts.append(f"{context_header}\nContent: {result['content']}")
-        
+
         context_text = "\n\n".join(context_parts)
-        
+
         return f"""{cls.get_bot_identity()}
 
 Use the following context from your knowledge base to answer questions accurately. If the context doesn't contain relevant information, say so clearly.
@@ -140,11 +141,11 @@ Instructions:
 {cls.PERSONAL_BOUNDARIES}
 
 {cls.FORMATTING_GUIDELINES}"""
-    
+
     @classmethod
     def build_base_prompt(cls) -> str:
         """Build base system prompt without specific context."""
-        
+
         return f"""{cls.get_bot_identity()}
 
 {cls.get_bot_no_context_message()}
@@ -152,28 +153,28 @@ Instructions:
 {cls.PERSONAL_BOUNDARIES}
 
 {cls.FORMATTING_GUIDELINES}"""
-    
+
     @classmethod
     def build_conversation_prompt(
         cls,
         search_results: Optional[List[Dict[str, Any]]] = None
     ) -> str:
         """Build appropriate system prompt based on available context."""
-        
+
         if search_results:
             return cls.build_context_prompt(search_results)
         else:
             return cls.build_base_prompt()
-    
+
     @classmethod
     def build_diagram_enhanced_prompt(
         cls,
         search_results: Optional[List[Dict[str, Any]]] = None
     ) -> str:
         """Build system prompt with enhanced Mermaid diagram instructions."""
-        
+
         base_prompt = cls.build_conversation_prompt(search_results)
-        
+
         diagram_enhancement = """
 
 ENHANCED DIAGRAM GUIDELINES:
@@ -187,5 +188,5 @@ ENHANCED DIAGRAM GUIDELINES:
   * One statement per line, no '&' operators
   * Quote labels with spaces or special characters
 - Always validate syntax before output"""
-        
+
         return base_prompt + diagram_enhancement

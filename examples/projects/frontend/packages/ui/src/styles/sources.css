@@ -1,0 +1,11 @@
+/**
+ * Tailwind v4 Source Detection for UI Package
+ *
+ * @source directive tells Tailwind v4 where to scan for utility classes.
+ * In monorepo, this is critical because automatic detection may not work.
+ *
+ * "./" scans the entire UI package starting from this file's location.
+ */
+@source "../components";
+@source "../layouts";
+@source "../blocks";

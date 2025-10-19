@@ -4,7 +4,8 @@ Context metadata builders for chunks.
 Builds rich context metadata for different types of content chunks.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, Optional
+
 from ....models.archive import ArchiveItem
 
 

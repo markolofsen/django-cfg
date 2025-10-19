@@ -3,7 +3,7 @@ Validation utilities for the knowbase app.
 """
 
 import math
-from typing import Union, Optional
+from typing import Optional, Union
 
 
 def is_valid_float(value: Union[float, int, None]) -> bool:
@@ -18,7 +18,7 @@ def is_valid_float(value: Union[float, int, None]) -> bool:
     """
     if value is None:
         return False
-    
+
     try:
         float_value = float(value)
         return not (math.isnan(float_value) or math.isinf(float_value))
@@ -39,7 +39,7 @@ def safe_float(value: Union[float, int, None], default: float = 0.0) -> float:
     """
     if value is None:
         return default
-    
+
     try:
         float_value = float(value)
         if math.isnan(float_value) or math.isinf(float_value):
@@ -61,15 +61,15 @@ def validate_similarity_score(similarity: Union[float, int, None]) -> Optional[f
     """
     if not is_valid_float(similarity):
         return None
-    
+
     score = float(similarity)
-    
+
     # Clamp to valid range [0.0, 1.0] for similarity scores
     if score < 0.0:
         return 0.0
     elif score > 1.0:
         return 1.0
-    
+
     return score
 
 
@@ -84,16 +84,16 @@ def clean_search_results(results: list) -> list:
         Cleaned list with valid similarity scores
     """
     cleaned_results = []
-    
+
     for result in results:
         if 'similarity' not in result:
             continue
-            
+
         similarity = validate_similarity_score(result['similarity'])
         if similarity is not None:
             # Create a copy and update similarity
             cleaned_result = result.copy()
             cleaned_result['similarity'] = similarity
             cleaned_results.append(cleaned_result)
-    
+
     return cleaned_results

@@ -4,13 +4,14 @@ Django-CFG Task Service.
 Main DjangoTasks class for Dramatiq integration.
 """
 
-from typing import Optional, Dict, Any, List
 import logging
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-from ..base import BaseCfgModule
-from django_cfg.models.tasks import TaskConfig, validate_task_config
 from django_cfg.models.django.constance import ConstanceField
+from django_cfg.models.tasks import TaskConfig, validate_task_config
+
+from ..base import BaseCfgModule
 
 # Django imports
 try:

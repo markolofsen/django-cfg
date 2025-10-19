@@ -1,0 +1,9 @@
+{
+  "label": "User Management",
+  "position": 1,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "User authentication, lead management, and customer support applications."
+  }
+}

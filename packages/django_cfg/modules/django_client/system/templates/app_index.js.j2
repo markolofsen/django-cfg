@@ -1,0 +1,13 @@
+/**
+ * {{ app_name.replace('_', ' ').title() }} API Module
+ * Re-exports the API client for convenient importing
+ * @module {{ app_name }}
+ */
+
+import { {{ class_name }}, {{ instance_name }} } from './client.mjs';
+
+// Re-export the class and instance
+export { {{ class_name }}, {{ instance_name }} };
+
+// Default export is the instance for convenience
+export default {{ instance_name }};

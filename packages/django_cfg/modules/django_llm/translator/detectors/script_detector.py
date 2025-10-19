@@ -5,7 +5,6 @@ Detects language based on character scripts (CJK, Cyrillic, etc.).
 """
 
 import re
-from typing import Optional
 
 
 class ScriptDetector:

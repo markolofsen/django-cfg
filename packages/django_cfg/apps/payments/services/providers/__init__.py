@@ -1,20 +1,17 @@
 """
-Payment providers for the Universal Payment System v2.0.
+Payment providers for Payments v2.0.
 
-Provider implementations with unified interface and Pydantic validation.
+Currently supports:
+- NowPayments (cryptocurrency)
 """
 
-from .base import BaseProvider
-from .nowpayments import NowPaymentsProvider
-from .registry import ProviderRegistry, get_provider_registry, initialize_providers
-from .sync_service import ProviderSyncService, get_provider_sync_service
+from .models import PaymentRequest, ProviderResponse, CurrencyInfo
+from .nowpayments import NowPaymentsProvider, NowPaymentsConfig
 
 __all__ = [
-    'BaseProvider',
+    'PaymentRequest',
+    'ProviderResponse',
+    'CurrencyInfo',
     'NowPaymentsProvider',
-    'ProviderRegistry',
-    'get_provider_registry',
-    'initialize_providers',
-    'ProviderSyncService',
-    'get_provider_sync_service',
+    'NowPaymentsConfig',
 ]

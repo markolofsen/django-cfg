@@ -4,8 +4,9 @@ Pydantic models for chunking context metadata.
 Data structures for chunk data and context metadata.
 """
 
+from typing import Any, Dict
+
 from pydantic import BaseModel
-from typing import Dict, Any
 
 
 class ChunkContextMetadata(BaseModel):

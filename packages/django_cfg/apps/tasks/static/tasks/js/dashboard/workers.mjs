@@ -10,13 +10,15 @@ export class WorkersModule {
 
     /**
      * Load workers data
+     * Using new MJS API method with JSDoc types
      */
     async loadData() {
         try {
             console.log('Loading workers data...');
-            
-            const response = await this.api.getWorkersList();
-            const data = response.data || response;
+
+            // Using the new API method name from MJS client
+            const response = await this.api.tasksApiWorkersListRetrieve();
+            const data = response?.data || response;
             
             this.renderWorkersData(data);
             

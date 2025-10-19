@@ -1,13 +1,15 @@
 import logging
 import traceback
-from django.utils import timezone
-from django.db import transaction
 from typing import Optional
 
+from django.db import transaction
+from django.utils import timezone
+
 from django_cfg.modules.django_telegram import DjangoTelegram
-from ..models import OTPSecret, CustomUser
-from ..utils.notifications import AccountNotifications
+
+from ..models import CustomUser, OTPSecret
 from ..signals import notify_failed_otp_attempt
+from ..utils.notifications import AccountNotifications
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +99,8 @@ class OTPService:
 
             # Send Telegram notification for OTP request
             try:
-                
-                
+
+
                 # Prepare notification data
                 notification_data = {
                     "Email": cleaned_email,
@@ -107,14 +109,14 @@ class OTPService:
                     "Source URL": source_url or "Direct",
                     "Timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
                 }
-                
+
                 if created:
                     DjangoTelegram.send_success("New User OTP Request", notification_data)
                 else:
                     DjangoTelegram.send_info("OTP Login Request", notification_data)
-                    
+
                 logger.info(f"Telegram OTP notification sent for {cleaned_email}")
-                
+
             except ImportError:
                 logger.warning("django_cfg DjangoTelegram not available for OTP notifications")
             except Exception as telegram_error:
@@ -150,13 +152,13 @@ class OTPService:
 
             if not otp_secret or not otp_secret.is_valid:
                 logger.warning(f"Invalid OTP for {cleaned_email}")
-                
+
                 # Send Telegram notification for failed OTP attempt
                 try:
                     notify_failed_otp_attempt(cleaned_email, reason="Invalid or expired OTP")
                 except Exception as e:
                     logger.error(f"Failed to send failed OTP notification: {e}")
-                
+
                 return None
 
             # Mark OTP as used
@@ -174,7 +176,7 @@ class OTPService:
 
                 # Send Telegram notification for successful OTP verification
                 try:
-                    
+
                     verification_data = {
                         "Email": cleaned_email,
                         "Username": user.username,
@@ -182,10 +184,10 @@ class OTPService:
                         "Login Time": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
                         "User ID": user.id
                     }
-                    
+
                     DjangoTelegram.send_success("Successful OTP Login", verification_data)
                     logger.info(f"Telegram OTP verification notification sent for {cleaned_email}")
-                    
+
                 except ImportError:
                     logger.warning("django_cfg DjangoTelegram not available for OTP verification notifications")
                 except Exception as telegram_error:

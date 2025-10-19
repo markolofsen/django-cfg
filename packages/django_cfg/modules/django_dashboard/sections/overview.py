@@ -1,6 +1,7 @@
 """Overview section for dashboard."""
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from .base import DataSection
 
 
@@ -28,6 +29,7 @@ class OverviewSection(DataSection):
     def get_context_data(self, **kwargs) -> Dict[str, Any]:
         """Add additional context for includes."""
         import json
+
         from django.utils.safestring import mark_safe
 
         context = super().get_context_data(**kwargs)
@@ -79,6 +81,7 @@ class OverviewSection(DataSection):
     def get_system_health(self) -> Dict[str, Any]:
         """Get system health metrics."""
         import sys
+
         import psutil
 
         return {
@@ -95,8 +98,8 @@ class OverviewSection(DataSection):
 
     def get_system_metrics(self) -> Dict[str, Any]:
         """Get system metrics for progress bars."""
-        from django.db import connection
         from django.core.cache import cache
+        from django.db import connection
 
         metrics = {}
 
@@ -185,7 +188,7 @@ class OverviewSection(DataSection):
                 "health_percentage": 100,
                 "description": f"{len(url_patterns)} URL patterns",
             }
-        except Exception as e:
+        except Exception:
             metrics["api"] = {
                 "status": "warning",
                 "type": "REST API",
@@ -240,8 +243,9 @@ class OverviewSection(DataSection):
 
         Returns list of dicts with date and count for last 365 days.
         """
+        from datetime import timedelta
+
         from django.contrib.auth import get_user_model
-        from datetime import datetime, timedelta
         from django.utils import timezone
 
         User = get_user_model()
@@ -277,7 +281,7 @@ class OverviewSection(DataSection):
 
             return activity_data
 
-        except Exception as e:
+        except Exception:
             # Return empty on error
             return []
 
@@ -308,11 +312,11 @@ class OverviewSection(DataSection):
         Args:
             days: Number of days to include in charts (default: 7)
         """
-        from django.contrib.auth import get_user_model
-        from datetime import datetime, timedelta
-        from django.utils import timezone
-        from django.utils.safestring import mark_safe
         import json
+        from datetime import datetime, timedelta
+
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
 
         User = get_user_model()
 
@@ -389,6 +393,6 @@ class OverviewSection(DataSection):
                 # JSON string for Unfold chart component (NO mark_safe - let Django escape quotes)
                 'user_activity_json': json.dumps(user_activity_data),
             }
-        except Exception as e:
+        except Exception:
             # Return empty chart data
             return {}

@@ -5,8 +5,8 @@ Complexity calculation, quality assessment, purpose detection, and tag generatio
 """
 
 from .complexity_analyzer import ComplexityAnalyzer
-from .quality_analyzer import QualityAnalyzer
 from .purpose_detector import PurposeDetector
+from .quality_analyzer import QualityAnalyzer
 from .tag_generator import TagGenerator
 
 __all__ = [

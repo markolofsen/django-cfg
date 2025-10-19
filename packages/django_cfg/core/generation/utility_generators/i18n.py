@@ -5,7 +5,7 @@ Handles Django i18n/l10n configuration.
 Size: ~60 lines (focused on i18n settings)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig

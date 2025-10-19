@@ -13,8 +13,8 @@ register = template.Library()
 def lib_name():
     """Get the library name."""
     # Lazy import to avoid AppRegistryNotReady error
-    from django_cfg.config import LIB_NAME
     from django_cfg import __version__
+    from django_cfg.config import LIB_NAME
     return f"{LIB_NAME} ({__version__})"
 
 
@@ -44,13 +44,13 @@ def lib_subtitle():
 def project_name():
     """Get the project name from current config."""
     # Lazy import to avoid AppRegistryNotReady error
-    from django_cfg.core.state import get_current_config
     from django_cfg.config import LIB_NAME
-    
+    from django_cfg.core.state import get_current_config
+
     # Try to get project name from current config
     config = get_current_config()
     if config and hasattr(config, 'project_name'):
         return config.project_name
-    
+
     # Fallback to library name
     return LIB_NAME

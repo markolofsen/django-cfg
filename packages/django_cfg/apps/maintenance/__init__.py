@@ -21,7 +21,7 @@ _LAZY_IMPORTS = {
     'CloudflareSite': ('django_cfg.apps.maintenance.models', 'CloudflareSite'),
     'MaintenanceLog': ('django_cfg.apps.maintenance.models', 'MaintenanceLog'),
     'ScheduledMaintenance': ('django_cfg.apps.maintenance.models', 'ScheduledMaintenance'),
-    
+
     # Services
     'MaintenanceService': ('django_cfg.apps.maintenance.services', 'MaintenanceService'),
     'SiteSyncService': ('django_cfg.apps.maintenance.services', 'SiteSyncService'),
@@ -45,11 +45,11 @@ def __getattr__(name: str):
     """Lazy import mechanism to avoid Django initialization issues."""
     if name in _LAZY_IMPORTS:
         module_path, attr_name = _LAZY_IMPORTS[name]
-        
+
         import importlib
         module = importlib.import_module(module_path)
         return getattr(module, attr_name)
-    
+
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 

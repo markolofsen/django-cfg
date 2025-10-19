@@ -4,7 +4,8 @@ Telegram service configuration for django_cfg.
 Type-safe Telegram bot configuration with validation.
 """
 
-from typing import Dict, Optional, Any, Literal
+from typing import Any, Dict, Literal, Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -123,8 +124,12 @@ class TelegramConfig(BaseModel):
     @field_validator('webhook_url')
     @classmethod
     def validate_webhook_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate webhook URL format."""
+        """Validate webhook URL format. Allows environment variable templates like ${VAR:-default}."""
         if v is None:
+            return v
+
+        # Skip validation for environment variable templates
+        if v.startswith("${") and "}" in v:
             return v
 
         if not v.startswith('https://'):

@@ -5,14 +5,15 @@ This email service automatically configures itself based on the DjangoConfig ins
 without requiring manual parameter passing.
 """
 
-from typing import List, Optional, Dict, Any
+import logging
 import socket
 from smtplib import SMTPException
-import logging
-from django.core.mail import send_mail, EmailMultiAlternatives
+from typing import Any, Dict, List, Optional
+
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.conf import settings
 
 from ..base import BaseCfgModule
 

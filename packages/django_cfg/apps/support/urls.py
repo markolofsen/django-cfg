@@ -1,8 +1,9 @@
 from django.urls import path
 from rest_framework_nested import routers
-from .views import TicketViewSet, MessageViewSet
-from .views.chat import ticket_chat_view, send_message_ajax
+
+from .views import MessageViewSet, TicketViewSet
 from .views.admin import ticket_admin_chat_view
+from .views.chat import send_message_ajax, ticket_chat_view
 
 app_name = 'cfg_support'
 
@@ -20,4 +21,4 @@ chat_urlpatterns = [
     path('admin/chat/<uuid:ticket_uuid>/', ticket_admin_chat_view, name='ticket-admin-chat'),
 ]
 
-urlpatterns = router.urls + tickets_router.urls + chat_urlpatterns 
+urlpatterns = router.urls + tickets_router.urls + chat_urlpatterns

@@ -1,7 +1,7 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from ..models import CustomUser, RegistrationSource, UserRegistrationSource
-
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -10,6 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
     initials = serializers.ReadOnlyField()
     display_username = serializers.ReadOnlyField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -40,6 +41,16 @@ class UserSerializer(serializers.ModelSerializer):
             "last_login",
             "unanswered_messages_count",
         ]
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_avatar(self, obj):
+        """Return full URL for avatar or None."""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request is not None:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
 
 
 
@@ -130,7 +141,7 @@ class RegistrationSourceSerializer(serializers.ModelSerializer):
 class UserRegistrationSourceSerializer(serializers.ModelSerializer):
     """Serializer for UserRegistrationSource model."""
     source = RegistrationSourceSerializer(read_only=True)
-    
+
     class Meta:
         model = UserRegistrationSource
         fields = ["id", "user", "source", "first_registration", "registration_date"]
@@ -141,15 +152,15 @@ class UserWithSourcesSerializer(UserSerializer):
     """Extended user serializer with sources information."""
     sources = serializers.SerializerMethodField()
     primary_source = serializers.SerializerMethodField()
-    
+
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ['sources', 'primary_source']
-    
+
     def get_sources(self, obj):
         """Get all sources for the user."""
         user_sources = UserRegistrationSource.objects.filter(user=obj).select_related('source')
         return UserRegistrationSourceSerializer(user_sources, many=True).data
-    
+
     def get_primary_source(self, obj):
         """Get the primary source for the user."""
         primary_source = obj.primary_source

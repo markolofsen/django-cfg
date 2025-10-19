@@ -1,0 +1,9 @@
+{
+  "label": "Django Unfold",
+  "position": 8,
+  "link": {
+    "type": "generated-index",
+    "description": "Modern Django admin interface with enhanced UI/UX and advanced features."
+  },
+  "collapsed": true
+}

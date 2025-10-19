@@ -5,7 +5,7 @@ Handles Django security configuration.
 Size: ~100 lines (focused on security settings)
 """
 
-from typing import Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig
@@ -41,6 +41,9 @@ class SecuritySettingsGenerator:
         """
         Generate security settings.
 
+        Uses SecurityBuilder for comprehensive security configuration
+        with Docker awareness and automatic domain normalization.
+
         Returns:
             Dictionary with security configuration
 
@@ -48,53 +51,29 @@ class SecuritySettingsGenerator:
             >>> generator = SecuritySettingsGenerator(config)
             >>> settings = generator.generate()
         """
-        settings = {}
+        from ...builders.security_builder import SecurityBuilder
 
-        # Generate security defaults if domains or SSL redirect are configured
-        if self.config.security_domains or self.config.ssl_redirect is not None:
-            security_defaults = self._get_security_defaults()
-            settings.update(security_defaults)
+        # Use SecurityBuilder for all security settings
+        builder = SecurityBuilder(self.config)
+        settings = builder.build_security_settings()
 
-        # Additional security settings for production
-        if self.config.env_mode == "production":
-            production_security = self._get_production_security()
-            settings.update(production_security)
+        # Add base Django settings
+        base_settings = self._get_base_settings()
+        settings.update(base_settings)
 
         return settings
 
-    def _get_security_defaults(self) -> Dict[str, Any]:
+    def _get_base_settings(self) -> Dict[str, Any]:
         """
-        Get security defaults based on configuration.
+        Get base Django settings (non-security specific).
 
         Returns:
-            Dictionary with security defaults
-        """
-        from ....utils.smart_defaults import SmartDefaults
-
-        security_defaults = SmartDefaults.get_security_defaults(
-            self.config.security_domains,
-            self.config.env_mode,
-            self.config.debug,
-            self.config.ssl_redirect,
-            self.config.cors_allow_headers
-        )
-
-        return security_defaults
-
-    def _get_production_security(self) -> Dict[str, Any]:
-        """
-        Get production-specific security settings.
-
-        Returns:
-            Dictionary with production security settings
+            Dictionary with base settings
         """
         return {
-            "SECURE_SSL_REDIRECT": True,
-            "SECURE_HSTS_SECONDS": 31536000,  # 1 year
-            "SECURE_HSTS_INCLUDE_SUBDOMAINS": True,
-            "SECURE_HSTS_PRELOAD": True,
-            "SESSION_COOKIE_SECURE": True,
-            "CSRF_COOKIE_SECURE": True,
+            'USE_TZ': True,
+            'USE_I18N': True,
+            'USE_L10N': True,
         }
 
 

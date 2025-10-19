@@ -10,9 +10,9 @@ Contains generators for utility Django settings:
 """
 
 from .email import EmailSettingsGenerator
-from .logging import LoggingSettingsGenerator
 from .i18n import I18nSettingsGenerator
 from .limits import LimitsSettingsGenerator
+from .logging import LoggingSettingsGenerator
 from .security import SecuritySettingsGenerator
 
 __all__ = [

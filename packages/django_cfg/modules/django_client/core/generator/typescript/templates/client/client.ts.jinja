@@ -88,6 +88,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      headers?: Record<string, string>;
     }
   ): Promise<T> {
     // Wrap request in retry logic if configured
@@ -123,16 +124,19 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      headers?: Record<string, string>;
     }
   ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     const startTime = Date.now();
 
-    // Build headers
-    const headers: Record<string, string> = {};
+    // Build headers - start with custom headers from options
+    const headers: Record<string, string> = {
+      ...(options?.headers || {})
+    };
 
     // Don't set Content-Type for FormData (browser will set it with boundary)
-    if (!options?.formData) {
+    if (!options?.formData && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 
@@ -322,6 +326,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      headers?: Record<string, string>;
     }
   ): Promise<T> {
     // Wrap request in retry logic if configured
@@ -343,15 +348,18 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      headers?: Record<string, string>;
     }
   ): Promise<T> {
     const url = new URL(path, this.baseUrl);
 
-    // Build headers
-    const headers: Record<string, string> = {};
+    // Build headers - start with custom headers from options
+    const headers: Record<string, string> = {
+      ...(options?.headers || {})
+    };
 
     // Don't set Content-Type for FormData (browser will set it with boundary)
-    if (!options?.formData) {
+    if (!options?.formData && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 

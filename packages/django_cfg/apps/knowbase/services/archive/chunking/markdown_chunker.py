@@ -4,11 +4,12 @@ Markdown document chunker.
 Chunks markdown by headings and sections.
 """
 
-from typing import List, Dict, Any
-from .base import BaseChunker
-from ..context.models import ChunkData
-from ..context.builders import ChunkContextBuilder
+from typing import Any, Dict, List
+
 from ....models.archive import ArchiveItem, ChunkType
+from ..context.builders import ChunkContextBuilder
+from ..context.models import ChunkData
+from .base import BaseChunker
 
 
 class MarkdownChunker(BaseChunker):

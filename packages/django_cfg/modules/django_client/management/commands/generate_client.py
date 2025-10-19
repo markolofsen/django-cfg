@@ -7,8 +7,8 @@ Usage:
     python manage.py generate_client --interactive
 """
 
+
 from django.core.management.base import BaseCommand, CommandError
-from typing import List, Optional
 
 
 class Command(BaseCommand):
@@ -78,7 +78,7 @@ class Command(BaseCommand):
         """Handle command execution."""
         try:
             # Import here to avoid Django import errors
-            from django_cfg.modules.django_client.core import get_openapi_service, GroupManager
+            from django_cfg.modules.django_client.core import get_openapi_service
 
             # Get service
             service = get_openapi_service()
@@ -126,8 +126,9 @@ class Command(BaseCommand):
             self.stdout.write(f"    Apps: {len(group_config.apps)} pattern(s)")
 
             # Show matched apps
-            from django_cfg.modules.django_client.core import GroupManager
             from django.apps import apps
+
+            from django_cfg.modules.django_client.core import GroupManager
 
             installed_apps = [app.name for app in apps.get_app_configs()]
             manager = GroupManager(service.config, installed_apps, groups=service.get_groups())
@@ -151,14 +152,15 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("✅ Configuration is valid!"))
 
             # Show statistics
-            from django_cfg.modules.django_client.core import GroupManager
             from django.apps import apps
+
+            from django_cfg.modules.django_client.core import GroupManager
 
             installed_apps = [app.name for app in apps.get_app_configs()]
             manager = GroupManager(service.config, installed_apps, groups=service.get_groups())
             stats = manager.get_statistics()
 
-            self.stdout.write(f"\nStatistics:")
+            self.stdout.write("\nStatistics:")
             self.stdout.write(f"  • Total groups: {stats['total_groups']}")
             self.stdout.write(f"  • Total apps in groups: {stats['total_apps_in_groups']}")
             self.stdout.write(f"  • Ungrouped apps: {stats['ungrouped_apps']}")
@@ -239,17 +241,18 @@ class Command(BaseCommand):
         # Generate clients
         self.stdout.write("\n" + "=" * 60)
 
-        from django_cfg.modules.django_client.core import (
-            GroupManager,
-            parse_openapi,
-            PythonGenerator,
-            TypeScriptGenerator,
-            ArchiveManager,
-        )
+        import shutil
+
         from django.apps import apps
         from drf_spectacular.generators import SchemaGenerator
-        from pathlib import Path
-        import shutil
+
+        from django_cfg.modules.django_client.core import (
+            ArchiveManager,
+            GroupManager,
+            PythonGenerator,
+            TypeScriptGenerator,
+            parse_openapi,
+        )
 
         # Clean output folders before generation
         schemas_dir = service.config.get_schemas_dir()

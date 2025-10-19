@@ -5,9 +5,9 @@ Refactored admin interfaces with Material Icons and optimized queries.
 """
 
 from .api_key_admin import CloudflareApiKeyAdmin
-from .site_admin import CloudflareSiteAdmin
 from .log_admin import MaintenanceLogAdmin
 from .scheduled_admin import ScheduledMaintenanceAdmin
+from .site_admin import CloudflareSiteAdmin
 
 __all__ = [
     'CloudflareApiKeyAdmin',

@@ -4,7 +4,7 @@ Database configuration converters.
 Convert DatabaseConfig to Django settings format.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def to_django_config(config: "DatabaseConfig") -> Dict[str, Any]:  # type: ignore

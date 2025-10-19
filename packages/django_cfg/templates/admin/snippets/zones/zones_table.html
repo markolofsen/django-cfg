@@ -84,9 +84,10 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex items-center space-x-2 text-sm">
-                                        <a href="/schema/{{ row.name }}/schema/swagger/" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800/30 transition-colors text-xs font-medium">swagger</a>
-                                        <a href="/schema/{{ row.name }}/redoc/" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800/30 transition-colors text-xs font-medium">redoc</a>
-                                        <a href="/schema/{{ row.name }}/schema/" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-base-100 dark:bg-base-800 text-font-default-light dark:text-font-default-dark hover:bg-base-200 dark:hover:bg-base-700 transition-colors text-xs font-medium">schema</a>
+                                        <a href="{{ row.schema_url }}" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-default bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800/30 transition-colors text-xs font-medium">
+                                            <span class="material-icons text-xs mr-1">description</span>
+                                            Schema
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

@@ -1,1 +1,1 @@
-# Managers package 
+# Managers package

@@ -1,17 +1,5 @@
-# Environment files
-# .env
 
-# Volumes (persistent data)
-volumes/
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-*.tmp
-temp/
-
-# OS files
-.DS_Store
-Thumbs.db
+# Environment secrets (contains real API keys - DO NOT COMMIT)
+# .env.secrets
+# .env.local
+# .env.*.local

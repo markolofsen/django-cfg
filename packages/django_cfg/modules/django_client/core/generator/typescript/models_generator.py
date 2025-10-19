@@ -5,6 +5,7 @@ TypeScript Models Generator - Generates TypeScript interfaces and enums.
 from __future__ import annotations
 
 from jinja2 import Environment
+
 from ...ir import IRSchemaObject
 from ..base import GeneratedFile
 
@@ -176,7 +177,7 @@ class ModelsGenerator:
         # - not required: add ? optional marker
         if schema.nullable:
             ts_type = f"{ts_type} | null"
-        
+
         optional_marker = "" if is_required else "?"
 
         # Comment
@@ -208,9 +209,14 @@ class ModelsGenerator:
             if not var_name or (isinstance(value, str) and value == ''):
                 continue
 
-            # Sanitize var_name: replace dots and spaces with underscores, convert to UPPER_CASE
-            # "TAR.GZ" -> "TAR_GZ", "TAR GZ" -> "TAR_GZ"
-            sanitized_var_name = var_name.replace('.', '_').replace(' ', '_').upper()
+            # Sanitize var_name: replace special chars with words/underscores, convert to UPPER_CASE
+            # "A+" -> "A_PLUS", "A-" -> "A_MINUS", "TAR.GZ" -> "TAR_DOT_GZ", "TAR GZ" -> "TAR_GZ"
+            sanitized_var_name = (var_name
+                .replace('+', '_PLUS')
+                .replace('-', '_MINUS')
+                .replace('.', '_DOT_')
+                .replace(' ', '_')
+                .upper())
 
             if isinstance(value, str):
                 member_lines.append(f'{sanitized_var_name} = "{value}",')

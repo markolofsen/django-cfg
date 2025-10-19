@@ -1,0 +1,87 @@
+import { BaseAPIClient } from '../base.mjs';
+
+/**
+ * {{ app_name.replace('_', ' ').title() }} API Client
+ * Auto-generated from OpenAPI schema
+ * @module {{ app_name }}
+ * @extends BaseAPIClient
+ */
+export class {{ class_name }} extends BaseAPIClient {
+    /**
+     * Initialize {{ app_name }} API client
+     * @param {string} [baseURL] - Optional base URL
+     */
+    constructor(baseURL) {
+        super(baseURL);
+    }
+
+{% for method in methods %}
+    /**
+     * {{ method.summary or method.name }}
+{%- if method.description %}
+     * {{ method.description }}
+{%- endif %}
+{%- for param in method.path_params %}
+     * @param {{ '{' }}{{ param.type }}{{ '}' }} {{ param.name }}{% if param.description %} - {{ param.description }}{% endif %}
+{%- endfor %}
+{%- if method.request_body %}
+     * @param {{ '{' }}{{ method.request_body.type }}{{ '}' }} data - Request body{% if method.request_body.description %} - {{ method.request_body.description }}{% endif %}
+{%- endif %}
+{%- if method.query_params %}
+     * @param {{ '{Object}' }} [params={}] - Query parameters
+{%- for param in method.query_params %}
+     * @param {{ '{' }}{{ param.type }}{{ '}' }} [params.{{ param.name }}]{% if param.description %} - {{ param.description }}{% endif %}
+{%- endfor %}
+{%- endif %}
+     * @returns {{ '{Promise<' }}{{ method.response_type }}{{ '>}' }} {{ 'Response data' if method.response_type != 'void' else 'No content' }}
+     */
+    async {{ method.name }}(
+{%- set params = [] %}
+{%- for param in method.path_params %}
+    {%- set _ = params.append(param.name) %}
+{%- endfor %}
+{%- if method.request_body %}
+    {%- set _ = params.append('data') %}
+{%- endif %}
+{%- if method.query_params %}
+    {%- set _ = params.append('params = {}') %}
+{%- endif %}
+{{- params | join(', ') -}}
+) {
+        const path = `{{ method.path }}`;
+{%- if method.http_method == 'GET' %}
+    {%- if method.query_params %}
+        return this.get(path, params);
+    {%- else %}
+        return this.get(path);
+    {%- endif %}
+{%- elif method.http_method == 'POST' %}
+    {%- if method.request_body %}
+        return this.post(path, data);
+    {%- else %}
+        return this.post(path, {});
+    {%- endif %}
+{%- elif method.http_method == 'PUT' %}
+    {%- if method.request_body %}
+        return this.put(path, data);
+    {%- else %}
+        return this.put(path, {});
+    {%- endif %}
+{%- elif method.http_method == 'PATCH' %}
+    {%- if method.request_body %}
+        return this.patch(path, data);
+    {%- else %}
+        return this.patch(path, {});
+    {%- endif %}
+{%- elif method.http_method == 'DELETE' %}
+        return this.delete(path);
+{%- endif %}
+    }
+{% endfor %}
+}
+
+// Default instance for convenience
+export const {{ instance_name }} = new {{ class_name }}();
+
+// Default export
+export default {{ class_name }};

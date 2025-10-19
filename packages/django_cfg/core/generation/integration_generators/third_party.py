@@ -5,8 +5,8 @@ Handles external service integrations like Telegram, Unfold, Constance.
 Size: ~150 lines (focused on third-party services)
 """
 
-from typing import Dict, Any, List, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig

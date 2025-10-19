@@ -1,10 +1,14 @@
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from drf_spectacular.utils import extend_schema, OpenApiExample
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import OpenApiExample, extend_schema
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
 
-from ..serializers.profile import UserSerializer, UserProfileUpdateSerializer, AvatarUploadSerializer
+from ..serializers.profile import (
+    AvatarUploadSerializer,
+    UserProfileUpdateSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -69,7 +73,7 @@ class UserProfileUpdateView(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         # Return full user data
-        user_serializer = UserSerializer(instance)
+        user_serializer = UserSerializer(instance, context={'request': request})
         return Response(user_serializer.data, status=status.HTTP_200_OK)
 
 
@@ -141,21 +145,21 @@ def upload_avatar(request):
     """Upload avatar for current user."""
     if 'avatar' not in request.FILES:
         return Response(
-            {'error': 'No avatar file provided'}, 
+            {'error': 'No avatar file provided'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     avatar_file = request.FILES['avatar']
     user = request.user
-    
+
     # Validate file
     serializer = AvatarUploadSerializer(user, data={'avatar': avatar_file}, partial=True)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     # Save avatar
     serializer.save()
-    
+
     # Return updated user data
-    user_serializer = UserSerializer(user)
-    return Response(user_serializer.data, status=status.HTTP_200_OK) 
+    user_serializer = UserSerializer(user, context={'request': request})
+    return Response(user_serializer.data, status=status.HTTP_200_OK)

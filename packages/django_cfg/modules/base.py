@@ -4,10 +4,10 @@ Base Module for Django CFG
 Provides base functionality for all auto-configuring modules.
 """
 
-from typing import Any, Optional, TYPE_CHECKING
-from abc import ABC
 import importlib
 import os
+from abc import ABC
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from django_cfg.core.config import DjangoConfig
@@ -20,13 +20,13 @@ class BaseCfgModule(ABC):
     Provides common functionality and configuration access.
     Auto-discovers configuration from Django settings.
     """
-    
+
     _config_instance: Optional["DjangoConfig"] = None
-    
+
     def __init__(self):
         """Initialize the base module."""
         self._config = None
-    
+
     @classmethod
     def get_config(cls) -> Optional["DjangoConfig"]:
         """Get the DjangoConfig instance automatically."""
@@ -51,6 +51,7 @@ class BaseCfgModule(ABC):
 
             # Fallback: try to create minimal config from Django settings
             from django.conf import settings
+
             from django_cfg.core.config import DjangoConfig
 
             return DjangoConfig(
@@ -67,7 +68,7 @@ class BaseCfgModule(ABC):
     def reset_config(cls):
         """Reset the cached config instance (useful for testing)."""
         cls._config_instance = None
-    
+
     def set_config(self, config: Any) -> None:
         """
         Set the configuration instance.
@@ -76,7 +77,7 @@ class BaseCfgModule(ABC):
             config: The DjangoConfig instance
         """
         self._config = config
-    
+
     def _get_config_key(self, key: str, default: Any) -> Any:
         """
         Get a key from the configuration instance.
@@ -88,15 +89,15 @@ class BaseCfgModule(ABC):
         try:
             # Get config using class method
             config = self.get_config()
-            
+
             # If config is available, get the key
             if config is not None:
                 result = getattr(config, key, default)
                 return result
-            
+
             # Fallback to default if no config available
             return default
-            
+
         except Exception:
             # Return default on any error
             return default
@@ -109,7 +110,7 @@ class BaseCfgModule(ABC):
             True if Support is enabled, False otherwise
         """
         return self._get_config_key('enable_support', True)
-    
+
     def is_accounts_enabled(self) -> bool:
         """
         Check if django-cfg Accounts is enabled.
@@ -118,7 +119,7 @@ class BaseCfgModule(ABC):
             True if Accounts is enabled, False otherwise
         """
         return self._get_config_key('enable_accounts', False)
-    
+
     def is_newsletter_enabled(self) -> bool:
         """
         Check if django-cfg Newsletter is enabled.
@@ -127,7 +128,7 @@ class BaseCfgModule(ABC):
             True if Newsletter is enabled, False otherwise
         """
         return self._get_config_key('enable_newsletter', False)
-    
+
     def is_leads_enabled(self) -> bool:
         """
         Check if django-cfg Leads is enabled.
@@ -136,7 +137,7 @@ class BaseCfgModule(ABC):
             True if Leads is enabled, False otherwise
         """
         return self._get_config_key('enable_leads', False)
-    
+
     def is_agents_enabled(self) -> bool:
         """
         Check if django-cfg Agents is enabled.
@@ -145,7 +146,7 @@ class BaseCfgModule(ABC):
             True if Agents is enabled, False otherwise
         """
         return self._get_config_key('enable_agents', False)
-    
+
     def is_knowbase_enabled(self) -> bool:
         """
         Check if django-cfg Knowbase is enabled.
@@ -154,7 +155,7 @@ class BaseCfgModule(ABC):
             True if Knowbase is enabled, False otherwise
         """
         return self._get_config_key('enable_knowbase', False)
-    
+
     def should_enable_tasks(self) -> bool:
         """
         Check if django-cfg Tasks is enabled.
@@ -165,7 +166,7 @@ class BaseCfgModule(ABC):
         """
 
         return self.get_config().should_enable_tasks()
-    
+
     def is_maintenance_enabled(self) -> bool:
         """
         Check if django-cfg Maintenance is enabled.

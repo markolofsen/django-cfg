@@ -6,8 +6,8 @@ of ExternalData from Django model instances.
 """
 
 from .content_generator import ExternalDataContentGenerator
-from .metadata_generator import ExternalDataMetadataGenerator
 from .field_analyzer import ExternalDataFieldAnalyzer
+from .metadata_generator import ExternalDataMetadataGenerator
 
 __all__ = [
     'ExternalDataContentGenerator',

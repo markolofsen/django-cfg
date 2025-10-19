@@ -1,6 +1,7 @@
 """Statistics section for dashboard."""
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from .base import DataSection
 
 
@@ -23,7 +24,6 @@ class StatsSection(DataSection):
     def get_app_stats(self) -> List[Dict[str, Any]]:
         """Get per-app statistics."""
         from django.apps import apps
-        from django.contrib.contenttypes.models import ContentType
 
         stats = []
 

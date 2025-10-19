@@ -10,7 +10,9 @@ Usage:
     python manage.py test_twilio --to +1234567890 --message "Test SMS"
 """
 
-from django_cfg.modules.django_twilio.management.commands.test_twilio import Command as TestTwilioCommand
+from django_cfg.modules.django_twilio.management.commands.test_twilio import (
+    Command as TestTwilioCommand,
+)
 
 
 class Command(TestTwilioCommand):

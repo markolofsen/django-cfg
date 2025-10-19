@@ -1,6 +1,7 @@
 """System section for dashboard."""
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from .base import DataSection
 
 

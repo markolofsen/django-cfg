@@ -4,12 +4,13 @@ Django Ngrok Service for django_cfg.
 Simple ngrok integration following KISS principle.
 """
 
-import os
-import logging
 import atexit
+import logging
+import os
 from typing import Optional
-from django_cfg.modules.base import BaseCfgModule
+
 from django_cfg.models.ngrok import NgrokConfig
+from django_cfg.modules.base import BaseCfgModule
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +22,15 @@ class NgrokError(Exception):
 
 class NgrokManager:
     """Simple ngrok tunnel manager."""
-    
+
     def __init__(self, config: NgrokConfig):
         self.config = config
         self.tunnel_url: Optional[str] = None
         self.listener = None
-        
+
         # Register cleanup on exit
         atexit.register(self.cleanup)
-    
+
     def start_tunnel(self, port: int = 8000) -> Optional[str]:
         """Start ngrok tunnel for given port."""
         if not self.config.enabled:
@@ -68,7 +69,7 @@ class NgrokManager:
         except Exception as e:
             logger.error(f"Failed to start ngrok tunnel: {e}")
             return None
-    
+
     def stop_tunnel(self) -> None:
         """Stop ngrok tunnel."""
         if self.listener:
@@ -80,15 +81,15 @@ class NgrokManager:
             finally:
                 self.listener = None
                 self.tunnel_url = None
-    
+
     def get_tunnel_url(self) -> Optional[str]:
         """Get current tunnel URL."""
         return self.tunnel_url
-    
+
     def is_active(self) -> bool:
         """Check if tunnel is active."""
         return self.tunnel_url is not None
-    
+
     def cleanup(self) -> None:
         """Cleanup on exit."""
         if self.is_active():
@@ -98,11 +99,11 @@ class NgrokManager:
 
 class DjangoNgrok(BaseCfgModule):
     """Main ngrok service for django-cfg."""
-    
+
     def __init__(self):
         super().__init__()
         self._manager: Optional[NgrokManager] = None
-    
+
     @property
     def manager(self) -> Optional[NgrokManager]:
         """Get ngrok manager (lazy-loaded)."""
@@ -115,28 +116,28 @@ class DjangoNgrok(BaseCfgModule):
                 logger.warning(f"Failed to get ngrok config: {e}")
                 return None
         return self._manager
-    
+
     @manager.setter
     def manager(self, value: Optional[NgrokManager]) -> None:
         """Set NgrokManager instance (for testing)."""
         self._manager = value
-    
+
     @manager.deleter
     def manager(self) -> None:
         """Delete NgrokManager instance (for testing)."""
         self._manager = None
-    
+
     def start_tunnel(self, port: int = 8000) -> Optional[str]:
         """Start ngrok tunnel."""
         if not self.manager:
             return None
         return self.manager.start_tunnel(port)
-    
+
     def stop_tunnel(self) -> None:
         """Stop ngrok tunnel."""
         if self.manager:
             self.manager.stop_tunnel()
-    
+
     def get_tunnel_url(self) -> Optional[str]:
         """Get current tunnel URL from manager or environment variables."""
         # First try to get from manager (active tunnel)
@@ -144,16 +145,16 @@ class DjangoNgrok(BaseCfgModule):
             tunnel_url = self.manager.get_tunnel_url()
             if tunnel_url:
                 return tunnel_url
-        
+
         # Fallback to environment variables (set by runserver_ngrok)
         return self.get_tunnel_url_from_env()
-    
+
     def is_tunnel_active(self) -> bool:
         """Check if tunnel is active."""
         if not self.manager:
             return False
         return self.manager.is_active()
-    
+
     def get_webhook_url(self, path: str = "/webhooks/") -> str:
         """Get webhook URL with ngrok tunnel or fallback to api_url."""
         # Try to get tunnel URL first
@@ -174,46 +175,46 @@ class DjangoNgrok(BaseCfgModule):
 
         # Ultimate fallback
         return f"http://localhost:8000/{path.lstrip('/')}"
-    
+
     def get_api_url(self) -> str:
         """Get API URL - tunnel URL if active, otherwise config api_url."""
         # Try tunnel URL first
         tunnel_url = self.get_tunnel_url()
         if tunnel_url:
             return tunnel_url
-        
+
         # Fallback to config api_url
         config = self.get_config()
         if config and hasattr(config, 'api_url'):
             return config.api_url
-        
+
         # Ultimate fallback
         return "http://localhost:8000"
-    
+
     def get_tunnel_url_from_env(self) -> Optional[str]:
         """Get ngrok tunnel URL from environment variables."""
         # Try different environment variable names
         env_vars = ['NGROK_URL', 'DJANGO_NGROK_URL', 'NGROK_API_URL']
-        
+
         for env_var in env_vars:
             url = os.environ.get(env_var)
             if url and url.startswith(('http://', 'https://')):
                 return url
-        
+
         return None
-    
+
     def get_ngrok_host_from_env(self) -> Optional[str]:
         """Get ngrok host from environment variables."""
         return os.environ.get('NGROK_HOST')
-    
+
     def get_ngrok_scheme_from_env(self) -> Optional[str]:
         """Get ngrok scheme from environment variables."""
         return os.environ.get('NGROK_SCHEME', 'https')
-    
+
     def is_ngrok_available_from_env(self) -> bool:
         """Check if ngrok URL is available from environment variables."""
         return self.get_tunnel_url_from_env() is not None
-    
+
     def get_effective_tunnel_url(self) -> Optional[str]:
         """Get effective tunnel URL (alias for get_tunnel_url for clarity)."""
         return self.get_tunnel_url()
@@ -284,11 +285,11 @@ def get_effective_tunnel_url() -> Optional[str]:
 # Export public API
 __all__ = [
     "DjangoNgrok",
-    "NgrokManager", 
+    "NgrokManager",
     "NgrokError",
     "get_ngrok_service",
     "start_tunnel",
-    "stop_tunnel", 
+    "stop_tunnel",
     "get_tunnel_url",
     "get_webhook_url",
     "get_api_url",

@@ -4,14 +4,13 @@ External Data models for integrating external Django models into django_cfg.apps
 Provides a unified way to vectorize and search any external data source.
 """
 
-from django.db import models
-from django.conf import settings
-from pgvector.django import VectorField
-from typing import Optional, List, Dict, Any
-import json
-from enum import Enum
+from typing import Any, Dict
 
-from .base import UserScopedModel, ProcessingStatus, TimestampedModel
+from django.conf import settings
+from django.db import models
+from pgvector.django import VectorField
+
+from .base import TimestampedModel, UserScopedModel
 from .document import DocumentCategory
 
 
@@ -40,11 +39,11 @@ class ExternalData(UserScopedModel):
     This model represents any external data source (Django models, APIs, etc.)
     that has been integrated into the knowledge base for semantic search.
     """
-    
+
     # Manager will be set after class definition
     from ..managers.external_data import ExternalDataManager
     objects = ExternalDataManager()
-    
+
     # Basic information
     title = models.CharField(
         max_length=512,
@@ -54,7 +53,7 @@ class ExternalData(UserScopedModel):
         blank=True,
         help_text="Description of what this external data contains"
     )
-    
+
     # Source configuration
     source_type = models.CharField(
         max_length=20,
@@ -72,7 +71,7 @@ class ExternalData(UserScopedModel):
         blank=True,
         help_text="Configuration for data extraction (fields, filters, etc.)"
     )
-    
+
     # Content and metadata
     content = models.TextField(
         blank=True,
@@ -89,7 +88,7 @@ class ExternalData(UserScopedModel):
         blank=True,
         help_text="Additional metadata from the source"
     )
-    
+
     # Processing status
     status = models.CharField(
         max_length=20,
@@ -101,7 +100,7 @@ class ExternalData(UserScopedModel):
         blank=True,
         help_text="Error message if processing failed"
     )
-    
+
     # Vectorization settings
     chunk_size = models.PositiveIntegerField(
         default=1000,
@@ -116,13 +115,13 @@ class ExternalData(UserScopedModel):
         default="text-embedding-ada-002",
         help_text="Embedding model used for vectorization"
     )
-    
+
     # Search settings
     similarity_threshold = models.FloatField(
         default=0.5,
         help_text="Similarity threshold for this external data (0.0-1.0). Lower = more results, higher = more precise"
     )
-    
+
     # Processing timestamps
     processed_at = models.DateTimeField(
         null=True, blank=True,
@@ -132,7 +131,7 @@ class ExternalData(UserScopedModel):
         null=True, blank=True,
         help_text="When the source data was last updated"
     )
-    
+
     # Statistics
     total_chunks = models.PositiveIntegerField(
         default=0,
@@ -146,7 +145,7 @@ class ExternalData(UserScopedModel):
         default=0.0,
         help_text="Total cost for processing this data (USD)"
     )
-    
+
     # Organization
     category = models.ForeignKey(
         DocumentCategory,
@@ -159,7 +158,7 @@ class ExternalData(UserScopedModel):
         blank=True,
         help_text="Tags for categorization and filtering"
     )
-    
+
     # Access control
     is_active = models.BooleanField(
         default=True,
@@ -169,7 +168,7 @@ class ExternalData(UserScopedModel):
         default=False,
         help_text="Whether this data is publicly searchable"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_external_data'
         verbose_name = 'External Data'
@@ -184,7 +183,7 @@ class ExternalData(UserScopedModel):
             models.Index(fields=['content_hash']),
         ]
         ordering = ['-processed_at', '-created_at']
-    
+
     def save(self, *args, **kwargs):
         """Override save to generate content_hash if not provided."""
         # Store original hash for comparison in signals
@@ -196,7 +195,7 @@ class ExternalData(UserScopedModel):
                 self._original_content_hash = None
         else:
             self._original_content_hash = None
-            
+
         # Generate hash if not provided
         if not self.content_hash and self.content:
             import hashlib
@@ -207,51 +206,46 @@ class ExternalData(UserScopedModel):
             new_hash = hashlib.sha256(self.content.encode()).hexdigest()
             if self.content_hash != new_hash:
                 self.content_hash = new_hash
-                
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         return f"{self.title} ({self.source_type})"
-    
+
     @property
     def full_name(self) -> str:
         """Full name including source type."""
         return f"{self.title} ({self.get_source_type_display()})"
-    
+
     @property
     def is_processed(self) -> bool:
         """Check if data has been successfully processed."""
         return self.status == ExternalDataStatus.COMPLETED
-    
+
     @property
     def is_outdated(self) -> bool:
         """Check if data needs reprocessing."""
         return (
             self.status == ExternalDataStatus.OUTDATED or
-            (self.source_updated_at and self.processed_at and 
+            (self.source_updated_at and self.processed_at and
              self.source_updated_at > self.processed_at)
         )
-    
-    @property
-    def chunks_count(self) -> int:
-        """Get the number of chunks for this external data."""
-        return self.chunks.count()
-    
+
     def get_config_value(self, key: str, default=None):
         """Get a configuration value."""
         return self.source_config.get(key, default)
-    
+
     def set_config_value(self, key: str, value):
         """Set a configuration value."""
         self.source_config[key] = value
         self.save(update_fields=['source_config'])
-    
+
     def add_tag(self, tag: str):
         """Add a tag if it doesn't exist."""
         if tag not in self.tags:
             self.tags.append(tag)
             self.save(update_fields=['tags'])
-    
+
     def remove_tag(self, tag: str):
         """Remove a tag if it exists."""
         if tag in self.tags:
@@ -265,10 +259,10 @@ class ExternalDataChunk(TimestampedModel):
     
     Similar to DocumentChunk but for external data sources.
     """
-    
+
     # Manager will be set after class definition
     objects = models.Manager()  # Temporary default manager
-    
+
     # Relationships
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -282,7 +276,7 @@ class ExternalDataChunk(TimestampedModel):
         related_name='chunks',
         help_text="External data this chunk belongs to"
     )
-    
+
     # Content
     content = models.TextField(
         blank=True,
@@ -292,7 +286,7 @@ class ExternalDataChunk(TimestampedModel):
         default=0,
         help_text="Sequential index of this chunk within the external data"
     )
-    
+
     # Vector embedding
     embedding = VectorField(
         dimensions=1536,  # OpenAI ada-002 default
@@ -304,7 +298,7 @@ class ExternalDataChunk(TimestampedModel):
         default="text-embedding-ada-002",
         help_text="Model used for embedding generation"
     )
-    
+
     # Metrics
     token_count = models.PositiveIntegerField(
         default=0,
@@ -318,14 +312,14 @@ class ExternalDataChunk(TimestampedModel):
         default=0.0,
         help_text="Cost for generating this embedding (USD)"
     )
-    
+
     # Context information
     chunk_metadata = models.JSONField(
         default=dict,
         blank=True,
         help_text="Additional metadata for this specific chunk"
     )
-    
+
     class Meta:
         db_table = 'django_cfg_knowbase_external_data_chunk'
         verbose_name = 'External Data Chunk'
@@ -338,10 +332,10 @@ class ExternalDataChunk(TimestampedModel):
             models.Index(fields=['chunk_index']),
         ]
         ordering = ['external_data', 'chunk_index']
-    
+
     def __str__(self) -> str:
         return f"{self.external_data.title} - Chunk {self.chunk_index}"
-    
+
     @property
     def content_preview(self) -> str:
         """Get a preview of the chunk content."""
@@ -350,19 +344,19 @@ class ExternalDataChunk(TimestampedModel):
         if len(self.content) <= 100:
             return self.content
         return self.content[:100] + "..."
-    
+
     @property
     def embedding_info(self) -> str:
         """Get embedding information."""
         if not self.embedding:
             return "No embedding"
         return f"{len(self.embedding)} dimensions"
-    
+
     @property
     def similarity_search_ready(self) -> bool:
         """Check if chunk is ready for similarity search."""
         return self.embedding is not None
-    
+
     @property
     def source_info(self) -> Dict[str, Any]:
         """Get source information for this chunk."""

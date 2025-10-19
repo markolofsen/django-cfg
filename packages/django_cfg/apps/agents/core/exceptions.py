@@ -2,12 +2,12 @@
 Exception classes for Django Agents.
 """
 
-from typing import Optional, Any
+from typing import Optional
 
 
 class AgentError(Exception):
     """Base exception for Django Agents."""
-    
+
     def __init__(self, message: str, details: Optional[dict] = None):
         super().__init__(message)
         self.message = message
@@ -16,7 +16,7 @@ class AgentError(Exception):
 
 class AgentNotFoundError(AgentError):
     """Raised when requested agent is not found in registry."""
-    
+
     def __init__(self, agent_name: str):
         message = f"Agent '{agent_name}' not found in registry"
         super().__init__(message)
@@ -25,10 +25,10 @@ class AgentNotFoundError(AgentError):
 
 class ExecutionError(AgentError):
     """Raised when agent execution fails."""
-    
+
     def __init__(
-        self, 
-        message: str, 
+        self,
+        message: str,
         agent_name: Optional[str] = None,
         original_error: Optional[Exception] = None
     ):
@@ -39,7 +39,7 @@ class ExecutionError(AgentError):
 
 class ValidationError(AgentError):
     """Raised when input/output validation fails."""
-    
+
     def __init__(self, message: str, validation_errors: Optional[list] = None):
         super().__init__(message)
         self.validation_errors = validation_errors or []
@@ -52,7 +52,7 @@ class ConfigurationError(AgentError):
 
 class PermissionError(AgentError):
     """Raised when user lacks required permissions."""
-    
+
     def __init__(self, message: str, required_permission: Optional[str] = None):
         super().__init__(message)
         self.required_permission = required_permission
@@ -60,7 +60,7 @@ class PermissionError(AgentError):
 
 class TimeoutError(AgentError):
     """Raised when agent execution times out."""
-    
+
     def __init__(self, message: str, timeout_seconds: Optional[float] = None):
         super().__init__(message)
         self.timeout_seconds = timeout_seconds
@@ -68,10 +68,10 @@ class TimeoutError(AgentError):
 
 class OrchestratorError(AgentError):
     """Raised when orchestrator execution fails."""
-    
+
     def __init__(
-        self, 
-        message: str, 
+        self,
+        message: str,
         orchestrator_name: Optional[str] = None,
         original_error: Optional[Exception] = None
     ):

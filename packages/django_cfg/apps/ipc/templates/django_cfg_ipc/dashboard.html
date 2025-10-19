@@ -1,0 +1,202 @@
+{% extends 'django_cfg_ipc/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Overview Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Requests -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-blue-500 dark:text-blue-400">bar_chart</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Today</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1" id="total-requests">
+            {{ overview_stats.total_requests_today|default:"0" }}
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Total Requests</p>
+    </div>
+
+    <!-- Active Methods -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-green-500 dark:text-green-400">functions</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Active</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1" id="active-methods-count">
+            {{ overview_stats.active_methods|length|default:"0" }}
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Active Methods</p>
+    </div>
+
+    <!-- Avg Response Time -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-yellow-500 dark:text-yellow-400">timer</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Average</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1" id="avg-response-time">
+            {{ overview_stats.avg_response_time_ms|default:"0" }}<span class="text-lg text-gray-600 dark:text-gray-400">ms</span>
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Response Time</p>
+    </div>
+
+    <!-- Success Rate -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-purple-500 dark:text-purple-400">check_circle</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Rate</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1" id="success-rate">
+            {{ overview_stats.success_rate|default:"0" }}<span class="text-lg text-gray-600 dark:text-gray-400">%</span>
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Success Rate</p>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+        <span class="material-icons mr-2">health_and_safety</span>
+        System Status
+    </h2>
+    <div id="system-status" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Redis Status -->
+        <div class="flex items-start gap-3">
+            <span class="material-icons flex-shrink-0 text-2xl {% if health.redis_connected %}text-green-500{% else %}text-red-500{% endif %}">
+                {% if health.redis_connected %}check_circle{% else %}cancel{% endif %}
+            </span>
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Redis</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                    {% if health.redis_connected %}Connected (DB 2){% else %}Disconnected{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Stream Status -->
+        <div class="flex items-start gap-3">
+            <span class="material-icons flex-shrink-0 text-2xl {% if health.stream_exists %}text-green-500{% else %}text-gray-500{% endif %}">
+                {% if health.stream_exists %}stream{% else %}stream_off{% endif %}
+            </span>
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Request Stream</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                    {% if health.stream_exists %}{{ health.stream_length }} entries{% else %}Not initialized{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Activity Status -->
+        <div class="flex items-start gap-3">
+            <span class="material-icons flex-shrink-0 text-2xl {% if health.recent_activity %}text-green-500{% else %}text-yellow-500{% endif %}">
+                {% if health.recent_activity %}notifications_active{% else %}notifications_paused{% endif %}
+            </span>
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Recent Activity</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                    {% if health.recent_activity %}Active (last 5 min){% else %}No recent activity{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+    <nav class="flex space-x-4">
+        <button class="tab-button active px-4 py-2 text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-medium" data-tab="overview">
+            Overview
+        </button>
+        <button class="tab-button px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 border-b-2 border-transparent font-medium" data-tab="requests">
+            Recent Requests
+        </button>
+        <button class="tab-button px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 border-b-2 border-transparent font-medium" data-tab="notifications">
+            Notifications
+        </button>
+        <button class="tab-button px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 border-b-2 border-transparent font-medium" data-tab="methods">
+            Methods
+        </button>
+    </nav>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content">
+    <!-- Overview Tab (Active by default) -->
+    <div id="overview-tab" class="tab-panel">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Top Method</h3>
+            <p class="text-gray-700 dark:text-gray-300" id="top-method">
+                {% if overview_stats.top_method %}
+                    <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-blue-600 dark:text-blue-300">{{ overview_stats.top_method }}</code>
+                {% else %}
+                    No data available
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Recent Requests Tab -->
+    <div id="requests-tab" class="tab-panel hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Time</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Method</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Correlation ID</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Params</th>
+                    </tr>
+                </thead>
+                <tbody id="requests-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-600 dark:text-gray-400">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Notifications Tab -->
+    <div id="notifications-tab" class="tab-panel hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Notification Statistics</h3>
+            <div id="notification-stats-content">
+                <p class="text-gray-600 dark:text-gray-400">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Methods Tab -->
+    <div id="methods-tab" class="tab-panel hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Method</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Count</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Percentage</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-400 uppercase">Avg Time</th>
+                    </tr>
+                </thead>
+                <tbody id="methods-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-600 dark:text-gray-400">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% load i18n %}
+{% now "U" as current_timestamp %}
+<script type="module" src="{% static 'django_cfg_ipc/js/dashboard.mjs' %}?v={{ current_timestamp }}"></script>
+{% endblock %}

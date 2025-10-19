@@ -4,16 +4,16 @@ Archive processing exceptions.
 Custom exception hierarchy for archive processing operations.
 """
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class ArchiveProcessingError(Exception):
     """Base exception for archive processing errors."""
-    
+
     def __init__(
-        self, 
-        message: str, 
-        code: str, 
+        self,
+        message: str,
+        code: str,
         details: Optional[Dict[str, Any]] = None
     ):
         self.message = message

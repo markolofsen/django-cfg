@@ -2,10 +2,10 @@
 Custom managers for knowledge base models.
 """
 
-from .base import *
-from .document import *
-from .chat import *
 from .archive import *
+from .base import *
+from .chat import *
+from .document import *
 from .external_data import *
 
 __all__ = [

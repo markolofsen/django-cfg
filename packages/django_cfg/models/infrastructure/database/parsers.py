@@ -4,7 +4,7 @@ Database connection string parsers.
 Utilities for parsing and detecting database engines from URLs.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 from urllib.parse import urlparse
 
 

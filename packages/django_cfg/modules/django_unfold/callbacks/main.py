@@ -4,32 +4,32 @@ Main Unfold Dashboard Callbacks
 Combines all callback modules into a single interface.
 """
 
-import logging
 import json
-from typing import Dict, Any
+import logging
+from typing import Any, Dict
 
 from django.utils import timezone
 
-from ...base import BaseCfgModule
-from ..models.dashboard import DashboardData
 from django_cfg.core.state import get_current_config
-
-from .statistics import StatisticsCallbacks
-from .system import SystemCallbacks
-from .actions import ActionsCallbacks
-from .charts import ChartsCallbacks
-from .commands import CommandsCallbacks
-from .revolution import OpenAPIClientCallbacks
-from .users import UsersCallbacks
-from .base import get_user_admin_urls
+from django_cfg.modules.django_dashboard.debug import save_section_render
+from django_cfg.modules.django_dashboard.sections.commands import CommandsSection
+from django_cfg.modules.django_dashboard.sections.documentation import DocumentationSection
 
 # Import new dashboard sections
 from django_cfg.modules.django_dashboard.sections.overview import OverviewSection
 from django_cfg.modules.django_dashboard.sections.stats import StatsSection
 from django_cfg.modules.django_dashboard.sections.system import SystemSection
-from django_cfg.modules.django_dashboard.sections.commands import CommandsSection
-from django_cfg.modules.django_dashboard.sections.documentation import DocumentationSection
-from django_cfg.modules.django_dashboard.debug import save_section_render
+
+from ...base import BaseCfgModule
+from ..models.dashboard import DashboardData
+from .actions import ActionsCallbacks
+from .base import get_user_admin_urls
+from .charts import ChartsCallbacks
+from .commands import CommandsCallbacks
+from .apizones import OpenAPIClientCallbacks
+from .statistics import StatisticsCallbacks
+from .system import SystemCallbacks
+from .users import UsersCallbacks
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class UnfoldCallbacks(
     Combines all callback modules using multiple inheritance for
     clean separation of concerns while maintaining a single interface.
     """
-    
+
     def main_dashboard_callback(self, request, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main dashboard callback function with comprehensive system data.
@@ -192,7 +192,7 @@ class UnfoldCallbacks(
                 "quick_actions": [
                     action.model_dump() for action in dashboard_data.quick_actions
                 ],
-                
+
                 # Additional categorized actions
                 "admin_actions": [
                     action.model_dump()
@@ -222,17 +222,17 @@ class UnfoldCallbacks(
                     ],
                     "rows": OpenAPIClientCallbacks().get_openapi_groups_data()[0],
                 },
-                
+
                 # Recent users
                 "recent_users": self.get_recent_users(),
                 "user_admin_urls": get_user_admin_urls(),
-                
+
                 # App statistics
                 "app_statistics": self.get_app_statistics(),
-                
+
                 # Django commands
                 "django_commands": self.get_django_commands(),
-                
+
                    # Charts data - serialize to JSON for JavaScript
                    "charts": {
                        "user_registrations_json": json.dumps(self.get_user_registration_chart_data()),
@@ -240,11 +240,11 @@ class UnfoldCallbacks(
                        "user_registrations": self.get_user_registration_chart_data(),
                        "user_activity": self.get_user_activity_chart_data(),
                    },
-                   
+
                    # Activity tracker data
                    "activity_tracker": self.get_activity_tracker_data(),
-                
-                
+
+
                 # Meta information
                 "last_updated": dashboard_data.last_updated,
                 "environment": dashboard_data.environment,
@@ -260,13 +260,13 @@ class UnfoldCallbacks(
             if 'user_activity' in charts_data:
                 act_data = charts_data['user_activity']
                 logger.info(f"Activity chart labels: {act_data.get('labels', [])}")
-            
+
             # Log recent users data for debugging
             recent_users_data = context.get('recent_users', [])
             logger.info(f"Recent users data count: {len(recent_users_data)}")
             if recent_users_data:
                 logger.info(f"First user: {recent_users_data[0].get('username', 'N/A')}")
-            
+
             # Log activity tracker data for debugging
             activity_tracker_data = context.get('activity_tracker', [])
             logger.info(f"Activity tracker data count: {len(activity_tracker_data)}")

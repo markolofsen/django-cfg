@@ -8,8 +8,8 @@ Instead generates: "ProductStatusEnum", "OrderStatusEnum", "PostStatusEnum", etc
 """
 
 import logging
-from typing import Dict, Any, Optional
 import re
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
