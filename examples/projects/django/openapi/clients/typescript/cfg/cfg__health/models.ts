@@ -1,21 +1,17 @@
 /**
- * Serializer for health check response.
+ * Health check response.
  * 
  * Response model (includes read-only fields).
  */
 export interface HealthCheck {
-  /** Overall health status: healthy, degraded, or unhealthy */
+  /** Health status: healthy or unhealthy */
   status: string;
-  /** Timestamp of the health check */
+  /** Configured wrapper URL */
+  wrapper_url: string;
+  /** Whether API key is configured */
+  has_api_key: boolean;
+  /** Current timestamp */
   timestamp: string;
-  /** Service name */
-  service: string;
-  /** Django-CFG version */
-  version: string;
-  /** Detailed health checks for databases, cache, and system */
-  checks: Record<string, any>;
-  /** Environment information */
-  environment: Record<string, any>;
 }
 
 /**

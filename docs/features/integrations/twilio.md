@@ -250,7 +250,6 @@ app:
   name: "Your App"
   api_url: "https://api.yourdomain.com"
   site_url: "https://yourdomain.com"
-  otp_url: "https://yourdomain.com/auth/otp/{code}"
 
 # === Twilio Configuration ===
 twilio:

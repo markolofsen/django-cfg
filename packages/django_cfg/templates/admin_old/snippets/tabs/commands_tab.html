@@ -1,0 +1,114 @@
+{% load unfold %}
+
+<!-- Commands Tab Content -->
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">Django Commands</h1>
+                <p class="text-font-default-light dark:text-font-default-dark mt-2">
+                    Discover and explore all available Django management commands
+                </p>
+            </div>
+            <div class="flex items-center space-x-2 text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                <span class="material-icons text-purple-500">terminal</span>
+                <span>{{ django_commands.total_commands }} commands available</span>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-base-50 dark:bg-base-800 rounded-lg p-4">
+                <div class="flex items-center">
+                    <span class="material-icons text-blue-600 dark:text-blue-400 mr-3">terminal</span>
+                    <div>
+                        <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ django_commands.total_commands }}</div>
+                        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Total Commands</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-base-50 dark:bg-base-800 rounded-lg p-4">
+                <div class="flex items-center">
+                    <span class="material-icons text-green-600 dark:text-green-400 mr-3">settings</span>
+                    <div>
+                        <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ django_commands.core_commands }}</div>
+                        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Core Commands</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-base-50 dark:bg-base-800 rounded-lg p-4">
+                <div class="flex items-center">
+                    <span class="material-icons text-indigo-600 dark:text-indigo-400 mr-3">apps</span>
+                    <div>
+                        <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ django_commands.custom_commands }}</div>
+                        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Custom Commands</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-base-50 dark:bg-base-800 rounded-lg p-4">
+                <div class="flex items-center">
+                    <span class="material-icons text-purple-600 dark:text-purple-400 mr-3">category</span>
+                    <div>
+                        <div class="text-2xl font-bold text-font-important-light dark:text-font-important-dark">{{ django_commands.categories|length }}</div>
+                        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Categories</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commands Section -->
+    {% include 'admin/snippets/components/django_commands.html' %}
+
+    <!-- Documentation Section -->
+    <div class="mt-12">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-font-important-light dark:text-font-important-dark flex items-center">
+                    <span class="material-icons text-blue-500 mr-2">menu_book</span>
+                    Commands Documentation
+                </h2>
+                <p class="text-font-default-light dark:text-font-default-dark mt-2">
+                    Complete guide to Django management commands
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-base-900 rounded-lg border border-base-200 dark:border-base-700 overflow-hidden shadow-sm">
+            <div class="p-6">
+                {% if documentation_content %}
+                    <!-- Rendered Markdown Content -->
+                    <div class="prose prose-slate dark:prose-invert max-w-none">
+                        {{ documentation_content|safe }}
+                    </div>
+                {% else %}
+                    <!-- Fallback: Basic documentation -->
+                    <div class="prose prose-slate dark:prose-invert max-w-none">
+                        <h2>Django Management Commands</h2>
+                        <p>Django management commands provide a command-line interface for administrative tasks.</p>
+
+                        <h3>Common Commands</h3>
+                        <ul>
+                            <li><code>migrate</code> - Apply database migrations</li>
+                            <li><code>makemigrations</code> - Create new migrations</li>
+                            <li><code>runserver</code> - Start development server</li>
+                            <li><code>createsuperuser</code> - Create admin user</li>
+                            <li><code>collectstatic</code> - Collect static files</li>
+                        </ul>
+
+                        <h3>Getting Help</h3>
+                        <p>To get help for any command, use:</p>
+                        <pre class="bg-base-50 dark:bg-base-800 rounded-lg p-4 overflow-x-auto text-sm"><code>python manage.py help &lt;command_name&gt;</code></pre>
+
+                        <h3>Custom Commands</h3>
+                        <p>You can create custom management commands by adding them to <code>management/commands/</code> directory in your Django app.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

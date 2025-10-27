@@ -166,9 +166,13 @@ dashboard.add_chart_widget(
 
 ### Custom Dashboard Callbacks
 
+Dashboard callbacks allow you to add custom widgets and metrics to your dashboard. Django-CFG provides a powerful **Dashboard Widgets System** with type-safe configuration and automatic template variable resolution.
+
 ```python
-# callbacks.py
+# config.py
 from django_cfg.modules.django_unfold.callbacks import UnfoldCallbacks
+from django_cfg.modules.django_unfold.models.dashboard import StatCard, StatsCardsWidget
+from django_cfg import Icons
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
@@ -176,51 +180,94 @@ from datetime import timedelta
 User = get_user_model()
 
 def dashboard_callback(request, context):
-    """Custom dashboard callback"""
-    
-    # Add custom statistics
-    context.update({
-        'total_users': User.objects.count(),
-        'active_users': User.objects.filter(
-            last_login__gte=timezone.now() - timedelta(days=30)
-        ).count(),
-        'new_users_today': User.objects.filter(
-            date_joined__gte=timezone.now().date()
-        ).count(),
-    })
-    
-    # Add custom widgets
-    context['custom_widgets'] = [
-        {
-            'title': 'System Health',
-            'template': 'admin/widgets/system_health.html',
-            'data': get_system_health_data()
-        },
-        {
-            'title': 'Recent Activity',
-            'template': 'admin/widgets/recent_activity.html',
-            'data': get_recent_activity_data()
-        }
+    """Custom dashboard with widgets."""
+
+    # 1. Get real data FIRST (before calling base callback)
+    total_users = User.objects.count()
+    week_ago = timezone.now() - timedelta(days=7)
+    recent_users = User.objects.filter(date_joined__gte=week_ago).count()
+    active_users = User.objects.filter(
+        last_login__gte=timezone.now() - timedelta(days=30)
+    ).count()
+
+    # 2. Create widgets with template variables
+    custom_widgets = [
+        StatsCardsWidget(
+            title="User Metrics",
+            cards=[
+                StatCard(
+                    title="Total Users",
+                    value="{{ total_users }}",  # Template variable - auto-resolved
+                    icon=Icons.PEOPLE,
+                    change="{{ recent_users_change }}",
+                    change_type="positive" if recent_users > 0 else "neutral",
+                    description="Registered users",
+                    color="primary"
+                ),
+                StatCard(
+                    title="Active Users",
+                    value="{{ active_users }}",
+                    icon=Icons.PERSON,
+                    description="Last 30 days",
+                    color="success"
+                ),
+            ]
+        )
     ]
-    
+
+    # 3. Add custom widgets and metrics to context BEFORE calling main callback
+    context.update({
+        # Widgets tab widgets (MUST be added before main_dashboard_callback!)
+        "custom_widgets": custom_widgets,
+
+        # Template variables for widgets (actual values)
+        "total_users": total_users,
+        "recent_users_change": f"+{recent_users}" if recent_users > 0 else "0",
+        "active_users": active_users,
+    })
+
+    # 4. NOW call base callback - it will pick up custom_widgets from context
+    unfold_callbacks = UnfoldCallbacks()
+    context = unfold_callbacks.main_dashboard_callback(request, context)
+
+    # 5. Add additional dashboard metadata (optional)
+    context.update({
+        "dashboard_title": "My Dashboard",
+        "dashboard_subtitle": "Real-time metrics",
+    })
+
     return context
+```
 
-def get_system_health_data():
-    """Get system health metrics"""
-    import psutil
-    
-    return {
-        'cpu_usage': psutil.cpu_percent(),
-        'memory_usage': psutil.virtual_memory().percent,
-        'disk_usage': psutil.disk_usage('/').percent,
-        'load_average': psutil.getloadavg()[0] if hasattr(psutil, 'getloadavg') else 0
-    }
+:::tip[Dashboard Widgets System]
+Django-CFG includes a powerful **Dashboard Widgets System** with:
+- **Type-Safe Configuration** - Define widgets using Pydantic models (`StatsCardsWidget`, `StatCard`)
+- **Template Variables** - Use `{{ variable }}` syntax for dynamic values
+- **Automatic Resolution** - Template variables automatically resolved from context
+- **Material Icons** - 2234+ icons with full IDE autocomplete (`Icons.*`)
+- **Real-Time Metrics** - System, RPC, and custom application metrics
+- **Tabbed Interface** - Widgets displayed in dedicated "Widgets" tab
 
-def get_recent_activity_data():
-    """Get recent user activity"""
-    return User.objects.filter(
-        last_login__gte=timezone.now() - timedelta(hours=24)
-    ).order_by('-last_login')[:10]
+**Learn more**: [Dashboard Widgets Guide](./dashboard-widgets.md) - Complete widgets documentation
+:::
+
+#### Execution Order (CRITICAL)
+
+Always add `custom_widgets` to context **BEFORE** calling `main_dashboard_callback()`:
+
+```python
+def dashboard_callback(request, context):
+    # ✅ CORRECT
+    context.update({
+        "custom_widgets": custom_widgets,
+        "metric": 123
+    })
+    context = unfold_callbacks.main_dashboard_callback(request, context)
+
+def dashboard_callback_wrong(request, context):
+    # ❌ WRONG - widgets added too late
+    context = unfold_callbacks.main_dashboard_callback(request, context)
+    context.update({"custom_widgets": custom_widgets})  # Won't work!
 ```
 
 ## 🧭 Navigation System
@@ -601,13 +648,28 @@ class UnfoldIntegrationTest(TestCase):
 
 ## Related Documentation
 
+- [**Dashboard Widgets**](./dashboard-widgets.md) - Complete widgets guide with examples
 - [**Configuration Guide**](/fundamentals/configuration) - Unfold configuration
 - [**Admin Interface**](/fundamentals/system/utilities) - Admin customization
 - [**Theme System**](/fundamentals/system/utilities) - Theming and styling
-- [**Dashboard Callbacks**](/fundamentals/system/utilities) - Custom dashboard widgets
+- [**Centrifugo Integration**](/features/integrations/centrifugo/) - Real-time monitoring
+
+## What's New
+
+### Dashboard Widgets System (Latest)
+
+Django-CFG now includes a **powerful widget system** for creating beautiful, type-safe dashboard widgets:
+
+- ✅ **Type-Safe Widgets** - Define widgets using Pydantic models
+- ✅ **Template Variables** - Automatic template variable resolution
+- ✅ **Material Icons** - 2234+ icons with IDE autocomplete
+- ✅ **Real-Time Metrics** - System, RPC, and custom metrics
+- ✅ **Tabbed Interface** - Dedicated "Widgets" tab in dashboard
+
+**Learn more**: [Dashboard Widgets Guide](./dashboard-widgets.md)
 
 The Unfold Admin module provides a beautiful, modern admin interface for your Django applications! 🎨
 
-TAGS: unfold, admin-interface, dashboard, theming, navigation, monitoring
-DEPENDS_ON: [configuration, admin, theming]
+TAGS: unfold, admin-interface, dashboard, theming, navigation, monitoring, widgets
+DEPENDS_ON: [configuration, admin, theming, widgets]
 USED_BY: [all-apps, administration, monitoring]

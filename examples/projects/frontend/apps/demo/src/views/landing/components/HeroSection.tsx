@@ -35,8 +35,8 @@ export function HeroSection() {
         href: routes.private.overview
       }}
       secondaryAction={{
-        label: "Explore Demo",
-        href: routes.private.crypto
+        label: "Django Admin",
+        href: routes.public.admin
       }}
       stats={[
         { number: "100%", label: "Type Safe" },
@@ -44,7 +44,8 @@ export function HeroSection() {
         { number: "Fast", label: "Development" },
         { number: "Modern", label: "Stack" }
       ]}
-      scrollIndicator={true}
+      backgroundVariant="waves"
+      showBackgroundSwitcher={true}
     />
   );
 }

@@ -1,0 +1,38 @@
+{% load unfold %}
+
+<!-- Widgets Tab Content -->
+<div class="space-y-8">
+    <!-- Info Banner -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div class="flex items-start">
+            <span class="material-icons text-blue-500 mr-3">info</span>
+            <div>
+                <h4 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">
+                    About Dashboard Widgets
+                </h4>
+                <p class="text-xs text-blue-700 dark:text-blue-400">
+                    Widgets are automatically generated from <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">DashboardManager.get_widgets_config()</code>.
+                    Add custom widgets by extending the configuration in your project's dashboard manager.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widgets Content (will be replaced by widgets_section if available) -->
+    {% if widgets_section %}
+        {{ widgets_section|safe }}
+    {% else %}
+        <!-- Fallback: show message if widgets_section not rendered -->
+        <div class="theme-card rounded-lg shadow-sm border theme-border p-12 text-center">
+            <span class="material-icons text-gray-300 dark:text-gray-600 text-6xl mb-4">
+                widgets
+            </span>
+            <h3 class="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                Widgets Section Not Loaded
+            </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-500">
+                The widgets section is being initialized. Please refresh the page.
+            </p>
+        </div>
+    {% endif %}
+</div>

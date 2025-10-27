@@ -21,8 +21,7 @@ class SyncCfgNewslettersAPI:
         url = "/cfg/newsletter/newsletters/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedNewsletterList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedNewsletterList.model_validate(response.json())
 
 
     def newsletter_newsletters_retrieve(self, id: int) -> Newsletter:

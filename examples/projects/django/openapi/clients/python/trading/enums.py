@@ -1,4 +1,10 @@
-from enum import IntEnum, StrEnum
+from enum import IntEnum, Enum
+
+# Python 3.10 compatibility: StrEnum was added in Python 3.11
+# Use str + Enum instead for backward compatibility
+class StrEnum(str, Enum):
+    """String Enum for Python 3.10+ compatibility"""
+    pass
 
 
 class OrderOrderType(StrEnum):

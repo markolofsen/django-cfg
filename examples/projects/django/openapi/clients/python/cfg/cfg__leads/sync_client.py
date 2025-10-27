@@ -20,8 +20,7 @@ class SyncCfgLeadsAPI:
         url = "/cfg/leads/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedLeadSubmissionList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedLeadSubmissionList.model_validate(response.json())
 
 
     def create(self, data: LeadSubmissionRequest) -> LeadSubmission:

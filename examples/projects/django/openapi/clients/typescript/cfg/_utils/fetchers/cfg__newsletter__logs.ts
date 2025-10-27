@@ -39,7 +39,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/newsletter/logs/
  */
-export async function getNewsletterLogsList(  params?: { page?: number; page_size?: number },  client?
+export async function getNewsletterLogsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedEmailLogList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_logs.newsletterLogsList(params?.page, params?.page_size)

@@ -66,6 +66,77 @@ python manage.py generate_python_client \
 - `--output PATH` - Output directory for generated client (required)
 - `--async-client` - Generate async client (default: True)
 
+### `generate_client` with `--proto`
+
+Generate Protocol Buffer definitions from OpenAPI schema using the unified command:
+
+```bash
+python manage.py generate_client \
+  --openapi-files path/to/openapi.yaml \
+  --output-dir openapi/clients \
+  --group profiles \
+  --proto --no-python --no-typescript --no-go
+```
+
+**Options:**
+- `--proto` - Generate Protocol Buffer definitions
+- `--no-proto` - Skip Protocol Buffer generation (when generating all clients)
+- `--group NAME` - Group name for the generated clients
+
+**Proto-specific features:**
+- Generates `messages.proto` and `service.proto` for each service
+- Creates README.md with compilation instructions
+- Supports all OpenAPI types, enums, arrays, and nested objects
+- Handles multipart/form-data as `bytes` fields
+
+### Compiling Proto Files
+
+After generation, compile proto files for your target language:
+
+#### Python (grpcio-tools)
+```bash
+# Install dependencies
+pip install grpcio grpcio-tools
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+python -m grpc_tools.protoc -I. \
+  --python_out=. \
+  --grpc_python_out=. \
+  api__profiles/*.proto
+```
+
+#### Go
+```bash
+# Install dependencies
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+protoc -I. \
+  --go_out=. \
+  --go-grpc_out=. \
+  api__profiles/*.proto
+```
+
+#### TypeScript (ts-proto)
+```bash
+# Install dependencies
+npm install ts-proto
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+protoc -I. \
+  --plugin=./node_modules/.bin/protoc-gen-ts_proto \
+  --ts_proto_out=. \
+  api__profiles/*.proto
+```
+
+:::tip Auto-Generated README
+Each generated proto group includes a README.md with detailed compilation commands for all supported languages.
+:::
+
 ## Quick Start
 
 ### Generate All Clients from Groups

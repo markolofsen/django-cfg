@@ -1,80 +1,346 @@
-{% extends 'admin/layouts/dashboard_with_tabs.html' %}
+{% extends 'admin/base.html' %}
 
+{% load static %}
 {% load unfold %}
+{% load django_cfg %}
 
-{% block overview_tab %}
-    {% if overview_section %}
-        {{ overview_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/tabs/overview_tab.html' %}
-    {% endif %}
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+    <style>
+        #nextjs-dashboard-iframe {
+            width: 100%;
+            min-height: 600px;
+            height: auto;
+            border: none;
+            display: block;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            transition: height 0.2s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        #nextjs-dashboard-iframe.loaded {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .iframe-container {
+            position: relative;
+            background: transparent;
+        }
+
+        .iframe-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1;
+        }
+
+        .iframe-loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 {% endblock %}
 
-{% block zones_tab %}
-    {% if zones_section %}
-        {{ zones_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/zones/zones_table.html' %}
-    {% endif %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    {% if subtitle %}{{ subtitle }} | {% endif %}
+    {{ title }} | {{ site_title|default:'Django site admin' }}
 {% endblock %}
 
-{% block users_tab %}
-    {% if users_section %}
-        {{ users_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/tabs/users_tab.html' %}
-    {% endif %}
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
 {% endblock %}
 
-{% block system_tab %}
-    {% if system_section %}
-        {{ system_section|safe }}
-    {% else %}
-        <div class="space-y-8">
-            <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-4">
-                System Management
-            </h2>
-
-            <!-- System Health -->
-            {% include 'admin/snippets/components/system_health.html' %}
-
-            <!-- System Metrics -->
-            {% include 'admin/snippets/components/system_metrics.html' %}
-
-            <!-- Activity Tracker -->
-            {% include 'admin/snippets/components/activity_tracker.html' %}
+{% block content %}
+    <!-- Main Container -->
+    {% component "unfold/components/container.html" %}
+        {% if is_frontend_dev_mode %}
+        <!-- Development Mode Badge -->
+        <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 mb-4" role="alert">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <p class="font-bold">Frontend Development Mode Active</p>
+                    <p class="text-sm">Loading Next.js from <code class="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">{% nextjs_admin_url %}</code></p>
+                </div>
+            </div>
         </div>
-    {% endif %}
+        {% endif %}
+
+        <!-- Next.js Dashboard iframe -->
+        <div class="iframe-container">
+            <div class="iframe-loading" id="iframe-loading">
+                <div class="spinner"></div>
+                <p id="loading-text">Loading Next.js Dashboard...</p>
+            </div>
+
+            <iframe
+                id="nextjs-dashboard-iframe"
+                src="{% nextjs_admin_url 'private' %}"
+                title="Next.js Dashboard"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+            ></iframe>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="text-center py-8 mt-5">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                {% load django_cfg %}
+                <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700 font-medium">
+                    {% lib_name %}
+                </a>
+                <span class="mx-2">•</span>
+                <a href="{% lib_health_url %}" class="text-blue-600 hover:text-blue-700">
+                    System Health
+                </a>
+            </p>
+        </div>
+    {% endcomponent %}
 {% endblock %}
 
-{% block stats_tab %}
-    {% if stats_section %}
-        {{ stats_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/tabs/stats_tab.html' %}
-    {% endif %}
-{% endblock %}
+{% block footer %}
+    {{ block.super }}
+    <script>
+        (function() {
+            const iframe = document.getElementById('nextjs-dashboard-iframe');
+            const loading = document.getElementById('iframe-loading');
+            const loadingText = document.getElementById('loading-text');
 
-{% block app_stats_tab %}
-    {% if app_stats_section %}
-        {{ app_stats_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/tabs/app_stats_tab.html' with stats_groups=stats_groups %}
-    {% endif %}
-{% endblock %}
+            // Log initial state
+            console.log('[Parent] 🎬 Initial iframe state:', {
+                visibility: window.getComputedStyle(iframe).visibility,
+                opacity: window.getComputedStyle(iframe).opacity,
+                hasLoadedClass: iframe.classList.contains('loaded')
+            });
 
-{% block commands_tab %}
-    {% if commands_section %}
-        {{ commands_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/tabs/commands_tab.html' %}
-    {% endif %}
-{% endblock %}
+            // Detect iframe origin based on src
+            const iframeUrl = new URL(iframe.src);
+            const iframeOrigin = iframeUrl.origin;
+            const isDevMode = iframeOrigin !== window.location.origin;
 
-{% block documentation_tab %}
-    {% if documentation_section %}
-        {{ documentation_section|safe }}
-    {% else %}
-        {% include 'admin/snippets/tabs/documentation_tab.html' %}
-    {% endif %}
-{% endblock %} 
+            // Debug logging (uncomment for debugging)
+            // console.log('[Parent] 🚀 Initializing iframe communication');
+            // console.log('[Parent] 📍 Parent origin:', window.location.origin);
+            // console.log('[Parent] 📍 iframe origin:', iframeOrigin);
+            // console.log('[Parent] 🔧 Dev mode:', isDevMode);
+
+            iframe.addEventListener('load', function() {
+                // console.log('[Parent] 🎬 iframe load event fired');
+
+                // Send initial data (theme + auth) to iframe after a small delay
+                // to ensure iframe is fully initialized
+                setTimeout(() => {
+                    // console.log('[Parent] ⏱️  Sending initial data after iframe load');
+                    sendDataToIframe();
+                }, 100);
+            });
+
+            // Hide loading after 5 seconds if iframe doesn't load
+            setTimeout(() => {
+                loading.classList.add('hidden');
+            }, 5000);
+
+            // Function to send theme and auth to iframe
+            function sendDataToIframe() {
+                // console.log('[Parent] 📤 sendDataToIframe() called');
+
+                if (!iframe || !iframe.contentWindow) {
+                    console.error('[Parent] iframe or contentWindow not available');
+                    return;
+                }
+
+                const htmlElement = document.documentElement;
+                const isDark = htmlElement.classList.contains('dark');
+                // console.log('[Parent] 🎨 HTML element classes:', htmlElement.className);
+                // console.log('[Parent] 🎨 isDark:', isDark);
+
+                // Get adminTheme value from Alpine.js data if available
+                let themeMode = 'auto';
+                // console.log('[Parent] 🔍 Checking Alpine.js:', {
+                //     hasAlpine: !!window.Alpine,
+                //     hasAlpineData: !!(window.Alpine && window.Alpine.$data)
+                // });
+
+                if (window.Alpine && window.Alpine.$data) {
+                    try {
+                        const alpineData = window.Alpine.$data(htmlElement);
+                        // console.log('[Parent] 🔍 Alpine data:', alpineData);
+                        if (alpineData && alpineData.adminTheme) {
+                            themeMode = alpineData.adminTheme;
+                            // console.log('[Parent] ✅ Got adminTheme from Alpine:', themeMode);
+                        }
+                    } catch (e) {
+                        console.warn('[Parent] Failed to get Alpine data:', e);
+                    }
+                }
+
+                // Get JWT tokens from localStorage (Django injected them)
+                const authToken = localStorage.getItem('auth_token');
+                const refreshToken = localStorage.getItem('refresh_token');
+                // console.log('[Parent] 🔑 Tokens in localStorage:', {
+                //     hasAuthToken: !!authToken,
+                //     hasRefreshToken: !!refreshToken,
+                //     authTokenLength: authToken ? authToken.length : 0
+                // });
+
+                // Send theme
+                const themeMessage = {
+                    type: 'parent-theme',
+                    data: {
+                        theme: isDark ? 'dark' : 'light',
+                        themeMode: themeMode
+                    }
+                };
+                // console.log('[Parent] 📨 Sending theme message:', themeMessage);
+
+                try {
+                    iframe.contentWindow.postMessage(themeMessage, iframeOrigin);
+                    // console.log('[Parent] ✅ Theme message sent successfully to', iframeOrigin);
+                } catch (e) {
+                    console.error('[Parent] Failed to send theme message:', e);
+                }
+
+                // Send auth tokens if available
+                if (authToken) {
+                    const authMessage = {
+                        type: 'parent-auth',
+                        data: {
+                            authToken: authToken,
+                            refreshToken: refreshToken
+                        }
+                    };
+                    // console.log('[Parent] 📨 Sending auth message:', {
+                    //     type: authMessage.type,
+                    //     hasAuthToken: !!authMessage.data.authToken,
+                    //     hasRefreshToken: !!authMessage.data.refreshToken
+                    // });
+
+                    try {
+                        iframe.contentWindow.postMessage(authMessage, iframeOrigin);
+                        // console.log('[Parent] ✅ Auth message sent successfully to', iframeOrigin);
+                    } catch (e) {
+                        console.error('[Parent] Failed to send auth message:', e);
+                    }
+                }
+                // else {
+                //     console.warn('[Parent] ⚠️  No auth token found, skipping auth message');
+                // }
+            }
+
+            // Watch for theme changes on HTML element
+            // console.log('[Parent] 👀 Setting up MutationObserver for theme changes');
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        // console.log('[Parent] 🔄 HTML class changed, sending updated theme');
+                        sendDataToIframe();
+                    }
+                });
+            });
+
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+            // console.log('[Parent] ✅ MutationObserver active');
+
+            // Listen for messages from iframe
+            // console.log('[Parent] 👂 Setting up message listener for iframe');
+            window.addEventListener('message', (event) => {
+                // console.log('[Parent] 📨 Message received from iframe:', {
+                //     origin: event.origin,
+                //     expectedOrigin: iframeOrigin,
+                //     type: event.data?.type,
+                //     data: event.data?.data
+                // });
+
+                if (event.origin !== iframeOrigin) {
+                    // console.log('[Parent] ⚠️  Message from unexpected origin, ignoring');
+                    return;
+                }
+
+                const { type, data } = event.data || {};
+
+                switch (type) {
+                    case 'iframe-ready':
+                        // console.log('[Parent] ✅ iframe-ready received:', data);
+                        // Send data immediately when iframe is ready
+                        // console.log('[Parent] 📤 Responding to iframe-ready by sending data');
+                        sendDataToIframe();
+                        break;
+
+                    case 'iframe-auth-status':
+                        // iframe sent auth status update
+                        console.log('[Parent] 🔐 Auth status received:', data);
+                        console.log('[Parent] 📊 Current iframe state BEFORE:', {
+                            visibility: window.getComputedStyle(iframe).visibility,
+                            opacity: window.getComputedStyle(iframe).opacity,
+                            hasLoadedClass: iframe.classList.contains('loaded')
+                        });
+
+                        if (data?.isAuthenticated && !data?.isLoading) {
+                            // User is authenticated, show iframe
+                            console.log('[Parent] ✅ Adding .loaded class');
+                            loading.classList.add('hidden');
+                            iframe.classList.add('loaded');
+
+                            setTimeout(() => {
+                                console.log('[Parent] 📊 iframe state AFTER .loaded:', {
+                                    visibility: window.getComputedStyle(iframe).visibility,
+                                    opacity: window.getComputedStyle(iframe).opacity,
+                                    hasLoadedClass: iframe.classList.contains('loaded')
+                                });
+                            }, 100);
+                        } else if (data?.isLoading) {
+                            // Still loading
+                            console.log('[Parent] ⏳ Auth loading...');
+                            loadingText.textContent = 'Loading authentication...';
+                        } else {
+                            // Not authenticated
+                            console.log('[Parent] ⚠️  Not authenticated');
+                            loadingText.textContent = 'Waiting for authentication...';
+                        }
+                        break;
+                    case 'iframe-resize':
+                        // Update iframe height based on content (both increase and decrease)
+                        if (data?.height && typeof data.height === 'number') {
+                            // Add padding to avoid scroll bars (50px buffer for safety)
+                            const newHeight = Math.max(600, data.height + 50); // Min 600px
+                            iframe.style.height = newHeight + 'px';
+                        }
+                        break;
+                    case 'iframe-navigation':
+                        // console.log('[Parent] 🧭 iframe navigated to:', data.path);
+                        break;
+                    default:
+                        // if (type) {
+                        //     console.log('[Parent] ℹ️  Unknown message type:', type);
+                        // }
+                        break;
+                }
+            });
+            // console.log('[Parent] ✅ Message listener active');
+        })();
+    </script>
+{% endblock %}

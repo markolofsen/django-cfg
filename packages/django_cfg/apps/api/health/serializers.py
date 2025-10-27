@@ -28,6 +28,10 @@ class HealthCheckSerializer(serializers.Serializer):
     environment = serializers.DictField(
         help_text="Environment information"
     )
+    links = serializers.DictField(
+        required=False,
+        help_text="Useful API endpoint links"
+    )
 
 
 class QuickHealthSerializer(serializers.Serializer):

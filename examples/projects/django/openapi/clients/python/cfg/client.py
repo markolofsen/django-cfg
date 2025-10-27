@@ -7,6 +7,16 @@ import httpx
 from .cfg__accounts__auth import CfgAuthAPI
 from .cfg__newsletter__bulk_email import CfgBulkEmailAPI
 from .cfg__newsletter__campaigns import CfgCampaignsAPI
+from .cfg__centrifugo__centrifugo_admin_api import CfgCentrifugoAdminApiAPI
+from .cfg__centrifugo__centrifugo_monitoring import CfgCentrifugoMonitoringAPI
+from .cfg__centrifugo__centrifugo_testing import CfgCentrifugoTestingAPI
+from .cfg__dashboard__dashboard_api_zones import CfgDashboardApiZonesAPI
+from .cfg__dashboard__dashboard_activity import CfgDashboardActivityAPI
+from .cfg__dashboard__dashboard_charts import CfgDashboardChartsAPI
+from .cfg__dashboard__dashboard_commands import CfgDashboardCommandsAPI
+from .cfg__dashboard__dashboard_overview import CfgDashboardOverviewAPI
+from .cfg__dashboard__dashboard_statistics import CfgDashboardStatisticsAPI
+from .cfg__dashboard__dashboard_system import CfgDashboardSystemAPI
 from .cfg__leads__lead_submission import CfgLeadSubmissionAPI
 from .cfg__newsletter__logs import CfgLogsAPI
 from .cfg__newsletter__newsletters import CfgNewslettersAPI
@@ -14,6 +24,7 @@ from .cfg__newsletter__subscriptions import CfgSubscriptionsAPI
 from .cfg__newsletter__testing import CfgTestingAPI
 from .cfg__accounts__user_profile import CfgUserProfileAPI
 from .cfg__accounts import CfgAccountsAPI
+from .cfg__centrifugo import CfgCentrifugoAPI
 from .cfg__endpoints import CfgEndpointsAPI
 from .cfg__health import CfgHealthAPI
 from .cfg__knowbase import CfgKnowbaseAPI
@@ -64,13 +75,11 @@ class APIClient:
             self._client = RetryAsyncClient(
                 base_url=self.base_url,
                 retry_config=retry_config,
-                timeout=30.0,
                 **kwargs,
             )
         else:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=30.0,
                 **kwargs,
             )
 
@@ -83,6 +92,16 @@ class APIClient:
         self.cfg_auth = CfgAuthAPI(self._client)
         self.cfg_bulk_email = CfgBulkEmailAPI(self._client)
         self.cfg_campaigns = CfgCampaignsAPI(self._client)
+        self.cfg_centrifugo_admin_api = CfgCentrifugoAdminApiAPI(self._client)
+        self.cfg_centrifugo_monitoring = CfgCentrifugoMonitoringAPI(self._client)
+        self.cfg_centrifugo_testing = CfgCentrifugoTestingAPI(self._client)
+        self.cfg_dashboard_api_zones = CfgDashboardApiZonesAPI(self._client)
+        self.cfg_dashboard_activity = CfgDashboardActivityAPI(self._client)
+        self.cfg_dashboard_charts = CfgDashboardChartsAPI(self._client)
+        self.cfg_dashboard_commands = CfgDashboardCommandsAPI(self._client)
+        self.cfg_dashboard_overview = CfgDashboardOverviewAPI(self._client)
+        self.cfg_dashboard_statistics = CfgDashboardStatisticsAPI(self._client)
+        self.cfg_dashboard_system = CfgDashboardSystemAPI(self._client)
         self.cfg_lead_submission = CfgLeadSubmissionAPI(self._client)
         self.cfg_logs = CfgLogsAPI(self._client)
         self.cfg_newsletters = CfgNewslettersAPI(self._client)
@@ -90,6 +109,7 @@ class APIClient:
         self.cfg_testing = CfgTestingAPI(self._client)
         self.cfg_user_profile = CfgUserProfileAPI(self._client)
         self.cfg_accounts = CfgAccountsAPI(self._client)
+        self.cfg_centrifugo = CfgCentrifugoAPI(self._client)
         self.cfg_endpoints = CfgEndpointsAPI(self._client)
         self.cfg_health = CfgHealthAPI(self._client)
         self.cfg_knowbase = CfgKnowbaseAPI(self._client)

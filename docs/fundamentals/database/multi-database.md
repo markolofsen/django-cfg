@@ -18,54 +18,118 @@ Configure multiple databases with automatic routing in Django-CFG.
 
 ## Quick Start
 
-### Configuration
+:::warning[Do You Really Need This?]
+**Most SaaS applications use a single database.** Multi-database is an advanced feature needed only for:
+- Read replicas (performance scaling)
+- Analytics/reporting warehouse
+- Legacy system integration
+- Multi-tenant isolation (complex)
+
+**Default recommendation:** Use one database with multiple Django apps.
+:::
+
+### Single Database Setup (Recommended)
 
 ```python
-# config.py
-from pydantic import BaseModel
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class DatabaseConfig(BaseModel):
+class DatabaseConfig(BaseSettings):
+    """Single database configuration."""
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
+```
+
+```bash
+# .env
+DATABASE__URL="postgresql://localhost/mydb"
+```
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+from .environment import env
+
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
+
+config = MyDjangoConfig()
+```
+
+**Your Django apps** (e.g., crypto, profiles, trading) all use the default database automatically.
+
+---
+
+### Multi-Database Setup (Advanced)
+
+For **read replicas**, **analytics warehouses**, or **legacy system integration**:
+
+```python
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class DatabaseConfig(BaseSettings):
     """Multi-database configuration."""
-    # Main database
-    url: str = "sqlite:///db/default.sqlite3"
+    # Primary database
+    url: str = Field(default="sqlite:///db/default.sqlite3")
 
-    # Domain-specific databases
-    url_blog: str = "sqlite:///db/blog.sqlite3"
-    url_shop: str = "sqlite:///db/shop.sqlite3"
+    # Read replica (optional)
+    url_replica: str | None = Field(default=None)
+
+    # Analytics warehouse (optional)
+    url_analytics: str | None = Field(default=None)
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 ```
 
-### YAML Configuration
-
-```yaml
-# config.yaml
-database:
-  url: "postgresql://localhost/main"
-  url_blog: "postgresql://localhost/blog_db"
-  url_shop: "postgresql://localhost/shop_db"
+```bash
+# .env or system ENV
+DATABASE__URL="postgresql://user:pass@db-primary.example.com/mydb"
+DATABASE__URL_REPLICA="postgresql://readonly:pass@db-replica.example.com/mydb"
+DATABASE__URL_ANALYTICS="postgresql://analytics:pass@warehouse.example.com/analytics"
 ```
-
-### Settings Integration
 
 ```python
-# settings.py
-import dj_database_url
-from django_cfg import load_config
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+from .environment import env
 
-config = load_config()
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
 
-DATABASES = {
-    'default': dj_database_url.parse(config.database.url),
-    'blog_db': dj_database_url.parse(config.database.url_blog),
-    'shop_db': dj_database_url.parse(config.database.url_shop),
-}
+    # Add replica if configured
+    if env.database.url_replica:
+        databases["replica"] = DatabaseConfig.from_url(url=env.database.url_replica)
 
-DATABASE_ROUTERS = ['django_cfg.routing.DatabaseRouter']
+    # Add analytics if configured
+    if env.database.url_analytics:
+        databases["analytics"] = DatabaseConfig.from_url(url=env.database.url_analytics)
 
-DATABASE_ROUTING_RULES = {
-    'blog': 'blog_db',
-    'shop': 'shop_db',
-}
+    # Optional: Configure routing rules
+    # database_routers = ["myapp.routers.ReadReplicaRouter"]
+
+config = MyDjangoConfig()
 ```
+
+**Common use cases:**
+- **Read replica** - Route 80% of read queries to replica for performance
+- **Analytics warehouse** - Separate database for heavy reporting queries
+- **Legacy integration** - Connect to existing external database
+
+---
 
 ## Database Architecture
 
@@ -77,41 +141,43 @@ The multi-database setup provides:
 - ✅ **Flexibility** - Different databases can use different engines
 :::
 
-### Architecture Diagram
+### Architecture Diagram - Read Replica Pattern
 
 ```mermaid
 graph TB
     subgraph "Django Application"
-        BlogApp[Blog App]
-        ShopApp[Shop App]
-        AuthApp[Auth/Users]
+        App[SaaS App]
+        Analytics[Analytics/Reports]
     end
 
     subgraph "Database Router"
-        Router[DatabaseRouter]
-        Rules[ROUTING_RULES]
+        Router[ReadReplicaRouter]
     end
 
     subgraph "Databases"
-        BlogDB[(blog_db<br/>PostgreSQL)]
-        ShopDB[(shop_db<br/>PostgreSQL)]
-        MainDB[(default<br/>PostgreSQL)]
+        Primary[(Primary DB<br/>Read+Write)]
+        Replica[(Replica DB<br/>Read Only)]
+        Warehouse[(Analytics<br/>Read Only)]
     end
 
-    BlogApp -->|Query| Router
-    ShopApp -->|Query| Router
-    AuthApp -->|Query| Router
+    App -->|Writes| Primary
+    App -->|80% Reads| Replica
+    App -->|20% Reads| Primary
+    Analytics -->|Heavy Queries| Warehouse
 
-    Router -->|Check| Rules
-    Rules -->|blog → blog_db| BlogDB
-    Rules -->|shop → shop_db| ShopDB
-    Rules -->|default → default| MainDB
+    Primary -.->|Replication| Replica
+    Primary -.->|ETL Pipeline| Warehouse
 
-    style BlogDB fill:#e1f5ff
-    style ShopDB fill:#fff4e1
-    style MainDB fill:#e8f5e9
+    style Primary fill:#e8f5e9
+    style Replica fill:#e1f5ff
+    style Warehouse fill:#fff4e1
     style Router fill:#fce4ec
 ```
+
+**Pattern: Read Replica**
+- All writes → Primary
+- Most reads → Replica (reduces primary load)
+- Analytics → Separate warehouse
 
 ### Example Architecture
 
@@ -199,58 +265,161 @@ user = User.objects.create_user(
 # Automatically routed to default database
 ```
 
-## Production Example
+## Production Examples
 
-```yaml
-# config.prod.yaml
-database:
-  # Main database
-  url: "postgresql://user:${DB_PASSWORD}@db-main.example.com:5432/main?sslmode=require&connect_timeout=10"
+### Example 1: Single Database (Most Common)
 
-  # Domain databases
-  url_blog: "postgresql://user:${DB_PASSWORD}@db-blog.example.com:5432/blog?sslmode=require"
-  url_shop: "postgresql://user:${DB_PASSWORD}@db-shop.example.com:5432/shop?sslmode=require"
-
-  # Analytics - read-only
-  url_analytics: "postgresql://readonly:${DB_READONLY_PASSWORD}@warehouse.example.com:5432/analytics?sslmode=require"
+```bash
+# Production environment variables (Docker/K8s)
+DATABASE__URL="postgresql://user:${DB_PASSWORD}@db.example.com:5432/mydb?sslmode=require&connect_timeout=10"
 ```
 
 ```python
-# settings.py
-DATABASES = {
-    'default': dj_database_url.parse(config.database.url),
-    'blog_db': dj_database_url.parse(config.database.url_blog),
-    'shop_db': dj_database_url.parse(config.database.url_shop),
-    'analytics': dj_database_url.parse(config.database.url_analytics),
-}
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+from .environment import env
 
-DATABASE_ROUTING_RULES = {
-    'blog': 'blog_db',
-    'shop': 'shop_db',
-    'analytics': 'analytics',
-}
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
 ```
+
+All your apps (crypto, profiles, trading, etc.) use this single database.
+
+---
+
+### Example 2: Primary + Read Replica (Performance Scaling)
+
+```bash
+# Production environment variables
+DATABASE__URL="postgresql://app:${DB_PASSWORD}@db-primary.example.com:5432/mydb?sslmode=require"
+DATABASE__URL_REPLICA="postgresql://readonly:${DB_READONLY_PASSWORD}@db-replica.example.com:5432/mydb?sslmode=require"
+```
+
+```python
+# api/environment/loader.py
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+    url_replica: str | None = Field(default=None)
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
+```
+
+```python
+# api/config.py
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
+
+    if env.database.url_replica:
+        databases["replica"] = DatabaseConfig.from_url(url=env.database.url_replica)
+        database_routers = ["myapp.routers.ReadReplicaRouter"]
+```
+
+```python
+# myapp/routers.py - Custom read replica router
+class ReadReplicaRouter:
+    """Route reads to replica, writes to primary."""
+
+    def db_for_read(self, model, **hints):
+        """80% of reads go to replica."""
+        import random
+        return 'replica' if random.random() < 0.8 else 'default'
+
+    def db_for_write(self, model, **hints):
+        """All writes to primary."""
+        return 'default'
+```
+
+**Performance gain:** 80% read load shifted to replica → reduces primary DB pressure.
+
+---
+
+### Example 3: Primary + Analytics Warehouse
+
+```bash
+# Production environment variables
+DATABASE__URL="postgresql://app:${DB_PASSWORD}@db.example.com:5432/mydb"
+DATABASE__URL_ANALYTICS="postgresql://analytics:${ANALYTICS_PASSWORD}@warehouse.example.com:5432/analytics"
+```
+
+```python
+# api/environment/loader.py
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+    url_analytics: str | None = Field(default=None)
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
+```
+
+```python
+# api/config.py
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
+
+    if env.database.url_analytics:
+        databases["analytics"] = DatabaseConfig.from_url(url=env.database.url_analytics)
+```
+
+```python
+# apps/reports/views.py - Use analytics database explicitly
+from django.db import connections
+
+def generate_report(request):
+    """Heavy analytics query on separate warehouse."""
+    with connections['analytics'].cursor() as cursor:
+        cursor.execute("""
+            SELECT date_trunc('month', created_at) as month,
+                   COUNT(*) as total_users,
+                   SUM(revenue) as total_revenue
+            FROM analytics.user_metrics
+            GROUP BY month
+            ORDER BY month DESC
+        """)
+        results = cursor.fetchall()
+
+    return render(request, 'report.html', {'data': results})
+```
+
+**Use case:** Separate heavy reporting queries from transactional database.
 
 ## Environment-Specific Configuration
 
 ### Development (SQLite)
 
-```yaml
-# config.dev.yaml
-database:
-  url: "sqlite:///db/default.sqlite3"
-  url_blog: "sqlite:///db/blog.sqlite3"
-  url_shop: "sqlite:///db/shop.sqlite3"
+```bash
+# .env (development) - optional, uses defaults if not set
+DATABASE__URL="sqlite:///db/dev.sqlite3"
+```
+
+Or use defaults in code:
+
+```python
+# api/environment/loader.py
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 ```
 
 ### Production (PostgreSQL)
 
-```yaml
-# config.prod.yaml
-database:
-  url: "postgresql://user:${DB_PASSWORD}@db.example.com/main"
-  url_blog: "postgresql://user:${DB_PASSWORD}@db.example.com/blog"
-  url_shop: "postgresql://user:${DB_PASSWORD}@db.example.com/shop"
+```bash
+# System ENV or Docker environment
+DATABASE__URL="postgresql://user:${DB_PASSWORD}@db.example.com/mydb?sslmode=require"
 ```
 
 ## Testing Setup

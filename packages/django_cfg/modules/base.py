@@ -191,18 +191,18 @@ class BaseCfgModule(ABC):
 
         return False
 
-    def is_rpc_enabled(self) -> bool:
+    def is_centrifugo_enabled(self) -> bool:
         """
-        Check if django-cfg RPC Client is enabled.
+        Check if django-cfg Centrifugo is enabled.
 
         Returns:
-            True if RPC Client is enabled, False otherwise
+            True if Centrifugo is enabled, False otherwise
         """
-        rpc_config = self._get_config_key('django_ipc', None)
+        centrifugo_config = self._get_config_key('centrifugo', None)
 
-        # Only handle DjangoCfgRPCConfig model
-        if rpc_config and hasattr(rpc_config, 'enabled'):
-            return rpc_config.enabled
+        # Check if centrifugo config exists and is enabled
+        if centrifugo_config and hasattr(centrifugo_config, 'enabled'):
+            return centrifugo_config.enabled
 
         return False
 

@@ -47,13 +47,11 @@ class APIClient:
             self._client = RetryAsyncClient(
                 base_url=self.base_url,
                 retry_config=retry_config,
-                timeout=30.0,
                 **kwargs,
             )
         else:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=30.0,
                 **kwargs,
             )
 

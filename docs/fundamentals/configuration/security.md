@@ -653,6 +653,517 @@ class MyConfig(DjangoConfig):
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ```
 
+## Django-Axes: Brute-Force Protection
+
+:::tip[Automatic Brute-Force Protection]
+Django-CFG includes **django-axes** for automatic brute-force attack protection. It tracks failed login attempts and locks out attackers.
+:::
+
+### Overview
+
+Django-Axes provides:
+- ✅ **Failed login tracking** - Monitor failed authentication attempts
+- ✅ **Automatic lockout** - Block users/IPs after too many failures
+- ✅ **Time-based cooldown** - Automatic unlock after cooldown period
+- ✅ **IP + Username tracking** - Flexible tracking strategies
+- ✅ **Proxy/Cloudflare support** - Real IP extraction from headers
+- ✅ **Admin integration** - View and manage lockouts in admin panel
+
+### Smart Defaults
+
+Django-CFG provides **environment-aware defaults** for django-axes:
+
+**Development Mode:**
+```python
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 10      # More attempts allowed in dev
+AXES_COOLOFF_TIME = 1        # 1 hour lockout
+AXES_VERBOSE = True          # Detailed logging
+```
+
+**Production Mode:**
+```python
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 5       # Stricter limit in production
+AXES_COOLOFF_TIME = 24       # 24 hours lockout
+AXES_VERBOSE = False         # Less verbose logging
+```
+
+:::info[No Configuration Required]
+Django-Axes works **out of the box** with smart defaults. You only need to configure it if you want custom behavior.
+:::
+
+### Basic Configuration
+
+<Tabs>
+  <TabItem value="defaults" label="Use Defaults (Recommended)" default>
+
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    secret_key: str = "your-secret-key"
+    debug: bool = False
+    security_domains: list = ["myapp.com"]
+
+    # axes: No configuration needed - smart defaults used automatically
+```
+
+**Result:** Automatic brute-force protection with environment-aware defaults.
+
+  </TabItem>
+  <TabItem value="custom" label="Custom Configuration">
+
+```python
+from django_cfg import DjangoConfig, AxesConfig
+
+class MyConfig(DjangoConfig):
+    secret_key: str = "your-secret-key"
+    debug: bool = False
+    security_domains: list = ["myapp.com"]
+
+    # Custom axes configuration
+    axes: AxesConfig = AxesConfig(
+        failure_limit=3,      # Only 3 attempts (stricter than default)
+        cooloff_time=48,      # 48 hours lockout (stricter than default)
+        lockout_template="account/locked.html",  # Custom lockout page
+    )
+```
+
+  </TabItem>
+  <TabItem value="yaml" label="YAML Configuration">
+
+```yaml title="config.yaml"
+secret_key: "${SECRET_KEY}"
+debug: false
+security_domains:
+  - myapp.com
+
+# Custom axes configuration
+axes:
+  failure_limit: 3
+  cooloff_time: 48
+  lockout_template: "account/locked.html"
+```
+
+  </TabItem>
+</Tabs>
+
+### Configuration Options
+
+#### Basic Settings
+
+```python
+from django_cfg import AxesConfig
+
+axes = AxesConfig(
+    # Enable/disable axes
+    enabled=True,  # Default: True
+
+    # Failure limit (None = auto: 10 dev, 5 prod)
+    failure_limit=5,
+
+    # Cooloff time in hours (None = auto: 1 dev, 24 prod)
+    cooloff_time=24,
+
+    # Lock out after reaching failure limit
+    lock_out_at_failure=True,  # Default: True
+
+    # Reset failure count after successful login
+    reset_on_success=True,  # Default: True
+)
+```
+
+#### UI/UX Settings
+
+```python
+axes = AxesConfig(
+    # Custom lockout template
+    lockout_template="account/locked.html",  # Default: None (built-in response)
+
+    # Custom lockout URL redirect
+    lockout_url="/account/locked/",  # Default: None (built-in response)
+)
+```
+
+#### Logging Settings
+
+```python
+axes = AxesConfig(
+    # Verbose logging (None = auto: True dev, False prod)
+    verbose=True,
+
+    # Log access failures for security audit
+    enable_access_failure_log=True,  # Default: True
+)
+```
+
+#### IP Whitelist/Blacklist
+
+```python
+axes = AxesConfig(
+    # IP addresses that bypass axes protection
+    allowed_ips=[
+        '192.168.1.100',  # Office IP
+        '10.0.0.5',       # Admin IP
+    ],
+
+    # IP addresses that are always blocked
+    denied_ips=[
+        '10.0.0.2',       # Known attacker
+    ],
+)
+```
+
+### Proxy/Cloudflare Support
+
+:::tip[Real IP Extraction]
+Django-Axes automatically extracts real client IPs from proxy headers (nginx, Cloudflare, traefik).
+:::
+
+#### Default Configuration
+
+```python
+axes = AxesConfig(
+    # Number of proxies between client and server
+    ipware_proxy_count=1,  # Default: 1
+
+    # Order of headers to extract real IP
+    ipware_meta_precedence_order=[
+        'HTTP_X_FORWARDED_FOR',  # Cloudflare, nginx, traefik
+        'HTTP_X_REAL_IP',        # Alternative proxy header
+        'REMOTE_ADDR',           # Fallback to direct connection
+    ],
+)
+```
+
+#### Cloudflare Configuration
+
+```python
+# For Cloudflare
+axes = AxesConfig(
+    ipware_proxy_count=1,  # Cloudflare is 1 proxy layer
+    ipware_meta_precedence_order=[
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_CF_CONNECTING_IP',  # Cloudflare-specific header
+        'REMOTE_ADDR',
+    ],
+)
+```
+
+#### Multiple Proxies
+
+```python
+# For multiple proxies (e.g., Cloudflare + nginx)
+axes = AxesConfig(
+    ipware_proxy_count=2,  # 2 proxy layers
+    ipware_meta_precedence_order=[
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_REAL_IP',
+        'REMOTE_ADDR',
+    ],
+)
+```
+
+### Custom Lockout Page
+
+<Tabs>
+  <TabItem value="template" label="Custom Template" default>
+
+**1. Create lockout template:**
+
+```html title="templates/account/locked.html"
+{% extends "base.html" %}
+
+{% block content %}
+<div class="lockout-page">
+    <h1>Account Locked</h1>
+    <p>
+        Your account has been locked due to too many failed login attempts.
+        Please try again in {{ cooloff_time }} hours.
+    </p>
+    <p>
+        If you believe this is a mistake, please contact support.
+    </p>
+</div>
+{% endblock %}
+```
+
+**2. Configure axes:**
+
+```python
+axes = AxesConfig(
+    lockout_template="account/locked.html",
+)
+```
+
+  </TabItem>
+  <TabItem value="url" label="Custom URL Redirect">
+
+**1. Create lockout view:**
+
+```python title="views.py"
+from django.shortcuts import render
+
+def account_locked(request):
+    return render(request, 'account/locked.html', {
+        'cooloff_time': 24,  # Hours
+    })
+```
+
+**2. Add URL route:**
+
+```python title="urls.py"
+urlpatterns = [
+    path('account/locked/', account_locked, name='account_locked'),
+]
+```
+
+**3. Configure axes:**
+
+```python
+axes = AxesConfig(
+    lockout_url="/account/locked/",
+)
+```
+
+  </TabItem>
+</Tabs>
+
+### Admin Integration
+
+Django-Axes provides admin interface to view and manage lockouts:
+
+```python
+# Admin panel automatically includes:
+# - Access Attempts (all login attempts)
+# - Access Logs (successful logins)
+# - Access Failures (failed login attempts)
+```
+
+**Admin features:**
+- ✅ View all failed login attempts
+- ✅ View locked accounts/IPs
+- ✅ Manually unlock accounts
+- ✅ View attempt history
+- ✅ Search by username/IP
+
+### Production Examples
+
+#### Strict Security
+
+```python
+from django_cfg import DjangoConfig, AxesConfig
+
+class MyConfig(DjangoConfig):
+    secret_key: str = "your-secret-key"
+    debug: bool = False
+    security_domains: list = ["myapp.com"]
+
+    # Very strict brute-force protection
+    axes: AxesConfig = AxesConfig(
+        failure_limit=3,      # Only 3 attempts
+        cooloff_time=72,      # 72 hours lockout (3 days)
+        lockout_template="account/locked.html",
+        enable_access_failure_log=True,
+    )
+```
+
+#### Moderate Security
+
+```python
+axes: AxesConfig = AxesConfig(
+    failure_limit=5,      # 5 attempts (default production)
+    cooloff_time=24,      # 24 hours lockout
+    reset_on_success=True,
+)
+```
+
+#### Whitelist Admin IPs
+
+```python
+axes: AxesConfig = AxesConfig(
+    failure_limit=5,
+    cooloff_time=24,
+
+    # Whitelist office/admin IPs
+    allowed_ips=[
+        '192.168.1.0/24',  # Office network
+        '10.0.0.100',       # Admin IP
+    ],
+)
+```
+
+#### Cloudflare + nginx Setup
+
+```python
+axes: AxesConfig = AxesConfig(
+    failure_limit=5,
+    cooloff_time=24,
+
+    # Cloudflare + nginx proxy setup
+    ipware_proxy_count=2,
+    ipware_meta_precedence_order=[
+        'HTTP_CF_CONNECTING_IP',  # Cloudflare real IP
+        'HTTP_X_FORWARDED_FOR',   # nginx proxy
+        'HTTP_X_REAL_IP',
+        'REMOTE_ADDR',
+    ],
+)
+```
+
+### Development vs Production
+
+<Tabs>
+  <TabItem value="dev" label="Development" default>
+
+```python
+class DevConfig(DjangoConfig):
+    debug: bool = True
+
+    # axes: Optional - smart defaults provide relaxed settings
+    # AXES_FAILURE_LIMIT = 10 (more attempts)
+    # AXES_COOLOFF_TIME = 1 (1 hour)
+    # AXES_VERBOSE = True (detailed logging)
+```
+
+  </TabItem>
+  <TabItem value="prod" label="Production">
+
+```python
+class ProdConfig(DjangoConfig):
+    debug: bool = False
+    security_domains: list = ["myapp.com"]
+
+    # axes: Optional - smart defaults provide strict settings
+    # AXES_FAILURE_LIMIT = 5 (stricter)
+    # AXES_COOLOFF_TIME = 24 (24 hours)
+    # AXES_VERBOSE = False (less verbose)
+```
+
+  </TabItem>
+</Tabs>
+
+### Monitoring Lockouts
+
+#### Check Lockout Status
+
+```python
+from axes.helpers import get_lockout_response
+
+# Check if IP/username is locked
+lockout_response = get_lockout_response(request)
+if lockout_response:
+    # User is locked out
+    return lockout_response
+```
+
+#### View Lockout Attempts
+
+```python
+from axes.models import AccessAttempt
+
+# Get all lockouts
+lockouts = AccessAttempt.objects.filter(failures_since_start__gte=5)
+
+# Get lockouts for specific IP
+ip_lockouts = AccessAttempt.objects.filter(ip_address='192.168.1.100')
+
+# Get lockouts for specific username
+user_lockouts = AccessAttempt.objects.filter(username='admin')
+```
+
+### Troubleshooting
+
+#### False Lockouts
+
+**Problem:** Legitimate users getting locked out
+
+**Solutions:**
+
+1. **Increase failure limit:**
+```python
+axes = AxesConfig(
+    failure_limit=10,  # More lenient
+)
+```
+
+2. **Whitelist trusted IPs:**
+```python
+axes = AxesConfig(
+    allowed_ips=['192.168.1.0/24'],  # Office network
+)
+```
+
+#### Proxy Issues
+
+**Problem:** All requests appear to come from proxy IP
+
+**Solution:** Configure proxy settings correctly
+
+```python
+axes = AxesConfig(
+    # Adjust proxy count
+    ipware_proxy_count=1,  # Or 2 for Cloudflare + nginx
+
+    # Add proxy-specific headers
+    ipware_meta_precedence_order=[
+        'HTTP_CF_CONNECTING_IP',  # For Cloudflare
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_REAL_IP',
+        'REMOTE_ADDR',
+    ],
+)
+```
+
+#### Unlock Users
+
+**Option 1: Admin Panel**
+1. Go to Admin → Axes → Access Attempts
+2. Find locked user/IP
+3. Delete the attempt record
+
+**Option 2: Management Command**
+```bash
+# Unlock specific username
+python manage.py axes_reset username admin
+
+# Unlock specific IP
+python manage.py axes_reset ip 192.168.1.100
+
+# Clear all lockouts
+python manage.py axes_reset
+```
+
+### Advanced Settings
+
+#### Cache Backend
+
+```python
+axes = AxesConfig(
+    cache_name='default',  # Use 'redis' for Redis cache
+)
+```
+
+#### Custom Username Field
+
+```python
+axes = AxesConfig(
+    username_form_field='email',  # Track by email instead of username
+)
+```
+
+### Security Best Practices
+
+:::warning[Axes Security Tips]
+1. ✅ Always enable axes in production (`enabled=True`)
+2. ✅ Use strict failure limits (3-5 attempts)
+3. ✅ Configure proxy settings correctly for Cloudflare/nginx
+4. ✅ Whitelist admin/office IPs to prevent self-lockout
+5. ✅ Monitor lockout logs for attack patterns
+6. ✅ Enable access failure logging (`enable_access_failure_log=True`)
+:::
+
 ## See Also
 
 - [**DjangoConfig**](./django-settings) - Base configuration class

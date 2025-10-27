@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import NewsletterCampaignstatus
+from ..enums import NewsletterCampaignStatus
 
 
 class NewsletterCampaign(BaseModel):
@@ -17,13 +17,13 @@ class NewsletterCampaign(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     id: int = ...
     newsletter: int = ...
-    newsletter_title: str = ...
+    newsletter_title: Any = ...
     subject: str = Field(max_length=255)
     email_title: str = Field(max_length=255)
     main_text: str = ...
@@ -32,8 +32,8 @@ class NewsletterCampaign(BaseModel):
     button_url: str = Field(None, max_length=200)
     secondary_text: str = None
     status: NewsletterCampaignStatus = Field(description='* `draft` - Draft\n* `sending` - Sending\n* `sent` - Sent\n* `failed` - Failed')
-    created_at: str = ...
-    sent_at: str | None = ...
+    created_at: Any = ...
+    sent_at: Any | None = ...
     recipient_count: int = ...
 
 
@@ -47,7 +47,7 @@ class Unsubscribe(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -64,7 +64,7 @@ class PatchedNewsletterCampaignRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -88,7 +88,7 @@ class UnsubscribeRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -105,7 +105,7 @@ class PatchedUnsubscribeRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

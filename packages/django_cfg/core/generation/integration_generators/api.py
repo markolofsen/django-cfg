@@ -219,6 +219,15 @@ class APIFrameworksGenerator:
         Returns:
             Dictionary with Spectacular settings
         """
+        # Import authentication extension to register it with drf-spectacular
+        # Only import if apps are ready to avoid warnings
+        try:
+            from django.apps import apps
+            if apps.ready:
+                from django_cfg.middleware import authentication  # noqa: F401
+        except (ImportError, RuntimeError):
+            pass
+
         # Check if Spectacular settings exist (from OpenAPI Client or elsewhere)
         if not hasattr(self, '_has_spectacular_settings'):
             return {}

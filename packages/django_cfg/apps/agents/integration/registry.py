@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from django.contrib.auth.models import User
 
-from ..core.agent import DjangoAgent
+from ..core.django_agent import DjangoAgent
 from ..core.dependencies import DjangoDeps
 from ..core.orchestrator import SimpleOrchestrator
 from ..models.registry import AgentDefinition

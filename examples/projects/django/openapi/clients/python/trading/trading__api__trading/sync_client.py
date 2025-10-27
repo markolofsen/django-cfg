@@ -21,8 +21,7 @@ class SyncTradingTradingAPI:
         url = "/api/trading/orders/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedOrderList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedOrderList.model_validate(response.json())
 
 
     def orders_create(self, data: OrderCreateRequest) -> OrderCreate:
@@ -87,8 +86,7 @@ class SyncTradingTradingAPI:
         url = "/api/trading/portfolios/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedPortfolioList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedPortfolioList.model_validate(response.json())
 
 
     def portfolios_retrieve(self, id: int) -> Portfolio:

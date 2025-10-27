@@ -1,0 +1,22 @@
+"""
+Generated Python Client Package.
+
+Auto-generated - DO NOT EDIT
+"""
+
+from .rpc_client import CentrifugoRPCClient
+from .client import APIClient
+{% if models %}
+from .models import (
+{% for model_name in models | unique | sort %}    {{ model_name }},
+{% endfor %})
+{% endif %}
+
+__all__ = [
+    "CentrifugoRPCClient",
+    "APIClient",
+{% if models %}
+{% for model_name in models | unique | sort %}    "{{ model_name }}",
+{% endfor %}
+{% endif %}
+]

@@ -15,10 +15,12 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
-from ...apps.ipc import DjangoCfgRPCConfig
+from ...apps.centrifugo.services.client.config import DjangoCfgCentrifugoConfig
 from ...models import (
     ApiKeys,
+    AxesConfig,
     CacheConfig,
+    CryptoFieldsConfig,
     DatabaseConfig,
     DRFConfig,
     EmailConfig,
@@ -147,6 +149,11 @@ class DjangoConfig(BaseModel):
         description="Enable django-cfg Maintenance application (multi-site maintenance mode with Cloudflare)",
     )
 
+    enable_frontend: bool = Field(
+        default=True,
+        description="Enable django-cfg Frontend application (Next.js admin panel static serving)",
+    )
+
     # === Payment System Configuration ===
     payments: Optional[PaymentsConfig] = Field(
         default=None,
@@ -162,16 +169,6 @@ class DjangoConfig(BaseModel):
     api_url: str = Field(
         default="http://localhost:8000",
         description="Backend API URL",
-    )
-
-    ticket_url: str = Field(
-        default="{site_url}/support/ticket/{uuid}",
-        description="Support ticket URL template. Use {site_url} and {uuid} placeholders",
-    )
-
-    otp_url: str = Field(
-        default="{site_url}/auth/otp/{code}",
-        description="OTP verification URL template. Use {site_url} and {code} placeholders",
     )
 
     # === Core Django Settings ===
@@ -230,7 +227,7 @@ class DjangoConfig(BaseModel):
 
     # === Security Configuration ===
     security_domains: List[str] = Field(
-        default_factory=list,
+        default_factory=lambda: ["localhost", "127.0.0.1"],
         description="Domains for automatic security configuration (CORS, SSL, etc.)",
     )
 
@@ -277,6 +274,17 @@ class DjangoConfig(BaseModel):
         description="Ngrok tunneling service configuration (for development/webhooks)",
     )
 
+    # === Security Configuration ===
+    axes: Optional["AxesConfig"] = Field(
+        default=None,
+        description="Django-Axes brute-force protection configuration (None = smart defaults)",
+    )
+
+    crypto_fields: Optional["CryptoFieldsConfig"] = Field(
+        default=None,
+        description="Django Crypto Fields encryption configuration for sensitive data (API keys, tokens, passwords)",
+    )
+
     # === Admin Interface Configuration ===
     unfold: Optional[UnfoldConfig] = Field(
         default=None,
@@ -309,10 +317,10 @@ class DjangoConfig(BaseModel):
         description="Background task processing configuration (Dramatiq)",
     )
 
-    # === RPC Client Configuration ===
-    django_ipc: Optional[DjangoCfgRPCConfig] = Field(
+    # === Centrifugo Configuration ===
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = Field(
         default=None,
-        description="Django-CFG RPC Client configuration (WebSocket RPC communication)",
+        description="Centrifugo pub/sub configuration (WebSocket notifications with ACK tracking)",
     )
 
     # === API Configuration ===
@@ -560,36 +568,6 @@ class DjangoConfig(BaseModel):
                 ) from e
 
         return self._django_settings
-
-    def get_ticket_url(self, ticket_uuid: str) -> str:
-        """
-        Generate ticket URL using the configured template.
-
-        Args:
-            ticket_uuid: UUID of the support ticket
-
-        Returns:
-            Complete URL to the ticket
-        """
-        return self.ticket_url.format(
-            site_url=self.site_url,
-            uuid=ticket_uuid,
-        )
-
-    def get_otp_url(self, otp_code: str) -> str:
-        """
-        Generate OTP verification URL using the configured template.
-
-        Args:
-            otp_code: OTP verification code
-
-        Returns:
-            Complete URL to the OTP verification page
-        """
-        return self.otp_url.format(
-            site_url=self.site_url,
-            code=otp_code,
-        )
 
     def invalidate_cache(self) -> None:
         """

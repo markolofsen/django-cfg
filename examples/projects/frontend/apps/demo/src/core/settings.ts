@@ -25,6 +25,7 @@ export const settings = {
 
   links: {
     documentationUrl: 'https://djangocfg.com',
+    githubUrl: 'https://github.com/markolofsen/django-cfg',
   },
 
   layouts: {
@@ -36,16 +37,14 @@ export const settings = {
     // Main API URL for authentication and CFG services
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
     // WebSocket RPC URL (for IPC communication)
-    wsUrl: process.env.NEXT_PUBLIC_WS_RPC_URL || 'ws://localhost:8965',
+    wsUrl: process.env.NEXT_PUBLIC_WS_RPC_URL || 'ws://localhost:8765',
+  },
 
-    // Router service (if needed)
-    router: {
-      baseUrl: process.env.NEXT_PUBLIC_ROUTER_API_URL || 'http://localhost:8083',
-      wsUrl: process.env.NEXT_PUBLIC_ROUTER_WS_URL || 'ws://localhost:8083',
-    },
-    // Swarm service (if needed)
-    swarm: {
-      baseUrl: process.env.NEXT_PUBLIC_SWARM_API_URL || 'http://localhost:8010',
+  admin: {
+    url: 'https://api.djangocfg.com/admin',
+    demo: {
+      email: 'admin@example.com',
+      password: 'admin123',
     },
   },
 

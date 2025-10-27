@@ -1,8 +1,13 @@
-import { ProfileView } from "@/views";
+import { ProfileLayout } from "@djangocfg/layouts";
 import { PageWithConfig } from "@/types";
 
 const View: PageWithConfig = () => {
-  return <ProfileView />;
+  return (
+    <ProfileLayout
+      title="Profile"
+      description="Manage your account settings and profile information"
+    />
+  );
 };
 
 View.pageConfig = {

@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import PatchedTicketRequeststatus, TicketRequeststatus, Ticketstatus
+from ..enums import PatchedTicketRequestStatus, TicketRequestStatus, TicketStatus
 
 
 class PaginatedTicketList(BaseModel):
@@ -16,7 +16,7 @@ class PaginatedTicketList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -28,7 +28,7 @@ class PaginatedTicketList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -40,15 +40,15 @@ class Ticket(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    uuid: str = ...
+    uuid: Any = ...
     user: int = ...
     subject: str = Field(max_length=255)
     status: TicketStatus = Field(None, description='* `open` - Open\n* `waiting_for_user` - Waiting for User\n* `waiting_for_admin` - Waiting for Admin\n* `resolved` - Resolved\n* `closed` - Closed')
-    created_at: str = ...
+    created_at: Any = ...
     unanswered_messages_count: int = Field(description='Get count of unanswered messages for this specific ticket.')
 
 
@@ -61,7 +61,7 @@ class PaginatedMessageList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -73,7 +73,7 @@ class PaginatedMessageList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -85,7 +85,7 @@ class MessageCreate(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -101,16 +101,16 @@ class Message(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    uuid: str = ...
-    ticket: str = ...
-    sender: dict[str, Any] = ...
+    uuid: Any = ...
+    ticket: Any = ...
+    sender: Any = ...
     is_from_author: bool = Field(description='Check if this message is from the ticket author.')
     text: str = ...
-    created_at: str = ...
+    created_at: Any = ...
 
 
 
@@ -122,7 +122,7 @@ class TicketRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -140,7 +140,7 @@ class MessageCreateRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -156,7 +156,7 @@ class MessageRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -172,7 +172,7 @@ class PatchedMessageRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -188,7 +188,7 @@ class PatchedTicketRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

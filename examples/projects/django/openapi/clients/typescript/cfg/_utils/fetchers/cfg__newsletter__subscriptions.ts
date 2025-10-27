@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/newsletter/subscribe/
  */
-export async function createNewsletterSubscribeCreate(  data: SubscribeRequest,  client?
+export async function createNewsletterSubscribeCreate(  data: SubscribeRequest,  client?: API
 ): Promise<SubscribeResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_subscriptions.newsletterSubscribeCreate(data)
@@ -57,7 +57,7 @@ export async function createNewsletterSubscribeCreate(  data: SubscribeRequest, 
  * @method GET
  * @path /cfg/newsletter/subscriptions/
  */
-export async function getNewsletterSubscriptionsList(  params?: { page?: number; page_size?: number },  client?
+export async function getNewsletterSubscriptionsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedNewsletterSubscriptionList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_subscriptions.newsletterSubscriptionsList(params?.page, params?.page_size)
@@ -71,7 +71,7 @@ export async function getNewsletterSubscriptionsList(  params?: { page?: number;
  * @method POST
  * @path /cfg/newsletter/unsubscribe/
  */
-export async function createNewsletterUnsubscribeCreate(  data: UnsubscribeRequest,  client?
+export async function createNewsletterUnsubscribeCreate(  data: UnsubscribeRequest,  client?: API
 ): Promise<SuccessResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_subscriptions.newsletterUnsubscribeCreate(data)

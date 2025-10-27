@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
-from ..core.agent import DjangoAgent
+from ..core.django_agent import DjangoAgent
 from ..core.dependencies import ContentDeps, RunContext
 from ..core.models import ValidationResult
 

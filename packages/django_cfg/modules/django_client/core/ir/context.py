@@ -151,6 +151,20 @@ class DjangoGlobalMetadata(BaseModel):
         description="Django session cookie name (default: 'sessionid')",
     )
 
+    # ===== Computed Properties =====
+
+    @property
+    def has_session_auth(self) -> bool:
+        """
+        Check if SessionAuthentication is enabled in DRF defaults.
+
+        Returns True if any authentication class contains 'SessionAuthentication'.
+        """
+        return any(
+            'SessionAuthentication' in auth_class
+            for auth_class in self.default_authentication_classes
+        )
+
     # ===== Validation =====
 
     @field_validator("component_split_request")

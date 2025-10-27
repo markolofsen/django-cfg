@@ -120,7 +120,11 @@ class SchemaParser:
                 return 'Object'
             # Check for additionalProperties (dictionary-like)
             if 'additionalProperties' in schema:
-                value_type = self.get_js_type(schema['additionalProperties'])
+                additional = schema['additionalProperties']
+                # additionalProperties can be bool or schema object
+                if isinstance(additional, bool):
+                    return 'Record<string, any>' if additional else 'Object'
+                value_type = self.get_js_type(additional)
                 return f'Record<string, {value_type}>'
             return 'Object'
 

@@ -15,7 +15,7 @@ class BulkEmailResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -36,7 +36,7 @@ class BulkEmailRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

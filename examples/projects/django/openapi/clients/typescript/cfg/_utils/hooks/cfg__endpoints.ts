@@ -19,6 +19,7 @@ import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__endpoints'
 import type { API } from '../../index'
 import type { EndpointsStatus } from '../schemas/EndpointsStatus.schema'
+import type { URLsList } from '../schemas/URLsList.schema'
 
 /**
  * API operation
@@ -30,6 +31,34 @@ export function useEndpointsDrfRetrieve(client?: API): ReturnType<typeof useSWR<
   return useSWR<EndpointsStatus>(
     'cfg-endpoints-drf',
     () => Fetchers.getEndpointsDrfRetrieve(client)
+  )
+}
+
+
+/**
+ * API operation
+ *
+ * @method GET
+ * @path /cfg/endpoints/urls/
+ */
+export function useEndpointsUrlsRetrieve(client?: API): ReturnType<typeof useSWR<URLsList>> {
+  return useSWR<URLsList>(
+    'cfg-endpoints-url',
+    () => Fetchers.getEndpointsUrlsRetrieve(client)
+  )
+}
+
+
+/**
+ * API operation
+ *
+ * @method GET
+ * @path /cfg/endpoints/urls/compact/
+ */
+export function useEndpointsUrlsCompactRetrieve(client?: API): ReturnType<typeof useSWR<any>> {
+  return useSWR<any>(
+    'cfg-endpoints-urls-compact',
+    () => Fetchers.getEndpointsUrlsCompactRetrieve(client)
   )
 }
 

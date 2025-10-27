@@ -61,8 +61,8 @@ export function generatePublicNav(documentationUrl?: string) {
   return generatePublicNavigation(routes.public, documentationUrl);
 }
 
-export function generateFooterNav() {
-  return generateFooterNavigation(routes.public);
+export function generateFooterNav(documentationUrl?: string) {
+  return generateFooterNavigation(routes.public, routes.legal, documentationUrl);
 }
 
 // Aliases for backwards compatibility
@@ -115,6 +115,7 @@ export type {
   UnrealonRoutes,
   PublicRoutes,
   PrivateRoutes,
+  LegalRoutes,
 } from './definitions';
 
 export type {

@@ -2,20 +2,18 @@
  * Zod schema for HealthCheck
  *
  * This schema provides runtime validation and type inference.
- *  * Serializer for health check response.
+ *  * Health check response.
  *  */
 import { z } from 'zod'
 
 /**
- * Serializer for health check response.
+ * Health check response.
  */
 export const HealthCheckSchema = z.object({
   status: z.string(),
-  timestamp: z.iso.datetime(),
-  service: z.string(),
-  version: z.string(),
-  checks: z.record(z.string(), z.any()),
-  environment: z.record(z.string(), z.any()),
+  wrapper_url: z.string(),
+  has_api_key: z.boolean(),
+  timestamp: z.string(),
 })
 
 /**

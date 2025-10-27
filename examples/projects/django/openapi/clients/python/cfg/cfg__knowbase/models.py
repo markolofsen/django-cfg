@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import ArchiveItemChunkDetailchunk_type, ArchiveItemChunkRequestchunk_type, ArchiveItemChunkchunk_type, ArchiveItemDetailcontent_type, ArchiveItemcontent_type, DocumentArchiveDetailarchive_type, DocumentArchiveDetailprocessing_status, DocumentArchivearchive_type, DocumentArchiveprocessing_status, PatchedArchiveItemChunkRequestchunk_type
+from ..enums import ArchiveItemChunkChunkType, ArchiveItemChunkDetailChunkType, ArchiveItemChunkRequestChunkType, ArchiveItemContentType, ArchiveItemDetailContentType, DocumentArchiveArchiveType, DocumentArchiveDetailArchiveType, DocumentArchiveDetailProcessingStatus, DocumentArchiveProcessingStatus, PatchedArchiveItemChunkRequestChunkType
 
 
 class PaginatedChatResponseList(BaseModel):
@@ -16,7 +16,7 @@ class PaginatedChatResponseList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -28,7 +28,7 @@ class PaginatedChatResponseList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -41,7 +41,7 @@ class ChatResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -51,7 +51,7 @@ class ChatResponse(BaseModel):
     cost_usd: float = ...
     processing_time_ms: int = ...
     model_used: str = ...
-    sources: list[dict[str, Any]] | None = None
+    sources: list[Any] | None = None
 
 
 
@@ -64,12 +64,12 @@ class ChatHistory(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     session_id: str = ...
-    messages: list[dict[str, Any]] = ...
+    messages: list[Any] = ...
     total_messages: int = ...
 
 
@@ -82,7 +82,7 @@ class PaginatedDocumentList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -94,7 +94,7 @@ class PaginatedDocumentList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -107,23 +107,23 @@ class Document(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     title: str = Field(description='Document title', max_length=512)
     file_type: str = Field(None, description='MIME type of original file', max_length=100)
-    file_size: int = Field(None, description='Original file size in bytes', ge=0.0, le=2147483647.0)
-    processing_status: str = ...
+    file_size: int = Field(None, description='Original file size in bytes', ge=0, le=2147483647)
+    processing_status: Any = ...
     chunks_count: int = ...
     total_tokens: int = ...
     total_cost_usd: float = ...
-    created_at: str = ...
-    updated_at: str = ...
-    processing_started_at: str = ...
-    processing_completed_at: str = ...
-    processing_error: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
+    processing_started_at: Any = ...
+    processing_completed_at: Any = ...
+    processing_error: Any = ...
     metadata: str | None = Field(None, description='Additional document metadata')
 
 
@@ -137,7 +137,7 @@ class DocumentProcessingStatus(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -158,7 +158,7 @@ class DocumentStats(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -180,7 +180,7 @@ class PaginatedChatSessionList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -192,7 +192,7 @@ class PaginatedChatSessionList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -205,21 +205,21 @@ class ChatSession(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     title: str = Field(None, description='Session title (auto-generated if empty)', max_length=255)
     is_active: bool = Field(None, description='Whether session accepts new messages')
-    messages_count: int = Field(None, ge=0.0, le=2147483647.0)
-    total_tokens_used: int = Field(None, ge=0.0, le=2147483647.0)
+    messages_count: int = Field(None, ge=0, le=2147483647)
+    total_tokens_used: int = Field(None, ge=0, le=2147483647)
     total_cost_usd: float = ...
     model_name: str = Field(None, description='LLM model used for this session', max_length=100)
     temperature: float = Field(None, description='Temperature setting for LLM')
-    max_context_chunks: int = Field(None, description='Maximum chunks to include in context', ge=0.0, le=2147483647.0)
-    created_at: str = ...
-    updated_at: str = ...
+    max_context_chunks: int = Field(None, description='Maximum chunks to include in context', ge=0, le=2147483647)
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -231,7 +231,7 @@ class PaginatedPublicCategoryList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -243,7 +243,7 @@ class PaginatedPublicCategoryList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -256,11 +256,11 @@ class PublicCategory(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     name: str = Field(description='Category name', max_length=255)
     description: str = Field(None, description='Category description')
 
@@ -274,7 +274,7 @@ class PaginatedPublicDocumentListList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -286,7 +286,7 @@ class PaginatedPublicDocumentListList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -299,16 +299,16 @@ class PublicDocument(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     title: str = Field(description='Document title', max_length=512)
     content: str = Field(description='Full document content')
-    category: dict[str, Any] = ...
-    created_at: str = ...
-    updated_at: str = ...
+    category: Any = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -320,7 +320,7 @@ class PaginatedDocumentArchiveListList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -332,7 +332,7 @@ class PaginatedDocumentArchiveListList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -345,18 +345,18 @@ class ArchiveProcessingResult(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    archive_id: str = ...
-    status: str = ...
+    archive_id: Any = ...
+    status: Any = ...
     processing_time_ms: int = ...
     items_processed: int = ...
     chunks_created: int = ...
     vectorized_chunks: int = ...
     total_cost_usd: float = ...
-    error_message: str = ...
+    error_message: Any = ...
 
 
 
@@ -369,23 +369,23 @@ class DocumentArchiveDetail(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     title: str = Field(description='Archive title', max_length=512)
     description: str = Field(None, description='Archive description')
-    categories: list[dict[str, Any]] = ...
+    categories: list[Any] = ...
     is_public: bool = Field(None, description='Whether this archive is publicly accessible')
-    archive_file: str = Field(description='Uploaded archive file')
-    original_filename: str = Field(description='Original uploaded filename')
+    archive_file: Any = Field(description='Uploaded archive file')
+    original_filename: Any = Field(description='Original uploaded filename')
     file_size: int = Field(description='Archive size in bytes')
     archive_type: DocumentArchiveDetailArchiveType = Field(description='Archive format\n\n* `zip` - ZIP\n* `tar` - TAR\n* `tar.gz` - TAR GZ\n* `tar.bz2` - TAR BZ2')
     processing_status: DocumentArchiveDetailProcessingStatus = Field(description='* `pending` - Pending\n* `processing` - Processing\n* `completed` - Completed\n* `failed` - Failed\n* `cancelled` - Cancelled')
-    processed_at: str | None = Field(description='When processing completed')
+    processed_at: Any | None = Field(description='When processing completed')
     processing_duration_ms: int = Field(description='Processing time in milliseconds')
-    processing_error: str = Field(description='Error message if processing failed')
+    processing_error: Any = Field(description='Error message if processing failed')
     total_items: int = Field(description='Total items in archive')
     processed_items: int = Field(description='Successfully processed items')
     total_chunks: int = Field(description='Total chunks created')
@@ -395,10 +395,10 @@ class DocumentArchiveDetail(BaseModel):
     processing_progress: float = Field(description='Calculate processing progress as percentage.')
     vectorization_progress: float = Field(description='Calculate vectorization progress as percentage.')
     is_processed: bool = Field(description='Check if archive processing is completed.')
-    created_at: str = ...
-    updated_at: str = ...
-    items: list[dict[str, Any]] = ...
-    file_tree: dict[str, Any] = Field(description='Get hierarchical file tree.')
+    created_at: Any = ...
+    updated_at: Any = ...
+    items: list[Any] = ...
+    file_tree: Any = Field(description='Get hierarchical file tree.')
     metadata: str | None = Field(None, description='Additional archive metadata')
 
 
@@ -412,23 +412,23 @@ class DocumentArchive(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     title: str = Field(description='Archive title', max_length=512)
     description: str = Field(None, description='Archive description')
-    categories: list[dict[str, Any]] = ...
+    categories: list[Any] = ...
     is_public: bool = Field(None, description='Whether this archive is publicly accessible')
-    archive_file: str = Field(description='Uploaded archive file')
-    original_filename: str = Field(description='Original uploaded filename')
+    archive_file: Any = Field(description='Uploaded archive file')
+    original_filename: Any = Field(description='Original uploaded filename')
     file_size: int = Field(description='Archive size in bytes')
     archive_type: DocumentArchiveArchiveType = Field(description='Archive format\n\n* `zip` - ZIP\n* `tar` - TAR\n* `tar.gz` - TAR GZ\n* `tar.bz2` - TAR BZ2')
     processing_status: DocumentArchiveProcessingStatus = Field(description='* `pending` - Pending\n* `processing` - Processing\n* `completed` - Completed\n* `failed` - Failed\n* `cancelled` - Cancelled')
-    processed_at: str | None = Field(description='When processing completed')
+    processed_at: Any | None = Field(description='When processing completed')
     processing_duration_ms: int = Field(description='Processing time in milliseconds')
-    processing_error: str = Field(description='Error message if processing failed')
+    processing_error: Any = Field(description='Error message if processing failed')
     total_items: int = Field(description='Total items in archive')
     processed_items: int = Field(description='Successfully processed items')
     total_chunks: int = Field(description='Total chunks created')
@@ -438,8 +438,8 @@ class DocumentArchive(BaseModel):
     processing_progress: float = Field(description='Calculate processing progress as percentage.')
     vectorization_progress: float = Field(description='Calculate vectorization progress as percentage.')
     is_processed: bool = Field(description='Check if archive processing is completed.')
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -451,7 +451,7 @@ class PaginatedArchiveItemList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -463,7 +463,7 @@ class PaginatedArchiveItemList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -475,7 +475,7 @@ class PaginatedArchiveSearchResultList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -487,7 +487,7 @@ class PaginatedArchiveSearchResultList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -500,7 +500,7 @@ class VectorizationResult(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -522,7 +522,7 @@ class ArchiveStatistics(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -548,7 +548,7 @@ class VectorizationStatistics(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -571,7 +571,7 @@ class PaginatedArchiveItemChunkList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -583,7 +583,7 @@ class PaginatedArchiveItemChunkList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -596,20 +596,20 @@ class ArchiveItemChunk(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     content: str = Field(description='Chunk text content')
-    chunk_index: int = Field(description='Sequential chunk number within item', ge=0.0, le=2147483647.0)
+    chunk_index: int = Field(description='Sequential chunk number within item', ge=0, le=2147483647)
     chunk_type: ArchiveItemChunkChunkType = Field(None, description='Type of content in chunk\n\n* `text` - Text\n* `code` - Code\n* `heading` - Heading\n* `metadata` - Metadata\n* `table` - Table\n* `list` - List')
     token_count: int = Field(description='Number of tokens in chunk')
     character_count: int = Field(description='Number of characters in chunk')
-    embedding_model: str = Field(description='Model used for embedding generation')
+    embedding_model: Any = Field(description='Model used for embedding generation')
     embedding_cost: float = Field(description='Cost in USD for embedding generation')
-    context_summary: dict[str, Any] = Field(description='Get context summary for display.')
-    created_at: str = ...
+    context_summary: Any = Field(description='Get context summary for display.')
+    created_at: Any = ...
 
 
 
@@ -622,21 +622,21 @@ class ArchiveItemChunkDetail(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     content: str = Field(description='Chunk text content')
-    chunk_index: int = Field(description='Sequential chunk number within item', ge=0.0, le=2147483647.0)
+    chunk_index: int = Field(description='Sequential chunk number within item', ge=0, le=2147483647)
     chunk_type: ArchiveItemChunkDetailChunkType = Field(None, description='Type of content in chunk\n\n* `text` - Text\n* `code` - Code\n* `heading` - Heading\n* `metadata` - Metadata\n* `table` - Table\n* `list` - List')
     token_count: int = Field(description='Number of tokens in chunk')
     character_count: int = Field(description='Number of characters in chunk')
-    embedding_model: str = Field(description='Model used for embedding generation')
+    embedding_model: Any = Field(description='Model used for embedding generation')
     embedding_cost: float = Field(description='Cost in USD for embedding generation')
-    context_summary: dict[str, Any] = Field(description='Get context summary for display.')
-    created_at: str = ...
-    context_metadata: str = ...
+    context_summary: Any = Field(description='Get context summary for display.')
+    created_at: Any = ...
+    context_metadata: Any = ...
 
 
 
@@ -649,24 +649,24 @@ class ArchiveItem(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     relative_path: str = Field(description='Path within archive', max_length=1024)
     item_name: str = Field(description='Item name', max_length=255)
     item_type: str = Field(description='MIME type', max_length=100)
     content_type: ArchiveItemContentType = Field(description='Content classification\n\n* `document` - Document\n* `code` - Code\n* `image` - Image\n* `data` - Data\n* `archive` - Archive\n* `unknown` - Unknown')
-    file_size: int = Field(None, description='Item size in bytes', ge=0.0, le=2147483647.0)
+    file_size: int = Field(None, description='Item size in bytes', ge=0, le=2147483647)
     is_processable: bool = Field(description='Whether item can be processed for chunks')
-    language: str = Field(description='Programming language or document language')
-    encoding: str = Field(description='Character encoding')
+    language: Any = Field(description='Programming language or document language')
+    encoding: Any = Field(description='Character encoding')
     chunks_count: int = Field(description='Number of chunks created')
     total_tokens: int = Field(description='Total tokens in all chunks')
     processing_cost: float = Field(description='Processing cost for this item')
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -679,26 +679,26 @@ class ArchiveItemDetail(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    id: str = ...
+    id: Any = ...
     relative_path: str = Field(description='Path within archive', max_length=1024)
     item_name: str = Field(description='Item name', max_length=255)
     item_type: str = Field(description='MIME type', max_length=100)
     content_type: ArchiveItemDetailContentType = Field(description='Content classification\n\n* `document` - Document\n* `code` - Code\n* `image` - Image\n* `data` - Data\n* `archive` - Archive\n* `unknown` - Unknown')
-    file_size: int = Field(None, description='Item size in bytes', ge=0.0, le=2147483647.0)
+    file_size: int = Field(None, description='Item size in bytes', ge=0, le=2147483647)
     is_processable: bool = Field(description='Whether item can be processed for chunks')
-    language: str = Field(description='Programming language or document language')
-    encoding: str = Field(description='Character encoding')
+    language: Any = Field(description='Programming language or document language')
+    encoding: Any = Field(description='Character encoding')
     chunks_count: int = Field(description='Number of chunks created')
     total_tokens: int = Field(description='Total tokens in all chunks')
     processing_cost: float = Field(description='Processing cost for this item')
-    created_at: str = ...
-    updated_at: str = ...
-    raw_content: str = ...
-    metadata: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
+    raw_content: Any = ...
+    metadata: Any = ...
 
 
 
@@ -711,7 +711,7 @@ class ChatResponseRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -721,7 +721,7 @@ class ChatResponseRequest(BaseModel):
     cost_usd: float = ...
     processing_time_ms: int = ...
     model_used: str = Field(min_length=1)
-    sources: list[dict[str, Any]] | None = None
+    sources: list[Any] | None = None
 
 
 
@@ -734,7 +734,7 @@ class PatchedChatResponseRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -744,7 +744,7 @@ class PatchedChatResponseRequest(BaseModel):
     cost_usd: float = None
     processing_time_ms: int = None
     model_used: str = Field(None, min_length=1)
-    sources: list[dict[str, Any]] | None = None
+    sources: list[Any] | None = None
 
 
 
@@ -757,13 +757,13 @@ class ChatQueryRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     session_id: str | None = Field(None, description='Chat session ID (creates new if not provided)')
     query: str = Field(description='User query', min_length=1, max_length=2000)
-    max_tokens: int = Field(None, description='Maximum response tokens', ge=1.0, le=4000.0)
+    max_tokens: int = Field(None, description='Maximum response tokens', ge=1, le=4000)
     include_sources: bool = Field(None, description='Include source documents in response')
 
 
@@ -777,7 +777,7 @@ class DocumentCreateRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -797,13 +797,13 @@ class DocumentRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     title: str = Field(description='Document title', min_length=1, max_length=512)
     file_type: str = Field(None, description='MIME type of original file', min_length=1, max_length=100)
-    file_size: int = Field(None, description='Original file size in bytes', ge=0.0, le=2147483647.0)
+    file_size: int = Field(None, description='Original file size in bytes', ge=0, le=2147483647)
     metadata: str | None = Field(None, description='Additional document metadata')
 
 
@@ -817,13 +817,13 @@ class PatchedDocumentRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     title: str = Field(None, description='Document title', min_length=1, max_length=512)
     file_type: str = Field(None, description='MIME type of original file', min_length=1, max_length=100)
-    file_size: int = Field(None, description='Original file size in bytes', ge=0.0, le=2147483647.0)
+    file_size: int = Field(None, description='Original file size in bytes', ge=0, le=2147483647)
     metadata: str | None = Field(None, description='Additional document metadata')
 
 
@@ -837,14 +837,14 @@ class ChatSessionCreateRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     title: str = Field(None, description='Session title', max_length=255)
     model_name: str = Field(None, description='LLM model to use', min_length=1, max_length=100)
     temperature: float = Field(None, description='Response creativity', ge=0.0, le=2.0)
-    max_context_chunks: int = Field(None, description='Maximum context chunks', ge=1.0, le=10.0)
+    max_context_chunks: int = Field(None, description='Maximum context chunks', ge=1, le=10)
 
 
 
@@ -857,17 +857,17 @@ class ChatSessionRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     title: str = Field(None, description='Session title (auto-generated if empty)', max_length=255)
     is_active: bool = Field(None, description='Whether session accepts new messages')
-    messages_count: int = Field(None, ge=0.0, le=2147483647.0)
-    total_tokens_used: int = Field(None, ge=0.0, le=2147483647.0)
+    messages_count: int = Field(None, ge=0, le=2147483647)
+    total_tokens_used: int = Field(None, ge=0, le=2147483647)
     model_name: str = Field(None, description='LLM model used for this session', min_length=1, max_length=100)
     temperature: float = Field(None, description='Temperature setting for LLM')
-    max_context_chunks: int = Field(None, description='Maximum chunks to include in context', ge=0.0, le=2147483647.0)
+    max_context_chunks: int = Field(None, description='Maximum chunks to include in context', ge=0, le=2147483647)
 
 
 
@@ -880,17 +880,17 @@ class PatchedChatSessionRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     title: str = Field(None, description='Session title (auto-generated if empty)', max_length=255)
     is_active: bool = Field(None, description='Whether session accepts new messages')
-    messages_count: int = Field(None, ge=0.0, le=2147483647.0)
-    total_tokens_used: int = Field(None, ge=0.0, le=2147483647.0)
+    messages_count: int = Field(None, ge=0, le=2147483647)
+    total_tokens_used: int = Field(None, ge=0, le=2147483647)
     model_name: str = Field(None, description='LLM model used for this session', min_length=1, max_length=100)
     temperature: float = Field(None, description='Temperature setting for LLM')
-    max_context_chunks: int = Field(None, description='Maximum chunks to include in context', ge=0.0, le=2147483647.0)
+    max_context_chunks: int = Field(None, description='Maximum chunks to include in context', ge=0, le=2147483647)
 
 
 
@@ -903,7 +903,7 @@ class DocumentArchiveRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -922,7 +922,7 @@ class PatchedDocumentArchiveRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -941,7 +941,7 @@ class ArchiveSearchRequestRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -950,7 +950,7 @@ class ArchiveSearchRequestRequest(BaseModel):
     languages: list[str] = Field(None, description='Filter by programming languages')
     chunk_types: list[str] = Field(None, description='Filter by chunk types')
     archive_ids: list[str] = Field(None, description='Search within specific archives')
-    limit: int = Field(None, description='Maximum number of results', ge=1.0, le=50.0)
+    limit: int = Field(None, description='Maximum number of results', ge=1, le=50)
     similarity_threshold: float = Field(None, description='Minimum similarity threshold', ge=0.0, le=1.0)
 
 
@@ -964,7 +964,7 @@ class ChunkRevectorizationRequestRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -982,12 +982,12 @@ class ArchiveItemChunkRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     content: str = Field(description='Chunk text content', min_length=1)
-    chunk_index: int = Field(description='Sequential chunk number within item', ge=0.0, le=2147483647.0)
+    chunk_index: int = Field(description='Sequential chunk number within item', ge=0, le=2147483647)
     chunk_type: ArchiveItemChunkRequestChunkType = Field(None, description='Type of content in chunk\n\n* `text` - Text\n* `code` - Code\n* `heading` - Heading\n* `metadata` - Metadata\n* `table` - Table\n* `list` - List')
 
 
@@ -1001,12 +1001,12 @@ class PatchedArchiveItemChunkRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     content: str = Field(None, description='Chunk text content', min_length=1)
-    chunk_index: int = Field(None, description='Sequential chunk number within item', ge=0.0, le=2147483647.0)
+    chunk_index: int = Field(None, description='Sequential chunk number within item', ge=0, le=2147483647)
     chunk_type: PatchedArchiveItemChunkRequestChunkType = Field(None, description='Type of content in chunk\n\n* `text` - Text\n* `code` - Code\n* `heading` - Heading\n* `metadata` - Metadata\n* `table` - Table\n* `list` - List')
 
 
@@ -1020,14 +1020,14 @@ class ArchiveItemRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     relative_path: str = Field(description='Path within archive', min_length=1, max_length=1024)
     item_name: str = Field(description='Item name', min_length=1, max_length=255)
     item_type: str = Field(description='MIME type', min_length=1, max_length=100)
-    file_size: int = Field(None, description='Item size in bytes', ge=0.0, le=2147483647.0)
+    file_size: int = Field(None, description='Item size in bytes', ge=0, le=2147483647)
 
 
 
@@ -1040,14 +1040,14 @@ class PatchedArchiveItemRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     relative_path: str = Field(None, description='Path within archive', min_length=1, max_length=1024)
     item_name: str = Field(None, description='Item name', min_length=1, max_length=255)
     item_type: str = Field(None, description='MIME type', min_length=1, max_length=100)
-    file_size: int = Field(None, description='Item size in bytes', ge=0.0, le=2147483647.0)
+    file_size: int = Field(None, description='Item size in bytes', ge=0, le=2147483647)
 
 
 

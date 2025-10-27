@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import OrderCreateRequestorder_type, OrderCreateRequestside, OrderCreateorder_type, OrderCreateside, OrderRequestorder_type, OrderRequestside, Orderorder_type, Orderside, Orderstatus, PatchedOrderRequestorder_type, PatchedOrderRequestside
+from ..enums import OrderCreateOrderType, OrderCreateRequestOrderType, OrderCreateRequestSide, OrderCreateSide, OrderOrderType, OrderRequestOrderType, OrderRequestSide, OrderSide, OrderStatus, PatchedOrderRequestOrderType, PatchedOrderRequestSide
 
 
 class PaginatedOrderList(BaseModel):
@@ -16,7 +16,7 @@ class PaginatedOrderList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -28,7 +28,7 @@ class PaginatedOrderList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -41,7 +41,7 @@ class OrderCreate(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -62,7 +62,7 @@ class Order(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -73,11 +73,11 @@ class Order(BaseModel):
     side: OrderSide = Field(description='* `buy` - Buy\n* `sell` - Sell')
     quantity: str = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
     price: str | None = Field(None, pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
-    filled_quantity: str = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
+    filled_quantity: Any = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
     status: OrderStatus = Field(description='* `pending` - Pending\n* `filled` - Filled\n* `cancelled` - Cancelled')
-    total_usd: str = Field(pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
-    created_at: str = ...
-    updated_at: str = ...
+    total_usd: Any = Field(pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -89,7 +89,7 @@ class PaginatedPortfolioList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -101,7 +101,7 @@ class PaginatedPortfolioList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -114,22 +114,22 @@ class Portfolio(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     id: int = ...
     user: int = ...
-    user_info: dict[str, Any] = ...
-    total_balance_usd: str = Field(description='Total portfolio value in USD', pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
+    user_info: Any = ...
+    total_balance_usd: Any = Field(description='Total portfolio value in USD', pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
     available_balance_usd: str = Field(None, description='Available balance for trading', pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
-    total_profit_loss: str = Field(pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
+    total_profit_loss: Any = Field(pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
     total_trades: int = ...
     winning_trades: int = ...
     losing_trades: int = ...
     win_rate: float = ...
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -142,7 +142,7 @@ class PortfolioStats(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -161,7 +161,7 @@ class OrderCreateRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -182,7 +182,7 @@ class OrderRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -204,7 +204,7 @@ class PatchedOrderRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

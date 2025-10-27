@@ -1,0 +1,193 @@
+"""
+Base Centrifugo RPC Client.
+
+Handles WebSocket connection and RPC call correlation.
+"""
+
+import asyncio
+import json
+import logging
+import uuid
+from typing import Any, Dict, Optional
+from centrifuge import Client, ClientEventContext, ConnectedContext, DisconnectedContext
+
+logger = logging.getLogger(__name__)
+
+
+class CentrifugoRPCClient:
+    """
+    Base RPC client for Centrifugo WebSocket communication.
+
+    Implements request-response pattern over Centrifugo pub/sub using correlation IDs.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        token: str,
+        user_id: str,
+        timeout: float = 30.0,
+    ):
+        """
+        Initialize RPC client.
+
+        Args:
+            url: Centrifugo WebSocket URL (e.g., "ws://localhost:8000/connection/websocket")
+            token: JWT token for authentication
+            user_id: User ID for reply channel
+            timeout: RPC call timeout in seconds
+        """
+        self.url = url
+        self.token = token
+        self.user_id = user_id
+        self.timeout = timeout
+
+        self.client: Optional[Client] = None
+        self._pending_requests: Dict[str, asyncio.Future] = {}
+        self._reply_channel = f"user#{user_id}"
+
+    async def connect(self) -> None:
+        """Connect to Centrifugo WebSocket."""
+        self.client = Client(
+            self.url,
+            token=self.token,
+            events={
+                "connected": self._on_connected,
+                "disconnected": self._on_disconnected,
+            }
+        )
+
+        await self.client.connect()
+
+        # Subscribe to reply channel for RPC responses
+        subscription = self.client.new_subscription(
+            self._reply_channel,
+            events={
+                "publication": self._on_response,
+            }
+        )
+        await subscription.subscribe()
+
+        logger.info(f"✅ Connected to Centrifugo at {self.url}")
+
+    async def disconnect(self) -> None:
+        """Disconnect from Centrifugo WebSocket."""
+        if self.client:
+            await self.client.disconnect()
+            self.client = None
+            logger.info("Disconnected from Centrifugo")
+
+    async def call(self, method: str, params: Any) -> Any:
+        """
+        Call RPC method and wait for response.
+
+        Args:
+            method: RPC method name (e.g., "tasks.get_stats")
+            params: Method parameters (dict or Pydantic model)
+
+        Returns:
+            Method result
+
+        Raises:
+            asyncio.TimeoutError: If RPC call times out
+            Exception: If RPC call fails
+        """
+        if not self.client:
+            raise Exception("Not connected to Centrifugo")
+
+        # Generate correlation ID
+        correlation_id = str(uuid.uuid4())
+
+        # Prepare params
+        params_dict = params if isinstance(params, dict) else params
+
+        # Create request message
+        message = {
+            "method": method,
+            "params": params_dict,
+            "correlation_id": correlation_id,
+            "reply_to": self._reply_channel,
+        }
+
+        # Create future for response
+        future = asyncio.Future()
+        self._pending_requests[correlation_id] = future
+
+        try:
+            # Publish request to RPC channel
+            await self.client.publish(
+                channel="rpc.requests",
+                data=message
+            )
+
+            logger.debug(f"📤 RPC call: {method} (correlation_id: {correlation_id})")
+
+            # Wait for response with timeout
+            result = await asyncio.wait_for(future, timeout=self.timeout)
+            logger.debug(f"📥 RPC response: {method} (correlation_id: {correlation_id})")
+
+            return result
+
+        except asyncio.TimeoutError:
+            self._pending_requests.pop(correlation_id, None)
+            logger.error(f"❌ RPC timeout: {method} (correlation_id: {correlation_id})")
+            raise
+        except Exception as e:
+            self._pending_requests.pop(correlation_id, None)
+            logger.error(f"❌ RPC error: {method} - {e}")
+            raise
+
+    async def _on_connected(self, ctx: ConnectedContext):
+        """Handle connection event."""
+        logger.info(f"Connected: client_id={ctx.client}")
+
+    async def _on_disconnected(self, ctx: DisconnectedContext):
+        """Handle disconnection event."""
+        logger.warning(f"Disconnected: code={ctx.code}, reason={ctx.reason}")
+
+        # Reject all pending requests
+        for correlation_id, future in list(self._pending_requests.items()):
+            if not future.done():
+                future.set_exception(Exception("Disconnected from Centrifugo"))
+        self._pending_requests.clear()
+
+    async def _on_response(self, ctx: ClientEventContext):
+        """Handle RPC response publication."""
+        try:
+            data = ctx.data
+
+            # Extract correlation ID
+            correlation_id = data.get("correlation_id")
+            if not correlation_id:
+                logger.warning("Received response without correlation_id")
+                return
+
+            # Find pending request
+            future = self._pending_requests.pop(correlation_id, None)
+            if not future:
+                logger.warning(f"Received response for unknown correlation_id: {correlation_id}")
+                return
+
+            # Check for error
+            if "error" in data:
+                error_msg = data["error"].get("message", "RPC error")
+                future.set_exception(Exception(error_msg))
+            else:
+                # Resolve with result
+                result = data.get("result")
+                future.set_result(result)
+
+        except Exception as e:
+            logger.error(f"Error handling response: {e}")
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.disconnect()
+
+
+__all__ = ["CentrifugoRPCClient"]

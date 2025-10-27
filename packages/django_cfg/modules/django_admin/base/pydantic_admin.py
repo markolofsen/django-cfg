@@ -333,6 +333,45 @@ class PydanticAdminMixin:
 
         return tuple(filtered_fieldsets)
 
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """
+        Override form field for specific database field types.
+
+        Automatically detects and customizes encrypted fields from django-crypto-fields.
+        """
+        # Check if this is an EncryptedTextField or EncryptedCharField
+        field_class_name = db_field.__class__.__name__
+        if 'Encrypted' in field_class_name and ('TextField' in field_class_name or 'CharField' in field_class_name):
+            from django import forms
+            from django.forms.widgets import PasswordInput
+
+            # Determine placeholder based on field name
+            placeholder = "Enter value"
+            if 'key' in db_field.name.lower():
+                placeholder = "Enter API Key"
+            elif 'secret' in db_field.name.lower():
+                placeholder = "Enter API Secret"
+            elif 'passphrase' in db_field.name.lower():
+                placeholder = "Enter Passphrase (if required)"
+
+            # Return CharField with PasswordInput widget for security
+            # render_value=True shows masked value (••••••) after save
+            return forms.CharField(
+                widget=PasswordInput(
+                    attrs={
+                        'placeholder': placeholder,
+                        'class': 'appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500'
+                    },
+                    render_value=True  # Show masked value after save
+                ),
+                required=not db_field.blank and not db_field.null,
+                help_text=db_field.help_text or "This field is encrypted at rest",
+                label=db_field.verbose_name if hasattr(db_field, 'verbose_name') else db_field.name.replace('_', ' ').title()
+            )
+
+        # Fall back to default Django behavior
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
 
 class PydanticAdmin(PydanticAdminMixin, _get_base_admin_class()):
     """

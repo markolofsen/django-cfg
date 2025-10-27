@@ -262,6 +262,8 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
     @computed_field("Emails")
     def emails_count(self, obj):
         """Show count of emails sent to user (if newsletter app is enabled)."""
+        from django.db.utils import ProgrammingError, OperationalError
+
         try:
             base_module = BaseCfgModule()
 
@@ -278,12 +280,17 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
                 variant="success",
                 icon=Icons.EMAIL
             )
+        except (ProgrammingError, OperationalError):
+            # Table doesn't exist in database
+            return None
         except (ImportError, Exception):
             return None
 
     @computed_field("Tickets")
     def tickets_count(self, obj):
         """Show count of support tickets for user (if support app is enabled)."""
+        from django.db.utils import ProgrammingError, OperationalError
+
         try:
             base_module = BaseCfgModule()
 
@@ -300,6 +307,9 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
                 variant="warning",
                 icon=Icons.SUPPORT_AGENT
             )
+        except (ProgrammingError, OperationalError):
+            # Table doesn't exist in database
+            return None
         except (ImportError, Exception):
             return None
 

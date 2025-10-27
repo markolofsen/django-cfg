@@ -1,0 +1,303 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG - Monolithic Docker Compose
+# ═════════════════════════════════════════════════════════════════
+# All services +100 ports (compared to StockAPIs)
+
+name: djangocfg
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # Infrastructure
+  # ─────────────────────────────────────────────────────────────────
+
+  traefik:
+    image: traefik:v2.11
+    container_name: djangocfg_traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=djangocfg_djangocfg-network"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websocket.address=:8081"
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+    ports:
+      - "7330:80"         # HTTP (Django-CFG: base 7300 +30)
+      - "7331:443"        # HTTPS (+31)
+      - "7333:8081"       # WebSocket (+33)
+      - "7332:8080"       # Dashboard (+32)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - djangocfg-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=web"
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: djangocfg_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - ../../volumes/postgres:/var/lib/postgresql/data
+      - ./services/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - djangocfg_django_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: djangocfg_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --databases 3
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - djangocfg_django_network
+
+  # ─────────────────────────────────────────────────────────────────
+  # Backend Services
+  # ─────────────────────────────────────────────────────────────────
+
+  django:
+    build:
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    image: djangocfg-django:latest
+    container_name: django
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      # Django Core
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../../volumes/django/media:/app/media:rw
+    ports:
+      - "7301:8000"  # Django-CFG: base 7300 (+01 Django API)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - djangocfg-network
+      - djangocfg_django_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.djangocfg-api.rule=Host(`api.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-api.entrypoints=web"
+      - "traefik.http.routers.djangocfg-api.service=djangocfg-api"
+      - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
+
+  django-dramatiq:
+    image: djangocfg-django:latest
+    container_name: django-dramatiq
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      # Django Core
+      DJANGO_SETTINGS_MODULE: api.settings
+
+      # Dramatiq
+      DRAMATIQ_PROCESSES: ${DRAMATIQ_PROCESSES:-2}
+      DRAMATIQ_THREADS: ${DRAMATIQ_THREADS:-4}
+
+      # AI API Keys
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Admin creation
+      DJANGO_CREATE_ADMIN: "false"
+    volumes:
+      - ../../volumes/django/media:/app/media:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      django:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py rundramatiq
+      --processes $${DRAMATIQ_PROCESSES:-2}
+      --threads $${DRAMATIQ_THREADS:-4}"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rundramatiq > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          memory: 512M
+    networks:
+      - djangocfg-network
+      - djangocfg_django_network
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: djangocfg_centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    env_file:
+      - .env.local
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    ports:
+      - "7320:8000"  # Centrifugo (Django-CFG: base 7300 +20)
+    networks:
+      - djangocfg-network        # For local Traefik (development)
+      - djangocfg_django_network # For Redis access
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.djangocfg-centrifugo.rule=Host(`ws.localhost`)"
+      - "traefik.http.routers.djangocfg-centrifugo.entrypoints=web"
+      - "traefik.http.routers.djangocfg-centrifugo.service=djangocfg-centrifugo"
+      - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Frontend Services
+  # ─────────────────────────────────────────────────────────────────
+
+  frontend-demo:
+    build:
+      context: ..
+      dockerfile: docker/services/frontend/Dockerfile
+      target: demo
+    image: djangocfg-frontend:demo
+    container_name: frontend-demo
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "7310:3000"  # Django-CFG: base 7300 (+10 Frontend Demo)
+    depends_on:
+      django:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          memory: 1G
+    networks:
+      - djangocfg-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-demo.entrypoints=web"
+      - "traefik.http.routers.djangocfg-demo.service=djangocfg-demo"
+      - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3000"
+
+  frontend-web:
+    build:
+      context: ..
+      dockerfile: docker/services/web/Dockerfile
+    image: djangocfg-web:latest
+    container_name: frontend-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3001
+    ports:
+      - "7311:3001"  # Django-CFG: base 7300 (+11 Frontend Web)
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          memory: 512M
+    networks:
+      - djangocfg-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.djangocfg-site.rule=Host(`djangocfg.com`) || Host(`www.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-site.entrypoints=web"
+      - "traefik.http.routers.djangocfg-site.service=djangocfg-site"
+      - "traefik.http.services.djangocfg-site.loadbalancer.server.port=3001"
+
+# ═════════════════════════════════════════════════════════════════
+# Networks
+# ═════════════════════════════════════════════════════════════════
+
+networks:
+  djangocfg-network:
+    driver: bridge
+  djangocfg_django_network:
+    driver: bridge
+    internal: true
+
+# ═════════════════════════════════════════════════════════════════
+# Local volumes - no named volumes needed
+# ═════════════════════════════════════════════════════════════════

@@ -14,7 +14,8 @@
         "django_cfg_leads",
         "django_cfg_agents",
         "tasks",
-        "payments"
+        "payments",
+        "django_cfg_centrifugo"
       ],
       "generator": "django-client",
       "generator_version": "1.0.0"
@@ -51,9 +52,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -123,9 +121,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -174,9 +169,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -234,9 +226,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -316,9 +305,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -396,9 +382,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -478,9 +461,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -558,9 +538,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -640,6 +617,2259 @@
         "x-async-capable": false
       }
     },
+    "/cfg/centrifugo/admin/api/monitor/channels/": {
+      "get": {
+        "operationId": "cfg_centrifugo_admin_api_monitor_channels_retrieve",
+        "description": "Get statistics per channel.",
+        "tags": [
+          "centrifugo"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/health/": {
+      "get": {
+        "operationId": "cfg_centrifugo_admin_api_monitor_health_retrieve",
+        "description": "Returns the current health status of the Centrifugo client.",
+        "summary": "Get Centrifugo health status",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Service unavailable"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/overview/": {
+      "get": {
+        "operationId": "cfg_centrifugo_admin_api_monitor_overview_retrieve",
+        "description": "Returns overview statistics for Centrifugo publishes.",
+        "summary": "Get overview statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Statistics period in hours (default: 24)"
+          }
+        ],
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewStats"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/publishes/": {
+      "get": {
+        "operationId": "cfg_centrifugo_admin_api_monitor_publishes_retrieve",
+        "description": "Returns a list of recent Centrifugo publishes with their details.",
+        "summary": "Get recent publishes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "channel",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by channel name"
+          },
+          {
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of publishes to return (default: 50, max: 200)"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Offset for pagination (default: 0)"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by status (success, failed, timeout, pending, partial)"
+          }
+        ],
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentPublishes"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/timeline/": {
+      "get": {
+        "operationId": "cfg_centrifugo_admin_api_monitor_timeline_retrieve",
+        "description": "Returns statistics grouped by channel.",
+        "summary": "Get channel statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Statistics period in hours (default: 24)"
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Time interval: 'hour' or 'day' (default: hour)"
+          }
+        ],
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelList"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/auth/token/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_server_auth_token_create",
+        "description": "Returns JWT token and config for WebSocket connection to Centrifugo.",
+        "summary": "Get connection token for dashboard",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "config": {
+                      "type": "object",
+                      "properties": {
+                        "centrifugo_url": {
+                          "type": "string"
+                        },
+                        "expires_at": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Centrifugo not configured"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/channels/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_server_channels_create",
+        "description": "Returns list of active channels with optional pattern filter.",
+        "summary": "List active channels",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoChannelsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/history/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_server_history_create",
+        "description": "Returns message history for a channel.",
+        "summary": "Get channel history",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoHistoryResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/info/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_server_info_create",
+        "description": "Returns server information including node count, version, and uptime.",
+        "summary": "Get Centrifugo server info",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoInfoResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/presence/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_server_presence_create",
+        "description": "Returns list of clients currently subscribed to a channel.",
+        "summary": "Get channel presence",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/presence-stats/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_server_presence_stats_create",
+        "description": "Returns quick statistics about channel presence (num_clients, num_users).",
+        "summary": "Get channel presence statistics",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceStatsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/connection-token/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_testing_connection_token_create",
+        "description": "Generate JWT token for WebSocket connection to Centrifugo.",
+        "summary": "Generate connection token",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTokenResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/publish-test/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_testing_publish_test_create",
+        "description": "Publish test message to Centrifugo via wrapper with optional ACK tracking.",
+        "summary": "Publish test message",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/publish-with-logging/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_testing_publish_with_logging_create",
+        "description": "Publish message using CentrifugoClient with database logging. This will create CentrifugoLog records.",
+        "summary": "Publish with database logging",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/send-ack/": {
+      "post": {
+        "operationId": "cfg_centrifugo_admin_api_testing_send_ack_create",
+        "description": "Manually send ACK for a message to the wrapper. Pass message_id in request body.",
+        "summary": "Send manual ACK",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualAckResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/channels/": {
+      "get": {
+        "operationId": "cfg_centrifugo_monitor_channels_retrieve",
+        "description": "Get statistics per channel.",
+        "tags": [
+          "centrifugo"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/health/": {
+      "get": {
+        "operationId": "cfg_centrifugo_monitor_health_retrieve",
+        "description": "Returns the current health status of the Centrifugo client.",
+        "summary": "Get Centrifugo health status",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Service unavailable"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/overview/": {
+      "get": {
+        "operationId": "cfg_centrifugo_monitor_overview_retrieve",
+        "description": "Returns overview statistics for Centrifugo publishes.",
+        "summary": "Get overview statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Statistics period in hours (default: 24)"
+          }
+        ],
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewStats"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/publishes/": {
+      "get": {
+        "operationId": "cfg_centrifugo_monitor_publishes_retrieve",
+        "description": "Returns a list of recent Centrifugo publishes with their details.",
+        "summary": "Get recent publishes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "channel",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by channel name"
+          },
+          {
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of publishes to return (default: 50, max: 200)"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Offset for pagination (default: 0)"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by status (success, failed, timeout, pending, partial)"
+          }
+        ],
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentPublishes"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/timeline/": {
+      "get": {
+        "operationId": "cfg_centrifugo_monitor_timeline_retrieve",
+        "description": "Returns statistics grouped by channel.",
+        "summary": "Get channel statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Statistics period in hours (default: 24)"
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Time interval: 'hour' or 'day' (default: hour)"
+          }
+        ],
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelList"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/auth/token/": {
+      "post": {
+        "operationId": "cfg_centrifugo_server_auth_token_create",
+        "description": "Returns JWT token and config for WebSocket connection to Centrifugo.",
+        "summary": "Get connection token for dashboard",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "config": {
+                      "type": "object",
+                      "properties": {
+                        "centrifugo_url": {
+                          "type": "string"
+                        },
+                        "expires_at": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Centrifugo not configured"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/channels/": {
+      "post": {
+        "operationId": "cfg_centrifugo_server_channels_create",
+        "description": "Returns list of active channels with optional pattern filter.",
+        "summary": "List active channels",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoChannelsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/history/": {
+      "post": {
+        "operationId": "cfg_centrifugo_server_history_create",
+        "description": "Returns message history for a channel.",
+        "summary": "Get channel history",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoHistoryResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/info/": {
+      "post": {
+        "operationId": "cfg_centrifugo_server_info_create",
+        "description": "Returns server information including node count, version, and uptime.",
+        "summary": "Get Centrifugo server info",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoInfoResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/presence/": {
+      "post": {
+        "operationId": "cfg_centrifugo_server_presence_create",
+        "description": "Returns list of clients currently subscribed to a channel.",
+        "summary": "Get channel presence",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/presence-stats/": {
+      "post": {
+        "operationId": "cfg_centrifugo_server_presence_stats_create",
+        "description": "Returns quick statistics about channel presence (num_clients, num_users).",
+        "summary": "Get channel presence statistics",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceStatsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/connection-token/": {
+      "post": {
+        "operationId": "cfg_centrifugo_testing_connection_token_create",
+        "description": "Generate JWT token for WebSocket connection to Centrifugo.",
+        "summary": "Generate connection token",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTokenResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/publish-test/": {
+      "post": {
+        "operationId": "cfg_centrifugo_testing_publish_test_create",
+        "description": "Publish test message to Centrifugo via wrapper with optional ACK tracking.",
+        "summary": "Publish test message",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/publish-with-logging/": {
+      "post": {
+        "operationId": "cfg_centrifugo_testing_publish_with_logging_create",
+        "description": "Publish message using CentrifugoClient with database logging. This will create CentrifugoLog records.",
+        "summary": "Publish with database logging",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/send-ack/": {
+      "post": {
+        "operationId": "cfg_centrifugo_testing_send_ack_create",
+        "description": "Manually send ACK for a message to the wrapper. Pass message_id in request body.",
+        "summary": "Send manual ACK",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualAckResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/activity/actions/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_activity_actions_list",
+        "description": "Retrieve quick action buttons for dashboard",
+        "summary": "Get quick actions",
+        "tags": [
+          "Dashboard - Activity"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuickAction"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/activity/recent/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_activity_recent_list",
+        "description": "Retrieve recent system activity entries",
+        "summary": "Get recent activity",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Maximum number of entries to return"
+          }
+        ],
+        "tags": [
+          "Dashboard - Activity"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityEntry"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/activity/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_charts_activity_retrieve",
+        "description": "Retrieve user activity data for chart visualization",
+        "summary": "Get user activity chart",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            },
+            "description": "Number of days to include"
+          }
+        ],
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartData"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/recent-users/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_charts_recent_users_list",
+        "description": "Retrieve list of recently registered users",
+        "summary": "Get recent users",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Maximum number of users to return"
+          }
+        ],
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecentUser"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/registrations/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_charts_registrations_retrieve",
+        "description": "Retrieve user registration data for chart visualization",
+        "summary": "Get user registration chart",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            },
+            "description": "Number of days to include"
+          }
+        ],
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartData"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/tracker/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_charts_tracker_list",
+        "description": "Retrieve activity tracker data (GitHub-style contribution graph)",
+        "summary": "Get activity tracker",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "weeks",
+            "schema": {
+              "type": "integer",
+              "default": 52
+            },
+            "description": "Number of weeks to include"
+          }
+        ],
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityTrackerDay"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/commands/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_commands_list",
+        "description": "Retrieve all available Django management commands",
+        "summary": "Get all commands",
+        "tags": [
+          "Dashboard - Commands"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Command"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/commands/summary/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_commands_summary_retrieve",
+        "description": "Retrieve commands summary with statistics and categorization",
+        "summary": "Get commands summary",
+        "tags": [
+          "Dashboard - Commands"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandsSummary"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/overview/overview/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_overview_overview_retrieve",
+        "description": "Retrieve complete dashboard data including stats, health, actions, and metrics",
+        "summary": "Get dashboard overview",
+        "tags": [
+          "Dashboard - Overview"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOverview"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/statistics/apps/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_statistics_apps_list",
+        "description": "Retrieve statistics for all enabled django-cfg applications",
+        "summary": "Get application statistics",
+        "tags": [
+          "Dashboard - Statistics"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppStatistics"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/statistics/cards/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_statistics_cards_list",
+        "description": "Retrieve dashboard statistics cards with key metrics",
+        "summary": "Get statistics cards",
+        "tags": [
+          "Dashboard - Statistics"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StatCard"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/statistics/users/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_statistics_users_retrieve",
+        "description": "Retrieve user-related statistics",
+        "summary": "Get user statistics",
+        "tags": [
+          "Dashboard - Statistics"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatistics"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/system/health/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_system_health_retrieve",
+        "description": "Retrieve overall system health including all component checks",
+        "summary": "Get system health status",
+        "tags": [
+          "Dashboard - System"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemHealth"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/system/metrics/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_system_metrics_retrieve",
+        "description": "Retrieve system performance metrics (CPU, memory, disk, etc.)",
+        "summary": "Get system metrics",
+        "tags": [
+          "Dashboard - System"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemMetrics"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/zones/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_zones_list",
+        "description": "Retrieve all OpenAPI zones/groups with their configuration",
+        "summary": "Get all API zones",
+        "tags": [
+          "Dashboard - API Zones"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/APIZone"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/zones/summary/": {
+      "get": {
+        "operationId": "cfg_dashboard_api_zones_summary_retrieve",
+        "description": "Retrieve zones summary with statistics",
+        "summary": "Get zones summary",
+        "tags": [
+          "Dashboard - API Zones"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIZonesSummary"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
     "/cfg/endpoints/drf/": {
       "get": {
         "operationId": "cfg_endpoints_drf_retrieve",
@@ -650,9 +2880,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -671,6 +2898,55 @@
         "x-async-capable": false
       }
     },
+    "/cfg/endpoints/urls/": {
+      "get": {
+        "operationId": "cfg_endpoints_urls_retrieve",
+        "description": "Return all registered URLs.",
+        "tags": [
+          "endpoints"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/URLsList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/endpoints/urls/compact/": {
+      "get": {
+        "operationId": "cfg_endpoints_urls_compact_retrieve",
+        "description": "Return compact URL list.",
+        "tags": [
+          "endpoints"
+        ],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
     "/cfg/health/drf/": {
       "get": {
         "operationId": "cfg_health_drf_retrieve",
@@ -681,9 +2957,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -712,9 +2985,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -763,9 +3033,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -811,9 +3078,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -853,9 +3117,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -913,9 +3174,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -972,9 +3230,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1012,9 +3267,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1048,9 +3300,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1109,9 +3358,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1178,9 +3424,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1237,9 +3480,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1299,9 +3539,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1362,9 +3599,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1421,9 +3655,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1462,9 +3693,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1521,9 +3749,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1564,9 +3789,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1595,9 +3817,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1646,9 +3865,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1694,9 +3910,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1736,9 +3949,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1795,9 +4005,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1854,9 +4061,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1894,9 +4098,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -1949,9 +4150,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2011,9 +4209,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2063,9 +4258,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -2106,9 +4298,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -2178,9 +4367,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -2221,9 +4407,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -2275,9 +4458,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2337,9 +4517,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2388,9 +4565,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2443,9 +4617,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2497,9 +4668,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2537,9 +4705,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2573,9 +4738,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2634,9 +4796,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2710,9 +4869,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2756,9 +4912,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2787,9 +4940,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2818,9 +4968,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2868,9 +5015,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2916,9 +5060,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -2958,9 +5099,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3018,9 +5156,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3077,9 +5212,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3117,9 +5249,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3153,9 +5282,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3216,9 +5342,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3266,9 +5389,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3314,9 +5434,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3356,9 +5473,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3416,9 +5530,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3475,9 +5586,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3515,9 +5623,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3569,9 +5674,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3612,9 +5714,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -3663,9 +5762,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -3712,9 +5808,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -3753,9 +5846,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -3814,9 +5904,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -3873,9 +5960,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -3912,9 +5996,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -3974,9 +6055,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -4035,9 +6113,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4096,9 +6171,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4145,9 +6217,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4186,9 +6255,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4245,9 +6311,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4302,9 +6365,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4341,9 +6401,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4385,9 +6442,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4456,9 +6510,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4508,9 +6559,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -4549,9 +6597,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -4601,9 +6646,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -4673,9 +6715,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4724,9 +6763,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -4787,9 +6823,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -4846,9 +6879,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -4894,9 +6924,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -4925,9 +6952,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -4956,9 +6980,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5009,9 +7030,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5049,9 +7067,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5089,9 +7104,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5129,9 +7141,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5159,9 +7168,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5216,9 +7222,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5269,9 +7272,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5317,9 +7317,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5377,9 +7374,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5437,9 +7431,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5489,9 +7480,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5559,9 +7547,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5628,9 +7613,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5678,9 +7660,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5713,9 +7692,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5773,9 +7749,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5832,9 +7805,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -5872,9 +7842,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -6360,6 +8327,166 @@
         },
         "required": [
           "success"
+        ]
+      },
+      "APIZone": {
+        "type": "object",
+        "description": "OpenAPI zone/group serializer.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "app_count": {
+            "type": "integer"
+          },
+          "endpoint_count": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "schema_url": {
+            "type": "string"
+          },
+          "api_url": {
+            "type": "string"
+          },
+          "apps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "api_url",
+          "app_count",
+          "apps",
+          "description",
+          "endpoint_count",
+          "name",
+          "schema_url",
+          "status",
+          "title"
+        ]
+      },
+      "APIZonesSummary": {
+        "type": "object",
+        "description": "API zones summary serializer.",
+        "properties": {
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/APIZone"
+            }
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "summary",
+          "zones"
+        ]
+      },
+      "ActivityEntry": {
+        "type": "object",
+        "description": "Serializer for recent activity entries.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Activity ID"
+          },
+          "user": {
+            "type": "string",
+            "description": "User who performed the action"
+          },
+          "action": {
+            "type": "string",
+            "description": "Action type (created, updated, deleted, etc.)"
+          },
+          "resource": {
+            "type": "string",
+            "description": "Resource affected"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Activity timestamp (ISO format)"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Material icon name"
+          },
+          "color": {
+            "type": "string",
+            "description": "Icon color"
+          }
+        },
+        "required": [
+          "action",
+          "color",
+          "icon",
+          "id",
+          "resource",
+          "timestamp",
+          "user"
+        ]
+      },
+      "ActivityTrackerDay": {
+        "type": "object",
+        "description": "Activity tracker single day serializer.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "color": {
+            "type": "string"
+          },
+          "tooltip": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "color",
+          "count",
+          "date",
+          "level",
+          "tooltip"
+        ]
+      },
+      "AppStatistics": {
+        "type": "object",
+        "description": "Serializer for application-specific statistics.",
+        "properties": {
+          "app_name": {
+            "type": "string",
+            "description": "Application name"
+          },
+          "statistics": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Application statistics"
+          }
+        },
+        "required": [
+          "app_name",
+          "statistics"
         ]
       },
       "ArchiveItem": {
@@ -7158,6 +9285,790 @@
           "total_recipients"
         ]
       },
+      "CentrifugoChannelInfo": {
+        "description": "Information about a single channel.",
+        "properties": {
+          "num_clients": {
+            "description": "Number of connected clients in channel",
+            "title": "Num Clients",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num_clients"
+        ],
+        "title": "CentrifugoChannelInfo",
+        "type": "object"
+      },
+      "CentrifugoChannelsRequestRequest": {
+        "description": "Request to list active channels.",
+        "properties": {
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Pattern to filter channels (e.g., 'user:*')",
+            "title": "Pattern"
+          }
+        },
+        "title": "CentrifugoChannelsRequest",
+        "type": "object"
+      },
+      "CentrifugoChannelsResponse": {
+        "description": "List of active channels response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoChannelsResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoChannelsResponse",
+        "type": "object"
+      },
+      "CentrifugoChannelsResult": {
+        "description": "Channels result wrapper.",
+        "properties": {
+          "channels": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CentrifugoChannelInfo"
+            },
+            "description": "Map of channel names to channel info",
+            "title": "Channels",
+            "type": "object"
+          }
+        },
+        "required": [
+          "channels"
+        ],
+        "title": "CentrifugoChannelsResult",
+        "type": "object"
+      },
+      "CentrifugoClientInfo": {
+        "description": "Information about connected client.",
+        "properties": {
+          "user": {
+            "description": "User ID",
+            "title": "User",
+            "type": "string"
+          },
+          "client": {
+            "description": "Client UUID",
+            "title": "Client",
+            "type": "string"
+          },
+          "conn_info": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Connection metadata",
+            "title": "Conn Info"
+          },
+          "chan_info": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Channel-specific metadata",
+            "title": "Chan Info"
+          }
+        },
+        "required": [
+          "user",
+          "client"
+        ],
+        "title": "CentrifugoClientInfo",
+        "type": "object"
+      },
+      "CentrifugoError": {
+        "description": "Centrifugo API error structure.",
+        "properties": {
+          "code": {
+            "default": 0,
+            "description": "Error code (0 = no error)",
+            "title": "Code",
+            "type": "integer"
+          },
+          "message": {
+            "default": "",
+            "description": "Error message",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CentrifugoError",
+        "type": "object"
+      },
+      "CentrifugoHistoryRequestRequest": {
+        "description": "Request to get channel history.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 1000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum number of messages to return",
+            "title": "Limit"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoStreamPosition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Stream position to get messages since"
+          },
+          "reverse": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "description": "Reverse message order (newest first)",
+            "title": "Reverse"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "CentrifugoHistoryRequest",
+        "type": "object"
+      },
+      "CentrifugoHistoryResponse": {
+        "description": "Channel history response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoHistoryResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoHistoryResponse",
+        "type": "object"
+      },
+      "CentrifugoHistoryResult": {
+        "description": "History result wrapper.",
+        "properties": {
+          "publications": {
+            "description": "List of publications",
+            "items": {
+              "$ref": "#/components/schemas/CentrifugoPublication"
+            },
+            "title": "Publications",
+            "type": "array"
+          },
+          "epoch": {
+            "description": "Current stream epoch",
+            "title": "Epoch",
+            "type": "string"
+          },
+          "offset": {
+            "description": "Latest stream offset",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "publications",
+          "epoch",
+          "offset"
+        ],
+        "title": "CentrifugoHistoryResult",
+        "type": "object"
+      },
+      "CentrifugoInfoResponse": {
+        "description": "Server info response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoInfoResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoInfoResponse",
+        "type": "object"
+      },
+      "CentrifugoInfoResult": {
+        "description": "Info result wrapper.",
+        "properties": {
+          "nodes": {
+            "description": "List of Centrifugo nodes",
+            "items": {
+              "$ref": "#/components/schemas/CentrifugoNodeInfo"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes"
+        ],
+        "title": "CentrifugoInfoResult",
+        "type": "object"
+      },
+      "CentrifugoMetrics": {
+        "description": "Server metrics.",
+        "properties": {
+          "interval": {
+            "description": "Metrics collection interval",
+            "title": "Interval",
+            "type": "number"
+          },
+          "items": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Metric name to value mapping",
+            "title": "Items",
+            "type": "object"
+          }
+        },
+        "required": [
+          "interval",
+          "items"
+        ],
+        "title": "CentrifugoMetrics",
+        "type": "object"
+      },
+      "CentrifugoNodeInfo": {
+        "description": "Information about a single Centrifugo node.",
+        "properties": {
+          "uid": {
+            "description": "Unique node identifier",
+            "title": "Uid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Node name",
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "description": "Centrifugo version",
+            "title": "Version",
+            "type": "string"
+          },
+          "num_clients": {
+            "description": "Number of connected clients",
+            "title": "Num Clients",
+            "type": "integer"
+          },
+          "num_users": {
+            "description": "Number of unique users",
+            "title": "Num Users",
+            "type": "integer"
+          },
+          "num_channels": {
+            "description": "Number of active channels",
+            "title": "Num Channels",
+            "type": "integer"
+          },
+          "uptime": {
+            "description": "Node uptime in seconds",
+            "title": "Uptime",
+            "type": "integer"
+          },
+          "num_subs": {
+            "description": "Total number of subscriptions",
+            "title": "Num Subs",
+            "type": "integer"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Server metrics"
+          },
+          "process": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoProcess"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Process information"
+          }
+        },
+        "required": [
+          "uid",
+          "name",
+          "version",
+          "num_clients",
+          "num_users",
+          "num_channels",
+          "uptime",
+          "num_subs"
+        ],
+        "title": "CentrifugoNodeInfo",
+        "type": "object"
+      },
+      "CentrifugoPresenceRequestRequest": {
+        "description": "Request to get channel presence.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "CentrifugoPresenceRequest",
+        "type": "object"
+      },
+      "CentrifugoPresenceResponse": {
+        "description": "Channel presence response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoPresenceResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoPresenceResponse",
+        "type": "object"
+      },
+      "CentrifugoPresenceResult": {
+        "description": "Presence result wrapper.",
+        "properties": {
+          "presence": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CentrifugoClientInfo"
+            },
+            "description": "Map of client IDs to client info",
+            "title": "Presence",
+            "type": "object"
+          }
+        },
+        "required": [
+          "presence"
+        ],
+        "title": "CentrifugoPresenceResult",
+        "type": "object"
+      },
+      "CentrifugoPresenceStatsRequestRequest": {
+        "description": "Request to get channel presence statistics.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "CentrifugoPresenceStatsRequest",
+        "type": "object"
+      },
+      "CentrifugoPresenceStatsResponse": {
+        "description": "Channel presence stats response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoPresenceStatsResponse",
+        "type": "object"
+      },
+      "CentrifugoPresenceStatsResult": {
+        "description": "Presence stats result.",
+        "properties": {
+          "num_clients": {
+            "description": "Number of connected clients",
+            "title": "Num Clients",
+            "type": "integer"
+          },
+          "num_users": {
+            "description": "Number of unique users",
+            "title": "Num Users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num_clients",
+          "num_users"
+        ],
+        "title": "CentrifugoPresenceStatsResult",
+        "type": "object"
+      },
+      "CentrifugoProcess": {
+        "description": "Process information.",
+        "properties": {
+          "cpu": {
+            "description": "CPU usage percentage",
+            "title": "Cpu",
+            "type": "number"
+          },
+          "rss": {
+            "description": "Resident set size in bytes",
+            "title": "Rss",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cpu",
+          "rss"
+        ],
+        "title": "CentrifugoProcess",
+        "type": "object"
+      },
+      "CentrifugoPublication": {
+        "description": "Single publication (message) in channel history.",
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "description": "Message payload",
+            "title": "Data",
+            "type": "object"
+          },
+          "info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoClientInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Publisher client info"
+          },
+          "offset": {
+            "description": "Message offset in channel stream",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional message tags",
+            "title": "Tags"
+          }
+        },
+        "required": [
+          "data",
+          "offset"
+        ],
+        "title": "CentrifugoPublication",
+        "type": "object"
+      },
+      "CentrifugoStreamPosition": {
+        "description": "Stream position for pagination.",
+        "properties": {
+          "offset": {
+            "description": "Stream offset",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "epoch": {
+            "description": "Stream epoch",
+            "title": "Epoch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "offset",
+          "epoch"
+        ],
+        "title": "CentrifugoStreamPosition",
+        "type": "object"
+      },
+      "ChannelList": {
+        "description": "List of channel statistics.",
+        "properties": {
+          "channels": {
+            "description": "Channel statistics",
+            "items": {
+              "$ref": "#/components/schemas/ChannelStatsSerializer"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "total_channels": {
+            "description": "Total number of channels",
+            "title": "Total Channels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channels",
+          "total_channels"
+        ],
+        "title": "ChannelListSerializer",
+        "type": "object"
+      },
+      "ChannelStatsSerializer": {
+        "description": "Statistics per channel.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          },
+          "total": {
+            "description": "Total publishes to this channel",
+            "title": "Total",
+            "type": "integer"
+          },
+          "successful": {
+            "description": "Successful publishes",
+            "title": "Successful",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Failed publishes",
+            "title": "Failed",
+            "type": "integer"
+          },
+          "avg_duration_ms": {
+            "description": "Average duration",
+            "title": "Avg Duration Ms",
+            "type": "number"
+          },
+          "avg_acks": {
+            "description": "Average ACKs received",
+            "title": "Avg Acks",
+            "type": "number"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Last activity timestamp (ISO format)",
+            "title": "Last Activity At"
+          }
+        },
+        "required": [
+          "channel",
+          "total",
+          "successful",
+          "failed",
+          "avg_duration_ms",
+          "avg_acks"
+        ],
+        "title": "ChannelStatsSerializer",
+        "type": "object"
+      },
+      "ChartData": {
+        "type": "object",
+        "description": "Chart.js data structure serializer.",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChartDataset"
+            }
+          }
+        },
+        "required": [
+          "datasets",
+          "labels"
+        ]
+      },
+      "ChartDataset": {
+        "type": "object",
+        "description": "Chart.js dataset serializer.",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "backgroundColor": {
+            "type": "string"
+          },
+          "borderColor": {
+            "type": "string"
+          },
+          "tension": {
+            "type": "number",
+            "format": "double"
+          },
+          "fill": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "backgroundColor",
+          "borderColor",
+          "data",
+          "label",
+          "tension"
+        ]
+      },
       "ChatHistory": {
         "type": "object",
         "description": "Chat history response serializer.",
@@ -7566,6 +10477,123 @@
           "chunk_ids"
         ]
       },
+      "Command": {
+        "type": "object",
+        "description": "Django management command serializer.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "app": {
+            "type": "string"
+          },
+          "help": {
+            "type": "string"
+          },
+          "is_core": {
+            "type": "boolean"
+          },
+          "is_custom": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "app",
+          "help",
+          "is_core",
+          "is_custom",
+          "name"
+        ]
+      },
+      "CommandsSummary": {
+        "type": "object",
+        "description": "Commands summary serializer.",
+        "properties": {
+          "total_commands": {
+            "type": "integer"
+          },
+          "core_commands": {
+            "type": "integer"
+          },
+          "custom_commands": {
+            "type": "integer"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Command"
+            }
+          },
+          "categorized": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "categories",
+          "categorized",
+          "commands",
+          "core_commands",
+          "custom_commands",
+          "total_commands"
+        ]
+      },
+      "ConnectionTokenRequestRequest": {
+        "description": "Request model for connection token generation.",
+        "properties": {
+          "user_id": {
+            "description": "User ID for the connection",
+            "title": "User Id",
+            "type": "string"
+          },
+          "channels": {
+            "description": "List of channels to authorize",
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "ConnectionTokenRequest",
+        "type": "object"
+      },
+      "ConnectionTokenResponse": {
+        "description": "Response model for connection token.",
+        "properties": {
+          "token": {
+            "description": "JWT token for WebSocket connection",
+            "title": "Token",
+            "type": "string"
+          },
+          "centrifugo_url": {
+            "description": "Centrifugo WebSocket URL",
+            "title": "Centrifugo Url",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Token expiration time (ISO 8601)",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "centrifugo_url",
+          "expires_at"
+        ],
+        "title": "ConnectionTokenResponse",
+        "type": "object"
+      },
       "Currency": {
         "type": "object",
         "description": "Currency list serializer.",
@@ -7634,6 +10662,67 @@
           "sort_order",
           "symbol",
           "token"
+        ]
+      },
+      "DashboardOverview": {
+        "type": "object",
+        "description": "Main serializer for dashboard overview endpoint.\nUses DictField to avoid allOf generation in OpenAPI.",
+        "properties": {
+          "stat_cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "Dashboard statistics cards"
+          },
+          "system_health": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "System health status"
+          },
+          "quick_actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "Quick action buttons"
+          },
+          "recent_activity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "Recent activity entries"
+          },
+          "system_metrics": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "System performance metrics"
+          },
+          "user_statistics": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "User statistics"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Data timestamp (ISO format)"
+          }
+        },
+        "required": [
+          "quick_actions",
+          "recent_activity",
+          "stat_cards",
+          "system_health",
+          "system_metrics",
+          "timestamp",
+          "user_statistics"
         ]
       },
       "Document": {
@@ -8662,45 +11751,37 @@
         ]
       },
       "HealthCheck": {
-        "type": "object",
-        "description": "Serializer for health check response.",
+        "description": "Health check response.",
         "properties": {
           "status": {
-            "type": "string",
-            "description": "Overall health status: healthy, degraded, or unhealthy"
+            "description": "Health status: healthy or unhealthy",
+            "title": "Status",
+            "type": "string"
+          },
+          "wrapper_url": {
+            "description": "Configured wrapper URL",
+            "title": "Wrapper Url",
+            "type": "string"
+          },
+          "has_api_key": {
+            "description": "Whether API key is configured",
+            "title": "Has Api Key",
+            "type": "boolean"
           },
           "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of the health check"
-          },
-          "service": {
-            "type": "string",
-            "description": "Service name"
-          },
-          "version": {
-            "type": "string",
-            "description": "Django-CFG version"
-          },
-          "checks": {
-            "type": "object",
-            "additionalProperties": {},
-            "description": "Detailed health checks for databases, cache, and system"
-          },
-          "environment": {
-            "type": "object",
-            "additionalProperties": {},
-            "description": "Environment information"
+            "description": "Current timestamp",
+            "title": "Timestamp",
+            "type": "string"
           }
         },
         "required": [
-          "checks",
-          "environment",
-          "service",
           "status",
-          "timestamp",
-          "version"
-        ]
+          "wrapper_url",
+          "has_api_key",
+          "timestamp"
+        ],
+        "title": "HealthCheckSerializer",
+        "type": "object"
       },
       "LeadSubmission": {
         "type": "object",
@@ -8879,6 +11960,61 @@
           "message",
           "success"
         ]
+      },
+      "ManualAckRequestRequest": {
+        "description": "Request model for manual ACK sending.",
+        "properties": {
+          "message_id": {
+            "description": "Message ID to acknowledge",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Client ID sending the ACK",
+            "title": "Client Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "client_id"
+        ],
+        "title": "ManualAckRequest",
+        "type": "object"
+      },
+      "ManualAckResponse": {
+        "description": "Response model for manual ACK.",
+        "properties": {
+          "success": {
+            "description": "Whether ACK was sent successfully",
+            "title": "Success",
+            "type": "boolean"
+          },
+          "message_id": {
+            "description": "Message ID that was acknowledged",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if failed",
+            "title": "Error"
+          }
+        },
+        "required": [
+          "success",
+          "message_id"
+        ],
+        "title": "ManualAckResponse",
+        "type": "object"
       },
       "Message": {
         "type": "object",
@@ -9304,6 +12440,63 @@
           "refresh",
           "user"
         ]
+      },
+      "OverviewStats": {
+        "description": "Overview statistics for Centrifugo publishes.",
+        "properties": {
+          "total": {
+            "description": "Total publishes in period",
+            "title": "Total",
+            "type": "integer"
+          },
+          "successful": {
+            "description": "Successful publishes",
+            "title": "Successful",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Failed publishes",
+            "title": "Failed",
+            "type": "integer"
+          },
+          "timeout": {
+            "description": "Timeout publishes",
+            "title": "Timeout",
+            "type": "integer"
+          },
+          "success_rate": {
+            "description": "Success rate percentage",
+            "title": "Success Rate",
+            "type": "number"
+          },
+          "avg_duration_ms": {
+            "description": "Average duration in milliseconds",
+            "title": "Avg Duration Ms",
+            "type": "number"
+          },
+          "avg_acks_received": {
+            "description": "Average ACKs received",
+            "title": "Avg Acks Received",
+            "type": "number"
+          },
+          "period_hours": {
+            "description": "Statistics period in hours",
+            "title": "Period Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "successful",
+          "failed",
+          "timeout",
+          "success_rate",
+          "avg_duration_ms",
+          "avg_acks_received",
+          "period_hours"
+        ],
+        "title": "OverviewStatsSerializer",
+        "type": "object"
       },
       "PaginatedArchiveItemChunkList": {
         "type": "object",
@@ -11105,6 +14298,94 @@
           "updated_at"
         ]
       },
+      "PublishTestRequestRequest": {
+        "description": "Request model for test message publishing.",
+        "properties": {
+          "channel": {
+            "description": "Target channel name",
+            "title": "Channel",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "description": "Message data (any JSON object)",
+            "title": "Data",
+            "type": "object"
+          },
+          "wait_for_ack": {
+            "default": false,
+            "description": "Wait for client acknowledgment",
+            "title": "Wait For Ack",
+            "type": "boolean"
+          },
+          "ack_timeout": {
+            "default": 10,
+            "description": "ACK timeout in seconds",
+            "maximum": 60,
+            "minimum": 1,
+            "title": "Ack Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel",
+          "data"
+        ],
+        "title": "PublishTestRequest",
+        "type": "object"
+      },
+      "PublishTestResponse": {
+        "description": "Response model for test message publishing.",
+        "properties": {
+          "success": {
+            "description": "Whether publish succeeded",
+            "title": "Success",
+            "type": "boolean"
+          },
+          "message_id": {
+            "description": "Unique message ID",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "channel": {
+            "description": "Target channel",
+            "title": "Channel",
+            "type": "string"
+          },
+          "acks_received": {
+            "default": 0,
+            "description": "Number of ACKs received",
+            "title": "Acks Received",
+            "type": "integer"
+          },
+          "delivered": {
+            "default": false,
+            "description": "Whether message was delivered",
+            "title": "Delivered",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if failed",
+            "title": "Error"
+          }
+        },
+        "required": [
+          "success",
+          "message_id",
+          "channel"
+        ],
+        "title": "PublishTestResponse",
+        "type": "object"
+      },
       "QueueAction": {
         "type": "object",
         "description": "Serializer for queue management actions.",
@@ -11200,6 +14481,52 @@
           "workers"
         ]
       },
+      "QuickAction": {
+        "type": "object",
+        "description": "Serializer for quick action buttons.\n\nMaps to QuickAction Pydantic model.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Action title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Action description"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Material icon name"
+          },
+          "link": {
+            "type": "string",
+            "description": "Action URL"
+          },
+          "color": {
+            "enum": [
+              "primary",
+              "success",
+              "warning",
+              "danger",
+              "secondary"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "6400710d5b71d6b0",
+            "default": "primary",
+            "description": "Button color theme\n\n* `primary` - primary\n* `success` - success\n* `warning` - warning\n* `danger` - danger\n* `secondary` - secondary"
+          },
+          "category": {
+            "type": "string",
+            "default": "general",
+            "description": "Action category"
+          }
+        },
+        "required": [
+          "description",
+          "icon",
+          "link",
+          "title"
+        ]
+      },
       "QuickHealth": {
         "type": "object",
         "description": "Serializer for quick health check response.",
@@ -11221,6 +14548,91 @@
         "required": [
           "status",
           "timestamp"
+        ]
+      },
+      "RecentPublishes": {
+        "description": "Recent publishes list.",
+        "properties": {
+          "publishes": {
+            "description": "List of recent publishes",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Publishes",
+            "type": "array"
+          },
+          "count": {
+            "description": "Number of publishes returned",
+            "title": "Count",
+            "type": "integer"
+          },
+          "total_available": {
+            "description": "Total publishes available",
+            "title": "Total Available",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Current offset for pagination",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "has_more": {
+            "default": false,
+            "description": "Whether more results are available",
+            "title": "Has More",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "publishes",
+          "count",
+          "total_available"
+        ],
+        "title": "RecentPublishesSerializer",
+        "type": "object"
+      },
+      "RecentUser": {
+        "type": "object",
+        "description": "Recent user serializer.",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "date_joined": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_staff": {
+            "type": "boolean"
+          },
+          "is_superuser": {
+            "type": "boolean"
+          },
+          "last_login": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "date_joined",
+          "email",
+          "id",
+          "is_active",
+          "is_staff",
+          "is_superuser",
+          "last_login",
+          "username"
         ]
       },
       "SendCampaignRequest": {
@@ -11306,6 +14718,55 @@
           "is_superuser"
         ]
       },
+      "StatCard": {
+        "type": "object",
+        "description": "Serializer for dashboard statistics cards.\n\nMaps to StatCard Pydantic model.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Card title"
+          },
+          "value": {
+            "type": "string",
+            "description": "Main value to display"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Material icon name"
+          },
+          "change": {
+            "type": "string",
+            "nullable": true,
+            "description": "Change indicator (e.g., '+12%')"
+          },
+          "change_type": {
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "b21c1f8e6042dbef",
+            "default": "neutral",
+            "description": "Change type\n\n* `positive` - positive\n* `negative` - negative\n* `neutral` - neutral"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Additional description"
+          },
+          "color": {
+            "type": "string",
+            "default": "primary",
+            "description": "Card color theme"
+          }
+        },
+        "required": [
+          "icon",
+          "title",
+          "value"
+        ]
+      },
       "SubscribeRequest": {
         "type": "object",
         "description": "Simple serializer for newsletter subscription.",
@@ -11357,6 +14818,134 @@
         "required": [
           "message",
           "success"
+        ]
+      },
+      "SystemHealth": {
+        "type": "object",
+        "description": "Serializer for overall system health status.",
+        "properties": {
+          "overall_status": {
+            "enum": [
+              "healthy",
+              "warning",
+              "error",
+              "unknown"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "4a4719b6db2b089e",
+            "description": "Overall system health status\n\n* `healthy` - healthy\n* `warning` - warning\n* `error` - error\n* `unknown` - unknown"
+          },
+          "overall_health_percentage": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 0,
+            "description": "Overall health percentage"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemHealthItem"
+            },
+            "description": "Health status of individual components"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Check timestamp (ISO format)"
+          }
+        },
+        "required": [
+          "components",
+          "overall_health_percentage",
+          "overall_status",
+          "timestamp"
+        ]
+      },
+      "SystemHealthItem": {
+        "type": "object",
+        "description": "Serializer for system health status items.\n\nMaps to SystemHealthItem Pydantic model.",
+        "properties": {
+          "component": {
+            "type": "string",
+            "description": "Component name"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "warning",
+              "error",
+              "unknown"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "4a4719b6db2b089e",
+            "description": "Health status\n\n* `healthy` - healthy\n* `warning` - warning\n* `error` - error\n* `unknown` - unknown"
+          },
+          "description": {
+            "type": "string",
+            "description": "Status description"
+          },
+          "last_check": {
+            "type": "string",
+            "description": "Last check time (ISO format)"
+          },
+          "health_percentage": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
+            "description": "Health percentage (0-100)"
+          }
+        },
+        "required": [
+          "component",
+          "description",
+          "last_check",
+          "status"
+        ]
+      },
+      "SystemMetrics": {
+        "type": "object",
+        "description": "Serializer for system performance metrics.",
+        "properties": {
+          "cpu_usage": {
+            "type": "number",
+            "format": "double",
+            "description": "CPU usage percentage"
+          },
+          "memory_usage": {
+            "type": "number",
+            "format": "double",
+            "description": "Memory usage percentage"
+          },
+          "disk_usage": {
+            "type": "number",
+            "format": "double",
+            "description": "Disk usage percentage"
+          },
+          "network_in": {
+            "type": "string",
+            "description": "Network incoming bandwidth"
+          },
+          "network_out": {
+            "type": "string",
+            "description": "Network outgoing bandwidth"
+          },
+          "response_time": {
+            "type": "string",
+            "description": "Average response time"
+          },
+          "uptime": {
+            "type": "string",
+            "description": "System uptime"
+          }
+        },
+        "required": [
+          "cpu_usage",
+          "disk_usage",
+          "memory_usage",
+          "network_in",
+          "network_out",
+          "response_time",
+          "uptime"
         ]
       },
       "TaskStatistics": {
@@ -11598,6 +15187,97 @@
           "type_display"
         ]
       },
+      "URLPattern": {
+        "type": "object",
+        "description": "Serializer for single URL pattern.",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "URL pattern (e.g., ^api/users/(?P<pk>[^/.]+)/$)"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL name (if defined)"
+          },
+          "full_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Full URL name with namespace (e.g., admin:index)"
+          },
+          "namespace": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL namespace"
+          },
+          "view": {
+            "type": "string",
+            "nullable": true,
+            "description": "View function/class name"
+          },
+          "view_class": {
+            "type": "string",
+            "nullable": true,
+            "description": "View class name (for CBV/ViewSets)"
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed HTTP methods"
+          },
+          "module": {
+            "type": "string",
+            "nullable": true,
+            "description": "View module path"
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      },
+      "URLsList": {
+        "type": "object",
+        "description": "Serializer for URLs list response.",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Status: success or error"
+          },
+          "service": {
+            "type": "string",
+            "description": "Service name"
+          },
+          "version": {
+            "type": "string",
+            "description": "Django-CFG version"
+          },
+          "base_url": {
+            "type": "string",
+            "description": "Base URL of the service"
+          },
+          "total_urls": {
+            "type": "integer",
+            "description": "Total number of registered URLs"
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/URLPattern"
+            },
+            "description": "List of all registered URL patterns"
+          }
+        },
+        "required": [
+          "base_url",
+          "service",
+          "status",
+          "total_urls",
+          "urls",
+          "version"
+        ]
+      },
       "Unsubscribe": {
         "type": "object",
         "description": "Simple serializer for unsubscribe.",
@@ -11744,6 +15424,34 @@
             "maxLength": 100
           }
         }
+      },
+      "UserStatistics": {
+        "type": "object",
+        "description": "Serializer for user statistics.",
+        "properties": {
+          "total_users": {
+            "type": "integer",
+            "description": "Total number of users"
+          },
+          "active_users": {
+            "type": "integer",
+            "description": "Active users (last 30 days)"
+          },
+          "new_users": {
+            "type": "integer",
+            "description": "New users (last 7 days)"
+          },
+          "superusers": {
+            "type": "integer",
+            "description": "Number of superusers"
+          }
+        },
+        "required": [
+          "active_users",
+          "new_users",
+          "superusers",
+          "total_users"
+        ]
       },
       "VectorizationResult": {
         "type": "object",

@@ -20,8 +20,7 @@ class CfgLeadsAPI:
         url = "/cfg/leads/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedLeadSubmissionList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedLeadSubmissionList.model_validate(response.json())
 
 
     async def create(self, data: LeadSubmissionRequest) -> LeadSubmission:

@@ -4,12 +4,92 @@ Django CFG URL integration utilities.
 Provides automatic URL registration for django_cfg endpoints and integrations.
 """
 
-from typing import List
+import importlib
+import sys
+from typing import List, Set
 
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import URLPattern, include, path
 from django.views.static import serve
+
+
+def _get_openapi_group_urls() -> List[URLPattern]:
+    """
+    Automatically generate URL patterns from OpenAPI groups.
+
+    For each OpenAPI group defined in config:
+    1. Get the group from OpenAPI service
+    2. Get the apps for that group
+    3. For each app with urls.py, include it
+    4. Add path("{api_prefix}/{app_basename}/", include("{app}.urls"))
+
+    Returns:
+        List of URL patterns for OpenAPI groups
+    """
+    patterns = []
+
+    try:
+        from django_cfg.modules.django_client.core import get_openapi_service
+
+        service = get_openapi_service()
+
+        # Check if OpenAPI client is configured and enabled
+        if not service.config or not service.is_enabled():
+            return patterns
+
+        # Get API prefix from config (default: "api")
+        api_prefix = getattr(service.config, 'api_prefix', 'api') or 'api'
+        api_prefix = api_prefix.rstrip('/')  # Remove trailing slash
+
+        # Track already added apps to avoid duplicates
+        added_apps: Set[str] = set()
+
+        # Get all groups from config
+        for group_config in service.config.groups:
+            group_name = group_config.name
+
+            # Skip the internal "cfg" group - it's handled separately
+            if group_name == "cfg":
+                continue
+
+            # Get apps for this group
+            apps = group_config.apps
+
+            # Process each app in the group
+            for app_name in apps:
+                # Skip if already added
+                if app_name in added_apps:
+                    continue
+
+                # Check if the app has a urls.py module
+                try:
+                    urls_module = f"{app_name}.urls"
+                    importlib.import_module(urls_module)
+
+                    # Get the app basename (last part of the app path)
+                    # e.g., "apps.workspaces" -> "workspaces"
+                    app_basename = app_name.split('.')[-1]
+
+                    # Add URL pattern for this app
+                    url_pattern = f"{api_prefix}/{app_basename}/"
+                    patterns.append(path(url_pattern, include(urls_module)))
+                    added_apps.add(app_name)
+
+                    # Log successful auto-registration
+                    sys.stderr.write(f"✅ Auto-registered URL: /{url_pattern} -> {urls_module}\n")
+                    sys.stderr.flush()
+
+                except ImportError:
+                    # App doesn't have urls.py - skip it
+                    continue
+
+    except Exception as e:
+        # Don't break if OpenAPI config is not available
+        sys.stderr.write(f"❌ ERROR: Could not auto-add OpenAPI group URLs: {e}\n")
+        sys.stderr.flush()
+
+    return patterns
 
 
 def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
@@ -48,6 +128,11 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     new_patterns = urlpatterns + [
         path("", include("django_cfg.apps.urls")),
     ]
+
+    # Automatically add OpenAPI group URLs from config
+    openapi_urls = _get_openapi_group_urls()
+    if openapi_urls:
+        new_patterns += openapi_urls
 
     # Add django-browser-reload URLs in development (if installed)
     if settings.DEBUG:

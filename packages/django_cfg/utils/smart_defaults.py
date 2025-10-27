@@ -233,8 +233,8 @@ class SmartDefaults:
         """Get Django REST Framework defaults."""
         return {
             'DEFAULT_AUTHENTICATION_CLASSES': [
-                'rest_framework_simplejwt.authentication.JWTAuthentication',
-                'rest_framework.authentication.SessionAuthentication',
+                'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin',
+                # SessionAuthentication removed (requires CSRF)
             ],
             'DEFAULT_PERMISSION_CLASSES': [
                 'rest_framework.permissions.IsAuthenticated',

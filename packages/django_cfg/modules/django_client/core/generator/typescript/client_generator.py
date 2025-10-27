@@ -55,7 +55,8 @@ class ClientGenerator:
         template = self.jinja_env.get_template('client/flat_client.ts.jinja')
         return template.render(
             api_title=self.context.openapi_info.title,
-            operations=method_codes
+            operations=method_codes,
+            has_session_auth=self.context.django_metadata.has_session_auth
         )
 
     def _generate_namespaced_client(self) -> str:
@@ -111,6 +112,7 @@ class ClientGenerator:
             include_imports=False,  # Imports already in main_client_file.ts.jinja
             tags=tags_data,
             info={"title": self.context.openapi_info.title},
+            has_session_auth=self.context.django_metadata.has_session_auth,
         )
 
     def generate_main_client_file(self, ops_by_tag: dict):

@@ -395,7 +395,7 @@ docker exec djangocfg_postgres pg_isready -U postgres
 ### Integrations
 - **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Background tasks
 - **[Background Task Commands](/cli/commands/background-tasks)** - Manage workers via CLI
-- **[WebSocket RPC](/features/integrations/websocket-ipc/)** - Real-time communication
+- **[Centrifugo WebSocket RPC](/features/integrations/centrifugo/)** - Real-time communication
 
 ---
 

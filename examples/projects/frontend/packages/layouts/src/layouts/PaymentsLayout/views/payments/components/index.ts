@@ -1,1 +1,0 @@
-export { PaymentsList } from './PaymentsList';

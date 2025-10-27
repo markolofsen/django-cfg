@@ -1,0 +1,27 @@
+{% extends "unfold/layouts/skeleton.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style id="django-cfg-theme-sync">
+/* ============================================== */
+/* Django CFG - Force Color Variables            */
+/* Ensures COLORS from get_color_scheme() apply  */
+/* ============================================== */
+
+/*
+ * NOTE: Colors are already defined via UNFOLD['COLORS'] in:
+ * django_cfg/modules/django_unfold/models/config.py:get_color_scheme()
+ *
+ * This CSS just ensures Tailwind classes use those variables correctly.
+ */
+
+/* Ensure color-scheme is set for proper dark mode rendering */
+html.dark {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+</style>
+{% endblock %}

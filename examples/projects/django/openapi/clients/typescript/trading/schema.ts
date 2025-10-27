@@ -517,11 +517,6 @@ export const OPENAPI_SCHEMA = {
       }
     },
     "securitySchemes": {
-      "cookieAuth": {
-        "in": "cookie",
-        "name": "sessionid",
-        "type": "apiKey"
-      },
       "jwtAuth": {
         "bearerFormat": "JWT",
         "scheme": "bearer",
@@ -583,9 +578,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List orders",
@@ -632,9 +624,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Create order",
@@ -667,9 +656,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -706,9 +692,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get order",
@@ -765,9 +748,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -824,9 +804,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -874,9 +851,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List portfolios",
@@ -905,9 +879,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get my portfolio",
@@ -936,9 +907,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get portfolio statistics",
@@ -978,9 +946,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get portfolio",

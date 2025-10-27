@@ -49,7 +49,7 @@ graph TB
     D --> D1[Install Django]
     D1 --> D2[Install django-cfg]
     D2 --> D3[Create Structure]
-    D3 --> D4[Configure YAML]
+    D3 --> D4[Configure ENV]
     D4 --> D5[Create Config Class]
     D5 --> D6[Update settings.py]
 
@@ -133,10 +133,10 @@ cd my-project
 python manage.py runserver
 ```
 
-:::note[What Gets Created]
+::::note[What Gets Created]
 The CLI creates a complete production-ready project with:
-- Type-safe configuration with Pydantic
-- Environment-based YAML configs (dev/prod/test)
+- Type-safe configuration with pydantic-settings
+- Environment variable configuration (.env files)
 - Modern admin interface (Unfold)
 - API documentation (DRF Spectacular)
 - All migrations and initial data
@@ -529,8 +529,8 @@ Django-CFG automatically installs:
 
 **Type Validation & Configuration:**
 - pydantic >=2.11.0 - Type validation
-- pydantic-yaml >=1.6.0 - YAML configuration
-- PyYAML >=6.0 - YAML parsing
+- pydantic-settings >=2.0.0 - Environment configuration
+- python-dotenv >=1.0.0 - .env file loading
 - click >=8.2.0 - CLI interface
 
 **Django Integration:**

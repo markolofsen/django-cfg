@@ -1,0 +1,55 @@
+# {{ api_title }} - Go Client
+
+Auto-generated Go client for {{ api_title }} (v{{ api_version }}).
+
+Generated at: {{ generated_at }}
+
+## Installation
+
+```bash
+go get {{ module_name }}
+```
+
+## Usage
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"{{ module_name }}"
+)
+
+func main() {
+	// Create client
+	client := {{ module_name }}.NewClient(
+		"https://api.example.com",
+		{{ module_name }}.WithToken("your-api-token"),
+	)
+
+	// Make requests
+	ctx := context.Background()
+
+	// Example: List users
+	// users, err := client.UsersList(ctx, nil)
+	// if err != nil {
+	//     log.Fatal(err)
+	// }
+	// fmt.Printf("Users: %+v\n", users)
+}
+```
+
+## Features
+
+- ✅ Type-safe Go structs
+- ✅ Context-aware requests
+- ✅ Bearer token authentication
+- ✅ Comprehensive error handling
+- ✅ Auto-generated from OpenAPI spec
+
+## Documentation
+
+See the OpenAPI specification for full API documentation.

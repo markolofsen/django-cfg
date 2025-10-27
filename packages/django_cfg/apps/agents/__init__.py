@@ -32,7 +32,7 @@ __all__ = [
 def __getattr__(name):
     """Lazy import for agents components."""
     if name == "DjangoAgent":
-        from .core.agent import DjangoAgent
+        from .core.django_agent import DjangoAgent
         return DjangoAgent
     elif name == "SimpleOrchestrator":
         from .core.orchestrator import SimpleOrchestrator

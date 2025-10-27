@@ -40,6 +40,7 @@ class OpenAPI31Parser(BaseParser):
         In OpenAPI 3.1.0, nullable is indicated by:
             type: ['string', 'null']
             type: ['integer', 'null']
+            anyOf: [{"type": "string"}, {"type": "null"}]  # Pydantic style
             etc.
 
         Examples:
@@ -61,4 +62,28 @@ class OpenAPI31Parser(BaseParser):
         Returns:
             True if nullable, False otherwise
         """
-        return schema.is_nullable_31
+        # Check standard type: ['string', 'null'] format
+        if schema.is_nullable_31:
+            return True
+
+        # Check anyOf: [{"type": "X"}, {"type": "null"}] format (Pydantic)
+        # or anyOf: [{"$ref": "..."}, {"type": "null"}] format
+        if schema.anyOf and len(schema.anyOf) == 2:
+            has_null = False
+            has_actual_type = False
+
+            for item in schema.anyOf:
+                if not isinstance(item, SchemaObject):
+                    continue
+
+                if item.base_type == 'null':
+                    has_null = True
+                elif item.base_type or item.ref:
+                    # Has actual type (either base_type or $ref)
+                    has_actual_type = True
+
+            # If one is null and another is actual type, it's nullable
+            if has_null and has_actual_type:
+                return True
+
+        return False

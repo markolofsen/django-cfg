@@ -6,7 +6,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import type { NavigationSection } from '@djangocfg/layouts';
-import type { PublicRoutes, PrivateRoutes, RouteDefinition } from './definitions';
+import type { PublicRoutes, PrivateRoutes, LegalRoutes, RouteDefinition } from './definitions';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Menu Types
@@ -47,7 +47,7 @@ function generateMenuGroups(
 
   for (const config of configs) {
     const groupRoutes = routes
-      .filter(r => r.metadata.group === config.name && r.metadata.icon)
+      .filter(r => r.metadata.group === config.name && r.metadata.icon && r.metadata.show !== false)
       .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));
 
     if (groupRoutes.length > 0) {
@@ -77,7 +77,7 @@ function generateNavigationSections(
 
   for (const config of configs) {
     const groupRoutes = routes
-      .filter(r => r.metadata.group === config.name)
+      .filter(r => r.metadata.group === config.name && r.metadata.show !== false)
       .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));
 
     if (groupRoutes.length > 0) {
@@ -119,13 +119,13 @@ export function generateDashboardMenu(privateRoutes: PrivateRoutes): MenuGroup[]
 export function generatePublicNavigation(publicRoutes: PublicRoutes, documentationUrl?: string): NavigationSection[] {
   const sections = generateNavigationSections(publicRoutes.getAllRoutes(), [
     { name: 'main', title: 'Home', order: 1 },
-    { name: 'components', title: 'Components', order: 2 },
-    { name: 'content', title: 'Content', order: 4 },
-    { name: 'legal', title: 'Legal', order: 5 },
-    { name: 'debug', title: 'Debug', order: 6 },
+    { name: 'admin', title: 'Admin', order: 2 },
+    { name: 'components', title: 'Components', order: 3 },
+    { name: 'legal', title: 'Legal', order: 4 },
+    { name: 'debug', title: 'Debug', order: 5 },
   ]);
 
-  // Add external documentation link if provided
+  // Add external documentation link if provided (after Admin, before Components)
   if (documentationUrl) {
     sections.splice(2, 0, {
       title: 'Docs',
@@ -144,19 +144,41 @@ export function generatePublicNavigation(publicRoutes: PublicRoutes, documentati
 /**
  * Generate footer navigation
  */
-export function generateFooterNavigation(publicRoutes: PublicRoutes): NavigationSection[] {
-  const allRoutes = publicRoutes.getAllRoutes();
+export function generateFooterNavigation(publicRoutes: PublicRoutes, legalRoutes: LegalRoutes, documentationUrl?: string): NavigationSection[] {
+  const legalItems = legalRoutes.getAllRoutes();
 
   return [
     {
+      title: 'Product',
+      items: [
+        { label: 'Home', path: publicRoutes.home },
+        { label: 'Django Admin', path: publicRoutes.admin },
+        { label: 'UI Components', path: publicRoutes.ui },
+      ],
+    },
+    {
+      title: 'Resources',
+      items: [
+        ...(documentationUrl ? [{ label: 'Documentation', path: documentationUrl }] : []),
+        { label: 'Debug Tools', path: publicRoutes.debug },
+      ],
+    },
+    {
       title: 'Legal',
-      items: allRoutes
-        .filter(r => r.metadata.group === 'legal')
+      items: legalItems
+        .filter(r => r.metadata.show !== false)
         .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0))
         .map(r => ({
           label: r.metadata.label,
           path: r.path,
         })),
+    },
+    {
+      title: 'Company',
+      items: [
+        { label: 'About', path: publicRoutes.home },
+        { label: 'Sign In', path: publicRoutes.auth },
+      ],
     },
   ];
 }

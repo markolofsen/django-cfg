@@ -14,7 +14,7 @@ class PaginatedNewsletterList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -26,7 +26,7 @@ class PaginatedNewsletterList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -39,7 +39,7 @@ class Newsletter(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -48,8 +48,8 @@ class Newsletter(BaseModel):
     description: str = None
     is_active: bool = None
     auto_subscribe: bool = Field(None, description='Automatically subscribe new users to this newsletter')
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
     subscribers_count: int = ...
 
 

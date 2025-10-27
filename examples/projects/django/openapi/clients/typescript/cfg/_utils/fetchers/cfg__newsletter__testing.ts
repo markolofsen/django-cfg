@@ -40,7 +40,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/newsletter/test/
  */
-export async function createNewsletterTestCreate(  data: TestEmailRequest,  client?
+export async function createNewsletterTestCreate(  data: TestEmailRequest,  client?: API
 ): Promise<BulkEmailResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_testing.newsletterTestCreate(data)

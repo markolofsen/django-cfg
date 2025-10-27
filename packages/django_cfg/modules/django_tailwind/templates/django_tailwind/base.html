@@ -9,10 +9,17 @@
     <!-- Tailwind CSS (compiled via django-tailwind) -->
     {% tailwind_css %}
 
+    <!-- Alpine.js will be loaded by pages that need it AFTER their modules load -->
+
+    <!-- JWT Token for API authentication -->
+    <script>
+        {% load django_cfg %}
+        window.USER_JWT_TOKEN = '{% user_jwt_token %}';
+    </script>
+
     {% block extra_head %}{% endblock %}
 
-    <!-- Alpine.js for interactivity -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <style>
         /* Prevent flash of unstyled content */

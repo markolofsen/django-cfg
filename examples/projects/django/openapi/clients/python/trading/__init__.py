@@ -35,7 +35,8 @@ from .logger import LoggerConfig
 from .retry import RetryConfig
 from .trading__api__trading import TradingTradingAPI
 from . import enums
-from .enums import Order.order_type, Order.side, Order.status, OrderCreate.order_type, OrderCreate.side, OrderCreateRequest.order_type, OrderCreateRequest.side, OrderRequest.order_type, OrderRequest.side, PatchedOrderRequest.order_type, PatchedOrderRequest.side
+# NOTE: Individual enum imports commented out due to invalid Python syntax with dotted names
+# from .enums import Order.order_type, Order.side, Order.status, OrderCreate.order_type, OrderCreate.side, OrderCreateRequest.order_type, OrderCreateRequest.side, OrderRequest.order_type, OrderRequest.side, PatchedOrderRequest.order_type, PatchedOrderRequest.side
 
 TOKEN_KEY = "auth_token"
 REFRESH_TOKEN_KEY = "refresh_token"

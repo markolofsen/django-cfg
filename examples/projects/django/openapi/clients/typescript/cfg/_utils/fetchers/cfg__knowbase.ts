@@ -82,7 +82,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/knowbase/admin/chat/
  */
-export async function getKnowbaseAdminChatList(  params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseAdminChatList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedChatResponseList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatList(params?.page, params?.page_size)
@@ -96,7 +96,7 @@ export async function getKnowbaseAdminChatList(  params?: { page?: number; page_
  * @method POST
  * @path /cfg/knowbase/admin/chat/
  */
-export async function createKnowbaseAdminChatCreate(  data: ChatResponseRequest,  client?
+export async function createKnowbaseAdminChatCreate(  data: ChatResponseRequest,  client?: API
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatCreate(data)
@@ -110,7 +110,7 @@ export async function createKnowbaseAdminChatCreate(  data: ChatResponseRequest,
  * @method GET
  * @path /cfg/knowbase/admin/chat/{id}/
  */
-export async function getKnowbaseAdminChatRetrieve(  id: string,  client?
+export async function getKnowbaseAdminChatRetrieve(  id: string,  client?: API
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatRetrieve(id)
@@ -124,7 +124,7 @@ export async function getKnowbaseAdminChatRetrieve(  id: string,  client?
  * @method PUT
  * @path /cfg/knowbase/admin/chat/{id}/
  */
-export async function updateKnowbaseAdminChatUpdate(  id: string, data: ChatResponseRequest,  client?
+export async function updateKnowbaseAdminChatUpdate(  id: string, data: ChatResponseRequest,  client?: API
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatUpdate(id, data)
@@ -138,7 +138,7 @@ export async function updateKnowbaseAdminChatUpdate(  id: string, data: ChatResp
  * @method PATCH
  * @path /cfg/knowbase/admin/chat/{id}/
  */
-export async function partialUpdateKnowbaseAdminChatPartialUpdate(  id: string, data?: PatchedChatResponseRequest,  client?
+export async function partialUpdateKnowbaseAdminChatPartialUpdate(  id: string, data?: PatchedChatResponseRequest,  client?: API
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatPartialUpdate(id, data)
@@ -152,7 +152,7 @@ export async function partialUpdateKnowbaseAdminChatPartialUpdate(  id: string, 
  * @method DELETE
  * @path /cfg/knowbase/admin/chat/{id}/
  */
-export async function deleteKnowbaseAdminChatDestroy(  id: string,  client?
+export async function deleteKnowbaseAdminChatDestroy(  id: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatDestroy(id)
@@ -166,7 +166,7 @@ export async function deleteKnowbaseAdminChatDestroy(  id: string,  client?
  * @method GET
  * @path /cfg/knowbase/admin/chat/{id}/history/
  */
-export async function getKnowbaseAdminChatHistoryRetrieve(  id: string,  client?
+export async function getKnowbaseAdminChatHistoryRetrieve(  id: string,  client?: API
 ): Promise<ChatHistory> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatHistoryRetrieve(id)
@@ -180,7 +180,7 @@ export async function getKnowbaseAdminChatHistoryRetrieve(  id: string,  client?
  * @method POST
  * @path /cfg/knowbase/admin/chat/query/
  */
-export async function createKnowbaseAdminChatQueryCreate(  data: ChatQueryRequest,  client?
+export async function createKnowbaseAdminChatQueryCreate(  data: ChatQueryRequest,  client?: API
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatQueryCreate(data)
@@ -194,7 +194,7 @@ export async function createKnowbaseAdminChatQueryCreate(  data: ChatQueryReques
  * @method GET
  * @path /cfg/knowbase/admin/documents/
  */
-export async function getKnowbaseAdminDocumentsList(  params?: { page?: number; page_size?: number; status?: string },  client?
+export async function getKnowbaseAdminDocumentsList(  params?: { page?: number; page_size?: number; status?: string },  client?: API
 ): Promise<PaginatedDocumentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsList(params?.page, params?.page_size, params?.status)
@@ -208,7 +208,7 @@ export async function getKnowbaseAdminDocumentsList(  params?: { page?: number; 
  * @method POST
  * @path /cfg/knowbase/admin/documents/
  */
-export async function createKnowbaseAdminDocumentsCreate(  data: DocumentCreateRequest,  client?
+export async function createKnowbaseAdminDocumentsCreate(  data: DocumentCreateRequest,  client?: API
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsCreate(data)
@@ -222,7 +222,7 @@ export async function createKnowbaseAdminDocumentsCreate(  data: DocumentCreateR
  * @method GET
  * @path /cfg/knowbase/admin/documents/{id}/
  */
-export async function getKnowbaseAdminDocumentsRetrieve(  id: string,  client?
+export async function getKnowbaseAdminDocumentsRetrieve(  id: string,  client?: API
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsRetrieve(id)
@@ -236,7 +236,7 @@ export async function getKnowbaseAdminDocumentsRetrieve(  id: string,  client?
  * @method PUT
  * @path /cfg/knowbase/admin/documents/{id}/
  */
-export async function updateKnowbaseAdminDocumentsUpdate(  id: string, data: DocumentRequest,  client?
+export async function updateKnowbaseAdminDocumentsUpdate(  id: string, data: DocumentRequest,  client?: API
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsUpdate(id, data)
@@ -250,7 +250,7 @@ export async function updateKnowbaseAdminDocumentsUpdate(  id: string, data: Doc
  * @method PATCH
  * @path /cfg/knowbase/admin/documents/{id}/
  */
-export async function partialUpdateKnowbaseAdminDocumentsPartialUpdate(  id: string, data?: PatchedDocumentRequest,  client?
+export async function partialUpdateKnowbaseAdminDocumentsPartialUpdate(  id: string, data?: PatchedDocumentRequest,  client?: API
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsPartialUpdate(id, data)
@@ -264,7 +264,7 @@ export async function partialUpdateKnowbaseAdminDocumentsPartialUpdate(  id: str
  * @method DELETE
  * @path /cfg/knowbase/admin/documents/{id}/
  */
-export async function deleteKnowbaseAdminDocumentsDestroy(  id: string,  client?
+export async function deleteKnowbaseAdminDocumentsDestroy(  id: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsDestroy(id)
@@ -278,7 +278,7 @@ export async function deleteKnowbaseAdminDocumentsDestroy(  id: string,  client?
  * @method POST
  * @path /cfg/knowbase/admin/documents/{id}/reprocess/
  */
-export async function createKnowbaseAdminDocumentsReprocessCreate(  id: string, data: DocumentRequest,  client?
+export async function createKnowbaseAdminDocumentsReprocessCreate(  id: string, data: DocumentRequest,  client?: API
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsReprocessCreate(id, data)
@@ -292,7 +292,7 @@ export async function createKnowbaseAdminDocumentsReprocessCreate(  id: string, 
  * @method GET
  * @path /cfg/knowbase/admin/documents/{id}/status/
  */
-export async function getKnowbaseAdminDocumentsStatusRetrieve(  id: string,  client?
+export async function getKnowbaseAdminDocumentsStatusRetrieve(  id: string,  client?: API
 ): Promise<DocumentProcessingStatus> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsStatusRetrieve(id)
@@ -306,7 +306,7 @@ export async function getKnowbaseAdminDocumentsStatusRetrieve(  id: string,  cli
  * @method GET
  * @path /cfg/knowbase/admin/documents/stats/
  */
-export async function getKnowbaseAdminDocumentsStatsRetrieve(  client?
+export async function getKnowbaseAdminDocumentsStatsRetrieve(  client?: API
 ): Promise<DocumentStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsStatsRetrieve()
@@ -320,7 +320,7 @@ export async function getKnowbaseAdminDocumentsStatsRetrieve(  client?
  * @method GET
  * @path /cfg/knowbase/admin/sessions/
  */
-export async function getKnowbaseAdminSessionsList(  params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseAdminSessionsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedChatSessionList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsList(params?.page, params?.page_size)
@@ -334,7 +334,7 @@ export async function getKnowbaseAdminSessionsList(  params?: { page?: number; p
  * @method POST
  * @path /cfg/knowbase/admin/sessions/
  */
-export async function createKnowbaseAdminSessionsCreate(  data: ChatSessionCreateRequest,  client?
+export async function createKnowbaseAdminSessionsCreate(  data: ChatSessionCreateRequest,  client?: API
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsCreate(data)
@@ -348,7 +348,7 @@ export async function createKnowbaseAdminSessionsCreate(  data: ChatSessionCreat
  * @method GET
  * @path /cfg/knowbase/admin/sessions/{id}/
  */
-export async function getKnowbaseAdminSessionsRetrieve(  id: string,  client?
+export async function getKnowbaseAdminSessionsRetrieve(  id: string,  client?: API
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsRetrieve(id)
@@ -362,7 +362,7 @@ export async function getKnowbaseAdminSessionsRetrieve(  id: string,  client?
  * @method PUT
  * @path /cfg/knowbase/admin/sessions/{id}/
  */
-export async function updateKnowbaseAdminSessionsUpdate(  id: string, data: ChatSessionRequest,  client?
+export async function updateKnowbaseAdminSessionsUpdate(  id: string, data: ChatSessionRequest,  client?: API
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsUpdate(id, data)
@@ -376,7 +376,7 @@ export async function updateKnowbaseAdminSessionsUpdate(  id: string, data: Chat
  * @method PATCH
  * @path /cfg/knowbase/admin/sessions/{id}/
  */
-export async function partialUpdateKnowbaseAdminSessionsPartialUpdate(  id: string, data?: PatchedChatSessionRequest,  client?
+export async function partialUpdateKnowbaseAdminSessionsPartialUpdate(  id: string, data?: PatchedChatSessionRequest,  client?: API
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsPartialUpdate(id, data)
@@ -390,7 +390,7 @@ export async function partialUpdateKnowbaseAdminSessionsPartialUpdate(  id: stri
  * @method DELETE
  * @path /cfg/knowbase/admin/sessions/{id}/
  */
-export async function deleteKnowbaseAdminSessionsDestroy(  id: string,  client?
+export async function deleteKnowbaseAdminSessionsDestroy(  id: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsDestroy(id)
@@ -404,7 +404,7 @@ export async function deleteKnowbaseAdminSessionsDestroy(  id: string,  client?
  * @method POST
  * @path /cfg/knowbase/admin/sessions/{id}/activate/
  */
-export async function createKnowbaseAdminSessionsActivateCreate(  id: string, data: ChatSessionRequest,  client?
+export async function createKnowbaseAdminSessionsActivateCreate(  id: string, data: ChatSessionRequest,  client?: API
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsActivateCreate(id, data)
@@ -418,7 +418,7 @@ export async function createKnowbaseAdminSessionsActivateCreate(  id: string, da
  * @method POST
  * @path /cfg/knowbase/admin/sessions/{id}/archive/
  */
-export async function createKnowbaseAdminSessionsArchiveCreate(  id: string, data: ChatSessionRequest,  client?
+export async function createKnowbaseAdminSessionsArchiveCreate(  id: string, data: ChatSessionRequest,  client?: API
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsArchiveCreate(id, data)
@@ -432,7 +432,7 @@ export async function createKnowbaseAdminSessionsArchiveCreate(  id: string, dat
  * @method GET
  * @path /cfg/knowbase/categories/
  */
-export async function getKnowbaseCategoriesList(  params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseCategoriesList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedPublicCategoryList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.categoriesList(params?.page, params?.page_size)
@@ -446,7 +446,7 @@ export async function getKnowbaseCategoriesList(  params?: { page?: number; page
  * @method GET
  * @path /cfg/knowbase/categories/{id}/
  */
-export async function getKnowbaseCategoriesRetrieve(  id: string,  client?
+export async function getKnowbaseCategoriesRetrieve(  id: string,  client?: API
 ): Promise<PublicCategory> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.categoriesRetrieve(id)
@@ -460,7 +460,7 @@ export async function getKnowbaseCategoriesRetrieve(  id: string,  client?
  * @method GET
  * @path /cfg/knowbase/documents/
  */
-export async function getKnowbaseDocumentsList(  params?: { category?: string; page?: number; page_size?: number; search?: string },  client?
+export async function getKnowbaseDocumentsList(  params?: { category?: string; page?: number; page_size?: number; search?: string },  client?: API
 ): Promise<PaginatedPublicDocumentListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.documentsList(params?.category, params?.page, params?.page_size, params?.search)
@@ -474,7 +474,7 @@ export async function getKnowbaseDocumentsList(  params?: { category?: string; p
  * @method GET
  * @path /cfg/knowbase/documents/{id}/
  */
-export async function getKnowbaseDocumentsRetrieve(  id: string,  client?
+export async function getKnowbaseDocumentsRetrieve(  id: string,  client?: API
 ): Promise<PublicDocument> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.documentsRetrieve(id)
@@ -488,7 +488,7 @@ export async function getKnowbaseDocumentsRetrieve(  id: string,  client?
  * @method GET
  * @path /cfg/knowbase/system/archives/
  */
-export async function getKnowbaseSystemArchivesList(  params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseSystemArchivesList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedDocumentArchiveListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesList(params?.page, params?.page_size)
@@ -502,7 +502,7 @@ export async function getKnowbaseSystemArchivesList(  params?: { page?: number; 
  * @method POST
  * @path /cfg/knowbase/system/archives/
  */
-export async function createKnowbaseSystemArchivesCreate(  data: any,  client?
+export async function createKnowbaseSystemArchivesCreate(  data: any,  client?: API
 ): Promise<ArchiveProcessingResult> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesCreate(data)
@@ -516,7 +516,7 @@ export async function createKnowbaseSystemArchivesCreate(  data: any,  client?
  * @method GET
  * @path /cfg/knowbase/system/archives/{id}/
  */
-export async function getKnowbaseSystemArchivesRetrieve(  id: string,  client?
+export async function getKnowbaseSystemArchivesRetrieve(  id: string,  client?: API
 ): Promise<DocumentArchiveDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesRetrieve(id)
@@ -530,7 +530,7 @@ export async function getKnowbaseSystemArchivesRetrieve(  id: string,  client?
  * @method PUT
  * @path /cfg/knowbase/system/archives/{id}/
  */
-export async function updateKnowbaseSystemArchivesUpdate(  id: string, data: DocumentArchiveRequest,  client?
+export async function updateKnowbaseSystemArchivesUpdate(  id: string, data: DocumentArchiveRequest,  client?: API
 ): Promise<DocumentArchive> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesUpdate(id, data)
@@ -544,7 +544,7 @@ export async function updateKnowbaseSystemArchivesUpdate(  id: string, data: Doc
  * @method PATCH
  * @path /cfg/knowbase/system/archives/{id}/
  */
-export async function partialUpdateKnowbaseSystemArchivesPartialUpdate(  id: string, data?: PatchedDocumentArchiveRequest,  client?
+export async function partialUpdateKnowbaseSystemArchivesPartialUpdate(  id: string, data?: PatchedDocumentArchiveRequest,  client?: API
 ): Promise<DocumentArchive> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesPartialUpdate(id, data)
@@ -558,7 +558,7 @@ export async function partialUpdateKnowbaseSystemArchivesPartialUpdate(  id: str
  * @method DELETE
  * @path /cfg/knowbase/system/archives/{id}/
  */
-export async function deleteKnowbaseSystemArchivesDestroy(  id: string,  client?
+export async function deleteKnowbaseSystemArchivesDestroy(  id: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesDestroy(id)
@@ -572,7 +572,7 @@ export async function deleteKnowbaseSystemArchivesDestroy(  id: string,  client?
  * @method GET
  * @path /cfg/knowbase/system/archives/{id}/file_tree/
  */
-export async function getKnowbaseSystemArchivesFileTreeRetrieve(  id: string,  client?
+export async function getKnowbaseSystemArchivesFileTreeRetrieve(  id: string,  client?: API
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesFileTreeRetrieve(id)
@@ -586,7 +586,7 @@ export async function getKnowbaseSystemArchivesFileTreeRetrieve(  id: string,  c
  * @method GET
  * @path /cfg/knowbase/system/archives/{id}/items/
  */
-export async function getKnowbaseSystemArchivesItemsList(  id: string, params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseSystemArchivesItemsList(  id: string, params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedArchiveItemList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesItemsList(id, params?.page, params?.page_size)
@@ -600,7 +600,7 @@ export async function getKnowbaseSystemArchivesItemsList(  id: string, params?: 
  * @method POST
  * @path /cfg/knowbase/system/archives/{id}/search/
  */
-export async function createKnowbaseSystemArchivesSearchCreate(  id: string, data: ArchiveSearchRequestRequest, params?: { page?: number; page_size?: number },  client?
+export async function createKnowbaseSystemArchivesSearchCreate(  id: string, data: ArchiveSearchRequestRequest, params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedArchiveSearchResultList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesSearchCreate(id, data, params?.page, params?.page_size)
@@ -614,7 +614,7 @@ export async function createKnowbaseSystemArchivesSearchCreate(  id: string, dat
  * @method POST
  * @path /cfg/knowbase/system/archives/revectorize/
  */
-export async function createKnowbaseSystemArchivesRevectorizeCreate(  data: ChunkRevectorizationRequestRequest,  client?
+export async function createKnowbaseSystemArchivesRevectorizeCreate(  data: ChunkRevectorizationRequestRequest,  client?: API
 ): Promise<VectorizationResult> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesRevectorizeCreate(data)
@@ -628,7 +628,7 @@ export async function createKnowbaseSystemArchivesRevectorizeCreate(  data: Chun
  * @method GET
  * @path /cfg/knowbase/system/archives/statistics/
  */
-export async function getKnowbaseSystemArchivesStatisticsRetrieve(  client?
+export async function getKnowbaseSystemArchivesStatisticsRetrieve(  client?: API
 ): Promise<ArchiveStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesStatisticsRetrieve()
@@ -642,7 +642,7 @@ export async function getKnowbaseSystemArchivesStatisticsRetrieve(  client?
  * @method GET
  * @path /cfg/knowbase/system/archives/vectorization_stats/
  */
-export async function getKnowbaseSystemArchivesVectorizationStatsRetrieve(  client?
+export async function getKnowbaseSystemArchivesVectorizationStatsRetrieve(  client?: API
 ): Promise<VectorizationStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesVectorizationStatsRetrieve()
@@ -656,7 +656,7 @@ export async function getKnowbaseSystemArchivesVectorizationStatsRetrieve(  clie
  * @method GET
  * @path /cfg/knowbase/system/chunks/
  */
-export async function getKnowbaseSystemChunksList(  params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseSystemChunksList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedArchiveItemChunkList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksList(params?.page, params?.page_size)
@@ -670,7 +670,7 @@ export async function getKnowbaseSystemChunksList(  params?: { page?: number; pa
  * @method POST
  * @path /cfg/knowbase/system/chunks/
  */
-export async function createKnowbaseSystemChunksCreate(  data: ArchiveItemChunkRequest,  client?
+export async function createKnowbaseSystemChunksCreate(  data: ArchiveItemChunkRequest,  client?: API
 ): Promise<ArchiveItemChunk> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksCreate(data)
@@ -684,7 +684,7 @@ export async function createKnowbaseSystemChunksCreate(  data: ArchiveItemChunkR
  * @method GET
  * @path /cfg/knowbase/system/chunks/{id}/
  */
-export async function getKnowbaseSystemChunksRetrieve(  id: string,  client?
+export async function getKnowbaseSystemChunksRetrieve(  id: string,  client?: API
 ): Promise<ArchiveItemChunkDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksRetrieve(id)
@@ -698,7 +698,7 @@ export async function getKnowbaseSystemChunksRetrieve(  id: string,  client?
  * @method PUT
  * @path /cfg/knowbase/system/chunks/{id}/
  */
-export async function updateKnowbaseSystemChunksUpdate(  id: string, data: ArchiveItemChunkRequest,  client?
+export async function updateKnowbaseSystemChunksUpdate(  id: string, data: ArchiveItemChunkRequest,  client?: API
 ): Promise<ArchiveItemChunk> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksUpdate(id, data)
@@ -712,7 +712,7 @@ export async function updateKnowbaseSystemChunksUpdate(  id: string, data: Archi
  * @method PATCH
  * @path /cfg/knowbase/system/chunks/{id}/
  */
-export async function partialUpdateKnowbaseSystemChunksPartialUpdate(  id: string, data?: PatchedArchiveItemChunkRequest,  client?
+export async function partialUpdateKnowbaseSystemChunksPartialUpdate(  id: string, data?: PatchedArchiveItemChunkRequest,  client?: API
 ): Promise<ArchiveItemChunk> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksPartialUpdate(id, data)
@@ -726,7 +726,7 @@ export async function partialUpdateKnowbaseSystemChunksPartialUpdate(  id: strin
  * @method DELETE
  * @path /cfg/knowbase/system/chunks/{id}/
  */
-export async function deleteKnowbaseSystemChunksDestroy(  id: string,  client?
+export async function deleteKnowbaseSystemChunksDestroy(  id: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksDestroy(id)
@@ -740,7 +740,7 @@ export async function deleteKnowbaseSystemChunksDestroy(  id: string,  client?
  * @method GET
  * @path /cfg/knowbase/system/chunks/{id}/context/
  */
-export async function getKnowbaseSystemChunksContextRetrieve(  id: string,  client?
+export async function getKnowbaseSystemChunksContextRetrieve(  id: string,  client?: API
 ): Promise<ArchiveItemChunkDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksContextRetrieve(id)
@@ -754,7 +754,7 @@ export async function getKnowbaseSystemChunksContextRetrieve(  id: string,  clie
  * @method POST
  * @path /cfg/knowbase/system/chunks/{id}/vectorize/
  */
-export async function createKnowbaseSystemChunksVectorizeCreate(  id: string, data: ArchiveItemChunkRequest,  client?
+export async function createKnowbaseSystemChunksVectorizeCreate(  id: string, data: ArchiveItemChunkRequest,  client?: API
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksVectorizeCreate(id, data)
@@ -768,7 +768,7 @@ export async function createKnowbaseSystemChunksVectorizeCreate(  id: string, da
  * @method GET
  * @path /cfg/knowbase/system/items/
  */
-export async function getKnowbaseSystemItemsList(  params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseSystemItemsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedArchiveItemList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsList(params?.page, params?.page_size)
@@ -782,7 +782,7 @@ export async function getKnowbaseSystemItemsList(  params?: { page?: number; pag
  * @method POST
  * @path /cfg/knowbase/system/items/
  */
-export async function createKnowbaseSystemItemsCreate(  data: ArchiveItemRequest,  client?
+export async function createKnowbaseSystemItemsCreate(  data: ArchiveItemRequest,  client?: API
 ): Promise<ArchiveItem> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsCreate(data)
@@ -796,7 +796,7 @@ export async function createKnowbaseSystemItemsCreate(  data: ArchiveItemRequest
  * @method GET
  * @path /cfg/knowbase/system/items/{id}/
  */
-export async function getKnowbaseSystemItemsRetrieve(  id: string,  client?
+export async function getKnowbaseSystemItemsRetrieve(  id: string,  client?: API
 ): Promise<ArchiveItemDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsRetrieve(id)
@@ -810,7 +810,7 @@ export async function getKnowbaseSystemItemsRetrieve(  id: string,  client?
  * @method PUT
  * @path /cfg/knowbase/system/items/{id}/
  */
-export async function updateKnowbaseSystemItemsUpdate(  id: string, data: ArchiveItemRequest,  client?
+export async function updateKnowbaseSystemItemsUpdate(  id: string, data: ArchiveItemRequest,  client?: API
 ): Promise<ArchiveItem> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsUpdate(id, data)
@@ -824,7 +824,7 @@ export async function updateKnowbaseSystemItemsUpdate(  id: string, data: Archiv
  * @method PATCH
  * @path /cfg/knowbase/system/items/{id}/
  */
-export async function partialUpdateKnowbaseSystemItemsPartialUpdate(  id: string, data?: PatchedArchiveItemRequest,  client?
+export async function partialUpdateKnowbaseSystemItemsPartialUpdate(  id: string, data?: PatchedArchiveItemRequest,  client?: API
 ): Promise<ArchiveItem> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsPartialUpdate(id, data)
@@ -838,7 +838,7 @@ export async function partialUpdateKnowbaseSystemItemsPartialUpdate(  id: string
  * @method DELETE
  * @path /cfg/knowbase/system/items/{id}/
  */
-export async function deleteKnowbaseSystemItemsDestroy(  id: string,  client?
+export async function deleteKnowbaseSystemItemsDestroy(  id: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsDestroy(id)
@@ -852,7 +852,7 @@ export async function deleteKnowbaseSystemItemsDestroy(  id: string,  client?
  * @method GET
  * @path /cfg/knowbase/system/items/{id}/chunks/
  */
-export async function getKnowbaseSystemItemsChunksList(  id: string, params?: { page?: number; page_size?: number },  client?
+export async function getKnowbaseSystemItemsChunksList(  id: string, params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedArchiveItemChunkList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsChunksList(id, params?.page, params?.page_size)
@@ -866,7 +866,7 @@ export async function getKnowbaseSystemItemsChunksList(  id: string, params?: { 
  * @method GET
  * @path /cfg/knowbase/system/items/{id}/content/
  */
-export async function getKnowbaseSystemItemsContentRetrieve(  id: string,  client?
+export async function getKnowbaseSystemItemsContentRetrieve(  id: string,  client?: API
 ): Promise<ArchiveItemDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsContentRetrieve(id)

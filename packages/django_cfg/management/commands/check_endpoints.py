@@ -13,7 +13,7 @@ import json
 from django.core.management.base import BaseCommand
 from django.urls import reverse
 
-from django_cfg.apps.api.endpoints.checker import check_all_endpoints
+from django_cfg.apps.api.endpoints.endpoints_status.checker import check_all_endpoints
 
 
 class Command(BaseCommand):

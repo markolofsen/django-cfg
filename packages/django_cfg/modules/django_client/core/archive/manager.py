@@ -34,6 +34,8 @@ class ArchiveManager:
         group_name: str,
         python_dir: Optional[Path] = None,
         typescript_dir: Optional[Path] = None,
+        go_dir: Optional[Path] = None,
+        proto_dir: Optional[Path] = None,
     ) -> Dict:
         """
         Archive generated clients.
@@ -42,6 +44,8 @@ class ArchiveManager:
             group_name: Name of the group
             python_dir: Python client directory
             typescript_dir: TypeScript client directory
+            go_dir: Go client directory
+            proto_dir: Protocol Buffer definitions directory
 
         Returns:
             Archive result dictionary
@@ -64,6 +68,16 @@ class ArchiveManager:
             dest = archive_path / "typescript"
             shutil.copytree(typescript_dir, dest, dirs_exist_ok=True)
             copied["typescript"] = str(dest)
+
+        if go_dir and go_dir.exists():
+            dest = archive_path / "go"
+            shutil.copytree(go_dir, dest, dirs_exist_ok=True)
+            copied["go"] = str(dest)
+
+        if proto_dir and proto_dir.exists():
+            dest = archive_path / "proto"
+            shutil.copytree(proto_dir, dest, dirs_exist_ok=True)
+            copied["proto"] = str(dest)
 
         # Create metadata
         metadata = {

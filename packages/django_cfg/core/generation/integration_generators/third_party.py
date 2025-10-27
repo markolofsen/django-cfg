@@ -60,7 +60,7 @@ class ThirdPartyIntegrationsGenerator:
         settings.update(self._generate_telegram_settings())
         settings.update(self._generate_unfold_settings())
         settings.update(self._generate_constance_settings())
-        settings.update(self._generate_rpc_settings())
+        settings.update(self._generate_centrifugo_settings())
 
         # Track enabled integrations
         if self.integrations:
@@ -116,20 +116,20 @@ class ThirdPartyIntegrationsGenerator:
 
         return constance_settings
 
-    def _generate_rpc_settings(self) -> Dict[str, Any]:
+    def _generate_centrifugo_settings(self) -> Dict[str, Any]:
         """
-        Generate RPC Client settings.
+        Generate Centrifugo settings.
 
         Returns:
-            Dictionary with RPC configuration
+            Dictionary with Centrifugo configuration
         """
-        if not hasattr(self.config, "django_ipc") or not self.config.django_ipc:
+        if not hasattr(self.config, "centrifugo") or not self.config.centrifugo:
             return {}
 
-        rpc_settings = self.config.django_ipc.to_django_settings()
-        self.integrations.append("django_ipc")
+        centrifugo_settings = self.config.centrifugo.to_django_settings()
+        self.integrations.append("centrifugo")
 
-        return rpc_settings
+        return centrifugo_settings
 
     def get_enabled_integrations(self) -> List[str]:
         """

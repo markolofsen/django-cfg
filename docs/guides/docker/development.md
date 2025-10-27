@@ -104,7 +104,7 @@ DATABASE_URL=postgresql://postgres:password@postgres:5432/djangocfg
 **Databases**:
 - DB 0: Django cache
 - DB 1: Dramatiq task queue
-- DB 2: WebSocket IPC
+- DB 2: Centrifugo broker
 
 ```yaml
 redis:
@@ -120,7 +120,6 @@ redis:
 ```bash
 REDIS_URL=redis://redis:6379/0
 REDIS_DRAMATIQ_URL=redis://redis:6379/1
-REDIS_IPC_URL=redis://redis:6379/2
 ```
 
 ---

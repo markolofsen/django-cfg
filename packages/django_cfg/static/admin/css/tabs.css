@@ -1,0 +1,95 @@
+/**
+ * Dashboard Tabs Styles
+ * Styling for tab navigation and tab content
+ */
+
+/* Tab Content Animation */
+.tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dashboard Tabs Navigation */
+#dashboard-tabs {
+    border-bottom: 2px solid #e5e7eb !important;
+}
+
+html.dark #dashboard-tabs {
+    border-bottom-color: #374151 !important;
+}
+
+#dashboard-tabs button {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    background-color: #f3f4f6 !important;
+    color: #6b7280 !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+html.dark #dashboard-tabs button {
+    background-color: #374151 !important;
+    color: #9ca3af !important;
+}
+
+#dashboard-tabs button:hover {
+    background-color: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+html.dark #dashboard-tabs button:hover {
+    background-color: #4b5563 !important;
+    color: #d1d5db !important;
+}
+
+/* Active Tab */
+#dashboard-tabs button.active,
+#dashboard-tabs button[class*="bg-blue"] {
+    background-color: #2563eb !important;
+    color: white !important;
+    border-bottom-color: #2563eb !important;
+}
+
+html.dark #dashboard-tabs button.active,
+html.dark #dashboard-tabs button[class*="bg-blue"] {
+    background-color: #3b82f6 !important;
+    color: white !important;
+    border-bottom-color: #3b82f6 !important;
+}
+
+/* Command Modal Tabs */
+.command-tab {
+    background-color: transparent;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.command-tab:hover {
+    background-color: #f3f4f6;
+}
+
+html.dark .command-tab {
+    color: #9ca3af;
+}
+
+html.dark .command-tab:hover {
+    background-color: #374151;
+}
+
+.command-tab.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+html.dark .command-tab.active {
+    background-color: #2563eb;
+}

@@ -1,7 +1,6 @@
 {
   "extends": "@djangocfg/typescript-config/nextjs.json",
   "compilerOptions": {
-    "skipLibCheck": true,
     "paths": {
       "@/*": [
         "./src/*"

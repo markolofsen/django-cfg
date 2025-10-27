@@ -36,6 +36,16 @@ from .retry import RetryConfig
 from .cfg__accounts__auth import CfgAuthAPI
 from .cfg__newsletter__bulk_email import CfgBulkEmailAPI
 from .cfg__newsletter__campaigns import CfgCampaignsAPI
+from .cfg__centrifugo__centrifugo_admin_api import CfgCentrifugoAdminApiAPI
+from .cfg__centrifugo__centrifugo_monitoring import CfgCentrifugoMonitoringAPI
+from .cfg__centrifugo__centrifugo_testing import CfgCentrifugoTestingAPI
+from .cfg__dashboard__dashboard_api_zones import CfgDashboardApiZonesAPI
+from .cfg__dashboard__dashboard_activity import CfgDashboardActivityAPI
+from .cfg__dashboard__dashboard_charts import CfgDashboardChartsAPI
+from .cfg__dashboard__dashboard_commands import CfgDashboardCommandsAPI
+from .cfg__dashboard__dashboard_overview import CfgDashboardOverviewAPI
+from .cfg__dashboard__dashboard_statistics import CfgDashboardStatisticsAPI
+from .cfg__dashboard__dashboard_system import CfgDashboardSystemAPI
 from .cfg__leads__lead_submission import CfgLeadSubmissionAPI
 from .cfg__newsletter__logs import CfgLogsAPI
 from .cfg__newsletter__newsletters import CfgNewslettersAPI
@@ -43,6 +53,7 @@ from .cfg__newsletter__subscriptions import CfgSubscriptionsAPI
 from .cfg__newsletter__testing import CfgTestingAPI
 from .cfg__accounts__user_profile import CfgUserProfileAPI
 from .cfg__accounts import CfgAccountsAPI
+from .cfg__centrifugo import CfgCentrifugoAPI
 from .cfg__endpoints import CfgEndpointsAPI
 from .cfg__health import CfgHealthAPI
 from .cfg__knowbase import CfgKnowbaseAPI
@@ -52,7 +63,8 @@ from .cfg__payments import CfgPaymentsAPI
 from .cfg__support import CfgSupportAPI
 from .cfg__tasks import CfgTasksAPI
 from . import enums
-from .enums import ArchiveItem.content_type, ArchiveItemChunk.chunk_type, ArchiveItemChunkDetail.chunk_type, ArchiveItemChunkRequest.chunk_type, ArchiveItemDetail.content_type, ArchiveSearchRequestRequest.chunk_types.items, ArchiveSearchRequestRequest.content_types.items, ChatMessage.role, DocumentArchive.archive_type, DocumentArchive.processing_status, DocumentArchiveDetail.archive_type, DocumentArchiveDetail.processing_status, DocumentArchiveList.archive_type, DocumentArchiveList.processing_status, EmailLog.status, LeadSubmission.contact_type, LeadSubmissionRequest.contact_type, NewsletterCampaign.status, OTPRequestRequest.channel, OTPVerifyRequest.channel, PatchedArchiveItemChunkRequest.chunk_type, PatchedLeadSubmissionRequest.contact_type, PatchedTicketRequest.status, PaymentDetail.status, PaymentList.status, QueueAction.action, QueueActionRequest.action, Ticket.status, TicketRequest.status, Transaction.transaction_type, WorkerAction.action, WorkerActionRequest.action
+# NOTE: Individual enum imports commented out due to invalid Python syntax with dotted names
+# from .enums import ArchiveItem.content_type, ArchiveItemChunk.chunk_type, ArchiveItemChunkDetail.chunk_type, ArchiveItemChunkRequest.chunk_type, ArchiveItemDetail.content_type, ArchiveSearchRequestRequest.chunk_types.items, ArchiveSearchRequestRequest.content_types.items, ChatMessage.role, DocumentArchive.archive_type, DocumentArchive.processing_status, DocumentArchiveDetail.archive_type, DocumentArchiveDetail.processing_status, DocumentArchiveList.archive_type, DocumentArchiveList.processing_status, EmailLog.status, LeadSubmission.contact_type, LeadSubmissionRequest.contact_type, NewsletterCampaign.status, OTPRequestRequest.channel, OTPVerifyRequest.channel, PatchedArchiveItemChunkRequest.chunk_type, PatchedLeadSubmissionRequest.contact_type, PatchedTicketRequest.status, PaymentDetail.status, PaymentList.status, QueueAction.action, QueueActionRequest.action, QuickAction.color, StatCard.change_type, SystemHealth.overall_status, SystemHealthItem.status, Ticket.status, TicketRequest.status, Transaction.transaction_type, WorkerAction.action, WorkerActionRequest.action
 
 TOKEN_KEY = "auth_token"
 REFRESH_TOKEN_KEY = "refresh_token"
@@ -142,6 +154,56 @@ class API:
         return self._client.cfg_campaigns
 
     @property
+    def cfg_centrifugo_admin_api(self) -> CfgCentrifugoAdminApiAPI:
+        """Access Centrifugo Admin API endpoints."""
+        return self._client.cfg_centrifugo_admin_api
+
+    @property
+    def cfg_centrifugo_monitoring(self) -> CfgCentrifugoMonitoringAPI:
+        """Access Centrifugo Monitoring endpoints."""
+        return self._client.cfg_centrifugo_monitoring
+
+    @property
+    def cfg_centrifugo_testing(self) -> CfgCentrifugoTestingAPI:
+        """Access Centrifugo Testing endpoints."""
+        return self._client.cfg_centrifugo_testing
+
+    @property
+    def cfg_dashboard_api_zones(self) -> CfgDashboardApiZonesAPI:
+        """Access Dashboard - API Zones endpoints."""
+        return self._client.cfg_dashboard_api_zones
+
+    @property
+    def cfg_dashboard_activity(self) -> CfgDashboardActivityAPI:
+        """Access Dashboard - Activity endpoints."""
+        return self._client.cfg_dashboard_activity
+
+    @property
+    def cfg_dashboard_charts(self) -> CfgDashboardChartsAPI:
+        """Access Dashboard - Charts endpoints."""
+        return self._client.cfg_dashboard_charts
+
+    @property
+    def cfg_dashboard_commands(self) -> CfgDashboardCommandsAPI:
+        """Access Dashboard - Commands endpoints."""
+        return self._client.cfg_dashboard_commands
+
+    @property
+    def cfg_dashboard_overview(self) -> CfgDashboardOverviewAPI:
+        """Access Dashboard - Overview endpoints."""
+        return self._client.cfg_dashboard_overview
+
+    @property
+    def cfg_dashboard_statistics(self) -> CfgDashboardStatisticsAPI:
+        """Access Dashboard - Statistics endpoints."""
+        return self._client.cfg_dashboard_statistics
+
+    @property
+    def cfg_dashboard_system(self) -> CfgDashboardSystemAPI:
+        """Access Dashboard - System endpoints."""
+        return self._client.cfg_dashboard_system
+
+    @property
     def cfg_lead_submission(self) -> CfgLeadSubmissionAPI:
         """Access Lead Submission endpoints."""
         return self._client.cfg_lead_submission
@@ -175,6 +237,11 @@ class API:
     def cfg_accounts(self) -> CfgAccountsAPI:
         """Access accounts endpoints."""
         return self._client.cfg_accounts
+
+    @property
+    def cfg_centrifugo(self) -> CfgCentrifugoAPI:
+        """Access centrifugo endpoints."""
+        return self._client.cfg_centrifugo
 
     @property
     def cfg_endpoints(self) -> CfgEndpointsAPI:

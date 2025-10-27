@@ -1,6 +1,16 @@
 import { CfgAuth } from "./cfg__accounts__auth";
 import { CfgBulkEmail } from "./cfg__newsletter__bulk_email";
 import { CfgCampaigns } from "./cfg__newsletter__campaigns";
+import { CfgCentrifugoAdminApi } from "./cfg__centrifugo__centrifugo_admin_api";
+import { CfgCentrifugoMonitoring } from "./cfg__centrifugo__centrifugo_monitoring";
+import { CfgCentrifugoTesting } from "./cfg__centrifugo__centrifugo_testing";
+import { CfgDashboardApiZones } from "./cfg__dashboard__dashboard_api_zones";
+import { CfgDashboardActivity } from "./cfg__dashboard__dashboard_activity";
+import { CfgDashboardCharts } from "./cfg__dashboard__dashboard_charts";
+import { CfgDashboardCommands } from "./cfg__dashboard__dashboard_commands";
+import { CfgDashboardOverview } from "./cfg__dashboard__dashboard_overview";
+import { CfgDashboardStatistics } from "./cfg__dashboard__dashboard_statistics";
+import { CfgDashboardSystem } from "./cfg__dashboard__dashboard_system";
 import { CfgLeadSubmission } from "./cfg__leads__lead_submission";
 import { CfgLogs } from "./cfg__newsletter__logs";
 import { CfgNewsletters } from "./cfg__newsletter__newsletters";
@@ -8,6 +18,7 @@ import { CfgSubscriptions } from "./cfg__newsletter__subscriptions";
 import { CfgTesting } from "./cfg__newsletter__testing";
 import { CfgUserProfile } from "./cfg__accounts__user_profile";
 import { CfgAccounts } from "./cfg__accounts";
+import { CfgCentrifugo } from "./cfg__centrifugo";
 import { CfgEndpoints } from "./cfg__endpoints";
 import { CfgHealth } from "./cfg__health";
 import { CfgKnowbase } from "./cfg__knowbase";
@@ -47,6 +58,16 @@ export class APIClient {
   public cfg_auth: CfgAuth;
   public cfg_bulk_email: CfgBulkEmail;
   public cfg_campaigns: CfgCampaigns;
+  public cfg_centrifugo_admin_api: CfgCentrifugoAdminApi;
+  public cfg_centrifugo_monitoring: CfgCentrifugoMonitoring;
+  public cfg_centrifugo_testing: CfgCentrifugoTesting;
+  public cfg_dashboard_api_zones: CfgDashboardApiZones;
+  public cfg_dashboard_activity: CfgDashboardActivity;
+  public cfg_dashboard_charts: CfgDashboardCharts;
+  public cfg_dashboard_commands: CfgDashboardCommands;
+  public cfg_dashboard_overview: CfgDashboardOverview;
+  public cfg_dashboard_statistics: CfgDashboardStatistics;
+  public cfg_dashboard_system: CfgDashboardSystem;
   public cfg_lead_submission: CfgLeadSubmission;
   public cfg_logs: CfgLogs;
   public cfg_newsletters: CfgNewsletters;
@@ -54,6 +75,7 @@ export class APIClient {
   public cfg_testing: CfgTesting;
   public cfg_user_profile: CfgUserProfile;
   public cfg_accounts: CfgAccounts;
+  public cfg_centrifugo: CfgCentrifugo;
   public cfg_endpoints: CfgEndpoints;
   public cfg_health: CfgHealth;
   public cfg_knowbase: CfgKnowbase;
@@ -88,6 +110,16 @@ export class APIClient {
     this.cfg_auth = new CfgAuth(this);
     this.cfg_bulk_email = new CfgBulkEmail(this);
     this.cfg_campaigns = new CfgCampaigns(this);
+    this.cfg_centrifugo_admin_api = new CfgCentrifugoAdminApi(this);
+    this.cfg_centrifugo_monitoring = new CfgCentrifugoMonitoring(this);
+    this.cfg_centrifugo_testing = new CfgCentrifugoTesting(this);
+    this.cfg_dashboard_api_zones = new CfgDashboardApiZones(this);
+    this.cfg_dashboard_activity = new CfgDashboardActivity(this);
+    this.cfg_dashboard_charts = new CfgDashboardCharts(this);
+    this.cfg_dashboard_commands = new CfgDashboardCommands(this);
+    this.cfg_dashboard_overview = new CfgDashboardOverview(this);
+    this.cfg_dashboard_statistics = new CfgDashboardStatistics(this);
+    this.cfg_dashboard_system = new CfgDashboardSystem(this);
     this.cfg_lead_submission = new CfgLeadSubmission(this);
     this.cfg_logs = new CfgLogs(this);
     this.cfg_newsletters = new CfgNewsletters(this);
@@ -95,6 +127,7 @@ export class APIClient {
     this.cfg_testing = new CfgTesting(this);
     this.cfg_user_profile = new CfgUserProfile(this);
     this.cfg_accounts = new CfgAccounts(this);
+    this.cfg_centrifugo = new CfgCentrifugo(this);
     this.cfg_endpoints = new CfgEndpoints(this);
     this.cfg_health = new CfgHealth(this);
     this.cfg_knowbase = new CfgKnowbase(this);
@@ -106,7 +139,9 @@ export class APIClient {
   }
 
   /**
-   * Get CSRF token from cookies.
+   * Get CSRF token from cookies (for SessionAuthentication).
+   *
+   * Returns null if cookie doesn't exist (JWT-only auth).
    */
   getCsrfToken(): string | null {
     const name = 'csrftoken';
@@ -181,13 +216,8 @@ export class APIClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    // Add CSRF token for non-GET requests
-    if (method !== 'GET') {
-      const csrfToken = this.getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-      }
-    }
+    // CSRF not needed - SessionAuthentication not enabled in DRF config
+    // Your API uses JWT/Token authentication (no CSRF required)
 
     // Log request
     if (this.logger) {

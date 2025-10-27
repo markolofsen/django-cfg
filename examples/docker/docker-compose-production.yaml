@@ -1,0 +1,121 @@
+version: '3.8'
+
+name: django-cfg
+
+# Django-CFG - Production Deployment
+# Services: Django API + Frontend + WebSocket
+
+services:
+  # Django API
+  django:
+    build:
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    image: django-cfg-django:latest
+    container_name: django-cfg-django
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/django-logs:/app/logs"
+      - "../files/django-media:/app/media"
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.djangocfg-api.rule=Host(`api.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-api.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
+
+  # Centrifugo WebSocket Server
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: django-cfg-centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    env_file:
+      - .env.prod
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.djangocfg-centrifugo.rule=Host(`ws.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-centrifugo.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-centrifugo.service=djangocfg-centrifugo"
+      - "traefik.http.routers.djangocfg-centrifugo.tls=true"
+      - "traefik.http.routers.djangocfg-centrifugo.tls.certresolver=letsencrypt"
+      - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
+
+  # Frontend
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/services/frontend/Dockerfile
+      target: demo
+    image: django-cfg-frontend:latest
+    container_name: django-cfg-frontend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-demo.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-demo.tls.certresolver=letsencrypt"
+      - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
+
+  # Docusaurus Site
+  web:
+    build:
+      context: ..
+      dockerfile: docker/services/web/Dockerfile
+    image: django-cfg-web:latest
+    container_name: django-cfg-web
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.djangocfg-web.rule=Host(`djangocfg.com`) || Host(`www.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-web.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.djangocfg-web.loadbalancer.server.port=3001"
+
+networks:
+  dokploy-network:
+    external: true

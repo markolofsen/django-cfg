@@ -22,3 +22,23 @@ class CfgEndpointsAPI:
         return EndpointsStatus.model_validate(response.json())
 
 
+    async def urls_retrieve(self) -> list[URLsList]:
+        """
+        Return all registered URLs.
+        """
+        url = "/cfg/endpoints/urls/"
+        response = await self._client.get(url)
+        response.raise_for_status()
+        return URLsList.model_validate(response.json())
+
+
+    async def urls_compact_retrieve(self) -> None:
+        """
+        Return compact URL list.
+        """
+        url = "/cfg/endpoints/urls/compact/"
+        response = await self._client.get(url)
+        response.raise_for_status()
+        return None
+
+

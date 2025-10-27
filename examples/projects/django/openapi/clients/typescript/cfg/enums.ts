@@ -420,6 +420,62 @@ export enum QueueActionRequestAction {
 }
 
 /**
+ * Button color theme
+ * * `primary` - primary
+ * * `success` - success
+ * * `warning` - warning
+ * * `danger` - danger
+ * * `secondary` - secondary
+ */
+export enum QuickActionColor {
+  PRIMARY = "primary",
+  SUCCESS = "success",
+  WARNING = "warning",
+  DANGER = "danger",
+  SECONDARY = "secondary",
+}
+
+/**
+ * Change type
+ * * `positive` - positive
+ * * `negative` - negative
+ * * `neutral` - neutral
+ */
+export enum StatCardChangeType {
+  POSITIVE = "positive",
+  NEGATIVE = "negative",
+  NEUTRAL = "neutral",
+}
+
+/**
+ * Overall system health status
+ * * `healthy` - healthy
+ * * `warning` - warning
+ * * `error` - error
+ * * `unknown` - unknown
+ */
+export enum SystemHealthOverallStatus {
+  HEALTHY = "healthy",
+  WARNING = "warning",
+  ERROR = "error",
+  UNKNOWN = "unknown",
+}
+
+/**
+ * Health status
+ * * `healthy` - healthy
+ * * `warning` - warning
+ * * `error` - error
+ * * `unknown` - unknown
+ */
+export enum SystemHealthItemStatus {
+  HEALTHY = "healthy",
+  WARNING = "warning",
+  ERROR = "error",
+  UNKNOWN = "unknown",
+}
+
+/**
  * * `open` - Open
  * * `waiting_for_user` - Waiting for User
  * * `waiting_for_admin` - Waiting for Admin

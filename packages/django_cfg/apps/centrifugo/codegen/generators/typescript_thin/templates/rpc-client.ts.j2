@@ -1,0 +1,137 @@
+/**
+ * Base Centrifugo RPC Client
+ *
+ * Handles WebSocket connection and RPC call correlation.
+ * Auto-generated - DO NOT EDIT
+ */
+
+import { Centrifuge } from 'centrifuge';
+
+export class CentrifugoRPCClient {
+  private centrifuge: Centrifuge;
+  private subscription: any;
+  private pendingRequests: Map<string, { resolve: Function; reject: Function }> = new Map();
+  private readonly replyChannel: string;
+  private readonly timeout: number;
+
+  constructor(
+    url: string,
+    token: string,
+    userId: string,
+    timeout: number = 30000
+  ) {
+    this.replyChannel = `user#${userId}`;
+    this.timeout = timeout;
+
+    this.centrifuge = new Centrifuge(url, {
+      token,
+    });
+
+    this.centrifuge.on('connected', (ctx) => {
+      console.log('✅ Connected to Centrifugo');
+    });
+
+    this.centrifuge.on('disconnected', (ctx) => {
+      console.warn('Disconnected:', ctx);
+      // Reject all pending requests
+      this.pendingRequests.forEach(({ reject }) => {
+        reject(new Error('Disconnected from Centrifugo'));
+      });
+      this.pendingRequests.clear();
+    });
+  }
+
+  async connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.centrifuge.connect();
+
+      // Subscribe to reply channel
+      this.subscription = this.centrifuge.newSubscription(this.replyChannel);
+
+      this.subscription.on('publication', (ctx: any) => {
+        this.handleResponse(ctx.data);
+      });
+
+      this.subscription.on('subscribed', () => {
+        resolve();
+      });
+
+      this.subscription.on('error', (ctx: any) => {
+        reject(new Error(ctx.error?.message || 'Subscription error'));
+      });
+
+      this.subscription.subscribe();
+    });
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
+    this.centrifuge.disconnect();
+  }
+
+  async call<T = any>(method: string, params: any): Promise<T> {
+    const correlationId = this.generateCorrelationId();
+
+    const message = {
+      method,
+      params,
+      correlation_id: correlationId,
+      reply_to: this.replyChannel,
+    };
+
+    // Create promise for response
+    const promise = new Promise<T>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(correlationId);
+        reject(new Error(`RPC timeout: ${method}`));
+      }, this.timeout);
+
+      this.pendingRequests.set(correlationId, {
+        resolve: (result: T) => {
+          clearTimeout(timeoutId);
+          resolve(result);
+        },
+        reject: (error: Error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+      });
+    });
+
+    // Publish request
+    await this.centrifuge.publish('rpc.requests', message);
+
+    console.log(`📤 RPC call: ${method} (${correlationId})`);
+
+    return promise;
+  }
+
+  private handleResponse(data: any): void {
+    const correlationId = data.correlation_id;
+    if (!correlationId) {
+      console.warn('Received response without correlation_id');
+      return;
+    }
+
+    const pending = this.pendingRequests.get(correlationId);
+    if (!pending) {
+      console.warn(`Received response for unknown correlation_id: ${correlationId}`);
+      return;
+    }
+
+    this.pendingRequests.delete(correlationId);
+
+    if (data.error) {
+      pending.reject(new Error(data.error.message || 'RPC error'));
+    } else {
+      console.log(`📥 RPC response: ${correlationId}`);
+      pending.resolve(data.result);
+    }
+  }
+
+  private generateCorrelationId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+}

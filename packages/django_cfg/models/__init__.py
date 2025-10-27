@@ -30,9 +30,11 @@ from .api.keys import ApiKeys
 from .api.limits import LimitsConfig
 from .base.config import BaseConfig, BaseSettings
 from .base.module import BaseCfgAutoModule
-from .django.constance import ConstanceConfig, ConstanceField
 
 # Django-specific
+from .django.axes import AxesConfig
+from .django.constance import ConstanceConfig, ConstanceField
+from .django.crypto_fields import CryptoFieldsConfig
 from .django.environment import EnvironmentConfig
 from .django.openapi import OpenAPIClientConfig
 from .infrastructure.cache import CacheConfig
@@ -79,6 +81,8 @@ __all__ = [
     "ConstanceField",
     "OpenAPIClientConfig",
     "UnfoldConfig",
+    "AxesConfig",
+    "CryptoFieldsConfig",
     # Services
     "EmailConfig",
     "TelegramConfig",

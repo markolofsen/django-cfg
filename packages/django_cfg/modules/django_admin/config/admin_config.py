@@ -96,6 +96,14 @@ class AdminConfig(BaseModel):
         default_factory=list,
         description="Fields with raw ID widget"
     )
+    filter_horizontal: List[str] = Field(
+        default_factory=list,
+        description="M2M fields with horizontal filter widget"
+    )
+    filter_vertical: List[str] = Field(
+        default_factory=list,
+        description="M2M fields with vertical filter widget"
+    )
     prepopulated_fields: Dict[str, tuple] = Field(
         default_factory=dict,
         description="Auto-populate fields (e.g., {'slug': ('name',)})"

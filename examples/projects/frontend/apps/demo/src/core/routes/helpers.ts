@@ -16,22 +16,16 @@ import type { UnrealonRoutes } from './definitions';
 export function getPageTitle(routes: UnrealonRoutes, path: string): string {
   // Try exact match first
   const label = routes.getRouteLabel(path);
-  if (label !== 'Unrealon Admin') {
+  if (label) {
     return label;
   }
 
   // Handle dynamic workspace routes
-  if (path.startsWith('/private/workspaces/')) {
-    if (path.endsWith('/code')) return 'Code Editor';
-    if (path.endsWith('/3d')) return '3D View';
-    if (path.endsWith('/chat')) return 'Chat';
-    if (path.endsWith('/settings')) return 'Settings';
-    if (path.endsWith('/files')) return 'Files';
-    if (path.endsWith('/git')) return 'Git';
-    return 'Workspace Details';
-  }
+  // if (path.startsWith('/private/workspaces/')) {
+  //   return 'Workspace Details';
+  // }
 
-  return 'Unrealon Admin';
+  return 'No label';
 }
 
 // ─────────────────────────────────────────────────────────────────────────

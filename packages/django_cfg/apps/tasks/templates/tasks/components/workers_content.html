@@ -6,24 +6,54 @@
             Worker Management
         </h2>
         <div class="flex space-x-2">
-            <button id="start-workers-btn" 
-                    class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors">
+            <button @click="startWorkers()"
+                    :disabled="loading"
+                    class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span class="material-icons text-sm mr-1">play_arrow</span>
                 Start
             </button>
-            <button id="stop-workers-btn" 
-                    class="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors">
+            <button @click="stopWorkers()"
+                    :disabled="loading"
+                    class="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span class="material-icons text-sm mr-1">stop</span>
                 Stop
             </button>
         </div>
     </div>
     <div class="p-6">
-        <div id="workers-container">
-            <!-- Workers will be loaded here by JavaScript -->
+        <!-- Loading State -->
+        <div x-show="loading && workers.length === 0" x-cloak>
             <div class="flex items-center justify-center py-12">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                 <span class="ml-3 text-gray-600 dark:text-gray-400">Loading workers...</span>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="!loading && workers.length === 0" x-cloak>
+            <p class="text-center text-gray-600 dark:text-gray-400 py-12">No workers found.</p>
+        </div>
+
+        <!-- Workers List -->
+        <div x-show="workers.length > 0" x-cloak>
+            <div class="space-y-3">
+                <template x-for="worker in workers" :key="worker.id">
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-gray-900 dark:text-white" x-text="worker.name || worker.id"></h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                    <span x-text="worker.current_task || 'Idle'"></span>
+                                </p>
+                            </div>
+                            <div>
+                                <div class="px-3 py-1 text-xs rounded-full"
+                                     :class="(worker.uptime === 'Active' || worker.is_active) ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'"
+                                     x-text="worker.uptime || (worker.is_active ? 'Active' : 'Inactive')"></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
     </div>

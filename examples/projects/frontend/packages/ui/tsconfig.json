@@ -1,8 +1,0 @@
-{
-  "extends": "@djangocfg/typescript-config/react-library.json",
-  "compilerOptions": {
-    "skipLibCheck": true
-  },
-  "include": ["src"],
-  "exclude": ["node_modules", "src/components_old"]
-}

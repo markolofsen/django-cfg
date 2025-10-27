@@ -6,7 +6,6 @@ Enhanced inline classes with better organization and conditional loading.
 
 from unfold.admin import TabularInline
 
-from django_cfg.apps.support.models import Ticket
 from django_cfg.modules.base import BaseCfgModule
 
 from ..models import UserActivity, UserRegistrationSource
@@ -135,6 +134,7 @@ class UserSupportTicketsInline(TabularInline):
 
             # Only import if support is enabled
             if base_module.is_support_enabled():
+                from django_cfg.apps.support.models import Ticket
                 self.model = Ticket
         except (ImportError, Exception):
             # Support app not available or not enabled

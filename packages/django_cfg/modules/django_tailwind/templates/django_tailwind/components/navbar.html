@@ -67,13 +67,13 @@ Custom navbar (extending):
                 <nav class="hidden md:flex items-center space-x-1">
                     {% for item in nav_items %}
                     <a href="{{ item.url }}"
-                       class="px-3 py-2 rounded-md text-sm font-medium transition-colors
+                       class="px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5
                               {% if item.active %}
                                   bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white
                               {% else %}
                                   text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white
                               {% endif %}">
-                        {% if item.icon %}<span class="mr-1">{{ item.icon }}</span>{% endif %}
+                        {% if item.icon %}<span class="material-icons text-sm">{{ item.icon }}</span>{% endif %}
                         {{ item.label }}
                     </a>
                     {% endfor %}

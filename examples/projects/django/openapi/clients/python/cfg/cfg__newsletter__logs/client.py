@@ -21,7 +21,6 @@ class CfgLogsAPI:
         url = "/cfg/newsletter/logs/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedEmailLogList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedEmailLogList.model_validate(response.json())
 
 

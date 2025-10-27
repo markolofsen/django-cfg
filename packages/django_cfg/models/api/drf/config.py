@@ -17,10 +17,12 @@ class DRFConfig(BaseModel):
     # Authentication
     authentication_classes: List[str] = Field(
         default_factory=lambda: [
+            'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin',
             'rest_framework.authentication.TokenAuthentication',
-            'rest_framework.authentication.SessionAuthentication',
+            # SessionAuthentication removed from defaults (requires CSRF)
+            # Add it manually in your config if you need Browsable API with session auth
         ],
-        description="Default authentication classes"
+        description="Default authentication classes (JWT with auto last_login update)"
     )
 
     # Permissions

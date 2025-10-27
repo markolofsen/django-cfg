@@ -25,7 +25,6 @@ class SyncAPIClient:
         self.base_url = base_url.rstrip('/')
         self._client = httpx.Client(
             base_url=self.base_url,
-            timeout=30.0,
             **kwargs,
         )
 

@@ -7,7 +7,9 @@ keywords:
   - type-safe api clients
   - typescript client generator
   - python client generator
-description: Auto-generate type-safe TypeScript and Python API clients from Django REST Framework. Built for Next.js, React, React Native, and modern Python backends.
+  - grpc client generator
+  - protocol buffers generator
+description: Auto-generate type-safe TypeScript, Python, Go, and Protocol Buffer clients from Django REST Framework. Built for Next.js, React, React Native, modern Python backends, and gRPC services.
 ---
 
 import { TechArticleSchema } from '@site/src/components/Schema';
@@ -20,7 +22,7 @@ import { TechArticleSchema } from '@site/src/components/Schema';
 
 # API Client Generation
 
-Django-CFG includes **integrated API client generation** that automatically creates type-safe **TypeScript** and **Python** clients from your Django REST Framework API using OpenAPI specifications.
+Django-CFG includes **integrated API client generation** that automatically creates type-safe **TypeScript**, **Python**, **Go**, and **Protocol Buffer/gRPC** clients from your Django REST Framework API using OpenAPI specifications.
 
 ## What is API Client Generation?
 
@@ -38,6 +40,8 @@ Generate fully typed clients with:
 
 - **TypeScript**: Interfaces, Zod schemas, typed fetch functions, SWR hooks
 - **Python**: Pydantic 2 models, async/await client, type hints
+- **Go**: Structs, interfaces, typed HTTP client
+- **Protocol Buffers**: Proto3 messages, gRPC service definitions
 
 ### 🏗️ Group-Based Organization
 
@@ -64,6 +68,8 @@ Each group gets its own:
 - OpenAPI schema
 - Generated TypeScript client
 - Generated Python client
+- Generated Go client
+- Generated Protocol Buffer definitions
 - API documentation (Swagger/Redoc)
 
 ### ⚙️ Auto-Generated Clients
@@ -90,6 +96,20 @@ client = APIClient(base_url="https://api.example.com")
 
 # Fully async with Pydantic 2 models
 users = await client.users.list(page=1)
+```
+
+**gRPC Client (Protocol Buffers):**
+```python
+import grpc
+from profiles.api__profiles import service_pb2, service_pb2_grpc
+
+# Create gRPC channel
+channel = grpc.insecure_channel('localhost:50051')
+stub = service_pb2_grpc.ProfilesServiceStub(channel)
+
+# Make gRPC call with type-safe proto messages
+request = service_pb2.ProfilesProfilesListRequest(page=1, page_size=10)
+response = stub.ProfilesProfilesList(request)
 ```
 
 ## Why Use API Client Generation?
@@ -166,9 +186,37 @@ backend/api_client/
 └── index.py                       # Main entry point
 ```
 
+### Protocol Buffers Output
+
+```
+openapi/clients/proto/
+├── core/                          # Group name
+│   ├── users/
+│   │   ├── messages.proto         # Message definitions (models, enums)
+│   │   ├── service.proto          # gRPC service definitions
+│   │   ├── messages_pb2.py        # Compiled Python messages
+│   │   ├── messages_pb2_grpc.py   # gRPC stubs (empty)
+│   │   ├── service_pb2.py         # Request/Response messages
+│   │   └── service_pb2_grpc.py    # gRPC client & server stubs
+│   │
+│   ├── accounts/
+│   │   └── ...                    # Same structure
+│   │
+│   └── README.md                  # Compilation instructions
+│
+├── billing/                       # Another group
+│   └── ...
+│
+└── README.md                      # Root compilation guide
+```
+
+:::info Compilation Required
+Proto files must be compiled with `protoc` before use. Each group includes a README.md with language-specific compilation commands for Python, Go, TypeScript, and other languages.
+:::
+
 ## Generated Features
 
-✅ **Type-safe API calls** - Full TypeScript/Python types
+✅ **Type-safe API calls** - Full TypeScript/Python/Go/Proto types
 ✅ **Authentication** - Bearer tokens, API keys, custom headers
 ✅ **Error handling** - Proper error types and validation
 ✅ **Async support** - Both sync and async methods

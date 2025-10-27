@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui';
-import { useProfile } from '../../contexts/ProfileContext';
+import { useAccountsContext } from '@djangocfg/api/cfg/contexts';
 import {
   Users,
   Wallet,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function DashboardView() {
-  const { profile, stats: profileStats, isLoading: profileLoading } = useProfile();
+  const { profile, isLoadingProfile: profileLoading } = useAccountsContext();
 
   if (profileLoading) {
     return (
@@ -67,7 +67,7 @@ export default function DashboardView() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-2">
-          Welcome back, {profile?.user_info?.username || 'User'}! Here's what's happening.
+          Welcome back, {profile?.display_username || 'User'}! Here's what's happening.
         </p>
       </div>
 
@@ -111,14 +111,14 @@ export default function DashboardView() {
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Username</span>
             </div>
-            <span className="text-sm font-medium">{profile?.user_info?.username || 'N/A'}</span>
+            <span className="text-sm font-medium">{profile?.display_username || 'N/A'}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Email</span>
             </div>
-            <span className="text-sm font-medium">{profile?.user_info?.email || 'N/A'}</span>
+            <span className="text-sm font-medium">{profile?.email || 'N/A'}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ export default function DashboardView() {
               <span className="text-sm">Member Since</span>
             </div>
             <span className="text-sm font-medium">
-              {profile?.user_info?.date_joined ? new Date(profile.user_info.date_joined).toLocaleDateString() : 'N/A'}
+              {profile?.date_joined ? new Date(profile.date_joined).toLocaleDateString() : 'N/A'}
             </span>
           </div>
         </CardContent>

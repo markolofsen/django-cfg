@@ -173,23 +173,40 @@ if not any([IS_DEV, IS_PROD, IS_TEST]):
     IS_DEV = True
 
 
-class DatabaseConfig(BaseModel):
+class DatabaseConfig(BaseSettings):
     """Database configuration."""
-    url: str = "sqlite:///db.sqlite3"
+    url: str = Field(default="sqlite:///db.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 
 
-class AppConfig(BaseModel):
+class AppConfig(BaseSettings):
     """Application configuration."""
-    name: str = "SaaS Platform"
-    site_url: str = "http://localhost:3000"
-    api_url: str = "http://localhost:8000"
+    name: str = Field(default="SaaS Platform")
+    site_url: str = Field(default="http://localhost:3000")
+    api_url: str = Field(default="http://localhost:8000")
+
+    model_config = SettingsConfigDict(
+        env_prefix="APP__",
+        env_nested_delimiter="__",
+    )
 
 
-class EnvironmentMode(BaseModel):
+class EnvironmentMode(BaseSettings):
     """Environment mode detection."""
-    is_test: bool = IS_TEST
-    is_dev: bool = IS_DEV
-    is_prod: bool = IS_PROD
+    is_test: bool = Field(default=False)
+    is_dev: bool = Field(default=False)
+    is_prod: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def set_default_env(self):
+        """Set development as default if no env specified."""
+        if not any([self.is_test, self.is_dev, self.is_prod]):
+            self.is_dev = True
+        return self
 
     @computed_field
     @property
@@ -204,12 +221,14 @@ class EnvironmentMode(BaseModel):
         return "development"
 
 
-class EnvironmentConfig(BaseModel):
+class EnvironmentConfig(BaseSettings):
     """Complete environment configuration."""
 
     # Core settings
-    secret_key: str = "change-me-in-production"
-    debug: bool = True
+    secret_key: str = Field(
+        default="dev-secret-key-at-least-fifty-characters-long-for-django-security"
+    )
+    debug: bool = Field(default=True)
 
     # Configuration sections
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
@@ -219,59 +238,41 @@ class EnvironmentConfig(BaseModel):
     # Security
     security_domains: list[str] | None = None
 
-
-def get_environment_config() -> EnvironmentConfig:
-    """Load environment configuration from YAML file."""
-
-    # Determine which config file to load
-    if IS_PROD:
-        config_file = "config.prod.yaml"
-    elif IS_TEST:
-        config_file = "config.test.yaml"
-    else:
-        config_file = "config.dev.yaml"
-
-    print(f"Loading config: {config_file}")
-
-    # Get config file path
-    config_path = Path(__file__).parent / config_file
-
-    if config_path.exists():
-        try:
-            return parse_yaml_file_as(EnvironmentConfig, config_path)
-        except Exception as e:
-            print(f"Warning: Failed to load {config_file}: {e}")
-            print("Using default configuration")
-    else:
-        print(f"Warning: {config_file} not found, using defaults")
-
-    return EnvironmentConfig()
+    model_config = SettingsConfigDict(
+        env_file=str(Path(__file__).parent / ".env"),
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 # Global environment configuration instance
-env = get_environment_config()
+# Auto-loads from ENV > .env > defaults
+env = EnvironmentConfig()
 ```
 
-**core/environment/config.dev.yaml:**
+**core/environment/.env:**
 
-```yaml
+```bash
 # Development configuration
-secret_key: "dev-secret-key-at-least-fifty-characters-long-for-django-security"
-debug: true
+SECRET_KEY="dev-secret-key-at-least-fifty-characters-long-for-django-security"
+DEBUG=true
 
-app:
-  name: "SaaS Platform"
-  site_url: "http://localhost:3000"
-  api_url: "http://localhost:8000"
+# Application
+APP__NAME="SaaS Platform"
+APP__SITE_URL="http://localhost:3000"
+APP__API_URL="http://localhost:8000"
 
-# security_domains: Optional in development
+# Database
+DATABASE__URL="sqlite:///db.sqlite3"
+
+# Security domains - optional in development
 # Django-CFG auto-configures for dev convenience:
 # - CORS fully open (CORS_ALLOW_ALL_ORIGINS=True)
 # - Docker IPs work automatically
 # - localhost any port
-
-database:
-  url: "sqlite:///db.sqlite3"
+# SECURITY_DOMAINS="localhost,127.0.0.1"
 ```
 
 ### 3. Create Configuration Class
@@ -284,13 +285,13 @@ SaaS Platform configuration using Django-CFG.
 """
 from django_cfg import DjangoConfig, DatabaseConfig
 from typing import Dict
-from .environment import env  # Type-safe YAML loader
+from .environment import env  # Type-safe ENV loader
 
 
 class SaaSConfig(DjangoConfig):
-    """SaaS platform configuration loaded from YAML."""
+    """SaaS platform configuration from environment variables."""
 
-    # From YAML
+    # From environment
     secret_key: str = env.secret_key
     debug: bool = env.debug
     env_mode: str = env.env.env_mode

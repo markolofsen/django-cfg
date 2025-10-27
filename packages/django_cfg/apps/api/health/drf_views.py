@@ -13,6 +13,7 @@ import psutil
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connections
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -102,6 +103,17 @@ class DRFHealthCheckView(APIView):
             "python_version": f"{os.sys.version_info.major}.{os.sys.version_info.minor}.{os.sys.version_info.micro}",
         }
 
+        # Add useful links using reverse()
+        health_data["links"] = {
+            "urls_list": request.build_absolute_uri(reverse('urls_list')),
+            "urls_list_compact": request.build_absolute_uri(reverse('urls_list_compact')),
+            "endpoints_status": request.build_absolute_uri(reverse('endpoints_status_drf')),
+            "quick_health": request.build_absolute_uri(reverse('django_cfg_drf_quick_health')),
+        }
+
+        # Add OpenAPI schema links
+        health_data["links"]["openapi_schemas"] = self._get_openapi_schema_links(request)
+
         # Return appropriate HTTP status
         http_status = status.HTTP_200_OK
         if health_data["status"] == "unhealthy":
@@ -190,6 +202,30 @@ class DRFHealthCheckView(APIView):
                 "status": "error",
                 "error": str(e)
             }
+
+    def _get_openapi_schema_links(self, request) -> Dict[str, str]:
+        """Get OpenAPI schema links for all configured groups."""
+        try:
+            from django_cfg.modules.django_client.core import get_openapi_service
+
+            service = get_openapi_service()
+
+            if not service.config or not service.is_enabled():
+                return {}
+
+            schema_links = {}
+            for group_name in service.get_group_names():
+                try:
+                    schema_url_name = f'openapi-schema-{group_name}'
+                    schema_links[group_name] = request.build_absolute_uri(reverse(schema_url_name))
+                except Exception:
+                    # Skip if URL name doesn't exist
+                    continue
+
+            return schema_links
+
+        except Exception:
+            return {}
 
     def _check_system_resources(self) -> Dict[str, Any]:
         """Check system resource usage."""

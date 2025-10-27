@@ -1,0 +1,3 @@
+"""
+Centrifugo Migrations.
+"""

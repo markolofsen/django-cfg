@@ -40,7 +40,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/health/drf/
  */
-export async function getHealthDrfRetrieve(  client?
+export async function getHealthDrfRetrieve(  client?: API
 ): Promise<HealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_health.drfRetrieve()
@@ -54,7 +54,7 @@ export async function getHealthDrfRetrieve(  client?
  * @method GET
  * @path /cfg/health/drf/quick/
  */
-export async function getHealthDrfQuickRetrieve(  client?
+export async function getHealthDrfQuickRetrieve(  client?: API
 ): Promise<QuickHealth> {
   const api = client || getAPIInstance()
   const response = await api.cfg_health.drfQuickRetrieve()

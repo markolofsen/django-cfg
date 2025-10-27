@@ -8,23 +8,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class HealthCheck(BaseModel):
     """
-    Serializer for health check response.
+    Health check response.
 
     Response model (includes read-only fields).
     """
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    status: str = Field(description='Overall health status: healthy, degraded, or unhealthy')
-    timestamp: str = Field(description='Timestamp of the health check')
-    service: str = Field(description='Service name')
-    version: str = Field(description='Django-CFG version')
-    checks: dict[str, Any] = Field(description='Detailed health checks for databases, cache, and system')
-    environment: dict[str, Any] = Field(description='Environment information')
+    status: str = Field(description='Health status: healthy or unhealthy')
+    wrapper_url: str = Field(description='Configured wrapper URL')
+    has_api_key: bool = Field(description='Whether API key is configured')
+    timestamp: str = Field(description='Current timestamp')
 
 
 
@@ -37,7 +35,7 @@ class QuickHealth(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

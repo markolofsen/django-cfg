@@ -7,16 +7,18 @@ sidebar_position: 3
 
 # Configuration Setup
 
-The Django-CFG sample project demonstrates best practices for configuration management using Pydantic v2 for type-safe settings. This guide covers the complete configuration architecture.
+The Django-CFG sample project demonstrates best practices for configuration management using **pydantic-settings** for type-safe environment-based configuration. This guide covers the complete configuration architecture.
 
 ## Configuration Architecture
 
-The sample project uses a layered configuration approach:
+The sample project uses a simple, modern configuration approach:
 
 1. **Type-safe Configuration** (`api/config.py`) - Main configuration class
-2. **Environment Files** (`api/environment/*.yaml`) - Environment-specific settings
-3. **Environment Variables** - Runtime overrides
-4. **Configuration Loader** (`api/environment/loader.py`) - Loads and merges configs
+2. **Environment Loader** (`api/environment/loader.py`) - Pydantic models with BaseSettings
+3. **Environment Variables** - System ENV or `.env` file
+4. **Django Integration** - Seamless settings generation
+
+**Priority**: System ENV > .env file > Code defaults
 
 ## Main Configuration (api/config.py)
 
@@ -24,65 +26,53 @@ The heart of the project is the type-safe configuration class:
 
 ```python
 from django_cfg import (
-    DjangoConfig, env,
-    DatabaseConfig, EmailConfig, TwilioConfig,
+    DjangoConfig,
+    DatabaseConfig, EmailConfig,
     TelegramConfig, UnfoldConfig, DRFConfig
 )
 from typing import Dict
+from .environment import env
+
 
 class SampleProjectConfig(DjangoConfig):
     """Complete Django-CFG sample configuration."""
 
     # Project metadata
-    project_name: str = "Django CFG Sample"
+    project_name: str = env.app.name
     debug: bool = env.debug
     secret_key: str = env.secret_key
+    env_mode: str = env.env.env_mode
 
     # Multi-database configuration
     databases: Dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig(
-            engine="django.db.backends.sqlite3",
-            name="db/db.sqlite3",
+        "default": DatabaseConfig.from_url(
+            url=env.database.url,
             # Main database for users, sessions, admin
         ),
-        "blog_db": DatabaseConfig(
-            engine="django.db.backends.sqlite3",
-            name="db/blog.sqlite3",
-            # Routed database for blog app
-            apps=["apps.blog"],
-            operations=["read", "write"],
-            migrate_to="default",  # Migrations go to main DB
-        ),
-        "shop_db": DatabaseConfig(
-            engine="django.db.backends.sqlite3",
-            name="db/shop.sqlite3",
-            # Routed database for shop app
-            apps=["apps.shop"],
-            operations=["read", "write", "migrate"],
-        )
     }
 
     # Email configuration
-    email: EmailConfig = EmailConfig(
-        backend="sendgrid" if env.is_prod else "console",
-        sendgrid_api_key=env.email.sendgrid_api_key,
-        from_email="noreply@djangocfg.com",
-        from_name="Django-CFG Sample"
-    )
-
-    # Twilio integration
-    twilio: TwilioConfig = TwilioConfig(
-        account_sid=env.twilio.account_sid,
-        auth_token=env.twilio.auth_token,
-        verify_service_sid=env.twilio.verify_service_sid,
-        phone_number=env.twilio.phone_number
+    email: EmailConfig | None = (
+        EmailConfig(
+            host=env.email.host,
+            port=env.email.port,
+            use_tls=env.email.use_tls,
+            username=env.email.username,
+            password=env.email.password,
+            default_from=env.email.default_from,
+        )
+        if env.email.host
+        else None
     )
 
     # Telegram notifications
-    telegram: TelegramConfig = TelegramConfig(
-        bot_token=env.telegram.bot_token,
-        chat_id=env.telegram.chat_id,
-        enabled=env.is_prod
+    telegram: TelegramConfig | None = (
+        TelegramConfig(
+            bot_token=env.telegram.bot_token,
+            chat_id=env.telegram.chat_id,
+        )
+        if env.telegram.bot_token and env.telegram.chat_id
+        else None
     )
 
     # Modern admin interface
@@ -94,22 +84,13 @@ class SampleProjectConfig(DjangoConfig):
             {
                 "title": "Content Management",
                 "items": [
-                    {"title": "Blog Posts", "link": "/admin/blog/post/"},
-                    {"title": "Comments", "link": "/admin/blog/comment/"},
-                ]
-            },
-            {
-                "title": "E-Commerce",
-                "items": [
-                    {"title": "Products", "link": "/admin/shop/product/"},
-                    {"title": "Orders", "link": "/admin/shop/order/"},
+                    {"title": "Profiles", "link": "/admin/profiles/profile/"},
                 ]
             },
             {
                 "title": "User Management",
                 "items": [
                     {"title": "Users", "link": "/admin/auth/user/"},
-                    {"title": "Profiles", "link": "/admin/profiles/profile/"},
                 ]
             }
         ]
@@ -131,6 +112,7 @@ class SampleProjectConfig(DjangoConfig):
         }
     )
 
+
 # Create global config instance
 config = SampleProjectConfig()
 ```
@@ -139,59 +121,69 @@ config = SampleProjectConfig()
 
 #### Project Metadata
 
-Basic project information:
+Basic project information loaded from environment:
 
 ```python
-project_name: str = "Django CFG Sample"
-debug: bool = env.debug  # From environment
-secret_key: str = env.secret_key  # From environment
+project_name: str = env.app.name  # From APP__NAME
+debug: bool = env.debug  # From DEBUG
+secret_key: str = env.secret_key  # From SECRET_KEY
+env_mode: str = env.env.env_mode  # "development", "production", or "test"
 ```
 
 #### Database Configuration
 
-Multi-database setup with routing:
+Database setup using environment URL:
 
 ```python
 databases: Dict[str, DatabaseConfig] = {
-    "default": DatabaseConfig(
-        engine="django.db.backends.sqlite3",
-        name="db/db.sqlite3",
-    ),
-    "blog_db": DatabaseConfig(
-        engine="django.db.backends.sqlite3",
-        name="db/blog.sqlite3",
-        apps=["apps.blog"],  # Apps using this database
-        operations=["read", "write"],  # Allowed operations
-        migrate_to="default",  # Where migrations are stored
+    "default": DatabaseConfig.from_url(
+        url=env.database.url,  # From DATABASE__URL
     ),
 }
+```
+
+Set via environment:
+```bash
+DATABASE__URL="postgresql://user:pass@localhost:5432/djangocfg"
 ```
 
 See [Multi-Database Setup](./multi-database) for detailed routing configuration.
 
 #### Service Configurations
 
-Email, SMS, and notification services:
+Email and notification services from environment:
 
 ```python
-# Email (SendGrid or console)
-email: EmailConfig = EmailConfig(
-    backend="sendgrid" if env.is_prod else "console",
-    sendgrid_api_key=env.email.sendgrid_api_key,
-    from_email="noreply@djangocfg.com",
-)
-
-# SMS (Twilio)
-twilio: TwilioConfig = TwilioConfig(
-    account_sid=env.twilio.account_sid,
-    auth_token=env.twilio.auth_token,
+# Email (console for dev, SMTP for prod)
+email: EmailConfig | None = (
+    EmailConfig(
+        host=env.email.host,  # From EMAIL__HOST
+        port=env.email.port,  # From EMAIL__PORT
+        use_tls=env.email.use_tls,  # From EMAIL__USE_TLS
+        username=env.email.username,  # From EMAIL__USERNAME
+        password=env.email.password,  # From EMAIL__PASSWORD
+    )
+    if env.email.host
+    else None
 )
 
 # Notifications (Telegram)
-telegram: TelegramConfig = TelegramConfig(
-    bot_token=env.telegram.bot_token,
-    enabled=env.is_prod,
+telegram: TelegramConfig | None = (
+    TelegramConfig(
+        bot_token=env.telegram.bot_token,  # From TELEGRAM__BOT_TOKEN
+        chat_id=env.telegram.chat_id,  # From TELEGRAM__CHAT_ID
+    )
+    if env.telegram.bot_token
+    else None
 )
+```
+
+Set via environment:
+```bash
+EMAIL__HOST="smtp.gmail.com"
+EMAIL__PORT=587
+TELEGRAM__BOT_TOKEN="123456:ABC-DEF"
+TELEGRAM__CHAT_ID=-1001234567890
 ```
 
 See [Service Integrations](./service-integrations) for service setup details.
@@ -203,7 +195,6 @@ Unfold theme customization:
 ```python
 unfold: UnfoldConfig = UnfoldConfig(
     site_title="Django-CFG Sample Admin",
-    site_header="Django-CFG Sample",
     dashboard_callback="api.config.dashboard_callback",
     navigation=[...],
 )
@@ -231,241 +222,279 @@ See [API Documentation](./api-documentation) for API configuration.
 
 ## Environment Configuration
 
-### Development Configuration (config.dev.yaml)
+### Development Configuration (.env)
 
-Development-specific settings optimized for local development:
+Development-specific settings in `.env` file (gitignored):
 
-```yaml
-# Development configuration
-secret_key: "django-cfg-sample-dev-key-change-in-production"
-debug: true
-is_prod: false
+```bash title="api/environment/.env"
+# === Environment Mode ===
+IS_DEV=true
 
-# Database URLs
-database:
-  url: "sqlite:///db/db.sqlite3"
-  url_blog: "sqlite:///db/blog.sqlite3"
-  url_shop: "sqlite:///db/shop.sqlite3"
+# === Core Django Settings ===
+SECRET_KEY="django-cfg-dev-key-change-in-production-min-50-chars"
+DEBUG=true
 
-# Application settings
-app:
-  name: "Django CFG Sample"
-  domain: "localhost:8000"
+# === Database ===
+DATABASE__URL="postgresql://postgres:postgres@localhost:5432/djangocfg"
 
-security_domains: ["localhost", "127.0.0.1"]
+# === Cache ===
+REDIS_URL="redis://localhost:6379/0"
 
-# Email configuration (development)
-email:
-  sendgrid_api_key: ""  # Empty for console backend
+# === Email Configuration ===
+EMAIL__BACKEND="console"
+EMAIL__DEFAULT_FROM="Django CFG Sample <noreply@localhost.dev>"
 
-# Twilio configuration (optional in dev)
-twilio:
-  account_sid: ""
-  auth_token: ""
-  verify_service_sid: ""
-  phone_number: ""
+# === Telegram (optional) ===
+# TELEGRAM__BOT_TOKEN="your-bot-token"
+# TELEGRAM__CHAT_ID=0
 
-# Telegram configuration (optional in dev)
-telegram:
-  bot_token: ""
-  chat_id: ""
+# === API Keys (optional) ===
+# API_KEYS__OPENROUTER="sk-or-xxx"
+# API_KEYS__OPENAI="sk-proj-xxx"
 
-# Cache configuration
-cache:
-  backend: "django.core.cache.backends.locmem.LocMemCache"
-  location: "sample-cache"
-
-# Static files
-static:
-  url: "/static/"
-  root: "static/"
-
-# Media files
-media:
-  url: "/media/"
-  root: "media/"
-
-# Logging
-logging:
-  level: "DEBUG"
-  format: "verbose"
+# === Application ===
+APP__NAME="Django CFG Sample"
+APP__API_URL="http://localhost:8000"
+APP__SITE_URL="http://localhost:3000"
 ```
 
-### Production Configuration (config.prod.yaml)
+**Benefits for development:**
+- ✅ **Console** email backend (prints to terminal)
+- ✅ **PostgreSQL** or **SQLite** (your choice)
+- ✅ **Local** domains for CORS
+- ✅ **Gitignored** - safe for local secrets
 
-Production-ready settings with security hardening:
+### Production Configuration (ENV)
 
-```yaml
-# Production configuration
-secret_key: "<from-yaml-config>"  # Set via environment/config.yaml
-debug: false
-is_prod: true
+Production uses system environment variables (Docker, K8s, etc.):
 
-# Database configuration (PostgreSQL)
-database:
-  url: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+```bash title="Production Environment Variables"
+# Set in Docker/K8s - NEVER in .env file!
 
-# Application settings
-app:
-  name: "Django CFG Sample"
-  domain: "<from-yaml-config>"  # Set via environment/config.yaml
+# === Environment Mode ===
+IS_PROD=true
 
-security_domains: ["<from-yaml-config>", "www.${DOMAIN}"]
+# === Core Django Settings ===
+SECRET_KEY="production-secret-key-from-secrets-manager-min-50-chars"
+DEBUG=false
 
-# Email configuration (SendGrid)
-email:
-  sendgrid_api_key: "<from-yaml-config>"  # Set via environment/config.yaml
-  from_email: "noreply@${DOMAIN}"
+# === Database ===
+DATABASE__URL="postgresql://prod_user:prod_pass@db.example.com:5432/prod_db"
 
-# Twilio configuration
-twilio:
-  account_sid: "<from-yaml-config>"
-  auth_token: "<from-yaml-config>"
-  verify_service_sid: "<from-yaml-config>"
+# === Cache ===
+REDIS_URL="redis://redis:6379/1"
 
-# Telegram configuration
-telegram:
-  bot_token: "<from-yaml-config>"
-  chat_id: "<from-yaml-config>"
+# === Email Configuration ===
+EMAIL__BACKEND="smtp"
+EMAIL__HOST="smtp.sendgrid.net"
+EMAIL__PORT=587
+EMAIL__USERNAME="apikey"
+EMAIL__PASSWORD="SG.xxxxxxxxxxxx"
+EMAIL__USE_TLS=true
+EMAIL__DEFAULT_FROM="Django CFG Sample <noreply@djangocfg.com>"
 
-# Cache configuration (Redis)
-cache:
-  backend: "django_redis.cache.RedisCache"
-  location: "redis://redis:6379/1"
+# === Application ===
+APP__NAME="Django CFG Sample"
+APP__DOMAIN="djangocfg.com"
+APP__API_URL="https://api.djangocfg.com"
+APP__SITE_URL="https://djangocfg.com"
 
-# Static files (served by nginx)
-static:
-  url: "/static/"
-  root: "/app/static/"
+# === Security Domains ===
+SECURITY_DOMAINS="djangocfg.com,api.djangocfg.com,admin.djangocfg.com"
 
-# Media files (served by nginx)
-media:
-  url: "/media/"
-  root: "/app/media/"
+# === Telegram ===
+TELEGRAM__BOT_TOKEN="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+TELEGRAM__CHAT_ID=-1001234567890
 
-# Security settings
-# Note: SSL/TLS handled by reverse proxy (nginx, Cloudflare, etc.)
-# secure_ssl_redirect not needed - Django-CFG defaults to reverse proxy mode
-security:
-  session_cookie_secure: true
-  csrf_cookie_secure: true
-  secure_browser_xss_filter: true
-  secure_content_type_nosniff: true
-
-# Logging
-logging:
-  level: "INFO"
-  format: "json"
+# === API Keys ===
+API_KEYS__OPENROUTER="sk-or-xxx"
+API_KEYS__OPENAI="sk-proj-xxx"
 ```
 
-### Test Configuration (config.test.yaml)
+**Security practices:**
+- ✅ Use **secrets managers** (AWS Secrets Manager, Vault)
+- ✅ Set in **Docker environment** or **K8s Secrets**
+- ✅ **Never commit** to version control
+- ✅ Rotate secrets regularly
 
-Optimized for fast test execution:
+### Test Configuration
 
-```yaml
-# Test configuration
-debug: true
-is_prod: false
+Testing uses defaults optimized for speed:
 
-# In-memory database for fast tests
-database:
-  url: "sqlite:///:memory:"
+```bash title="Test Environment (pytest.ini or CI)"
+# === Environment Mode ===
+IS_TEST=true
 
-# Disable external services
-email:
-  backend: "locmem"
-  sendgrid_api_key: ""
+# === Core Settings ===
+SECRET_KEY="test-key-for-testing-only-min-50-chars-long"
+DEBUG=false
 
-twilio:
-  account_sid: ""
-  auth_token: ""
+# === Database (in-memory for speed) ===
+DATABASE__URL="sqlite:///:memory:"
 
-telegram:
-  bot_token: ""
-  enabled: false
+# === Email (don't send real emails) ===
+EMAIL__BACKEND="console"
 
-# Simple cache
-cache:
-  backend: "django.core.cache.backends.locmem.LocMemCache"
-  location: "test-cache"
-
-# Logging
-logging:
-  level: "WARNING"
+# === Disable external services ===
+TELEGRAM__BOT_TOKEN=""
+API_KEYS__OPENROUTER=""
 ```
+
+**Optimizations:**
+- ✅ **In-memory SQLite** for fast tests
+- ✅ **Console** email backend
+- ✅ **Disabled** external services
+- ✅ **Minimal** logging
 
 ## Configuration Loader
 
-The loader merges configuration from multiple sources:
+The environment loader uses pydantic-settings for automatic loading:
 
 ```python
 # api/environment/loader.py
-import os
-import yaml
 from pathlib import Path
-from typing import Dict, Any
+from typing import Optional
+from pydantic import Field, computed_field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-def load_environment_config() -> Dict[str, Any]:
-    """Load configuration from environment-specific YAML file."""
 
-    # Determine environment
-    env = os.getenv("DJANGO_ENV", "dev")
+class DatabaseConfig(BaseSettings):
+    """Database configuration."""
+    url: str = Field(default="sqlite:///db/default.sqlite3")
 
-    # Load config file
-    config_file = Path(__file__).parent / f"config.{env}.yaml"
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 
-    if not config_file.exists():
-        raise FileNotFoundError(f"Config file not found: {config_file}")
 
-    with open(config_file, 'r') as f:
-        config = yaml.safe_load(f)
+class EmailConfig(BaseSettings):
+    """Email configuration."""
+    backend: str = Field(default="console")
+    host: str = Field(default="localhost")
+    port: int = Field(default=587)
+    username: Optional[str] = Field(default=None)
+    password: Optional[str] = Field(default=None)
+    use_tls: bool = Field(default=True)
+    default_from: str = Field(default="noreply@example.com")
 
-    # Override with environment variables
-    config = apply_environment_overrides(config)
+    model_config = SettingsConfigDict(
+        env_prefix="EMAIL__",
+        env_nested_delimiter="__",
+    )
 
-    return config
 
-def apply_environment_overrides(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Override config values with environment variables."""
+class EnvironmentMode(BaseSettings):
+    """Environment mode detection."""
+    is_test: bool = Field(default=False)
+    is_dev: bool = Field(default=False)
+    is_prod: bool = Field(default=False)
 
-    # Example: Override secret key
-    if secret_key := os.getenv("SECRET_KEY"):
-        config["secret_key"] = secret_key
+    @model_validator(mode="after")
+    def set_default_env(self):
+        if not any([self.is_test, self.is_dev, self.is_prod]):
+            self.is_dev = True
+        return self
 
-    # Example: Override database URL
-    if db_url := os.getenv("DATABASE_URL"):
-        config["database"]["url"] = db_url
+    @computed_field
+    @property
+    def env_mode(self) -> str:
+        if self.is_test:
+            return "test"
+        elif self.is_prod:
+            return "production"
+        return "development"
 
-    # Override SendGrid API key
-    if sendgrid_key := os.getenv("SENDGRID_API_KEY"):
-        config["email"]["sendgrid_api_key"] = sendgrid_key
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="__",
+    )
 
-    return config
+
+class EnvironmentConfig(BaseSettings):
+    """Complete environment configuration."""
+    secret_key: str = Field(
+        default="django-cfg-dev-key-change-in-production-min-50-chars"
+    )
+    debug: bool = Field(default=True)
+
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    email: EmailConfig = Field(default_factory=EmailConfig)
+    env: EnvironmentMode = Field(default_factory=EnvironmentMode)
+
+    model_config = SettingsConfigDict(
+        env_file=str(Path(__file__).parent / ".env"),
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
+# Global instance - auto-loads from ENV > .env > defaults
+env = EnvironmentConfig()
 ```
+
+**How it works:**
+1. Checks system environment variables (highest priority)
+2. Loads `.env` file if exists
+3. Uses defaults from Field definitions
+4. Validates types automatically with Pydantic
 
 ## Environment Variables
 
-Override configuration at runtime:
+### Setting Environment Variables
+
+**Development (local):**
+```bash
+# In .env file (gitignored)
+DATABASE__URL="postgresql://localhost:5432/dev_db"
+DEBUG=true
+```
+
+**Production (Docker):**
+```yaml
+# docker-compose.yml
+services:
+  django:
+    environment:
+      DATABASE__URL: "postgresql://prod-db:5432/db"
+      SECRET_KEY: "${SECRET_KEY}"
+      IS_PROD: "true"
+```
+
+**Production (Kubernetes):**
+```yaml
+# k8s-deployment.yaml
+env:
+  - name: DATABASE__URL
+    valueFrom:
+      secretKeyRef:
+        name: django-secrets
+        key: database-url
+  - name: SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: django-secrets
+        key: secret-key
+```
+
+### Variable Naming
+
+Use **double underscore (`__`)** for nested configurations:
 
 ```bash
-# Basic settings
-export SECRET_KEY="production-secret-key"
-export DEBUG=false
-export DJANGO_ENV=prod
+# Top-level
+DEBUG=true
+SECRET_KEY="my-secret"
 
-# Database
-export DATABASE_URL="postgresql://user:pass@localhost/db"
+# Nested: database.url
+DATABASE__URL="postgresql://..."
 
-# Email
-export SENDGRID_API_KEY="SG.xxxxxxxxxxxxx"
+# Nested: email.host
+EMAIL__HOST="smtp.gmail.com"
 
-# Twilio
-export TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxx"
-export TWILIO_AUTH_TOKEN="your-auth-token"
-
-# Telegram
-export TELEGRAM_BOT_TOKEN="123456:ABC-DEF"
-export TELEGRAM_CHAT_ID="@your-channel"
+# Nested: api_keys.openai
+API_KEYS__OPENAI="sk-proj-xxx"
 ```
 
 ## Dashboard Callback Configuration
@@ -477,8 +506,7 @@ Custom dashboard metrics function:
 
 def dashboard_callback(request, context):
     """Custom dashboard with real-time metrics."""
-    from apps.blog.models import Post
-    from apps.shop.models import Product, Order
+    from apps.profiles.models import Profile
     from django.contrib.auth import get_user_model
     from django.utils import timezone
     from datetime import timedelta
@@ -487,10 +515,9 @@ def dashboard_callback(request, context):
 
     # Calculate metrics
     total_users = User.objects.count()
-    total_posts = Post.objects.count()
-    total_products = Product.objects.count()
-    recent_orders = Order.objects.filter(
-        created_at__gte=timezone.now() - timedelta(days=7)
+    total_profiles = Profile.objects.count()
+    recent_users = User.objects.filter(
+        date_joined__gte=timezone.now() - timedelta(days=7)
     ).count()
 
     # Add custom cards to dashboard
@@ -502,22 +529,16 @@ def dashboard_callback(request, context):
             "icon": "people"
         },
         {
-            "title": "Blog Posts",
-            "value": str(total_posts),
-            "description": "Published articles",
-            "icon": "article"
+            "title": "Profiles",
+            "value": str(total_profiles),
+            "description": "User profiles",
+            "icon": "account_circle"
         },
         {
-            "title": "Products",
-            "value": str(total_products),
-            "description": "Available products",
-            "icon": "inventory"
-        },
-        {
-            "title": "Orders (7d)",
-            "value": str(recent_orders),
-            "description": "Recent orders",
-            "icon": "shopping_cart"
+            "title": "New Users (7d)",
+            "value": str(recent_users),
+            "description": "Recent signups",
+            "icon": "person_add"
         }
     ]
 
@@ -535,46 +556,48 @@ Always define configuration in type-safe classes:
 # ✅ Good: Type-safe with validation
 class MyConfig(DjangoConfig):
     email: EmailConfig = EmailConfig(
-        backend="sendgrid",
-        sendgrid_api_key=env.email.sendgrid_api_key
+        host=env.email.host,
+        port=env.email.port,
     )
 
 # ❌ Bad: Raw dictionary
 settings = {
-    "email_backend": "sendgrid",
-    "sendgrid_key": "xxx"
+    "email_host": "smtp.example.com",
+    "email_port": 587
 }
 ```
 
 ### 2. Environment-Specific Settings
 
-Keep environment-specific settings in YAML files:
+Use environment variables for all environments:
 
 ```python
-# ✅ Good: Environment-specific files
-# config.dev.yaml - Development
-# config.prod.yaml - Production
-# config.test.yaml - Testing
+# ✅ Good: Environment variables
+DATABASE__URL="postgresql://..." # Dev, prod, test
 
 # ❌ Bad: Inline conditions
 if DEBUG:
-    EMAIL_BACKEND = 'console'
+    DATABASE = 'sqlite:///db.sqlite3'
 else:
-    EMAIL_BACKEND = 'sendgrid'
+    DATABASE = 'postgresql://...'
 ```
 
 ### 3. Sensitive Data Management
 
-Never commit sensitive data to version control:
+Never commit sensitive data:
 
-```yaml
-# ✅ Good: Use environment variables
-email:
-  sendgrid_api_key: "<from-yaml-config>"  # Loaded from secure source
+```bash
+# ✅ Good: In .env file (gitignored)
+SECRET_KEY="my-secret-key-min-50-chars"
+EMAIL__PASSWORD="my-password"
 
-# ❌ Bad: Hard-coded secrets
-email:
-  sendgrid_api_key: "SG.xxxxxxxxxxxxx"  # Never commit this!
+# ✅ Good: In .gitignore
+.env
+.env.local
+environment/.env
+
+# ❌ Bad: Hardcoded in code
+SECRET_KEY = "hardcoded-secret"  # Never do this!
 ```
 
 ### 4. Configuration Documentation
@@ -585,16 +608,19 @@ Document all configuration options:
 class MyConfig(DjangoConfig):
     """Project configuration.
 
-    Attributes:
-        project_name: Display name for the project
-        debug: Enable debug mode (development only)
-        databases: Multi-database configuration with routing
-        email: Email service configuration (SendGrid or console)
+    Environment Variables:
+        DEBUG: Enable debug mode (default: True)
+        SECRET_KEY: Django secret key (required in production)
+        DATABASE__URL: Database connection URL
+        EMAIL__HOST: SMTP server hostname
+
+    Example:
+        export DEBUG=false
+        export SECRET_KEY="prod-secret-key"
+        export DATABASE__URL="postgresql://..."
     """
-    project_name: str
-    debug: bool
-    databases: Dict[str, DatabaseConfig]
-    email: EmailConfig
+    debug: bool = env.debug
+    secret_key: str = env.secret_key
 ```
 
 ## Accessing Configuration
@@ -610,8 +636,8 @@ project_name = config.project_name
 is_debug = config.debug
 
 # Access service configs
-email_backend = config.email.backend
-twilio_sid = config.twilio.account_sid
+email_host = config.email.host if config.email else None
+telegram_enabled = config.telegram is not None
 
 # Access database configs
 databases = config.databases
@@ -623,21 +649,56 @@ Check your configuration:
 
 ```bash
 # Show all configuration
-poetry run cli show-config
-
-# Show specific section
-poetry run cli show-config --section databases
-poetry run cli show-config --section email
+python manage.py show_config
 
 # Validate configuration
-poetry run cli validate-config
+python manage.py check
+
+# Check settings
+python manage.py check_settings
 ```
+
+## Migration from YAML
+
+:::info[Migrating from YAML configs?]
+Old approach used `config.dev.yaml`, `config.prod.yaml`, etc.
+
+**New approach:** Everything via ENV variables!
+:::
+
+### Before (YAML)
+
+```yaml title="config.prod.yaml"
+secret_key: "my-secret-key"
+debug: false
+database:
+  url: "postgresql://user:pass@localhost:5432/db"
+email:
+  backend: "smtp"
+  host: "smtp.example.com"
+```
+
+### After (ENV)
+
+```bash title=".env or system ENV"
+SECRET_KEY="my-secret-key"
+DEBUG=false
+DATABASE__URL="postgresql://user:pass@localhost:5432/db"
+EMAIL__BACKEND="smtp"
+EMAIL__HOST="smtp.example.com"
+```
+
+**Benefits:**
+- ✅ Simpler - one method for all environments
+- ✅ 12-factor app compliant
+- ✅ Works everywhere (Docker, K8s, CI/CD)
+- ✅ No file management
 
 ## Related Topics
 
 - [Multi-Database Setup](./multi-database) - Database routing configuration
-- [Admin Interface](./admin-interface) - Admin customization settings
 - [Service Integrations](./service-integrations) - Service configuration details
 - [Deployment Guide](./deployment) - Production configuration
+- [Environment Configuration](/fundamentals/configuration/environment) - Detailed ENV guide
 
 Proper configuration management is essential for maintainable Django-CFG applications!

@@ -145,52 +145,28 @@ def get_tailwind_config() -> Dict[str, Any]:
 
 def get_css_variables() -> str:
     """
-    Get CSS variables for semantic colors.
-    
+    Get CSS variables for semantic colors matching Next.js UI package.
+
+    NOTE: Background color overrides are now in templates/unfold/layouts/skeleton.html
+    for better CSS specificity. This function now only provides base color definitions
+    and is kept for backward compatibility.
+
     Returns:
         str: CSS variables as string
     """
     return """
-/* CSS variables for semantic colors */
-:root {
-  /* Base colors */
-  --color-base-50: 249, 250, 251;
-  --color-base-100: 243, 244, 246;
-  --color-base-200: 229, 231, 235;
-  --color-base-300: 209, 213, 219;
-  --color-base-400: 156, 163, 175;
-  --color-base-500: 107, 114, 128;
-  --color-base-600: 75, 85, 99;
-  --color-base-700: 55, 65, 81;
-  --color-base-800: 31, 41, 55;
-  --color-base-900: 17, 24, 39;
-  --color-base-950: 3, 7, 18;
+/* ============================================== */
+/* CSS Variables - Base Color Definitions        */
+/* NOTE: Background overrides in skeleton.html   */
+/* ============================================== */
 
-  /* Primary colors */
-  --color-primary-50: 239, 246, 255;
-  --color-primary-100: 219, 234, 254;
-  --color-primary-200: 191, 219, 254;
-  --color-primary-300: 147, 197, 253;
-  --color-primary-400: 96, 165, 250;
-  --color-primary-500: 59, 130, 246;
-  --color-primary-600: 37, 99, 235;
-  --color-primary-700: 29, 78, 216;
-  --color-primary-800: 30, 64, 175;
-  --color-primary-900: 30, 58, 138;
-  --color-primary-950: 23, 37, 84;
-
-  /* Font colors for light theme */
-  --color-font-subtle-light: var(--color-base-500);
-  --color-font-default-light: var(--color-base-600);
-  --color-font-important-light: var(--color-base-900);
+/* Tailwind Dark Mode Class Support */
+html.dark {
+  color-scheme: dark;
 }
 
-/* Dark theme */
-.dark {
-  /* Font colors for dark theme */
-  --color-font-subtle-dark: var(--color-base-400);
-  --color-font-default-dark: var(--color-base-300);
-  --color-font-important-dark: var(--color-base-100);
+html:not(.dark) {
+  color-scheme: light;
 }
 
 """
@@ -266,44 +242,20 @@ def get_modal_fix_css() -> str:
 
 def get_unfold_colors() -> Dict[str, Any]:
     """
-    Get color configuration for Unfold settings.
-    
+    Get color configuration for Unfold settings matching Next.js UI package.
+
+    Colors synchronized with:
+    - packages/ui/src/styles/theme/light.css
+    - packages/ui/src/styles/theme/dark.css
+
+    IMPORTANT: Returns OKLCH format for Unfold's color-mix() CSS compatibility.
+
     Returns:
-        Dict[str, Any]: Color configuration for Unfold
+        Dict[str, Any]: Color configuration for Unfold in OKLCH format
     """
-    return {
-        "primary": {
-            "50": "239, 246, 255",
-            "100": "219, 234, 254",
-            "200": "191, 219, 254",
-            "300": "147, 197, 253",
-            "400": "96, 165, 250",
-            "500": "59, 130, 246",
-            "600": "37, 99, 235",
-            "700": "29, 78, 216",
-            "800": "30, 64, 175",
-            "900": "30, 58, 138",
-            "950": "23, 37, 84",
-        },
-        "base": {
-            "50": "249, 250, 251",
-            "100": "243, 244, 246",
-            "200": "229, 231, 235",
-            "300": "209, 213, 219",
-            "400": "156, 163, 175",
-            "500": "107, 114, 128",
-            "600": "75, 85, 99",
-            "700": "55, 65, 81",
-            "800": "31, 41, 55",
-            "900": "17, 24, 39",
-            "950": "3, 7, 18",
-        },
-        "font": {
-            "subtle-light": "var(--color-base-500)",
-            "subtle-dark": "var(--color-base-400)",
-            "default-light": "var(--color-base-600)",
-            "default-dark": "var(--color-base-300)",
-            "important-light": "var(--color-base-900)",
-            "important-dark": "var(--color-base-100)",
-        }
-    }
+    # Import from UnfoldConfig to keep colors in sync
+    from .models.config import UnfoldConfig
+
+    # Create temporary config to get color scheme
+    temp_config = UnfoldConfig(site_title="temp")
+    return temp_config.get_color_scheme()

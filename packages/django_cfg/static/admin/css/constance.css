@@ -1,0 +1,44 @@
+/**
+ * Constance Settings UI Styles
+ *
+ * Enhanced UI for Django Constance dynamic settings
+ */
+
+/* Smooth transitions for all interactive elements */
+.constance-expandable {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Better hover states */
+.constance tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark .constance tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Improved focus states for accessibility */
+.constance a:focus,
+.constance button:focus {
+    outline: 2px solid rgb(59, 130, 246);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Better spacing for long text */
+.constance .break-words {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Smooth animations for expand/collapse */
+.constance [x-show] {
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Icon rotation animation */
+.constance .material-symbols-outlined {
+    transition: transform 0.3s ease-in-out;
+}

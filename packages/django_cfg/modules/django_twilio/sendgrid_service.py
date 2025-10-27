@@ -17,6 +17,7 @@ from django.template.loader import render_to_string
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+from django_cfg.core.utils import get_otp_url
 from django_cfg.modules.base import BaseCfgModule
 from django_cfg.modules.django_twilio.exceptions import (
     TwilioConfigurationError,
@@ -305,6 +306,9 @@ class SendGridService(BaseCfgModule):
             # Prepare subject
             subject = f"Your {cfg.project_name if cfg else 'Django CFG'} verification code"
 
+            # Generate OTP link using utility function
+            otp_link = get_otp_url(otp_code)
+
             # Prepare template data matching sendgrid_otp_email.html template
             dynamic_data = {
                 'site_name': cfg.project_name if cfg else 'Django CFG',
@@ -317,7 +321,7 @@ class SendGridService(BaseCfgModule):
                     'email': email
                 },
                 'otp_code': otp_code,  # This is what the template expects!
-                'otp_link': cfg.get_otp_url(otp_code) if cfg else None,  # Add OTP verification link
+                'otp_link': otp_link,  # Add OTP verification link
                 'expires_minutes': 10,
                 'subject': subject,  # Add subject to template data
                 **config.custom_template_data,
@@ -370,9 +374,8 @@ class SendGridService(BaseCfgModule):
                 "user": {"username": email.split("@")[0]},  # Fallback user object
             }
 
-            # Add OTP link if config is available
-            if current_config:
-                context["otp_link"] = current_config.get_otp_url(otp_code)
+            # Add OTP link using utility function
+            context["otp_link"] = get_otp_url(otp_code)
 
             # Render Django templates
             try:

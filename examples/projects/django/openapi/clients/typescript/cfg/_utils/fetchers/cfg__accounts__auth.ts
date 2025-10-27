@@ -40,7 +40,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/accounts/token/refresh/
  */
-export async function createAccountsTokenRefreshCreate(  data: TokenRefreshRequest,  client?
+export async function createAccountsTokenRefreshCreate(  data: TokenRefreshRequest,  client?: API
 ): Promise<TokenRefresh> {
   const api = client || getAPIInstance()
   const response = await api.cfg_auth.accountsTokenRefreshCreate(data)

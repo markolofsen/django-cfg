@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method PATCH
  * @path /cfg/newsletter/campaigns/{id}/
  */
-export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number, data?: PatchedNewsletterCampaignRequest,  client?
+export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number, data?: PatchedNewsletterCampaignRequest,  client?: API
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.campaignsPartialUpdate(id, data)
@@ -57,7 +57,7 @@ export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number
  * @method PUT
  * @path /cfg/newsletter/unsubscribe/
  */
-export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeRequest,  client?
+export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeRequest,  client?: API
 ): Promise<Unsubscribe> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.unsubscribeUpdate(data)
@@ -71,7 +71,7 @@ export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeReque
  * @method PATCH
  * @path /cfg/newsletter/unsubscribe/
  */
-export async function partialUpdateNewsletterUnsubscribePartialUpdate(  data?: PatchedUnsubscribeRequest,  client?
+export async function partialUpdateNewsletterUnsubscribePartialUpdate(  data?: PatchedUnsubscribeRequest,  client?: API
 ): Promise<Unsubscribe> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.unsubscribePartialUpdate(data)

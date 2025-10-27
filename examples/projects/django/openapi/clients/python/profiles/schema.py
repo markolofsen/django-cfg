@@ -54,9 +54,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -102,9 +99,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -144,9 +138,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -203,9 +194,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -262,9 +250,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -302,9 +287,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -326,9 +308,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -374,9 +353,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -422,9 +398,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -453,9 +426,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {
-                        "cookieAuth": []
                     }
                 ],
                 "responses": {
@@ -800,11 +770,6 @@ OPENAPI_SCHEMA: Dict[str, Any] = {
             }
         },
         "securitySchemes": {
-            "cookieAuth": {
-                "type": "apiKey",
-                "in": "cookie",
-                "name": "sessionid"
-            },
             "jwtAuth": {
                 "type": "http",
                 "scheme": "bearer",

@@ -331,11 +331,6 @@ export const OPENAPI_SCHEMA = {
       }
     },
     "securitySchemes": {
-      "cookieAuth": {
-        "in": "cookie",
-        "name": "sessionid",
-        "type": "apiKey"
-      },
       "jwtAuth": {
         "bearerFormat": "JWT",
         "scheme": "bearer",
@@ -397,9 +392,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List user profiles",
@@ -445,9 +437,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Create user profile",
@@ -476,9 +465,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get my profile",
@@ -524,9 +510,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get my profile",
@@ -572,9 +555,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get my profile",
@@ -603,9 +583,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get profile statistics",
@@ -638,9 +615,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Delete user profile",
@@ -678,9 +652,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get user profile",
@@ -737,9 +708,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Partially update user profile",
@@ -796,9 +764,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Update user profile",

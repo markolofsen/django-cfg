@@ -7,10 +7,11 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
-import { RPCClient, ClientLogger } from './generated';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react';
+import { APIClient, CentrifugoRPCClient } from './generated';
 import { useAuth } from '@djangocfg/layouts';
-import { isDevelopment } from '@/core/settings';
+import { settings } from '@/core/settings';
+import { createRPCLogger, getTokenInfo, isTokenExpired } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Context Types
@@ -18,7 +19,8 @@ import { isDevelopment } from '@/core/settings';
 
 export interface WSRPCContextValue {
   // Connection State
-  client: RPCClient | null;
+  client: APIClient | null;
+  baseClient: CentrifugoRPCClient | null;
   isConnected: boolean;
   isConnecting: boolean;
   error: Error | null;
@@ -28,23 +30,6 @@ export interface WSRPCContextValue {
   connect: () => Promise<void>;
   disconnect: () => void;
   reconnect: () => Promise<void>;
-
-  // RPC Methods (typed from generated client)
-  workspace: {
-    list: (params: any) => Promise<any>;
-    fileChanged: (params: any) => Promise<any>;
-    snapshotCreated: (params: any) => Promise<any>;
-    stateChanged: (params: any) => Promise<any>;
-  };
-  session: {
-    message: (params: any) => Promise<any>;
-    taskStatus: (params: any) => Promise<any>;
-    contextUpdated: (params: any) => Promise<any>;
-  };
-  notification: {
-    send: (params: any) => Promise<any>;
-    broadcast: (params: any) => Promise<any>;
-  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -74,29 +59,23 @@ export function WSRPCProvider({
   url,
   autoConnect: autoConnectProp = true,
 }: WSRPCProviderProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, getToken } = useAuth();
 
-  const [client, setClient] = useState<RPCClient | null>(null);
+  const [client, setClient] = useState<APIClient | null>(null);
+  const [baseClient, setBaseClient] = useState<CentrifugoRPCClient | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const loggerRef = useRef<ClientLogger | null>(null);
+  // Create logger once with useMemo (cleaner than useRef + useEffect)
+  const logger = useMemo(() => createRPCLogger(), []);
+
+  // Reconnect timeout ref (needs useRef for mutable value)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Use custom URL or environment variable or auto-detect
-  const wsUrl = url || process.env.NEXT_PUBLIC_WS_RPC_URL;
+  // Use custom URL or settings.api.wsUrl
+  const wsUrl = url || settings.api.wsUrl;
   const autoConnect = autoConnectProp && (isAuthenticated && !isLoading);
-
-  // Initialize logger
-  useEffect(() => {
-    if (!loggerRef.current) {
-      loggerRef.current = new ClientLogger({
-        level: isDevelopment ? 4 : 3, // DEBUG : INFO
-        logRPCCalls: isDevelopment,
-      });
-    }
-  }, [isDevelopment]);
 
   // Connection logic
   const connect = useCallback(async () => {
@@ -108,33 +87,84 @@ export function WSRPCProvider({
     setError(null);
 
     try {
-      loggerRef.current?.info('Connecting to WebSocket RPC server...');
+      logger.info('Connecting to WebSocket RPC server...');
 
-      const rpcClient = wsUrl ? new RPCClient(wsUrl) : RPCClient.fromEnv();
-      await rpcClient.connect();
+      // Get auth token
+      const token = getToken();
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
 
+      // Validate token before connecting
+      const tokenInfo = getTokenInfo(token);
+      logger.debug(`Token info: ${JSON.stringify({
+        masked: tokenInfo.masked,
+        expiresAt: tokenInfo.expiryFormatted,
+        timeUntilExpiry: tokenInfo.timeUntilExpiryFormatted,
+        isExpired: tokenInfo.isExpired,
+      })}`);
+
+      // Check if token is expired
+      if (tokenInfo.isExpired) {
+        throw new Error('Authentication token is expired. Please refresh the page to get a new token.');
+      }
+
+      // Warn if token expires soon (less than 5 minutes)
+      if (tokenInfo.timeUntilExpiry !== null && tokenInfo.timeUntilExpiry < 5 * 60 * 1000) {
+        logger.warning(`Token expires in ${tokenInfo.timeUntilExpiryFormatted}. Consider refreshing soon.`);
+      }
+
+      // Create client with token and user ID (extracted from token)
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      const userId = tokenPayload.user_id || tokenPayload.sub || '1';
+
+      // Create base RPC client
+      const baseRPC = new CentrifugoRPCClient(wsUrl, token, userId);
+      await baseRPC.connect();
+
+      // Create API client wrapper
+      const rpcClient = new APIClient(baseRPC);
+
+      setBaseClient(baseRPC);
       setClient(rpcClient);
       setIsConnected(true);
       setError(null);
 
-      loggerRef.current?.success('WebSocket RPC connected successfully');
+      logger.success('WebSocket RPC connected successfully');
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Connection failed');
       setError(error);
+      setBaseClient(null);
       setClient(null);
       setIsConnected(false);
 
-      loggerRef.current?.error('WebSocket RPC connection failed', error);
+      // Check if it's an authentication error
+      const isAuthError = error.message.includes('token') ||
+                          error.message.includes('auth') ||
+                          error.message.includes('expired');
 
-      // Auto-reconnect after 5 seconds
-      reconnectTimeoutRef.current = setTimeout(() => {
-        loggerRef.current?.info('Attempting to reconnect...');
-        connect();
-      }, 5000);
+      if (isAuthError) {
+        logger.error('WebSocket RPC authentication failed', error);
+        logger.error('This usually means:');
+        logger.error('1. The JWT token is expired - try refreshing the page');
+        logger.error('2. The JWT secret key differs between frontend and backend');
+        logger.error('3. The token format is incorrect');
+        logger.error('Please check the server logs for more details.');
+      } else {
+        logger.error('WebSocket RPC connection failed', error);
+      }
+
+      // Only auto-reconnect for non-auth errors
+      if (!isAuthError) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          logger.info('Attempting to reconnect...');
+          connect();
+        }, 5000);
+      }
     } finally {
       setIsConnecting(false);
     }
-  }, [wsUrl, isConnecting, isConnected]);
+  }, [wsUrl, isConnecting, isConnected, getToken, logger]);
 
   // Disconnect logic
   const disconnect = useCallback(() => {
@@ -143,14 +173,15 @@ export function WSRPCProvider({
       reconnectTimeoutRef.current = null;
     }
 
-    if (client) {
-      loggerRef.current?.info('Disconnecting from WebSocket RPC server...');
-      client.disconnect();
+    if (baseClient) {
+      logger.info('Disconnecting from WebSocket RPC server...');
+      baseClient.disconnect();
+      setBaseClient(null);
       setClient(null);
       setIsConnected(false);
       setError(null);
     }
-  }, [client]);
+  }, [baseClient, logger]);
 
   // Reconnect logic
   const reconnect = useCallback(async () => {
@@ -169,66 +200,6 @@ export function WSRPCProvider({
     };
   }, [autoConnect]); // Only run on mount/unmount
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // RPC Method Wrappers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const workspace = {
-    list: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      // Use generic call method for workspace.list
-      return (client as any).call('workspace.list', params);
-    }, [client]),
-
-    fileChanged: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.workspaceFileChanged(params);
-    }, [client]),
-
-    snapshotCreated: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.workspaceSnapshotCreated(params);
-    }, [client]),
-
-    stateChanged: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.workspaceStateChanged(params);
-    }, [client]),
-  };
-
-  const session = {
-    message: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.sessionMessage(params);
-    }, [client]),
-
-    taskStatus: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.sessionTaskStatus(params);
-    }, [client]),
-
-    contextUpdated: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.sessionContextUpdated(params);
-    }, [client]),
-  };
-
-  const notification = {
-    send: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.notificationSend(params);
-    }, [client]),
-
-    broadcast: useCallback(async (params: any) => {
-      if (!client) throw new Error('RPC client not connected');
-      return client.notificationBroadcast(params);
-    }, [client]),
-  };
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Context Value
-  // ─────────────────────────────────────────────────────────────────────────
-
   // Connection state string for UI display
   const connectionState = isConnected
     ? 'connected'
@@ -240,6 +211,7 @@ export function WSRPCProvider({
 
   const value: WSRPCContextValue = {
     client,
+    baseClient,
     isConnected,
     isConnecting,
     error,
@@ -247,9 +219,6 @@ export function WSRPCProvider({
     connect,
     disconnect,
     reconnect,
-    workspace,
-    session,
-    notification,
   };
 
   return (

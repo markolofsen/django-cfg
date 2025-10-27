@@ -14,7 +14,7 @@ class PaginatedUserProfileList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -26,7 +26,7 @@ class PaginatedUserProfileList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -39,13 +39,13 @@ class UserProfile(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     id: int = ...
     user: int = ...
-    user_info: dict[str, Any] = Field(description='Get basic user information.')
+    user_info: Any = Field(description='Get basic user information.')
     website: str = Field(None, max_length=200)
     github: str = Field(None, max_length=100)
     twitter: str = Field(None, max_length=100)
@@ -55,8 +55,8 @@ class UserProfile(BaseModel):
     posts_count: int = ...
     comments_count: int = ...
     orders_count: int = ...
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -69,7 +69,7 @@ class UserProfileUpdate(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -91,14 +91,14 @@ class UserProfileStats(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     total_profiles: int = ...
     profiles_with_company: int = ...
     profiles_with_social_links: int = ...
-    most_active_users: list[dict[str, Any]] = ...
+    most_active_users: list[Any] = ...
 
 
 
@@ -111,7 +111,7 @@ class UserProfileRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -133,7 +133,7 @@ class UserProfileUpdateRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -155,7 +155,7 @@ class PatchedUserProfileUpdateRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -177,7 +177,7 @@ class PatchedUserProfileRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

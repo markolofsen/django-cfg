@@ -34,32 +34,33 @@ RUN curl -sSL https://install.python-poetry.org | python3 - \
 WORKDIR /app
 
 # Copy pyproject.toml only (poetry.lock excluded in .dockerignore)
-COPY solution/projects/django/pyproject.toml ./
+COPY projects/django/pyproject.toml ./
 
 # Remove local dependencies group from pyproject.toml and install without lock file
 RUN python3 -c "import re; content = open('pyproject.toml').read(); content = re.sub(r'\[tool\.poetry\.group\.local[^\]]*\][^\[]*', '', content, flags=re.DOTALL); open('pyproject.toml', 'w').write(content)" && \
     poetry install --only main --no-root --no-cache && \
+    pip install --upgrade django-cfg && \
     rm -rf $POETRY_CACHE_DIR
 
 # Copy application code
-COPY solution/projects/django /app
+COPY projects/django /app
 
 # Copy entrypoint script
-COPY solution/docker/services/django/entrypoint.sh /entrypoint.sh
+COPY docker/services/django/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/staticfiles /app/media /app/logs
 
 # Expose port
-EXPOSE 8200
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8200/cfg/health/ || exit 1
+    CMD curl -f http://localhost:8000/cfg/health/ || exit 1
 
 # Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Default command (can be overridden in docker-compose)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8200"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

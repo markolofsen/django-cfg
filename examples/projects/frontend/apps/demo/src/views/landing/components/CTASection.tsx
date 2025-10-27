@@ -1,6 +1,7 @@
 import { ButtonLink, Card } from '@djangocfg/ui';
 import { ArrowRight, Github } from 'lucide-react';
 import { routes } from '@/core/routes';
+import { settings } from '@/core/settings';
 import Link from 'next/link';
 
 export function CTASection() {
@@ -33,7 +34,7 @@ export function CTASection() {
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </ButtonLink>
                 <ButtonLink
-                  href="https://github.com"
+                  href={settings.links.githubUrl}
                   size="lg"
                   variant="outline"
                   className="min-w-[200px]"
