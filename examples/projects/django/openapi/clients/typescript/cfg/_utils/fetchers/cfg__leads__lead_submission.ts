@@ -40,7 +40,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/leads/submit/
  */
-export async function createLeadsSubmitCreate(  data: LeadSubmissionRequest,  client?
+export async function createLeadsSubmitCreate(  data: LeadSubmissionRequest,  client?: API
 ): Promise<LeadSubmissionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_lead_submission.leadsSubmitCreate(data)

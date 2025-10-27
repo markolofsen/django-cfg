@@ -9,8 +9,9 @@ import {
   LayoutDashboard, MessageSquare, BriefcaseIcon, Code,
   LogIn, User, CreditCard, LifeBuoy, Bug,
   Book, Shield, FileText, Cookie, Wallet, TrendingUp, Bitcoin, Building2,
-  FileQuestion, ServerCrash, Wrench
+  FileQuestion, ServerCrash, Wrench, Lock
 } from 'lucide-react';
+import { isDevelopment } from '../settings';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -23,6 +24,7 @@ export interface RouteMetadata {
   protected: boolean;
   group?: string;  // For menu grouping
   order?: number;  // Order within group
+  show?: boolean;
 }
 
 export interface RouteDefinition {
@@ -71,6 +73,15 @@ export class PublicRoutes extends BaseRouteGroup {
     icon: LayoutDashboard,
     protected: false,
     group: 'components',
+    order: 1,
+  });
+
+  readonly admin = this.route('/admin', {
+    label: 'Django Admin',
+    description: 'Django CFG admin interface demo',
+    icon: Lock,
+    protected: false,
+    group: 'admin',
     order: 1,
   });
 
@@ -231,13 +242,23 @@ export class PrivateRoutes extends BaseRouteGroup {
     order: 3,
   });
 
-  readonly debugIPC = this.route('/private/debug/ipc', {
-    label: 'IPC Debug',
-    description: 'Debug WebSocket RPC communication',
-    icon: Bug,
+  readonly ui = this.route('/private/ui', {
+    label: 'UI Components',
+    description: 'UI component library and showcase',
+    icon: LayoutDashboard,
     protected: true,
     group: 'developer',
-    order: 1,
+    order: 2,
+    // show: isDevelopment,
+  });
+
+  readonly admin = this.route('/private/admin', {
+    label: 'Django Admin',
+    description: 'Django CFG admin interface demo',
+    icon: Lock,
+    protected: true,
+    group: 'developer',
+    order: 3,
   });
 
   // Dynamic order routes
@@ -278,7 +299,7 @@ export class UnrealonRoutes {
 
   getRouteLabel(path: string): string {
     const route = this.getRouteByPath(path);
-    return route?.metadata.label || 'Unrealon Admin';
+    return route?.metadata.label || 'No label';
   }
 
   getRouteDescription(path: string): string | undefined {

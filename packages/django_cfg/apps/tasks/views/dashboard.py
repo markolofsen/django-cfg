@@ -33,12 +33,12 @@ def dashboard_view(request):
             {
                 'label': 'Task History',
                 'url': '/admin/django_dramatiq/task/',
-                'icon': '📜',
+                'icon': 'history',
             },
             {
                 'label': 'Settings',
                 'url': '/admin/constance/config/',
-                'icon': '⚙️',
+                'icon': 'settings',
             },
         ]
 
@@ -59,12 +59,12 @@ def dashboard_view(request):
             {
                 'label': 'Task History',
                 'url': '/admin/django_dramatiq/task/',
-                'icon': '📜',
+                'icon': 'history',
             },
             {
                 'label': 'Settings',
                 'url': '/admin/constance/config/',
-                'icon': '⚙️',
+                'icon': 'settings',
             },
         ]
 

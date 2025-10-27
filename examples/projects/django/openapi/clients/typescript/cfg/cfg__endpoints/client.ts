@@ -19,4 +19,20 @@ export class CfgEndpoints {
     return response;
   }
 
+  /**
+   * Return all registered URLs.
+   */
+  async urlsRetrieve(): Promise<Models.URLsList[]> {
+    const response = await this.client.request('GET', "/cfg/endpoints/urls/");
+    return (response as any).results || [];
+  }
+
+  /**
+   * Return compact URL list.
+   */
+  async urlsCompactRetrieve(): Promise<any> {
+    const response = await this.client.request('GET', "/cfg/endpoints/urls/compact/");
+    return response;
+  }
+
 }

@@ -1,0 +1,21 @@
+/**
+ * Layout Styles
+ * Grid layouts, containers, and responsive design
+ */
+
+/* Overview Grid Layout */
+.overview-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+}
+
+@media (min-width: 1280px) {
+    .overview-grid {
+        grid-template-columns: 2fr 1fr !important;
+    }
+}
+
+/* Alpine.js Cloak - Hide elements until Alpine initializes */
+[x-cloak] {
+    display: none !important;
+}

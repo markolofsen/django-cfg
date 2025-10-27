@@ -1,31 +1,30 @@
 ---
 title: Environment Setup
-description: Environment configuration principles for Django-CFG with YAML configs and environment variable overrides.
+description: Environment configuration principles for Django-CFG using pydantic-settings and environment variables.
 sidebar_label: Environment Setup
 sidebar_position: 1
 keywords:
   - django-cfg environment
   - environment configuration
-  - yaml configuration
+  - pydantic-settings
+  - environment variables
 ---
 
 # 🌍 Environment Setup
 
-Django-CFG uses YAML configuration files with environment variable overrides for flexible deployment across different environments.
+Django-CFG uses **pydantic-settings** for type-safe environment configuration. Configuration is loaded from environment variables and `.env` files automatically.
 
 ---
 
 ## Core Principles
 
-### Single Source of Truth
-One YAML file per environment contains all configuration:
+### Single Configuration Method
+Environment variables for all environments:
 
 ```
-api/environment/
-├── config.dev.yaml         # Development (local)
-├── config.prod.yaml        # Production
-├── config.dev.docker.yaml  # Development (Docker)
-└── config.prod.docker.yaml # Production (Docker)
+Development → .env file (gitignored)
+Production  → System ENV (Docker, K8s, CI/CD)
+Testing     → Defaults + minimal ENV overrides
 ```
 
 ### Priority System
@@ -33,9 +32,9 @@ api/environment/
 Configuration loading follows this priority (highest wins):
 
 ```
-1. Environment variables (highest priority)
-2. YAML file values
-3. Default values (lowest priority)
+1. System environment variables (highest priority)
+2. .env file values
+3. Default values in code (lowest priority)
 ```
 
 ### Environment Detection
@@ -43,7 +42,7 @@ Configuration loading follows this priority (highest wins):
 Automatic detection based on environment variables:
 
 ```bash
-# Development (default)
+# Development (default if nothing set)
 IS_DEV=true
 
 # Production
@@ -51,113 +50,123 @@ IS_PROD=true
 
 # Testing
 IS_TEST=true
-# or: pytest (auto-detected)
 ```
 
 ---
 
 ## Configuration Structure
 
-### Development Config
+### Development Config (.env)
 
-```yaml
-# config.dev.yaml
+```bash title="api/environment/.env"
+# === Environment Mode ===
+IS_DEV=true
 
 # === Core Settings ===
-secret_key: "dev-secret-key-at-least-50-chars-xxxxxxxxxxxxxxxxxxxxxxx"
-debug: false
+SECRET_KEY="dev-secret-key-at-least-50-chars-change-in-production"
+DEBUG=true
 
 # === Database ===
-database:
-  url: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/djangocfg}
+DATABASE__URL="postgresql://postgres:postgres@localhost:5432/djangocfg"
 
 # === Application URLs ===
-app:
-  name: "My App"
-  domain: ${DOMAIN:-localhost}
-  api_url: ${API_URL:-http://localhost:8000}
-  site_url: ${SITE_URL:-http://localhost:3000}
-
-# === Security Domains ===
-# Optional in development - Django-CFG auto-configures:
-# - CORS open for all localhost ports
-# - Docker IPs work automatically
-# security_domains:
-#   - "staging.example.com"
+APP__NAME="My App"
+APP__DOMAIN="localhost"
+APP__API_URL="http://localhost:8000"
+APP__SITE_URL="http://localhost:3000"
 
 # === Email ===
-email:
-  backend: "console"  # Prints to console
-  default_from: "noreply@localhost.dev"
+EMAIL__BACKEND="console"  # Prints to console
+EMAIL__DEFAULT_FROM="My App <noreply@localhost.dev>"
 
 # === Cache ===
-redis_url: ${REDIS_URL:-redis://redis:6379/0}
+REDIS_URL="redis://localhost:6379/0"
 
-# === API Keys ===
-api_keys:
-  openai: ""      # Set via OPENAI_API_KEY env var
-  sendgrid: ""    # Set via SENDGRID_API_KEY env var
+# === API Keys (optional) ===
+# API_KEYS__OPENAI=""
+# API_KEYS__SENDGRID=""
 ```
 
-### Production Config
+**Development benefits:**
+- ✅ **Console email backend** (no SMTP setup needed)
+- ✅ **Local database** (PostgreSQL or SQLite)
+- ✅ **Gitignored** - safe for local secrets
+- ✅ **Quick setup** - copy `.env.example`
 
-```yaml
-# config.prod.yaml
+### Production Config (System ENV)
+
+```bash title="Production Environment Variables"
+# Set in Docker/K8s - NEVER in .env file!
+
+# === Environment Mode ===
+IS_PROD=true
 
 # === Core Settings ===
-secret_key: ${SECRET_KEY}  # REQUIRED from environment
-debug: false
+SECRET_KEY="production-secret-from-secrets-manager-min-50-chars"
+DEBUG=false
 
 # === Database ===
-database:
-  url: ${DATABASE_URL}
+DATABASE__URL="postgresql://prod_user:prod_pass@db.example.com:5432/prod_db"
 
 # === Application URLs ===
-app:
-  name: ${APP_NAME:-My App}
-  domain: ${DOMAIN:-example.com}
-  api_url: ${API_URL:-https://api.example.com}
-  site_url: ${SITE_URL:-https://example.com}
+APP__NAME="My App"
+APP__DOMAIN="example.com"
+APP__API_URL="https://api.example.com"
+APP__SITE_URL="https://example.com"
 
 # === Security Domains ===
 # REQUIRED in production!
-security_domains:
-  - "example.com"
-  - "api.example.com"
-  - "www.example.com"
+SECURITY_DOMAINS="example.com,api.example.com,www.example.com"
 
 # === Email ===
-email:
-  backend: "smtp"
-  host: "smtp.example.com"
-  port: 587
-  username: ${EMAIL_USERNAME}
-  password: ${EMAIL_PASSWORD}
-  use_tls: true
-  default_from: "My App <noreply@example.com>"
+EMAIL__BACKEND="smtp"
+EMAIL__HOST="smtp.sendgrid.net"
+EMAIL__PORT=587
+EMAIL__USERNAME="apikey"
+EMAIL__PASSWORD="${SENDGRID_API_KEY}"
+EMAIL__USE_TLS=true
+EMAIL__DEFAULT_FROM="My App <noreply@example.com>"
 
 # === Cache ===
-redis_url: ${REDIS_URL:-redis://localhost:6379/1}
+REDIS_URL="redis://redis:6379/1"
 
 # === API Keys ===
-api_keys:
-  openai: ${OPENAI_API_KEY}
-  sendgrid: ${SENDGRID_API_KEY}
+API_KEYS__OPENAI="${OPENAI_API_KEY}"
+API_KEYS__SENDGRID="${SENDGRID_API_KEY}"
 ```
 
-### Docker Configs
+**Production practices:**
+- ✅ Use **secrets managers** (AWS Secrets Manager, Vault)
+- ✅ Set in **Docker environment** or **K8s Secrets**
+- ✅ **Never commit** to version control
+- ✅ **Rotate secrets** regularly
 
-Docker versions are identical but use Docker service names:
+### Test Config
 
-```yaml
-# config.dev.docker.yaml (identical to config.dev.yaml)
-# Just copy config.dev.yaml for Docker
+```bash title="Test Environment (pytest.ini or CI)"
+# === Environment Mode ===
+IS_TEST=true
 
-# config.prod.docker.yaml (identical to config.prod.yaml)
-# Just copy config.prod.yaml for Docker
+# === Core Settings ===
+SECRET_KEY="test-key-for-testing-only-min-50-chars-long"
+DEBUG=false
+
+# === Database (in-memory for speed) ===
+DATABASE__URL="sqlite:///:memory:"
+
+# === Email (don't send real emails) ===
+EMAIL__BACKEND="console"
+
+# === Disable external services ===
+API_KEYS__OPENAI=""
+REDIS_URL=""
 ```
 
-Docker service names (postgres, redis) work automatically due to Docker networking.
+**Testing optimizations:**
+- ✅ **In-memory SQLite** for fast tests
+- ✅ **Console email backend**
+- ✅ **Disabled** external services
+- ✅ **Minimal** logging
 
 ---
 
@@ -169,32 +178,32 @@ Django-CFG supports standard environment variables:
 
 ```bash
 # Core
-SECRET_KEY=your-secret-key-here
+SECRET_KEY="your-secret-key-here"
 DEBUG=true
-DATABASE_URL=postgresql://user:pass@host:5432/db
-REDIS_URL=redis://localhost:6379/0
+DATABASE__URL="postgresql://user:pass@host:5432/db"
+REDIS_URL="redis://localhost:6379/0"
 
 # API Keys
-OPENAI_API_KEY=sk-...
-SENDGRID_API_KEY=SG...
+API_KEYS__OPENAI="sk-..."
+API_KEYS__SENDGRID="SG..."
 ```
 
-### Nested Configuration Override
+### Nested Configuration
 
-Use `__` (double underscore) to override nested config:
+Use `__` (double underscore) for nested config:
 
 ```bash
 # email.host
-EMAIL__HOST=smtp.gmail.com
+EMAIL__HOST="smtp.gmail.com"
 
 # email.port
 EMAIL__PORT=587
 
 # api_keys.openai
-API_KEYS__OPENAI=sk-...
+API_KEYS__OPENAI="sk-..."
 
 # app.domain
-APP__DOMAIN=example.com
+APP__DOMAIN="example.com"
 ```
 
 **Pattern:** `SECTION__FIELD=value` maps to `section.field = value`
@@ -203,51 +212,79 @@ APP__DOMAIN=example.com
 
 ## Loading Configuration
 
-### Automatic Loading
+### Automatic Loading with Pydantic
 
-Django-CFG automatically loads the correct config:
+Django-CFG automatically loads configuration using pydantic-settings:
 
 ```python
 # api/environment/loader.py
-from pydantic_yaml import parse_yaml_file_as
+from pathlib import Path
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Environment detection
-IS_DEV = os.environ.get("IS_DEV", "").lower() in ("true", "1", "yes")
-IS_PROD = os.environ.get("IS_PROD", "").lower() in ("true", "1", "yes")
-IS_TEST = "test" in sys.argv  # Auto-detect pytest
 
-# Config file selection with Docker priority
-if IS_PROD:
-    # Check Docker config first, fallback to regular
-    config_file = "config.prod.docker.yaml" if exists("config.prod.docker.yaml") else "config.prod.yaml"
-elif IS_TEST:
-    config_file = "config.test.yaml"
-else:
-    # Check Docker config first, fallback to regular
-    config_file = "config.dev.docker.yaml" if exists("config.dev.docker.yaml") else "config.dev.yaml"
+class DatabaseConfig(BaseSettings):
+    """Database configuration."""
+    url: str = Field(default="sqlite:///db/default.sqlite3")
 
-# Load YAML config
-env = parse_yaml_file_as(EnvironmentConfig, config_file)
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 
-# Override with environment variables (double underscore pattern)
-for env_key, env_value in os.environ.items():
-    if '__' in env_key:
-        # EMAIL__HOST -> env.email.host
-        parts = env_key.lower().split('__')
-        obj = env
-        for part in parts[:-1]:
-            obj = getattr(obj, part)
-        setattr(obj, parts[-1], convert_type(env_value))
 
-print(f"✅ Loaded config: {config_file}")
+class EmailConfig(BaseSettings):
+    """Email configuration."""
+    backend: str = Field(default="console")
+    host: str = Field(default="localhost")
+    port: int = Field(default=587)
+    username: str | None = Field(default=None)
+    password: str | None = Field(default=None)
+    use_tls: bool = Field(default=True)
+    default_from: str = Field(default="noreply@example.com")
+
+    model_config = SettingsConfigDict(
+        env_prefix="EMAIL__",
+        env_nested_delimiter="__",
+    )
+
+
+class EnvironmentConfig(BaseSettings):
+    """Complete environment configuration."""
+    secret_key: str = Field(
+        default="django-cfg-dev-key-change-in-production-min-50-chars"
+    )
+    debug: bool = Field(default=True)
+
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    email: EmailConfig = Field(default_factory=EmailConfig)
+
+    model_config = SettingsConfigDict(
+        env_file=str(Path(__file__).parent / ".env"),
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
+# Global instance - auto-loads from ENV > .env > defaults
+env = EnvironmentConfig()
 ```
+
+**How it works:**
+1. Checks system environment variables (highest priority)
+2. Loads `.env` file if exists
+3. Uses defaults from Field definitions
+4. Validates types automatically with Pydantic
 
 ### Using Configuration
 
 ```python
 # api/config.py
-from django_cfg import DjangoConfig
+from django_cfg import DjangoConfig, DatabaseConfig
 from .environment import env
+
 
 class MyDjangoConfig(DjangoConfig):
     project_name: str = env.app.name
@@ -255,15 +292,14 @@ class MyDjangoConfig(DjangoConfig):
     debug: bool = env.debug
     security_domains: list[str] = env.security_domains or []
 
-    # Database from environment config
+    # Database from environment
     databases = {
-        "default": {
-            "url": env.database.url
-        }
+        "default": DatabaseConfig.from_url(url=env.database.url)
     }
 
+
 # Generate Django settings
-settings = MyDjangoConfig().to_settings()
+config = MyDjangoConfig()
 ```
 
 ---
@@ -273,18 +309,46 @@ settings = MyDjangoConfig().to_settings()
 ### Development
 
 **Automatic configuration:**
-- `security_domains: []` → CORS open, localhost any port allowed
-- `email.backend: console` → Emails printed to console
+- `security_domains: ["localhost", "127.0.0.1"]` → CORS open for local dev
+- `email.backend: "console"` → Emails printed to console
 - `debug: true` → Verbose logging, detailed errors
 - Relaxed security settings
+
+**Setup:**
+```bash
+# Copy .env.example to .env
+cp api/environment/.env.example api/environment/.env
+
+# Edit with your values
+vim api/environment/.env
+
+# Run development server
+python manage.py runserver
+```
 
 ### Production
 
 **Automatic configuration:**
 - `security_domains` → REQUIRED, strict CORS/CSRF
-- `email.backend: smtp` → Real email sending
+- `email.backend: "smtp"` → Real email sending
 - `debug: false` → Structured logging, minimal output
 - Strict security (HTTPS, HSTS, secure cookies)
+
+**Setup:**
+```bash
+# Set environment variables in Docker/K8s
+export IS_PROD=true
+export SECRET_KEY="from-secrets-manager"
+export DATABASE__URL="postgresql://..."
+
+# Or in docker-compose.yml
+services:
+  django:
+    environment:
+      IS_PROD: "true"
+      SECRET_KEY: "${SECRET_KEY}"
+      DATABASE__URL: "${DATABASE_URL}"
+```
 
 ### Docker
 
@@ -293,6 +357,46 @@ settings = MyDjangoConfig().to_settings()
 - Health check endpoints enabled
 - Private IP ranges allowed for internal calls
 - Container-aware resource monitoring
+
+**Docker Compose example:**
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  django:
+    build: .
+    environment:
+      # Environment mode
+      IS_PROD: "true"
+
+      # Core settings
+      SECRET_KEY: "${SECRET_KEY}"
+      DEBUG: "false"
+
+      # Database (Docker service name)
+      DATABASE__URL: "postgresql://postgres:postgres@postgres:5432/db"
+
+      # Cache (Docker service name)
+      REDIS_URL: "redis://redis:6379/0"
+
+      # Email
+      EMAIL__BACKEND: "smtp"
+      EMAIL__HOST: "${EMAIL_HOST}"
+      EMAIL__PORT: "587"
+      EMAIL__USERNAME: "${EMAIL_USERNAME}"
+      EMAIL__PASSWORD: "${EMAIL_PASSWORD}"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  redis:
+    image: redis:7-alpine
+```
 
 ---
 
@@ -304,95 +408,177 @@ settings = MyDjangoConfig().to_settings()
 # .gitignore
 .env
 .env.*
-config.prod.yaml  # If it contains secrets
+environment/.env
 secrets/
 ```
 
-### 2. Use Environment Variables for Secrets
-
-```yaml
-# Good - loads from environment
-secret_key: ${SECRET_KEY}
-database_url: ${DATABASE_URL}
-api_keys:
-  openai: ${OPENAI_API_KEY}
-
-# Bad - hardcoded secrets
-secret_key: "my-secret-key-12345"
-api_keys:
-  openai: "sk-hardcoded-key"
+**Good:**
+```bash
+# In .env file (gitignored)
+SECRET_KEY="my-secret-key"
+DATABASE__URL="postgresql://..."
 ```
 
-### 3. Provide Defaults for Non-Secrets
-
-```yaml
-# Good - has fallback
-database_url: ${DATABASE_URL:-postgresql://localhost:5432/mydb}
-redis_url: ${REDIS_URL:-redis://localhost:6379/0}
-
-# Bad - no fallback, crashes if not set
-database_url: ${DATABASE_URL}
+**Bad:**
+```python
+# Hardcoded in code - NEVER DO THIS!
+SECRET_KEY = "hardcoded-secret-key"
+DATABASE_URL = "postgresql://hardcoded-pass@..."
 ```
 
-### 4. Document Required Variables
+### 2. Use .env for Development Only
 
-```yaml
+```bash
+# Development (local)
+.env file → gitignored, safe for local secrets
+
+# Production
+System ENV → Docker, K8s, CI/CD
+Secrets Manager → AWS Secrets Manager, Vault
+
+# Testing
+Defaults → Minimal ENV overrides
+```
+
+### 3. Provide Defaults for Development
+
+```python
+# Good - has sensible defaults
+class DatabaseConfig(BaseSettings):
+    url: str = Field(
+        default="sqlite:///db/default.sqlite3"  # Dev default
+    )
+
+# Override in production
+DATABASE__URL="postgresql://prod-db:5432/db"
+```
+
+### 4. Validate in Production
+
+```python
+from api.environment import env
+
+if env.env.is_prod:
+    # Validate critical settings
+    assert len(env.secret_key) >= 50, "Secret key too short!"
+    assert not env.debug, "DEBUG must be False in production!"
+    assert "postgresql" in env.database.url.lower(), "Use PostgreSQL in production!"
+    assert env.security_domains, "SECURITY_DOMAINS required in production!"
+```
+
+### 5. Document Required Variables
+
+```bash title=".env.example"
 # === Required Environment Variables ===
 # Production deployment requires:
 # - SECRET_KEY: Django secret key (50+ chars)
-# - DATABASE_URL: PostgreSQL connection string
+# - DATABASE__URL: PostgreSQL connection string
 # - REDIS_URL: Redis connection string
-# - OPENAI_API_KEY: OpenAI API key (if using AI features)
+# - EMAIL__HOST: SMTP server hostname
+# - EMAIL__PASSWORD: SMTP password
+# - API_KEYS__OPENAI: OpenAI API key (if using AI features)
 
-secret_key: ${SECRET_KEY}
-database_url: ${DATABASE_URL}
+# === Core Settings ===
+SECRET_KEY="your-secret-key-minimum-50-characters-long"
+DEBUG=false
+
+# === Database ===
+DATABASE__URL="postgresql://user:pass@host:5432/db"
 ```
 
 ---
 
 ## Docker Deployment
 
-For Docker deployment, see **[Docker Guide →](/guides/docker/overview)**
+For complete Docker deployment guide, see **[Docker Guide →](/guides/docker/overview)**
 
 ### Quick Reference
 
-Docker configs are identical to regular configs:
+**Docker Compose with ENV:**
+```yaml
+version: '3.8'
 
-```bash
-# Copy configs for Docker
-cp config.dev.yaml config.dev.docker.yaml
-cp config.prod.yaml config.prod.docker.yaml
+services:
+  django:
+    build: .
+    env_file:
+      - .env.production  # Load from file
+    environment:
+      # Or set directly
+      IS_PROD: "true"
+      DATABASE__URL: "postgresql://postgres@db:5432/prod"
+```
 
-# Use Docker service names (postgres, redis)
-# Everything else works the same!
+**Kubernetes with Secrets:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: django
+        env:
+        - name: IS_PROD
+          value: "true"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: secret-key
+        - name: DATABASE__URL
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: database-url
 ```
 
 ---
 
 ## Troubleshooting
 
-### Config File Not Found
+### Environment Variables Not Loading
 
+**Check:**
 ```bash
-# Check file exists
-ls api/environment/config.*.yaml
+# Verify .env file location
+ls api/environment/.env
 
 # Check environment variable
-echo $IS_PROD  # Should be "true" or "1"
-echo $IS_DEV   # Should be "true" or "1"
-```
+echo $DATABASE__URL
 
-### Environment Variables Not Applied
-
-```bash
-# Check variable format
-EMAIL__HOST=smtp.gmail.com  # ✅ Correct (double underscore)
-EMAIL_HOST=smtp.gmail.com   # ❌ Wrong (single underscore)
-
-# Test override
+# Test in Python
 python manage.py shell
 >>> from api.environment import env
->>> print(env.email.host)  # Should show overridden value
+>>> print(env.database.url)
+```
+
+### Variable Format Errors
+
+```bash
+# ✅ Correct (double underscore)
+EMAIL__HOST="smtp.gmail.com"
+
+# ❌ Wrong (single underscore)
+EMAIL_HOST="smtp.gmail.com"
+
+# ✅ Correct (nested)
+API_KEYS__OPENAI="sk-..."
+
+# ❌ Wrong
+API_KEYS_OPENAI="sk-..."
+```
+
+### Type Conversion Errors
+
+```bash
+# ✅ Correct
+EMAIL__PORT=587  # Automatically converted to int
+DEBUG=true       # Automatically converted to bool
+
+# ❌ Wrong
+EMAIL__PORT=abc  # Not a valid integer!
+DEBUG=yes        # Use "true" or "false"
 ```
 
 ### Secret Key Error
@@ -401,12 +587,50 @@ python manage.py shell
 # Generate secure key
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 
-# Set in environment
-export SECRET_KEY="generated-key-here"
+# Set in .env (development)
+SECRET_KEY="generated-key-here-min-50-chars"
 
-# Or in YAML (development only)
-secret_key: "dev-key-at-least-50-characters-long-xxxxxxxxxxxxxxxxxxxxx"
+# Set in environment (production)
+export SECRET_KEY="generated-key-here-min-50-chars"
 ```
+
+---
+
+## Migration from YAML
+
+:::info[Migrating from YAML configs?]
+Old approach used `config.dev.yaml`, `config.prod.yaml`, etc.
+
+**New approach:** Everything via ENV variables!
+:::
+
+### Before (YAML)
+
+```yaml title="config.prod.yaml"
+secret_key: "${SECRET_KEY}"
+debug: false
+database:
+  url: "${DATABASE_URL}"
+email:
+  backend: "smtp"
+  host: "smtp.example.com"
+```
+
+### After (ENV)
+
+```bash title="System ENV or .env"
+SECRET_KEY="my-secret-key"
+DEBUG=false
+DATABASE__URL="postgresql://..."
+EMAIL__BACKEND="smtp"
+EMAIL__HOST="smtp.example.com"
+```
+
+**Benefits:**
+- ✅ Simpler - one method for all environments
+- ✅ 12-factor app compliant
+- ✅ Works everywhere (Docker, K8s, CI/CD)
+- ✅ No file management overhead
 
 ---
 
@@ -415,10 +639,10 @@ secret_key: "dev-key-at-least-50-characters-long-xxxxxxxxxxxxxxxxxxxxx"
 - **[Docker Guide](/guides/docker/overview)** - Docker deployment
 - **[Security Settings](/deployment/security)** - Security domains and CORS
 - **[Monitoring](/deployment/monitoring)** - Health checks and logging
-- **[Configuration Reference](/fundamentals/configuration)** - Full config options
+- **[Configuration Reference](/fundamentals/configuration/environment)** - Detailed ENV guide
 
 ---
 
-TAGS: environment, configuration, yaml, env-vars, deployment
-DEPENDS_ON: [django-cfg, yaml, pydantic]
+TAGS: environment, configuration, pydantic-settings, env-vars, deployment
+DEPENDS_ON: [django-cfg, pydantic-settings]
 USED_BY: [deployment, docker, production]

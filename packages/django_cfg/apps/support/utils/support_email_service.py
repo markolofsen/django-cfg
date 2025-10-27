@@ -6,6 +6,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 
+from django_cfg.core.utils import get_ticket_url
 from django_cfg.modules.django_email import DjangoEmailService
 
 User = get_user_model()
@@ -17,20 +18,6 @@ class SupportEmailService:
 
     def __init__(self, user: User):
         self.user = user
-
-    def _get_ticket_url(self, ticket_uuid: str) -> str:
-        """Get ticket URL from configuration."""
-        try:
-            from django_cfg.core.state import get_current_config
-            config = get_current_config()
-            if config and hasattr(config, 'get_ticket_url'):
-                return config.get_ticket_url(str(ticket_uuid))
-            else:
-                # Fallback URL if config is not available
-                return f"#ticket-{ticket_uuid}"
-        except Exception as e:
-            logger.warning(f"Could not generate ticket URL: {e}")
-            return f"#ticket-{ticket_uuid}"
 
     def _send_email(
         self,
@@ -72,7 +59,7 @@ class SupportEmailService:
             main_html_content=f'<div style="background: #e8f5e8; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;"><strong>Ticket #{ticket.uuid.hex[:8]}</strong><br><strong>Subject:</strong> {ticket.subject}</div>',
             secondary_text="You will receive email notifications when our support team replies to your ticket.",
             button_text="View Ticket",
-            button_url=self._get_ticket_url(ticket.uuid),
+            button_url=get_ticket_url(str(ticket.uuid)),
         )
 
     def send_support_reply_email(self, message):
@@ -89,7 +76,7 @@ class SupportEmailService:
             main_html_content=f'<div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;"><strong>Support Reply:</strong><br>{message.text}</div>',
             secondary_text="Please reply to continue the conversation. We're here to help!",
             button_text="View & Reply",
-            button_url=self._get_ticket_url(ticket.uuid),
+            button_url=get_ticket_url(str(ticket.uuid)),
         )
 
     def send_ticket_status_changed_email(self, ticket, old_status, new_status):
@@ -109,7 +96,7 @@ class SupportEmailService:
             main_html_content=f'<div style="background: #f8f9fa; padding: 15px; border-left: 4px solid {color}; margin: 15px 0;"><strong>Status Update:</strong><br>From: <span style="color: #6c757d;">{old_status}</span><br>To: <span style="color: {color}; font-weight: bold;">{new_status}</span></div>',
             secondary_text="If you have any questions about this status change, please reply to your ticket.",
             button_text="View Ticket",
-            button_url=self._get_ticket_url(ticket.uuid),
+            button_url=get_ticket_url(str(ticket.uuid)),
         )
 
     def send_ticket_resolved_email(self, ticket):
@@ -120,5 +107,5 @@ class SupportEmailService:
             main_html_content='<div style="background: #e8f5e8; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;"><strong>✅ Ticket Resolved</strong><br>Your issue has been successfully resolved by our support team.</div>',
             secondary_text="If you're satisfied with the resolution, no further action is needed. If you need additional help, feel free to reply to reopen the ticket.",
             button_text="View Resolution",
-            button_url=self._get_ticket_url(ticket.uuid),
+            button_url=get_ticket_url(str(ticket.uuid)),
         )

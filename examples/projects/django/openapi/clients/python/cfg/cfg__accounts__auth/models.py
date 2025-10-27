@@ -14,11 +14,11 @@ class TokenRefresh(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
-    access: str = ...
+    access: Any = ...
     refresh: str = ...
 
 
@@ -31,7 +31,7 @@ class TokenRefreshRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

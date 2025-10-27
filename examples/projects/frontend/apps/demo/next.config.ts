@@ -4,9 +4,10 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: [
-    // "@djangocfg/ui",
-    // "@djangocfg/layouts", // use if need Player snippet
-    // "@djangocfg/markdown"
+    "@djangocfg/ui",
+    "@djangocfg/layouts",
+    "@djangocfg/markdown",
+    "@djangocfg/api"
   ],
   // Use standalone only in production build
   ...(process.env.NODE_ENV === "production" && { output: "standalone" }),

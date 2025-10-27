@@ -132,10 +132,8 @@ export class API {
       loggerConfig: this.options?.loggerConfig,
     });
 
-    // Inject Authorization header if token exists
-    if (this._token) {
-      this._injectAuthHeader();
-    }
+    // Always inject auth header wrapper (reads token dynamically from storage)
+    this._injectAuthHeader();
 
     // Initialize sub-clients from APIClient
     this.profiles_profiles = this._client.profiles_profiles;
@@ -152,10 +150,8 @@ export class API {
       loggerConfig: this.options?.loggerConfig,
     });
 
-    // Inject Authorization header if token exists
-    if (this._token) {
-      this._injectAuthHeader();
-    }
+    // Always inject auth header wrapper (reads token dynamically from storage)
+    this._injectAuthHeader();
 
     // Reinitialize sub-clients
     this.profiles_profiles = this._client.profiles_profiles;
@@ -169,12 +165,13 @@ export class API {
       path: string,
       options?: { params?: Record<string, any>; body?: any; formData?: FormData; headers?: Record<string, string> }
     ): Promise<T> => {
-      // Merge Authorization header with existing headers
+      // Read token from storage dynamically (supports JWT injection after instantiation)
+      const token = this.getToken();
       const mergedOptions = {
         ...options,
         headers: {
           ...(options?.headers || {}),
-          ...(this._token ? { 'Authorization': `Bearer ${this._token}` } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
       };
 

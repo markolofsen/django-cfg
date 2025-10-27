@@ -9,7 +9,7 @@ help:
 	@echo ""
 	@echo "Setup & Installation:"
 	@echo "  make install       - Install dependencies (production mode)"
-	@echo "  make install-local - Install with local django-cfg and django-ipc"
+	@echo "  make install-local - Install with local django-cfg"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev           - Run development server (kills port 8000 first)"
@@ -58,10 +58,9 @@ install:
 	$(POETRY) install
 
 install-local:
-	@echo "📦 Installing with local django-cfg and django-ipc..."
+	@echo "📦 Installing with local django-cfg..."
 	@rm -f poetry.lock
 	$(POETRY) add --group local --editable ~/djangocfg --lock
-	$(POETRY) add --group local --editable ~/djangoipc --lock
 	$(POETRY) install --with local --no-root
 
 env:

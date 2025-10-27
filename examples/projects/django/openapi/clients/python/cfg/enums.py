@@ -1,4 +1,10 @@
-from enum import IntEnum, StrEnum
+from enum import IntEnum, Enum
+
+# Python 3.10 compatibility: StrEnum was added in Python 3.11
+# Use str + Enum instead for backward compatibility
+class StrEnum(str, Enum):
+    """String Enum for Python 3.10+ compatibility"""
+    pass
 
 
 class ArchiveItemContentType(StrEnum):
@@ -473,6 +479,70 @@ class QueueActionRequestAction(StrEnum):
     PURGE = "purge"
     PURGE_FAILED = "purge_failed"
     FLUSH = "flush"
+
+
+
+class QuickActionColor(StrEnum):
+    """
+    Button color theme
+    * `primary` - primary
+    * `success` - success
+    * `warning` - warning
+    * `danger` - danger
+    * `secondary` - secondary
+    """
+
+    PRIMARY = "primary"
+    SUCCESS = "success"
+    WARNING = "warning"
+    DANGER = "danger"
+    SECONDARY = "secondary"
+
+
+
+class StatCardChangeType(StrEnum):
+    """
+    Change type
+    * `positive` - positive
+    * `negative` - negative
+    * `neutral` - neutral
+    """
+
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+    NEUTRAL = "neutral"
+
+
+
+class SystemHealthOverallStatus(StrEnum):
+    """
+    Overall system health status
+    * `healthy` - healthy
+    * `warning` - warning
+    * `error` - error
+    * `unknown` - unknown
+    """
+
+    HEALTHY = "healthy"
+    WARNING = "warning"
+    ERROR = "error"
+    UNKNOWN = "unknown"
+
+
+
+class SystemHealthItemStatus(StrEnum):
+    """
+    Health status
+    * `healthy` - healthy
+    * `warning` - warning
+    * `error` - error
+    * `unknown` - unknown
+    """
+
+    HEALTHY = "healthy"
+    WARNING = "warning"
+    ERROR = "error"
+    UNKNOWN = "unknown"
 
 
 

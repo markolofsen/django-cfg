@@ -45,7 +45,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /api/crypto/coins/
  */
-export async function getCryptoCoinsList(  params?: { page?: number; page_size?: number },  client?
+export async function getCryptoCoinsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedCoinListList> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.coinsList(params?.page, params?.page_size)
@@ -59,7 +59,7 @@ export async function getCryptoCoinsList(  params?: { page?: number; page_size?:
  * @method GET
  * @path /api/crypto/coins/{id}/
  */
-export async function getCryptoCoinsRetrieve(  id: number,  client?
+export async function getCryptoCoinsRetrieve(  id: number,  client?: API
 ): Promise<Coin> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.coinsRetrieve(id)
@@ -73,7 +73,7 @@ export async function getCryptoCoinsRetrieve(  id: number,  client?
  * @method GET
  * @path /api/crypto/coins/stats/
  */
-export async function getCryptoCoinsStatsRetrieve(  client?
+export async function getCryptoCoinsStatsRetrieve(  client?: API
 ): Promise<CoinStats> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.coinsStatsRetrieve()
@@ -87,7 +87,7 @@ export async function getCryptoCoinsStatsRetrieve(  client?
  * @method GET
  * @path /api/crypto/exchanges/
  */
-export async function getCryptoExchangesList(  params?: { page?: number; page_size?: number },  client?
+export async function getCryptoExchangesList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedExchangeList> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.exchangesList(params?.page, params?.page_size)
@@ -101,7 +101,7 @@ export async function getCryptoExchangesList(  params?: { page?: number; page_si
  * @method GET
  * @path /api/crypto/exchanges/{slug}/
  */
-export async function getCryptoExchangesRetrieve(  slug: string,  client?
+export async function getCryptoExchangesRetrieve(  slug: string,  client?: API
 ): Promise<Exchange> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.exchangesRetrieve(slug)
@@ -115,7 +115,7 @@ export async function getCryptoExchangesRetrieve(  slug: string,  client?
  * @method GET
  * @path /api/crypto/wallets/
  */
-export async function getCryptoWalletsList(  params?: { page?: number; page_size?: number },  client?
+export async function getCryptoWalletsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedWalletList> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.walletsList(params?.page, params?.page_size)
@@ -129,7 +129,7 @@ export async function getCryptoWalletsList(  params?: { page?: number; page_size
  * @method GET
  * @path /api/crypto/wallets/{id}/
  */
-export async function getCryptoWalletsRetrieve(  id: string,  client?
+export async function getCryptoWalletsRetrieve(  id: string,  client?: API
 ): Promise<Wallet> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.walletsRetrieve(id)

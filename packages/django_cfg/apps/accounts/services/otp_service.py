@@ -5,6 +5,7 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
+from django_cfg.core.utils import get_otp_url
 from django_cfg.modules.django_telegram import DjangoTelegram
 
 from ..models import CustomUser, OTPSecret
@@ -17,20 +18,8 @@ logger = logging.getLogger(__name__)
 class OTPService:
     """Simple OTP service for authentication."""
 
-    @staticmethod
-    def _get_otp_url(otp_code: str) -> str:
-        """Get OTP verification URL from configuration."""
-        try:
-            from django_cfg.core.state import get_current_config
-            config = get_current_config()
-            if config and hasattr(config, 'get_otp_url'):
-                return config.get_otp_url(otp_code)
-            else:
-                # Fallback URL if config is not available
-                return f"#otp-{otp_code}"
-        except Exception as e:
-            logger.warning(f"Could not generate OTP URL: {e}")
-            return f"#otp-{otp_code}"
+    # Expose get_otp_url as a static method for backward compatibility
+    _get_otp_url = staticmethod(get_otp_url)
 
     @staticmethod
     @transaction.atomic

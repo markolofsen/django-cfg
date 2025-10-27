@@ -58,5 +58,10 @@ poetry.lock
 *.temp
 .cache/
 logs
-openapi/archive
 db/*
+media/*
+static/*
+openapi/archive
+
+# Generated SDK clients
+# opensdk/

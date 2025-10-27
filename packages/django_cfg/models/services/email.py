@@ -58,6 +58,11 @@ class EmailConfig(BaseConfig):
         description="Use SSL for SMTP"
     )
 
+    ssl_verify: bool = Field(
+        default=True,
+        description="Verify SSL certificates (set False for self-signed certs in dev)"
+    )
+
     timeout: int = Field(
         default=30,
         ge=1,
@@ -111,7 +116,12 @@ class EmailConfig(BaseConfig):
     def to_django_settings(self) -> Dict[str, Any]:
         """Convert to Django email settings."""
         if self.backend == 'smtp':
-            backend_class = 'django.core.mail.backends.smtp.EmailBackend'
+            # Choose backend based on SSL verification setting
+            if self.ssl_verify:
+                backend_class = 'django.core.mail.backends.smtp.EmailBackend'
+            else:
+                # Use custom backend that accepts self-signed SSL certs
+                backend_class = 'django_cfg.core.backends.smtp.UnverifiedSSLEmailBackend'
 
             settings = {
                 'EMAIL_BACKEND': backend_class,

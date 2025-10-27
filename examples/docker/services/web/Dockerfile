@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY projects/web ./
+COPY projects/web .
 
 # Build arguments
 ARG DJANGO_API_URL
@@ -35,7 +35,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3201
+ENV PORT=3001
 ENV HOST=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && \
@@ -49,9 +49,9 @@ COPY --from=builder --chown=docusaurus:nodejs /app/build ./build
 
 USER docusaurus
 
-EXPOSE 3201
+EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3201/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/ || exit 1
 
-CMD ["serve", "-s", "build", "-l", "3201"]
+CMD ["serve", "-s", "build", "-l", "3001"]

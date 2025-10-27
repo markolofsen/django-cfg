@@ -109,7 +109,11 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
+            "django_cfg.apps.dashboard",  # Dashboard API
         ]
+
+        if self.config.enable_frontend:
+            apps.append("django_cfg.apps.frontend")
 
         # Add optional apps based on configuration
         if self.config.enable_support:
@@ -133,8 +137,11 @@ class InstalledAppsBuilder:
         if self.config.payments and self.config.payments.enabled:
             apps.append("django_cfg.apps.payments")
 
-        if self.config.django_ipc and self.config.django_ipc.enabled:
-            apps.append("django_cfg.apps.ipc")
+        if self.config.centrifugo and self.config.centrifugo.enabled:
+            apps.append("django_cfg.apps.centrifugo")
+
+        if self.config.crypto_fields and self.config.crypto_fields.enabled:
+            apps.append("django_crypto_fields.apps.AppConfig")
 
         return apps
 

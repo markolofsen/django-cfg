@@ -579,11 +579,6 @@ export const OPENAPI_SCHEMA = {
       }
     },
     "securitySchemes": {
-      "cookieAuth": {
-        "in": "cookie",
-        "name": "sessionid",
-        "type": "apiKey"
-      },
       "jwtAuth": {
         "bearerFormat": "JWT",
         "scheme": "bearer",
@@ -646,9 +641,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "List coins",
@@ -677,9 +669,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -720,9 +709,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -773,9 +759,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "List exchanges",
@@ -814,9 +797,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -866,9 +846,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List wallets",
@@ -907,9 +884,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get wallet details",

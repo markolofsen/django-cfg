@@ -1,0 +1,35 @@
+{% load unfold %}
+
+<!-- Statistics Section -->
+<div class="space-y-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold theme-text">{{ title|default:"Statistics" }}</h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">
+                Detailed metrics for each application module
+            </p>
+        </div>
+    </div>
+
+    <!-- App Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for app in data.app_stats %}
+            <div class="theme-card p-6 rounded-lg shadow-sm border theme-border">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold theme-text">{{ app.name }}</h3>
+                    <span class="material-icons text-blue-500">{{ app.icon|default:"apps" }}</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Label:</span>
+                        <span class="theme-text">{{ app.label }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Models:</span>
+                        <span class="theme-text font-mono">{{ app.models_count }}</span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>

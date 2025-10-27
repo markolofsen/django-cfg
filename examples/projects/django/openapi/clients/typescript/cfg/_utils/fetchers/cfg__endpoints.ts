@@ -30,6 +30,7 @@
  * ```
  */
 import { EndpointsStatusSchema, type EndpointsStatus } from '../schemas/EndpointsStatus.schema'
+import { URLsListSchema, type URLsList } from '../schemas/URLsList.schema'
 import { getAPIInstance } from '../../api-instance'
 import type { API } from '../../index'
 
@@ -39,11 +40,39 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/endpoints/drf/
  */
-export async function getEndpointsDrfRetrieve(  client?
+export async function getEndpointsDrfRetrieve(  client?: API
 ): Promise<EndpointsStatus> {
   const api = client || getAPIInstance()
   const response = await api.cfg_endpoints.drfRetrieve()
   return EndpointsStatusSchema.parse(response)
+}
+
+
+/**
+ * API operation
+ *
+ * @method GET
+ * @path /cfg/endpoints/urls/
+ */
+export async function getEndpointsUrlsRetrieve(  client?: API
+): Promise<URLsList> {
+  const api = client || getAPIInstance()
+  const response = await api.cfg_endpoints.urlsRetrieve()
+  return URLsListSchema.parse(response)
+}
+
+
+/**
+ * API operation
+ *
+ * @method GET
+ * @path /cfg/endpoints/urls/compact/
+ */
+export async function getEndpointsUrlsCompactRetrieve(  client?: API
+): Promise<any> {
+  const api = client || getAPIInstance()
+  const response = await api.cfg_endpoints.urlsCompactRetrieve()
+  return response
 }
 
 

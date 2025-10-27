@@ -43,7 +43,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/newsletter/campaigns/
  */
-export async function getNewsletterCampaignsList(  params?: { page?: number; page_size?: number },  client?
+export async function getNewsletterCampaignsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedNewsletterCampaignList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsList(params?.page, params?.page_size)
@@ -57,7 +57,7 @@ export async function getNewsletterCampaignsList(  params?: { page?: number; pag
  * @method POST
  * @path /cfg/newsletter/campaigns/
  */
-export async function createNewsletterCampaignsCreate(  data: NewsletterCampaignRequest,  client?
+export async function createNewsletterCampaignsCreate(  data: NewsletterCampaignRequest,  client?: API
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsCreate(data)
@@ -71,7 +71,7 @@ export async function createNewsletterCampaignsCreate(  data: NewsletterCampaign
  * @method GET
  * @path /cfg/newsletter/campaigns/{id}/
  */
-export async function getNewsletterCampaignsRetrieve(  id: number,  client?
+export async function getNewsletterCampaignsRetrieve(  id: number,  client?: API
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsRetrieve(id)
@@ -85,7 +85,7 @@ export async function getNewsletterCampaignsRetrieve(  id: number,  client?
  * @method PUT
  * @path /cfg/newsletter/campaigns/{id}/
  */
-export async function updateNewsletterCampaignsUpdate(  id: number, data: NewsletterCampaignRequest,  client?
+export async function updateNewsletterCampaignsUpdate(  id: number, data: NewsletterCampaignRequest,  client?: API
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsUpdate(id, data)
@@ -99,7 +99,7 @@ export async function updateNewsletterCampaignsUpdate(  id: number, data: Newsle
  * @method DELETE
  * @path /cfg/newsletter/campaigns/{id}/
  */
-export async function deleteNewsletterCampaignsDestroy(  id: number,  client?
+export async function deleteNewsletterCampaignsDestroy(  id: number,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsDestroy(id)
@@ -113,7 +113,7 @@ export async function deleteNewsletterCampaignsDestroy(  id: number,  client?
  * @method POST
  * @path /cfg/newsletter/campaigns/send/
  */
-export async function createNewsletterCampaignsSendCreate(  data: SendCampaignRequest,  client?
+export async function createNewsletterCampaignsSendCreate(  data: SendCampaignRequest,  client?: API
 ): Promise<SendCampaignResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsSendCreate(data)

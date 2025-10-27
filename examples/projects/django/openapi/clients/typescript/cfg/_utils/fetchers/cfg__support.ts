@@ -48,7 +48,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/support/tickets/
  */
-export async function getSupportTicketsList(  params?: { page?: number; page_size?: number },  client?
+export async function getSupportTicketsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedTicketList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsList(params?.page, params?.page_size)
@@ -62,7 +62,7 @@ export async function getSupportTicketsList(  params?: { page?: number; page_siz
  * @method POST
  * @path /cfg/support/tickets/
  */
-export async function createSupportTicketsCreate(  data: TicketRequest,  client?
+export async function createSupportTicketsCreate(  data: TicketRequest,  client?: API
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsCreate(data)
@@ -76,7 +76,7 @@ export async function createSupportTicketsCreate(  data: TicketRequest,  client?
  * @method GET
  * @path /cfg/support/tickets/{ticket_uuid}/messages/
  */
-export async function getSupportTicketsMessagesList(  ticket_uuid: string, params?: { page?: number; page_size?: number },  client?
+export async function getSupportTicketsMessagesList(  ticket_uuid: string, params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedMessageList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesList(ticket_uuid, params?.page, params?.page_size)
@@ -90,7 +90,7 @@ export async function getSupportTicketsMessagesList(  ticket_uuid: string, param
  * @method POST
  * @path /cfg/support/tickets/{ticket_uuid}/messages/
  */
-export async function createSupportTicketsMessagesCreate(  ticket_uuid: string, data: MessageCreateRequest,  client?
+export async function createSupportTicketsMessagesCreate(  ticket_uuid: string, data: MessageCreateRequest,  client?: API
 ): Promise<MessageCreate> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesCreate(ticket_uuid, data)
@@ -104,7 +104,7 @@ export async function createSupportTicketsMessagesCreate(  ticket_uuid: string, 
  * @method GET
  * @path /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/
  */
-export async function getSupportTicketsMessagesRetrieve(  ticket_uuid: string, uuid: string,  client?
+export async function getSupportTicketsMessagesRetrieve(  ticket_uuid: string, uuid: string,  client?: API
 ): Promise<Message> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesRetrieve(ticket_uuid, uuid)
@@ -118,7 +118,7 @@ export async function getSupportTicketsMessagesRetrieve(  ticket_uuid: string, u
  * @method PUT
  * @path /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/
  */
-export async function updateSupportTicketsMessagesUpdate(  ticket_uuid: string, uuid: string, data: MessageRequest,  client?
+export async function updateSupportTicketsMessagesUpdate(  ticket_uuid: string, uuid: string, data: MessageRequest,  client?: API
 ): Promise<Message> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesUpdate(ticket_uuid, uuid, data)
@@ -132,7 +132,7 @@ export async function updateSupportTicketsMessagesUpdate(  ticket_uuid: string, 
  * @method PATCH
  * @path /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/
  */
-export async function partialUpdateSupportTicketsMessagesPartialUpdate(  ticket_uuid: string, uuid: string, data?: PatchedMessageRequest,  client?
+export async function partialUpdateSupportTicketsMessagesPartialUpdate(  ticket_uuid: string, uuid: string, data?: PatchedMessageRequest,  client?: API
 ): Promise<Message> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesPartialUpdate(ticket_uuid, uuid, data)
@@ -146,7 +146,7 @@ export async function partialUpdateSupportTicketsMessagesPartialUpdate(  ticket_
  * @method DELETE
  * @path /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/
  */
-export async function deleteSupportTicketsMessagesDestroy(  ticket_uuid: string, uuid: string,  client?
+export async function deleteSupportTicketsMessagesDestroy(  ticket_uuid: string, uuid: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesDestroy(ticket_uuid, uuid)
@@ -160,7 +160,7 @@ export async function deleteSupportTicketsMessagesDestroy(  ticket_uuid: string,
  * @method GET
  * @path /cfg/support/tickets/{uuid}/
  */
-export async function getSupportTicketsRetrieve(  uuid: string,  client?
+export async function getSupportTicketsRetrieve(  uuid: string,  client?: API
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsRetrieve(uuid)
@@ -174,7 +174,7 @@ export async function getSupportTicketsRetrieve(  uuid: string,  client?
  * @method PUT
  * @path /cfg/support/tickets/{uuid}/
  */
-export async function updateSupportTicketsUpdate(  uuid: string, data: TicketRequest,  client?
+export async function updateSupportTicketsUpdate(  uuid: string, data: TicketRequest,  client?: API
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsUpdate(uuid, data)
@@ -188,7 +188,7 @@ export async function updateSupportTicketsUpdate(  uuid: string, data: TicketReq
  * @method PATCH
  * @path /cfg/support/tickets/{uuid}/
  */
-export async function partialUpdateSupportTicketsPartialUpdate(  uuid: string, data?: PatchedTicketRequest,  client?
+export async function partialUpdateSupportTicketsPartialUpdate(  uuid: string, data?: PatchedTicketRequest,  client?: API
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsPartialUpdate(uuid, data)
@@ -202,7 +202,7 @@ export async function partialUpdateSupportTicketsPartialUpdate(  uuid: string, d
  * @method DELETE
  * @path /cfg/support/tickets/{uuid}/
  */
-export async function deleteSupportTicketsDestroy(  uuid: string,  client?
+export async function deleteSupportTicketsDestroy(  uuid: string,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsDestroy(uuid)

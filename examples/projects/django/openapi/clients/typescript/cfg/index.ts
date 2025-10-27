@@ -46,6 +46,16 @@ import { APILogger } from "./logger";
 import { CfgAuth } from "./cfg__accounts__auth/client";
 import { CfgBulkEmail } from "./cfg__newsletter__bulk_email/client";
 import { CfgCampaigns } from "./cfg__newsletter__campaigns/client";
+import { CfgCentrifugoAdminApi } from "./cfg__centrifugo__centrifugo_admin_api/client";
+import { CfgCentrifugoMonitoring } from "./cfg__centrifugo__centrifugo_monitoring/client";
+import { CfgCentrifugoTesting } from "./cfg__centrifugo__centrifugo_testing/client";
+import { CfgDashboardApiZones } from "./cfg__dashboard__dashboard_api_zones/client";
+import { CfgDashboardActivity } from "./cfg__dashboard__dashboard_activity/client";
+import { CfgDashboardCharts } from "./cfg__dashboard__dashboard_charts/client";
+import { CfgDashboardCommands } from "./cfg__dashboard__dashboard_commands/client";
+import { CfgDashboardOverview } from "./cfg__dashboard__dashboard_overview/client";
+import { CfgDashboardStatistics } from "./cfg__dashboard__dashboard_statistics/client";
+import { CfgDashboardSystem } from "./cfg__dashboard__dashboard_system/client";
 import { CfgLeadSubmission } from "./cfg__leads__lead_submission/client";
 import { CfgLogs } from "./cfg__newsletter__logs/client";
 import { CfgNewsletters } from "./cfg__newsletter__newsletters/client";
@@ -53,6 +63,7 @@ import { CfgSubscriptions } from "./cfg__newsletter__subscriptions/client";
 import { CfgTesting } from "./cfg__newsletter__testing/client";
 import { CfgUserProfile } from "./cfg__accounts__user_profile/client";
 import { CfgAccounts } from "./cfg__accounts/client";
+import { CfgCentrifugo } from "./cfg__centrifugo/client";
 import { CfgEndpoints } from "./cfg__endpoints/client";
 import { CfgHealth } from "./cfg__health/client";
 import { CfgKnowbase } from "./cfg__knowbase/client";
@@ -64,6 +75,16 @@ import { CfgTasks } from "./cfg__tasks/client";
 export * as CfgAuthTypes from "./cfg__accounts__auth/models";
 export * as CfgBulkEmailTypes from "./cfg__newsletter__bulk_email/models";
 export * as CfgCampaignsTypes from "./cfg__newsletter__campaigns/models";
+export * as CfgCentrifugoAdminApiTypes from "./cfg__centrifugo__centrifugo_admin_api/models";
+export * as CfgCentrifugoMonitoringTypes from "./cfg__centrifugo__centrifugo_monitoring/models";
+export * as CfgCentrifugoTestingTypes from "./cfg__centrifugo__centrifugo_testing/models";
+export * as CfgDashboardApiZonesTypes from "./cfg__dashboard__dashboard_api_zones/models";
+export * as CfgDashboardActivityTypes from "./cfg__dashboard__dashboard_activity/models";
+export * as CfgDashboardChartsTypes from "./cfg__dashboard__dashboard_charts/models";
+export * as CfgDashboardCommandsTypes from "./cfg__dashboard__dashboard_commands/models";
+export * as CfgDashboardOverviewTypes from "./cfg__dashboard__dashboard_overview/models";
+export * as CfgDashboardStatisticsTypes from "./cfg__dashboard__dashboard_statistics/models";
+export * as CfgDashboardSystemTypes from "./cfg__dashboard__dashboard_system/models";
 export * as CfgLeadSubmissionTypes from "./cfg__leads__lead_submission/models";
 export * as CfgLogsTypes from "./cfg__newsletter__logs/models";
 export * as CfgNewslettersTypes from "./cfg__newsletter__newsletters/models";
@@ -71,6 +92,7 @@ export * as CfgSubscriptionsTypes from "./cfg__newsletter__subscriptions/models"
 export * as CfgTestingTypes from "./cfg__newsletter__testing/models";
 export * as CfgUserProfileTypes from "./cfg__accounts__user_profile/models";
 export * as CfgAccountsTypes from "./cfg__accounts/models";
+export * as CfgCentrifugoTypes from "./cfg__centrifugo/models";
 export * as CfgEndpointsTypes from "./cfg__endpoints/models";
 export * as CfgHealthTypes from "./cfg__health/models";
 export * as CfgKnowbaseTypes from "./cfg__knowbase/models";
@@ -150,6 +172,16 @@ export class API {
   public cfg_auth!: CfgAuth;
   public cfg_bulk_email!: CfgBulkEmail;
   public cfg_campaigns!: CfgCampaigns;
+  public cfg_centrifugo_admin_api!: CfgCentrifugoAdminApi;
+  public cfg_centrifugo_monitoring!: CfgCentrifugoMonitoring;
+  public cfg_centrifugo_testing!: CfgCentrifugoTesting;
+  public cfg_dashboard_api_zones!: CfgDashboardApiZones;
+  public cfg_dashboard_activity!: CfgDashboardActivity;
+  public cfg_dashboard_charts!: CfgDashboardCharts;
+  public cfg_dashboard_commands!: CfgDashboardCommands;
+  public cfg_dashboard_overview!: CfgDashboardOverview;
+  public cfg_dashboard_statistics!: CfgDashboardStatistics;
+  public cfg_dashboard_system!: CfgDashboardSystem;
   public cfg_lead_submission!: CfgLeadSubmission;
   public cfg_logs!: CfgLogs;
   public cfg_newsletters!: CfgNewsletters;
@@ -157,6 +189,7 @@ export class API {
   public cfg_testing!: CfgTesting;
   public cfg_user_profile!: CfgUserProfile;
   public cfg_accounts!: CfgAccounts;
+  public cfg_centrifugo!: CfgCentrifugo;
   public cfg_endpoints!: CfgEndpoints;
   public cfg_health!: CfgHealth;
   public cfg_knowbase!: CfgKnowbase;
@@ -184,15 +217,23 @@ export class API {
       loggerConfig: this.options?.loggerConfig,
     });
 
-    // Inject Authorization header if token exists
-    if (this._token) {
-      this._injectAuthHeader();
-    }
+    // Always inject auth header wrapper (reads token dynamically from storage)
+    this._injectAuthHeader();
 
     // Initialize sub-clients from APIClient
     this.cfg_auth = this._client.cfg_auth;
     this.cfg_bulk_email = this._client.cfg_bulk_email;
     this.cfg_campaigns = this._client.cfg_campaigns;
+    this.cfg_centrifugo_admin_api = this._client.cfg_centrifugo_admin_api;
+    this.cfg_centrifugo_monitoring = this._client.cfg_centrifugo_monitoring;
+    this.cfg_centrifugo_testing = this._client.cfg_centrifugo_testing;
+    this.cfg_dashboard_api_zones = this._client.cfg_dashboard_api_zones;
+    this.cfg_dashboard_activity = this._client.cfg_dashboard_activity;
+    this.cfg_dashboard_charts = this._client.cfg_dashboard_charts;
+    this.cfg_dashboard_commands = this._client.cfg_dashboard_commands;
+    this.cfg_dashboard_overview = this._client.cfg_dashboard_overview;
+    this.cfg_dashboard_statistics = this._client.cfg_dashboard_statistics;
+    this.cfg_dashboard_system = this._client.cfg_dashboard_system;
     this.cfg_lead_submission = this._client.cfg_lead_submission;
     this.cfg_logs = this._client.cfg_logs;
     this.cfg_newsletters = this._client.cfg_newsletters;
@@ -200,6 +241,7 @@ export class API {
     this.cfg_testing = this._client.cfg_testing;
     this.cfg_user_profile = this._client.cfg_user_profile;
     this.cfg_accounts = this._client.cfg_accounts;
+    this.cfg_centrifugo = this._client.cfg_centrifugo;
     this.cfg_endpoints = this._client.cfg_endpoints;
     this.cfg_health = this._client.cfg_health;
     this.cfg_knowbase = this._client.cfg_knowbase;
@@ -221,15 +263,23 @@ export class API {
       loggerConfig: this.options?.loggerConfig,
     });
 
-    // Inject Authorization header if token exists
-    if (this._token) {
-      this._injectAuthHeader();
-    }
+    // Always inject auth header wrapper (reads token dynamically from storage)
+    this._injectAuthHeader();
 
     // Reinitialize sub-clients
     this.cfg_auth = this._client.cfg_auth;
     this.cfg_bulk_email = this._client.cfg_bulk_email;
     this.cfg_campaigns = this._client.cfg_campaigns;
+    this.cfg_centrifugo_admin_api = this._client.cfg_centrifugo_admin_api;
+    this.cfg_centrifugo_monitoring = this._client.cfg_centrifugo_monitoring;
+    this.cfg_centrifugo_testing = this._client.cfg_centrifugo_testing;
+    this.cfg_dashboard_api_zones = this._client.cfg_dashboard_api_zones;
+    this.cfg_dashboard_activity = this._client.cfg_dashboard_activity;
+    this.cfg_dashboard_charts = this._client.cfg_dashboard_charts;
+    this.cfg_dashboard_commands = this._client.cfg_dashboard_commands;
+    this.cfg_dashboard_overview = this._client.cfg_dashboard_overview;
+    this.cfg_dashboard_statistics = this._client.cfg_dashboard_statistics;
+    this.cfg_dashboard_system = this._client.cfg_dashboard_system;
     this.cfg_lead_submission = this._client.cfg_lead_submission;
     this.cfg_logs = this._client.cfg_logs;
     this.cfg_newsletters = this._client.cfg_newsletters;
@@ -237,6 +287,7 @@ export class API {
     this.cfg_testing = this._client.cfg_testing;
     this.cfg_user_profile = this._client.cfg_user_profile;
     this.cfg_accounts = this._client.cfg_accounts;
+    this.cfg_centrifugo = this._client.cfg_centrifugo;
     this.cfg_endpoints = this._client.cfg_endpoints;
     this.cfg_health = this._client.cfg_health;
     this.cfg_knowbase = this._client.cfg_knowbase;
@@ -255,12 +306,13 @@ export class API {
       path: string,
       options?: { params?: Record<string, any>; body?: any; formData?: FormData; headers?: Record<string, string> }
     ): Promise<T> => {
-      // Merge Authorization header with existing headers
+      // Read token from storage dynamically (supports JWT injection after instantiation)
+      const token = this.getToken();
       const mergedOptions = {
         ...options,
         headers: {
           ...(options?.headers || {}),
-          ...(this._token ? { 'Authorization': `Bearer ${this._token}` } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
       };
 

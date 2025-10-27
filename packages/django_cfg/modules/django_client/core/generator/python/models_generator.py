@@ -125,7 +125,8 @@ class ModelsGenerator:
         return template.render(
             name=schema.name,
             docstring=docstring,
-            fields=field_lines
+            fields=field_lines,
+            is_response_model=schema.is_response_model,
         )
 
     def _generate_field(
@@ -182,9 +183,13 @@ class ModelsGenerator:
         if schema.pattern:
             field_kwargs.append(f"pattern={schema.pattern!r}")
         if schema.minimum is not None:
-            field_kwargs.append(f"ge={schema.minimum}")
+            # Convert to int for integer types to avoid float scientific notation
+            min_val = int(schema.minimum) if schema.type == "integer" and isinstance(schema.minimum, float) else schema.minimum
+            field_kwargs.append(f"ge={min_val}")
         if schema.maximum is not None:
-            field_kwargs.append(f"le={schema.maximum}")
+            # Convert to int for integer types to avoid float scientific notation
+            max_val = int(schema.maximum) if schema.type == "integer" and isinstance(schema.maximum, float) else schema.maximum
+            field_kwargs.append(f"le={max_val}")
 
         # Example
         if schema.example:
@@ -267,11 +272,11 @@ class ModelsGenerator:
                 if schema.properties:
                     for prop in schema.properties.values():
                         if prop.enum and prop.name:
-                            enum_names.add(prop.name.replace(".", ""))
+                            enum_names.add(self.base.sanitize_enum_name(prop.name))
                         elif prop.ref and prop.ref in self.context.schemas:
                             ref_schema = self.context.schemas[prop.ref]
                             if ref_schema.enum:
-                                enum_names.add(prop.ref.replace(".", ""))
+                                enum_names.add(self.base.sanitize_enum_name(prop.ref))
 
         # Request models
         for name, schema in schemas.items():
@@ -282,11 +287,11 @@ class ModelsGenerator:
                 if schema.properties:
                     for prop in schema.properties.values():
                         if prop.enum and prop.name:
-                            enum_names.add(prop.name.replace(".", ""))
+                            enum_names.add(self.base.sanitize_enum_name(prop.name))
                         elif prop.ref and prop.ref in self.context.schemas:
                             ref_schema = self.context.schemas[prop.ref]
                             if ref_schema.enum:
-                                enum_names.add(prop.ref.replace(".", ""))
+                                enum_names.add(self.base.sanitize_enum_name(prop.ref))
 
         # Patch models
         for name, schema in schemas.items():
@@ -297,11 +302,11 @@ class ModelsGenerator:
                 if schema.properties:
                     for prop in schema.properties.values():
                         if prop.enum and prop.name:
-                            enum_names.add(prop.name.replace(".", ""))
+                            enum_names.add(self.base.sanitize_enum_name(prop.name))
                         elif prop.ref and prop.ref in self.context.schemas:
                             ref_schema = self.context.schemas[prop.ref]
                             if ref_schema.enum:
-                                enum_names.add(prop.ref.replace(".", ""))
+                                enum_names.add(self.base.sanitize_enum_name(prop.ref))
 
         template = self.jinja_env.get_template('models/app_models.py.jinja')
         content = template.render(

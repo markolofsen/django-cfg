@@ -1,5 +1,23 @@
+# Persistent volumes - ignore completely
+volumes/
+
+# Runtime files and logs
+files/
+*.log
+logs/
 
 # Environment secrets (contains real API keys - DO NOT COMMIT)
 # .env.secrets
 # .env.local
 # .env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

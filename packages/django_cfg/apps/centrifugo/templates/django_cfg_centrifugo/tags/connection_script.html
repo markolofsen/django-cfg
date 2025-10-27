@@ -1,0 +1,48 @@
+{% load static %}
+{% if config and user.is_authenticated %}
+<!-- Centrifugo WebSocket Connection -->
+<script src="https://unpkg.com/centrifuge@^5/dist/centrifuge.js"></script>
+<script>
+(function() {
+    // Centrifugo connection configuration
+    window.centrifugoConfig = {
+        url: '{{ config.centrifugo_url }}',
+        token: '{{ token }}',
+        debug: {{ config.log_level|lower == 'debug'|yesno:"true,false" }}
+    };
+
+    // Initialize Centrifuge client
+    window.centrifuge = new Centrifuge(window.centrifugoConfig.url, {
+        token: window.centrifugoConfig.token,
+        debug: window.centrifugoConfig.debug
+    });
+
+    // Connection event handlers
+    window.centrifuge.on('connected', function(ctx) {
+        console.log('[Centrifugo] Connected:', ctx);
+        document.dispatchEvent(new CustomEvent('centrifugo:connected', { detail: ctx }));
+    });
+
+    window.centrifuge.on('disconnected', function(ctx) {
+        console.log('[Centrifugo] Disconnected:', ctx);
+        document.dispatchEvent(new CustomEvent('centrifugo:disconnected', { detail: ctx }));
+    });
+
+    window.centrifuge.on('error', function(ctx) {
+        console.error('[Centrifugo] Error:', ctx);
+        document.dispatchEvent(new CustomEvent('centrifugo:error', { detail: ctx }));
+    });
+
+    // Auto-connect on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            window.centrifuge.connect();
+        });
+    } else {
+        window.centrifuge.connect();
+    }
+
+    console.log('[Centrifugo] Client initialized');
+})();
+</script>
+{% endif %}

@@ -19,8 +19,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/admin/chat/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedChatResponseList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedChatResponseList.model_validate(response.json())
 
 
     async def admin_chat_create(self, data: ChatResponseRequest) -> ChatResponse:
@@ -106,8 +105,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/admin/documents/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None, "status": status if status is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedDocumentList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedDocumentList.model_validate(response.json())
 
 
     async def admin_documents_create(self, data: DocumentCreateRequest) -> Document:
@@ -211,8 +209,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/admin/sessions/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedChatSessionList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedChatSessionList.model_validate(response.json())
 
 
     async def admin_sessions_create(self, data: ChatSessionCreateRequest) -> ChatSession:
@@ -300,8 +297,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/categories/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedPublicCategoryList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedPublicCategoryList.model_validate(response.json())
 
 
     async def categories_retrieve(self, id: str) -> PublicCategory:
@@ -325,8 +321,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/documents/"
         response = await self._client.get(url, params={"category": category if category is not None else None, "page": page if page is not None else None, "page_size": page_size if page_size is not None else None, "search": search if search is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedPublicDocumentListList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedPublicDocumentListList.model_validate(response.json())
 
 
     async def documents_retrieve(self, id: str) -> PublicDocument:
@@ -348,8 +343,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/system/archives/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedDocumentArchiveListList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedDocumentArchiveListList.model_validate(response.json())
 
 
     async def system_archives_create(self, data: InlineRequestBody) -> ArchiveProcessingResult:
@@ -425,8 +419,7 @@ class CfgKnowbaseAPI:
         url = f"/cfg/knowbase/system/archives/{id}/items/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedArchiveItemList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedArchiveItemList.model_validate(response.json())
 
 
     async def system_archives_search_create(self, id: str, data: ArchiveSearchRequestRequest, page: int | None = None, page_size: int | None = None) -> PaginatedArchiveSearchResultList:
@@ -484,8 +477,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/system/chunks/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedArchiveItemChunkList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedArchiveItemChunkList.model_validate(response.json())
 
 
     async def system_chunks_create(self, data: ArchiveItemChunkRequest) -> ArchiveItemChunk:
@@ -569,8 +561,7 @@ class CfgKnowbaseAPI:
         url = "/cfg/knowbase/system/items/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedArchiveItemList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedArchiveItemList.model_validate(response.json())
 
 
     async def system_items_create(self, data: ArchiveItemRequest) -> ArchiveItem:
@@ -632,8 +623,7 @@ class CfgKnowbaseAPI:
         url = f"/cfg/knowbase/system/items/{id}/chunks/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedArchiveItemChunkList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedArchiveItemChunkList.model_validate(response.json())
 
 
     async def system_items_content_retrieve(self, id: str) -> ArchiveItemDetail:

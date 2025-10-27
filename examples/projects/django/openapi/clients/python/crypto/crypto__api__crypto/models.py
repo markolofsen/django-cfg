@@ -14,7 +14,7 @@ class PaginatedCoinListList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -26,7 +26,7 @@ class PaginatedCoinListList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -39,7 +39,7 @@ class Coin(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -57,12 +57,12 @@ class Coin(BaseModel):
     description: str = None
     website: str = Field(None, max_length=200)
     whitepaper_url: str = Field(None, max_length=200)
-    rank: int = Field(None, description='Market cap rank', ge=0.0, le=2147483647.0)
+    rank: int = Field(None, description='Market cap rank', ge=0, le=2147483647)
     is_active: bool = None
     is_tradeable: bool = None
     is_price_up_24h: bool = ...
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -75,14 +75,14 @@ class CoinStats(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     total_coins: int = ...
     total_market_cap_usd: str = Field(pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
     total_volume_24h_usd: str = Field(pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
-    trending_coins: list[dict[str, Any]] = ...
+    trending_coins: list[Any] = ...
 
 
 
@@ -94,7 +94,7 @@ class PaginatedExchangeList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -106,7 +106,7 @@ class PaginatedExchangeList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -119,7 +119,7 @@ class Exchange(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -131,16 +131,16 @@ class Exchange(BaseModel):
     website: str = Field(None, max_length=200)
     logo_url: str = Field(None, max_length=200)
     volume_24h_usd: str = Field(None, description='24h trading volume', pattern='^-?\\d{0,18}(?:\\.\\d{0,2})?$')
-    num_markets: int = Field(None, description='Number of trading pairs', ge=0.0, le=2147483647.0)
-    num_coins: int = Field(None, description='Number of supported coins', ge=0.0, le=2147483647.0)
+    num_markets: int = Field(None, description='Number of trading pairs', ge=0, le=2147483647)
+    num_coins: int = Field(None, description='Number of supported coins', ge=0, le=2147483647)
     maker_fee_percent: str = Field(None, pattern='^-?\\d{0,1}(?:\\.\\d{0,4})?$')
     taker_fee_percent: str = Field(None, pattern='^-?\\d{0,1}(?:\\.\\d{0,4})?$')
     is_active: bool = None
     is_verified: bool = None
     supports_api: bool = None
-    rank: int = Field(None, description='Exchange rank by volume', ge=0.0, le=2147483647.0)
-    created_at: str = ...
-    updated_at: str = ...
+    rank: int = Field(None, description='Exchange rank by volume', ge=0, le=2147483647)
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 
@@ -152,7 +152,7 @@ class PaginatedWalletList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -164,7 +164,7 @@ class PaginatedWalletList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -177,21 +177,21 @@ class Wallet(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     id: int = ...
     user: int = ...
     coin: int = ...
-    coin_info: dict[str, Any] = ...
+    coin_info: Any = ...
     balance: str = Field(None, description='Available balance', pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
-    locked_balance: str = Field(description='Locked balance (in orders)', pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
-    total_balance: str = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
-    value_usd: str = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
+    locked_balance: Any = Field(description='Locked balance (in orders)', pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
+    total_balance: Any = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
+    value_usd: Any = Field(pattern='^-?\\d{0,12}(?:\\.\\d{0,8})?$')
     address: str = Field(None, description='Deposit address', max_length=200)
-    created_at: str = ...
-    updated_at: str = ...
+    created_at: Any = ...
+    updated_at: Any = ...
 
 
 

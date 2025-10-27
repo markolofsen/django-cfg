@@ -99,9 +99,9 @@ class APIConfig(BaseConfig):
                 'MAX_PAGE_SIZE': self.max_page_size,
 
                 'DEFAULT_AUTHENTICATION_CLASSES': [
-                    'rest_framework.authentication.SessionAuthentication',
-                    'rest_framework.authentication.TokenAuthentication',
                     'rest_framework_simplejwt.authentication.JWTAuthentication',
+                    'rest_framework.authentication.TokenAuthentication',
+                    # SessionAuthentication removed (requires CSRF)
                 ],
 
                 'DEFAULT_PERMISSION_CLASSES': [

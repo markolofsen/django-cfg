@@ -47,7 +47,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /api/trading/orders/
  */
-export async function getTradingOrdersList(  params?: { page?: number; page_size?: number },  client?
+export async function getTradingOrdersList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedOrderList> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersList(params?.page, params?.page_size)
@@ -61,7 +61,7 @@ export async function getTradingOrdersList(  params?: { page?: number; page_size
  * @method POST
  * @path /api/trading/orders/
  */
-export async function createTradingOrdersCreate(  data: OrderCreateRequest,  client?
+export async function createTradingOrdersCreate(  data: OrderCreateRequest,  client?: API
 ): Promise<OrderCreate> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersCreate(data)
@@ -75,7 +75,7 @@ export async function createTradingOrdersCreate(  data: OrderCreateRequest,  cli
  * @method GET
  * @path /api/trading/orders/{id}/
  */
-export async function getTradingOrdersRetrieve(  id: number,  client?
+export async function getTradingOrdersRetrieve(  id: number,  client?: API
 ): Promise<Order> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersRetrieve(id)
@@ -89,7 +89,7 @@ export async function getTradingOrdersRetrieve(  id: number,  client?
  * @method PUT
  * @path /api/trading/orders/{id}/
  */
-export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest,  client?
+export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest,  client?: API
 ): Promise<Order> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersUpdate(id, data)
@@ -103,7 +103,7 @@ export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest
  * @method PATCH
  * @path /api/trading/orders/{id}/
  */
-export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data?: PatchedOrderRequest,  client?
+export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data?: PatchedOrderRequest,  client?: API
 ): Promise<Order> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersPartialUpdate(id, data)
@@ -117,7 +117,7 @@ export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data
  * @method DELETE
  * @path /api/trading/orders/{id}/
  */
-export async function deleteTradingOrdersDestroy(  id: number,  client?
+export async function deleteTradingOrdersDestroy(  id: number,  client?: API
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersDestroy(id)
@@ -131,7 +131,7 @@ export async function deleteTradingOrdersDestroy(  id: number,  client?
  * @method GET
  * @path /api/trading/portfolios/
  */
-export async function getTradingPortfoliosList(  params?: { page?: number; page_size?: number },  client?
+export async function getTradingPortfoliosList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedPortfolioList> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosList(params?.page, params?.page_size)
@@ -145,7 +145,7 @@ export async function getTradingPortfoliosList(  params?: { page?: number; page_
  * @method GET
  * @path /api/trading/portfolios/{id}/
  */
-export async function getTradingPortfoliosRetrieve(  id: number,  client?
+export async function getTradingPortfoliosRetrieve(  id: number,  client?: API
 ): Promise<Portfolio> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosRetrieve(id)
@@ -159,7 +159,7 @@ export async function getTradingPortfoliosRetrieve(  id: number,  client?
  * @method GET
  * @path /api/trading/portfolios/me/
  */
-export async function getTradingPortfoliosMeRetrieve(  client?
+export async function getTradingPortfoliosMeRetrieve(  client?: API
 ): Promise<Portfolio> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosMeRetrieve()
@@ -173,7 +173,7 @@ export async function getTradingPortfoliosMeRetrieve(  client?
  * @method GET
  * @path /api/trading/portfolios/stats/
  */
-export async function getTradingPortfoliosStatsRetrieve(  client?
+export async function getTradingPortfoliosStatsRetrieve(  client?: API
 ): Promise<PortfolioStats> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosStatsRetrieve()

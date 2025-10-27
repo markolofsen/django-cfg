@@ -1,0 +1,45 @@
+<!-- Overview Tab (Active by default) -->
+<div id="overview-tab" class="tab-panel">
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Publish Timeline Chart -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                <span class="material-icons mr-2 text-purple-500">timeline</span>
+                Publish Timeline (24h)
+            </h3>
+            <canvas id="publish-timeline-chart" height="200"></canvas>
+        </div>
+
+        <!-- Success/Failure Breakdown -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                <span class="material-icons mr-2 text-purple-500">pie_chart</span>
+                Success/Failure Breakdown
+            </h3>
+            <canvas id="status-breakdown-chart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- ACK Statistics -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span class="material-icons mr-2 text-purple-500">verified</span>
+            ACK Statistics
+        </h3>
+        <div id="ack-stats-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total ACKs Received</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white" id="total-acks">0</div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg ACKs per Publish</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white" id="avg-acks">0.0</div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">ACK Tracking Rate</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white"><span id="ack-rate">0</span>%</div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import NewsletterCampaignstatus
+from ..enums import NewsletterCampaignStatus
 
 
 class PaginatedNewsletterCampaignList(BaseModel):
@@ -16,7 +16,7 @@ class PaginatedNewsletterCampaignList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -28,7 +28,7 @@ class PaginatedNewsletterCampaignList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -41,13 +41,13 @@ class NewsletterCampaign(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     id: int = ...
     newsletter: int = ...
-    newsletter_title: str = ...
+    newsletter_title: Any = ...
     subject: str = Field(max_length=255)
     email_title: str = Field(max_length=255)
     main_text: str = ...
@@ -56,8 +56,8 @@ class NewsletterCampaign(BaseModel):
     button_url: str = Field(None, max_length=200)
     secondary_text: str = None
     status: NewsletterCampaignStatus = Field(description='* `draft` - Draft\n* `sending` - Sending\n* `sent` - Sent\n* `failed` - Failed')
-    created_at: str = ...
-    sent_at: str | None = ...
+    created_at: Any = ...
+    sent_at: Any | None = ...
     recipient_count: int = ...
 
 
@@ -71,7 +71,7 @@ class SendCampaignResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -91,7 +91,7 @@ class ErrorResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -109,7 +109,7 @@ class NewsletterCampaignRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -133,7 +133,7 @@ class SendCampaignRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

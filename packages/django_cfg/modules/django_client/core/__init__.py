@@ -19,7 +19,7 @@ from .config import (
 )
 
 # Generators
-from .generator import PythonGenerator, TypeScriptGenerator
+from .generator import GoGenerator, ProtoGenerator, PythonGenerator, TypeScriptGenerator
 
 # Groups
 from .groups import GroupDetector, GroupManager
@@ -52,4 +52,6 @@ __all__ = [
     "OpenAPI31Parser",
     "PythonGenerator",
     "TypeScriptGenerator",
+    "GoGenerator",
+    "ProtoGenerator",
 ]

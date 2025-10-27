@@ -40,6 +40,8 @@ DEFAULT_APPS: List[str] = [
     "django_extensions",
     "constance",
     "constance.backends.database",
+    # Security
+    "axes",  # django-axes for brute-force protection
     # Django CFG Core
     "django_cfg",
     "django_cfg.modules.django_client",
@@ -54,6 +56,8 @@ DEFAULT_MIDDLEWARE: List[str] = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Security: django-axes must be after AuthenticationMiddleware
+    "axes.middleware.AxesMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

@@ -482,6 +482,243 @@ except Exception as e:
     print(f"Error: {e}")
 ```
 
+## Protocol Buffer/gRPC Clients
+
+Django-CFG can generate Protocol Buffer definitions and gRPC service definitions from your OpenAPI specification. This is useful when you need high-performance RPC communication or want to use gRPC instead of REST.
+
+:::info Compilation Required
+Proto files must be compiled with `protoc` before use. Each generated group includes a README.md with detailed compilation instructions for Python, Go, TypeScript, and other languages.
+:::
+
+### Installation
+
+Install gRPC tools for your language:
+
+#### Python
+```bash
+pip install grpcio grpcio-tools
+```
+
+#### Go
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+```
+
+#### TypeScript
+```bash
+npm install ts-proto
+```
+
+### Generating Proto Files
+
+```bash
+# Generate Protocol Buffers for specific group
+python manage.py generate_client \
+  --openapi-files openapi/groups/profiles.yaml \
+  --output-dir openapi/clients \
+  --group profiles \
+  --proto --no-python --no-typescript --no-go
+
+# Or generate all clients including proto
+python manage.py generate_api  # Proto enabled by default
+```
+
+### Compilation
+
+Proto files must be compiled to your target language:
+
+#### Python
+```bash
+cd openapi/clients/proto/profiles
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. api__profiles/*.proto
+```
+
+#### Go
+```bash
+cd openapi/clients/proto/profiles
+protoc -I. --go_out=. --go-grpc_out=. api__profiles/*.proto
+```
+
+#### TypeScript
+```bash
+cd openapi/clients/proto/profiles
+protoc -I. --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=. api__profiles/*.proto
+```
+
+See the generated `README.md` in each proto group for complete compilation instructions.
+
+### Basic Usage (Python)
+
+```python
+import grpc
+from profiles.api__profiles import service_pb2, service_pb2_grpc
+
+# Create insecure channel (for development)
+channel = grpc.insecure_channel('localhost:50051')
+
+# Create service stub
+stub = service_pb2_grpc.ProfilesServiceStub(channel)
+
+# List profiles
+request = service_pb2.ProfilesProfilesListRequest(
+    page=1,
+    page_size=10
+)
+response = stub.ProfilesProfilesList(request)
+
+print(f"Found {response.data.count} profiles")
+for profile in response.data.results:
+    print(f"- {profile.user.email}: {profile.bio}")
+
+# Create profile
+create_request = service_pb2.ProfilesProfilesCreateRequest(
+    body=service_pb2.Userprofilerequest(
+        bio="Software Engineer",
+        location="San Francisco, CA",
+        website="https://example.com"
+    )
+)
+new_profile = stub.ProfilesProfilesCreate(create_request)
+print(f"Created profile for {new_profile.data.user.email}")
+```
+
+### Basic Usage (Go)
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "google.golang.org/grpc"
+    pb "your-module/profiles/api__profiles"
+)
+
+func main() {
+    // Create connection
+    conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+    if err != nil {
+        log.Fatalf("did not connect: %v", err)
+    }
+    defer conn.Close()
+
+    // Create client
+    client := pb.NewProfilesServiceClient(conn)
+
+    // List profiles
+    resp, err := client.ProfilesProfilesList(context.Background(), &pb.ProfilesProfilesListRequest{
+        Page:     proto.Int64(1),
+        PageSize: proto.Int64(10),
+    })
+    if err != nil {
+        log.Fatalf("could not list: %v", err)
+    }
+
+    fmt.Printf("Found %d profiles\n", resp.Data.Count)
+    for _, profile := range resp.Data.Results {
+        fmt.Printf("- %s: %s\n", profile.User.Email, profile.Bio)
+    }
+}
+```
+
+### Authentication
+
+gRPC uses interceptors for authentication instead of HTTP headers:
+
+```python
+import grpc
+
+# Create credentials interceptor
+class AuthInterceptor(grpc.UnaryUnaryClientInterceptor):
+    def __init__(self, token):
+        self._token = token
+
+    def intercept_unary_unary(self, continuation, client_call_details, request):
+        metadata = []
+        if client_call_details.metadata is not None:
+            metadata = list(client_call_details.metadata)
+        metadata.append(('authorization', f'Bearer {self._token}'))
+
+        new_details = client_call_details._replace(metadata=metadata)
+        return continuation(new_details, request)
+
+# Use interceptor
+channel = grpc.insecure_channel('localhost:50051')
+intercepted_channel = grpc.intercept_channel(channel, AuthInterceptor('your-token'))
+stub = service_pb2_grpc.ProfilesServiceStub(intercepted_channel)
+```
+
+### Error Handling
+
+gRPC uses status codes instead of HTTP status codes:
+
+```python
+import grpc
+
+try:
+    response = stub.ProfilesProfilesRetrieve(request)
+except grpc.RpcError as e:
+    if e.code() == grpc.StatusCode.NOT_FOUND:
+        print("Profile not found")
+    elif e.code() == grpc.StatusCode.PERMISSION_DENIED:
+        print("Permission denied")
+    else:
+        print(f"RPC failed: {e.code()}: {e.details()}")
+```
+
+### Features
+
+- ✅ **Type-safe messages** - Proto3 message definitions with full type safety
+- ✅ **gRPC services** - Complete gRPC service definitions with all operations
+- ✅ **Multi-language support** - Compile to Python, Go, TypeScript, C++, Java, Rust, etc.
+- ✅ **Binary serialization** - Efficient Protocol Buffer encoding
+- ✅ **Cross-platform** - Works with any gRPC implementation
+- ✅ **All OpenAPI features** - Enums, arrays, nested objects, pagination
+
+### Generated Files
+
+For each service, the proto generator creates:
+
+```
+openapi/clients/proto/profiles/
+├── api__profiles/
+│   ├── messages.proto          # Message definitions (models, enums)
+│   ├── service.proto           # gRPC service and RPC methods
+│   ├── messages_pb2.py         # Compiled Python messages
+│   ├── messages_pb2_grpc.py    # Empty (no services in messages)
+│   ├── service_pb2.py          # Request/Response message classes
+│   └── service_pb2_grpc.py     # gRPC client stubs and server servicers
+└── README.md                    # Compilation instructions
+```
+
+### Limitations
+
+Proto generation has some limitations compared to REST clients:
+
+- **File uploads**: Multipart/form-data is converted to `bytes` fields (streaming not auto-generated)
+- **Authentication**: Must be implemented via gRPC interceptors (not auto-generated)
+- **Error codes**: Uses gRPC status codes instead of HTTP status codes
+- **No hooks/fetchers**: Proto clients require manual integration (no SWR hooks equivalent)
+- **Compilation step**: Proto files must be compiled with `protoc` before use
+
+### When to Use gRPC vs REST
+
+**Use gRPC/Proto when:**
+- ✅ You need high performance and low latency
+- ✅ Building microservices that communicate internally
+- ✅ Need bi-directional streaming
+- ✅ Working with polyglot services (multiple languages)
+- ✅ Binary efficiency is important
+
+**Use REST when:**
+- ✅ Building web/mobile applications with HTTP clients
+- ✅ Need browser compatibility without extra tooling
+- ✅ Want simpler debugging with HTTP tools
+- ✅ Working with third-party integrations
+- ✅ Need standard HTTP features (caching, CDN, etc.)
+
 ## Type Safety
 
 ### TypeScript Types

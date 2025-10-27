@@ -46,9 +46,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -89,9 +86,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -120,9 +114,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -173,9 +164,6 @@
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "responses": {
@@ -214,9 +202,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -266,9 +251,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -307,9 +289,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -902,11 +881,6 @@
       }
     },
     "securitySchemes": {
-      "cookieAuth": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "sessionid"
-      },
       "jwtAuth": {
         "type": "http",
         "scheme": "bearer",

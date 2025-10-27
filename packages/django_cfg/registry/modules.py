@@ -10,8 +10,8 @@ MODULES_REGISTRY = {
     # Configuration utilities
     "set_current_config": ("django_cfg.core.config", "set_current_config"),
 
-    # IPC/RPC module
-    "DjangoCfgRPCConfig": ("django_cfg.apps.ipc", "DjangoCfgRPCConfig"),
+    # Centrifugo module
+    "DjangoCfgCentrifugoConfig": ("django_cfg.apps.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
     # Import/Export integration (simple re-exports)
     "ImportForm": ("django_cfg.modules.django_import_export", "ImportForm"),

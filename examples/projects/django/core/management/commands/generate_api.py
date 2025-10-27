@@ -3,16 +3,23 @@ Generate and deploy API clients for Django-CFG Example.
 
 Usage:
     python manage.py generate_api
+    make api
 
 Workflow:
     1. Generate OpenAPI clients (django-cfg)
-    2. Copy CFG → @api package
-    3. Copy Profiles + Trading + Crypto → demo app
-    4. Build @api package
+    2. Generate Centrifugo WebSocket RPC clients
+    3. Copy Centrifugo TypeScript RPC clients → demo app (rpc/generated/)
+    4. Copy Profiles + Trading + Crypto → demo app (api/generated/)
+    5. Build @api package
 
 Architecture:
-    - @api package: CFG endpoints (shared across all apps)
-    - Demo app: Profiles + Trading + Crypto in generated/
+    - Demo app:
+        - api/generated/: Profiles + Trading + Crypto OpenAPI clients
+        - rpc/generated/: Centrifugo WebSocket RPC clients (TypeScript)
+    - opensdk/: Full Centrifugo WebSocket RPC clients (Python, TypeScript, Go)
+
+Note:
+    - CFG clients are NOT copied to @api package (Step 3 disabled)
 """
 
 import shutil
@@ -32,7 +39,7 @@ class Command(BaseCommand):
         self.stdout.write('🚀 Starting API generation...')
 
         # Step 1: Generate OpenAPI clients
-        self.stdout.write('⚙️  Generating OpenAPI clients...')
+        self.stdout.write('\n⚙️  Generating OpenAPI clients...')
         try:
             call_command('generate_clients')
             self.stdout.write(self.style.SUCCESS('✅ OpenAPI clients generated'))
@@ -42,35 +49,61 @@ class Command(BaseCommand):
 
         # Paths setup
         base_dir = Path(__file__).resolve().parent.parent.parent.parent
+
+        # Step 2: Generate Centrifugo WebSocket RPC clients
+        self.stdout.write('\n🔌 Generating Centrifugo WebSocket RPC clients...')
+        opensdk_dir = base_dir / "opensdk"
+
+        try:
+            call_command('generate_centrifugo_clients',
+                        output=str(opensdk_dir),
+                        all=True,
+                        verbose=False)
+            self.stdout.write(self.style.SUCCESS('✅ Centrifugo clients generated'))
+            self.stdout.write(self.style.SUCCESS(f'   📁 Python: opensdk/python/'))
+            self.stdout.write(self.style.SUCCESS(f'   📁 TypeScript: opensdk/typescript/'))
+            self.stdout.write(self.style.SUCCESS(f'   📁 Go: opensdk/go/'))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'⚠️  Centrifugo generation failed: {e}'))
+            self.stdout.write(self.style.WARNING('   (Continuing with OpenAPI clients only)'))
         ts_source = base_dir / "openapi" / "clients" / "typescript"
         projects_root = base_dir.parent
 
-        # Step 2: Copy CFG to @api package
-        self.stdout.write('\n📦 Copying CFG to @api package...')
-        ts_cfg_source = ts_source / "cfg"
-        api_package_ts = projects_root / "frontend" / "packages" / "api" / "src" / "cfg" / "generated"
+        # Step 3: Copy Centrifugo TypeScript RPC clients to demo app
+        self.stdout.write('\n🔌 Copying Centrifugo TypeScript RPC clients to demo app...')
+        centrifugo_ts_source = opensdk_dir / "typescript"
+        demo_rpc_target = projects_root / "frontend" / "apps" / "demo" / "src" / "rpc" / "generated"
 
-        if not ts_cfg_source.exists():
-            self.stdout.write(self.style.ERROR(f'❌ CFG source not found: {ts_cfg_source}'))
-            return
+        if centrifugo_ts_source.exists():
+            try:
+                # Remove old RPC clients
+                if demo_rpc_target.exists():
+                    shutil.rmtree(demo_rpc_target)
 
-        try:
-            # Remove old CFG
-            if api_package_ts.exists():
-                shutil.rmtree(api_package_ts)
+                # Create target directory
+                demo_rpc_target.mkdir(parents=True, exist_ok=True)
 
-            # Copy new CFG
-            api_package_ts.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(ts_cfg_source, api_package_ts, dirs_exist_ok=True)
+                # Copy only .ts files
+                ts_files = list(centrifugo_ts_source.glob('*.ts'))
+                if ts_files:
+                    for ts_file in ts_files:
+                        shutil.copy2(ts_file, demo_rpc_target / ts_file.name)
 
-            self.stdout.write(self.style.SUCCESS(
-                f'✅ CFG → {api_package_ts.relative_to(projects_root)}'
+                    self.stdout.write(self.style.SUCCESS(
+                        f'✅ Centrifugo RPC ({len(ts_files)} .ts files) → {demo_rpc_target.relative_to(projects_root)}'
+                    ))
+                else:
+                    self.stdout.write(self.style.WARNING(
+                        f'⚠️  No .ts files found in {centrifugo_ts_source.relative_to(base_dir)}'
+                    ))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'❌ Failed to copy Centrifugo RPC clients: {e}'))
+        else:
+            self.stdout.write(self.style.WARNING(
+                f'⚠️  Centrifugo TypeScript clients not found at {centrifugo_ts_source.relative_to(base_dir)}'
             ))
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'❌ Failed to copy CFG: {e}'))
-            return
 
-        # Step 3: Copy Profiles + Trading + Crypto to demo app
+        # Step 4: Copy Profiles + Trading + Crypto to demo app
         self.stdout.write('\n🎨 Copying Profiles + Trading + Crypto to demo app...')
         demo_api_base = projects_root / "frontend" / "apps" / "demo" / "src" / "api" / "generated"
 
@@ -98,7 +131,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'❌ Failed to copy {group}: {e}'))
 
-        # Step 4: Build @api package
+        # Step 5: Build @api package
         self.stdout.write('\n🔨 Building @api package...')
         api_package_dir = projects_root / "frontend" / "packages" / "api"
 
@@ -125,5 +158,6 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(self.style.SUCCESS('\n🎉 API generation completed!'))
-        self.stdout.write(self.style.SUCCESS('   📦 @api package: CFG endpoints (shared)'))
-        self.stdout.write(self.style.SUCCESS('   🎨 demo app: Profiles + Trading + Crypto in generated/'))
+        self.stdout.write(self.style.SUCCESS('   🎨 demo app: Profiles + Trading + Crypto in api/generated/'))
+        self.stdout.write(self.style.SUCCESS('   🔌 demo app: Centrifugo WebSocket RPC clients in rpc/generated/'))
+        self.stdout.write(self.style.SUCCESS('   📂 opensdk: Full clients (Python, TypeScript, Go)'))

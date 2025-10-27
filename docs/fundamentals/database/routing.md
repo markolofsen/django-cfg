@@ -121,84 +121,164 @@ def allow_migrate(self, db, app_label, **hints):
 
 ### Setup
 
-```python
-# settings.py
-import dj_database_url
-from django_cfg import load_config
-
-config = load_config()
-
-DATABASES = {
-    'default': dj_database_url.parse(config.database.url),
-    'blog_db': dj_database_url.parse(config.database.url_blog),
-    'shop_db': dj_database_url.parse(config.database.url_shop),
-}
-
-# Enable routing
-DATABASE_ROUTERS = ['django_cfg.routing.DatabaseRouter']
-
-# Define routing rules
-DATABASE_ROUTING_RULES = {
-    'blog': 'blog_db',
-    'shop': 'shop_db',
-}
-```
-
-### YAML Configuration
-
-```yaml
-# config.yaml
-database:
-  url: "postgresql://localhost/main"
-  url_blog: "postgresql://localhost/blog_db"
-  url_shop: "postgresql://localhost/shop_db"
-```
-
-## Usage Examples
-
-### Automatic Routing
+:::warning[Advanced Feature]
+Most applications don't need database routing. Use this **only** if you have:
+- Multiple physical databases for different modules
+- Read replicas for performance
+- Separate analytics/reporting database
+:::
 
 ```python
-# Blog operations automatically use blog_db
-from apps.blog.models import Post
+# api/config.py - ONLY use if you need multiple databases!
+from django_cfg import DjangoConfig, DatabaseConfig
+from .environment import env
 
-post = Post.objects.create(title="New Post")
-# Automatically routed to blog_db
+class MyDjangoConfig(DjangoConfig):
+    # Single database (default for most SaaS apps)
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
 
-posts = Post.objects.all()
-# Automatically routed to blog_db
-
-# Shop operations automatically use shop_db
-from apps.shop.models import Product
-
-product = Product.objects.create(name="Django Book", price=29.99)
-# Automatically routed to shop_db
-
-# User operations automatically use default
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-user = User.objects.create_user(email="user@example.com")
-# Automatically routed to default database
+# Generate Django settings
+config = MyDjangoConfig()
 ```
 
-### Manual Routing (When Needed)
+For advanced multi-database setup (rare), see [Multi-Database Guide](./multi-database).
+
+### Environment Configuration
+
+```bash
+# .env or system environment variables
+DATABASE__URL="postgresql://localhost/mydb"
+```
 
 ```python
-# Explicitly specify database
-post = Post.objects.using('blog_db').get(id=1)
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Write to specific database
-product = Product.objects.using('shop_db').create(name="Special Product")
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
 
-# Query across all databases
-all_databases = ['default', 'blog_db', 'shop_db']
-for db in all_databases:
-    count = Post.objects.using(db).count()
-    print(f"Posts in {db}: {count}")
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 ```
 
-## Routing Flow
+:::tip[Single Database for SaaS]
+Most SaaS applications use a **single database** with multiple apps/modules. Database routing is typically only needed for:
+- Read replicas (performance)
+- Analytics warehouses (separate reporting DB)
+- Legacy system integration
+:::
+
+---
+
+## Advanced: Read Replica Setup
+
+For **performance scaling** with read replicas:
+
+### Configuration
+
+```python
+# api/environment/loader.py
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+    url_replica: str | None = Field(default=None)
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
+```
+
+```bash
+# Production ENV
+DATABASE__URL="postgresql://app:pass@db-primary.example.com/mydb"
+DATABASE__URL_REPLICA="postgresql://readonly:pass@db-replica.example.com/mydb"
+```
+
+```python
+# api/config.py
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url),
+    }
+
+    if env.database.url_replica:
+        databases["replica"] = DatabaseConfig.from_url(url=env.database.url_replica)
+        database_routers = ["myapp.routers.ReadReplicaRouter"]
+```
+
+### Custom Router
+
+```python
+# myapp/routers.py
+import random
+
+class ReadReplicaRouter:
+    """Route 80% of reads to replica, all writes to primary."""
+
+    def db_for_read(self, model, **hints):
+        """Most reads go to replica."""
+        return 'replica' if random.random() < 0.8 else 'default'
+
+    def db_for_write(self, model, **hints):
+        """All writes to primary."""
+        return 'default'
+
+    def allow_relation(self, obj1, obj2, **hints):
+        """Allow relations between same database."""
+        return True
+
+    def allow_migrate(self, db, app_label, **hints):
+        """Only migrate on primary."""
+        return db == 'default'
+```
+
+### Usage Examples
+
+```python
+from apps.profiles.models import User
+
+# Writes always go to primary
+user = User.objects.create(email="user@example.com")
+# → Routed to 'default' (primary)
+
+# Reads mostly go to replica (80%)
+users = User.objects.all()
+# → Routed to 'replica' (80%) or 'default' (20%)
+
+# Force specific database when needed
+fresh_user = User.objects.using('default').get(id=user.id)
+# → Always reads from primary (latest data)
+
+heavy_report = User.objects.using('analytics').aggregate(
+    total=Count('*'),
+    revenue=Sum('purchases__amount')
+)
+# → Use analytics warehouse for heavy queries
+```
+
+### Manual Database Selection
+
+```python
+# Force read from primary (when you need latest data)
+latest_user = User.objects.using('default').get(id=123)
+
+# Force read from replica (when eventual consistency is ok)
+cached_users = User.objects.using('replica').filter(is_active=True)
+
+# Use analytics database for reports
+from django.db import connections
+
+with connections['analytics'].cursor() as cursor:
+    cursor.execute("SELECT * FROM user_stats WHERE created_at > NOW() - INTERVAL '30 days'")
+    results = cursor.fetchall()
+```
+
+## Routing Flow - Read Replica Pattern
 
 <Tabs groupId="routing-flow">
   <TabItem value="read" label="Read Operation" default>
@@ -207,27 +287,32 @@ for db in all_databases:
 sequenceDiagram
     participant U as User Code
     participant D as Django ORM
-    participant R as DatabaseRouter
-    participant DB as blog_db
+    participant R as ReadReplicaRouter
+    participant Replica as Replica DB
+    participant Primary as Primary DB
 
-    U->>D: Post.objects.all()
-    D->>R: db_for_read(Post)
-    R->>R: Check app_label = 'blog'
-    R->>R: Lookup DATABASE_ROUTING_RULES['blog']
-    R-->>D: Return 'blog_db'
-    D->>DB: SELECT * FROM blog_post
-    DB-->>D: Query results
-    D-->>U: QuerySet[Post]
+    U->>D: User.objects.all()
+    D->>R: db_for_read(User)
+    R->>R: random() < 0.8?
+    alt 80% of time
+        R-->>D: Return 'replica'
+        D->>Replica: SELECT * FROM users
+        Replica-->>D: Query results
+    else 20% of time
+        R-->>D: Return 'default'
+        D->>Primary: SELECT * FROM users
+        Primary-->>D: Query results
+    end
+    D-->>U: QuerySet[User]
 
-    Note over U,DB: Automatic routing - no .using() needed!
+    Note over U,Primary: 80% reads → replica, 20% → primary
 ```
 
 **Flow Steps:**
-1. User calls: `Post.objects.all()`
-2. Django calls: `router.db_for_read(Post)`
-3. Router checks: `Post._meta.app_label = 'blog'`
-4. Router looks up: `DATABASE_ROUTING_RULES['blog'] = 'blog_db'`
-5. Django executes query on: `blog_db`
+1. User calls: `User.objects.all()`
+2. Django calls: `router.db_for_read(User)`
+3. Router randomizes: 80% replica, 20% primary
+4. Django executes query on selected database
 
   </TabItem>
   <TabItem value="write" label="Write Operation">
@@ -236,27 +321,27 @@ sequenceDiagram
 sequenceDiagram
     participant U as User Code
     participant D as Django ORM
-    participant R as DatabaseRouter
-    participant DB as blog_db
+    participant R as ReadReplicaRouter
+    participant Primary as Primary DB
+    participant Replica as Replica DB
 
-    U->>D: Post.objects.create(title="...")
-    D->>R: db_for_write(Post)
-    R->>R: Check app_label = 'blog'
-    R->>R: Lookup DATABASE_ROUTING_RULES['blog']
-    R-->>D: Return 'blog_db'
-    D->>DB: INSERT INTO blog_post VALUES (...)
-    DB-->>D: Insert successful (id=123)
-    D-->>U: Post object (id=123)
+    U->>D: User.objects.create(...)
+    D->>R: db_for_write(User)
+    R-->>D: Return 'default' (always)
+    D->>Primary: INSERT INTO users VALUES (...)
+    Primary-->>D: Insert successful (id=123)
+    Primary-.>>Replica: Async replication
+    D-->>U: User object (id=123)
 
-    Note over U,DB: Writes automatically go to correct database
+    Note over U,Replica: All writes → primary, then replicated
 ```
 
 **Flow Steps:**
-1. User calls: `Post.objects.create(title="...")`
-2. Django calls: `router.db_for_write(Post)`
-3. Router checks: `Post._meta.app_label = 'blog'`
-4. Router looks up: `DATABASE_ROUTING_RULES['blog'] = 'blog_db'`
-5. Django executes INSERT on: `blog_db`
+1. User calls: `User.objects.create(...)`
+2. Django calls: `router.db_for_write(User)`
+3. Router always returns: `'default'` (primary)
+4. Django executes INSERT on primary
+5. Data replicates to replica asynchronously
 
   </TabItem>
   <TabItem value="migrate" label="Migration">
@@ -265,27 +350,26 @@ sequenceDiagram
 sequenceDiagram
     participant U as Command Line
     participant M as Migration Command
-    participant R as DatabaseRouter
-    participant DB as blog_db
+    participant R as ReadReplicaRouter
+    participant Primary as Primary DB
 
-    U->>M: python manage.py migrate --database=blog_db
-    M->>R: allow_migrate(db='blog_db', app_label='blog')
-    R->>R: Check DATABASE_ROUTING_RULES['blog']
-    R->>R: Compare 'blog_db' == 'blog_db'
+    U->>M: python manage.py migrate
+    M->>R: allow_migrate(db='default', app_label='users')
+    R->>R: Check if db == 'default'
     R-->>M: Return True
-    M->>DB: Run migrations for blog app
-    DB-->>M: Migrations applied
+    M->>Primary: Run migrations
+    Primary-->>M: Migrations applied
     M-->>U: ✅ Migrations complete
 
-    Note over U,DB: Only blog app migrations run on blog_db
+    Note over U,Primary: Only primary gets migrations
 ```
 
 **Flow Steps:**
-1. User runs: `python manage.py migrate --database=blog_db`
-2. Django calls: `router.allow_migrate(db='blog_db', app_label='blog')`
-3. Router checks: `DATABASE_ROUTING_RULES['blog'] = 'blog_db'`
-4. Router returns: `db == 'blog_db'` → `True`
-5. Django migrates: blog app on blog_db
+1. User runs: `python manage.py migrate`
+2. Django calls: `router.allow_migrate(db='default', app_label='users')`
+3. Router checks: `db == 'default'` → `True`
+4. Django migrates: only on primary
+5. Replica syncs schema via replication
 
   </TabItem>
 </Tabs>

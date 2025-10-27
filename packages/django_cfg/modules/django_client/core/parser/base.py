@@ -124,10 +124,14 @@ class BaseParser(ABC):
         if has_patch is None:
             has_patch = self._detect_component_split_patch()
 
+        # Get DRF authentication classes
+        auth_classes = self._get_drf_authentication_classes()
+
         return DjangoGlobalMetadata(
             component_split_request=has_split if has_split is not None else False,
             component_split_patch=has_patch if has_patch is not None else False,
             oas_version=self.spec.normalized_version,
+            default_authentication_classes=auth_classes,
         )
 
     def _get_django_spectacular_setting(self, setting_name: str) -> bool | None:
@@ -153,6 +157,32 @@ class BaseParser(ABC):
         except Exception:
             # Any other error
             return None
+
+    def _get_drf_authentication_classes(self) -> list[str]:
+        """
+        Get DRF default authentication classes from Django settings.
+
+        Returns:
+            List of authentication class paths, or empty list if not available
+        """
+        try:
+            from django.conf import settings
+            if not settings.configured:
+                return []
+
+            rest_framework = getattr(settings, 'REST_FRAMEWORK', {})
+            auth_classes = rest_framework.get('DEFAULT_AUTHENTICATION_CLASSES', [])
+
+            # Ensure it's a list
+            if isinstance(auth_classes, (list, tuple)):
+                return list(auth_classes)
+            return []
+        except ImportError:
+            # Django not available (standalone usage)
+            return []
+        except Exception:
+            # Any other error
+            return []
 
     def _detect_component_split_request(self) -> bool:
         """
@@ -444,9 +474,12 @@ class BaseParser(ABC):
         if schema.items is not None:
             return "array"
 
-        # Special case: JSONField from Django has no type but description mentions JSON
-        if schema.description and 'JSON' in schema.description:
-            return "object"
+        # Special case: JSONField from Django has no type but description hints at dict/object
+        # Check for keywords like: JSON, configuration, settings, config, dict
+        if schema.description:
+            desc_lower = schema.description.lower()
+            if any(keyword in desc_lower for keyword in ['json', 'configuration', 'settings', 'config', 'dict']):
+                return "object"
 
         return "string"  # Default
 

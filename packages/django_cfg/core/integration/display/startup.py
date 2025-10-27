@@ -2,9 +2,11 @@
 Startup display manager for Django CFG.
 """
 
+from cmath import e
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+import traceback
 
 from .base import BaseDisplayManager
 from .ngrok import NgrokDisplayManager
@@ -66,10 +68,10 @@ class StartupDisplayManager(BaseDisplayManager):
 
             self.console.print(info_text)
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in display_minimal_info: {e}")
             print("🔍 TRACEBACK:")
             traceback.print_exc()
+            exit(1)
 
     def display_essential_info(self):
         """Display essential startup info (SHORT mode)."""
@@ -101,10 +103,10 @@ class StartupDisplayManager(BaseDisplayManager):
             # Create columns for essential info
             self._display_essential_columns()
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in display_essential_info: {e}")
             print("🔍 TRACEBACK:")
             traceback.print_exc()
+            exit(1)
 
     def display_complete_info(self):
         """Display complete startup info (FULL mode)."""
@@ -170,10 +172,10 @@ class StartupDisplayManager(BaseDisplayManager):
 
             self.print_spacing()
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in display_complete_info: {e}")
             print("🔍 TRACEBACK:")
             traceback.print_exc()
+            exit(1)
 
     def _display_update_notification_short(self):
         """Display update notification for SHORT mode."""
@@ -201,8 +203,11 @@ class StartupDisplayManager(BaseDisplayManager):
                 )
                 update_panel.padding = (0, 2)  # Override padding
                 self.console.print(update_panel)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"❌ ERROR in _display_update_notification_short: {e}")
+            print("🔍 TRACEBACK:")
+            traceback.print_exc()
+            exit(1)
 
     def _display_update_notification_full(self):
         """Display update notification for FULL mode."""
@@ -435,9 +440,9 @@ class StartupDisplayManager(BaseDisplayManager):
             self.console.print(task_panel)
 
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in _display_background_tasks: {e}")
             traceback.print_exc()
+            exit(1)
 
     def _display_constance_integrated_block(self, constance_config, all_fields):
         """Display integrated Constance block with summary and field details."""
@@ -580,9 +585,9 @@ class StartupDisplayManager(BaseDisplayManager):
             self.console.print(integrated_panel)
 
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in _display_constance_integrated_block: {e}")
             traceback.print_exc()
+            exit(1)
 
     def _display_constance_details(self):
         """Display detailed Constance configuration information."""
@@ -600,9 +605,9 @@ class StartupDisplayManager(BaseDisplayManager):
             self._display_constance_integrated_block(constance_config, all_fields)
 
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in _display_constance_details: {e}")
             traceback.print_exc()
+            exit(1)
 
     def _display_constance_summary(self, constance_config, all_fields):
         """Display summary of Constance fields by source."""
@@ -671,16 +676,16 @@ class StartupDisplayManager(BaseDisplayManager):
             self.console.print(summary_panel)
 
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in _display_constance_summary: {e}")
             traceback.print_exc()
+            exit(1)
 
     def _display_openapi_client_info(self):
         """Display Django Client (OpenAPI) information."""
         try:
-            from django_cfg.modules.django_client.core.config.service import DjangoOpenAPI
+            from django_cfg.modules.django_client.core.config.service import get_openapi_service
 
-            service = DjangoOpenAPI.instance()
+            service = get_openapi_service()
             if not service.config or not service.config.enabled:
                 return
 
@@ -708,8 +713,11 @@ class StartupDisplayManager(BaseDisplayManager):
         except ImportError:
             # Django Client not available
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"❌ ERROR in _display_openapi_client_info: {e}")
+            print("🔍 TRACEBACK:")
+            traceback.print_exc()
+            exit(1)
 
     def _display_commands_info(self):
         """Display management commands information."""
@@ -745,9 +753,9 @@ class StartupDisplayManager(BaseDisplayManager):
             self._display_commands_breakdown()
 
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in _display_commands_info: {e}")
             traceback.print_exc()
+            exit(1)
 
     def _display_commands_breakdown(self):
         """Display detailed commands breakdown."""
@@ -845,6 +853,6 @@ class StartupDisplayManager(BaseDisplayManager):
                 self.console.print(project_panel)
 
         except Exception as e:
-            import traceback
             print(f"❌ ERROR in _display_commands_breakdown: {e}")
             traceback.print_exc()
+            exit(1)

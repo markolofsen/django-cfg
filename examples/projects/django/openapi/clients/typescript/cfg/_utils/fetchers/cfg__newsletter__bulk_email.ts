@@ -40,7 +40,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/newsletter/bulk/
  */
-export async function createNewsletterBulkCreate(  data: BulkEmailRequest,  client?
+export async function createNewsletterBulkCreate(  data: BulkEmailRequest,  client?: API
 ): Promise<BulkEmailResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_bulk_email.newsletterBulkCreate(data)

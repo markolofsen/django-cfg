@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand, CommandError
 class Command(BaseCommand):
     """Generate OpenAPI clients for configured application groups."""
 
-    help = "Generate Python and TypeScript API clients from OpenAPI schemas"
+    help = "Generate Python, TypeScript, and Go API clients from OpenAPI schemas"
 
     def add_arguments(self, parser):
         """Add command arguments."""
@@ -38,6 +38,18 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
+            "--go",
+            action="store_true",
+            help="Generate Go client only",
+        )
+
+        parser.add_argument(
+            "--proto",
+            action="store_true",
+            help="Generate Protocol Buffer/gRPC definitions only",
+        )
+
+        parser.add_argument(
             "--no-python",
             action="store_true",
             help="Skip Python client generation",
@@ -47,6 +59,18 @@ class Command(BaseCommand):
             "--no-typescript",
             action="store_true",
             help="Skip TypeScript client generation",
+        )
+
+        parser.add_argument(
+            "--no-go",
+            action="store_true",
+            help="Skip Go client generation",
+        )
+
+        parser.add_argument(
+            "--no-proto",
+            action="store_true",
+            help="Skip Protocol Buffer generation",
         )
 
         # Utility options
@@ -193,15 +217,31 @@ class Command(BaseCommand):
     def _generate_clients(self, service, options):
         """Generate clients."""
         # Determine languages
-        if options["python"] and not options["typescript"]:
+        if options["python"] and not options["typescript"] and not options["go"] and not options["proto"]:
             python = True
             typescript = False
-        elif options["typescript"] and not options["python"]:
+            go = False
+            proto = False
+        elif options["typescript"] and not options["python"] and not options["go"] and not options["proto"]:
             python = False
             typescript = True
+            go = False
+            proto = False
+        elif options["go"] and not options["python"] and not options["typescript"] and not options["proto"]:
+            python = False
+            typescript = False
+            go = True
+            proto = False
+        elif options["proto"] and not options["python"] and not options["typescript"] and not options["go"]:
+            python = False
+            typescript = False
+            go = False
+            proto = True
         else:
             python = not options["no_python"]
             typescript = not options["no_typescript"]
+            go = not options["no_go"]
+            proto = not options["no_proto"]
 
         # Get groups
         groups = options.get("groups")
@@ -233,6 +273,10 @@ class Command(BaseCommand):
             self.stdout.write("  → Python")
         if typescript:
             self.stdout.write("  → TypeScript")
+        if go:
+            self.stdout.write("  → Go")
+        if proto:
+            self.stdout.write("  → Protocol Buffers (proto3)")
 
         if dry_run:
             self.stdout.write(self.style.WARNING("\n✅ Dry run completed - no files generated"))
@@ -248,7 +292,9 @@ class Command(BaseCommand):
 
         from django_cfg.modules.django_client.core import (
             ArchiveManager,
+            GoGenerator,
             GroupManager,
+            ProtoGenerator,
             PythonGenerator,
             TypeScriptGenerator,
             parse_openapi,
@@ -395,6 +441,53 @@ class Command(BaseCommand):
 
                     self.stdout.write(f"  ✅ TypeScript client: {ts_dir} ({len(ts_files)} files)")
 
+                # Generate Go client
+                if go:
+                    self.stdout.write("  → Generating Go client...")
+                    go_dir = service.config.get_group_go_dir(group_name)
+                    go_dir.mkdir(parents=True, exist_ok=True)
+
+                    go_generator = GoGenerator(
+                        ir_context,
+                        client_structure=service.config.client_structure,
+                        openapi_schema=schema_dict,
+                        tag_prefix=f"{group_name}_",
+                        generate_package_files=service.config.generate_package_files,
+                        package_config={
+                            "name": group_name,
+                            "module_name": group_name,
+                            "version": "v1.0.0",
+                        },
+                    )
+                    go_files = go_generator.generate()
+
+                    for generated_file in go_files:
+                        full_path = go_dir / generated_file.path
+                        full_path.parent.mkdir(parents=True, exist_ok=True)
+                        full_path.write_text(generated_file.content)
+
+                    self.stdout.write(f"  ✅ Go client: {go_dir} ({len(go_files)} files)")
+
+                # Generate Proto files
+                if proto:
+                    self.stdout.write("  → Generating Protocol Buffer definitions...")
+                    proto_dir = clients_dir / "proto" / group_name
+                    proto_dir.mkdir(parents=True, exist_ok=True)
+
+                    proto_generator = ProtoGenerator(
+                        ir_context,
+                        split_files=True,  # Generate separate messages.proto and services.proto
+                        package_name=f"{group_name}.v1",
+                    )
+                    proto_files = proto_generator.generate()
+
+                    for generated_file in proto_files:
+                        full_path = proto_dir / generated_file.path
+                        full_path.parent.mkdir(parents=True, exist_ok=True)
+                        full_path.write_text(generated_file.content)
+
+                    self.stdout.write(f"  ✅ Proto files: {proto_dir} ({len(proto_files)} files)")
+
                 # Archive if enabled
                 if service.config.enable_archive:
                     self.stdout.write("  → Archiving...")
@@ -403,6 +496,8 @@ class Command(BaseCommand):
                         group_name,
                         python_dir=service.config.get_group_python_dir(group_name) if python else None,
                         typescript_dir=service.config.get_group_typescript_dir(group_name) if typescript else None,
+                        go_dir=go_dir if go else None,
+                        proto_dir=proto_dir if proto else None,
                     )
                     if archive_result.get('success'):
                         self.stdout.write(f"  ✅ Archived: {archive_result['archive_path']}")
@@ -428,3 +523,5 @@ class Command(BaseCommand):
             self.stdout.write(f"  Python:     {service.config.get_python_clients_dir()}")
         if typescript:
             self.stdout.write(f"  TypeScript: {service.config.get_typescript_clients_dir()}")
+        if go:
+            self.stdout.write(f"  Go:         {service.config.get_go_clients_dir()}")

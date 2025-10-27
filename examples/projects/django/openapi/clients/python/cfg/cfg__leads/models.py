@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import LeadSubmissionRequestcontact_type, LeadSubmissioncontact_type, PatchedLeadSubmissionRequestcontact_type
+from ..enums import LeadSubmissionContactType, LeadSubmissionRequestContactType, PatchedLeadSubmissionRequestContactType
 
 
 class PaginatedLeadSubmissionList(BaseModel):
@@ -16,7 +16,7 @@ class PaginatedLeadSubmissionList(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -28,7 +28,7 @@ class PaginatedLeadSubmissionList(BaseModel):
     has_previous: bool = Field(description='Whether there is a previous page')
     next_page: int | None = Field(None, description='Next page number (null if no next page)')
     previous_page: int | None = Field(None, description='Previous page number (null if no previous page)')
-    results: list[dict[str, Any]] = Field(description='Array of items for current page')
+    results: list[Any] = Field(description='Array of items for current page')
 
 
 
@@ -41,7 +41,7 @@ class LeadSubmission(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -67,7 +67,7 @@ class LeadSubmissionRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -93,7 +93,7 @@ class PatchedLeadSubmissionRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

@@ -188,6 +188,10 @@ class OpenAPIConfig(BaseModel):
         """Get TypeScript clients directory path."""
         return self.get_clients_dir() / "typescript"
 
+    def get_go_clients_dir(self) -> Path:
+        """Get Go clients directory path."""
+        return self.get_clients_dir() / "go"
+
     def get_archive_dir(self) -> Path:
         """Get archive directory path."""
         return self.get_output_path() / "archive"
@@ -203,6 +207,10 @@ class OpenAPIConfig(BaseModel):
     def get_group_typescript_dir(self, group_name: str) -> Path:
         """Get TypeScript client directory for a group."""
         return self.get_typescript_clients_dir() / group_name
+
+    def get_group_go_dir(self, group_name: str) -> Path:
+        """Get Go client directory for a group."""
+        return self.get_go_clients_dir() / group_name
 
 
 __all__ = [

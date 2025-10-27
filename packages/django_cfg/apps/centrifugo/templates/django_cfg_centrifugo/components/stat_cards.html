@@ -1,0 +1,53 @@
+<!-- Overview Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Publishes -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-purple-500 dark:text-purple-400">publish</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Today</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1" id="total-publishes">
+            0
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Total Publishes</p>
+        <div class="mt-2 flex items-center text-xs">
+            <span id="publish-trend" class="text-green-600 dark:text-green-400"></span>
+        </div>
+    </div>
+
+    <!-- Success Rate -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-green-500 dark:text-green-400">check_circle</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Rate</span>
+        </div>
+        <h3 class="text-2xl font-bold mb-1" id="success-rate-value">
+            <span class="text-gray-900 dark:text-white">0</span><span class="text-lg text-gray-600 dark:text-gray-400">%</span>
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Success Rate</p>
+    </div>
+
+    <!-- Average Duration -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-yellow-500 dark:text-yellow-400">timer</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Average</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            <span id="avg-duration">0</span><span class="text-lg text-gray-600 dark:text-gray-400">ms</span>
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Avg Duration</p>
+    </div>
+
+    <!-- Failed/Timeout -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <span class="material-icons text-4xl text-red-500 dark:text-red-400">error</span>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Issues</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1" id="failed-count">
+            0
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Failed/Timeout</p>
+    </div>
+</div>

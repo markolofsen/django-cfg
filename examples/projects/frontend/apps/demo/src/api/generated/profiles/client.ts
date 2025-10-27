@@ -55,7 +55,9 @@ export class APIClient {
   }
 
   /**
-   * Get CSRF token from cookies.
+   * Get CSRF token from cookies (for SessionAuthentication).
+   *
+   * Returns null if cookie doesn't exist (JWT-only auth).
    */
   getCsrfToken(): string | null {
     const name = 'csrftoken';
@@ -130,13 +132,8 @@ export class APIClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    // Add CSRF token for non-GET requests
-    if (method !== 'GET') {
-      const csrfToken = this.getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-      }
-    }
+    // CSRF not needed - SessionAuthentication not enabled in DRF config
+    // Your API uses JWT/Token authentication (no CSRF required)
 
     // Log request
     if (this.logger) {

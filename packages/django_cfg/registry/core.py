@@ -32,6 +32,12 @@ CORE_REGISTRY = {
     # Environment models
     "EnvironmentConfig": ("django_cfg.models.django.environment", "EnvironmentConfig"),
 
+    # Security - Django-Axes
+    "AxesConfig": ("django_cfg.models.django.axes", "AxesConfig"),
+
+    # Security - Django Crypto Fields
+    "CryptoFieldsConfig": ("django_cfg.models.django.crypto_fields", "CryptoFieldsConfig"),
+
     # Limits models
     "LimitsConfig": ("django_cfg.models.api.limits", "LimitsConfig"),
 
@@ -58,6 +64,8 @@ CORE_REGISTRY = {
 
     # Utils
     "version_check": ("django_cfg.utils.version_check", "version_check"),
+    "get_ticket_url": ("django_cfg.core.utils.url_helpers", "get_ticket_url"),
+    "get_otp_url": ("django_cfg.core.utils.url_helpers", "get_otp_url"),
 
     # Routing
     "DynamicRouter": ("django_cfg.routing.routers", "DynamicRouter"),

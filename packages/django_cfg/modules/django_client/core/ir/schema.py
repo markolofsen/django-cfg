@@ -268,7 +268,18 @@ class IRSchemaObject(BaseModel):
             'int'
             >>> IRSchemaObject(name="x", type="string", nullable=True).python_type
             'str | None'
+            >>> IRSchemaObject(name="x", type="string", read_only=True).python_type
+            'Any'
         """
+        # For read-only string fields, use Any since they often return complex objects
+        # from SerializerMethodField in Django (e.g., dicts instead of strings)
+        if self.read_only and self.type == "string":
+            return "Any | None" if self.nullable else "Any"
+
+        # For object fields without defined properties (like JSONField), use Any
+        if self.type == "object" and not self.properties:
+            return "Any | None" if self.nullable else "Any"
+
         type_map = {
             "string": "str",
             "integer": "int",

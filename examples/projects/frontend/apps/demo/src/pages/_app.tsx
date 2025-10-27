@@ -45,6 +45,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
         config={appLayoutConfig}
         disableLayout={false}
         fontFamily={manrope.style.fontFamily}
+        showPackageVersions={true}
       >
         {hasCustomLayout ? (
           Component.getLayout!(<Component {...pageProps} />)

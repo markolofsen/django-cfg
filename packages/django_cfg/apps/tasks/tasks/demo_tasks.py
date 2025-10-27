@@ -21,7 +21,6 @@ def quick_task(task_id: str, duration: int = 2):
     logger.info(f'🚀 Quick task {task_id} started at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Quick task {task_id} completed in {duration}s')
-    return f'Quick task {task_id} done in {duration}s'
 
 
 @dramatiq.actor(queue_name='background')
@@ -30,7 +29,6 @@ def medium_task(task_id: str, duration: int = 5):
     logger.info(f'🔄 Medium task {task_id} started at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Medium task {task_id} completed in {duration}s')
-    return f'Medium task {task_id} done in {duration}s'
 
 
 @dramatiq.actor(queue_name='low')
@@ -39,7 +37,6 @@ def slow_task(task_id: str, duration: int = 10):
     logger.info(f'🐌 Slow task {task_id} started at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Slow task {task_id} completed in {duration}s')
-    return f'Slow task {task_id} done in {duration}s'
 
 
 @dramatiq.actor(queue_name='critical')
@@ -48,7 +45,6 @@ def critical_task(task_id: str, duration: int = 3):
     logger.info(f'🔥 Critical task {task_id} started at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Critical task {task_id} completed in {duration}s')
-    return f'Critical task {task_id} done in {duration}s'
 
 
 @dramatiq.actor(queue_name='payments')
@@ -58,7 +54,6 @@ def payment_task(task_id: str, amount: float):
     logger.info(f'💳 Payment task {task_id} processing ${amount} at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Payment task {task_id} completed in {duration}s')
-    return f'Payment ${amount} processed in {duration}s'
 
 
 @dramatiq.actor(queue_name='agents')
@@ -68,7 +63,6 @@ def agent_task(task_id: str, query: str):
     logger.info(f'🤖 Agent task {task_id} processing query "{query}" at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Agent task {task_id} completed in {duration}s')
-    return f'Agent processed query "{query}" in {duration}s'
 
 
 @dramatiq.actor(queue_name='high')
@@ -78,7 +72,6 @@ def priority_task(task_id: str, priority_level: str):
     logger.info(f'⚡ Priority task {task_id} ({priority_level}) started at {datetime.now().strftime("%H:%M:%S")}')
     time.sleep(duration)
     logger.info(f'✅ Priority task {task_id} completed in {duration}s')
-    return f'Priority task {task_id} ({priority_level}) done in {duration}s'
 
 
 def generate_demo_tasks() -> int:

@@ -1,0 +1,25 @@
+/**
+ * Generated API Client
+ * Auto-generated thin wrapper - DO NOT EDIT
+ */
+
+import { CentrifugoRPCClient } from './rpc-client';
+{% if models %}
+import type {
+{% for model_name in models | unique | sort %}  {{ model_name }},
+{% endfor %}} from './types';
+{% endif %}
+
+export class APIClient {
+  constructor(private rpc: CentrifugoRPCClient) {}
+
+{% for method in methods %}
+  /**
+   * {{ method.docstring.split('\n')[0] if method.docstring else 'No description' }}
+   */
+  async {{ method.name_ts }}(params: {{ method.param_type }}): Promise<{{ method.return_type }}> {
+    return this.rpc.call<{{ method.return_type }}>('{{ method.name }}', params);
+  }
+
+{% endfor %}
+}

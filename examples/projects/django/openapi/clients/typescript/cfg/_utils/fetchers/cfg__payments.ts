@@ -42,7 +42,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/payments/balance/
  */
-export async function getPaymentsBalanceRetrieve(  client?
+export async function getPaymentsBalanceRetrieve(  client?: API
 ): Promise<Balance> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.balanceRetrieve()
@@ -56,7 +56,7 @@ export async function getPaymentsBalanceRetrieve(  client?
  * @method GET
  * @path /cfg/payments/currencies/
  */
-export async function getPaymentsCurrenciesList(  client?
+export async function getPaymentsCurrenciesList(  client?: API
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.currenciesList()
@@ -70,7 +70,7 @@ export async function getPaymentsCurrenciesList(  client?
  * @method GET
  * @path /cfg/payments/payments/
  */
-export async function getPaymentsPaymentsList(  params?: { page?: number; page_size?: number },  client?
+export async function getPaymentsPaymentsList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedPaymentListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsList(params?.page, params?.page_size)
@@ -84,7 +84,7 @@ export async function getPaymentsPaymentsList(  params?: { page?: number; page_s
  * @method GET
  * @path /cfg/payments/payments/{id}/
  */
-export async function getPaymentsPaymentsRetrieve(  id: string,  client?
+export async function getPaymentsPaymentsRetrieve(  id: string,  client?: API
 ): Promise<PaymentDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsRetrieve(id)
@@ -98,7 +98,7 @@ export async function getPaymentsPaymentsRetrieve(  id: string,  client?
  * @method POST
  * @path /cfg/payments/payments/{id}/confirm/
  */
-export async function createPaymentsPaymentsConfirmCreate(  id: string,  client?
+export async function createPaymentsPaymentsConfirmCreate(  id: string,  client?: API
 ): Promise<PaymentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsConfirmCreate(id)
@@ -112,7 +112,7 @@ export async function createPaymentsPaymentsConfirmCreate(  id: string,  client?
  * @method GET
  * @path /cfg/payments/payments/{id}/status/
  */
-export async function getPaymentsPaymentsStatusRetrieve(  id: string,  client?
+export async function getPaymentsPaymentsStatusRetrieve(  id: string,  client?: API
 ): Promise<PaymentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsStatusRetrieve(id)
@@ -126,7 +126,7 @@ export async function getPaymentsPaymentsStatusRetrieve(  id: string,  client?
  * @method POST
  * @path /cfg/payments/payments/create/
  */
-export async function createPaymentsPaymentsCreateCreate(  client?
+export async function createPaymentsPaymentsCreateCreate(  client?: API
 ): Promise<PaymentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsCreateCreate()
@@ -140,7 +140,7 @@ export async function createPaymentsPaymentsCreateCreate(  client?
  * @method GET
  * @path /cfg/payments/transactions/
  */
-export async function getPaymentsTransactionsList(  params?: { limit?: number; offset?: number; type?: string },  client?
+export async function getPaymentsTransactionsList(  params?: { limit?: number; offset?: number; type?: string },  client?: API
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.transactionsList(params?.limit, params?.offset, params?.type)

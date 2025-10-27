@@ -433,19 +433,37 @@ class MyConfig(DjangoConfig):
             )
 ```
 
-### Using YAML
+### Using Environment Variables
 
-```yaml
-# config.production.yaml
-email:
-  backend: "sendgrid"
-  username: "apikey"
-  password: "${SENDGRID_API_KEY}"
-  default_from: "noreply@myapp.com"
+```bash
+# Production (.env or system ENV)
+EMAIL__BACKEND="sendgrid"
+EMAIL__USERNAME="apikey"
+EMAIL__PASSWORD="${SENDGRID_API_KEY}"
+EMAIL__DEFAULT_FROM="noreply@myapp.com"
 
-# config.development.yaml
-email:
-  backend: "console"
+# Development (.env)
+EMAIL__BACKEND="console"
+```
+
+```python
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class EmailConfig(BaseSettings):
+    backend: str = Field(default="console")
+    host: str = Field(default="localhost")
+    port: int = Field(default=587)
+    username: str | None = Field(default=None)
+    password: str | None = Field(default=None)
+    use_tls: bool = Field(default=True)
+    default_from: str = Field(default="noreply@example.com")
+
+    model_config = SettingsConfigDict(
+        env_prefix="EMAIL__",
+        env_nested_delimiter="__",
+    )
 ```
 
 ## Advanced Usage

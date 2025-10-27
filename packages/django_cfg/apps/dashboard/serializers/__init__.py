@@ -1,0 +1,55 @@
+"""
+Dashboard Serializers
+
+Organized by domain for better maintainability.
+"""
+
+from .base import APIResponseSerializer
+from .statistics import StatCardSerializer, UserStatisticsSerializer, AppStatisticsSerializer
+from .system import SystemHealthSerializer, SystemHealthItemSerializer, SystemMetricsSerializer
+from .activity import ActivityEntrySerializer, QuickActionSerializer
+from .overview import DashboardOverviewSerializer
+from .charts import (
+    ChartDataSerializer,
+    ChartDatasetSerializer,
+    ActivityTrackerDaySerializer,
+    RecentUserSerializer,
+)
+from .commands import CommandSerializer, CommandsSummarySerializer
+from .apizones import APIZoneSerializer, APIZonesSummarySerializer
+
+__all__ = [
+    # Base
+    'APIResponseSerializer',
+
+    # Statistics
+    'StatCardSerializer',
+    'UserStatisticsSerializer',
+    'AppStatisticsSerializer',
+
+    # System
+    'SystemHealthSerializer',
+    'SystemHealthItemSerializer',
+    'SystemMetricsSerializer',
+
+    # Activity
+    'ActivityEntrySerializer',
+    'QuickActionSerializer',
+
+    # Overview
+    'DashboardOverviewSerializer',
+
+    # Charts
+    'ChartDataSerializer',
+    'ChartDatasetSerializer',
+    'ActivityTrackerDaySerializer',
+    'RecentUserSerializer',
+
+    # Commands
+    'CommandSerializer',
+    'CommandsSummarySerializer',
+
+    # API Zones
+    'APIZoneSerializer',
+    'APIZonesSummarySerializer',
+]

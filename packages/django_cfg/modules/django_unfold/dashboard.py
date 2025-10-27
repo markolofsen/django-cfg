@@ -61,6 +61,7 @@ class DashboardManager(BaseCfgModule):
                 collapsible=True,
                 items=[
                     NavigationItem(title="Overview", icon=Icons.DASHBOARD, link=str(reverse_lazy("admin:index"))),
+                    NavigationItem(title="Frontend Admin", icon=Icons.WEB_ASSET, link="/cfg/admin/"),
                     NavigationItem(title="Settings", icon=Icons.SETTINGS, link=str(reverse_lazy("admin:constance_config_changelist"))),
                     NavigationItem(title="Health Check", icon=Icons.HEALTH_AND_SAFETY, link=str(reverse_lazy("django_cfg_drf_health"))),
                     NavigationItem(title="Endpoints Status", icon=Icons.API, link=str(reverse_lazy("endpoints_status_drf"))),
@@ -68,14 +69,21 @@ class DashboardManager(BaseCfgModule):
             ),
         ]
 
+        # Centrifugo Dashboard (if enabled)
+        if self.is_centrifugo_enabled():
+            navigation_sections.append(
+                NavigationSection(
+                    title="Centrifugo",
+                    separator=True,
+                    collapsible=True,
+                    items=[NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/centrifugo/admin/"),
+                    NavigationItem(title="Logs", icon=Icons.LIST_ALT, link=str(reverse_lazy("admin:django_cfg_centrifugo_centrifugolog_changelist"))),
+                ]
+            )
+        )
+
         # Add Operations section (System & Monitoring tools)
         operations_items = []
-
-        # RPC Dashboard (if enabled)
-        if self.is_rpc_enabled():
-            operations_items.append(
-                NavigationItem(title="IPC/RPC Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/ipc/admin/")
-            )
 
         # Background Tasks (if enabled)
         if self.should_enable_tasks():
@@ -238,42 +246,7 @@ class DashboardManager(BaseCfgModule):
 
             # Design system
             "BORDER_RADIUS": "8px",
-            "COLORS": {
-                "base": {
-                    "50": "249, 250, 251",
-                    "100": "243, 244, 246",
-                    "200": "229, 231, 235",
-                    "300": "209, 213, 219",
-                    "400": "156, 163, 175",
-                    "500": "107, 114, 128",
-                    "600": "75, 85, 99",
-                    "700": "55, 65, 81",
-                    "800": "31, 41, 55",
-                    "900": "17, 24, 39",
-                    "950": "3, 7, 18",
-                },
-                "primary": {
-                    "50": "239, 246, 255",
-                    "100": "219, 234, 254",
-                    "200": "191, 219, 254",
-                    "300": "147, 197, 253",
-                    "400": "96, 165, 250",
-                    "500": "59, 130, 246",
-                    "600": "37, 99, 235",
-                    "700": "29, 78, 216",
-                    "800": "30, 64, 175",
-                    "900": "30, 58, 138",
-                    "950": "23, 37, 84",
-                },
-                "font": {
-                    "subtle-light": "var(--color-base-500)",
-                    "subtle-dark": "var(--color-base-400)",
-                    "default-light": "var(--color-base-600)",
-                    "default-dark": "var(--color-base-300)",
-                    "important-light": "var(--color-base-900)",
-                    "important-dark": "var(--color-base-100)",
-                },
-            },
+            # COLORS removed - use UnfoldConfig.get_color_scheme() instead
 
             # Sidebar navigation - KEY STRUCTURE!
             "SIDEBAR": {
@@ -298,6 +271,8 @@ class DashboardManager(BaseCfgModule):
 
     def get_widgets_config(self) -> List[Dict[str, Any]]:
         """Get dashboard widgets configuration using Pydantic models."""
+        widgets = []
+
         # Create system overview widget with StatCard models
         system_overview_widget = StatsCardsWidget(
             title="System Overview",
@@ -322,9 +297,43 @@ class DashboardManager(BaseCfgModule):
                 ),
             ]
         )
+        widgets.append(system_overview_widget.to_dict())
+
+        # Add Centrifugo monitoring widget if enabled
+        if self.is_centrifugo_enabled():
+            centrifugo_monitoring_widget = StatsCardsWidget(
+                title="Centrifugo Monitoring",
+                cards=[
+                    StatCard(
+                        title="Total Publishes",
+                        value="{{ centrifugo_total_publishes }}",
+                        icon=Icons.API,
+                        color="blue",
+                    ),
+                    StatCard(
+                        title="Success Rate",
+                        value="{{ centrifugo_success_rate }}%",
+                        icon=Icons.CHECK_CIRCLE,
+                        color="green",
+                    ),
+                    StatCard(
+                        title="Avg Duration",
+                        value="{{ centrifugo_avg_duration }}ms",
+                        icon=Icons.SPEED,
+                        color="purple",
+                    ),
+                    StatCard(
+                        title="Failed Publishes",
+                        value="{{ centrifugo_failed_publishes }}",
+                        icon=Icons.ERROR,
+                        color="red",
+                    ),
+                ]
+            )
+            widgets.append(centrifugo_monitoring_widget.to_dict())
 
         # Convert to dictionaries for Unfold
-        return [system_overview_widget.to_dict()]
+        return widgets
 
 
 # Lazy initialization to avoid circular imports

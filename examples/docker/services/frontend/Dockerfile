@@ -14,7 +14,7 @@ WORKDIR /app
 FROM base AS pruner-demo
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
-COPY . .
+COPY projects/frontend .
 
 # Generate a pruned monorepo with only demo dependencies
 RUN npx turbo@^2 prune @djangocfg/demo --docker
@@ -35,14 +35,8 @@ RUN pnpm install
 # Copy pruned source code
 COPY --from=pruner-demo /app/out/full/ .
 
-# Build arguments
-ARG DJANGO_API_URL
-ARG IPC_WS_URL
-
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_API_URL=${DJANGO_API_URL}
-ENV NEXT_PUBLIC_WS_RPC_URL=${IPC_WS_URL}
 
 # Build the demo app
 RUN pnpm turbo run build --filter=@djangocfg/demo

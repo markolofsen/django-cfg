@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import OTPRequestRequestchannel, OTPVerifyRequestchannel
+from ..enums import OTPRequestRequestChannel, OTPVerifyRequestChannel
 
 
 class OTPRequestResponse(BaseModel):
@@ -17,7 +17,7 @@ class OTPRequestResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -34,7 +34,7 @@ class OTPErrorResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -51,13 +51,13 @@ class OTPVerifyResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     refresh: str = Field(description='JWT refresh token')
     access: str = Field(description='JWT access token')
-    user: dict[str, Any] = ...
+    user: Any = ...
 
 
 
@@ -70,7 +70,7 @@ class OTPRequestRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -89,7 +89,7 @@ class OTPVerifyRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..enums import LeadSubmissionRequestcontact_type
+from ..enums import LeadSubmissionRequestContactType
 
 
 class LeadSubmissionResponse(BaseModel):
@@ -17,7 +17,7 @@ class LeadSubmissionResponse(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
@@ -36,13 +36,13 @@ class LeadSubmissionError(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 
     success: bool = ...
     error: str = ...
-    details: dict[str, Any] = None
+    details: Any = None
 
 
 
@@ -55,7 +55,7 @@ class LeadSubmissionRequest(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
-        extra="forbid",
+        extra="allow",
         frozen=False,
     )
 

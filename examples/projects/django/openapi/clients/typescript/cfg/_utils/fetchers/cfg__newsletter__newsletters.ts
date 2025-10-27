@@ -40,7 +40,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/newsletter/newsletters/
  */
-export async function getNewsletterNewslettersList(  params?: { page?: number; page_size?: number },  client?
+export async function getNewsletterNewslettersList(  params?: { page?: number; page_size?: number },  client?: API
 ): Promise<PaginatedNewsletterList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletters.newsletterNewslettersList(params?.page, params?.page_size)
@@ -54,7 +54,7 @@ export async function getNewsletterNewslettersList(  params?: { page?: number; p
  * @method GET
  * @path /cfg/newsletter/newsletters/{id}/
  */
-export async function getNewsletterNewslettersRetrieve(  id: number,  client?
+export async function getNewsletterNewslettersRetrieve(  id: number,  client?: API
 ): Promise<Newsletter> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletters.newsletterNewslettersRetrieve(id)

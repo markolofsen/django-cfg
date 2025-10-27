@@ -95,6 +95,8 @@ class DramatiqConfig(BaseModel):
             "dramatiq.middleware.TimeLimit",
             "dramatiq.middleware.Callbacks",
             "dramatiq.middleware.Retries",
+            # NOTE: Results middleware requires backend configuration
+            # "dramatiq.results.middleware.Results",
             "dramatiq.middleware.Prometheus",
             "django_dramatiq.middleware.AdminMiddleware",
             "django_dramatiq.middleware.DbConnectionsMiddleware",

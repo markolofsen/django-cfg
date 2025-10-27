@@ -38,7 +38,8 @@ from django_cfg import (
     PaymentsConfig,
     NowPaymentsConfig,
     ApiKeys,
-    DjangoCfgRPCConfig,
+    AxesConfig,
+    DjangoCfgCentrifugoConfig,
 )
 
 # Import environment configuration
@@ -51,7 +52,8 @@ class DjangoCfgConfig(DjangoConfig):
 
     Demonstrates all features and best practices with YAML environment loading.
     """
-    
+
+    # Keep env_mode as string like stockapis - prevents Pydantic enum conversion
     env_mode: str = env.env.env_mode
 
     # === Project Information ===
@@ -66,6 +68,16 @@ class DjangoCfgConfig(DjangoConfig):
     # === Security ===
     secret_key: str = env.secret_key
     debug: bool = env.debug
+
+    # === Django-Axes: Brute-force Protection ===
+    # Custom configuration (optional - smart defaults used if None)
+    axes: AxesConfig = AxesConfig(
+        failure_limit=3,  # Only 3 attempts (stricter than default)
+        cooloff_time=48,  # 48 hours lockout (stricter than default)
+        lockout_template=None,  # Use default lockout page
+        # Whitelist your admin IPs if needed
+        # allowed_ips=['192.168.1.100'],
+    )
 
     # === URL Configuration ===
     root_urlconf: str = "api.urls"
@@ -93,22 +105,26 @@ class DjangoCfgConfig(DjangoConfig):
         )
     )
     
-    # === RPC Configuration ===
-    django_ipc: Optional[DjangoCfgRPCConfig] = (
-        DjangoCfgRPCConfig(
-            enabled=env.rpc.enabled,
-            redis_url=env.rpc.redis_url,
-            redis_max_connections=env.rpc.redis_max_connections,
-            rpc_timeout=env.rpc.rpc_timeout,
-            request_stream=env.rpc.request_stream,
-            consumer_group=env.rpc.consumer_group,
-            stream_maxlen=env.rpc.stream_maxlen,
-            response_key_prefix=env.rpc.response_key_prefix,
-            response_key_ttl=env.rpc.response_key_ttl,
-            log_rpc_calls=env.rpc.log_rpc_calls,
-            log_level=env.rpc.log_level,
+    # === Centrifugo Configuration ===
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = (
+        DjangoCfgCentrifugoConfig(
+            enabled=env.centrifugo.enabled,
+            # Wrapper configuration
+            wrapper_url=env.centrifugo.wrapper_url,
+            wrapper_api_key=env.centrifugo.wrapper_api_key,
+            # Centrifugo server configuration
+            centrifugo_url=env.centrifugo.centrifugo_url,
+            centrifugo_api_url=env.centrifugo.centrifugo_api_url,
+            centrifugo_api_key=env.centrifugo.centrifugo_api_key,
+            centrifugo_token_hmac_secret=env.centrifugo.centrifugo_token_hmac_secret,
+            # Timeouts and behavior
+            ack_timeout=env.centrifugo.default_ack_timeout,
+            log_level=env.centrifugo.log_level,
+            # Database logging configuration
+            log_all_calls=env.centrifugo.log_all_calls,
+            log_only_with_ack=env.centrifugo.log_only_with_ack,
         )
-        if env.rpc.enabled
+        if env.centrifugo.enabled
         else None
     )
 
@@ -121,8 +137,6 @@ class DjangoCfgConfig(DjangoConfig):
     # === URLs ===
     site_url: str = env.app.site_url
     api_url: str = env.app.api_url
-    ticket_url: str = env.app.ticket_url
-    otp_url: str = env.app.otp_url
     
     # === Security Domains ===
     security_domains: list[str] = env.security_domains or []
@@ -142,12 +156,15 @@ class DjangoCfgConfig(DjangoConfig):
 
     # === Email Configuration ===
     email: Optional[EmailConfig] = EmailConfig(
+        backend=env.email.backend,  # "smtp" for real emails, "console" for development
         host=env.email.host,
         port=env.email.port,
+        username=env.email.username,  # SMTP username
+        password=env.email.password,  # SMTP password
         use_tls=env.email.use_tls,
         use_ssl=env.email.use_ssl,
-        default_from_email=env.email.default_from,
-        default_from_name=env.app.name,
+        ssl_verify=env.email.ssl_verify,  # Verify SSL certs (False for self-signed in dev)
+        default_from=env.email.default_from,  # Correct parameter name
     )
 
     # === Telegram Configuration ===
@@ -289,18 +306,16 @@ set_current_config(config)
 def dashboard_callback(request, context):
     """
     Django CFG dashboard callback.
-    
+
     Uses Django CFG's base system monitoring and adds sample-specific metrics.
+
+    NEW: Supports custom widgets via context["custom_widgets"] for Widgets tab!
     """
     from django_cfg.modules.django_unfold.callbacks import UnfoldCallbacks
-    from django_cfg.modules.django_unfold.models.dashboard import StatCard
+    from django_cfg.modules.django_unfold.models.dashboard import StatCard, StatsCardsWidget
 
     try:
-        # Use Django CFG's base callback for system metrics, quick actions, etc.
-        unfold_callbacks = UnfoldCallbacks()
-        context = unfold_callbacks.main_dashboard_callback(request, context)
-
-        # Get real data from models
+        # Get real data from models FIRST (before calling base callback)
         from apps.profiles.models import UserProfile
         from django_cfg.apps.accounts.models import CustomUser
         from django.utils import timezone
@@ -325,71 +340,102 @@ def dashboard_callback(request, context):
         total_wallets = Wallet.objects.count()
         total_orders = Order.objects.count()
 
-        # Add real metrics cards
-        sample_cards = [
-            StatCard(
-                title="Total Users",
-                value=str(total_users),
-                icon=Icons.PEOPLE,
-                change=f"+{recent_users}" if recent_users > 0 else "0",
-                change_type="positive" if recent_users > 0 else "neutral",
-                description="Registered users",
-                color="primary"
+        # Create widgets for Widgets tab using template variables
+        # IMPORTANT: Do this BEFORE calling main_dashboard_callback!
+        custom_widgets = [
+            StatsCardsWidget(
+                title="User & Activity Metrics",
+                cards=[
+                    StatCard(
+                        title="Total Users",
+                        value="{{ total_users }}",
+                        icon=Icons.PEOPLE,
+                        change="{{ recent_users_change }}",
+                        change_type="positive" if recent_users > 0 else "neutral",
+                        description="Registered users",
+                        color="primary"
+                    ),
+                    StatCard(
+                        title="User Profiles",
+                        value="{{ total_profiles }}",
+                        icon=Icons.PERSON,
+                        description="Active profiles",
+                        color="primary"
+                    ),
+                    StatCard(
+                        title="Orders Today",
+                        value="{{ orders_today }}",
+                        icon=Icons.TODAY,
+                        description="Orders placed today",
+                        color="green"
+                    ),
+                    StatCard(
+                        title="Recent Orders (7d)",
+                        value="{{ recent_orders }}",
+                        icon=Icons.TRENDING_UP,
+                        description="Orders last 7 days",
+                        color="blue"
+                    ),
+                ]
             ),
-            StatCard(
-                title="User Profiles",
-                value=str(total_profiles),
-                icon=Icons.PERSON,
-                change="",
-                change_type="neutral",
-                description="Active profiles",
-                color="primary"
-            ),
-            StatCard(
-                title="Total Orders",
-                value=str(total_orders),
-                icon=Icons.SHOPPING_CART,
-                change="",
-                change_type="neutral",
-                description="Total orders",
-                color="primary"
-            ),
-            StatCard(
-                title="Total Coins",
-                value=str(total_coins),
-                icon=Icons.CURRENCY_BITCOIN,
-                change="",
-                change_type="neutral",
-                description="Total coins",
-                color="primary"
-            ),
-            StatCard(
-                title="Total Exchanges",
-                value=str(total_exchanges),
-                icon=Icons.STOREFRONT,
-                change="",
-                change_type="neutral",
-                description="Total exchanges",
-                color="primary"
-            ),
-            StatCard(
-                title="Total Wallets",
-                value=str(total_wallets),
-                icon=Icons.ACCOUNT_BALANCE_WALLET,
-                change="",
-                change_type="neutral",
-                description="Total wallets",
-                color="primary"
+            StatsCardsWidget(
+                title="Crypto Exchange Metrics",
+                cards=[
+                    StatCard(
+                        title="Total Orders",
+                        value="{{ total_orders }}",
+                        icon=Icons.SHOPPING_CART,
+                        description="All time orders",
+                        color="primary"
+                    ),
+                    StatCard(
+                        title="Active Coins",
+                        value="{{ total_coins }}",
+                        icon=Icons.CURRENCY_BITCOIN,
+                        description="Tradeable coins",
+                        color="orange"
+                    ),
+                    StatCard(
+                        title="Exchanges",
+                        value="{{ total_exchanges }}",
+                        icon=Icons.STOREFRONT,
+                        description="Connected exchanges",
+                        color="purple"
+                    ),
+                    StatCard(
+                        title="Total Wallets",
+                        value="{{ total_wallets }}",
+                        icon=Icons.ACCOUNT_BALANCE_WALLET,
+                        description="User wallets",
+                        color="green"
+                    ),
+                ]
             ),
         ]
 
-        # Convert to dict and add to existing cards
-        existing_cards = context.get("cards", [])
-        sample_cards_dict = [card.model_dump() for card in sample_cards]
-
-        # Update context with combined data
+        # Add custom widgets and metrics to context BEFORE calling main_dashboard_callback
         context.update({
-            "cards": existing_cards + sample_cards_dict,
+            # Widgets tab widgets (MUST be added before main_dashboard_callback!)
+            "custom_widgets": custom_widgets,
+
+            # Template variables for widgets
+            "total_users": total_users,
+            "total_profiles": total_profiles,
+            "orders_today": orders_today,
+            "recent_orders": recent_orders,
+            "recent_users_change": f"+{recent_users}" if recent_users > 0 else "0",
+            "total_orders": total_orders,
+            "total_coins": total_coins,
+            "total_exchanges": total_exchanges,
+            "total_wallets": total_wallets,
+        })
+
+        # NOW call base callback - it will pick up custom_widgets from context!
+        unfold_callbacks = UnfoldCallbacks()
+        context = unfold_callbacks.main_dashboard_callback(request, context)
+
+        # Add dashboard metadata
+        context.update({
             "dashboard_title": f"{env.app.name} Dashboard",
             "dashboard_subtitle": "Django CFG Sample Project",
             "sample_version": "1.0.0",

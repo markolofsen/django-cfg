@@ -25,6 +25,26 @@ export interface EndpointsStatus {
 }
 
 /**
+ * Serializer for URLs list response.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface URLsList {
+  /** Status: success or error */
+  status: string;
+  /** Service name */
+  service: string;
+  /** Django-CFG version */
+  version: string;
+  /** Base URL of the service */
+  base_url: string;
+  /** Total number of registered URLs */
+  total_urls: number;
+  /** List of all registered URL patterns */
+  urls: Array<URLPattern>;
+}
+
+/**
  * Serializer for single endpoint status.
  * 
  * Response model (includes read-only fields).
@@ -64,5 +84,29 @@ export interface Endpoint {
   required_auth?: boolean;
   /** Whether endpoint returned 429 (rate limited) */
   rate_limited?: boolean;
+}
+
+/**
+ * Serializer for single URL pattern.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface URLPattern {
+  /** URL pattern (e.g., ^api/users/(?P<pk>[^/.]+)/$) */
+  pattern: string;
+  /** URL name (if defined) */
+  name?: string | null;
+  /** Full URL name with namespace (e.g., admin:index) */
+  full_name?: string | null;
+  /** URL namespace */
+  namespace?: string | null;
+  /** View function/class name */
+  view?: string | null;
+  /** View class name (for CBV/ViewSets) */
+  view_class?: string | null;
+  /** Allowed HTTP methods */
+  methods?: Array<string>;
+  /** View module path */
+  module?: string | null;
 }
 

@@ -2,35 +2,11 @@
 {% load static %}
 
 {% block extra_css %}
-<style>
-    /* Tab styling - важно для работы табов */
-    .tab-button.active {
-        border-color: #3b82f6 !important;
-        color: #3b82f6 !important;
-    }
-    
-    .tab-panel {
-        display: none !important;
-    }
-    
-    .tab-panel.active {
-        display: block !important;
-    }
-    
-    /* Убираем все остальные табы кроме активного */
-    #queues-tab,
-    #workers-tab, 
-    #tasks-tab {
-        display: none;
-    }
-    
-    #overview-tab {
-        display: block;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'tasks/css/dashboard-alpine.css' %}">
 {% endblock %}
 
 {% block content %}
+<div x-data="tasksDashboard()">
 {% csrf_token %}
 
 <!-- Management Actions -->
@@ -42,22 +18,22 @@
 <!-- Tab Content -->
 <div class="tab-content mt-6">
     <!-- Overview Tab -->
-    <div id="overview-tab" class="tab-panel active">
+    <div x-show="activeTab === 'overview'" x-cloak>
         {% include 'tasks/components/overview_content.html' %}
     </div>
-    
+
     <!-- Queues Tab -->
-    <div id="queues-tab" class="tab-panel">
+    <div x-show="activeTab === 'queues'" x-cloak>
         {% include 'tasks/components/queues_content.html' %}
     </div>
-    
+
     <!-- Workers Tab -->
-    <div id="workers-tab" class="tab-panel">
+    <div x-show="activeTab === 'workers'" x-cloak>
         {% include 'tasks/components/workers_content.html' %}
     </div>
-    
+
     <!-- Tasks Tab -->
-    <div id="tasks-tab" class="tab-panel">
+    <div x-show="activeTab === 'tasks'" x-cloak>
         {% include 'tasks/components/tasks_content.html' %}
     </div>
 </div>
@@ -65,6 +41,9 @@
 <!-- Templates for JavaScript -->
 {% include 'tasks/partials/task_row_template.html' %}
 
+<!-- Task Details Modal -->
+{% include 'tasks/components/task_details_modal.html' %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -90,12 +69,9 @@ try {
 }
 </script>
 
-<!-- Dashboard Modules -->
-<script type="module" src="{% static 'tasks/js/dashboard/overview.mjs' %}"></script>
-<script type="module" src="{% static 'tasks/js/dashboard/queues.mjs' %}"></script>
-<script type="module" src="{% static 'tasks/js/dashboard/workers.mjs' %}"></script>
-<script type="module" src="{% static 'tasks/js/dashboard/tasks.mjs' %}"></script>
+<!-- Alpine.js Dashboard Logic (Modular) - Registers component factory globally -->
+<script type="module" src="{% static 'tasks/js/alpine/index.js' %}"></script>
 
-<!-- Main Dashboard Controller -->
-<script type="module" src="{% static 'tasks/js/dashboard/main.mjs' %}"></script>
+<!-- Alpine.js Core - Will find and register the component when it initializes -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 {% endblock %}

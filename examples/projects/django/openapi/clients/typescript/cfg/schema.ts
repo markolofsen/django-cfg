@@ -61,6 +61,166 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "APIZone": {
+        "description": "OpenAPI zone/group serializer.",
+        "properties": {
+          "api_url": {
+            "type": "string"
+          },
+          "app_count": {
+            "type": "integer"
+          },
+          "apps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": {
+            "type": "string"
+          },
+          "endpoint_count": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schema_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_url",
+          "app_count",
+          "apps",
+          "description",
+          "endpoint_count",
+          "name",
+          "schema_url",
+          "status",
+          "title"
+        ],
+        "type": "object"
+      },
+      "APIZonesSummary": {
+        "description": "API zones summary serializer.",
+        "properties": {
+          "summary": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/APIZone"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "summary",
+          "zones"
+        ],
+        "type": "object"
+      },
+      "ActivityEntry": {
+        "description": "Serializer for recent activity entries.",
+        "properties": {
+          "action": {
+            "description": "Action type (created, updated, deleted, etc.)",
+            "type": "string"
+          },
+          "color": {
+            "description": "Icon color",
+            "type": "string"
+          },
+          "icon": {
+            "description": "Material icon name",
+            "type": "string"
+          },
+          "id": {
+            "description": "Activity ID",
+            "type": "integer"
+          },
+          "resource": {
+            "description": "Resource affected",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "Activity timestamp (ISO format)",
+            "type": "string"
+          },
+          "user": {
+            "description": "User who performed the action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "color",
+          "icon",
+          "id",
+          "resource",
+          "timestamp",
+          "user"
+        ],
+        "type": "object"
+      },
+      "ActivityTrackerDay": {
+        "description": "Activity tracker single day serializer.",
+        "properties": {
+          "color": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "tooltip": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "color",
+          "count",
+          "date",
+          "level",
+          "tooltip"
+        ],
+        "type": "object"
+      },
+      "AppStatistics": {
+        "description": "Serializer for application-specific statistics.",
+        "properties": {
+          "app_name": {
+            "description": "Application name",
+            "type": "string"
+          },
+          "statistics": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Application statistics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "app_name",
+          "statistics"
+        ],
+        "type": "object"
+      },
       "ArchiveItem": {
         "description": "Archive item serializer.",
         "properties": {
@@ -857,6 +1017,790 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "CentrifugoChannelInfo": {
+        "description": "Information about a single channel.",
+        "properties": {
+          "num_clients": {
+            "description": "Number of connected clients in channel",
+            "title": "Num Clients",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num_clients"
+        ],
+        "title": "CentrifugoChannelInfo",
+        "type": "object"
+      },
+      "CentrifugoChannelsRequestRequest": {
+        "description": "Request to list active channels.",
+        "properties": {
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Pattern to filter channels (e.g., \u0027user:*\u0027)",
+            "title": "Pattern"
+          }
+        },
+        "title": "CentrifugoChannelsRequest",
+        "type": "object"
+      },
+      "CentrifugoChannelsResponse": {
+        "description": "List of active channels response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoChannelsResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoChannelsResponse",
+        "type": "object"
+      },
+      "CentrifugoChannelsResult": {
+        "description": "Channels result wrapper.",
+        "properties": {
+          "channels": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CentrifugoChannelInfo"
+            },
+            "description": "Map of channel names to channel info",
+            "title": "Channels",
+            "type": "object"
+          }
+        },
+        "required": [
+          "channels"
+        ],
+        "title": "CentrifugoChannelsResult",
+        "type": "object"
+      },
+      "CentrifugoClientInfo": {
+        "description": "Information about connected client.",
+        "properties": {
+          "chan_info": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Channel-specific metadata",
+            "title": "Chan Info"
+          },
+          "client": {
+            "description": "Client UUID",
+            "title": "Client",
+            "type": "string"
+          },
+          "conn_info": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Connection metadata",
+            "title": "Conn Info"
+          },
+          "user": {
+            "description": "User ID",
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user",
+          "client"
+        ],
+        "title": "CentrifugoClientInfo",
+        "type": "object"
+      },
+      "CentrifugoError": {
+        "description": "Centrifugo API error structure.",
+        "properties": {
+          "code": {
+            "default": 0,
+            "description": "Error code (0 = no error)",
+            "title": "Code",
+            "type": "integer"
+          },
+          "message": {
+            "default": "",
+            "description": "Error message",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CentrifugoError",
+        "type": "object"
+      },
+      "CentrifugoHistoryRequestRequest": {
+        "description": "Request to get channel history.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 1000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum number of messages to return",
+            "title": "Limit"
+          },
+          "reverse": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "description": "Reverse message order (newest first)",
+            "title": "Reverse"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoStreamPosition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Stream position to get messages since"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "CentrifugoHistoryRequest",
+        "type": "object"
+      },
+      "CentrifugoHistoryResponse": {
+        "description": "Channel history response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoHistoryResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoHistoryResponse",
+        "type": "object"
+      },
+      "CentrifugoHistoryResult": {
+        "description": "History result wrapper.",
+        "properties": {
+          "epoch": {
+            "description": "Current stream epoch",
+            "title": "Epoch",
+            "type": "string"
+          },
+          "offset": {
+            "description": "Latest stream offset",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "publications": {
+            "description": "List of publications",
+            "items": {
+              "$ref": "#/components/schemas/CentrifugoPublication"
+            },
+            "title": "Publications",
+            "type": "array"
+          }
+        },
+        "required": [
+          "publications",
+          "epoch",
+          "offset"
+        ],
+        "title": "CentrifugoHistoryResult",
+        "type": "object"
+      },
+      "CentrifugoInfoResponse": {
+        "description": "Server info response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoInfoResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoInfoResponse",
+        "type": "object"
+      },
+      "CentrifugoInfoResult": {
+        "description": "Info result wrapper.",
+        "properties": {
+          "nodes": {
+            "description": "List of Centrifugo nodes",
+            "items": {
+              "$ref": "#/components/schemas/CentrifugoNodeInfo"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes"
+        ],
+        "title": "CentrifugoInfoResult",
+        "type": "object"
+      },
+      "CentrifugoMetrics": {
+        "description": "Server metrics.",
+        "properties": {
+          "interval": {
+            "description": "Metrics collection interval",
+            "title": "Interval",
+            "type": "number"
+          },
+          "items": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Metric name to value mapping",
+            "title": "Items",
+            "type": "object"
+          }
+        },
+        "required": [
+          "interval",
+          "items"
+        ],
+        "title": "CentrifugoMetrics",
+        "type": "object"
+      },
+      "CentrifugoNodeInfo": {
+        "description": "Information about a single Centrifugo node.",
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Server metrics"
+          },
+          "name": {
+            "description": "Node name",
+            "title": "Name",
+            "type": "string"
+          },
+          "num_channels": {
+            "description": "Number of active channels",
+            "title": "Num Channels",
+            "type": "integer"
+          },
+          "num_clients": {
+            "description": "Number of connected clients",
+            "title": "Num Clients",
+            "type": "integer"
+          },
+          "num_subs": {
+            "description": "Total number of subscriptions",
+            "title": "Num Subs",
+            "type": "integer"
+          },
+          "num_users": {
+            "description": "Number of unique users",
+            "title": "Num Users",
+            "type": "integer"
+          },
+          "process": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoProcess"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Process information"
+          },
+          "uid": {
+            "description": "Unique node identifier",
+            "title": "Uid",
+            "type": "string"
+          },
+          "uptime": {
+            "description": "Node uptime in seconds",
+            "title": "Uptime",
+            "type": "integer"
+          },
+          "version": {
+            "description": "Centrifugo version",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uid",
+          "name",
+          "version",
+          "num_clients",
+          "num_users",
+          "num_channels",
+          "uptime",
+          "num_subs"
+        ],
+        "title": "CentrifugoNodeInfo",
+        "type": "object"
+      },
+      "CentrifugoPresenceRequestRequest": {
+        "description": "Request to get channel presence.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "CentrifugoPresenceRequest",
+        "type": "object"
+      },
+      "CentrifugoPresenceResponse": {
+        "description": "Channel presence response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoPresenceResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoPresenceResponse",
+        "type": "object"
+      },
+      "CentrifugoPresenceResult": {
+        "description": "Presence result wrapper.",
+        "properties": {
+          "presence": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CentrifugoClientInfo"
+            },
+            "description": "Map of client IDs to client info",
+            "title": "Presence",
+            "type": "object"
+          }
+        },
+        "required": [
+          "presence"
+        ],
+        "title": "CentrifugoPresenceResult",
+        "type": "object"
+      },
+      "CentrifugoPresenceStatsRequestRequest": {
+        "description": "Request to get channel presence statistics.",
+        "properties": {
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "CentrifugoPresenceStatsRequest",
+        "type": "object"
+      },
+      "CentrifugoPresenceStatsResponse": {
+        "description": "Channel presence stats response.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error if any"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result data"
+          }
+        },
+        "title": "CentrifugoPresenceStatsResponse",
+        "type": "object"
+      },
+      "CentrifugoPresenceStatsResult": {
+        "description": "Presence stats result.",
+        "properties": {
+          "num_clients": {
+            "description": "Number of connected clients",
+            "title": "Num Clients",
+            "type": "integer"
+          },
+          "num_users": {
+            "description": "Number of unique users",
+            "title": "Num Users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num_clients",
+          "num_users"
+        ],
+        "title": "CentrifugoPresenceStatsResult",
+        "type": "object"
+      },
+      "CentrifugoProcess": {
+        "description": "Process information.",
+        "properties": {
+          "cpu": {
+            "description": "CPU usage percentage",
+            "title": "Cpu",
+            "type": "number"
+          },
+          "rss": {
+            "description": "Resident set size in bytes",
+            "title": "Rss",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cpu",
+          "rss"
+        ],
+        "title": "CentrifugoProcess",
+        "type": "object"
+      },
+      "CentrifugoPublication": {
+        "description": "Single publication (message) in channel history.",
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "description": "Message payload",
+            "title": "Data",
+            "type": "object"
+          },
+          "info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CentrifugoClientInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Publisher client info"
+          },
+          "offset": {
+            "description": "Message offset in channel stream",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional message tags",
+            "title": "Tags"
+          }
+        },
+        "required": [
+          "data",
+          "offset"
+        ],
+        "title": "CentrifugoPublication",
+        "type": "object"
+      },
+      "CentrifugoStreamPosition": {
+        "description": "Stream position for pagination.",
+        "properties": {
+          "epoch": {
+            "description": "Stream epoch",
+            "title": "Epoch",
+            "type": "string"
+          },
+          "offset": {
+            "description": "Stream offset",
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offset",
+          "epoch"
+        ],
+        "title": "CentrifugoStreamPosition",
+        "type": "object"
+      },
+      "ChannelList": {
+        "description": "List of channel statistics.",
+        "properties": {
+          "channels": {
+            "description": "Channel statistics",
+            "items": {
+              "$ref": "#/components/schemas/ChannelStatsSerializer"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "total_channels": {
+            "description": "Total number of channels",
+            "title": "Total Channels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channels",
+          "total_channels"
+        ],
+        "title": "ChannelListSerializer",
+        "type": "object"
+      },
+      "ChannelStatsSerializer": {
+        "description": "Statistics per channel.",
+        "properties": {
+          "avg_acks": {
+            "description": "Average ACKs received",
+            "title": "Avg Acks",
+            "type": "number"
+          },
+          "avg_duration_ms": {
+            "description": "Average duration",
+            "title": "Avg Duration Ms",
+            "type": "number"
+          },
+          "channel": {
+            "description": "Channel name",
+            "title": "Channel",
+            "type": "string"
+          },
+          "failed": {
+            "description": "Failed publishes",
+            "title": "Failed",
+            "type": "integer"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Last activity timestamp (ISO format)",
+            "title": "Last Activity At"
+          },
+          "successful": {
+            "description": "Successful publishes",
+            "title": "Successful",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total publishes to this channel",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel",
+          "total",
+          "successful",
+          "failed",
+          "avg_duration_ms",
+          "avg_acks"
+        ],
+        "title": "ChannelStatsSerializer",
+        "type": "object"
+      },
+      "ChartData": {
+        "description": "Chart.js data structure serializer.",
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/ChartDataset"
+            },
+            "type": "array"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "datasets",
+          "labels"
+        ],
+        "type": "object"
+      },
+      "ChartDataset": {
+        "description": "Chart.js dataset serializer.",
+        "properties": {
+          "backgroundColor": {
+            "type": "string"
+          },
+          "borderColor": {
+            "type": "string"
+          },
+          "data": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "fill": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tension": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "backgroundColor",
+          "borderColor",
+          "data",
+          "label",
+          "tension"
+        ],
+        "type": "object"
+      },
       "ChatHistory": {
         "description": "Chat history response serializer.",
         "properties": {
@@ -1265,6 +2209,123 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "Command": {
+        "description": "Django management command serializer.",
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "help": {
+            "type": "string"
+          },
+          "is_core": {
+            "type": "boolean"
+          },
+          "is_custom": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "app",
+          "help",
+          "is_core",
+          "is_custom",
+          "name"
+        ],
+        "type": "object"
+      },
+      "CommandsSummary": {
+        "description": "Commands summary serializer.",
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "categorized": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "commands": {
+            "items": {
+              "$ref": "#/components/schemas/Command"
+            },
+            "type": "array"
+          },
+          "core_commands": {
+            "type": "integer"
+          },
+          "custom_commands": {
+            "type": "integer"
+          },
+          "total_commands": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "categories",
+          "categorized",
+          "commands",
+          "core_commands",
+          "custom_commands",
+          "total_commands"
+        ],
+        "type": "object"
+      },
+      "ConnectionTokenRequestRequest": {
+        "description": "Request model for connection token generation.",
+        "properties": {
+          "channels": {
+            "description": "List of channels to authorize",
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "user_id": {
+            "description": "User ID for the connection",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "ConnectionTokenRequest",
+        "type": "object"
+      },
+      "ConnectionTokenResponse": {
+        "description": "Response model for connection token.",
+        "properties": {
+          "centrifugo_url": {
+            "description": "Centrifugo WebSocket URL",
+            "title": "Centrifugo Url",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Token expiration time (ISO 8601)",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "description": "JWT token for WebSocket connection",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "centrifugo_url",
+          "expires_at"
+        ],
+        "title": "ConnectionTokenResponse",
+        "type": "object"
+      },
       "Currency": {
         "description": "Currency list serializer.",
         "properties": {
@@ -1332,6 +2393,67 @@ export const OPENAPI_SCHEMA = {
           "sort_order",
           "symbol",
           "token"
+        ],
+        "type": "object"
+      },
+      "DashboardOverview": {
+        "description": "Main serializer for dashboard overview endpoint.\nUses DictField to avoid allOf generation in OpenAPI.",
+        "properties": {
+          "quick_actions": {
+            "description": "Quick action buttons",
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "recent_activity": {
+            "description": "Recent activity entries",
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "stat_cards": {
+            "description": "Dashboard statistics cards",
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "system_health": {
+            "description": "System health status",
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "system_metrics": {
+            "additionalProperties": {},
+            "description": "System performance metrics",
+            "type": "object"
+          },
+          "timestamp": {
+            "description": "Data timestamp (ISO format)",
+            "type": "string"
+          },
+          "user_statistics": {
+            "additionalProperties": {},
+            "description": "User statistics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "quick_actions",
+          "recent_activity",
+          "stat_cards",
+          "system_health",
+          "system_metrics",
+          "timestamp",
+          "user_statistics"
         ],
         "type": "object"
       },
@@ -2361,44 +3483,36 @@ export const OPENAPI_SCHEMA = {
         "type": "object"
       },
       "HealthCheck": {
-        "description": "Serializer for health check response.",
+        "description": "Health check response.",
         "properties": {
-          "checks": {
-            "additionalProperties": {},
-            "description": "Detailed health checks for databases, cache, and system",
-            "type": "object"
-          },
-          "environment": {
-            "additionalProperties": {},
-            "description": "Environment information",
-            "type": "object"
-          },
-          "service": {
-            "description": "Service name",
-            "type": "string"
+          "has_api_key": {
+            "description": "Whether API key is configured",
+            "title": "Has Api Key",
+            "type": "boolean"
           },
           "status": {
-            "description": "Overall health status: healthy, degraded, or unhealthy",
+            "description": "Health status: healthy or unhealthy",
+            "title": "Status",
             "type": "string"
           },
           "timestamp": {
-            "description": "Timestamp of the health check",
-            "format": "date-time",
+            "description": "Current timestamp",
+            "title": "Timestamp",
             "type": "string"
           },
-          "version": {
-            "description": "Django-CFG version",
+          "wrapper_url": {
+            "description": "Configured wrapper URL",
+            "title": "Wrapper Url",
             "type": "string"
           }
         },
         "required": [
-          "checks",
-          "environment",
-          "service",
           "status",
-          "timestamp",
-          "version"
+          "wrapper_url",
+          "has_api_key",
+          "timestamp"
         ],
+        "title": "HealthCheckSerializer",
         "type": "object"
       },
       "LeadSubmission": {
@@ -2577,6 +3691,61 @@ export const OPENAPI_SCHEMA = {
           "message",
           "success"
         ],
+        "type": "object"
+      },
+      "ManualAckRequestRequest": {
+        "description": "Request model for manual ACK sending.",
+        "properties": {
+          "client_id": {
+            "description": "Client ID sending the ACK",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "message_id": {
+            "description": "Message ID to acknowledge",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "client_id"
+        ],
+        "title": "ManualAckRequest",
+        "type": "object"
+      },
+      "ManualAckResponse": {
+        "description": "Response model for manual ACK.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if failed",
+            "title": "Error"
+          },
+          "message_id": {
+            "description": "Message ID that was acknowledged",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "success": {
+            "description": "Whether ACK was sent successfully",
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "message_id"
+        ],
+        "title": "ManualAckResponse",
         "type": "object"
       },
       "Message": {
@@ -3002,6 +4171,63 @@ export const OPENAPI_SCHEMA = {
           "refresh",
           "user"
         ],
+        "type": "object"
+      },
+      "OverviewStats": {
+        "description": "Overview statistics for Centrifugo publishes.",
+        "properties": {
+          "avg_acks_received": {
+            "description": "Average ACKs received",
+            "title": "Avg Acks Received",
+            "type": "number"
+          },
+          "avg_duration_ms": {
+            "description": "Average duration in milliseconds",
+            "title": "Avg Duration Ms",
+            "type": "number"
+          },
+          "failed": {
+            "description": "Failed publishes",
+            "title": "Failed",
+            "type": "integer"
+          },
+          "period_hours": {
+            "description": "Statistics period in hours",
+            "title": "Period Hours",
+            "type": "integer"
+          },
+          "success_rate": {
+            "description": "Success rate percentage",
+            "title": "Success Rate",
+            "type": "number"
+          },
+          "successful": {
+            "description": "Successful publishes",
+            "title": "Successful",
+            "type": "integer"
+          },
+          "timeout": {
+            "description": "Timeout publishes",
+            "title": "Timeout",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total publishes in period",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "successful",
+          "failed",
+          "timeout",
+          "success_rate",
+          "avg_duration_ms",
+          "avg_acks_received",
+          "period_hours"
+        ],
+        "title": "OverviewStatsSerializer",
         "type": "object"
       },
       "PaginatedArchiveItemChunkList": {
@@ -4804,6 +6030,94 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "PublishTestRequestRequest": {
+        "description": "Request model for test message publishing.",
+        "properties": {
+          "ack_timeout": {
+            "default": 10,
+            "description": "ACK timeout in seconds",
+            "maximum": 60,
+            "minimum": 1,
+            "title": "Ack Timeout",
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Target channel name",
+            "title": "Channel",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "description": "Message data (any JSON object)",
+            "title": "Data",
+            "type": "object"
+          },
+          "wait_for_ack": {
+            "default": false,
+            "description": "Wait for client acknowledgment",
+            "title": "Wait For Ack",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "channel",
+          "data"
+        ],
+        "title": "PublishTestRequest",
+        "type": "object"
+      },
+      "PublishTestResponse": {
+        "description": "Response model for test message publishing.",
+        "properties": {
+          "acks_received": {
+            "default": 0,
+            "description": "Number of ACKs received",
+            "title": "Acks Received",
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Target channel",
+            "title": "Channel",
+            "type": "string"
+          },
+          "delivered": {
+            "default": false,
+            "description": "Whether message was delivered",
+            "title": "Delivered",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if failed",
+            "title": "Error"
+          },
+          "message_id": {
+            "description": "Unique message ID",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "success": {
+            "description": "Whether publish succeeded",
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "message_id",
+          "channel"
+        ],
+        "title": "PublishTestResponse",
+        "type": "object"
+      },
       "QueueAction": {
         "description": "Serializer for queue management actions.",
         "properties": {
@@ -4899,6 +6213,52 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "QuickAction": {
+        "description": "Serializer for quick action buttons.\n\nMaps to QuickAction Pydantic model.",
+        "properties": {
+          "category": {
+            "default": "general",
+            "description": "Action category",
+            "type": "string"
+          },
+          "color": {
+            "default": "primary",
+            "description": "Button color theme\n\n* `primary` - primary\n* `success` - success\n* `warning` - warning\n* `danger` - danger\n* `secondary` - secondary",
+            "enum": [
+              "primary",
+              "success",
+              "warning",
+              "danger",
+              "secondary"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "6400710d5b71d6b0"
+          },
+          "description": {
+            "description": "Action description",
+            "type": "string"
+          },
+          "icon": {
+            "description": "Material icon name",
+            "type": "string"
+          },
+          "link": {
+            "description": "Action URL",
+            "type": "string"
+          },
+          "title": {
+            "description": "Action title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "icon",
+          "link",
+          "title"
+        ],
+        "type": "object"
+      },
       "QuickHealth": {
         "description": "Serializer for quick health check response.",
         "properties": {
@@ -4919,6 +6279,91 @@ export const OPENAPI_SCHEMA = {
         "required": [
           "status",
           "timestamp"
+        ],
+        "type": "object"
+      },
+      "RecentPublishes": {
+        "description": "Recent publishes list.",
+        "properties": {
+          "count": {
+            "description": "Number of publishes returned",
+            "title": "Count",
+            "type": "integer"
+          },
+          "has_more": {
+            "default": false,
+            "description": "Whether more results are available",
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Current offset for pagination",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "publishes": {
+            "description": "List of recent publishes",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Publishes",
+            "type": "array"
+          },
+          "total_available": {
+            "description": "Total publishes available",
+            "title": "Total Available",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "publishes",
+          "count",
+          "total_available"
+        ],
+        "title": "RecentPublishesSerializer",
+        "type": "object"
+      },
+      "RecentUser": {
+        "description": "Recent user serializer.",
+        "properties": {
+          "date_joined": {
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_staff": {
+            "type": "boolean"
+          },
+          "is_superuser": {
+            "type": "boolean"
+          },
+          "last_login": {
+            "nullable": true,
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_joined",
+          "email",
+          "id",
+          "is_active",
+          "is_staff",
+          "is_superuser",
+          "last_login",
+          "username"
         ],
         "type": "object"
       },
@@ -5005,6 +6450,55 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "StatCard": {
+        "description": "Serializer for dashboard statistics cards.\n\nMaps to StatCard Pydantic model.",
+        "properties": {
+          "change": {
+            "description": "Change indicator (e.g., \u0027+12%\u0027)",
+            "nullable": true,
+            "type": "string"
+          },
+          "change_type": {
+            "default": "neutral",
+            "description": "Change type\n\n* `positive` - positive\n* `negative` - negative\n* `neutral` - neutral",
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "b21c1f8e6042dbef"
+          },
+          "color": {
+            "default": "primary",
+            "description": "Card color theme",
+            "type": "string"
+          },
+          "description": {
+            "description": "Additional description",
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Material icon name",
+            "type": "string"
+          },
+          "title": {
+            "description": "Card title",
+            "type": "string"
+          },
+          "value": {
+            "description": "Main value to display",
+            "type": "string"
+          }
+        },
+        "required": [
+          "icon",
+          "title",
+          "value"
+        ],
+        "type": "object"
+      },
       "SubscribeRequest": {
         "description": "Simple serializer for newsletter subscription.",
         "properties": {
@@ -5055,6 +6549,134 @@ export const OPENAPI_SCHEMA = {
         "required": [
           "message",
           "success"
+        ],
+        "type": "object"
+      },
+      "SystemHealth": {
+        "description": "Serializer for overall system health status.",
+        "properties": {
+          "components": {
+            "description": "Health status of individual components",
+            "items": {
+              "$ref": "#/components/schemas/SystemHealthItem"
+            },
+            "type": "array"
+          },
+          "overall_health_percentage": {
+            "description": "Overall health percentage",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "overall_status": {
+            "description": "Overall system health status\n\n* `healthy` - healthy\n* `warning` - warning\n* `error` - error\n* `unknown` - unknown",
+            "enum": [
+              "healthy",
+              "warning",
+              "error",
+              "unknown"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "4a4719b6db2b089e"
+          },
+          "timestamp": {
+            "description": "Check timestamp (ISO format)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "components",
+          "overall_health_percentage",
+          "overall_status",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "SystemHealthItem": {
+        "description": "Serializer for system health status items.\n\nMaps to SystemHealthItem Pydantic model.",
+        "properties": {
+          "component": {
+            "description": "Component name",
+            "type": "string"
+          },
+          "description": {
+            "description": "Status description",
+            "type": "string"
+          },
+          "health_percentage": {
+            "description": "Health percentage (0-100)",
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "last_check": {
+            "description": "Last check time (ISO format)",
+            "type": "string"
+          },
+          "status": {
+            "description": "Health status\n\n* `healthy` - healthy\n* `warning` - warning\n* `error` - error\n* `unknown` - unknown",
+            "enum": [
+              "healthy",
+              "warning",
+              "error",
+              "unknown"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "4a4719b6db2b089e"
+          }
+        },
+        "required": [
+          "component",
+          "description",
+          "last_check",
+          "status"
+        ],
+        "type": "object"
+      },
+      "SystemMetrics": {
+        "description": "Serializer for system performance metrics.",
+        "properties": {
+          "cpu_usage": {
+            "description": "CPU usage percentage",
+            "format": "double",
+            "type": "number"
+          },
+          "disk_usage": {
+            "description": "Disk usage percentage",
+            "format": "double",
+            "type": "number"
+          },
+          "memory_usage": {
+            "description": "Memory usage percentage",
+            "format": "double",
+            "type": "number"
+          },
+          "network_in": {
+            "description": "Network incoming bandwidth",
+            "type": "string"
+          },
+          "network_out": {
+            "description": "Network outgoing bandwidth",
+            "type": "string"
+          },
+          "response_time": {
+            "description": "Average response time",
+            "type": "string"
+          },
+          "uptime": {
+            "description": "System uptime",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cpu_usage",
+          "disk_usage",
+          "memory_usage",
+          "network_in",
+          "network_out",
+          "response_time",
+          "uptime"
         ],
         "type": "object"
       },
@@ -5297,6 +6919,97 @@ export const OPENAPI_SCHEMA = {
         ],
         "type": "object"
       },
+      "URLPattern": {
+        "description": "Serializer for single URL pattern.",
+        "properties": {
+          "full_name": {
+            "description": "Full URL name with namespace (e.g., admin:index)",
+            "nullable": true,
+            "type": "string"
+          },
+          "methods": {
+            "description": "Allowed HTTP methods",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "module": {
+            "description": "View module path",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "URL name (if defined)",
+            "nullable": true,
+            "type": "string"
+          },
+          "namespace": {
+            "description": "URL namespace",
+            "nullable": true,
+            "type": "string"
+          },
+          "pattern": {
+            "description": "URL pattern (e.g., ^api/users/(?P\u003cpk\u003e[^/.]+)/$)",
+            "type": "string"
+          },
+          "view": {
+            "description": "View function/class name",
+            "nullable": true,
+            "type": "string"
+          },
+          "view_class": {
+            "description": "View class name (for CBV/ViewSets)",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "type": "object"
+      },
+      "URLsList": {
+        "description": "Serializer for URLs list response.",
+        "properties": {
+          "base_url": {
+            "description": "Base URL of the service",
+            "type": "string"
+          },
+          "service": {
+            "description": "Service name",
+            "type": "string"
+          },
+          "status": {
+            "description": "Status: success or error",
+            "type": "string"
+          },
+          "total_urls": {
+            "description": "Total number of registered URLs",
+            "type": "integer"
+          },
+          "urls": {
+            "description": "List of all registered URL patterns",
+            "items": {
+              "$ref": "#/components/schemas/URLPattern"
+            },
+            "type": "array"
+          },
+          "version": {
+            "description": "Django-CFG version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_url",
+          "service",
+          "status",
+          "total_urls",
+          "urls",
+          "version"
+        ],
+        "type": "object"
+      },
       "Unsubscribe": {
         "description": "Simple serializer for unsubscribe.",
         "properties": {
@@ -5442,6 +7155,34 @@ export const OPENAPI_SCHEMA = {
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UserStatistics": {
+        "description": "Serializer for user statistics.",
+        "properties": {
+          "active_users": {
+            "description": "Active users (last 30 days)",
+            "type": "integer"
+          },
+          "new_users": {
+            "description": "New users (last 7 days)",
+            "type": "integer"
+          },
+          "superusers": {
+            "description": "Number of superusers",
+            "type": "integer"
+          },
+          "total_users": {
+            "description": "Total number of users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active_users",
+          "new_users",
+          "superusers",
+          "total_users"
+        ],
         "type": "object"
       },
       "VectorizationResult": {
@@ -5636,7 +7377,8 @@ export const OPENAPI_SCHEMA = {
         "django_cfg_leads",
         "django_cfg_agents",
         "tasks",
-        "payments"
+        "payments",
+        "django_cfg_centrifugo"
       ],
       "generator": "django-client",
       "generator_version": "1.0.0",
@@ -5704,9 +7446,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -5776,9 +7515,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "tags": [
@@ -5816,9 +7552,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get current user profile",
@@ -5886,9 +7619,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Upload user avatar",
@@ -5968,9 +7698,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Partial update user profile",
@@ -6048,9 +7775,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Partial update user profile",
@@ -6130,9 +7854,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Update user profile",
@@ -6210,9 +7931,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Update user profile",
@@ -6264,6 +7982,2259 @@ export const OPENAPI_SCHEMA = {
         "x-async-capable": false
       }
     },
+    "/cfg/centrifugo/admin/api/monitor/channels/": {
+      "get": {
+        "description": "Get statistics per channel.",
+        "operationId": "cfg_centrifugo_admin_api_monitor_channels_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "tags": [
+          "centrifugo"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/health/": {
+      "get": {
+        "description": "Returns the current health status of the Centrifugo client.",
+        "operationId": "cfg_centrifugo_admin_api_monitor_health_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Service unavailable"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get Centrifugo health status",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/overview/": {
+      "get": {
+        "description": "Returns overview statistics for Centrifugo publishes.",
+        "operationId": "cfg_centrifugo_admin_api_monitor_overview_retrieve",
+        "parameters": [
+          {
+            "description": "Statistics period in hours (default: 24)",
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewStats"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get overview statistics",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/publishes/": {
+      "get": {
+        "description": "Returns a list of recent Centrifugo publishes with their details.",
+        "operationId": "cfg_centrifugo_admin_api_monitor_publishes_retrieve",
+        "parameters": [
+          {
+            "description": "Filter by channel name",
+            "in": "query",
+            "name": "channel",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of publishes to return (default: 50, max: 200)",
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Offset for pagination (default: 0)",
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by status (success, failed, timeout, pending, partial)",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentPublishes"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get recent publishes",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/monitor/timeline/": {
+      "get": {
+        "description": "Returns statistics grouped by channel.",
+        "operationId": "cfg_centrifugo_admin_api_monitor_timeline_retrieve",
+        "parameters": [
+          {
+            "description": "Statistics period in hours (default: 24)",
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Time interval: \u0027hour\u0027 or \u0027day\u0027 (default: hour)",
+            "in": "query",
+            "name": "interval",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelList"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel statistics",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/auth/token/": {
+      "post": {
+        "description": "Returns JWT token and config for WebSocket connection to Centrifugo.",
+        "operationId": "cfg_centrifugo_admin_api_server_auth_token_create",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "config": {
+                      "properties": {
+                        "centrifugo_url": {
+                          "type": "string"
+                        },
+                        "expires_at": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Centrifugo not configured"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get connection token for dashboard",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/channels/": {
+      "post": {
+        "description": "Returns list of active channels with optional pattern filter.",
+        "operationId": "cfg_centrifugo_admin_api_server_channels_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoChannelsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "List active channels",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/history/": {
+      "post": {
+        "description": "Returns message history for a channel.",
+        "operationId": "cfg_centrifugo_admin_api_server_history_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoHistoryResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel history",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/info/": {
+      "post": {
+        "description": "Returns server information including node count, version, and uptime.",
+        "operationId": "cfg_centrifugo_admin_api_server_info_create",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoInfoResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get Centrifugo server info",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/presence-stats/": {
+      "post": {
+        "description": "Returns quick statistics about channel presence (num_clients, num_users).",
+        "operationId": "cfg_centrifugo_admin_api_server_presence_stats_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceStatsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel presence statistics",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/server/presence/": {
+      "post": {
+        "description": "Returns list of clients currently subscribed to a channel.",
+        "operationId": "cfg_centrifugo_admin_api_server_presence_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel presence",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/connection-token/": {
+      "post": {
+        "description": "Generate JWT token for WebSocket connection to Centrifugo.",
+        "operationId": "cfg_centrifugo_admin_api_testing_connection_token_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTokenResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Generate connection token",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/publish-test/": {
+      "post": {
+        "description": "Publish test message to Centrifugo via wrapper with optional ACK tracking.",
+        "operationId": "cfg_centrifugo_admin_api_testing_publish_test_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Publish test message",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/publish-with-logging/": {
+      "post": {
+        "description": "Publish message using CentrifugoClient with database logging. This will create CentrifugoLog records.",
+        "operationId": "cfg_centrifugo_admin_api_testing_publish_with_logging_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Publish with database logging",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/admin/api/testing/send-ack/": {
+      "post": {
+        "description": "Manually send ACK for a message to the wrapper. Pass message_id in request body.",
+        "operationId": "cfg_centrifugo_admin_api_testing_send_ack_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualAckResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Send manual ACK",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/channels/": {
+      "get": {
+        "description": "Get statistics per channel.",
+        "operationId": "cfg_centrifugo_monitor_channels_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "tags": [
+          "centrifugo"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/health/": {
+      "get": {
+        "description": "Returns the current health status of the Centrifugo client.",
+        "operationId": "cfg_centrifugo_monitor_health_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Service unavailable"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get Centrifugo health status",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/overview/": {
+      "get": {
+        "description": "Returns overview statistics for Centrifugo publishes.",
+        "operationId": "cfg_centrifugo_monitor_overview_retrieve",
+        "parameters": [
+          {
+            "description": "Statistics period in hours (default: 24)",
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewStats"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get overview statistics",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/publishes/": {
+      "get": {
+        "description": "Returns a list of recent Centrifugo publishes with their details.",
+        "operationId": "cfg_centrifugo_monitor_publishes_retrieve",
+        "parameters": [
+          {
+            "description": "Filter by channel name",
+            "in": "query",
+            "name": "channel",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of publishes to return (default: 50, max: 200)",
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Offset for pagination (default: 0)",
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by status (success, failed, timeout, pending, partial)",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentPublishes"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get recent publishes",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/monitor/timeline/": {
+      "get": {
+        "description": "Returns statistics grouped by channel.",
+        "operationId": "cfg_centrifugo_monitor_timeline_retrieve",
+        "parameters": [
+          {
+            "description": "Statistics period in hours (default: 24)",
+            "in": "query",
+            "name": "hours",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Time interval: \u0027hour\u0027 or \u0027day\u0027 (default: hour)",
+            "in": "query",
+            "name": "interval",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelList"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid parameters"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel statistics",
+        "tags": [
+          "Centrifugo Monitoring"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/auth/token/": {
+      "post": {
+        "description": "Returns JWT token and config for WebSocket connection to Centrifugo.",
+        "operationId": "cfg_centrifugo_server_auth_token_create",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "config": {
+                      "properties": {
+                        "centrifugo_url": {
+                          "type": "string"
+                        },
+                        "expires_at": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Centrifugo not configured"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get connection token for dashboard",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/channels/": {
+      "post": {
+        "description": "Returns list of active channels with optional pattern filter.",
+        "operationId": "cfg_centrifugo_server_channels_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoChannelsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "List active channels",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/history/": {
+      "post": {
+        "description": "Returns message history for a channel.",
+        "operationId": "cfg_centrifugo_server_history_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoHistoryResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel history",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/info/": {
+      "post": {
+        "description": "Returns server information including node count, version, and uptime.",
+        "operationId": "cfg_centrifugo_server_info_create",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoInfoResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get Centrifugo server info",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/presence-stats/": {
+      "post": {
+        "description": "Returns quick statistics about channel presence (num_clients, num_users).",
+        "operationId": "cfg_centrifugo_server_presence_stats_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceStatsResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel presence statistics",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/server/presence/": {
+      "post": {
+        "description": "Returns list of clients currently subscribed to a channel.",
+        "operationId": "cfg_centrifugo_server_presence_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentrifugoPresenceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Get channel presence",
+        "tags": [
+          "Centrifugo Admin API"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/connection-token/": {
+      "post": {
+        "description": "Generate JWT token for WebSocket connection to Centrifugo.",
+        "operationId": "cfg_centrifugo_testing_connection_token_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTokenResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Generate connection token",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/publish-test/": {
+      "post": {
+        "description": "Publish test message to Centrifugo via wrapper with optional ACK tracking.",
+        "operationId": "cfg_centrifugo_testing_publish_test_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Publish test message",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/publish-with-logging/": {
+      "post": {
+        "description": "Publish message using CentrifugoClient with database logging. This will create CentrifugoLog records.",
+        "operationId": "cfg_centrifugo_testing_publish_with_logging_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTestRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishTestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Publish with database logging",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/centrifugo/testing/send-ack/": {
+      "post": {
+        "description": "Manually send ACK for a message to the wrapper. Pass message_id in request body.",
+        "operationId": "cfg_centrifugo_testing_send_ack_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAckRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualAckResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Server error"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
+        "summary": "Send manual ACK",
+        "tags": [
+          "Centrifugo Testing"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/activity/actions/": {
+      "get": {
+        "description": "Retrieve quick action buttons for dashboard",
+        "operationId": "cfg_dashboard_api_activity_actions_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuickAction"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get quick actions",
+        "tags": [
+          "Dashboard - Activity"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/activity/recent/": {
+      "get": {
+        "description": "Retrieve recent system activity entries",
+        "operationId": "cfg_dashboard_api_activity_recent_list",
+        "parameters": [
+          {
+            "description": "Maximum number of entries to return",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 10,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get recent activity",
+        "tags": [
+          "Dashboard - Activity"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/activity/": {
+      "get": {
+        "description": "Retrieve user activity data for chart visualization",
+        "operationId": "cfg_dashboard_api_charts_activity_retrieve",
+        "parameters": [
+          {
+            "description": "Number of days to include",
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "default": 7,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartData"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get user activity chart",
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/recent-users/": {
+      "get": {
+        "description": "Retrieve list of recently registered users",
+        "operationId": "cfg_dashboard_api_charts_recent_users_list",
+        "parameters": [
+          {
+            "description": "Maximum number of users to return",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 10,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentUser"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get recent users",
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/registrations/": {
+      "get": {
+        "description": "Retrieve user registration data for chart visualization",
+        "operationId": "cfg_dashboard_api_charts_registrations_retrieve",
+        "parameters": [
+          {
+            "description": "Number of days to include",
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "default": 7,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartData"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get user registration chart",
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/charts/tracker/": {
+      "get": {
+        "description": "Retrieve activity tracker data (GitHub-style contribution graph)",
+        "operationId": "cfg_dashboard_api_charts_tracker_list",
+        "parameters": [
+          {
+            "description": "Number of weeks to include",
+            "in": "query",
+            "name": "weeks",
+            "schema": {
+              "default": 52,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityTrackerDay"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get activity tracker",
+        "tags": [
+          "Dashboard - Charts"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/commands/": {
+      "get": {
+        "description": "Retrieve all available Django management commands",
+        "operationId": "cfg_dashboard_api_commands_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Command"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get all commands",
+        "tags": [
+          "Dashboard - Commands"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/commands/summary/": {
+      "get": {
+        "description": "Retrieve commands summary with statistics and categorization",
+        "operationId": "cfg_dashboard_api_commands_summary_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandsSummary"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get commands summary",
+        "tags": [
+          "Dashboard - Commands"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/overview/overview/": {
+      "get": {
+        "description": "Retrieve complete dashboard data including stats, health, actions, and metrics",
+        "operationId": "cfg_dashboard_api_overview_overview_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOverview"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get dashboard overview",
+        "tags": [
+          "Dashboard - Overview"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/statistics/apps/": {
+      "get": {
+        "description": "Retrieve statistics for all enabled django-cfg applications",
+        "operationId": "cfg_dashboard_api_statistics_apps_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AppStatistics"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get application statistics",
+        "tags": [
+          "Dashboard - Statistics"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/statistics/cards/": {
+      "get": {
+        "description": "Retrieve dashboard statistics cards with key metrics",
+        "operationId": "cfg_dashboard_api_statistics_cards_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StatCard"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get statistics cards",
+        "tags": [
+          "Dashboard - Statistics"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/statistics/users/": {
+      "get": {
+        "description": "Retrieve user-related statistics",
+        "operationId": "cfg_dashboard_api_statistics_users_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatistics"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get user statistics",
+        "tags": [
+          "Dashboard - Statistics"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/system/health/": {
+      "get": {
+        "description": "Retrieve overall system health including all component checks",
+        "operationId": "cfg_dashboard_api_system_health_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemHealth"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get system health status",
+        "tags": [
+          "Dashboard - System"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/system/metrics/": {
+      "get": {
+        "description": "Retrieve system performance metrics (CPU, memory, disk, etc.)",
+        "operationId": "cfg_dashboard_api_system_metrics_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemMetrics"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get system metrics",
+        "tags": [
+          "Dashboard - System"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/zones/": {
+      "get": {
+        "description": "Retrieve all OpenAPI zones/groups with their configuration",
+        "operationId": "cfg_dashboard_api_zones_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/APIZone"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get all API zones",
+        "tags": [
+          "Dashboard - API Zones"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/zones/summary/": {
+      "get": {
+        "description": "Retrieve zones summary with statistics",
+        "operationId": "cfg_dashboard_api_zones_summary_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIZonesSummary"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get zones summary",
+        "tags": [
+          "Dashboard - API Zones"
+        ],
+        "x-async-capable": false
+      }
+    },
     "/cfg/endpoints/drf/": {
       "get": {
         "description": "Return endpoints status data.",
@@ -6284,8 +10255,54 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
+          {}
+        ],
+        "tags": [
+          "endpoints"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/endpoints/urls/": {
+      "get": {
+        "description": "Return all registered URLs.",
+        "operationId": "cfg_endpoints_urls_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/URLsList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
           {
-            "cookieAuth": []
+            "jwtAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "endpoints"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/endpoints/urls/compact/": {
+      "get": {
+        "description": "Return compact URL list.",
+        "operationId": "cfg_endpoints_urls_compact_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
           },
           {}
         ],
@@ -6315,9 +10332,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "tags": [
@@ -6345,9 +10359,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -6396,9 +10407,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -6444,9 +10452,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -6514,9 +10519,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Process chat query with RAG",
@@ -6550,9 +10552,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -6590,9 +10589,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -6649,9 +10645,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -6709,9 +10702,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -6751,9 +10741,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get chat history",
@@ -6810,9 +10797,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List user documents",
@@ -6888,9 +10872,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Upload new document",
@@ -6919,9 +10900,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get processing statistics",
@@ -6958,9 +10936,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Delete document",
@@ -7002,9 +10977,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get document details",
@@ -7062,9 +11034,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7122,9 +11091,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7184,9 +11150,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Reprocess document",
@@ -7227,9 +11190,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get document processing status",
@@ -7278,9 +11238,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List user chat sessions",
@@ -7326,9 +11283,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Create new chat session",
@@ -7362,9 +11316,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7402,9 +11353,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7461,9 +11409,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7520,9 +11465,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7581,9 +11523,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Activate chat session",
@@ -7643,9 +11582,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Archive chat session",
@@ -7695,9 +11631,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "List public categories",
@@ -7741,9 +11674,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -7810,9 +11740,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "List public documents",
@@ -7856,9 +11783,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -7908,9 +11832,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -7978,9 +11899,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Upload and process archive",
@@ -8024,9 +11942,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Re-vectorize chunks",
@@ -8055,9 +11970,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get archive statistics",
@@ -8086,9 +11998,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get vectorization statistics",
@@ -8122,9 +12031,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8162,9 +12068,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8216,9 +12119,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8271,9 +12171,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8313,9 +12210,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get archive file tree",
@@ -8374,9 +12268,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get archive items",
@@ -8450,9 +12341,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Search archive chunks",
@@ -8501,9 +12389,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8549,9 +12434,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8584,9 +12466,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8624,9 +12503,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8683,9 +12559,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8743,9 +12616,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8785,9 +12655,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get chunk context",
@@ -8848,9 +12715,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Vectorize chunk",
@@ -8899,9 +12763,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8947,9 +12808,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -8982,9 +12840,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -9022,9 +12877,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -9081,9 +12933,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -9141,9 +12990,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -9201,9 +13047,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get item chunks",
@@ -9244,9 +13087,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get item content",
@@ -9296,9 +13136,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "tags": [
@@ -9344,9 +13181,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -9422,9 +13256,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "Submit Lead Form",
@@ -9457,9 +13288,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -9497,9 +13325,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -9556,9 +13381,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -9617,9 +13439,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "tags": [
@@ -9677,9 +13496,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Send Bulk Email",
@@ -9728,9 +13544,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List Newsletter Campaigns",
@@ -9777,9 +13590,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Create Newsletter Campaign",
@@ -9848,9 +13658,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Send Newsletter Campaign",
@@ -9882,9 +13689,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Delete Campaign",
@@ -9921,9 +13725,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get Campaign Details",
@@ -9979,9 +13780,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10037,9 +13835,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Update Campaign",
@@ -10088,9 +13883,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List Email Logs",
@@ -10140,9 +13932,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "List Active Newsletters",
@@ -10181,9 +13970,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -10254,9 +14040,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "Subscribe to Newsletter",
@@ -10305,9 +14088,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "List User Subscriptions",
@@ -10367,9 +14147,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "Test Email Sending",
@@ -10417,9 +14194,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           },
           {}
         ],
@@ -10477,9 +14251,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "summary": "Unsubscribe from Newsletter",
@@ -10527,9 +14298,6 @@ export const OPENAPI_SCHEMA = {
           {
             "jwtAuth": []
           },
-          {
-            "cookieAuth": []
-          },
           {}
         ],
         "tags": [
@@ -10557,9 +14325,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get user balance",
@@ -10591,9 +14356,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get available currencies",
@@ -10642,9 +14404,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10672,9 +14431,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10712,9 +14468,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10752,9 +14505,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10792,9 +14542,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10851,9 +14598,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "summary": "Get user transactions",
@@ -10902,9 +14646,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -10950,9 +14691,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11010,9 +14748,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11070,9 +14805,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11115,9 +14847,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11165,9 +14894,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11234,9 +14960,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11304,9 +15027,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11339,9 +15059,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11379,9 +15096,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11438,9 +15152,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [
@@ -11498,9 +15209,6 @@ export const OPENAPI_SCHEMA = {
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "tags": [

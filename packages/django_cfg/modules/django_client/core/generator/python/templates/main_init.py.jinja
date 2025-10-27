@@ -38,7 +38,8 @@ from .{{ tag.slug }} import {{ tag.class_name }}
 {% endfor %}
 {% if has_enums %}
 from . import enums
-from .enums import {{ enum_names | join(', ') }}
+# NOTE: Individual enum imports commented out due to invalid Python syntax with dotted names
+# from .enums import {{ enum_names | join(', ') }}
 {% endif %}
 
 TOKEN_KEY = "auth_token"

@@ -1,6 +1,6 @@
 ---
 title: Docker Configuration Strategy
-description: Master Django-CFG configuration in Docker with universal __ notation and YAML files. Learn the modern hybrid approach for seamless credential management.
+description: Master Django-CFG configuration in Docker with environment variables and pydantic-settings. Modern, simple, and production-ready.
 sidebar_label: Configuration
 sidebar_position: 3
 keywords:
@@ -8,26 +8,26 @@ keywords:
   - docker environment variables
   - django docker secrets
   - __ notation configuration
-  - yaml docker configuration
+  - pydantic-settings docker
 ---
 
 # Docker Configuration Strategy
 
 > **📚 Part of**: [Docker Guide](./overview) - Return to Docker overview
 
-Learn Django-CFG's modern hybrid configuration approach: YAML files for structure + environment variables for credentials.
+Learn Django-CFG's modern configuration approach: **environment variables** with **pydantic-settings** for type-safe, production-ready Docker deployments.
 
 ---
 
 ## Overview
 
-Django-CFG uses a layered configuration system that combines:
-- **YAML files** - Structure and templates
-- **Environment variables** - Universal `SECTION__FIELD` notation for overrides
-- **No rebuilds needed** - Just restart to apply credential changes
+Django-CFG uses **pydantic-settings** for automatic configuration loading from:
+- **Environment variables** - Docker, K8s, CI/CD
+- **.env files** - Local development only
+- **Code defaults** - Fallback values
 
-:::tip[Key Innovation]
-The **universal `__` notation** allows you to override ANY config value via environment variables, with automatic type conversion and no image rebuilds needed.
+:::tip[Key Benefit]
+The **universal `__` notation** allows you to configure ANY setting via environment variables, with automatic type conversion and validation. No YAML files, no rebuilds needed.
 :::
 
 ---
@@ -36,27 +36,23 @@ The **universal `__` notation** allows you to override ANY config value via envi
 
 **Settings load in this order (highest priority first)**:
 
-1. **Environment variables** - `SECTION__FIELD` notation (e.g., `EMAIL__HOST`)
-2. **`.env.secrets`** file - Sensitive credentials (git-ignored)
-3. **`config.*.docker.yaml`** - Docker-specific configs (git-ignored)
-4. **`config.*.yaml`** - Base templates (in git)
-5. **Built-in defaults** - Pydantic model defaults
+1. **System environment variables** - Docker Compose, K8s, etc.
+2. **.env file** - Local development only (gitignored)
+3. **Code defaults** - Pydantic Field definitions
 
 ```mermaid
 graph LR
-    A[ENV Variables<br/>EMAIL__HOST] --> B{Set?}
-    B -->|Yes| H[Use Value]
-    B -->|No| C[.env.secrets]
+    A[Docker ENV<br/>EMAIL__HOST] --> B{Set?}
+    B -->|Yes| E[Use Value]
+    B -->|No| C[.env File]
     C --> D{Set?}
-    D -->|Yes| H
-    D -->|No| E[config.*.docker.yaml]
-    E --> F{Set?}
-    F -->|Yes| H
-    F -->|No| G[config.*.yaml]
-    G --> I{Set?}
-    I -->|Yes| H
-    I -->|No| J[Built-in default]
-    J --> H
+    D -->|Yes| E
+    D -->|No| F[Code Default]
+    F --> E
+
+    style A fill:#e1f5e1
+    style C fill:#fff4e1
+    style F fill:#f0f0f0
 ```
 
 ---
@@ -65,25 +61,25 @@ graph LR
 
 ### How It Works
 
-Any configuration value can be overridden using `SECTION__FIELD` format:
+Any configuration value can be set using `SECTION__FIELD` format:
 
 ```bash
-# Simple section field
-EMAIL__HOST=mail.example.com
+# Simple fields
+EMAIL__HOST="mail.example.com"
 EMAIL__PORT=465
-EMAIL__PASSWORD=your-password-here
+EMAIL__PASSWORD="your-password-here"
 
-# Nested subsections
-API_KEYS__OPENAI=sk-proj-your-key-here
-API_KEYS__CLOUDFLARE=your-cloudflare-key
+# Nested sections
+API_KEYS__OPENAI="sk-proj-your-key-here"
+API_KEYS__CLOUDFLARE="your-cloudflare-key"
 
 # Deep nesting
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=TV383SB-...
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY="TV383SB-..."
 ```
 
 ### Type Conversion
 
-The system automatically converts values based on Pydantic model field types:
+Pydantic automatically converts values based on field types:
 
 | Type | Example Input | Converted Value |
 |------|--------------|-----------------|
@@ -100,10 +96,10 @@ EMAIL__USE_TLS=false         # → False
 
 # Integer examples
 EMAIL__PORT=465              # → 465 (int)
-REDIS__MAX_CONNECTIONS=100   # → 100 (int)
+DATABASE__POOL_SIZE=20       # → 20 (int)
 
 # String examples
-EMAIL__HOST=mail.spacemail.com  # → "mail.spacemail.com" (str)
+EMAIL__HOST="mail.example.com"  # → "mail.example.com" (str)
 ```
 
 ---
@@ -112,18 +108,15 @@ EMAIL__HOST=mail.spacemail.com  # → "mail.spacemail.com" (str)
 
 ```
 docker/
-├── .env                            # Base environment variables (in git)
-├── .env.secrets                    # Sensitive credentials (git-ignored!)
-├── .dockerignore                   # Excludes .env.secrets and poetry.lock
-└── .gitignore                      # Ignores .env.secrets
+├── .env                            # Development ENV vars (gitignored!)
+├── .env.example                    # Template (in git)
+├── .dockerignore                   # Excludes sensitive files
+└── .gitignore                      # Ignores .env
 
 projects/django/api/environment/
-├── loader.py                       # Configuration loader with __ support
-├── config.dev.yaml                 # Development template (in git)
-├── config.dev.docker.yaml          # Docker dev config (git-ignored!)
-├── config.prod.yaml                # Production template (in git)
-├── config.prod.docker.yaml         # Docker prod config (git-ignored!)
-└── .gitignore                      # Ignores config.*.docker.yaml
+├── loader.py                       # Pydantic settings loader
+├── .env                            # Local dev config (gitignored!)
+└── .env.example                    # Template (in git)
 ```
 
 ### File Protection
@@ -131,9 +124,9 @@ projects/django/api/environment/
 #### `.dockerignore` (in `/docker/`)
 ```dockerignore
 # Prevent secrets from entering Docker build context
-.env.secrets
-.env.local
-.env.*.local
+.env
+.env.*
+!.env.example
 
 # Don't copy poetry.lock
 poetry.lock
@@ -144,81 +137,136 @@ poetry.lock
 # Persistent volumes
 /volumes/*
 
-# Environment secrets (contains real API keys - DO NOT COMMIT)
-.env.secrets
+# Environment files (contains secrets - DO NOT COMMIT)
+.env
 .env.local
 .env.*.local
 ```
 
 #### `.gitignore` (in `/projects/django/api/environment/`)
 ```gitignore
-# Ignore Docker-specific configs with credentials
-config.*.docker.yaml
+# Environment file with secrets
+.env
+.env.local
 ```
 
 ---
 
-## The `.env.secrets` File
+## Configuration Files
 
-**Location**: `docker/.env.secrets`
+### Development `.env` File
 
-This file contains **all sensitive credentials** using the universal `__` notation:
+**Location**: `docker/.env` or `api/environment/.env`
 
-```bash
+```bash title="docker/.env"
 # ═══════════════════════════════════════════════════════════
-# Django-CFG Environment Secrets
+# Django-CFG Docker Environment Configuration
 # ═══════════════════════════════════════════════════════════
-# IMPORTANT: This file is git-ignored! Never commit it!
-# Use SECTION__FIELD notation for any config value override
+# IMPORTANT: This file is gitignored! Never commit it!
+# Copy from .env.example and fill in your values
 # ═══════════════════════════════════════════════════════════
 
-# Email Configuration
-EMAIL__BACKEND=smtp
-EMAIL__HOST=mail.spacemail.com
-EMAIL__PORT=465
-EMAIL__USERNAME=hello@example.com
-EMAIL__PASSWORD=your-password-here
-EMAIL__USE_TLS=false
-EMAIL__USE_SSL=true
-EMAIL__DEFAULT_FROM=My App <hello@example.com>
+# === Environment Mode ===
+IS_DEV=true
 
-# API Keys
-API_KEYS__OPENAI=sk-proj-...
-API_KEYS__OPENROUTER=sk-or-v1-...
-API_KEYS__CLOUDFLARE=your-key-here
-API_KEYS__NGROK=your-ngrok-token
-API_KEYS__PERPLEXITY=pplx-...
+# === Core Django Settings ===
+SECRET_KEY="django-cfg-dev-key-change-in-production-min-50-chars"
+DEBUG=true
 
-# Telegram
-TELEGRAM__BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+# === Database ===
+DATABASE__URL="postgresql://postgres:postgres@postgres:5432/djangocfg"
+
+# === Cache ===
+REDIS_URL="redis://redis:6379/0"
+
+# === Email Configuration ===
+EMAIL__BACKEND="console"
+EMAIL__HOST="localhost"
+EMAIL__PORT=587
+EMAIL__USE_TLS=true
+EMAIL__DEFAULT_FROM="My App <noreply@localhost.dev>"
+
+# === API Keys ===
+API_KEYS__OPENAI="sk-proj-your-dev-key-here"
+API_KEYS__OPENROUTER="sk-or-v1-your-dev-key-here"
+API_KEYS__CLOUDFLARE="your-cloudflare-key"
+
+# === Telegram ===
+TELEGRAM__BOT_TOKEN="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
 TELEGRAM__CHAT_ID=-123456789
 
-# Twilio
-TWILIO__ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO__AUTH_TOKEN=your-auth-token-here
-TWILIO__WHATSAPP_FROM=+1234567890
-TWILIO__SMS_FROM=+1234567890
-TWILIO__SENDGRID_API_KEY=SG.your-sendgrid-key-here
+# === Twilio (optional) ===
+# TWILIO__ACCOUNT_SID="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# TWILIO__AUTH_TOKEN="your-auth-token-here"
 
-# Payments
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=TV383SB-...
-PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-ipn-secret
-PAYMENTS_API_KEYS__NOWPAYMENTS_SANDBOX_MODE=false
+# === Payments (optional) ===
+# PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY="TV383SB-..."
+# PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET="your-ipn-secret"
+# PAYMENTS_API_KEYS__NOWPAYMENTS_SANDBOX_MODE=true
+```
+
+### Example Template (`.env.example`)
+
+**Location**: `docker/.env.example` (committed to git)
+
+```bash title="docker/.env.example"
+# Django-CFG Docker Environment - Example
+# Copy this file to .env and fill in your values
+
+# === Environment Mode ===
+IS_DEV=true
+
+# === Core Settings ===
+SECRET_KEY="your-secret-key-minimum-50-characters-long"
+DEBUG=true
+
+# === Database ===
+DATABASE__URL="postgresql://postgres:postgres@postgres:5432/djangocfg"
+
+# === Cache ===
+REDIS_URL="redis://redis:6379/0"
+
+# === Email ===
+EMAIL__BACKEND="console"
+EMAIL__HOST="smtp.example.com"
+EMAIL__PORT=587
+EMAIL__USERNAME="your-email@example.com"
+EMAIL__PASSWORD="your-password"
+EMAIL__USE_TLS=true
+
+# === API Keys ===
+API_KEYS__OPENAI="your-openai-key"
+API_KEYS__OPENROUTER="your-openrouter-key"
+
+# === Telegram ===
+TELEGRAM__BOT_TOKEN="your-bot-token"
+TELEGRAM__CHAT_ID=0
 ```
 
 ### Docker Compose Integration
 
-```yaml
-# docker-compose.yaml
+```yaml title="docker-compose.yml"
+version: '3.8'
+
 services:
   django:
+    build: .
     env_file:
-      - .env          # Base config (in git)
-      - .env.secrets  # Sensitive credentials (git-ignored)
+      - .env  # Loads environment variables from file
     environment:
-      # Infrastructure URLs (can also be in .env)
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379/0
+      # Or set directly (overrides .env file)
+      DATABASE__URL: "postgresql://postgres:postgres@postgres:5432/db"
+      REDIS_URL: "redis://redis:6379/0"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: djangocfg
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  redis:
+    image: redis:7-alpine
 ```
 
 ---
@@ -228,126 +276,173 @@ services:
 ### Local Development (Without Docker)
 
 **How it works:**
-1. Run `python manage.py runserver` locally
-2. Loader checks for `config.dev.docker.yaml` first
-3. Falls back to `config.dev.yaml` if not found
-4. Environment variables (with `__` notation) override YAML values
+1. Create `.env` file in `api/environment/`
+2. Run `python manage.py runserver`
+3. Pydantic-settings automatically loads from `.env` file
+4. System ENV variables override `.env` values
 
-**Create Docker-specific config:**
+**Setup:**
 
 ```bash
-# Copy template
-cp api/environment/config.dev.yaml api/environment/config.dev.docker.yaml
+# Copy example
+cp api/environment/.env.example api/environment/.env
 
-# Edit with your development credentials
-vim api/environment/config.dev.docker.yaml
+# Edit with your credentials
+vim api/environment/.env
+
+# Run development server
+python manage.py runserver
 ```
 
-**What goes in `config.*.docker.yaml`:**
-
-```yaml
-# Full credentials for Docker development
-email:
-  backend: "smtp"
-  host: "mail.spacemail.com"
-  port: 465
-  username: "hello@example.com"
-  password: "your-password-here"
-  use_tls: false
-  use_ssl: true
-
-api_keys:
-  openai: "sk-proj-YOUR-FULL-KEY-HERE"
-  cloudflare: "your-cloudflare-key-here"
-
-telegram:
-  bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-  chat_id: -123456789
-```
-
-:::warning[Security]
-**`config.*.docker.yaml` files are gitignored!** They contain full credentials for local development.
-:::
-
-### Docker Environment
+### Docker Development
 
 **How it works:**
-1. Base config file (`config.dev.yaml`) is built into image
-2. Docker-specific config (`config.dev.docker.yaml`) overrides base if exists
-3. `.env.secrets` file provides sensitive credentials via `__` notation
-4. Loader auto-detects and prioritizes configs
+1. Create `.env` file in `docker/` directory
+2. Docker Compose loads it via `env_file:`
+3. Pydantic-settings reads environment variables
+4. No rebuilds needed - just restart!
+
+**Setup:**
+
+```bash
+# Copy example
+cp docker/.env.example docker/.env
+
+# Edit with your credentials
+vim docker/.env
+
+# Start Docker services
+docker compose up -d
+
+# Restart to apply changes
+docker compose restart django
+```
 
 **Benefits:**
-- ✅ **No secrets in git** - `.env.secrets` is gitignored
-- ✅ **No rebuilds needed** - Just restart to apply changes
+- ✅ **No secrets in git** - `.env` is gitignored
+- ✅ **No rebuilds needed** - Just restart container
 - ✅ **Universal syntax** - Works for any config value
-- ✅ **Type-safe** - Automatic conversion based on Pydantic models
+- ✅ **Type-safe** - Automatic validation via Pydantic
+
+### Docker Production
+
+**How it works:**
+1. Set environment variables in Docker/K8s
+2. Never use `.env` files in production
+3. Use secrets managers (AWS Secrets Manager, Vault, etc.)
+
+**Docker Compose production:**
+
+```yaml
+version: '3.8'
+
+services:
+  django:
+    build: .
+    environment:
+      # Set from external sources
+      IS_PROD: "true"
+      SECRET_KEY: "${SECRET_KEY}"  # From host environment
+      DATABASE__URL: "${DATABASE_URL}"
+      EMAIL__PASSWORD: "${EMAIL_PASSWORD}"
+      API_KEYS__OPENAI: "${OPENAI_API_KEY}"
+```
+
+**Kubernetes production:**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: django
+        env:
+        - name: IS_PROD
+          value: "true"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: secret-key
+        - name: DATABASE__URL
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: database-url
+        - name: API_KEYS__OPENAI
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: openai-api-key
+```
 
 ---
 
 ## Configuration Categories
 
-### Use Environment Variables (`__` notation) For:
+### Use Environment Variables For:
 
 ✅ **All sensitive credentials**
 ```bash
-API_KEYS__OPENAI=sk-proj-your-key
-EMAIL__PASSWORD=your-smtp-password
+API_KEYS__OPENAI="sk-proj-your-key"
+EMAIL__PASSWORD="your-smtp-password"
+TELEGRAM__BOT_TOKEN="your-bot-token"
+```
+
+✅ **Infrastructure URLs**
+```bash
+DATABASE__URL="postgresql://user:pass@host:5432/db"
+REDIS_URL="redis://redis:6379/0"
 ```
 
 ✅ **Email credentials**
 ```bash
-EMAIL__HOST=mail.example.com
+EMAIL__HOST="mail.example.com"
 EMAIL__PORT=465
-EMAIL__USERNAME=hello@example.com
-EMAIL__PASSWORD=your-password
+EMAIL__USERNAME="hello@example.com"
+EMAIL__PASSWORD="your-password"
 ```
 
 ✅ **Third-party services**
 ```bash
-TELEGRAM__BOT_TOKEN=123456789:ABC...
-TWILIO__AUTH_TOKEN=your-auth-token
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=TV383SB-...
+TELEGRAM__BOT_TOKEN="123456789:ABC..."
+TWILIO__AUTH_TOKEN="your-auth-token"
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY="TV383SB-..."
 ```
 
-✅ **Per-environment values**
+✅ **Environment-specific values**
 ```bash
 # Development
-API_KEYS__STRIPE=sk_test_...
+API_KEYS__STRIPE="sk_test_..."
+DEBUG=true
 
 # Production
-API_KEYS__STRIPE=sk_live_...
+API_KEYS__STRIPE="sk_live_..."
+DEBUG=false
 ```
 
-### Use YAML Files For:
+### Use Code Defaults For:
 
-✅ **Structure and templates**
-```yaml
-# Base configuration shape
-email:
-  backend: "console"
-  host: "localhost"
-  port: 587
+✅ **Development defaults**
+```python
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
 ```
 
-✅ **Non-sensitive defaults**
-```yaml
-redis:
-  max_connections: 50
-  timeout: 5
+✅ **Safe fallbacks**
+```python
+class EmailConfig(BaseSettings):
+    backend: str = Field(default="console")
+    port: int = Field(default=587)
 ```
 
 ✅ **Feature flags**
-```yaml
-features:
-  enable_ai: true
-  enable_payments: false
-```
-
-✅ **Infrastructure URLs** (can also use env vars)
-```yaml
-database:
-  url: "${DATABASE_URL}"  # From environment
+```python
+class FeatureConfig(BaseSettings):
+    enable_ai: bool = Field(default=True)
+    enable_payments: bool = Field(default=False)
 ```
 
 ---
@@ -357,20 +452,25 @@ database:
 ### Step 1: Add Field to Pydantic Model
 
 ```python
-# loader.py
-class ApiKeysConfig(BaseModel):
+# api/environment/loader.py
+class ApiKeysConfig(BaseSettings):
     """API keys configuration."""
 
-    openai: str = ""
-    openrouter: str = ""
-    your_new_api: str = ""  # Add here
+    openai: str = Field(default="")
+    openrouter: str = Field(default="")
+    your_new_api: str = Field(default="")  # Add here
+
+    model_config = SettingsConfigDict(
+        env_prefix="API_KEYS__",
+        env_nested_delimiter="__",
+    )
 ```
 
-### Step 2: Add to `.env.secrets`
+### Step 2: Add to `.env`
 
 ```bash
-# docker/.env.secrets
-API_KEYS__YOUR_NEW_API=your-actual-api-key-here
+# docker/.env
+API_KEYS__YOUR_NEW_API="your-actual-api-key-here"
 ```
 
 ### Step 3: Restart Container (No Rebuild!)
@@ -395,84 +495,121 @@ docker compose restart django  # ✅ 10 seconds
 
 ## Examples
 
-### Base Template (`config.dev.yaml`)
+### Complete `.env` for Docker Development
 
-```yaml
-# Minimal template with no secrets (in git)
-email:
-  backend: "console"  # Print emails to console in dev
-  host: "localhost"
-  port: 587
-  use_tls: true
+```bash title="docker/.env"
+# === Environment Mode ===
+IS_DEV=true
 
-api_keys:
-  openai: ""       # Empty - override via ENV
-  openrouter: ""
-  cloudflare: ""
+# === Core Django Settings ===
+SECRET_KEY="django-cfg-dev-key-change-in-production-min-50-chars"
+DEBUG=true
 
-database:
-  url: "${DATABASE_URL}"  # From environment
+# === Database (Docker service name) ===
+DATABASE__URL="postgresql://postgres:postgres@postgres:5432/djangocfg"
 
-redis:
-  url: "${REDIS_URL}"     # From environment
+# === Cache (Docker service name) ===
+REDIS_URL="redis://redis:6379/0"
+
+# === Email Configuration ===
+EMAIL__BACKEND="smtp"
+EMAIL__HOST="mail.spacemail.com"
+EMAIL__PORT=465
+EMAIL__USERNAME="hello@example.com"
+EMAIL__PASSWORD="your-smtp-password"
+EMAIL__USE_TLS=false
+EMAIL__USE_SSL=true
+EMAIL__DEFAULT_FROM="My App <hello@example.com>"
+
+# === API Keys ===
+API_KEYS__OPENAI="sk-proj-your-dev-key-here"
+API_KEYS__OPENROUTER="sk-or-v1-your-dev-key-here"
+API_KEYS__CLOUDFLARE="your-cloudflare-key"
+API_KEYS__NGROK="your-ngrok-token"
+
+# === Telegram ===
+TELEGRAM__BOT_TOKEN="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+TELEGRAM__CHAT_ID=-123456789
+
+# === Twilio ===
+TWILIO__ACCOUNT_SID="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+TWILIO__AUTH_TOKEN="your-auth-token-here"
+TWILIO__WHATSAPP_FROM="+1234567890"
+TWILIO__SMS_FROM="+1234567890"
+
+# === Payments ===
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY="TV383SB-..."
+PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET="your-ipn-secret"
+PAYMENTS_API_KEYS__NOWPAYMENTS_SANDBOX_MODE=true
 ```
 
-### Docker-Specific Config (`config.dev.docker.yaml`)
+### Docker Compose with `.env`
 
-```yaml
-# Docker development with full credentials (git-ignored!)
-email:
-  backend: "smtp"
-  host: "mail.spacemail.com"
-  port: 465
-  username: "hello@example.com"
-  password: "your-smtp-password-here"
-  use_tls: false
-  use_ssl: true
+```yaml title="docker-compose.yml"
+version: '3.8'
 
-api_keys:
-  openai: "sk-proj-your-key-here..."
-  openrouter: "sk-or-v1-your-key-here..."
-  cloudflare: "your-cloudflare-key-here"
+services:
+  django:
+    build:
+      context: ../projects/django
+      dockerfile: ../../docker/Dockerfile
+    env_file:
+      - .env  # Loads all variables from .env file
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ../projects/django:/app
 
-telegram:
-  bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-  chat_id: -123456789
-```
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: djangocfg
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-### Environment Variables (`.env.secrets`)
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
 
-```bash
-# Overrides everything (git-ignored!)
-EMAIL__HOST=mail.spacemail.com
-EMAIL__PASSWORD=actual-password-here
-API_KEYS__OPENAI=sk-proj-actual-key-here
+volumes:
+  postgres_data:
+  redis_data:
 ```
 
 ---
 
 ## Environment Detection
 
-The loader automatically detects the environment:
+Pydantic-settings automatically detects the environment:
 
 ```python
 # From loader.py
-IS_DEV = os.environ.get("IS_DEV", "").lower() in ("true", "1", "yes")
-IS_PROD = os.environ.get("IS_PROD", "").lower() in ("true", "1", "yes")
-IS_TEST = os.environ.get("IS_TEST", "").lower() in ("true", "1", "yes")
+class EnvironmentMode(BaseSettings):
+    is_test: bool = Field(default=False)
+    is_dev: bool = Field(default=False)
+    is_prod: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def set_default_env(self):
+        if not any([self.is_test, self.is_dev, self.is_prod]):
+            self.is_dev = True
+        return self
 ```
 
 **Set in `.env`:**
 
 ```bash
 # docker/.env
-IS_DEV=true  # Uses config.dev.docker.yaml → config.dev.yaml → defaults
+IS_DEV=true   # Development mode
+# IS_PROD=true  # Production mode
+# IS_TEST=true  # Testing mode
 ```
-
-**Config file priority:**
-1. `config.dev.docker.yaml` (if exists)
-2. `config.dev.yaml` (fallback)
-3. Built-in defaults
 
 ---
 
@@ -480,119 +617,138 @@ IS_DEV=true  # Uses config.dev.docker.yaml → config.dev.yaml → defaults
 
 ### ✅ DO
 
-**Use `.env.secrets` for ALL sensitive credentials**
+**Use `.env` for development only**
 ```bash
-# docker/.env.secrets (git-ignored!)
-API_KEYS__STRIPE=sk_live_your-production-key
-EMAIL__PASSWORD=your-smtp-password
+# docker/.env (gitignored!)
+API_KEYS__STRIPE="sk_test_your-dev-key"
+EMAIL__PASSWORD="your-dev-password"
 ```
 
-**Keep `.env.secrets` out of git**
+**Keep `.env` out of git**
 ```bash
 # Already in .gitignore
-.env.secrets
+.env
+.env.local
+.env.*.local
 ```
 
-**Use `__` notation for clean variable names**
+**Use `__` notation for clean variables**
 ```bash
-EMAIL__HOST=mail.example.com
-API_KEYS__OPENAI=sk-proj-...
+EMAIL__HOST="mail.example.com"
+API_KEYS__OPENAI="sk-proj-..."
+DATABASE__URL="postgresql://..."
 ```
-
-**Rotate API keys regularly**
-- Every 90 days minimum
-- Immediately if compromised
 
 **Use different keys per environment**
 ```bash
 # Development
-API_KEYS__STRIPE=sk_test_...
+API_KEYS__STRIPE="sk_test_..."
 
 # Production
-API_KEYS__STRIPE=sk_live_...
+API_KEYS__STRIPE="sk_live_..."
 ```
 
-**Document all `__` variables**
+**Use secrets managers in production**
+- AWS Secrets Manager
+- HashiCorp Vault
+- Kubernetes Secrets
+- Docker Secrets
+
+**Create `.env.example` for team**
 ```bash
-# Create .env.secrets.example
-cp .env.secrets .env.secrets.example
-# Replace values with placeholders
+# Copy .env and replace values with placeholders
+cp .env .env.example
+# Replace: sk-proj-abc123 → your-openai-key-here
 ```
 
 ### ❌ DON'T
 
-**Don't commit `.env.secrets` to git**
+**Don't commit `.env` to git**
 ```bash
 # ❌ BAD
-git add docker/.env.secrets
+git add docker/.env  # Contains secrets!
 ```
 
-**Don't put production keys in development configs**
-```yaml
+**Don't use production keys in development**
+```bash
 # ❌ BAD - Production key in dev
-api_keys:
-  stripe: "sk_live_..."  # Should be sk_test_...
+API_KEYS__STRIPE="sk_live_..."  # Should be sk_test_...
 ```
 
-**Don't hardcode secrets in YAML files**
-```yaml
-# ❌ BAD - Password in template
-email:
-  password: "actual-password-here"  # Use ENV variable instead!
+**Don't hardcode secrets in code**
+```python
+# ❌ BAD - Password in code
+EMAIL_PASSWORD = "actual-password-here"  # Use ENV variable!
 ```
 
-**Don't use same API keys across environments**
+**Don't use same keys across environments**
 ```
 Development: ✅ sk_test_...
 Production:  ❌ sk_test_...  # Should be sk_live_...
 ```
 
-**Don't share `.env.secrets` via insecure channels**
-- Use password manager
-- Use secure file transfer
-- Never email or Slack
+**Don't share `.env` via insecure channels**
+- ❌ Email or Slack
+- ✅ Use password manager
+- ✅ Use secure file transfer
 
 ---
 
-## Migration from Old System
+## Migration from YAML
 
 ### Old Way (❌)
 
-```yaml
-# docker/services/django/config.dev.ignore.yaml (committed to git!)
+```yaml title="config.dev.docker.yaml"
+# Committed to git or gitignored with credentials
 api_keys:
-  openai: "sk-proj-KEY-IN-GIT-BAD"
+  openai: "sk-proj-KEY-HERE"
+
+email:
+  host: "mail.example.com"
+  password: "password-here"
 ```
 
 ### New Way (✅)
 
-```bash
-# docker/.env.secrets (git-ignored!)
-API_KEYS__OPENAI=sk-proj-KEY-NOT-IN-GIT-GOOD
+```bash title=".env (gitignored)"
+# Simple ENV variables
+API_KEYS__OPENAI="sk-proj-KEY-HERE"
+EMAIL__HOST="mail.example.com"
+EMAIL__PASSWORD="password-here"
 ```
 
 ### Migration Steps
 
-**1. Create `.env.secrets`:**
+**1. Create `.env`:**
 ```bash
 cd docker
-touch .env.secrets
+cp .env.example .env
 ```
 
-**2. Move credentials from YAML to `.env.secrets`:**
+**2. Move credentials from YAML to `.env`:**
 ```bash
-# Old: config.dev.docker.yaml
+# Old YAML:
 api_keys:
   openai: "sk-proj-abc123"
+email:
+  host: "mail.example.com"
+  password: "secret"
 
-# New: .env.secrets
-API_KEYS__OPENAI=sk-proj-abc123
+# New .env:
+API_KEYS__OPENAI="sk-proj-abc123"
+EMAIL__HOST="mail.example.com"
+EMAIL__PASSWORD="secret"
 ```
 
 **3. Update `.gitignore`:**
 ```gitignore
-.env.secrets
+# Remove
 config.*.docker.yaml
+config.*.ignore.yaml
+
+# Keep
+.env
+.env.*
 ```
 
 **4. Restart services:**
@@ -604,56 +760,84 @@ docker compose restart django
 
 ## Troubleshooting
 
-### Check Which Config is Loaded
-
-```bash
-docker logs django | grep "Loading config file"
-# Output: Loading config file: config.dev.docker.yaml (Docker-specific)
-```
-
-### Check Environment Variable Overrides
-
-```bash
-docker logs django | grep "Environment variables override"
-# Output: ✅ Environment variables override YAML: EMAIL__HOST, API_KEYS__OPENAI, ...
-```
-
-### Test Specific Value
-
-```bash
-docker exec django python -c "
-from api.environment.loader import get_environment_config
-config = get_environment_config()
-print('OpenAI Key:', config.api_keys.openai[:20])
-"
-```
-
-### Verify `.env.secrets` is Loaded
+### Check Environment Variables in Container
 
 ```bash
 docker exec django env | grep "__"
 # Should show all your SECTION__FIELD variables
 ```
 
+### Test Specific Value
+
+```bash
+docker exec django python -c "
+from api.environment import env
+print('OpenAI Key:', env.api_keys.openai[:20] if env.api_keys.openai else 'Not set')
+print('Email Host:', env.email.host)
+print('Database URL:', env.database.url)
+"
+```
+
+### View Loaded Configuration
+
+```bash
+docker exec django python manage.py shell
+>>> from api.environment import env
+>>> print(f"Environment: {env.env.env_mode}")
+>>> print(f"Debug: {env.debug}")
+>>> print(f"Database: {env.database.url}")
+>>> print(f"Email Host: {env.email.host}")
+```
+
 ### Config Not Updating After Changes
 
-**Problem:** Made changes to `.env.secrets` but config hasn't updated
+**Problem:** Made changes to `.env` but config hasn't updated
 
-**Solution:** Just restart (no rebuild needed!)
+**Solution:** Restart container (no rebuild needed!)
 ```bash
 docker compose restart django
 ```
 
-### Wrong Config File Used
+### Wrong Environment Detected
 
-**Check loader output:**
+**Check environment variable:**
 ```bash
-docker logs django | grep "Loading config file"
+docker exec django env | grep "IS_"
+# Should show IS_DEV=true or IS_PROD=true
 ```
 
-**List available configs:**
+**Set explicitly in docker-compose.yml:**
+```yaml
+services:
+  django:
+    environment:
+      IS_DEV: "true"  # Force development mode
+```
+
+### Variables Not Loading
+
+**Check `.env` file location:**
 ```bash
-docker exec django ls -la /app/api/environment/
+ls -la docker/.env
+# Should exist and be readable
+```
+
+**Check docker-compose.yml:**
+```yaml
+services:
+  django:
+    env_file:
+      - .env  # ✅ Correct path
+      # - ../api/environment/.env  # ❌ Wrong path
+```
+
+**Verify variable format:**
+```bash
+# ✅ Correct (double underscore)
+EMAIL__HOST="mail.example.com"
+
+# ❌ Wrong (single underscore)
+EMAIL_HOST="mail.example.com"
 ```
 
 ---
@@ -661,29 +845,28 @@ docker exec django ls -la /app/api/environment/
 ## Summary
 
 ### Configuration Loading Order:
-1. **Base YAML** (`config.dev.yaml`) - Templates and structure
-2. **Docker YAML** (`config.dev.docker.yaml`) - Docker-specific overrides
-3. **`.env.secrets`** - Sensitive credentials via `__` notation
-4. **Direct ENV vars** - Runtime overrides
+1. **System ENV variables** - Docker Compose, K8s (highest priority)
+2. **.env file** - Development only
+3. **Code defaults** - Pydantic Field definitions (lowest priority)
 
 ### Key Benefits:
-- ✅ **No secrets in git** - `.env.secrets` is gitignored
+- ✅ **No secrets in git** - `.env` is gitignored
 - ✅ **No image rebuilds** - Just restart to pick up changes
-- ✅ **Universal syntax** - `SECTION__FIELD` works for any config
-- ✅ **Type-safe** - Automatic conversion based on Pydantic models
-- ✅ **Clean separation** - Structure in YAML, secrets in ENV
-- ✅ **Team-friendly** - Share YAML templates, keep credentials private
+- ✅ **Universal syntax** - `SECTION__FIELD` works for everything
+- ✅ **Type-safe** - Automatic validation via Pydantic
+- ✅ **Simple** - One configuration method for all environments
+- ✅ **12-factor app** - Environment-based configuration
 
 ### Quick Reference:
 ```bash
 # Add new credential
-echo "API_KEYS__NEW_SERVICE=your-key-here" >> docker/.env.secrets
+echo 'API_KEYS__NEW_SERVICE="your-key-here"' >> docker/.env
 
 # Restart to apply
 docker compose restart django
 
 # Verify it loaded
-docker logs django | grep "API_KEYS__NEW_SERVICE"
+docker exec django python -c "from api.environment import env; print(env.api_keys.new_service)"
 ```
 
 ---
@@ -711,10 +894,10 @@ docker logs django | grep "API_KEYS__NEW_SERVICE"
 - **[Troubleshooting](./troubleshooting)** - Quick fixes
 
 ### Configuration
-- **[Configuration Overview](/fundamentals/configuration)** - Core concepts
+- **[Configuration Overview](/fundamentals/configuration/environment)** - Core concepts
 - **[Database Configuration](/fundamentals/configuration/database)** - PostgreSQL
 - **[Cache Configuration](/fundamentals/configuration/cache)** - Redis
-- **[Environment Variables](/fundamentals/configuration/environment)** - Env vars
+- **[Environment Setup](/deployment/environment-setup)** - Detailed ENV guide
 
 ### Security
 - **[Security Settings](/deployment/security)** - Production security
@@ -722,12 +905,12 @@ docker logs django | grep "API_KEYS__NEW_SERVICE"
 
 ---
 
-**Last Updated**: 2025-10-14
-**Django-CFG Version**: 1.4.41
-**Configuration System**: Universal `__` notation + YAML templates
+**Last Updated**: 2025-10-21
+**Django-CFG Version**: 1.4.52
+**Configuration System**: Pydantic-settings with ENV variables
 
 ---
 
-TAGS: docker, configuration, yaml, environment-variables, secrets, __ notation
-DEPENDS_ON: [docker, pydantic, yaml]
+TAGS: docker, configuration, environment-variables, secrets, pydantic-settings
+DEPENDS_ON: [docker, pydantic-settings]
 USED_BY: [development, production, docker-setup]

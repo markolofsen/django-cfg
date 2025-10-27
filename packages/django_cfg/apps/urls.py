@@ -50,8 +50,8 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.is_payments_enabled():
         enabled_apps.append("django_cfg.apps.payments")
 
-    if base_module.is_rpc_enabled():
-        enabled_apps.append("django_cfg.apps.ipc")
+    if base_module.is_centrifugo_enabled():
+        enabled_apps.append("django_cfg.apps.centrifugo")
 
     return enabled_apps
 
@@ -84,7 +84,7 @@ def get_default_cfg_group():
         name="cfg",
         apps=get_enabled_cfg_apps(),
         title="Django-CFG API",
-        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Payments",
+        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Payments, Dashboard",
         version="1.0.0",
     )
 
@@ -133,6 +133,8 @@ urlpatterns = [
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_client.urls')),
+    path('cfg/admin/', include('django_cfg.apps.frontend.urls')),  # Next.js admin panel
+    path('cfg/dashboard/', include('django_cfg.apps.dashboard.urls')),  # Dashboard API
 ]
 
 # Django-CFG apps - conditionally registered based on config
@@ -166,9 +168,9 @@ APP_URL_MAP = {
         ("cfg/payments/", "django_cfg.apps.payments.urls"),
         # Payments v2.0: No separate urls_admin (uses Django Admin only)
     ],
-    "django_cfg.apps.ipc": [
-        ("cfg/ipc/", "django_cfg.apps.ipc.urls"),
-        ("cfg/ipc/admin/", "django_cfg.apps.ipc.urls_admin"),
+    "django_cfg.apps.centrifugo": [
+        ("cfg/centrifugo/", "django_cfg.apps.centrifugo.urls"),
+        ("cfg/centrifugo/admin/", "django_cfg.apps.centrifugo.urls_admin"),
     ],
 }
 

@@ -33,8 +33,7 @@ class SyncCfgSubscriptionsAPI:
         url = "/cfg/newsletter/subscriptions/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedNewsletterSubscriptionList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedNewsletterSubscriptionList.model_validate(response.json())
 
 
     def newsletter_unsubscribe_create(self, data: UnsubscribeRequest) -> SuccessResponse:

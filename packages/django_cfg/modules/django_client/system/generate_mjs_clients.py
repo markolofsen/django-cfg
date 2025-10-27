@@ -54,7 +54,9 @@ def main():
     django_cfg_dir = modules_dir.parent  # django_cfg
     src_dir = django_cfg_dir.parent  # src
     dev_dir = src_dir.parent  # django-cfg-dev
-    example_django_dir = dev_dir.parent / "django-cfg-example" / "django"
+    projects_dir = dev_dir.parent  # projects
+    root_dir = projects_dir.parent  # root (django-cfg)
+    example_django_dir = root_dir / "solution" / "projects" / "django"
 
     # Output directory for MJS clients
     if args.output:

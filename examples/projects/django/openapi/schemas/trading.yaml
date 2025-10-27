@@ -45,9 +45,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -94,9 +91,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -136,9 +130,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -195,9 +186,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -253,9 +241,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -292,9 +277,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -336,9 +318,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -378,9 +357,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -409,9 +385,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -440,9 +413,6 @@
         "security": [
           {
             "jwtAuth": []
-          },
-          {
-            "cookieAuth": []
           }
         ],
         "responses": {
@@ -973,11 +943,6 @@
       }
     },
     "securitySchemes": {
-      "cookieAuth": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "sessionid"
-      },
       "jwtAuth": {
         "type": "http",
         "scheme": "bearer",

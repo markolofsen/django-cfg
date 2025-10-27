@@ -23,7 +23,9 @@ class AgentsConfig(AppConfig):
 
         # Initialize orchestrator registry
         try:
-            from .integration.registry import initialize_registry
-            initialize_registry()
+            from .integration.registry import get_registry
+            # Just create the registry instance, don't load agents yet
+            # Agents will be loaded lazily on first access or via management command
+            get_registry()
         except ImportError:
             pass

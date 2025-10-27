@@ -305,92 +305,121 @@ class UnfoldConfig(BaseModel):
         return v
 
     def get_color_scheme(self) -> Dict[str, Any]:
-        """Get Unfold semantic color scheme configuration with theme support."""
+        """
+        Get Unfold semantic color scheme configuration matching Next.js UI package.
+
+        Colors are synchronized with:
+        - packages/ui/src/styles/theme/light.css
+        - packages/ui/src/styles/theme/dark.css
+
+        This ensures consistent theming between Django Unfold and Next.js iframe.
+
+        IMPORTANT: Colors must be in OKLCH format for Unfold's color-mix() CSS to work!
+        Format: "oklch(lightness% chroma hue)"
+        """
         return {
-            # Base semantic colors that auto-adapt to theme
+            # Base semantic colors - matches Next.js UI package
+            # Light theme: Clean whites and neutral grays (Vercel-inspired)
+            # Dark theme: True black backgrounds with subtle grays
+            # Converted from RGB to OKLCH for color-mix() compatibility
             "base": {
-                "50": "248, 250, 252",   # Light theme: very light background
-                "100": "241, 245, 249",  # Light theme: light background
-                "200": "226, 232, 240",  # Light theme: subtle border
-                "300": "203, 213, 225",  # Light theme: border
-                "400": "148, 163, 184",  # Light theme: muted text / Dark theme: text
-                "500": "100, 116, 139",  # Neutral - works in both themes
-                "600": "71, 85, 105",    # Dark theme: muted text / Light theme: text
-                "700": "51, 65, 85",     # Dark theme: border
-                "800": "30, 41, 59",     # Dark theme: subtle border
-                "900": "15, 23, 42",     # Dark theme: light background
-                "950": "2, 6, 23",       # Dark theme: very light background
+                "50": "oklch(98.5% .002 247.839)",   # #f9fafb - Very light background
+                "100": "oklch(96.7% .003 264.542)",  # #f3f4f6 - Light background (96%)
+                "200": "oklch(92.8% .006 264.531)",  # #e5e7eb - Subtle border (90%)
+                "300": "oklch(87.2% .010 258.338)",  # #d1d5db - Border
+                "400": "oklch(70.7% .022 261.325)",  # #9ca3af - Muted text
+                "500": "oklch(55.1% .027 264.364)",  # #6b7280 - Neutral
+                "600": "oklch(44.6% .030 256.802)",  # #4b5563 - Text (9%)
+                "700": "oklch(37.3% 0 0)",           # Neutral dark gray (no hue)
+                "800": "oklch(20.0% 0 0)",           # Dark card background (no hue)
+                "900": "oklch(14.0% 0 0)",           # Main background - near black (14%)
+                "950": "oklch(10.0% 0 0)",           # Deepest black (10%)
             },
-            # Primary brand - auto-adapts via CSS variables
+            # Primary brand color - Blue (#3b82f6 / hsl(217 91% 60%))
+            # Matches Next.js UI primary color
+            # OKLCH format for color-mix() compatibility
             "primary": {
-                "50": "239, 246, 255",
-                "100": "219, 234, 254",
-                "200": "191, 219, 254",
-                "300": "147, 197, 253",
-                "400": "96, 165, 250",
-                "500": "59, 130, 246",   # Main brand color
-                "600": "37, 99, 235",
-                "700": "29, 78, 216",
-                "800": "30, 64, 175",
-                "900": "30, 58, 138",
-                "950": "23, 37, 84",
+                "50": "oklch(97.0% .014 254.604)",   # #eff6ff
+                "100": "oklch(93.2% .032 255.585)",  # #dbeafe
+                "200": "oklch(88.2% .059 254.128)",  # #bfdbfe
+                "300": "oklch(79.0% .099 253.800)",  # #93c5fd
+                "400": "oklch(70.7% .165 254.624)",  # #60a5fa
+                "500": "oklch(62.3% .214 259.815)",  # #3b82f6 - Main brand color
+                "600": "oklch(54.6% .245 262.881)",  # #2563eb
+                "700": "oklch(48.8% .243 264.376)",  # #1d4ed8
+                "800": "oklch(43.0% .223 265.500)",  # #1e40af
+                "900": "oklch(37.5% .195 266.000)",  # #1e3a8a
+                "950": "oklch(30.0% .150 267.000)",  # #172554
             },
-            # Success semantic color
+            # Success color - Green
+            # OKLCH format for color-mix() compatibility
             "success": {
-                "50": "236, 253, 245",
-                "100": "209, 250, 229",
-                "200": "167, 243, 208",
-                "300": "110, 231, 183",
-                "400": "52, 211, 153",
-                "500": "16, 185, 129",   # Main success color
-                "600": "5, 150, 105",
-                "700": "4, 120, 87",
-                "800": "6, 95, 70",
-                "900": "6, 78, 59",
-                "950": "2, 44, 34",
+                "50": "oklch(98.0% .029 156.743)",   # #f0fdf4
+                "100": "oklch(96.2% .044 156.743)",  # #dcfce7
+                "200": "oklch(92.5% .084 155.995)",  # #bbf7d0
+                "300": "oklch(87.0% .139 154.500)",  # #86efac
+                "400": "oklch(79.2% .209 151.711)",  # #4ade80
+                "500": "oklch(72.3% .219 149.579)",  # #22c55e - Main success
+                "600": "oklch(62.7% .194 149.214)",  # #16a34a
+                "700": "oklch(52.7% .154 150.069)",  # #15803d
+                "800": "oklch(45.0% .125 151.000)",  # #166534
+                "900": "oklch(38.0% .100 151.500)",  # #14532d
+                "950": "oklch(25.0% .060 152.000)",  # #052e16
             },
-            # Warning semantic color
+            # Warning color - Amber/Yellow
+            # OKLCH format for color-mix() compatibility
             "warning": {
-                "50": "255, 251, 235",
-                "100": "254, 243, 199",
-                "200": "253, 230, 138",
-                "300": "252, 211, 77",
-                "400": "251, 191, 36",
-                "500": "245, 158, 11",   # Main warning color
-                "600": "217, 119, 6",
-                "700": "180, 83, 9",
-                "800": "146, 64, 14",
-                "900": "120, 53, 15",
-                "950": "69, 26, 3",
+                "50": "oklch(99.0% .020 95.617)",    # #fffbeb
+                "100": "oklch(96.2% .059 95.617)",   # #fef3c7
+                "200": "oklch(94.5% .129 101.54)",   # #fde68a
+                "300": "oklch(89.0% .178 100.000)",  # #fcd34d
+                "400": "oklch(83.0% .198 95.000)",   # #fbbf24
+                "500": "oklch(70.5% .213 47.604)",   # #f59e0b - Main warning
+                "600": "oklch(64.6% .222 41.116)",   # #d97706
+                "700": "oklch(55.3% .195 38.402)",   # #b45309
+                "800": "oklch(48.0% .170 37.000)",   # #92400e
+                "900": "oklch(41.0% .145 38.000)",   # #78350f
+                "950": "oklch(30.0% .100 40.000)",   # #451a03
             },
-            # Danger semantic color
+            # Danger/Error color - Red (matches destructive color)
+            # OKLCH format for color-mix() compatibility
             "danger": {
-                "50": "254, 242, 242",
-                "100": "254, 226, 226",
-                "200": "254, 202, 202",
-                "300": "252, 165, 165",
-                "400": "248, 113, 113",
-                "500": "239, 68, 68",    # Main danger color
-                "600": "220, 38, 38",
-                "700": "185, 28, 28",
-                "800": "153, 27, 27",
-                "900": "127, 29, 29",
-                "950": "69, 10, 10",
+                "50": "oklch(98.0% .011 17.38)",     # #fef2f2
+                "100": "oklch(95.5% .027 17.717)",   # #fee2e2
+                "200": "oklch(93.6% .032 17.717)",   # #fecaca
+                "300": "oklch(88.5% .062 18.334)",   # #fca5a5
+                "400": "oklch(80.8% .114 19.571)",   # #f87171
+                "500": "oklch(63.7% .237 25.331)",   # #ef4444 - Main danger
+                "600": "oklch(57.7% .245 27.325)",   # #dc2626
+                "700": "oklch(50.5% .213 27.518)",   # #b91c1c
+                "800": "oklch(45.0% .190 28.000)",   # #991b1b
+                "900": "oklch(40.0% .165 28.500)",   # #7f1d1d
+                "950": "oklch(30.0% .120 29.000)",   # #450a0a
             },
-            # Info semantic color
+            # Info color - Cyan/Sky blue
+            # OKLCH format for color-mix() compatibility
             "info": {
-                "50": "236, 254, 255",
-                "100": "207, 250, 254",
-                "200": "165, 243, 252",
-                "300": "103, 232, 249",
-                "400": "34, 211, 238",
-                "500": "6, 182, 212",    # Main info color
-                "600": "8, 145, 178",
-                "700": "14, 116, 144",
-                "800": "21, 94, 117",
-                "900": "22, 78, 99",
-                "950": "8, 51, 68",
+                "50": "oklch(97.5% .015 230.000)",   # #f0f9ff
+                "100": "oklch(95.0% .035 230.000)",  # #e0f2fe
+                "200": "oklch(90.0% .070 225.000)",  # #bae6fd
+                "300": "oklch(82.0% .120 220.000)",  # #7dd3fc
+                "400": "oklch(74.0% .155 217.000)",  # #38bdf8
+                "500": "oklch(67.0% .184 215.000)",  # #0ea5e9 - Main info
+                "600": "oklch(58.0% .185 218.000)",  # #0284c7
+                "700": "oklch(49.0% .165 220.000)",  # #0369a1
+                "800": "oklch(42.0% .140 222.000)",  # #075985
+                "900": "oklch(36.0% .115 224.000)",  # #0c4a6e
+                "950": "oklch(28.0% .085 226.000)",  # #082f49
             },
+            # Font semantic colors (using OKLCH format)
+            "font": {
+                "subtle-light": "oklch(55.1% .027 264.364)",    # base-500 #6b7280
+                "subtle-dark": "oklch(70.7% .022 261.325)",     # base-400 #9ca3af
+                "default-light": "oklch(44.6% .030 256.802)",   # base-600 #4b5563
+                "default-dark": "oklch(87.2% .010 258.338)",    # base-300 #d1d5db
+                "important-light": "oklch(14.0% 0 0)",          # base-900 (near black)
+                "important-dark": "oklch(96.7% .003 264.542)",  # base-100 #f3f4f6
+            }
         }
 
     def to_django_settings(self) -> Dict[str, Any]:

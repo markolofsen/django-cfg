@@ -59,10 +59,13 @@ class SecurityBuilder:
             >>> 'ALLOWED_HOSTS' in settings
             True
         """
+        # Get all security domains including auto-extracted from api_url and site_url
+        all_domains = self._get_all_security_domains()
+
         if self.config.is_development or self.config.debug:
             return self._dev_mode_universal()
         else:
-            return self._prod_mode_universal(self.config.security_domains)
+            return self._prod_mode_universal(all_domains)
 
     def build_allowed_hosts(self) -> List[str]:
         """
@@ -91,7 +94,9 @@ class SecurityBuilder:
         Returns:
             Dictionary with dev security settings
         """
-        normalized = self._normalize_domains(self.config.security_domains)
+        # Get all security domains including auto-extracted from api_url and site_url
+        all_domains = self._get_all_security_domains()
+        normalized = self._normalize_domains(all_domains)
 
         # Get all dev CORS origins (popular ports + security_domains)
         dev_cors_origins = self._get_dev_csrf_origins() + normalized['cors_origins']
@@ -123,6 +128,15 @@ class SecurityBuilder:
             'SECURE_CONTENT_TYPE_NOSNIFF': False,
             'SECURE_BROWSER_XSS_FILTER': False,
             'X_FRAME_OPTIONS': 'SAMEORIGIN',
+
+            # === Django-Axes: Brute-force protection ===
+            **self._get_axes_settings(is_dev=True),
+
+            # === Authentication backends (django-axes + default) ===
+            'AUTHENTICATION_BACKENDS': [
+                'axes.backends.AxesStandaloneBackend',  # django-axes must be first
+                'django.contrib.auth.backends.ModelBackend',  # Default Django auth
+            ],
         }
 
     def _prod_mode_universal(self, security_domains: List[str]) -> Dict[str, Any]:
@@ -154,12 +168,19 @@ class SecurityBuilder:
 
         normalized = self._normalize_domains(security_domains)
 
+        # Check if localhost is in security_domains for universal CORS regex
+        has_localhost = any(
+            domain in ('localhost', '127.0.0.1')
+            for domain in security_domains
+        )
+
         return {
             # === CORS: Only security_domains ===
             # Docker-to-Docker requests don't have Origin header - CORS doesn't apply
             'CORS_ALLOW_ALL_ORIGINS': False,
             'CORS_ALLOW_CREDENTIALS': True,
             'CORS_ALLOWED_ORIGINS': normalized['cors_origins'],
+            'CORS_ALLOWED_ORIGIN_REGEXES': self._get_localhost_cors_regexes() if has_localhost else [],
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 
             # === ALLOWED_HOSTS: security_domains + Docker patterns ===
@@ -167,7 +188,9 @@ class SecurityBuilder:
             'ALLOWED_HOSTS': self._get_prod_allowed_hosts(normalized['allowed_hosts']),
 
             # === CSRF: Only security_domains ===
-            'CSRF_TRUSTED_ORIGINS': normalized['csrf_origins'],
+            'CSRF_TRUSTED_ORIGINS': normalized['csrf_origins'] + (
+                self._get_localhost_csrf_origins() if has_localhost else []
+            ),
 
             # === Security: All enabled ===
             'SECURE_SSL_REDIRECT': self._should_enable_ssl_redirect(),
@@ -179,6 +202,15 @@ class SecurityBuilder:
             'SECURE_CONTENT_TYPE_NOSNIFF': True,
             'SECURE_BROWSER_XSS_FILTER': True,
             'X_FRAME_OPTIONS': 'DENY',
+
+            # === Django-Axes: Brute-force protection ===
+            **self._get_axes_settings(is_dev=False),
+
+            # === Authentication backends (django-axes + default) ===
+            'AUTHENTICATION_BACKENDS': [
+                'axes.backends.AxesStandaloneBackend',  # django-axes must be first
+                'django.contrib.auth.backends.ModelBackend',  # Default Django auth
+            ],
         }
 
     def _get_prod_allowed_hosts(self, domain_hosts: List[str]) -> List[str]:
@@ -308,6 +340,241 @@ class SecurityBuilder:
 
         return origins
 
+    def _get_localhost_cors_regexes(self) -> List[str]:
+        """
+        Universal localhost CORS regex for ANY port.
+
+        When localhost/127.0.0.1 is in security_domains, allow all ports via regex.
+        This is much simpler than maintaining a list of specific ports.
+
+        Matches:
+        - http://localhost:3000
+        - http://localhost:8000
+        - http://127.0.0.1:7301
+        - Any other localhost port
+
+        Returns:
+            List of regex patterns for CORS_ALLOWED_ORIGIN_REGEXES
+        """
+        return [
+            r'^http://localhost:\d+$',      # localhost with any port
+            r'^http://127\.0\.0\.1:\d+$',   # 127.0.0.1 with any port
+        ]
+
+    def _get_localhost_csrf_origins(self) -> List[str]:
+        """
+        Localhost CSRF origins with common development ports.
+
+        CSRF doesn't support regex, so we need to list specific ports.
+        Covers standard development tools and frameworks.
+
+        Note: CORS uses regex for ALL ports via CORS_ALLOWED_ORIGIN_REGEXES.
+        CSRF is more limited - only these common ports are whitelisted.
+
+        Returns:
+            List of localhost origins with common ports for CSRF
+        """
+        # Common development ports (framework defaults)
+        dev_ports = [
+            # Frontend frameworks
+            3000, 3001, 3002,  # React/Next.js
+            5173, 5174,        # Vite
+            8080, 8081,        # Vue/Spring Boot
+            4200,              # Angular
+            # Backend servers
+            8000, 8001, 8002,  # Django
+            5000,              # Flask
+            4000,              # Express
+        ]
+
+        origins = []
+        for port in dev_ports:
+            origins.extend([
+                f"http://localhost:{port}",
+                f"http://127.0.0.1:{port}",
+            ])
+
+        return origins
+
+    def _get_axes_settings(self, is_dev: bool) -> Dict[str, Any]:
+        """
+        Get Django-Axes settings (custom config or smart defaults).
+
+        Args:
+            is_dev: Whether running in development mode
+
+        Returns:
+            Dictionary with Django-Axes settings
+        """
+        # If user provided custom AxesConfig, use it
+        if self.config.axes:
+            return self.config.axes.to_django_settings(
+                is_production=self.config.is_production,
+                debug=self.config.debug
+            )
+
+        # Otherwise, use smart defaults
+        return self._get_default_axes_settings(is_dev)
+
+    def _get_default_axes_settings(self, is_dev: bool) -> Dict[str, Any]:
+        """
+        Get default Django-Axes settings based on environment.
+
+        Args:
+            is_dev: Whether running in development mode
+
+        Returns:
+            Dictionary with default Django-Axes settings
+        """
+        if is_dev:
+            return {
+                'AXES_ENABLED': True,
+                'AXES_FAILURE_LIMIT': 10,  # More attempts in dev
+                'AXES_COOLOFF_TIME': 1,  # 1 hour lockout
+                'AXES_LOCK_OUT_AT_FAILURE': True,
+                'AXES_RESET_ON_SUCCESS': True,
+                # AXES_ONLY_USER_FAILURES deprecated in 8.0
+                'AXES_LOCKOUT_TEMPLATE': None,  # Use default lockout response
+                'AXES_LOCKOUT_URL': None,  # No custom lockout URL
+                'AXES_VERBOSE': True,  # Log lockout events in dev
+                'AXES_ENABLE_ACCESS_FAILURE_LOG': True,
+                'AXES_IPWARE_PROXY_COUNT': 1,
+                'AXES_IPWARE_META_PRECEDENCE_ORDER': [
+                    'HTTP_X_FORWARDED_FOR',
+                    'HTTP_X_REAL_IP',
+                    'REMOTE_ADDR',
+                ],
+            }
+        else:
+            return {
+                'AXES_ENABLED': True,
+                'AXES_FAILURE_LIMIT': 5,  # Stricter limit in production
+                'AXES_COOLOFF_TIME': 24,  # 24 hours lockout in production
+                'AXES_LOCK_OUT_AT_FAILURE': True,
+                'AXES_RESET_ON_SUCCESS': True,
+                # AXES_ONLY_USER_FAILURES deprecated in 8.0
+                'AXES_LOCKOUT_TEMPLATE': None,  # Use default lockout response
+                'AXES_LOCKOUT_URL': None,  # No custom lockout URL
+                'AXES_VERBOSE': False,  # Less verbose logging in production
+                'AXES_ENABLE_ACCESS_FAILURE_LOG': True,  # Log failures for security audit
+                # Proxy/Cloudflare support - get real IP from X-Forwarded-For
+                'AXES_IPWARE_PROXY_COUNT': 1,  # Number of proxies between client and server
+                'AXES_IPWARE_META_PRECEDENCE_ORDER': [
+                    'HTTP_X_FORWARDED_FOR',  # Cloudflare, nginx, traefik
+                    'HTTP_X_REAL_IP',        # Alternative proxy header
+                    'REMOTE_ADDR',           # Fallback to direct connection
+                ],
+            }
+
+    def _get_all_security_domains(self) -> List[str]:
+        """
+        Get all security domains including auto-extracted from api_url and site_url.
+
+        Automatically extracts domains from:
+        - config.security_domains (user-defined)
+        - config.api_url (backend URL)
+        - config.site_url (frontend URL)
+
+        Smart deduplication by hostname:port (ignoring protocol differences).
+
+        Returns:
+            List of all unique security domains
+
+        Example:
+            >>> config = DjangoConfig(
+            ...     api_url="https://api.example.com",
+            ...     site_url="https://example.com",
+            ...     security_domains=["localhost"]
+            ... )
+            >>> builder = SecurityBuilder(config)
+            >>> domains = builder._get_all_security_domains()
+            >>> len([d for d in domains if 'api.example.com' in d])
+            1
+            >>> len([d for d in domains if 'example.com' in d and 'api' not in d])
+            1
+        """
+        domains = list(self.config.security_domains)
+
+        # Extract domain from api_url
+        if self.config.api_url:
+            try:
+                parsed = urlparse(self.config.api_url)
+                if parsed.netloc:
+                    # Add full URL with protocol and port if present
+                    if parsed.port:
+                        domains.append(f"{parsed.scheme}://{parsed.hostname}:{parsed.port}")
+                    else:
+                        domains.append(f"{parsed.scheme}://{parsed.hostname}")
+            except Exception:
+                pass  # Ignore parsing errors
+
+        # Extract domain from site_url
+        if self.config.site_url:
+            try:
+                parsed = urlparse(self.config.site_url)
+                if parsed.netloc:
+                    # Add full URL with protocol and port if present
+                    if parsed.port:
+                        domains.append(f"{parsed.scheme}://{parsed.hostname}:{parsed.port}")
+                    else:
+                        domains.append(f"{parsed.scheme}://{parsed.hostname}")
+            except Exception:
+                pass  # Ignore parsing errors
+
+        # Smart deduplication: track by hostname:port, keep first occurrence with protocol
+        seen_hostports = {}  # hostname:port -> full domain string
+        unique_domains = []
+
+        for domain in domains:
+            if not domain or not domain.strip():
+                continue
+
+            domain = domain.strip()
+
+            # Normalize for comparison: parse to get hostname:port key
+            try:
+                # Add protocol if missing for parsing
+                if not domain.startswith(("http://", "https://")):
+                    parse_domain = f"http://{domain}"
+                else:
+                    parse_domain = domain
+
+                parsed = urlparse(parse_domain)
+                hostname = (parsed.hostname or parsed.netloc.split(':')[0]).lower()  # Lowercase for case-insensitive comparison
+                port = parsed.port
+
+                # Create unique key: hostname:port or just hostname (lowercase for case-insensitivity)
+                if port:
+                    hostport_key = f"{hostname}:{port}"
+                else:
+                    hostport_key = hostname
+
+                # Only add if we haven't seen this hostname:port combination
+                if hostport_key not in seen_hostports:
+                    # Normalize domain to lowercase but preserve original format (with/without protocol)
+                    # Reconstruct normalized domain
+                    if domain.startswith(("http://", "https://")):
+                        # Has protocol - normalize hostname part only
+                        if port:
+                            normalized_domain = f"{parsed.scheme}://{hostname}:{port}"
+                        else:
+                            normalized_domain = f"{parsed.scheme}://{hostname}"
+                    else:
+                        # No protocol - just lowercase the whole thing
+                        normalized_domain = domain.lower()
+
+                    seen_hostports[hostport_key] = normalized_domain
+                    unique_domains.append(normalized_domain)
+
+            except Exception:
+                # If parsing fails, use simple string deduplication with lowercase
+                domain_lower = domain.lower()
+                if domain_lower not in seen_hostports.values():
+                    seen_hostports[domain_lower] = domain_lower
+                    unique_domains.append(domain_lower)
+
+        return unique_domains
+
     def _normalize_domains(self, domains: List[str]) -> Dict[str, List[str]]:
         """
         Normalize domains in ANY format.
@@ -317,6 +584,7 @@ class SecurityBuilder:
         - "https://api.example.com" → https://api.example.com (as is)
         - "http://staging.com:8080" → http://staging.com:8080 (as is)
         - "192.168.1.10" → http://192.168.1.10
+        - "localhost" → http://localhost (regex handles all ports via CORS_ALLOWED_ORIGIN_REGEXES)
 
         Args:
             domains: List of domains in any format

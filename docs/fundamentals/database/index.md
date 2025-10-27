@@ -17,9 +17,47 @@ Django-CFG uses **URL-based configuration** for databases, providing a simple, c
 ## Quick Start
 
 <Tabs>
-  <TabItem value="python" label="Python Config" default>
+  <TabItem value="env" label="Environment Variables" default>
 
-```python title="config.py"
+```bash title=".env"
+DATABASE__URL="postgresql://user:password@localhost:5432/mydb"
+```
+
+```python title="api/environment/loader.py"
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
+
+env = EnvironmentConfig()  # Auto-loads from ENV and .env
+```
+
+```python title="api/config.py"
+from django_cfg import DjangoConfig, DatabaseConfig
+from .environment import env
+
+class MyConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url)
+    }
+
+config = MyConfig()
+```
+
+:::warning[Production Secrets]
+Always use environment variables for database credentials in production. Never commit passwords to version control.
+:::
+
+  </TabItem>
+  <TabItem value="python" label="Direct Config">
+
+```python title="api/config.py"
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
@@ -32,45 +70,8 @@ class MyConfig(DjangoConfig):
 config = MyConfig()
 ```
 
-  </TabItem>
-  <TabItem value="yaml" label="YAML Config">
-
-```yaml title="config.yaml"
-database:
-  url: "postgresql://user:password@localhost:5432/mydb"
-```
-
-```python title="config.py"
-from django_cfg import DjangoConfig, DatabaseConfig
-from .environment import env
-
-class MyConfig(DjangoConfig):
-    databases: dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig.from_url(url=env.database.url)
-    }
-```
-
-  </TabItem>
-  <TabItem value="env" label="Environment Variables">
-
-```bash title=".env"
-DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
-```
-
-```python title="config.py"
-import os
-from django_cfg import DjangoConfig, DatabaseConfig
-
-class MyConfig(DjangoConfig):
-    databases: dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig.from_url(
-            url=os.environ["DATABASE_URL"]
-        )
-    }
-```
-
-:::warning[Production Secrets]
-Always use environment variables for database credentials in production. Never commit passwords to version control.
+:::danger[Not Recommended]
+Hardcoded credentials are a security risk. Use environment variables instead.
 :::
 
   </TabItem>

@@ -21,8 +21,7 @@ class CfgCampaignsAPI:
         url = "/cfg/newsletter/campaigns/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedNewsletterCampaignList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedNewsletterCampaignList.model_validate(response.json())
 
 
     async def newsletter_campaigns_create(self, data: NewsletterCampaignRequest) -> NewsletterCampaign:

@@ -83,52 +83,64 @@ url: str = "oracle://user:password@localhost:1521/dbname"
 ### Development (SQLite)
 
 ```python
-# config.py
-from pydantic import BaseModel
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class DatabaseConfig(BaseModel):
-    url: str = "sqlite:///db/dev.sqlite3"
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/dev.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 ```
 
-```yaml
-# config.dev.yaml
-database:
-  url: "sqlite:///db/dev.sqlite3"
+```bash
+# .env (optional override)
+DATABASE__URL="sqlite:///db/dev.sqlite3"
 ```
 
 ### Production (PostgreSQL)
 
 ```python
-# config.py
-from pydantic import BaseModel
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class DatabaseConfig(BaseModel):
-    url: str = "postgresql://user:password@db.example.com:5432/production"
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 ```
 
-```yaml
-# config.prod.yaml
-database:
-  url: "postgresql://user:${DB_PASSWORD}@db.example.com:5432/production"
+```bash
+# System ENV or Docker environment
+DATABASE__URL="postgresql://user:${DB_PASSWORD}@db.example.com:5432/production"
 ```
 
 ### Environment Variable Override
 
 ```bash
 # .env
-DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
+DATABASE__URL="postgresql://user:password@localhost:5432/mydb"
 ```
 
 ```python
-# config.py - automatically reads DATABASE_URL
-from pydantic import BaseModel
-from pydantic_settings import BaseSettings
+# api/environment/loader.py - automatically reads DATABASE__URL
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class DatabaseConfig(BaseSettings):
-    url: str = "sqlite:///db/default.sqlite3"  # Fallback
+    url: str = Field(default="sqlite:///db/default.sqlite3")  # Fallback
 
-    class Config:
-        env_prefix = "DATABASE_"
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
 ```
 
 ## Settings Integration
@@ -136,15 +148,17 @@ class DatabaseConfig(BaseSettings):
 Django-CFG automatically converts URLs to Django's `DATABASES` format:
 
 ```python
-# settings.py
-import dj_database_url
-from django_cfg import load_config
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+from .environment import env
 
-config = load_config()
+class MyDjangoConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(url=env.database.url)
+    }
 
-DATABASES = {
-    'default': dj_database_url.parse(config.database.url),
-}
+# Generate Django settings
+config = MyDjangoConfig()
 ```
 
 ## Advanced Options
@@ -196,40 +210,48 @@ url: str = "postgresql://admin:MyPassword123@localhost/db"
 ```
 
 ✅ **Good:**
-```yaml
-# config.prod.yaml
-database:
-  url: "postgresql://admin:${DB_PASSWORD}@localhost/db"
+```bash
+# System environment variable
+export DATABASE__URL="postgresql://admin:${DB_PASSWORD}@localhost/db"
+export DB_PASSWORD="MyPassword123"
 ```
 
+Or in `.env` file (gitignored):
 ```bash
-# Environment variable
-export DB_PASSWORD="MyPassword123"
+DATABASE__URL="postgresql://admin:MyPassword123@localhost/db"
 ```
 
 ### 2. Use Environment Variables in Production
 
 ```python
-# config.py
-import os
-from pydantic import BaseModel
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class DatabaseConfig(BaseModel):
-    url: str = os.getenv("DATABASE_URL", "sqlite:///db/default.sqlite3")
+class DatabaseConfig(BaseSettings):
+    url: str = Field(default="sqlite:///db/default.sqlite3")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE__",
+        env_nested_delimiter="__",
+    )
+```
+
+```bash
+# Production environment
+export DATABASE__URL="postgresql://prod_user:${DB_PASSWORD}@db.example.com/prod_db"
 ```
 
 ### 3. Different Credentials Per Environment
 
-```yaml
-# config.dev.yaml
-database:
-  url: "postgresql://dev_user:dev_pass@localhost/dev_db"
+```bash
+# Development (.env file)
+DATABASE__URL="postgresql://dev_user:dev_pass@localhost/dev_db"
 ```
 
-```yaml
-# config.prod.yaml
-database:
-  url: "postgresql://prod_user:${DB_PASSWORD}@db.example.com/prod_db"
+```bash
+# Production (system ENV or Docker)
+DATABASE__URL="postgresql://prod_user:${DB_PASSWORD}@db.example.com/prod_db"
 ```
 
 ## Troubleshooting

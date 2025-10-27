@@ -21,8 +21,7 @@ class CryptoCryptoAPI:
         url = "/api/crypto/coins/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedCoinListList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedCoinListList.model_validate(response.json())
 
 
     async def coins_retrieve(self, id: int) -> Coin:
@@ -58,8 +57,7 @@ class CryptoCryptoAPI:
         url = "/api/crypto/exchanges/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedExchangeList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedExchangeList.model_validate(response.json())
 
 
     async def exchanges_retrieve(self, slug: str) -> Exchange:
@@ -83,8 +81,7 @@ class CryptoCryptoAPI:
         url = "/api/crypto/wallets/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedWalletList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedWalletList.model_validate(response.json())
 
 
     async def wallets_retrieve(self, id: str) -> Wallet:

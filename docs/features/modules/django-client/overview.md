@@ -7,16 +7,23 @@ keywords:
   - typescript client generator
   - python client generator
   - type-safe api client
-description: Auto-generate production-ready TypeScript and Python clients from OpenAPI specs. Built for Django REST Framework with drf-spectacular.
+description: Auto-generate production-ready TypeScript, Python, Go, and Protocol Buffer clients from OpenAPI specs. Built for Django REST Framework with drf-spectacular.
 ---
 
 # Django Client Generator
 
 **Auto-generate type-safe, production-ready API clients from OpenAPI 3.0/3.1 specifications**
 
-The `django_client` module generates TypeScript and Python clients optimized for Django REST Framework applications. Unlike generic OpenAPI generators, it produces clean, framework-specific code for modern ecosystems.
+The `django_client` module generates TypeScript, Python, Go, and Protocol Buffer clients optimized for Django REST Framework applications. Unlike generic OpenAPI generators, it produces clean, framework-specific code for modern ecosystems.
 
 ## What It Generates
+
+The django_client module generates clients for multiple languages and protocols:
+
+- **TypeScript** - Type-safe client with Zod validation, SWR hooks, universal fetchers
+- **Python** - Async Pydantic 2 client with full type hints
+- **Go** - Typed HTTP client with structs and interfaces
+- **Protocol Buffers** - Proto3 definitions for gRPC services
 
 ### TypeScript Client Structure
 
@@ -62,6 +69,35 @@ backend/api_client/
     ├── accounts.py                   # client.accounts.*
     └── payments.py                   # client.payments.*
 ```
+
+### Protocol Buffers Structure
+
+```
+openapi/clients/proto/
+├── profiles/                         # Group name
+│   ├── api__profiles/                # Service folder
+│   │   ├── messages.proto            # Message definitions (models, enums)
+│   │   ├── service.proto             # gRPC service definitions
+│   │   ├── messages_pb2.py           # Compiled Python messages
+│   │   ├── messages_pb2_grpc.py      # Empty (no services in messages)
+│   │   ├── service_pb2.py            # Request/Response messages
+│   │   └── service_pb2_grpc.py       # gRPC client stubs & server servicers
+│   └── README.md                      # Compilation guide
+│
+├── trading/                          # Another group
+│   └── api__trading/
+│       └── ...                        # Same structure
+│
+└── cfg/                              # Large group (21 services)
+    ├── accounts/
+    ├── payments/
+    ├── knowbase/
+    └── ...                            # One folder per service
+```
+
+:::info Compilation Required
+Proto files are source files that must be compiled with `protoc` before use. Each group includes a README.md with compilation commands for Python, Go, TypeScript, C++, Java, and more.
+:::
 
 ---
 

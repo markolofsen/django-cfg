@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { ProfileProvider } from './ProfileContext';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -24,9 +23,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         dedupingInterval: 2000, // Dedupe requests within 2 seconds
       }}
     >
-      <ProfileProvider>
-        {children}
-      </ProfileProvider>
+      {children}
     </SWRConfig>
   );
 }

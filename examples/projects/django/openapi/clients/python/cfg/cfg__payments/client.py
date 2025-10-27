@@ -46,8 +46,7 @@ class CfgPaymentsAPI:
         url = "/cfg/payments/payments/"
         response = await self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedPaymentListList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedPaymentListList.model_validate(response.json())
 
 
     async def payments_retrieve(self, id: str) -> PaymentDetail:
@@ -84,8 +83,7 @@ class CfgPaymentsAPI:
         url = f"/cfg/payments/payments/{id}/status/"
         response = await self._client.get(url)
         response.raise_for_status()
-        data = response.json()
-        return [PaymentList.model_validate(item) for item in data.get("results", [])]
+        return PaymentList.model_validate(response.json())
 
 
     async def payments_create_create(self) -> PaymentList:

@@ -1,0 +1,73 @@
+"""
+Generated API Client.
+
+Auto-generated thin wrapper over CentrifugoRPCClient - DO NOT EDIT
+"""
+
+from typing import Optional
+{% if models %}
+from .models import (
+{% for model_name in models | unique | sort %}    {{ model_name }},
+{% endfor %})
+{% endif %}
+from .rpc_client import CentrifugoRPCClient
+
+
+class APIClient:
+    """
+    Generated API client.
+
+    Thin wrapper over CentrifugoRPCClient providing type-safe RPC methods.
+    """
+
+    def __init__(self, rpc_client: CentrifugoRPCClient):
+        """
+        Initialize API client.
+
+        Args:
+            rpc_client: Connected CentrifugoRPCClient instance
+
+        Example:
+            >>> rpc = CentrifugoRPCClient(
+            ...     url='ws://localhost:8000/connection/websocket',
+            ...     token='jwt-token',
+            ...     user_id='user-123'
+            ... )
+            >>> await rpc.connect()
+            >>>
+            >>> api = APIClient(rpc)
+            >>> result = await api.some_method(params)
+        """
+        self._rpc = rpc_client
+
+    # ========== Generated RPC Methods ==========
+
+{% for method in methods %}
+    async def {{ method.name_python }}(self, params: {{ method.param_type }}) -> {{ method.return_type }}:
+        """
+        {{ method.docstring | replace('\n', '\n        ') }}
+
+        Args:
+            params: {{ method.param_type }} parameters
+
+        Returns:
+            {{ method.return_type }}
+
+        Raises:
+            asyncio.TimeoutError: If RPC call times out
+            Exception: If RPC call fails
+        """
+{% if method.param_type == 'dict' %}
+        result = await self._rpc.call('{{ method.name }}', params)
+{% else %}
+        result = await self._rpc.call('{{ method.name }}', params.model_dump())
+{% endif %}
+{% if method.return_type == 'dict' %}
+        return result
+{% else %}
+        return {{ method.return_type }}(**result)
+{% endif %}
+
+{% endfor %}
+
+__all__ = ["APIClient"]

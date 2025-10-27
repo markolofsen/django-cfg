@@ -65,7 +65,9 @@ export class APIClient {
   }
 
   /**
-   * Get CSRF token from cookies.
+   * Get CSRF token from cookies (for SessionAuthentication).
+   *
+   * Returns null if cookie doesn't exist (JWT-only auth).
    */
   getCsrfToken(): string | null {
     const name = 'csrftoken';
@@ -140,13 +142,18 @@ export class APIClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    // Add CSRF token for non-GET requests
+{% if has_session_auth %}
+    // Add CSRF token for SessionAuthentication
     if (method !== 'GET') {
       const csrfToken = this.getCsrfToken();
       if (csrfToken) {
         headers['X-CSRFToken'] = csrfToken;
       }
     }
+{% else %}
+    // CSRF not needed - SessionAuthentication not enabled in DRF config
+    // Your API uses JWT/Token authentication (no CSRF required)
+{% endif %}
 
     // Log request
     if (this.logger) {
@@ -363,13 +370,18 @@ export class APIClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    // Add CSRF token for non-GET requests
+{% if has_session_auth %}
+    // Add CSRF token for SessionAuthentication
     if (method !== 'GET') {
       const csrfToken = this.getCsrfToken();
       if (csrfToken) {
         headers['X-CSRFToken'] = csrfToken;
       }
     }
+{% else %}
+    // CSRF not needed - SessionAuthentication not enabled in DRF config
+    // Your API uses JWT/Token authentication (no CSRF required)
+{% endif %}
 
     try {
       // Make request via HTTP adapter

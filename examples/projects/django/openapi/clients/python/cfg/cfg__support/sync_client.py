@@ -19,8 +19,7 @@ class SyncCfgSupportAPI:
         url = "/cfg/support/tickets/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedTicketList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedTicketList.model_validate(response.json())
 
 
     def tickets_create(self, data: TicketRequest) -> Ticket:
@@ -40,8 +39,7 @@ class SyncCfgSupportAPI:
         url = f"/cfg/support/tickets/{ticket_uuid}/messages/"
         response = self._client.get(url, params={"page": page if page is not None else None, "page_size": page_size if page_size is not None else None})
         response.raise_for_status()
-        data = response.json()
-        return [PaginatedMessageList.model_validate(item) for item in data.get("results", [])]
+        return PaginatedMessageList.model_validate(response.json())
 
 
     def tickets_messages_create(self, ticket_uuid: str, data: MessageCreateRequest) -> MessageCreate:

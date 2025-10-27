@@ -1,0 +1,176 @@
+{% extends 'admin/base.html' %}
+
+{% load unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Removed Tailwind CDN - using CSS-only solution -->
+
+    <!-- Alpine.js Components - Load before Alpine.js -->
+    {% load static %}
+    <script src="{% static 'admin/js/utils.js' %}"></script>
+    <script src="{% static 'admin/js/alpine/dashboard-tabs.js' %}"></script>
+
+    <!-- Note: Alpine.js and its plugins are already loaded by Unfold's skeleton.html -->
+    <!-- Removed duplicate Alpine.js CDN loading to prevent conflicts with Unfold's Alpine instance -->
+
+    <!-- Admin Styles -->
+    <link rel="stylesheet" href="{% static 'admin/css/layout.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/theme.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/tabs.css' %}">
+
+    <!-- JavaScript Component Notes:
+         - Dashboard tabs functionality: dashboard-tabs.js Alpine component
+         - Toggle category functionality: commands-panel.js Alpine component
+         - Command execution: command-modal.js Alpine component
+         - copyToClipboard and getCookie: dashboard.js (loaded in base_dashboard.html)
+    -->
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    {% if subtitle %}
+        {{ subtitle }} |
+    {% endif %}
+    {{ title }} | {{ site_title|default:'Django site admin' }}
+{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <!-- Main Dashboard Container -->
+    {% component "unfold/components/container.html" %}
+        <div x-data="dashboardTabs">
+            <!-- Tabs Navigation -->
+            <div class="flex gap-1 mb-4" id="dashboard-tabs">
+                <button
+                    type="button"
+                    @click="switchTab(0)"
+                    :class="isActive(0) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none font-semibold"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">dashboard</span>
+                    Overview
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(1)"
+                    :class="isActive(1) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">public</span>
+                    API Zones
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(2)"
+                    :class="isActive(2) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">people</span>
+                    Users
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(3)"
+                    :class="isActive(3) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">settings</span>
+                    System
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(4)"
+                    :class="isActive(4) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">analytics</span>
+                    Statistics
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(5)"
+                    :class="isActive(5) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">apps</span>
+                    App Stats
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(6)"
+                    :class="isActive(6) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">terminal</span>
+                    Commands
+                </button>
+                <button
+                    type="button"
+                    @click="switchTab(7)"
+                    :class="isActive(7) ? 'active' : ''"
+                    class="px-4 py-3 rounded-t-lg focus:outline-none"
+                >
+                    <span class="material-icons mr-2 align-middle text-sm">widgets</span>
+                    Widgets
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-5">
+
+            <!-- Tab Content with improved spacing -->
+            <div class="tab-content" x-show="isActive(0)">
+                {% block overview_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(1)">
+                {% block zones_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(2)">
+                {% block users_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(3)">
+                {% block system_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(4)">
+                {% block stats_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(5)">
+                {% block app_stats_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(6)">
+                {% block commands_tab %}{% endblock %}
+            </div>
+
+            <div class="tab-content" x-show="isActive(7)">
+                {% block widgets_tab %}{% endblock %}
+            </div>
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="text-center py-8 border-t theme-border mt-5">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                {% load django_cfg %}
+                <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700 font-medium">
+                    {% lib_name %}
+                </a>
+                <span class="mx-2">•</span>
+                <a href="{% lib_health_url %}" class="text-blue-600 hover:text-blue-700">
+                    System Health
+                </a>
+            </p>
+        </div>
+
+    {% endcomponent %}
+{% endblock %}

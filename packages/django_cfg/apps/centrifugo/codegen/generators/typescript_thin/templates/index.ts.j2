@@ -1,0 +1,12 @@
+/**
+ * Generated TypeScript Client Package
+ * Auto-generated - DO NOT EDIT
+ */
+
+export { CentrifugoRPCClient } from './rpc-client';
+export { APIClient } from './client';
+{% if models %}
+export type {
+{% for model_name in models | unique | sort %}  {{ model_name }},
+{% endfor %}} from './types';
+{% endif %}

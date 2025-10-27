@@ -22,3 +22,22 @@ class SyncCfgEndpointsAPI:
         return EndpointsStatus.model_validate(response.json())
 
 
+    def urls_retrieve(self) -> list[URLsList]:
+        """
+        Return all registered URLs.
+        """
+        url = "/cfg/endpoints/urls/"
+        response = self._client.get(url)
+        response.raise_for_status()
+        return URLsList.model_validate(response.json())
+
+
+    def urls_compact_retrieve(self) -> None:
+        """
+        Return compact URL list.
+        """
+        url = "/cfg/endpoints/urls/compact/"
+        response = self._client.get(url)
+        response.raise_for_status()
+
+

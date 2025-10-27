@@ -80,7 +80,7 @@ export const appLayoutConfig: AppLayoutConfig = {
         security: routes.legal.security,
         cookies: routes.legal.cookies,
       },
-      menuSections: generateFooterNavigation(),
+      menuSections: generateFooterNavigation(settings.links.documentationUrl),
     },
   },
 
