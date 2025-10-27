@@ -34,7 +34,6 @@ import { LeadSubmissionRequestSchema, type LeadSubmissionRequest } from '../sche
 import { PaginatedLeadSubmissionListSchema, type PaginatedLeadSubmissionList } from '../schemas/PaginatedLeadSubmissionList.schema'
 import { PatchedLeadSubmissionRequestSchema, type PatchedLeadSubmissionRequest } from '../schemas/PatchedLeadSubmissionRequest.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -42,7 +41,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/leads/
  */
-export async function getLeadsList(  params?: { page?: number; page_size?: number },  client?: API
+export async function getLeadsList(  params?: { page?: number; page_size?: number },  client?: any
 ): Promise<PaginatedLeadSubmissionList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.list(params?.page, params?.page_size)
@@ -56,7 +55,7 @@ export async function getLeadsList(  params?: { page?: number; page_size?: numbe
  * @method POST
  * @path /cfg/leads/
  */
-export async function createLeadsCreate(  data: LeadSubmissionRequest,  client?: API
+export async function createLeadsCreate(  data: LeadSubmissionRequest,  client?: any
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.create(data)
@@ -70,7 +69,7 @@ export async function createLeadsCreate(  data: LeadSubmissionRequest,  client?:
  * @method GET
  * @path /cfg/leads/{id}/
  */
-export async function getLeadsRetrieve(  id: number,  client?: API
+export async function getLeadsRetrieve(  id: number,  client?: any
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.retrieve(id)
@@ -84,7 +83,7 @@ export async function getLeadsRetrieve(  id: number,  client?: API
  * @method PUT
  * @path /cfg/leads/{id}/
  */
-export async function updateLeadsUpdate(  id: number, data: LeadSubmissionRequest,  client?: API
+export async function updateLeadsUpdate(  id: number, data: LeadSubmissionRequest,  client?: any
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.update(id, data)
@@ -98,7 +97,7 @@ export async function updateLeadsUpdate(  id: number, data: LeadSubmissionReques
  * @method PATCH
  * @path /cfg/leads/{id}/
  */
-export async function partialUpdateLeadsPartialUpdate(  id: number, data?: PatchedLeadSubmissionRequest,  client?: API
+export async function partialUpdateLeadsPartialUpdate(  id: number, data?: PatchedLeadSubmissionRequest,  client?: any
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.partialUpdate(id, data)
@@ -112,7 +111,7 @@ export async function partialUpdateLeadsPartialUpdate(  id: number, data?: Patch
  * @method DELETE
  * @path /cfg/leads/{id}/
  */
-export async function deleteLeadsDestroy(  id: number,  client?: API
+export async function deleteLeadsDestroy(  id: number,  client?: any
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.destroy(id)

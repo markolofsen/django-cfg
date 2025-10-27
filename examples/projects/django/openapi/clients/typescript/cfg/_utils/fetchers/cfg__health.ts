@@ -32,7 +32,6 @@
 import { HealthCheckSchema, type HealthCheck } from '../schemas/HealthCheck.schema'
 import { QuickHealthSchema, type QuickHealth } from '../schemas/QuickHealth.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/health/drf/
  */
-export async function getHealthDrfRetrieve(  client?: API
+export async function getHealthDrfRetrieve(  client?: any
 ): Promise<HealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_health.drfRetrieve()
@@ -54,7 +53,7 @@ export async function getHealthDrfRetrieve(  client?: API
  * @method GET
  * @path /cfg/health/drf/quick/
  */
-export async function getHealthDrfQuickRetrieve(  client?: API
+export async function getHealthDrfQuickRetrieve(  client?: any
 ): Promise<QuickHealth> {
   const api = client || getAPIInstance()
   const response = await api.cfg_health.drfQuickRetrieve()

@@ -39,7 +39,6 @@ import { CentrifugoPresenceResponseSchema, type CentrifugoPresenceResponse } fro
 import { CentrifugoPresenceStatsRequestRequestSchema, type CentrifugoPresenceStatsRequestRequest } from '../schemas/CentrifugoPresenceStatsRequestRequest.schema'
 import { CentrifugoPresenceStatsResponseSchema, type CentrifugoPresenceStatsResponse } from '../schemas/CentrifugoPresenceStatsResponse.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get connection token for dashboard
@@ -47,7 +46,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/centrifugo/admin/api/server/auth/token/
  */
-export async function createCentrifugoAdminApiServerAuthTokenCreate(  client?: API
+export async function createCentrifugoAdminApiServerAuthTokenCreate(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.serverAuthTokenCreate()
@@ -61,7 +60,7 @@ export async function createCentrifugoAdminApiServerAuthTokenCreate(  client?: A
  * @method POST
  * @path /cfg/centrifugo/admin/api/server/channels/
  */
-export async function createCentrifugoAdminApiServerChannelsCreate(  data: CentrifugoChannelsRequestRequest,  client?: API
+export async function createCentrifugoAdminApiServerChannelsCreate(  data: CentrifugoChannelsRequestRequest,  client?: any
 ): Promise<CentrifugoChannelsResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.serverChannelsCreate(data)
@@ -75,7 +74,7 @@ export async function createCentrifugoAdminApiServerChannelsCreate(  data: Centr
  * @method POST
  * @path /cfg/centrifugo/admin/api/server/history/
  */
-export async function createCentrifugoAdminApiServerHistoryCreate(  data: CentrifugoHistoryRequestRequest,  client?: API
+export async function createCentrifugoAdminApiServerHistoryCreate(  data: CentrifugoHistoryRequestRequest,  client?: any
 ): Promise<CentrifugoHistoryResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.serverHistoryCreate(data)
@@ -89,7 +88,7 @@ export async function createCentrifugoAdminApiServerHistoryCreate(  data: Centri
  * @method POST
  * @path /cfg/centrifugo/admin/api/server/info/
  */
-export async function createCentrifugoAdminApiServerInfoCreate(  client?: API
+export async function createCentrifugoAdminApiServerInfoCreate(  client?: any
 ): Promise<CentrifugoInfoResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.serverInfoCreate()
@@ -103,7 +102,7 @@ export async function createCentrifugoAdminApiServerInfoCreate(  client?: API
  * @method POST
  * @path /cfg/centrifugo/admin/api/server/presence/
  */
-export async function createCentrifugoAdminApiServerPresenceCreate(  data: CentrifugoPresenceRequestRequest,  client?: API
+export async function createCentrifugoAdminApiServerPresenceCreate(  data: CentrifugoPresenceRequestRequest,  client?: any
 ): Promise<CentrifugoPresenceResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.serverPresenceCreate(data)
@@ -117,7 +116,7 @@ export async function createCentrifugoAdminApiServerPresenceCreate(  data: Centr
  * @method POST
  * @path /cfg/centrifugo/admin/api/server/presence-stats/
  */
-export async function createCentrifugoAdminApiServerPresenceStatsCreate(  data: CentrifugoPresenceStatsRequestRequest,  client?: API
+export async function createCentrifugoAdminApiServerPresenceStatsCreate(  data: CentrifugoPresenceStatsRequestRequest,  client?: any
 ): Promise<CentrifugoPresenceStatsResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.serverPresenceStatsCreate(data)
@@ -131,7 +130,7 @@ export async function createCentrifugoAdminApiServerPresenceStatsCreate(  data: 
  * @method POST
  * @path /cfg/centrifugo/server/auth/token/
  */
-export async function createCentrifugoServerAuthTokenCreate(  client?: API
+export async function createCentrifugoServerAuthTokenCreate(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerAuthTokenCreate()
@@ -145,7 +144,7 @@ export async function createCentrifugoServerAuthTokenCreate(  client?: API
  * @method POST
  * @path /cfg/centrifugo/server/channels/
  */
-export async function createCentrifugoServerChannelsCreate(  data: CentrifugoChannelsRequestRequest,  client?: API
+export async function createCentrifugoServerChannelsCreate(  data: CentrifugoChannelsRequestRequest,  client?: any
 ): Promise<CentrifugoChannelsResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerChannelsCreate(data)
@@ -159,7 +158,7 @@ export async function createCentrifugoServerChannelsCreate(  data: CentrifugoCha
  * @method POST
  * @path /cfg/centrifugo/server/history/
  */
-export async function createCentrifugoServerHistoryCreate(  data: CentrifugoHistoryRequestRequest,  client?: API
+export async function createCentrifugoServerHistoryCreate(  data: CentrifugoHistoryRequestRequest,  client?: any
 ): Promise<CentrifugoHistoryResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerHistoryCreate(data)
@@ -173,7 +172,7 @@ export async function createCentrifugoServerHistoryCreate(  data: CentrifugoHist
  * @method POST
  * @path /cfg/centrifugo/server/info/
  */
-export async function createCentrifugoServerInfoCreate(  client?: API
+export async function createCentrifugoServerInfoCreate(  client?: any
 ): Promise<CentrifugoInfoResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerInfoCreate()
@@ -187,7 +186,7 @@ export async function createCentrifugoServerInfoCreate(  client?: API
  * @method POST
  * @path /cfg/centrifugo/server/presence/
  */
-export async function createCentrifugoServerPresenceCreate(  data: CentrifugoPresenceRequestRequest,  client?: API
+export async function createCentrifugoServerPresenceCreate(  data: CentrifugoPresenceRequestRequest,  client?: any
 ): Promise<CentrifugoPresenceResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerPresenceCreate(data)
@@ -201,7 +200,7 @@ export async function createCentrifugoServerPresenceCreate(  data: CentrifugoPre
  * @method POST
  * @path /cfg/centrifugo/server/presence-stats/
  */
-export async function createCentrifugoServerPresenceStatsCreate(  data: CentrifugoPresenceStatsRequestRequest,  client?: API
+export async function createCentrifugoServerPresenceStatsCreate(  data: CentrifugoPresenceStatsRequestRequest,  client?: any
 ): Promise<CentrifugoPresenceStatsResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerPresenceStatsCreate(data)

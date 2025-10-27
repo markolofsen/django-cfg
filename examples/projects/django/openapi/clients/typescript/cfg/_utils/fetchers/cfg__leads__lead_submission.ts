@@ -32,7 +32,6 @@
 import { LeadSubmissionRequestSchema, type LeadSubmissionRequest } from '../schemas/LeadSubmissionRequest.schema'
 import { LeadSubmissionResponseSchema, type LeadSubmissionResponse } from '../schemas/LeadSubmissionResponse.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Submit Lead Form
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/leads/submit/
  */
-export async function createLeadsSubmitCreate(  data: LeadSubmissionRequest,  client?: API
+export async function createLeadsSubmitCreate(  data: LeadSubmissionRequest,  client?: any
 ): Promise<LeadSubmissionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_lead_submission.leadsSubmitCreate(data)

@@ -38,7 +38,6 @@ import { TaskStatisticsSchema, type TaskStatistics } from '../schemas/TaskStatis
 import { WorkerActionSchema, type WorkerAction } from '../schemas/WorkerAction.schema'
 import { WorkerActionRequestSchema, type WorkerActionRequest } from '../schemas/WorkerActionRequest.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -46,7 +45,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/tasks/api/clear/
  */
-export async function createTasksApiClearCreate(  data: APIResponseRequest,  client?: API
+export async function createTasksApiClearCreate(  data: APIResponseRequest,  client?: any
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiClearCreate(data)
@@ -60,7 +59,7 @@ export async function createTasksApiClearCreate(  data: APIResponseRequest,  cli
  * @method POST
  * @path /cfg/tasks/api/clear-queues/
  */
-export async function createTasksApiClearQueuesCreate(  data: APIResponseRequest,  client?: API
+export async function createTasksApiClearQueuesCreate(  data: APIResponseRequest,  client?: any
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiClearQueuesCreate(data)
@@ -74,7 +73,7 @@ export async function createTasksApiClearQueuesCreate(  data: APIResponseRequest
  * @method POST
  * @path /cfg/tasks/api/purge-failed/
  */
-export async function createTasksApiPurgeFailedCreate(  data: APIResponseRequest,  client?: API
+export async function createTasksApiPurgeFailedCreate(  data: APIResponseRequest,  client?: any
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiPurgeFailedCreate(data)
@@ -88,7 +87,7 @@ export async function createTasksApiPurgeFailedCreate(  data: APIResponseRequest
  * @method POST
  * @path /cfg/tasks/api/queues/manage/
  */
-export async function createTasksApiQueuesManageCreate(  data: QueueActionRequest,  client?: API
+export async function createTasksApiQueuesManageCreate(  data: QueueActionRequest,  client?: any
 ): Promise<QueueAction> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiQueuesManageCreate(data)
@@ -102,7 +101,7 @@ export async function createTasksApiQueuesManageCreate(  data: QueueActionReques
  * @method GET
  * @path /cfg/tasks/api/queues/status/
  */
-export async function getTasksApiQueuesStatusRetrieve(  client?: API
+export async function getTasksApiQueuesStatusRetrieve(  client?: any
 ): Promise<QueueStatus> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiQueuesStatusRetrieve()
@@ -116,7 +115,7 @@ export async function getTasksApiQueuesStatusRetrieve(  client?: API
  * @method POST
  * @path /cfg/tasks/api/simulate/
  */
-export async function createTasksApiSimulateCreate(  data: APIResponseRequest,  client?: API
+export async function createTasksApiSimulateCreate(  data: APIResponseRequest,  client?: any
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiSimulateCreate(data)
@@ -130,7 +129,7 @@ export async function createTasksApiSimulateCreate(  data: APIResponseRequest,  
  * @method GET
  * @path /cfg/tasks/api/tasks/list/
  */
-export async function getTasksApiTasksListRetrieve(  client?: API
+export async function getTasksApiTasksListRetrieve(  client?: any
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiTasksListRetrieve()
@@ -144,7 +143,7 @@ export async function getTasksApiTasksListRetrieve(  client?: API
  * @method GET
  * @path /cfg/tasks/api/tasks/stats/
  */
-export async function getTasksApiTasksStatsRetrieve(  client?: API
+export async function getTasksApiTasksStatsRetrieve(  client?: any
 ): Promise<TaskStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiTasksStatsRetrieve()
@@ -158,7 +157,7 @@ export async function getTasksApiTasksStatsRetrieve(  client?: API
  * @method GET
  * @path /cfg/tasks/api/workers/list/
  */
-export async function getTasksApiWorkersListRetrieve(  client?: API
+export async function getTasksApiWorkersListRetrieve(  client?: any
 ): Promise<APIResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiWorkersListRetrieve()
@@ -172,7 +171,7 @@ export async function getTasksApiWorkersListRetrieve(  client?: API
  * @method POST
  * @path /cfg/tasks/api/workers/manage/
  */
-export async function createTasksApiWorkersManageCreate(  data: WorkerActionRequest,  client?: API
+export async function createTasksApiWorkersManageCreate(  data: WorkerActionRequest,  client?: any
 ): Promise<WorkerAction> {
   const api = client || getAPIInstance()
   const response = await api.cfg_tasks.apiWorkersManageCreate(data)

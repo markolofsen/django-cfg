@@ -38,7 +38,6 @@ import { UserProfileStatsSchema, type UserProfileStats } from '../schemas/UserPr
 import { UserProfileUpdateSchema, type UserProfileUpdate } from '../schemas/UserProfileUpdate.schema'
 import { UserProfileUpdateRequestSchema, type UserProfileUpdateRequest } from '../schemas/UserProfileUpdateRequest.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * List user profiles
@@ -46,7 +45,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /api/profiles/profiles/
  */
-export async function getProfilesProfilesList(  params?: { page?: number; page_size?: number },  client?: API
+export async function getProfilesProfilesList(  params?: { page?: number; page_size?: number },  client?: any
 ): Promise<PaginatedUserProfileList> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesList(params?.page, params?.page_size)
@@ -60,7 +59,7 @@ export async function getProfilesProfilesList(  params?: { page?: number; page_s
  * @method POST
  * @path /api/profiles/profiles/
  */
-export async function createProfilesProfilesCreate(  data: UserProfileRequest,  client?: API
+export async function createProfilesProfilesCreate(  data: UserProfileRequest,  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesCreate(data)
@@ -74,7 +73,7 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
  * @method GET
  * @path /api/profiles/profiles/{id}/
  */
-export async function getProfilesProfilesRetrieve(  id: number,  client?: API
+export async function getProfilesProfilesRetrieve(  id: number,  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesRetrieve(id)
@@ -88,7 +87,7 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: API
  * @method PUT
  * @path /api/profiles/profiles/{id}/
  */
-export async function updateProfilesProfilesUpdate(  id: number, data: UserProfileUpdateRequest,  client?: API
+export async function updateProfilesProfilesUpdate(  id: number, data: UserProfileUpdateRequest,  client?: any
 ): Promise<UserProfileUpdate> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesUpdate(id, data)
@@ -102,7 +101,7 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
  * @method PATCH
  * @path /api/profiles/profiles/{id}/
  */
-export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, data?: PatchedUserProfileUpdateRequest,  client?: API
+export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, data?: PatchedUserProfileUpdateRequest,  client?: any
 ): Promise<UserProfileUpdate> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesPartialUpdate(id, data)
@@ -116,7 +115,7 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
  * @method DELETE
  * @path /api/profiles/profiles/{id}/
  */
-export async function deleteProfilesProfilesDestroy(  id: number,  client?: API
+export async function deleteProfilesProfilesDestroy(  id: number,  client?: any
 ): Promise<void> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesDestroy(id)
@@ -130,7 +129,7 @@ export async function deleteProfilesProfilesDestroy(  id: number,  client?: API
  * @method GET
  * @path /api/profiles/profiles/me/
  */
-export async function getProfilesProfilesMeRetrieve(  client?: API
+export async function getProfilesProfilesMeRetrieve(  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesMeRetrieve()
@@ -144,7 +143,7 @@ export async function getProfilesProfilesMeRetrieve(  client?: API
  * @method PUT
  * @path /api/profiles/profiles/me/
  */
-export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,  client?: API
+export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesMeUpdate(data)
@@ -158,7 +157,7 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
  * @method PATCH
  * @path /api/profiles/profiles/me/
  */
-export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: PatchedUserProfileRequest,  client?: API
+export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: PatchedUserProfileRequest,  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesMePartialUpdate(data)
@@ -172,7 +171,7 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
  * @method GET
  * @path /api/profiles/profiles/stats/
  */
-export async function getProfilesProfilesStatsRetrieve(  client?: API
+export async function getProfilesProfilesStatsRetrieve(  client?: any
 ): Promise<UserProfileStats> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesStatsRetrieve()

@@ -8,7 +8,7 @@ export async function {{ func_name }}(
 {%- if func_params %}
   {{ func_params }},
 {%- endif %}
-  client?: API
+  client?: any
 ): Promise<{{ response_type }}> {
   const api = client || getAPIInstance()
 {% if api_call_params %}

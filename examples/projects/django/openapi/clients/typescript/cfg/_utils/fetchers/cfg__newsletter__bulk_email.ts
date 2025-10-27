@@ -32,7 +32,6 @@
 import { BulkEmailRequestSchema, type BulkEmailRequest } from '../schemas/BulkEmailRequest.schema'
 import { BulkEmailResponseSchema, type BulkEmailResponse } from '../schemas/BulkEmailResponse.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Send Bulk Email
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/newsletter/bulk/
  */
-export async function createNewsletterBulkCreate(  data: BulkEmailRequest,  client?: API
+export async function createNewsletterBulkCreate(  data: BulkEmailRequest,  client?: any
 ): Promise<BulkEmailResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_bulk_email.newsletterBulkCreate(data)

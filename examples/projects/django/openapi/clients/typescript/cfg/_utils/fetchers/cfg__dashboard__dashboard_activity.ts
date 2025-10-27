@@ -30,7 +30,6 @@
  * ```
  */
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get quick actions
@@ -38,7 +37,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/activity/actions/
  */
-export async function getDashboardApiActivityActionsList(  client?: API
+export async function getDashboardApiActivityActionsList(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_activity.dashboardApiActivityActionsList()
@@ -52,7 +51,7 @@ export async function getDashboardApiActivityActionsList(  client?: API
  * @method GET
  * @path /cfg/dashboard/api/activity/recent/
  */
-export async function getDashboardApiActivityRecentList(  params?: { limit?: number },  client?: API
+export async function getDashboardApiActivityRecentList(  params?: { limit?: number },  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_activity.dashboardApiActivityRecentList(params?.limit)

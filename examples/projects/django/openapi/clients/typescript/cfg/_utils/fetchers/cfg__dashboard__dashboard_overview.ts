@@ -31,7 +31,6 @@
  */
 import { DashboardOverviewSchema, type DashboardOverview } from '../schemas/DashboardOverview.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get dashboard overview
@@ -39,7 +38,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/overview/overview/
  */
-export async function getDashboardApiOverviewOverviewRetrieve(  client?: API
+export async function getDashboardApiOverviewOverviewRetrieve(  client?: any
 ): Promise<DashboardOverview> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_overview.dashboardApiOverviewOverviewRetrieve()

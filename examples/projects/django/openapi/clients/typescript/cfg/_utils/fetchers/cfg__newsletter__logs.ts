@@ -31,7 +31,6 @@
  */
 import { PaginatedEmailLogListSchema, type PaginatedEmailLogList } from '../schemas/PaginatedEmailLogList.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * List Email Logs
@@ -39,7 +38,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/newsletter/logs/
  */
-export async function getNewsletterLogsList(  params?: { page?: number; page_size?: number },  client?: API
+export async function getNewsletterLogsList(  params?: { page?: number; page_size?: number },  client?: any
 ): Promise<PaginatedEmailLogList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_logs.newsletterLogsList(params?.page, params?.page_size)

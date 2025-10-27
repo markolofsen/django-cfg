@@ -36,7 +36,6 @@ import { {{ schema_name }}Schema, type {{ schema_name }} } from '../schemas/{{ s
 {% endif %}
 {% if has_client %}
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 {% endif %}
 
 {% for fetcher in fetchers %}
