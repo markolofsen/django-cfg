@@ -30,7 +30,6 @@
  * ```
  */
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -38,7 +37,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/centrifugo/admin/api/monitor/channels/
  */
-export async function getCentrifugoAdminApiMonitorChannelsRetrieve(  client?: API
+export async function getCentrifugoAdminApiMonitorChannelsRetrieve(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo.adminApiMonitorChannelsRetrieve()
@@ -52,7 +51,7 @@ export async function getCentrifugoAdminApiMonitorChannelsRetrieve(  client?: AP
  * @method GET
  * @path /cfg/centrifugo/monitor/channels/
  */
-export async function getCentrifugoMonitorChannelsRetrieve(  client?: API
+export async function getCentrifugoMonitorChannelsRetrieve(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo.monitorChannelsRetrieve()

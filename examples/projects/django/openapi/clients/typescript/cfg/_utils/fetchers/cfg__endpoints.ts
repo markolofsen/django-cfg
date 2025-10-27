@@ -32,7 +32,6 @@
 import { EndpointsStatusSchema, type EndpointsStatus } from '../schemas/EndpointsStatus.schema'
 import { URLsListSchema, type URLsList } from '../schemas/URLsList.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/endpoints/drf/
  */
-export async function getEndpointsDrfRetrieve(  client?: API
+export async function getEndpointsDrfRetrieve(  client?: any
 ): Promise<EndpointsStatus> {
   const api = client || getAPIInstance()
   const response = await api.cfg_endpoints.drfRetrieve()
@@ -54,7 +53,7 @@ export async function getEndpointsDrfRetrieve(  client?: API
  * @method GET
  * @path /cfg/endpoints/urls/
  */
-export async function getEndpointsUrlsRetrieve(  client?: API
+export async function getEndpointsUrlsRetrieve(  client?: any
 ): Promise<URLsList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_endpoints.urlsRetrieve()
@@ -68,7 +67,7 @@ export async function getEndpointsUrlsRetrieve(  client?: API
  * @method GET
  * @path /cfg/endpoints/urls/compact/
  */
-export async function getEndpointsUrlsCompactRetrieve(  client?: API
+export async function getEndpointsUrlsCompactRetrieve(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_endpoints.urlsCompactRetrieve()

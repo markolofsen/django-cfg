@@ -32,7 +32,6 @@
 import { BulkEmailResponseSchema, type BulkEmailResponse } from '../schemas/BulkEmailResponse.schema'
 import { TestEmailRequestSchema, type TestEmailRequest } from '../schemas/TestEmailRequest.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Test Email Sending
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/newsletter/test/
  */
-export async function createNewsletterTestCreate(  data: TestEmailRequest,  client?: API
+export async function createNewsletterTestCreate(  data: TestEmailRequest,  client?: any
 ): Promise<BulkEmailResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_testing.newsletterTestCreate(data)

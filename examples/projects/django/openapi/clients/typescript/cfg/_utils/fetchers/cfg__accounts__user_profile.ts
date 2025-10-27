@@ -33,7 +33,6 @@ import { PatchedUserProfileUpdateRequestSchema, type PatchedUserProfileUpdateReq
 import { UserSchema, type User } from '../schemas/User.schema'
 import { UserProfileUpdateRequestSchema, type UserProfileUpdateRequest } from '../schemas/UserProfileUpdateRequest.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get current user profile
@@ -41,7 +40,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/accounts/profile/
  */
-export async function getAccountsProfileRetrieve(  client?: API
+export async function getAccountsProfileRetrieve(  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileRetrieve()
@@ -55,7 +54,7 @@ export async function getAccountsProfileRetrieve(  client?: API
  * @method POST
  * @path /cfg/accounts/profile/avatar/
  */
-export async function createAccountsProfileAvatarCreate(  data: any,  client?: API
+export async function createAccountsProfileAvatarCreate(  data: any,  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileAvatarCreate(data)
@@ -69,7 +68,7 @@ export async function createAccountsProfileAvatarCreate(  data: any,  client?: A
  * @method PUT
  * @path /cfg/accounts/profile/partial/
  */
-export async function partialUpdateAccountsProfilePartialUpdate(  data: UserProfileUpdateRequest,  client?: API
+export async function partialUpdateAccountsProfilePartialUpdate(  data: UserProfileUpdateRequest,  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfilePartialUpdate(data)
@@ -83,7 +82,7 @@ export async function partialUpdateAccountsProfilePartialUpdate(  data: UserProf
  * @method PATCH
  * @path /cfg/accounts/profile/partial/
  */
-export async function partialUpdateAccountsProfilePartialPartialUpdate(  data?: PatchedUserProfileUpdateRequest,  client?: API
+export async function partialUpdateAccountsProfilePartialPartialUpdate(  data?: PatchedUserProfileUpdateRequest,  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfilePartialPartialUpdate(data)
@@ -97,7 +96,7 @@ export async function partialUpdateAccountsProfilePartialPartialUpdate(  data?: 
  * @method PUT
  * @path /cfg/accounts/profile/update/
  */
-export async function updateAccountsProfileUpdateUpdate(  data: UserProfileUpdateRequest,  client?: API
+export async function updateAccountsProfileUpdateUpdate(  data: UserProfileUpdateRequest,  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileUpdateUpdate(data)
@@ -111,7 +110,7 @@ export async function updateAccountsProfileUpdateUpdate(  data: UserProfileUpdat
  * @method PATCH
  * @path /cfg/accounts/profile/update/
  */
-export async function partialUpdateAccountsProfileUpdatePartialUpdate(  data?: PatchedUserProfileUpdateRequest,  client?: API
+export async function partialUpdateAccountsProfileUpdatePartialUpdate(  data?: PatchedUserProfileUpdateRequest,  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileUpdatePartialUpdate(data)

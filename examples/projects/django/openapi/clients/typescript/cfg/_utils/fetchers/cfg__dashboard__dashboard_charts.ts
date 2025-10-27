@@ -31,7 +31,6 @@
  */
 import { ChartDataSchema, type ChartData } from '../schemas/ChartData.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get user activity chart
@@ -39,7 +38,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/charts/activity/
  */
-export async function getDashboardApiChartsActivityRetrieve(  params?: { days?: number },  client?: API
+export async function getDashboardApiChartsActivityRetrieve(  params?: { days?: number },  client?: any
 ): Promise<ChartData> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_charts.dashboardApiChartsActivityRetrieve(params?.days)
@@ -53,7 +52,7 @@ export async function getDashboardApiChartsActivityRetrieve(  params?: { days?: 
  * @method GET
  * @path /cfg/dashboard/api/charts/recent-users/
  */
-export async function getDashboardApiChartsRecentUsersList(  params?: { limit?: number },  client?: API
+export async function getDashboardApiChartsRecentUsersList(  params?: { limit?: number },  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_charts.dashboardApiChartsRecentUsersList(params?.limit)
@@ -67,7 +66,7 @@ export async function getDashboardApiChartsRecentUsersList(  params?: { limit?: 
  * @method GET
  * @path /cfg/dashboard/api/charts/registrations/
  */
-export async function getDashboardApiChartsRegistrationsRetrieve(  params?: { days?: number },  client?: API
+export async function getDashboardApiChartsRegistrationsRetrieve(  params?: { days?: number },  client?: any
 ): Promise<ChartData> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_charts.dashboardApiChartsRegistrationsRetrieve(params?.days)
@@ -81,7 +80,7 @@ export async function getDashboardApiChartsRegistrationsRetrieve(  params?: { da
  * @method GET
  * @path /cfg/dashboard/api/charts/tracker/
  */
-export async function getDashboardApiChartsTrackerList(  params?: { weeks?: number },  client?: API
+export async function getDashboardApiChartsTrackerList(  params?: { weeks?: number },  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_charts.dashboardApiChartsTrackerList(params?.weeks)

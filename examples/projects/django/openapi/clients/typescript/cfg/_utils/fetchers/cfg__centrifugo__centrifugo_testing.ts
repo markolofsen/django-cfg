@@ -36,7 +36,6 @@ import { ManualAckResponseSchema, type ManualAckResponse } from '../schemas/Manu
 import { PublishTestRequestRequestSchema, type PublishTestRequestRequest } from '../schemas/PublishTestRequestRequest.schema'
 import { PublishTestResponseSchema, type PublishTestResponse } from '../schemas/PublishTestResponse.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Generate connection token
@@ -44,7 +43,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/centrifugo/admin/api/testing/connection-token/
  */
-export async function createCentrifugoAdminApiTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: API
+export async function createCentrifugoAdminApiTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: any
 ): Promise<ConnectionTokenResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingConnectionTokenCreate(data)
@@ -58,7 +57,7 @@ export async function createCentrifugoAdminApiTestingConnectionTokenCreate(  dat
  * @method POST
  * @path /cfg/centrifugo/admin/api/testing/publish-test/
  */
-export async function createCentrifugoAdminApiTestingPublishTestCreate(  data: PublishTestRequestRequest,  client?: API
+export async function createCentrifugoAdminApiTestingPublishTestCreate(  data: PublishTestRequestRequest,  client?: any
 ): Promise<PublishTestResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingPublishTestCreate(data)
@@ -72,7 +71,7 @@ export async function createCentrifugoAdminApiTestingPublishTestCreate(  data: P
  * @method POST
  * @path /cfg/centrifugo/admin/api/testing/publish-with-logging/
  */
-export async function createCentrifugoAdminApiTestingPublishWithLoggingCreate(  data: PublishTestRequestRequest,  client?: API
+export async function createCentrifugoAdminApiTestingPublishWithLoggingCreate(  data: PublishTestRequestRequest,  client?: any
 ): Promise<PublishTestResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingPublishWithLoggingCreate(data)
@@ -86,7 +85,7 @@ export async function createCentrifugoAdminApiTestingPublishWithLoggingCreate(  
  * @method POST
  * @path /cfg/centrifugo/admin/api/testing/send-ack/
  */
-export async function createCentrifugoAdminApiTestingSendAckCreate(  data: ManualAckRequestRequest,  client?: API
+export async function createCentrifugoAdminApiTestingSendAckCreate(  data: ManualAckRequestRequest,  client?: any
 ): Promise<ManualAckResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingSendAckCreate(data)
@@ -100,7 +99,7 @@ export async function createCentrifugoAdminApiTestingSendAckCreate(  data: Manua
  * @method POST
  * @path /cfg/centrifugo/testing/connection-token/
  */
-export async function createCentrifugoTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: API
+export async function createCentrifugoTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: any
 ): Promise<ConnectionTokenResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.connectionTokenCreate(data)
@@ -114,7 +113,7 @@ export async function createCentrifugoTestingConnectionTokenCreate(  data: Conne
  * @method POST
  * @path /cfg/centrifugo/testing/publish-test/
  */
-export async function createCentrifugoTestingPublishTestCreate(  data: PublishTestRequestRequest,  client?: API
+export async function createCentrifugoTestingPublishTestCreate(  data: PublishTestRequestRequest,  client?: any
 ): Promise<PublishTestResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.publishTestCreate(data)
@@ -128,7 +127,7 @@ export async function createCentrifugoTestingPublishTestCreate(  data: PublishTe
  * @method POST
  * @path /cfg/centrifugo/testing/publish-with-logging/
  */
-export async function createCentrifugoTestingPublishWithLoggingCreate(  data: PublishTestRequestRequest,  client?: API
+export async function createCentrifugoTestingPublishWithLoggingCreate(  data: PublishTestRequestRequest,  client?: any
 ): Promise<PublishTestResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.publishWithLoggingCreate(data)
@@ -142,7 +141,7 @@ export async function createCentrifugoTestingPublishWithLoggingCreate(  data: Pu
  * @method POST
  * @path /cfg/centrifugo/testing/send-ack/
  */
-export async function createCentrifugoTestingSendAckCreate(  data: ManualAckRequestRequest,  client?: API
+export async function createCentrifugoTestingSendAckCreate(  data: ManualAckRequestRequest,  client?: any
 ): Promise<ManualAckResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_testing.sendAckCreate(data)

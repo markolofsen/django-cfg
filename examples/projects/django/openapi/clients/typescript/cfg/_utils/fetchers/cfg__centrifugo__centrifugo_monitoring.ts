@@ -34,7 +34,6 @@ import { HealthCheckSchema, type HealthCheck } from '../schemas/HealthCheck.sche
 import { OverviewStatsSchema, type OverviewStats } from '../schemas/OverviewStats.schema'
 import { RecentPublishesSchema, type RecentPublishes } from '../schemas/RecentPublishes.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get Centrifugo health status
@@ -42,7 +41,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/centrifugo/admin/api/monitor/health/
  */
-export async function getCentrifugoAdminApiMonitorHealthRetrieve(  client?: API
+export async function getCentrifugoAdminApiMonitorHealthRetrieve(  client?: any
 ): Promise<HealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorHealthRetrieve()
@@ -56,7 +55,7 @@ export async function getCentrifugoAdminApiMonitorHealthRetrieve(  client?: API
  * @method GET
  * @path /cfg/centrifugo/admin/api/monitor/overview/
  */
-export async function getCentrifugoAdminApiMonitorOverviewRetrieve(  params?: { hours?: number },  client?: API
+export async function getCentrifugoAdminApiMonitorOverviewRetrieve(  params?: { hours?: number },  client?: any
 ): Promise<OverviewStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorOverviewRetrieve(params?.hours)
@@ -70,7 +69,7 @@ export async function getCentrifugoAdminApiMonitorOverviewRetrieve(  params?: { 
  * @method GET
  * @path /cfg/centrifugo/admin/api/monitor/publishes/
  */
-export async function getCentrifugoAdminApiMonitorPublishesRetrieve(  params?: { channel?: string; count?: number; offset?: number; status?: string },  client?: API
+export async function getCentrifugoAdminApiMonitorPublishesRetrieve(  params?: { channel?: string; count?: number; offset?: number; status?: string },  client?: any
 ): Promise<RecentPublishes> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorPublishesRetrieve(params?.channel, params?.count, params?.offset, params?.status)
@@ -84,7 +83,7 @@ export async function getCentrifugoAdminApiMonitorPublishesRetrieve(  params?: {
  * @method GET
  * @path /cfg/centrifugo/admin/api/monitor/timeline/
  */
-export async function getCentrifugoAdminApiMonitorTimelineRetrieve(  params?: { hours?: number; interval?: string },  client?: API
+export async function getCentrifugoAdminApiMonitorTimelineRetrieve(  params?: { hours?: number; interval?: string },  client?: any
 ): Promise<ChannelList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorTimelineRetrieve(params?.hours, params?.interval)
@@ -98,7 +97,7 @@ export async function getCentrifugoAdminApiMonitorTimelineRetrieve(  params?: { 
  * @method GET
  * @path /cfg/centrifugo/monitor/health/
  */
-export async function getCentrifugoMonitorHealthRetrieve(  client?: API
+export async function getCentrifugoMonitorHealthRetrieve(  client?: any
 ): Promise<HealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorHealthRetrieve()
@@ -112,7 +111,7 @@ export async function getCentrifugoMonitorHealthRetrieve(  client?: API
  * @method GET
  * @path /cfg/centrifugo/monitor/overview/
  */
-export async function getCentrifugoMonitorOverviewRetrieve(  params?: { hours?: number },  client?: API
+export async function getCentrifugoMonitorOverviewRetrieve(  params?: { hours?: number },  client?: any
 ): Promise<OverviewStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorOverviewRetrieve(params?.hours)
@@ -126,7 +125,7 @@ export async function getCentrifugoMonitorOverviewRetrieve(  params?: { hours?: 
  * @method GET
  * @path /cfg/centrifugo/monitor/publishes/
  */
-export async function getCentrifugoMonitorPublishesRetrieve(  params?: { channel?: string; count?: number; offset?: number; status?: string },  client?: API
+export async function getCentrifugoMonitorPublishesRetrieve(  params?: { channel?: string; count?: number; offset?: number; status?: string },  client?: any
 ): Promise<RecentPublishes> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorPublishesRetrieve(params?.channel, params?.count, params?.offset, params?.status)
@@ -140,7 +139,7 @@ export async function getCentrifugoMonitorPublishesRetrieve(  params?: { channel
  * @method GET
  * @path /cfg/centrifugo/monitor/timeline/
  */
-export async function getCentrifugoMonitorTimelineRetrieve(  params?: { hours?: number; interval?: string },  client?: API
+export async function getCentrifugoMonitorTimelineRetrieve(  params?: { hours?: number; interval?: string },  client?: any
 ): Promise<ChannelList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorTimelineRetrieve(params?.hours, params?.interval)

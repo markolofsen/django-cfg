@@ -32,7 +32,6 @@
 import { NewsletterSchema, type Newsletter } from '../schemas/Newsletter.schema'
 import { PaginatedNewsletterListSchema, type PaginatedNewsletterList } from '../schemas/PaginatedNewsletterList.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * List Active Newsletters
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/newsletter/newsletters/
  */
-export async function getNewsletterNewslettersList(  params?: { page?: number; page_size?: number },  client?: API
+export async function getNewsletterNewslettersList(  params?: { page?: number; page_size?: number },  client?: any
 ): Promise<PaginatedNewsletterList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletters.newsletterNewslettersList(params?.page, params?.page_size)
@@ -54,7 +53,7 @@ export async function getNewsletterNewslettersList(  params?: { page?: number; p
  * @method GET
  * @path /cfg/newsletter/newsletters/{id}/
  */
-export async function getNewsletterNewslettersRetrieve(  id: number,  client?: API
+export async function getNewsletterNewslettersRetrieve(  id: number,  client?: any
 ): Promise<Newsletter> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletters.newsletterNewslettersRetrieve(id)

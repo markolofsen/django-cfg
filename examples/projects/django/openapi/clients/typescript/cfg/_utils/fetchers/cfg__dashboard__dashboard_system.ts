@@ -32,7 +32,6 @@
 import { SystemHealthSchema, type SystemHealth } from '../schemas/SystemHealth.schema'
 import { SystemMetricsSchema, type SystemMetrics } from '../schemas/SystemMetrics.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get system health status
@@ -40,7 +39,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/system/health/
  */
-export async function getDashboardApiSystemHealthRetrieve(  client?: API
+export async function getDashboardApiSystemHealthRetrieve(  client?: any
 ): Promise<SystemHealth> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_system.dashboardApiSystemHealthRetrieve()
@@ -54,7 +53,7 @@ export async function getDashboardApiSystemHealthRetrieve(  client?: API
  * @method GET
  * @path /cfg/dashboard/api/system/metrics/
  */
-export async function getDashboardApiSystemMetricsRetrieve(  client?: API
+export async function getDashboardApiSystemMetricsRetrieve(  client?: any
 ): Promise<SystemMetrics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_system.dashboardApiSystemMetricsRetrieve()

@@ -31,7 +31,6 @@
  */
 import { UserStatisticsSchema, type UserStatistics } from '../schemas/UserStatistics.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get application statistics
@@ -39,7 +38,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/statistics/apps/
  */
-export async function getDashboardApiStatisticsAppsList(  client?: API
+export async function getDashboardApiStatisticsAppsList(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_statistics.dashboardApiStatisticsAppsList()
@@ -53,7 +52,7 @@ export async function getDashboardApiStatisticsAppsList(  client?: API
  * @method GET
  * @path /cfg/dashboard/api/statistics/cards/
  */
-export async function getDashboardApiStatisticsCardsList(  client?: API
+export async function getDashboardApiStatisticsCardsList(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_statistics.dashboardApiStatisticsCardsList()
@@ -67,7 +66,7 @@ export async function getDashboardApiStatisticsCardsList(  client?: API
  * @method GET
  * @path /cfg/dashboard/api/statistics/users/
  */
-export async function getDashboardApiStatisticsUsersRetrieve(  client?: API
+export async function getDashboardApiStatisticsUsersRetrieve(  client?: any
 ): Promise<UserStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_statistics.dashboardApiStatisticsUsersRetrieve()

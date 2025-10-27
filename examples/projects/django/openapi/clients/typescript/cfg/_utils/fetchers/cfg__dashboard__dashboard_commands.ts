@@ -31,7 +31,6 @@
  */
 import { CommandsSummarySchema, type CommandsSummary } from '../schemas/CommandsSummary.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get all commands
@@ -39,7 +38,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/commands/
  */
-export async function getDashboardApiCommandsList(  client?: API
+export async function getDashboardApiCommandsList(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_commands.dashboardApiCommandsList()
@@ -53,7 +52,7 @@ export async function getDashboardApiCommandsList(  client?: API
  * @method GET
  * @path /cfg/dashboard/api/commands/summary/
  */
-export async function getDashboardApiCommandsSummaryRetrieve(  client?: API
+export async function getDashboardApiCommandsSummaryRetrieve(  client?: any
 ): Promise<CommandsSummary> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_commands.dashboardApiCommandsSummaryRetrieve()

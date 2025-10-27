@@ -31,7 +31,6 @@
  */
 import { APIZonesSummarySchema, type APIZonesSummary } from '../schemas/APIZonesSummary.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * Get all API zones
@@ -39,7 +38,7 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/dashboard/api/zones/
  */
-export async function getDashboardApiZonesList(  client?: API
+export async function getDashboardApiZonesList(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_api_zones.list()
@@ -53,7 +52,7 @@ export async function getDashboardApiZonesList(  client?: API
  * @method GET
  * @path /cfg/dashboard/api/zones/summary/
  */
-export async function getDashboardApiZonesSummaryRetrieve(  client?: API
+export async function getDashboardApiZonesSummaryRetrieve(  client?: any
 ): Promise<APIZonesSummary> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_api_zones.summaryRetrieve()

@@ -34,7 +34,6 @@ import { OTPRequestResponseSchema, type OTPRequestResponse } from '../schemas/OT
 import { OTPVerifyRequestSchema, type OTPVerifyRequest } from '../schemas/OTPVerifyRequest.schema'
 import { OTPVerifyResponseSchema, type OTPVerifyResponse } from '../schemas/OTPVerifyResponse.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -42,7 +41,7 @@ import type { API } from '../../index'
  * @method POST
  * @path /cfg/accounts/otp/request/
  */
-export async function createAccountsOtpRequestCreate(  data: OTPRequestRequest,  client?: API
+export async function createAccountsOtpRequestCreate(  data: OTPRequestRequest,  client?: any
 ): Promise<OTPRequestResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_accounts.otpRequestCreate(data)
@@ -56,7 +55,7 @@ export async function createAccountsOtpRequestCreate(  data: OTPRequestRequest, 
  * @method POST
  * @path /cfg/accounts/otp/verify/
  */
-export async function createAccountsOtpVerifyCreate(  data: OTPVerifyRequest,  client?: API
+export async function createAccountsOtpVerifyCreate(  data: OTPVerifyRequest,  client?: any
 ): Promise<OTPVerifyResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_accounts.otpVerifyCreate(data)

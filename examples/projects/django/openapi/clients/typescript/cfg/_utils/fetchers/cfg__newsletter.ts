@@ -35,7 +35,6 @@ import { PatchedUnsubscribeRequestSchema, type PatchedUnsubscribeRequest } from 
 import { UnsubscribeSchema, type Unsubscribe } from '../schemas/Unsubscribe.schema'
 import { UnsubscribeRequestSchema, type UnsubscribeRequest } from '../schemas/UnsubscribeRequest.schema'
 import { getAPIInstance } from '../../api-instance'
-import type { API } from '../../index'
 
 /**
  * API operation
@@ -43,7 +42,7 @@ import type { API } from '../../index'
  * @method PATCH
  * @path /cfg/newsletter/campaigns/{id}/
  */
-export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number, data?: PatchedNewsletterCampaignRequest,  client?: API
+export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number, data?: PatchedNewsletterCampaignRequest,  client?: any
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.campaignsPartialUpdate(id, data)
@@ -57,7 +56,7 @@ export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number
  * @method PUT
  * @path /cfg/newsletter/unsubscribe/
  */
-export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeRequest,  client?: API
+export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeRequest,  client?: any
 ): Promise<Unsubscribe> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.unsubscribeUpdate(data)
@@ -71,7 +70,7 @@ export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeReque
  * @method PATCH
  * @path /cfg/newsletter/unsubscribe/
  */
-export async function partialUpdateNewsletterUnsubscribePartialUpdate(  data?: PatchedUnsubscribeRequest,  client?: API
+export async function partialUpdateNewsletterUnsubscribePartialUpdate(  data?: PatchedUnsubscribeRequest,  client?: any
 ): Promise<Unsubscribe> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.unsubscribePartialUpdate(data)
