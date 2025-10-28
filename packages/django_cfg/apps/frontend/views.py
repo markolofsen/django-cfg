@@ -4,8 +4,9 @@ JWT tokens are automatically injected into HTML responses for authenticated user
 This is specific to Next.js frontend apps only.
 
 Features:
-- Automatic extraction of ZIP archives with smart update detection
-- Auto-reextraction when ZIP is modified within last 5 minutes
+- Automatic extraction of ZIP archives with timestamp comparison
+- Auto-reextraction when ZIP is newer than extracted directory
+- Cache busting (no-store headers for HTML)
 - SPA routing with fallback strategies
 - JWT token injection for authenticated users
 """
@@ -28,24 +29,26 @@ logger = logging.getLogger(__name__)
 
 class ZipExtractionMixin:
     """
-    Mixin for automatic ZIP extraction with age-based refresh.
+    Mixin for automatic ZIP extraction with timestamp-based refresh.
 
     Provides intelligent ZIP archive handling:
     - Auto-extraction when directory doesn't exist
-    - Auto-reextraction when extracted directory is older than 10 minutes
-    - Simple age-based logic (no ZIP timestamp comparison needed)
+    - Auto-reextraction when ZIP is newer than extracted directory
+    - Timestamp comparison ensures fresh builds are always deployed
 
     Usage:
         class MyView(ZipExtractionMixin, View):
             app_name = 'myapp'  # Will look for myapp.zip
     """
 
-    # Maximum age of extracted directory before re-extraction (in seconds)
-    MAX_DIRECTORY_AGE = 600  # 10 minutes = 600 seconds
-
     def extract_zip_if_needed(self, base_dir: Path, zip_path: Path, app_name: str) -> bool:
         """
-        Extract ZIP archive if needed based on directory age.
+        Extract ZIP archive if needed based on ZIP modification time comparison.
+
+        Logic:
+        1. If directory doesn't exist → extract
+        2. If ZIP is newer than directory → remove and re-extract
+        3. If directory is newer than ZIP → use existing
 
         Args:
             base_dir: Target directory for extraction
@@ -57,20 +60,27 @@ class ZipExtractionMixin:
         """
         should_extract = False
 
+        # Check if ZIP exists first
+        if not zip_path.exists():
+            logger.error(f"[{app_name}] ZIP not found: {zip_path}")
+            return False
+
+        # Get ZIP modification time
+        zip_mtime = datetime.fromtimestamp(zip_path.stat().st_mtime)
+
         # Priority 1: If directory doesn't exist at all - always extract
         if not base_dir.exists():
             should_extract = True
             logger.info(f"[{app_name}] Directory doesn't exist, will extract")
 
-        # Priority 2: Directory exists - check if it's too old
+        # Priority 2: Directory exists - compare timestamps
         else:
             # Get directory modification time
             dir_mtime = datetime.fromtimestamp(base_dir.stat().st_mtime)
-            directory_age = (datetime.now() - dir_mtime).total_seconds()
 
-            # If directory is older than MAX_DIRECTORY_AGE - re-extract
-            if directory_age > self.MAX_DIRECTORY_AGE:
-                logger.info(f"[{app_name}] Directory is old ({directory_age:.0f}s > {self.MAX_DIRECTORY_AGE}s), re-extracting")
+            # If ZIP is newer than directory - re-extract
+            if zip_mtime > dir_mtime:
+                logger.info(f"[{app_name}] ZIP is newer (ZIP: {zip_mtime}, DIR: {dir_mtime}), re-extracting")
                 try:
                     shutil.rmtree(base_dir)
                     should_extract = True
@@ -78,26 +88,22 @@ class ZipExtractionMixin:
                     logger.error(f"[{app_name}] Failed to remove old directory: {e}")
                     return False
             else:
-                logger.debug(f"[{app_name}] Directory is fresh ({directory_age:.0f}s), using existing")
+                logger.debug(f"[{app_name}] Directory is up-to-date (DIR: {dir_mtime} >= ZIP: {zip_mtime})")
 
         # Extract ZIP if needed
         if should_extract:
-            if zip_path.exists():
-                logger.info(f"[{app_name}] Extracting {zip_path.name} to {base_dir}...")
-                try:
-                    base_dir.parent.mkdir(parents=True, exist_ok=True)
-                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                        zip_ref.extractall(base_dir)
-                    logger.info(f"[{app_name}] Successfully extracted {zip_path.name}")
-                    return True
-                except Exception as e:
-                    logger.error(f"[{app_name}] Failed to extract: {e}")
-                    return False
-            else:
-                logger.error(f"[{app_name}] ZIP not found: {zip_path}")
+            logger.info(f"[{app_name}] Extracting {zip_path.name} to {base_dir}...")
+            try:
+                base_dir.parent.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(base_dir)
+                logger.info(f"[{app_name}] Successfully extracted {zip_path.name}")
+                return True
+            except Exception as e:
+                logger.error(f"[{app_name}] Failed to extract: {e}")
                 return False
 
-        # Directory exists and is fresh
+        # Directory exists and is up-to-date
         return True
 
 
@@ -108,7 +114,7 @@ class NextJSStaticView(ZipExtractionMixin, View):
 
     Features:
     - Serves Next.js static export files like a static file server
-    - Smart ZIP extraction: auto-refreshes when directory older than 10 minutes
+    - Smart ZIP extraction: auto-refreshes when ZIP is newer than directory
     - Automatically injects JWT tokens for authenticated users
     - Tokens injected into HTML responses only
     - Handles Next.js client-side routing (.html fallback)
@@ -117,9 +123,9 @@ class NextJSStaticView(ZipExtractionMixin, View):
 
     ZIP Extraction Logic:
     - If directory doesn't exist: extract from ZIP
-    - If directory older than 10 minutes: remove and re-extract
-    - If directory fresh (< 10 min): use existing files
-    - This enables auto-refresh during development while caching in production
+    - If ZIP is newer than directory: remove and re-extract
+    - If directory is up-to-date: use existing files
+    - This ensures fresh builds are always deployed automatically
 
     Path resolution examples:
     - /cfg/admin/              → /cfg/admin/index.html

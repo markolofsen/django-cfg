@@ -1,18 +1,17 @@
-.PHONY: help dev dev-django dev-admin dev-frontend dev-websocket api kill-ports
+.PHONY: help dev django frontend websocket api kill-ports
 
 help:
 	@echo "Django CFG Solution - Development Commands"
 	@echo ""
 	@echo "Available commands:"
-	@echo "  make dev           - Start Next.js Admin only (port 3000)"
-	@echo "  make dev-admin     - Start Django + Next.js Admin with iframe mode (8000 + 3000)"
-	@echo "  make dev-django    - Start only Django backend (port 8000)"
-	@echo "  make dev-frontend  - Start only Next.js demo app (port 3000)"
-	@echo "  make dev-websocket - Start only WebSocket server (port 8765)"
+	@echo "  make dev           - Start Django + Next.js Admin (8000 + 3000)"
+	@echo "  make django        - Start only Django backend (port 8000)"
+	@echo "  make frontend      - Start only Next.js demo app (port 3000)"
+	@echo "  make websocket     - Start only WebSocket server (port 8765)"
 	@echo "  make api           - Generate TypeScript API clients"
 	@echo "  make kill-ports    - Kill processes on ports 8000, 3000, and 8765"
 	@echo ""
-	@echo "Quick start: make dev-admin"
+	@echo "Quick start: make dev"
 
 # Kill processes on ports 8000 (Django), 3000 (Next.js), and 8765 (WebSocket)
 kill-ports:
@@ -39,20 +38,12 @@ api:
 	@echo ""
 
 # Start Django backend only
-dev-django: kill-ports
+django: kill-ports
 	@echo "🐍 Starting Django backend on port 8000..."
 	@cd django && make dev
 
-# Start Next.js Admin only
-dev:
-	@echo "🚀 Starting Next.js Admin dev server..."
-	@echo ""
-	@echo "📍 Next.js Admin: http://localhost:3000"
-	@echo ""
-	@cd django_admin/apps/admin && pnpm dev
-
 # Start Django backend + Next.js Admin in parallel with iframe mode
-dev-admin: kill-ports
+dev: kill-ports
 	@echo "🚀 Starting Django backend + Next.js Admin in parallel..."
 	@echo ""
 	@echo "📍 Django backend: http://localhost:8000"
@@ -70,11 +61,11 @@ dev-admin: kill-ports
 	wait
 
 # Start Next.js demo frontend only
-dev-frontend: kill-ports
+frontend: kill-ports
 	@echo "⚛️  Starting Next.js demo app on port 3000..."
 	@cd frontend/apps/demo && pnpm dev
 
 # Start WebSocket server only
-dev-websocket: kill-ports
+websocket: kill-ports
 	@echo "🔗 Starting WebSocket server on port 8765..."
 	@cd websocket && make dev

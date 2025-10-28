@@ -196,13 +196,14 @@ def nextjs_admin_url(path=''):
     port_3001_available = _is_port_available('localhost', 3001)
 
     if port_3001_available:
-        # Dev server is running on 3001 - use it
-        base_url = 'http://localhost:3001/admin'
+        # Dev server is running on 3001 - use it (builtin admin has no /admin prefix)
+        base_url = 'http://localhost:3001'
         url = f'{base_url}/{path}' if path else base_url
         return f'{url}?{cache_buster}'
     else:
         # No dev server or dev server stopped - use static files with cache buster
-        base_url = f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
+        # Static files are served from /cfg/admin/ but ZIP contains files in root (no /admin prefix)
+        base_url = f'/cfg/admin/{path}' if path else '/cfg/admin/'
         return f'{base_url}?{cache_buster}'
 
 
@@ -285,6 +286,7 @@ def nextjs_external_admin_url(route=''):
         # Auto-detect development mode: DEBUG=True + port 3000 available
         if settings.DEBUG and _is_port_available('localhost', 3000):
             # Development mode: solution project on port 3000
+            # Routes start with /admin in Next.js (e.g., /admin, /admin/crypto)
             base_url = 'http://localhost:3000/admin'
             url = f'{base_url}/{route}' if route else base_url
             return f'{url}?{cache_buster}'
