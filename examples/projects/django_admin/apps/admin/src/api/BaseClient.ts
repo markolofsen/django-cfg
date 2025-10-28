@@ -20,15 +20,12 @@ import { settings } from '@/core/settings';
 // Get base URL from environment
 const baseUrl = settings.api.baseUrl;
 
-// API endpoints for each group
-const profilesUrl = `${baseUrl}/api/profiles`;
-const tradingUrl = `${baseUrl}/api/trading`;
-const cryptoUrl = `${baseUrl}/api/crypto`;
-
 // Create singleton API instances for each group
-const profilesApi = new ProfilesAPI(profilesUrl, { storage: new ProfilesStorage() });
-const tradingApi = new TradingAPI(tradingUrl, { storage: new TradingStorage() });
-const cryptoApi = new CryptoAPI(cryptoUrl, { storage: new CryptoStorage() });
+// NOTE: The generated clients already include the full path (e.g., /api/trading/orders/)
+// so we only pass the base URL without any prefixes
+const profilesApi = new ProfilesAPI(baseUrl, { storage: new ProfilesStorage() });
+const tradingApi = new TradingAPI(baseUrl, { storage: new TradingStorage() });
+const cryptoApi = new CryptoAPI(baseUrl, { storage: new CryptoStorage() });
 
 export class BaseClient {
   /**
