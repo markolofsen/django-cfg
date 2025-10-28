@@ -4,14 +4,17 @@ JWT tokens are automatically injected into HTML responses for authenticated user
 This is specific to Next.js frontend apps only.
 
 Features:
-- Automatic extraction of ZIP archives on first request
+- Automatic extraction of ZIP archives with smart update detection
+- Auto-reextraction when ZIP is modified within last 5 minutes
 - SPA routing with fallback strategies
 - JWT token injection for authenticated users
 """
 
 import logging
 import zipfile
+import shutil
 from pathlib import Path
+from datetime import datetime, timedelta
 from django.http import Http404, HttpResponse, FileResponse
 from django.views.static import serve
 from django.views import View
@@ -23,18 +26,104 @@ from rest_framework_simplejwt.tokens import RefreshToken
 logger = logging.getLogger(__name__)
 
 
+class ZipExtractionMixin:
+    """
+    Mixin for automatic ZIP extraction with smart update detection.
+
+    Provides intelligent ZIP archive handling:
+    - Auto-extraction when directory doesn't exist
+    - Auto-reextraction when ZIP is modified < 5 minutes ago
+    - Timestamp comparison to avoid unnecessary extractions
+
+    Usage:
+        class MyView(ZipExtractionMixin, View):
+            app_name = 'myapp'  # Will look for myapp.zip
+    """
+
+    def extract_zip_if_needed(self, base_dir: Path, zip_path: Path, app_name: str) -> bool:
+        """
+        Extract ZIP archive if needed based on modification times.
+
+        Args:
+            base_dir: Target directory for extraction
+            zip_path: Path to ZIP archive
+            app_name: Name of the app (for logging)
+
+        Returns:
+            bool: True if extraction succeeded or not needed, False if failed
+        """
+        should_extract = False
+
+        # Priority 1: If directory doesn't exist at all - always extract
+        if not base_dir.exists():
+            should_extract = True
+            logger.info(f"[{app_name}] Directory {base_dir} doesn't exist, will extract")
+
+        # Priority 2: Directory exists - check if ZIP is fresh and needs update
+        elif zip_path.exists():
+            # Get ZIP modification time
+            zip_mtime = datetime.fromtimestamp(zip_path.stat().st_mtime)
+            time_since_modification = (datetime.now() - zip_mtime).total_seconds()
+
+            # If ZIP was modified less than 5 minutes ago - check for updates
+            if time_since_modification < 300:  # 5 minutes = 300 seconds
+                # Compare ZIP time with directory time
+                dir_mtime = datetime.fromtimestamp(base_dir.stat().st_mtime)
+
+                # If ZIP is newer than directory, re-extract
+                if zip_mtime > dir_mtime:
+                    logger.info(f"[{app_name}] ZIP is fresh ({time_since_modification:.0f}s) and newer, re-extracting")
+                    try:
+                        shutil.rmtree(base_dir)
+                        should_extract = True
+                    except Exception as e:
+                        logger.error(f"[{app_name}] Failed to remove old directory: {e}")
+                        return False
+                else:
+                    logger.debug(f"[{app_name}] ZIP is fresh but directory is up-to-date")
+            else:
+                # ZIP is old (> 5 min) - use existing directory, no checks needed
+                logger.debug(f"[{app_name}] ZIP is old ({time_since_modification:.0f}s), using existing")
+
+        # Extract ZIP if needed
+        if should_extract:
+            if zip_path.exists():
+                logger.info(f"[{app_name}] Extracting {zip_path.name} to {base_dir}...")
+                try:
+                    base_dir.parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(base_dir)
+                    logger.info(f"[{app_name}] Successfully extracted {zip_path.name}")
+                    return True
+                except Exception as e:
+                    logger.error(f"[{app_name}] Failed to extract: {e}")
+                    return False
+            else:
+                logger.error(f"[{app_name}] ZIP not found: {zip_path}")
+                return False
+
+        # Directory exists and is up-to-date
+        return True
+
+
 @method_decorator(xframe_options_exempt, name='dispatch')
-class NextJSStaticView(View):
+class NextJSStaticView(ZipExtractionMixin, View):
     """
     Serve Next.js static build files with automatic JWT token injection.
 
     Features:
     - Serves Next.js static export files like a static file server
+    - Smart ZIP extraction: auto-updates when archive modified < 5 minutes ago
     - Automatically injects JWT tokens for authenticated users
     - Tokens injected into HTML responses only
     - Handles Next.js client-side routing (.html fallback)
     - Automatically serves index.html for directory paths
     - X-Frame-Options exempt to allow embedding in iframes
+
+    ZIP Update Logic:
+    - If ZIP modified < 5 minutes ago: removes old files and re-extracts
+    - If ZIP modified > 5 minutes ago: uses existing extraction
+    - This enables hot-reload during development while staying fast in production
 
     Path resolution examples:
     - /cfg/admin/              → /cfg/admin/index.html
@@ -51,22 +140,16 @@ class NextJSStaticView(View):
         import django_cfg
 
         base_dir = Path(django_cfg.__file__).parent / 'static' / 'frontend' / self.app_name
+        zip_path = Path(django_cfg.__file__).parent / 'static' / 'frontend' / f'{self.app_name}.zip'
 
-        # Check if ZIP archive exists and extract if needed
+        # Extract ZIP if needed using mixin
+        if not self.extract_zip_if_needed(base_dir, zip_path, self.app_name):
+            return render(request, 'frontend/404.html', status=404)
+
+        # Ensure directory exists
         if not base_dir.exists():
-            zip_path = Path(django_cfg.__file__).parent / 'static' / 'frontend' / f'{self.app_name}.zip'
-            if zip_path.exists():
-                logger.info(f"Extracting {self.app_name}.zip to {base_dir}...")
-                try:
-                    base_dir.parent.mkdir(parents=True, exist_ok=True)
-                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                        zip_ref.extractall(base_dir)
-                    logger.info(f"Successfully extracted {self.app_name}.zip")
-                except Exception as e:
-                    logger.error(f"Failed to extract {self.app_name}.zip: {e}")
-                    return render(request, 'frontend/404.html', status=404)
-            else:
-                return render(request, 'frontend/404.html', status=404)
+            logger.error(f"[{self.app_name}] Directory doesn't exist after extraction attempt")
+            return render(request, 'frontend/404.html', status=404)
 
         original_path = path  # Store for logging
 

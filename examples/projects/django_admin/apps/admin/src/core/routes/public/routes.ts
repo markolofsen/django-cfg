@@ -25,13 +25,13 @@ export const ui = defineRoute('/ui', {
   order: 1,
 });
 
-export const admin = defineRoute('/admin', {
-  label: 'Django Admin',
-  description: 'Django CFG admin interface demo',
-  icon: Lock,
+export const demo = defineRoute('/demo', {
+  label: 'Admin Demo',
+  description: 'Admin interface demo',
+  icon: LayoutDashboard,
   protected: false,
-  group: 'admin',
-  order: 1,
+  group: 'demo',
+  order: 2,
 });
 
 export const auth = defineRoute('/auth', {
@@ -78,4 +78,4 @@ export const security = defineRoute('/legal/security', {
 });
 
 // All routes as array
-export const allRoutes = [home, ui, admin, auth, privacy, terms, cookies, security];
+export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security];

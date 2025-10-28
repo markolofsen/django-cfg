@@ -17,8 +17,8 @@ export function generateNavigation(): NavigationSection[] {
       items: getGroupItems('main'),
     },
     {
-      title: 'Admin',
-      items: getGroupItems('admin'),
+      title: 'Demo',
+      items: getGroupItems('demo'),
     },
     {
       title: 'Components',

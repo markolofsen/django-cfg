@@ -36,8 +36,8 @@ export function HeroSection() {
         href: settings.links.docsUrl
       }}
       secondaryAction={{
-        label: "Admin Panel",
-        href: routes.public.admin.path
+        label: "Demo Panel",
+        href: routes.public.demo.path
       }}
       stats={[
         { number: "100%", label: "Type Safe" },

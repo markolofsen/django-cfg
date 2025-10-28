@@ -48,6 +48,9 @@ export const settings = {
   // Base path for static builds (used when serving from Django)
   basePath,
 
+  // Build mode flag
+  isStaticBuild,
+
   features: {
     search: false,
     notifications: false,

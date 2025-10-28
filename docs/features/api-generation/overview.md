@@ -70,11 +70,16 @@ Each group gets its own:
 - Generated Python client
 - Generated Go client
 - Generated Protocol Buffer definitions
-- API documentation (Swagger/Redoc)
 
 ### ⚙️ Auto-Generated Clients
 
 For each group, the generator creates:
+
+- ✅ **Auto-generated TypeScript** clients with Zod validation
+- ✅ **Auto-generated Python** clients with type hints
+- ✅ **SWR hooks** for React/Next.js
+- ✅ **Type-safe fetchers** with error handling
+- ✅ **Group-based architecture** for API organization
 
 **TypeScript Client:**
 ```typescript
@@ -355,9 +360,7 @@ urlpatterns = add_django_cfg_urls(urlpatterns)
 ```
 
 This adds:
-- `/schema/{group}/schema/` - OpenAPI schema
-- `/schema/{group}/swagger/` - Swagger UI
-- `/schema/{group}/redoc/` - Redoc documentation
+- `/schema/{group}/schema/` - OpenAPI schema endpoint
 
 ### Built-in drf-spectacular Integration
 

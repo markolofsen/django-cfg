@@ -336,7 +336,7 @@ python manage.py check_endpoints --url endpoints_status
 - ❌ Admin endpoints (`/admin/`)
 - ❌ Static/media files (`/static/`, `/media/`)
 - ❌ Health check endpoints (`/cfg/health/`)
-- ❌ **Schema/Swagger/Redoc documentation** (`/schema/`)
+- ❌ **Schema documentation** (`/schema/`)
 - ❌ Django debug toolbar (`/__debug__/`, `/__reload__/`)
 
 **Status Categories:**
@@ -381,7 +381,7 @@ python manage.py check_endpoints --url api_users_list
 - ✅ Creates test user `endpoint_test_user` once and reuses token
 - ✅ Respects Django Test Client
 - ✅ No ALLOWED_HOSTS issues (uses localhost)
-- ✅ **Excludes schema/swagger/redoc** (prevents rate limiting issues)
+- ✅ **Excludes schema documentation** (prevents rate limiting issues)
 - ✅ Excludes recursive endpoints (health checks)
 - ✅ Colored console output with emojis
 - ✅ JSON export for automation
