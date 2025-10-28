@@ -48,7 +48,6 @@ class NavigationManager(BaseCfgModule):
                 collapsible=True,
                 items=[
                     NavigationItem(title="Overview", icon=Icons.DASHBOARD, link=str(reverse_lazy("admin:index"))),
-                    NavigationItem(title="Frontend Admin", icon=Icons.WEB_ASSET, link="/cfg/admin/"),
                     NavigationItem(title="Settings", icon=Icons.SETTINGS, link=str(reverse_lazy("admin:constance_config_changelist"))),
                     NavigationItem(title="Health Check", icon=Icons.HEALTH_AND_SAFETY, link=str(reverse_lazy("django_cfg_drf_health"))),
                     NavigationItem(title="Endpoints Status", icon=Icons.API, link=str(reverse_lazy("endpoints_status_drf"))),

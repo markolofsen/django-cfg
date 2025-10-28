@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-how-it-works
+id: how-it-works
 title: How It Works
 description: Understanding the architecture and technical implementation of Next.js admin integration
 sidebar_label: How It Works

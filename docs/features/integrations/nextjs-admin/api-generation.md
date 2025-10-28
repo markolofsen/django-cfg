@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-api-generation
+id: api-generation
 title: API Client Generation
 description: Generate and use TypeScript API clients for your Next.js admin
 sidebar_label: API Generation

@@ -42,7 +42,6 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
       <AppLayout
         config={appLayoutConfig}
         fontFamily={inter.style.fontFamily}
-        forceLayout="admin"
       >
         {hasCustomLayout ? (
           Component.getLayout!(<Component {...pageProps} />)

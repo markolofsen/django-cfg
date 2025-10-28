@@ -1,7 +1,7 @@
 import { ProfileLayout } from "@djangocfg/layouts";
 import { PageWithConfig } from "@/types";
 
-const View: PageWithConfig = () => {
+const Page: PageWithConfig = () => {
   return (
     <ProfileLayout
       title="Profile"
@@ -10,8 +10,8 @@ const View: PageWithConfig = () => {
   );
 };
 
-View.pageConfig = {
+Page.pageConfig = {
   title: 'Profile',
 };
 
-export default View;
+export default Page;

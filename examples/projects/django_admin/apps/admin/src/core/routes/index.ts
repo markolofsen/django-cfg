@@ -1,126 +1,72 @@
 /**
  * Routes Module
  *
- * Simple, flat structure with all routing functionality
+ * Domain-based route structure
+ * Everything organized by domain: public, user, admin
  *
  * ## Usage
  * ```ts
- * import { routes, generatePublicNavigation } from '@/core/routes';
+ * import { public, user, admin } from '@/core/routes';
  *
  * // Access routes
- * const home = routes.public.home;
- * const dashboard = routes.private.overview;
+ * const homePath = public.routes.home.path;
+ * const dashboardPath = user.routes.home.path;
+ * const adminPath = admin.routes.overview.path;
  *
  * // Generate menus
- * const menu = generatePublicNavigation();
+ * const publicNav = public.generateNavigation();
+ * const userMenu = user.generateMenu();
+ * const adminMenu = admin.generateMenu();
  * ```
  */
 
-import {
-  generateDashboardMenu,
-  generatePublicNavigation,
-  generateFooterNavigation,
-} from './menus';
-import {
-  isPublicRoute as isPublicRouteFn,
-  isPrivateRoute,
-  isAuthRoute as isAuthRouteFn,
-  getUnauthenticatedRedirect as getUnauthenticatedRedirectFn,
-  redirectToAuth as redirectToAuthFn,
-} from './guards';
-import {
-  getPageTitle as getPageTitleFn,
-  isActive,
-  generateBreadcrumbs as generateBreadcrumbsFn,
-} from './helpers';
-import { DjangoCfgRoutes } from './definitions';
+import * as publicDomain from './public';
+import * as userDomain from './private';
+import * as adminDomain from './admin';
 
 // ─────────────────────────────────────────────────────────────────────────
-// Singleton Instance
+// Domain Exports
+// ─────────────────────────────────────────────────────────────────────────
+
+export { publicDomain as public, userDomain as user, adminDomain as admin };
+
+// ─────────────────────────────────────────────────────────────────────────
+// Shared Utilities
+// ─────────────────────────────────────────────────────────────────────────
+
+export * from './shared';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Convenience Exports (for backwards compatibility)
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
- * Global routes instance
+ * Pre-generated menus
  */
-export const routes = new DjangoCfgRoutes();
-
-// ─────────────────────────────────────────────────────────────────────────
-// Pre-generated Menus
-// ─────────────────────────────────────────────────────────────────────────
+export const userMenuGroups = userDomain.generateMenu();
+export const adminMenuGroups = adminDomain.generateMenu();
+export const menuGroups = userMenuGroups;  // Backwards compatibility
 
 /**
- * Dashboard menu (pre-generated)
+ * Pre-generated navigation
  */
-export const menuGroups = generateDashboardMenu(routes.private);
+export const generatePublicNavigation = () => publicDomain.generateNavigation();
+export const generateFooterNavigation = () => publicDomain.generateFooter();
 
-// ─────────────────────────────────────────────────────────────────────────
-// Menu Generators (with routes bound)
-// ─────────────────────────────────────────────────────────────────────────
+/**
+ * All routes combined
+ */
+export const routes = {
+  public: publicDomain.routes,
+  user: userDomain.routes,
+  admin: adminDomain.routes,
+  private: userDomain.routes,  // Alias for backwards compatibility
 
-export function generatePublicNav() {
-  return generatePublicNavigation(routes.public);
-}
-
-export function generateFooterNav() {
-  return generateFooterNavigation(routes.public);
-}
-
-// Aliases for backwards compatibility
-export { generatePublicNav as generatePublicNavigation };
-export { generateFooterNav as generateFooterNavigation };
-
-// ─────────────────────────────────────────────────────────────────────────
-// Route Guards (with routes bound)
-// ─────────────────────────────────────────────────────────────────────────
-
-export function isPublicRoute(path: string) {
-  return isPublicRouteFn(routes, path);
-}
-
-export function isAuthRoute(path: string) {
-  return isAuthRouteFn(routes, path);
-}
-
-export function getUnauthenticatedRedirect(path: string) {
-  return getUnauthenticatedRedirectFn(routes, path);
-}
-
-export function redirectToAuth(path: string) {
-  return redirectToAuthFn(routes);
-}
-
-export { isPrivateRoute };
-
-// ─────────────────────────────────────────────────────────────────────────
-// Helpers (with routes bound)
-// ─────────────────────────────────────────────────────────────────────────
-
-export function getPageTitle(path: string) {
-  return getPageTitleFn(routes, path);
-}
-
-export function generateBreadcrumbs(path: string) {
-  return generateBreadcrumbsFn(routes, path);
-}
-
-export { isActive };
-
-// ─────────────────────────────────────────────────────────────────────────
-// Type Exports
-// ─────────────────────────────────────────────────────────────────────────
-
-export type {
-  RouteMetadata,
-  RouteDefinition,
-  PublicRoutes,
-  PrivateRoutes,
-} from './definitions';
-
-export type {
-  MenuItem,
-  MenuGroup,
-} from './menus';
-
-export type {
-  BreadcrumbItem,
-} from './helpers';
+  getAllRoutes() {
+    return [
+      ...publicDomain.routes.allRoutes,
+      ...userDomain.routes.allRoutes,
+      ...adminDomain.routes.allRoutes,
+    ];
+  },
+};

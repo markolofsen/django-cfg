@@ -118,27 +118,23 @@ class NextJsAdminView(LoginRequiredMixin, View):
         Resolve SPA path with Next.js routing conventions.
 
         Resolution order:
-        1. Default to iframe_route for empty path
+        1. Default to /admin for empty path or /admin path
         2. Exact file match (static assets)
         3. path/index.html (SPA routes)
         4. path.html (single page)
         5. Fallback to index.html
 
         Examples:
-            '' → 'private.html' (from iframe_route)
-            'private/centrifugo' → 'private/centrifugo/index.html'
+            '' → 'admin/index.html'
+            'admin' → 'admin/index.html'
+            'admin/centrifugo' → 'admin/centrifugo/index.html'
             '_next/static/...' → '_next/static/...' (exact)
         """
-        # Empty path - use iframe_route
-        if not path or path == '/':
-            iframe_route = nextjs_config.get_iframe_route().strip('/')
-            # Try iframe_route.html or iframe_route/index.html
-            html_file = base_dir / f"{iframe_route}.html"
-            if html_file.exists():
-                return f"{iframe_route}.html"
-            index_file = base_dir / iframe_route / 'index.html'
-            if index_file.exists():
-                return f"{iframe_route}/index.html"
+        # Empty path or 'admin' - serve /admin route
+        if not path or path == '/' or path == 'admin' or path == 'admin/':
+            admin_index = base_dir / 'admin' / 'index.html'
+            if admin_index.exists():
+                return 'admin/index.html'
             # Fallback to root index.html
             return 'index.html'
 

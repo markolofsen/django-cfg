@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-configuration
+id: configuration
 title: Configuration Reference
 description: Complete configuration reference for Next.js admin integration
 sidebar_label: Configuration

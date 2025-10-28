@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-troubleshooting
+id: troubleshooting
 title: Troubleshooting
 description: Solutions to common issues with Next.js admin integration
 sidebar_label: Troubleshooting

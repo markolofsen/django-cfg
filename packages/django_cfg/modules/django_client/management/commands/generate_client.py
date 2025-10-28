@@ -571,13 +571,19 @@ class Command(BaseCommand):
 
             self.stdout.write(f"\n📦 Copying TypeScript clients to Next.js admin...")
 
-            # Copy each group
+            # Copy each group (exclude 'cfg' for Next.js admin)
             copied_count = 0
             for group_dir in ts_source.iterdir():
                 if not group_dir.is_dir():
                     continue
 
                 group_name = group_dir.name
+
+                # Skip 'cfg' group for Next.js admin
+                if group_name == 'cfg':
+                    self.stdout.write(f"  ⏭️  Skipping 'cfg' group (excluded from Next.js admin)")
+                    continue
+
                 target_dir = api_output_path / group_name
 
                 # Remove old
