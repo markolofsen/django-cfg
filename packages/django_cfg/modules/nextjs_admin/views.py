@@ -4,10 +4,20 @@ Views for Next.js admin integration.
 Serves Next.js static files with SPA routing support and JWT injection.
 
 Features:
-- Automatic extraction of ZIP archives with age-based refresh
-- Auto-reextraction when directory is older than 10 minutes
+- Priority-based ZIP resolution (solution project → package fallback)
+- Automatic extraction with timestamp comparison (ZIP mtime vs directory mtime)
+- Cache busting (no-store headers + timestamp query params)
 - SPA routing with fallback strategies
 - JWT token injection for authenticated users
+
+ZIP Resolution Priority:
+1. Solution project: {BASE_DIR}/static/nextjs_admin.zip → {BASE_DIR}/static/nextjs_admin/
+2. Package fallback: django_cfg/static/frontend/nextjs_admin.zip → django_cfg/static/frontend/nextjs_admin/
+
+Extraction Logic:
+- Compares ZIP mtime with directory mtime
+- Re-extracts only when ZIP is newer
+- Ensures fresh builds are deployed automatically
 """
 
 import logging
@@ -31,20 +41,26 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
 
     Features:
     - Serves Next.js static build files
-    - Smart ZIP extraction: auto-refreshes when directory older than 10 minutes
+    - Priority-based ZIP resolution (solution first, package fallback)
+    - Smart ZIP extraction: compares ZIP mtime vs directory mtime
+    - Cache busting: no-store headers for HTML files
     - Automatic JWT token injection for authenticated users
     - SPA routing support (path/to/route → path/to/route/index.html)
-    - Development mode support (proxies to dev server conceptually)
+
+    ZIP Resolution Priority:
+    1. Solution: {BASE_DIR}/static/nextjs_admin.zip → {BASE_DIR}/static/nextjs_admin/
+    2. Package: django_cfg/static/frontend/nextjs_admin.zip → django_cfg/static/frontend/nextjs_admin/
 
     ZIP Extraction Logic:
     - If directory doesn't exist: extract from ZIP
-    - If directory older than 10 minutes: remove and re-extract
-    - If directory fresh (< 10 min): use existing files
+    - If ZIP is newer than directory: remove and re-extract
+    - If directory is up-to-date: use existing files
+    - Ensures fresh builds are deployed automatically
 
     URL Examples:
-        /cfg/admin/                    → admin/index.html
-        /cfg/admin/crypto              → admin/crypto/index.html
-        /cfg/admin/_next/static/...    → _next/static/...
+        /cfg/nextjs-admin/admin/                    → admin/index.html
+        /cfg/nextjs-admin/admin/crypto              → admin/crypto/index.html
+        /cfg/nextjs-admin/admin/_next/static/...    → _next/static/...
     """
 
     def get(self, request, path=''):
@@ -58,17 +74,27 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
 
         nextjs_config = config.nextjs_admin
 
-        # Use extracted directory from static/frontend/nextjs_admin/
-        base_dir = Path(django_cfg.__file__).parent / 'static' / 'frontend' / 'nextjs_admin'
-        zip_path = Path(django_cfg.__file__).parent / 'static' / 'frontend' / 'nextjs_admin.zip'
+        # Priority 1: Try solution project static directory first
+        from django.conf import settings
+        solution_zip = Path(settings.BASE_DIR) / 'static' / 'nextjs_admin.zip'
+        solution_base_dir = Path(settings.BASE_DIR) / 'static' / 'nextjs_admin'
 
-        # Fallback: Try solution project static directory
-        if not zip_path.exists():
-            from django.conf import settings
-            solution_zip = Path(settings.BASE_DIR) / 'static' / 'nextjs_admin.zip'
-            if solution_zip.exists():
-                zip_path = solution_zip
-                logger.info(f"[nextjs_admin] Using ZIP from solution project: {solution_zip}")
+        # Priority 2: Fallback to django_cfg package
+        default_zip = Path(django_cfg.__file__).parent / 'static' / 'frontend' / 'nextjs_admin.zip'
+        default_base_dir = Path(django_cfg.__file__).parent / 'static' / 'frontend' / 'nextjs_admin'
+
+        # Choose which ZIP to use
+        if solution_zip.exists():
+            zip_path = solution_zip
+            base_dir = solution_base_dir
+            logger.info(f"[nextjs_admin] Using ZIP from solution project: {solution_zip}")
+        elif default_zip.exists():
+            zip_path = default_zip
+            base_dir = default_base_dir
+            logger.info(f"[nextjs_admin] Using ZIP from django_cfg package: {default_zip}")
+        else:
+            logger.error(f"[nextjs_admin] No ZIP found in solution ({solution_zip}) or package ({default_zip})")
+            return render(request, 'frontend/404.html', status=404)
 
         # Extract ZIP if needed using mixin
         if not self.extract_zip_if_needed(base_dir, zip_path, 'nextjs_admin'):
