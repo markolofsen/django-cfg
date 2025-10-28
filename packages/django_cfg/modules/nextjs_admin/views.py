@@ -114,6 +114,12 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
         if is_html and request.user.is_authenticated:
             self._inject_jwt_tokens(request, response)
 
+        # Disable caching for HTML files (prevent Cloudflare/browser caching)
+        if is_html:
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+
         return response
 
     def _resolve_spa_path(self, base_dir: Path, path: str, nextjs_config) -> str:
