@@ -11,23 +11,26 @@
     <style>
         #nextjs-dashboard-iframe {
             width: 100%;
-            min-height: 600px;
-            height: auto;
+            min-height: 500px;
+            height: 500px;
             border: none;
             display: block;
-            visibility: hidden !important;
-            opacity: 0 !important;
+            visibility: hidden;
+            opacity: 0;
             transition: height 0.2s ease-in-out, opacity 0.3s ease-in-out;
         }
 
         #nextjs-dashboard-iframe.loaded {
-            visibility: visible !important;
-            opacity: 1 !important;
+            visibility: visible;
+            opacity: 1;
+            height: auto;
+            min-height: 600px;
         }
 
         .iframe-container {
             position: relative;
             background: transparent;
+            min-height: 500px;
         }
 
         .iframe-loading {
@@ -92,14 +95,14 @@
         <div class="iframe-container">
             <div class="iframe-loading" id="iframe-loading">
                 <div class="spinner"></div>
-                <p id="loading-text">Loading Next.js Dashboard...</p>
+                <p id="loading-text">Loading...</p>
             </div>
 
             <iframe
                 id="nextjs-dashboard-iframe"
                 src="{% nextjs_admin_url 'private' %}"
                 title="Next.js Dashboard"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
             ></iframe>
         </div>
 
@@ -128,11 +131,11 @@
             const loadingText = document.getElementById('loading-text');
 
             // Log initial state
-            console.log('[Parent] 🎬 Initial iframe state:', {
-                visibility: window.getComputedStyle(iframe).visibility,
-                opacity: window.getComputedStyle(iframe).opacity,
-                hasLoadedClass: iframe.classList.contains('loaded')
-            });
+            // console.log('[Parent] 🎬 Initial iframe state:', {
+            //     visibility: window.getComputedStyle(iframe).visibility,
+            //     opacity: window.getComputedStyle(iframe).opacity,
+            //     hasLoadedClass: iframe.classList.contains('loaded')
+            // });
 
             // Detect iframe origin based on src
             const iframeUrl = new URL(iframe.src);
@@ -156,9 +159,13 @@
                 }, 100);
             });
 
-            // Hide loading after 5 seconds if iframe doesn't load
+            // Fallback: Show iframe after 5 seconds if auth status never arrives
             setTimeout(() => {
-                loading.classList.add('hidden');
+                if (!iframe.classList.contains('loaded')) {
+                    console.log('[Parent] ⏱️  Timeout - showing iframe anyway');
+                    loading.classList.add('hidden');
+                    iframe.classList.add('loaded');
+                }
             }, 5000);
 
             // Function to send theme and auth to iframe
@@ -291,40 +298,19 @@
                         break;
 
                     case 'iframe-auth-status':
-                        // iframe sent auth status update
+                        // iframe sent auth status update (for logging only)
                         console.log('[Parent] 🔐 Auth status received:', data);
-                        console.log('[Parent] 📊 Current iframe state BEFORE:', {
-                            visibility: window.getComputedStyle(iframe).visibility,
-                            opacity: window.getComputedStyle(iframe).opacity,
-                            hasLoadedClass: iframe.classList.contains('loaded')
-                        });
-
-                        if (data?.isAuthenticated && !data?.isLoading) {
-                            // User is authenticated, show iframe
-                            console.log('[Parent] ✅ Adding .loaded class');
-                            loading.classList.add('hidden');
-                            iframe.classList.add('loaded');
-
-                            setTimeout(() => {
-                                console.log('[Parent] 📊 iframe state AFTER .loaded:', {
-                                    visibility: window.getComputedStyle(iframe).visibility,
-                                    opacity: window.getComputedStyle(iframe).opacity,
-                                    hasLoadedClass: iframe.classList.contains('loaded')
-                                });
-                            }, 100);
-                        } else if (data?.isLoading) {
-                            // Still loading
-                            console.log('[Parent] ⏳ Auth loading...');
-                            loadingText.textContent = 'Loading authentication...';
-                        } else {
-                            // Not authenticated
-                            console.log('[Parent] ⚠️  Not authenticated');
-                            loadingText.textContent = 'Waiting for authentication...';
-                        }
                         break;
                     case 'iframe-resize':
                         // Update iframe height based on content (both increase and decrease)
                         if (data?.height && typeof data.height === 'number') {
+                            // First resize message means content is loaded - show iframe
+                            if (!iframe.classList.contains('loaded')) {
+                                console.log('[Parent] 📏 First resize received - showing iframe');
+                                loading.classList.add('hidden');
+                                iframe.classList.add('loaded');
+                            }
+
                             // Add padding to avoid scroll bars (50px buffer for safety)
                             const newHeight = Math.max(600, data.height + 50); // Min 600px
                             iframe.style.height = newHeight + 'px';

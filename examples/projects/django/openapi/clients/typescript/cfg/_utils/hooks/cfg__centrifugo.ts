@@ -23,20 +23,6 @@ import type { API } from '../../index'
  * API operation
  *
  * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/channels/
- */
-export function useCentrifugoAdminApiMonitorChannelsRetrieve(client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
-    'cfg-centrifugo-admin-api-monitor-channel',
-    () => Fetchers.getCentrifugoAdminApiMonitorChannelsRetrieve(client)
-  )
-}
-
-
-/**
- * API operation
- *
- * @method GET
  * @path /cfg/centrifugo/monitor/channels/
  */
 export function useCentrifugoMonitorChannelsRetrieve(client?: API): ReturnType<typeof useSWR<any>> {

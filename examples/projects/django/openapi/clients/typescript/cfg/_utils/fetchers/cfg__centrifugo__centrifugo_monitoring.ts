@@ -39,62 +39,6 @@ import { getAPIInstance } from '../../api-instance'
  * Get Centrifugo health status
  *
  * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/health/
- */
-export async function getCentrifugoAdminApiMonitorHealthRetrieve(  client?: any
-): Promise<HealthCheck> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorHealthRetrieve()
-  return HealthCheckSchema.parse(response)
-}
-
-
-/**
- * Get overview statistics
- *
- * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/overview/
- */
-export async function getCentrifugoAdminApiMonitorOverviewRetrieve(  params?: { hours?: number },  client?: any
-): Promise<OverviewStats> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorOverviewRetrieve(params?.hours)
-  return OverviewStatsSchema.parse(response)
-}
-
-
-/**
- * Get recent publishes
- *
- * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/publishes/
- */
-export async function getCentrifugoAdminApiMonitorPublishesRetrieve(  params?: { channel?: string; count?: number; offset?: number; status?: string },  client?: any
-): Promise<RecentPublishes> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorPublishesRetrieve(params?.channel, params?.count, params?.offset, params?.status)
-  return RecentPublishesSchema.parse(response)
-}
-
-
-/**
- * Get channel statistics
- *
- * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/timeline/
- */
-export async function getCentrifugoAdminApiMonitorTimelineRetrieve(  params?: { hours?: number; interval?: string },  client?: any
-): Promise<ChannelList> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_monitoring.centrifugoAdminApiMonitorTimelineRetrieve(params?.hours, params?.interval)
-  return ChannelListSchema.parse(response)
-}
-
-
-/**
- * Get Centrifugo health status
- *
- * @method GET
  * @path /cfg/centrifugo/monitor/health/
  */
 export async function getCentrifugoMonitorHealthRetrieve(  client?: any

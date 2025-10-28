@@ -131,7 +131,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'❌ Failed to copy {group}: {e}'))
 
-        # Step 5: Build @api package
+        # Step 6: Build @api package
         self.stdout.write('\n🔨 Building @api package...')
         api_package_dir = projects_root / "frontend" / "packages" / "api"
 
@@ -158,6 +158,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(self.style.SUCCESS('\n🎉 API generation completed!'))
+        self.stdout.write(self.style.SUCCESS('   📦 @api package: CFG endpoints (shared)'))
         self.stdout.write(self.style.SUCCESS('   🎨 demo app: Profiles + Trading + Crypto in api/generated/'))
         self.stdout.write(self.style.SUCCESS('   🔌 demo app: Centrifugo WebSocket RPC clients in rpc/generated/'))
         self.stdout.write(self.style.SUCCESS('   📂 opensdk: Full clients (Python, TypeScript, Go)'))

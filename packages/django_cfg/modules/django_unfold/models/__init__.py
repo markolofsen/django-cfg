@@ -12,18 +12,8 @@ from .config import (
     UnfoldTheme,
     UnfoldThemeConfig,
 )
-from .dashboard import (
-    ChartData,
-    ChartDataset,
-    DashboardData,
-    DashboardWidget,
-    QuickAction,
-    StatCard,
-    SystemHealthItem,
-)
 from .dropdown import SiteDropdownItem
 from .navigation import NavigationItem, NavigationItemType, NavigationSection
-from .tabs import TabConfiguration, TabItem
 
 __all__ = [
     # Config models
@@ -41,17 +31,4 @@ __all__ = [
 
     # Dropdown models
     'SiteDropdownItem',
-
-    # Dashboard models
-    'StatCard',
-    'SystemHealthItem',
-    'QuickAction',
-    'DashboardWidget',
-    'DashboardData',
-    'ChartDataset',
-    'ChartData',
-
-    # Tab models
-    'TabConfiguration',
-    'TabItem',
 ]

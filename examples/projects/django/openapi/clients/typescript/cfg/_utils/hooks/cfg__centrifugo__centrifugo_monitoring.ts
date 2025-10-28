@@ -27,62 +27,6 @@ import type { RecentPublishes } from '../schemas/RecentPublishes.schema'
  * Get Centrifugo health status
  *
  * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/health/
- */
-export function useCentrifugoAdminApiMonitorHealthRetrieve(client?: API): ReturnType<typeof useSWR<HealthCheck>> {
-  return useSWR<HealthCheck>(
-    'cfg-centrifugo-admin-api-monitor-health',
-    () => Fetchers.getCentrifugoAdminApiMonitorHealthRetrieve(client)
-  )
-}
-
-
-/**
- * Get overview statistics
- *
- * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/overview/
- */
-export function useCentrifugoAdminApiMonitorOverviewRetrieve(params?: { hours?: number }, client?: API): ReturnType<typeof useSWR<OverviewStats>> {
-  return useSWR<OverviewStats>(
-    params ? ['cfg-centrifugo-admin-api-monitor-overview', params] : 'cfg-centrifugo-admin-api-monitor-overview',
-    () => Fetchers.getCentrifugoAdminApiMonitorOverviewRetrieve(params, client)
-  )
-}
-
-
-/**
- * Get recent publishes
- *
- * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/publishes/
- */
-export function useCentrifugoAdminApiMonitorPublishesRetrieve(params?: { channel?: string; count?: number; offset?: number; status?: string }, client?: API): ReturnType<typeof useSWR<RecentPublishes>> {
-  return useSWR<RecentPublishes>(
-    params ? ['cfg-centrifugo-admin-api-monitor-publishe', params] : 'cfg-centrifugo-admin-api-monitor-publishe',
-    () => Fetchers.getCentrifugoAdminApiMonitorPublishesRetrieve(params, client)
-  )
-}
-
-
-/**
- * Get channel statistics
- *
- * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/timeline/
- */
-export function useCentrifugoAdminApiMonitorTimelineRetrieve(params?: { hours?: number; interval?: string }, client?: API): ReturnType<typeof useSWR<ChannelList>> {
-  return useSWR<ChannelList>(
-    params ? ['cfg-centrifugo-admin-api-monitor-timeline', params] : 'cfg-centrifugo-admin-api-monitor-timeline',
-    () => Fetchers.getCentrifugoAdminApiMonitorTimelineRetrieve(params, client)
-  )
-}
-
-
-/**
- * Get Centrifugo health status
- *
- * @method GET
  * @path /cfg/centrifugo/monitor/health/
  */
 export function useCentrifugoMonitorHealthRetrieve(client?: API): ReturnType<typeof useSWR<HealthCheck>> {

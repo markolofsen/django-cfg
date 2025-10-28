@@ -18,6 +18,8 @@ import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__dashboard__dashboard_commands'
 import type { API } from '../../index'
+import type { CommandExecuteRequestRequest } from '../schemas/CommandExecuteRequestRequest.schema'
+import type { CommandHelpResponse } from '../schemas/CommandHelpResponse.schema'
 import type { CommandsSummary } from '../schemas/CommandsSummary.schema'
 
 /**
@@ -31,6 +33,38 @@ export function useDashboardApiCommandsList(client?: API): ReturnType<typeof use
     'cfg-dashboard-api-commands',
     () => Fetchers.getDashboardApiCommandsList(client)
   )
+}
+
+
+/**
+ * Get command help
+ *
+ * @method GET
+ * @path /cfg/dashboard/api/commands/{id}/help/
+ */
+export function useDashboardApiCommandsHelpRetrieve(id: string, client?: API): ReturnType<typeof useSWR<CommandHelpResponse>> {
+  return useSWR<CommandHelpResponse>(
+    ['cfg-dashboard-api-commands-help', id],
+    () => Fetchers.getDashboardApiCommandsHelpRetrieve(id, client)
+  )
+}
+
+
+/**
+ * Execute command
+ *
+ * @method POST
+ * @path /cfg/dashboard/api/commands/execute/
+ */
+export function useCreateDashboardApiCommandsExecuteCreate() {
+  const { mutate } = useSWRConfig()
+
+  return async (data: CommandExecuteRequestRequest, client?: API): Promise<any> => {
+    const result = await Fetchers.createDashboardApiCommandsExecuteCreate(data, client)
+    // Revalidate related queries
+    mutate('cfg-dashboard-api-commands-execute')
+    return result
+  }
 }
 
 

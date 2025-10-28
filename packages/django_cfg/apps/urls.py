@@ -170,7 +170,6 @@ APP_URL_MAP = {
     ],
     "django_cfg.apps.centrifugo": [
         ("cfg/centrifugo/", "django_cfg.apps.centrifugo.urls"),
-        ("cfg/centrifugo/admin/", "django_cfg.apps.centrifugo.urls_admin"),
     ],
 }
 

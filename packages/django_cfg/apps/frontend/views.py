@@ -9,20 +9,32 @@ from pathlib import Path
 from django.http import Http404, HttpResponse, FileResponse
 from django.views.static import serve
 from django.views import View
+from django.views.decorators.clickjacking import xframe_options_exempt
+from django.utils.decorators import method_decorator
 from rest_framework_simplejwt.tokens import RefreshToken
 
 logger = logging.getLogger(__name__)
 
 
+@method_decorator(xframe_options_exempt, name='dispatch')
 class NextJSStaticView(View):
     """
     Serve Next.js static build files with automatic JWT token injection.
 
     Features:
-    - Serves Next.js static export files
+    - Serves Next.js static export files like a static file server
     - Automatically injects JWT tokens for authenticated users
     - Tokens injected into HTML responses only
     - Handles Next.js client-side routing (.html fallback)
+    - Automatically serves index.html for directory paths
+    - X-Frame-Options exempt to allow embedding in iframes
+
+    Path resolution examples:
+    - /cfg/admin/              → /cfg/admin/index.html
+    - /cfg/admin/private/      → /cfg/admin/private/index.html (if exists)
+    - /cfg/admin/private/      → /cfg/admin/private.html (fallback)
+    - /cfg/admin/tasks         → /cfg/admin/tasks.html
+    - /cfg/admin/tasks         → /cfg/admin/tasks/index.html (fallback)
     """
 
     app_name = 'admin'
@@ -36,22 +48,15 @@ class NextJSStaticView(View):
         if not base_dir.exists():
             raise Http404(f"Frontend app '{self.app_name}' not found. Run 'make build-admin' to build it.")
 
+        original_path = path  # Store for logging
+
         # Default to index.html for root path
         if not path or path == '/':
             path = 'index.html'
+            logger.debug(f"Root path requested, serving: {path}")
 
-        # Handle trailing slash (Next.js static export behavior)
-        # /private/ -> private.html
-        if path.endswith('/') and path != '/':
-            path = path.rstrip('/') + '.html'
-
-        # For routes without extension, try .html (Next.js static export behavior)
-        file_path = base_dir / path
-        if not file_path.exists() and not path.endswith('.html') and '.' not in Path(path).name:
-            html_path = path + '.html'
-            html_file = base_dir / html_path
-            if html_file.exists():
-                path = html_path
+        # Resolve file path with SPA routing fallback strategy
+        path = self._resolve_spa_path(base_dir, path)
 
         # For HTML files, remove conditional GET headers to force full response
         # This allows JWT token injection (can't inject into 304 Not Modified responses)
@@ -84,6 +89,73 @@ class NextJSStaticView(View):
             self._inject_jwt_tokens(request, response)
 
         return response
+
+    def _resolve_spa_path(self, base_dir, path):
+        """
+        Resolve SPA path with multiple fallback strategies.
+
+        Resolution order:
+        1. Exact file match (e.g., script.js, style.css)
+        2. path/index.html (e.g., private/centrifugo/index.html)
+        3. path.html (e.g., private.html for /private)
+        4. Fallback to root index.html for SPA routing
+
+        Examples:
+            /private/centrifugo → private/centrifugo/index.html
+            /private → private.html OR private/index.html
+            /_next/static/... → _next/static/... (exact match)
+            /unknown/route → index.html (SPA fallback)
+        """
+        file_path = base_dir / path
+
+        # Remove trailing slash for processing
+        path_normalized = path.rstrip('/')
+
+        # Strategy 1: Exact file match (for static assets like JS, CSS, images)
+        if file_path.exists() and file_path.is_file():
+            logger.debug(f"[SPA Router] Exact match: {path}")
+            return path
+
+        # Strategy 2: Try path/index.html (most common for SPA routes)
+        index_in_dir = base_dir / path_normalized / 'index.html'
+        if index_in_dir.exists():
+            resolved_path = f"{path_normalized}/index.html"
+            logger.debug(f"[SPA Router] Resolved {path} → {resolved_path}")
+            return resolved_path
+
+        # Strategy 3: Try with trailing slash + index.html
+        if path.endswith('/'):
+            index_path = path + 'index.html'
+            if (base_dir / index_path).exists():
+                logger.debug(f"[SPA Router] Trailing slash resolved: {index_path}")
+                return index_path
+
+        # Strategy 4: Try path.html (Next.js static export behavior)
+        html_file = base_dir / (path_normalized + '.html')
+        if html_file.exists():
+            resolved_path = path_normalized + '.html'
+            logger.debug(f"[SPA Router] HTML file match: {resolved_path}")
+            return resolved_path
+
+        # Strategy 5: Check if it's a directory without index.html
+        if file_path.exists() and file_path.is_dir():
+            # Try index.html in that directory
+            index_in_existing_dir = file_path / 'index.html'
+            if index_in_existing_dir.exists():
+                resolved_path = f"{path_normalized}/index.html"
+                logger.debug(f"[SPA Router] Directory with index: {resolved_path}")
+                return resolved_path
+
+        # Strategy 6: SPA fallback - serve root index.html
+        # This allows client-side routing to handle unknown routes
+        root_index = base_dir / 'index.html'
+        if root_index.exists():
+            logger.debug(f"[SPA Router] Fallback to index.html for route: {path}")
+            return 'index.html'
+
+        # Strategy 7: Nothing found - return original path (will 404)
+        logger.warning(f"[SPA Router] No match found for: {path}")
+        return path
 
     def _should_inject_jwt(self, request, response):
         """Check if JWT tokens should be injected."""

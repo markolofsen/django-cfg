@@ -147,9 +147,8 @@ def get_css_variables() -> str:
     """
     Get CSS variables for semantic colors matching Next.js UI package.
 
-    NOTE: Background color overrides are now in templates/unfold/layouts/skeleton.html
-    for better CSS specificity. This function now only provides base color definitions
-    and is kept for backward compatibility.
+    This function provides base color definitions for the Unfold admin interface.
+    Color variables are defined in OKLCH format for proper color-mix() support.
 
     Returns:
         str: CSS variables as string
@@ -157,7 +156,6 @@ def get_css_variables() -> str:
     return """
 /* ============================================== */
 /* CSS Variables - Base Color Definitions        */
-/* NOTE: Background overrides in skeleton.html   */
 /* ============================================== */
 
 /* Tailwind Dark Mode Class Support */

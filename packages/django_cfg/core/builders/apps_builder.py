@@ -183,65 +183,7 @@ class InstalledAppsBuilder:
                 # django-browser-reload not installed, skip it
                 pass
 
-        # Auto-detect dashboard apps from Unfold callback
-        dashboard_apps = self._get_dashboard_apps_from_callback()
-        apps.extend(dashboard_apps)
-
         return apps
-
-    def _get_dashboard_apps_from_callback(self) -> List[str]:
-        """
-        Auto-detect dashboard apps from Unfold dashboard_callback setting.
-
-        Extracts app names from callback paths like:
-        - "api.dashboard.callbacks.main_dashboard_callback" → ["api.dashboard"]
-        - "myproject.admin.callbacks.dashboard" → ["myproject.admin"]
-
-        This allows django-cfg to automatically add dashboard apps to INSTALLED_APPS
-        without requiring manual configuration.
-
-        Returns:
-            List of dashboard app names to add to INSTALLED_APPS
-        """
-        dashboard_apps = []
-
-        # Check if Unfold is configured with a theme
-        if not self.config.unfold or not self.config.unfold.theme:
-            return dashboard_apps
-
-        # Get dashboard callback path from theme
-        callback_path = getattr(self.config.unfold.theme, "dashboard_callback", None)
-        if not callback_path:
-            return dashboard_apps
-
-        try:
-            # Parse callback path: "api.dashboard.callbacks.main_dashboard_callback"
-            # Extract app part: "api.dashboard"
-            parts = callback_path.split(".")
-
-            # Look for common callback patterns
-            callback_indicators = ["callbacks", "views", "handlers"]
-
-            # Find the callback indicator and extract app path before it
-            app_parts = []
-            for i, part in enumerate(parts):
-                if part in callback_indicators:
-                    app_parts = parts[:i]  # Everything before the callback indicator
-                    break
-
-            # If no callback indicator found, assume last part is function name
-            if not app_parts and len(parts) > 1:
-                app_parts = parts[:-1]  # Everything except the last part
-
-            if app_parts:
-                app_name = ".".join(app_parts)
-                dashboard_apps.append(app_name)
-
-        except Exception:
-            # If parsing fails, silently continue - dashboard callback is optional
-            pass
-
-        return dashboard_apps
 
     def _deduplicate(self, apps: List[str]) -> List[str]:
         """

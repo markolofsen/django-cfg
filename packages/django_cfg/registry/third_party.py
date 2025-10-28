@@ -19,15 +19,6 @@ THIRD_PARTY_REGISTRY = {
     "NavigationSection": ("django_cfg.modules.django_unfold.models.navigation", "NavigationSection"),
     "NavigationItemType": ("django_cfg.modules.django_unfold.models.navigation", "NavigationItemType"),
     "SiteDropdownItem": ("django_cfg.modules.django_unfold.models.dropdown", "SiteDropdownItem"),
-    "StatCard": ("django_cfg.modules.django_unfold.models.dashboard", "StatCard"),
-    "SystemHealthItem": ("django_cfg.modules.django_unfold.models.dashboard", "SystemHealthItem"),
-    "QuickAction": ("django_cfg.modules.django_unfold.models.dashboard", "QuickAction"),
-    "DashboardWidget": ("django_cfg.modules.django_unfold.models.dashboard", "DashboardWidget"),
-    "DashboardData": ("django_cfg.modules.django_unfold.models.dashboard", "DashboardData"),
-    "ChartDataset": ("django_cfg.modules.django_unfold.models.dashboard", "ChartDataset"),
-    "ChartData": ("django_cfg.modules.django_unfold.models.dashboard", "ChartData"),
-    "TabConfiguration": ("django_cfg.modules.django_unfold.models.tabs", "TabConfiguration"),
-    "TabItem": ("django_cfg.modules.django_unfold.models.tabs", "TabItem"),
 
     # Django REST Framework
     "DRFConfig": ("django_cfg.models.api.drf", "DRFConfig"),

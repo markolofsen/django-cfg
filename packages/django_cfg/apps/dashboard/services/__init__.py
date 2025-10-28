@@ -10,6 +10,7 @@ from .system_health_service import SystemHealthService
 from .charts_service import ChartsService
 from .commands_service import CommandsService
 from .apizones_service import APIZonesService
+from .overview_service import OverviewService
 
 __all__ = [
     'StatisticsService',
@@ -17,4 +18,5 @@ __all__ = [
     'ChartsService',
     'CommandsService',
     'APIZonesService',
+    'OverviewService',
 ]

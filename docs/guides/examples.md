@@ -183,26 +183,24 @@ user = User.objects.create(...)      # Goes to default database
 
 Examples of customizing the modern Unfold admin interface.
 
-### Custom Dashboard
-```python
-from django_cfg.apps.unfold.dashboard import DashboardManager, MetricCard
+### Dashboard Integration
 
-class MyDashboard(DashboardManager):
-    def get_dashboard_cards(self) -> list[MetricCard]:
-        return [
-            MetricCard(
-                title="Active Users",
-                value=self.get_active_users_count(),
-                trend="+12%",
-                icon="users"
-            ),
-            MetricCard(
-                title="Revenue (MTD)",
-                value=f"${self.get_monthly_revenue():,.2f}",
-                trend="+8.5%",
-                icon="dollar-sign"
-            ),
-        ]
+Dashboard is automatically available at `/admin/` with Next.js frontend and REST API backend:
+
+```python
+# Built-in endpoints automatically available:
+# - /cfg/dashboard/api/statistics/ - Real-time statistics
+# - /cfg/dashboard/api/health/ - System health monitoring
+# - /cfg/dashboard/api/charts/ - Chart data
+# - /cfg/dashboard/api/commands/ - Command execution
+
+# To customize, extend the service classes:
+from django_cfg.apps.dashboard.services import StatisticsService
+
+class CustomStatisticsService(StatisticsService):
+    def get_custom_metrics(self):
+        # Add your custom metrics
+        return {"custom_metric": 42}
 ```
 
 **See**: [Sample Project Admin Interface](./sample-project/admin-interface)

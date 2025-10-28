@@ -1,102 +1,62 @@
 ---
-title: Unfold Module Changelog
-description: Latest updates and improvements to Django-CFG Unfold admin module
-sidebar_label: Changelog
+title: Unfold Module Updates
+description: Latest features and improvements to Django-CFG Unfold admin module
+sidebar_label: What's New
 sidebar_position: 10
 ---
 
-# Unfold Module Changelog
+# What's New in Unfold Module
 
-## Latest Updates (October 2023)
+## 🎨 Next.js Dashboard Integration
 
-### 🎨 Dashboard Widgets System
+Modern React-based admin dashboard with real-time capabilities and type-safe API.
 
-A powerful new widget system for creating beautiful, type-safe dashboard widgets with automatic template variable resolution.
+### Features
 
-#### Features
+- **Next.js Dashboard** - Modern React-based admin dashboard served via iframe
+- **REST API Backend** - Complete API at `/cfg/dashboard/api/` for all dashboard data
+- **Service Layer** - Clean service classes for statistics, health, charts, and commands
+- **Type-Safe** - Full TypeScript + Pydantic type safety
+- **Real-Time** - WebSocket support via Centrifugo integration
 
-- **Type-Safe Widgets** - Define widgets using Pydantic models (`StatsCardsWidget`, `StatCard`)
-- **Template Variables** - Use `{{ variable }}` syntax for dynamic values with automatic resolution
-- **Material Icons** - 2234+ icons with full IDE autocomplete (`Icons.*`)
-- **Real-Time Metrics** - Built-in system, RPC, and custom application metrics
-- **Tabbed Interface** - Widgets displayed in dedicated "Widgets" tab
-- **Multiple Widget Groups** - Organize related metrics in widget groups
+### API Endpoints
 
-#### Migration Guide
+Access dashboard data via REST API:
 
-**Before** (Old approach - still works):
+- `/cfg/dashboard/api/statistics/` - User and app statistics
+- `/cfg/dashboard/api/health/` - System health checks
+- `/cfg/dashboard/api/charts/` - Chart data
+- `/cfg/dashboard/api/commands/` - Django management commands
+
+### Configuration
+
+The dashboard is automatically configured and served at `/admin/`. No additional setup required.
+
 ```python
-def dashboard_callback(request, context):
-    context['total_users'] = User.objects.count()
-    return context
+from django_cfg import DjangoConfig, UnfoldConfig
+
+class MyConfig(DjangoConfig):
+    unfold: UnfoldConfig = UnfoldConfig(
+        site_title="My Admin",
+        site_header="Admin Panel",
+        theme='dark',
+    )
 ```
-
-**After** (New widgets approach):
-```python
-from django_cfg.modules.django_unfold.models.dashboard import StatCard, StatsCardsWidget
-from django_cfg.modules.django_unfold.callbacks import UnfoldCallbacks
-from django_cfg import Icons
-
-def dashboard_callback(request, context):
-    # 1. Get data
-    total_users = User.objects.count()
-
-    # 2. Create widgets
-    custom_widgets = [
-        StatsCardsWidget(
-            title="User Metrics",
-            cards=[
-                StatCard(
-                    title="Total Users",
-                    value="{{ total_users }}",
-                    icon=Icons.PEOPLE,
-                    color="primary"
-                )
-            ]
-        )
-    ]
-
-    # 3. Add to context BEFORE calling main callback
-    context.update({
-        "custom_widgets": custom_widgets,
-        "total_users": total_users,
-    })
-
-    # 4. Call base callback
-    unfold_callbacks = UnfoldCallbacks()
-    return unfold_callbacks.main_dashboard_callback(request, context)
-```
-
-#### Breaking Changes
-
-None - fully backward compatible.
-
-#### Documentation
-
-- [Dashboard Widgets Guide](./dashboard-widgets.md) - Complete guide with examples
-- [Unfold Overview](./overview.md) - Updated with widget examples
 
 ---
 
-### 🔧 Centrifugo WebSocket RPC Integration
+## 🔧 Centrifugo WebSocket Integration
 
-#### New Features
+Real-time communication via WebSocket with automatic RPC logging.
+
+### Features
 
 - **RPC Logging** - Automatic logging of all RPC calls to database
-- **RPC Dashboard Widgets** - Automatic RPC monitoring widgets when Centrifugo is enabled
-- **Admin Interface** - New RPC Logs admin panel
+- **Admin Interface** - RPC Logs admin panel with filtering
+- **Real-Time Metrics** - WebSocket connection monitoring
+- **Type-Safe** - Full Pydantic validation for all messages
 
-#### Database Models
-
-New `RPCLog` model for storing RPC call history:
-- Request/Response tracking
-- Duration monitoring
-- Success/Error tracking
-- Automatic cleanup of old logs
-
-#### Configuration
-
-RPC logging is automatically enabled when `centrifugo` is configured:
+### Configuration
 
 ```python
 from django_cfg import DjangoConfig, DjangoCfgCentrifugoConfig
@@ -105,85 +65,129 @@ class MyConfig(DjangoConfig):
     centrifugo: DjangoCfgCentrifugoConfig = DjangoCfgCentrifugoConfig(
         enabled=True,
         centrifugo_url="ws://localhost:8000/connection/websocket",
-        log_all_calls=True,  # Enable RPC logging (default: True)
-        log_level="INFO",    # Log level (default: "INFO")
+        log_all_calls=True,
+        log_level="INFO",
     )
 ```
 
-#### Automatic Widgets
+### Usage
 
-When RPC is enabled, these widgets are automatically added:
-
-- **Total Calls** - Total RPC calls in last 24h
-- **Success Rate** - Percentage of successful calls
-- **Avg Response Time** - Average response time in ms
-- **Failed Calls** - Number of failed calls
-
----
-
-### 📊 Dashboard System Improvements
-
-#### New Components
-
-- **WidgetsSection** - New section for rendering widgets (`modules/django_dashboard/sections/widgets.py`)
-- **widgets_section.html** - Template for widgets display
-- **widgets_tab.html** - Tab wrapper for widgets interface
-
-#### Template Structure
-
-```
-templates/admin/
-├── layouts/
-│   └── dashboard_with_tabs.html (updated - added Widgets tab)
-├── sections/
-│   └── widgets_section.html (new)
-└── snippets/
-    └── tabs/
-        └── widgets_tab.html (new)
-```
-
-#### Callback System
-
-Enhanced `UnfoldCallbacks` to support:
-- Automatic extraction of `custom_widgets` from context
-- Template variable resolution for widget values
-- Custom metrics merging
+Access Centrifugo dashboard at `/cfg/centrifugo/admin/` to view:
+- Real-time connection status
+- RPC call logs
+- Channel statistics
+- Error tracking
 
 ---
 
-## Upgrade Path
+## 🎯 Navigation Manager
 
-### Step 1: Update Django-CFG
+Automatic navigation generation based on enabled Django-CFG modules.
 
-```bash
-poetry update django-cfg
-# or
-pip install --upgrade django-cfg
+### Auto-Generated Sections
+
+The NavigationManager automatically creates sidebar sections for:
+
+- **Dashboard** - Overview, Frontend Admin, Settings, Health Check
+- **Centrifugo** (if enabled) - Dashboard, Logs
+- **Operations** (if enabled) - Background Tasks, Maintenance
+- **Users & Access** (if accounts enabled) - Users, Groups, OTP Secrets
+- **Support** (if enabled) - Tickets, Messages
+- **Newsletter** (if enabled) - Newsletters, Subscriptions, Campaigns
+- **Leads** (if enabled) - Lead management
+- **AI Agents** (if enabled) - Agent Definitions, Executions, Templates
+- **Knowledge Base** (if enabled) - Documents, Chunks, Chat Sessions
+- **Payments** (if enabled) - Payments, Currencies, Balances
+
+### Custom Navigation
+
+Add your own navigation sections:
+
+```python
+from django_cfg.modules.django_unfold import UnfoldConfig, NavigationSection, NavigationItem
+from django_cfg.modules.django_admin.icons import Icons
+
+unfold: UnfoldConfig = UnfoldConfig(
+    navigation=[
+        NavigationSection(
+            title="My App",
+            separator=True,
+            collapsible=True,
+            items=[
+                NavigationItem(
+                    title="Products",
+                    icon=Icons.SHOPPING_CART,
+                    link="admin:myapp_product_changelist"
+                ),
+            ]
+        ),
+    ],
+)
 ```
-
-### Step 2: Run Migrations (if using RPC)
-
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-### Step 3: Update dashboard_callback (Optional)
-
-If you want to use the new widgets system, update your `dashboard_callback` following the pattern above.
-
-**Note**: Old callbacks continue to work without changes.
 
 ---
 
-## Related Documentation
+## 🎨 Theme Customization
 
-- [Dashboard Widgets Guide](./dashboard-widgets.md) - Complete widgets documentation
-- [Unfold Overview](./overview.md) - Main unfold documentation
-- [Centrifugo Integration](/features/integrations/centrifugo/) - RPC system documentation
+OKLCH color format for modern, perceptually uniform theming.
+
+### Features
+
+- **OKLCH Colors** - Perceptually uniform color space
+- **Dark/Light Modes** - Automatic theme switching
+- **Custom Colors** - Full color customization
+- **Tailwind Integration** - Seamless Tailwind CSS integration
+
+### Configuration
+
+```python
+from django_cfg.modules.django_unfold import UnfoldConfig, UnfoldColors
+
+unfold: UnfoldConfig = UnfoldConfig(
+    theme='dark',  # 'dark', 'light', or None for auto
+    colors=UnfoldColors(
+        primary="#3b82f6",  # Brand color
+    ),
+)
+```
 
 ---
 
-## Feedback
+## 📚 Related Documentation
 
-Found an issue or have a suggestion? Please [open an issue](https://github.com/your-repo/issues).
+- [Unfold Overview](./overview.md) - Complete module documentation
+- [Centrifugo Integration](/features/integrations/centrifugo/) - Real-time WebSocket setup
+- [Configuration Guide](/fundamentals/configuration) - Unfold configuration
+
+---
+
+## 🚀 Quick Start
+
+```python
+from django_cfg import DjangoConfig, UnfoldConfig, DjangoCfgCentrifugoConfig
+
+class MyConfig(DjangoConfig):
+    # Unfold admin interface
+    unfold: UnfoldConfig = UnfoldConfig(
+        site_title="My Admin",
+        theme='dark',
+    )
+
+    # Optional: Centrifugo WebSocket
+    centrifugo: DjangoCfgCentrifugoConfig = DjangoCfgCentrifugoConfig(
+        enabled=True,
+        centrifugo_url="ws://localhost:8000/connection/websocket",
+    )
+```
+
+Access admin at: `http://localhost:8000/admin/`
+
+---
+
+## 💡 Tips
+
+- Dashboard automatically adapts to enabled Django-CFG modules
+- Use `NavigationManager` for consistent sidebar across projects
+- OKLCH colors provide better color interpolation than RGB
+- Centrifugo logging helps debug real-time issues
+- All APIs are documented via OpenAPI/Swagger at `/api/schema/swagger/`

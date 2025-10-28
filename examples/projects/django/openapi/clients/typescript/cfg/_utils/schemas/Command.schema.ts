@@ -15,6 +15,8 @@ export const CommandSchema = z.object({
   help: z.string(),
   is_core: z.boolean(),
   is_custom: z.boolean(),
+  is_allowed: z.boolean().optional(),
+  risk_level: z.string().optional(),
 })
 
 /**
