@@ -12,12 +12,14 @@ import {
   routes,
   isPublicRoute,
   isPrivateRoute,
+  isAdminRoute,
   isAuthRoute,
   getUnauthenticatedRedirect,
   getPageTitle,
   generatePublicNavigation,
   generateFooterNavigation,
   menuGroups,
+  adminMenuGroups,
 } from './routes';
 
 /**
@@ -46,27 +48,28 @@ export const appLayoutConfig: AppLayoutConfig = {
 
   // Route configuration
   routes: {
-    auth: routes.public.auth,
-    defaultCallback: settings.basePath + routes.private.overview,
-    defaultAuthCallback: settings.basePath + routes.private.overview,
+    auth: routes.public.auth.path,
+    defaultCallback: routes.admin.overview.path,
+    defaultAuthCallback: routes.public.auth.path,
     detectors: {
       isPublicRoute,
       isPrivateRoute,
+      isAdminRoute,
       isAuthRoute,
       getUnauthenticatedRedirect,
-      getPageTitle,
+      getPageTitle: (path: string) => getPageTitle(routes.getAllRoutes(), path),
     },
   },
 
   // Public layout configuration
   publicLayout: {
     navigation: {
-      homePath: routes.public.home,
+      homePath: routes.public.home.path,
       menuSections: generatePublicNavigation(),
     },
     userMenu: {
-      dashboardPath: routes.private.overview,
-      profilePath: routes.private.profile,
+      dashboardPath: routes.private.home.path,
+      profilePath: routes.private.profile.path,
     },
     footer: {
       badge: {
@@ -74,11 +77,10 @@ export const appLayoutConfig: AppLayoutConfig = {
         text: settings.app.name,
       },
       links: {
-        docs: routes.public.docsExternal,
-        privacy: routes.legal.privacy,
-        terms: routes.legal.terms,
-        security: routes.legal.security,
-        cookies: routes.legal.cookies,
+        privacy: routes.public.privacy.path,
+        terms: routes.public.terms.path,
+        security: routes.public.security.path,
+        cookies: routes.public.cookies.path,
       },
       menuSections: generateFooterNavigation(),
     },
@@ -86,11 +88,24 @@ export const appLayoutConfig: AppLayoutConfig = {
 
   // Private layout configuration
   privateLayout: {
-    homeHref: routes.public.home,
-    profileHref: routes.private.profile,
+    homeHref: routes.private.home.path,
+    profileHref: routes.private.profile.path,
     showChat: settings.layouts.showChat,
     menuGroups,
     contentPadding: 'none',
     // headerActions can be added dynamically
+  },
+
+  // Admin layout configuration
+  adminLayout: {
+    menuSections: adminMenuGroups.map(group => ({
+      title: group.label,
+      items: group.items.map(item => ({
+        label: item.label,
+        path: item.path,
+        icon: item.icon,
+        badge: item.badge,
+      })),
+    })),
   },
 };

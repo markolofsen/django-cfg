@@ -5,11 +5,38 @@ Provides template tags for accessing django-cfg configuration constants.
 """
 
 import os
+import socket
 from django import template
+from django.conf import settings
 from django.utils.safestring import mark_safe
 from rest_framework_simplejwt.tokens import RefreshToken
 
 register = template.Library()
+
+
+def _is_port_available(host: str, port: int, timeout: float = 0.1) -> bool:
+    """
+    Check if a port is available (listening) on the specified host.
+
+    Uses a quick socket connection test with minimal timeout.
+    Returns True if the port is open and accepting connections.
+
+    Args:
+        host: Host to check (e.g., 'localhost', '127.0.0.1')
+        port: Port number to check
+        timeout: Connection timeout in seconds (default: 0.1s)
+
+    Returns:
+        bool: True if port is available, False otherwise
+    """
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
 
 
 @register.simple_tag
@@ -140,37 +167,42 @@ def inject_jwt_tokens_script(context):
 @register.simple_tag
 def nextjs_admin_url(path=''):
     """
-    Get the URL for Next.js Admin Panel.
+    Get the URL for Next.js Admin Panel (Built-in Dashboard - Tab 1).
 
-    In development mode (when DJANGO_CFG_FRONTEND_DEV_MODE=true):
-        Returns http://localhost:3000/{path}
+    Auto-detects development mode with priority:
+        1. If port 3000 is available → use static files (Tab 2 gets dev server)
+        2. If only port 3001 is available → http://localhost:3001/admin/{path}
+        3. Otherwise → /cfg/admin/admin/{path} (static files)
 
-    In production mode:
-        Returns /cfg/admin/{path}
+    This ensures only ONE tab shows dev server at a time.
 
     Usage in template:
         {% load django_cfg %}
-        <iframe src="{% nextjs_admin_url 'private' %}"></iframe>
-
-    Environment variable:
-        DJANGO_CFG_FRONTEND_DEV_MODE=true    # Enable dev mode
-        DJANGO_CFG_FRONTEND_DEV_PORT=3000    # Custom dev port (default: 3000)
+        <iframe src="{% nextjs_admin_url %}"></iframe>
+        <iframe src="{% nextjs_admin_url 'centrifugo' %}"></iframe>
     """
-    # Check if frontend dev mode is enabled
-    is_dev_mode = os.environ.get('DJANGO_CFG_FRONTEND_DEV_MODE', '').lower() in ('true', '1', 'yes')
+    # Normalize path - remove leading/trailing slashes
+    path = path.strip('/')
 
-    # Normalize path - ensure trailing slash for Django static view
-    if path and not path.endswith('/'):
-        path = f'{path}/'
+    if not settings.DEBUG:
+        # Production mode: always use static files
+        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
 
-    if is_dev_mode:
-        # Development mode: use Next.js dev server
-        dev_port = os.environ.get('DJANGO_CFG_FRONTEND_DEV_PORT', '3000')
-        base_url = f'http://localhost:{dev_port}'
+    # Check which ports are available
+    port_3000_available = _is_port_available('localhost', 3000)
+    port_3001_available = _is_port_available('localhost', 3001)
+
+    # Priority: if port 3000 is running, Tab 2 gets it, Tab 1 uses static
+    if port_3000_available:
+        # Solution project is running - use static files for Tab 1
+        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
+    elif port_3001_available:
+        # Dev project is running - use dev server for Tab 1
+        base_url = 'http://localhost:3001/admin'
         return f'{base_url}/{path}' if path else base_url
     else:
-        # Production mode: use Django static files
-        return f'/cfg/admin/{path}' if path else '/cfg/admin/'
+        # No dev server - use static files
+        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
 
 
 @register.simple_tag
@@ -178,7 +210,11 @@ def is_frontend_dev_mode():
     """
     Check if frontend is in development mode.
 
-    Returns True if DJANGO_CFG_FRONTEND_DEV_MODE environment variable is set to true.
+    Auto-detects by checking:
+        - DEBUG=True
+        - AND (port 3000 OR port 3001 is available)
+
+    Returns True if any Next.js dev server is detected.
 
     Usage in template:
         {% load django_cfg %}
@@ -186,7 +222,12 @@ def is_frontend_dev_mode():
             <div class="dev-badge">Dev Mode</div>
         {% endif %}
     """
-    return os.environ.get('DJANGO_CFG_FRONTEND_DEV_MODE', '').lower() in ('true', '1', 'yes')
+    if not settings.DEBUG:
+        return False
+
+    # Check if either dev server is running
+    return (_is_port_available('localhost', 3000) or
+            _is_port_available('localhost', 3001))
 
 
 @register.simple_tag
@@ -214,10 +255,14 @@ def has_nextjs_external_admin():
 @register.simple_tag
 def nextjs_external_admin_url(route=''):
     """
-    Get URL for external Next.js admin (Tab 2).
+    Get URL for external Next.js admin (Tab 2 - solution project).
 
-    Always returns relative URL (Django serves from static/nextjs_admin.zip):
-        Returns /cfg/nextjs-admin/{route}
+    Auto-detects development mode:
+        - If DEBUG=True AND localhost:3000 is available → http://localhost:3000/admin/{route}
+        - Otherwise → /cfg/nextjs-admin/admin/{route} (static files)
+
+    This is for the external admin panel (solution project).
+    No env variable needed - automatically detects running dev server!
 
     Usage in template:
         {% load django_cfg %}
@@ -231,10 +276,16 @@ def nextjs_external_admin_url(route=''):
         if not config or not config.nextjs_admin:
             return ''
 
-        route = route.strip().lstrip('/')
+        route = route.strip('/')
 
-        # Always use relative URL - Django serves from extracted ZIP
-        return f"/cfg/nextjs-admin/{route}" if route else "/cfg/nextjs-admin/"
+        # Auto-detect development mode: DEBUG=True + port 3000 available
+        if settings.DEBUG and _is_port_available('localhost', 3000):
+            # Development mode: solution project on port 3000
+            base_url = 'http://localhost:3000/admin'
+            return f'{base_url}/{route}' if route else base_url
+        else:
+            # Production mode: use relative URL - Django serves from extracted ZIP with /admin prefix
+            return f"/cfg/nextjs-admin/admin/{route}" if route else "/cfg/nextjs-admin/admin/"
     except Exception:
         return ''
 

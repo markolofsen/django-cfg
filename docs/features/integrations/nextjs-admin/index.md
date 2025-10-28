@@ -1,9 +1,8 @@
 ---
-id: nextjs-admin-overview
+id: index
 title: Next.js Admin Integration
 description: Integrate custom Next.js admin dashboards as secondary admin interfaces within django-cfg
 sidebar_label: Overview
-slug: /features/integrations/nextjs-admin
 tags:
   - nextjs
   - admin

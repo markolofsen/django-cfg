@@ -1,16 +1,18 @@
-.PHONY: help dev dev-django dev-frontend dev-websocket kill-ports
+.PHONY: help dev dev-django dev-admin dev-frontend dev-websocket api kill-ports
 
 help:
 	@echo "Django CFG Solution - Development Commands"
 	@echo ""
 	@echo "Available commands:"
-	@echo "  make dev           - Start all services: Django (8000), Next.js (3000), WebSocket (8765)"
-	@echo "  make dev-django    - Start only Django backend on port 8000"
-	@echo "  make dev-frontend  - Start only Next.js demo app on port 3000"
-	@echo "  make dev-websocket - Start only WebSocket server on port 8765"
+	@echo "  make dev           - Start Next.js Admin only (port 3000)"
+	@echo "  make dev-admin     - Start Django + Next.js Admin with iframe mode (8000 + 3000)"
+	@echo "  make dev-django    - Start only Django backend (port 8000)"
+	@echo "  make dev-frontend  - Start only Next.js demo app (port 3000)"
+	@echo "  make dev-websocket - Start only WebSocket server (port 8765)"
+	@echo "  make api           - Generate TypeScript API clients"
 	@echo "  make kill-ports    - Kill processes on ports 8000, 3000, and 8765"
 	@echo ""
-	@echo "Quick start: make dev"
+	@echo "Quick start: make dev-admin"
 
 # Kill processes on ports 8000 (Django), 3000 (Next.js), and 8765 (WebSocket)
 kill-ports:
@@ -20,12 +22,54 @@ kill-ports:
 	@lsof -ti:8765 | xargs kill -9 2>/dev/null || true
 	@echo "✅ Ports cleared"
 
+# Generate TypeScript API clients
+api:
+	@echo "🚀 Generating TypeScript API clients..."
+	@echo "📁 Output: django_admin/apps/admin/src/api/generated/cfg/"
+	@echo ""
+	cd django && poetry run python manage.py generate_clients --typescript --no-python
+	@echo ""
+	@echo "📦 Copying cfg API clients to admin app..."
+	mkdir -p django_admin/apps/admin/src/api/generated/cfg
+	rm -rf django_admin/apps/admin/src/api/generated/cfg/generated django_admin/apps/admin/src/api/generated/cfg/BaseClient.ts
+	cp -r django/openapi/clients/typescript/cfg/* django_admin/apps/admin/src/api/generated/cfg/
+	@echo "✅ Copied cfg API clients to django_admin/apps/admin/src/api/generated/cfg!"
+	@echo ""
+	@echo "✅ TypeScript clients generated successfully!"
+	@echo ""
+
 # Start Django backend only
 dev-django: kill-ports
 	@echo "🐍 Starting Django backend on port 8000..."
 	@cd django && make dev
 
-# Start Next.js frontend only
+# Start Next.js Admin only
+dev:
+	@echo "🚀 Starting Next.js Admin dev server..."
+	@echo ""
+	@echo "📍 Next.js Admin: http://localhost:3000"
+	@echo ""
+	@cd django_admin/apps/admin && pnpm dev
+
+# Start Django backend + Next.js Admin in parallel with iframe mode
+dev-admin: kill-ports
+	@echo "🚀 Starting Django backend + Next.js Admin in parallel..."
+	@echo ""
+	@echo "📍 Django backend: http://localhost:8000"
+	@echo "📍 Next.js Admin:  http://localhost:3000"
+	@echo ""
+	@echo "⚡ Auto-detect mode: Port 3000 (Tab 2 External Admin)"
+	@echo "   Django will auto-detect dev server and load iframe"
+	@echo ""
+	@echo "Press Ctrl+C to stop all services"
+	@echo ""
+	@sleep 2 && (command -v open >/dev/null && open http://localhost:3000 || command -v xdg-open >/dev/null && xdg-open http://localhost:3000) &
+	@trap 'kill 0' EXIT; \
+	(cd django && make dev) & \
+	(cd django_admin/apps/admin && pnpm dev) & \
+	wait
+
+# Start Next.js demo frontend only
 dev-frontend: kill-ports
 	@echo "⚛️  Starting Next.js demo app on port 3000..."
 	@cd frontend/apps/demo && pnpm dev
@@ -34,12 +78,3 @@ dev-frontend: kill-ports
 dev-websocket: kill-ports
 	@echo "🔗 Starting WebSocket server on port 8765..."
 	@cd websocket && make dev
-
-# Start all three services in parallel
-dev: kill-ports
-	@echo "🚀 Starting development servers..."
-	@echo "   Django:    http://localhost:8000"
-	@echo "   Next.js:   http://localhost:3000"
-	@echo "   WebSocket: ws://localhost:8765"
-	@echo ""
-	@(cd django && make dev) & (cd frontend/apps/demo && pnpm dev) & wait

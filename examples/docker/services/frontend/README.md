@@ -1,104 +1,55 @@
-# Django-CFG Frontend - Turbo Monorepo Docker Setup
+# Django-CFG Admin - Next.js Docker Setup
 
-Universal Docker configuration for building multiple Next.js apps from a Turbo monorepo.
+Docker configuration for building the Django-CFG Admin Next.js application.
 
 ## Structure
 
 ```
 frontend/
-├── Dockerfile              # Multi-stage build for all apps
+├── Dockerfile              # Multi-stage build for admin app
 ├── docker-compose.yaml    # Standalone service definitions
 └── README.md              # This file
 ```
 
 ## How It Works
 
-The `Dockerfile` uses **multi-stage builds** with **target** parameter to build different apps:
+The `Dockerfile` uses **multi-stage builds** to create an optimized production image:
 
-### Adding a New App
+### Build Stages
 
-1. **Add a new pruner stage** in `Dockerfile`:
-```dockerfile
-FROM base AS pruner-myapp
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
-COPY . .
-RUN npx turbo@^2 prune @djangocfg/myapp --docker
-```
+1. **Base Stage** - Alpine Linux with Node.js 20
+2. **Installer Stage** - Installs dependencies and builds the admin app
+3. **Runner Stage** - Minimal runtime image with standalone output
 
-2. **Add installer stage**:
-```dockerfile
-FROM base AS installer-myapp
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
-COPY --from=pruner-myapp /app/out/json/ .
-RUN pnpm install
-COPY --from=pruner-myapp /app/out/full/ .
+### Key Features
 
-ARG DJANGO_API_URL
-ARG IPC_WS_URL
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_API_URL=${DJANGO_API_URL}
-ENV NEXT_PUBLIC_WS_RPC_URL=${IPC_WS_URL}
-
-RUN pnpm turbo run build --filter=@djangocfg/myapp
-```
-
-3. **Add runner stage**:
-```dockerfile
-FROM node:20-alpine AS myapp
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3xxx
-ENV HOSTNAME="0.0.0.0"
-
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
-
-COPY --from=installer-myapp --chown=nextjs:nodejs /app/apps/myapp/.next/standalone ./
-COPY --from=installer-myapp --chown=nextjs:nodejs /app/apps/myapp/.next/static ./apps/myapp/.next/static
-COPY --from=installer-myapp --chown=nextjs:nodejs /app/apps/myapp/public ./apps/myapp/public
-
-USER nextjs
-EXPOSE 3xxx
-
-CMD node apps/myapp/server.js
-```
-
-4. **Add service in docker-compose.yaml** or use in main compose:
-```yaml
-frontend-myapp:
-  build:
-    context: ../projects/frontend
-    dockerfile: ../../docker/services/frontend/Dockerfile
-    target: myapp
-    args:
-      DJANGO_API_URL: ${DJANGO_API_URL}
-      IPC_WS_URL: ${IPC_WS_URL}
-  image: djangocfg-frontend:myapp
-  # ... rest of config
-```
+- ✅ **Standalone output** - Next.js generates a self-contained server
+- ✅ **Minimal runtime** - Only production dependencies included
+- ✅ **Non-root user** - Runs as `nextjs` user for security
+- ✅ **Health checks** - Built-in health monitoring
+- ✅ **Optimized caching** - Efficient Docker layer caching
 
 ## Usage
 
-### Build specific app:
+### Build admin app:
 ```bash
-docker compose build --build-arg target=demo frontend-demo
+docker compose build admin
 ```
 
-### Run specific app:
+### Run admin app:
 ```bash
-docker compose up frontend-demo
+docker compose up admin
 ```
 
-### Build all frontend apps:
+### Build with custom environment:
 ```bash
-docker compose build frontend-demo frontend-myapp
+docker compose build admin --build-arg NEXT_PUBLIC_API_URL=https://api.example.com
 ```
 
-## Benefits
+## Environment Variables
 
-- ✅ **Single Dockerfile** for all apps
-- ✅ **Efficient caching** - shared base layers
-- ✅ **Turbo prune** - minimal dependencies per app
-- ✅ **Standalone output** - smallest runtime image
-- ✅ **Easy to extend** - just add new target stages
+- `NODE_ENV` - Set to `production`
+- `PORT` - Server port (default: 3000)
+- `HOSTNAME` - Server hostname (default: 0.0.0.0)
+- `NEXT_PUBLIC_API_URL` - Django API URL
+- `NEXT_PUBLIC_BASE_PATH` - Base path for Next.js app

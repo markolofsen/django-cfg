@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-quick-start
+id: quick-start
 title: Quick Start
 description: Get started with Next.js admin integration in 5 minutes
 sidebar_label: Quick Start

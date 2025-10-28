@@ -216,7 +216,7 @@ services:
     build:
       context: ..
       dockerfile: docker/services/frontend/Dockerfile
-      target: demo
+      target: admin
     image: djangocfg-frontend:demo
     container_name: frontend-demo
     restart: unless-stopped

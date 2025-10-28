@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-examples
+id: examples
 title: Real-World Examples
 description: Real-world examples and patterns for Next.js admin integration
 sidebar_label: Examples

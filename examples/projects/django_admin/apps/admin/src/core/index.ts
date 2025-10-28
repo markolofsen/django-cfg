@@ -21,6 +21,8 @@ export {
 
   // Menu generation
   menuGroups,
+  userMenuGroups,
+  adminMenuGroups,
   generatePublicNavigation,
   generateFooterNavigation,
 
@@ -34,6 +36,7 @@ export {
   // Route guards
   isPublicRoute,
   isPrivateRoute,
+  isAdminRoute,
   isAuthRoute,
   getUnauthenticatedRedirect,
   redirectToAuth,
@@ -45,6 +48,8 @@ export type {
   RouteDefinition,
   MenuGroup,
   MenuItem,
+  NavigationItem,
+  NavigationSection,
   BreadcrumbItem,
 } from './routes';
 

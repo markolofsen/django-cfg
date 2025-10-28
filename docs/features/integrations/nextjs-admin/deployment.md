@@ -1,5 +1,5 @@
 ---
-id: nextjs-admin-deployment
+id: deployment
 title: Production Deployment
 description: Deploy Next.js admin to production with Docker and best practices
 sidebar_label: Deployment
