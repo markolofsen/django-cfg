@@ -41,62 +41,6 @@ import { getAPIInstance } from '../../api-instance'
  * Generate connection token
  *
  * @method POST
- * @path /cfg/centrifugo/admin/api/testing/connection-token/
- */
-export async function createCentrifugoAdminApiTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: any
-): Promise<ConnectionTokenResponse> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingConnectionTokenCreate(data)
-  return ConnectionTokenResponseSchema.parse(response)
-}
-
-
-/**
- * Publish test message
- *
- * @method POST
- * @path /cfg/centrifugo/admin/api/testing/publish-test/
- */
-export async function createCentrifugoAdminApiTestingPublishTestCreate(  data: PublishTestRequestRequest,  client?: any
-): Promise<PublishTestResponse> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingPublishTestCreate(data)
-  return PublishTestResponseSchema.parse(response)
-}
-
-
-/**
- * Publish with database logging
- *
- * @method POST
- * @path /cfg/centrifugo/admin/api/testing/publish-with-logging/
- */
-export async function createCentrifugoAdminApiTestingPublishWithLoggingCreate(  data: PublishTestRequestRequest,  client?: any
-): Promise<PublishTestResponse> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingPublishWithLoggingCreate(data)
-  return PublishTestResponseSchema.parse(response)
-}
-
-
-/**
- * Send manual ACK
- *
- * @method POST
- * @path /cfg/centrifugo/admin/api/testing/send-ack/
- */
-export async function createCentrifugoAdminApiTestingSendAckCreate(  data: ManualAckRequestRequest,  client?: any
-): Promise<ManualAckResponse> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_testing.centrifugoAdminApiTestingSendAckCreate(data)
-  return ManualAckResponseSchema.parse(response)
-}
-
-
-/**
- * Generate connection token
- *
- * @method POST
  * @path /cfg/centrifugo/testing/connection-token/
  */
 export async function createCentrifugoTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: any

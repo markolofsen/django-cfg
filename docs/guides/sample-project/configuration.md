@@ -79,7 +79,6 @@ class SampleProjectConfig(DjangoConfig):
     unfold: UnfoldConfig = UnfoldConfig(
         site_title="Django-CFG Sample Admin",
         site_header="Django-CFG Sample",
-        dashboard_callback="api.config.dashboard_callback",
         navigation=[
             {
                 "title": "Content Management",
@@ -195,7 +194,6 @@ Unfold theme customization:
 ```python
 unfold: UnfoldConfig = UnfoldConfig(
     site_title="Django-CFG Sample Admin",
-    dashboard_callback="api.config.dashboard_callback",
     navigation=[...],
 )
 ```
@@ -495,55 +493,6 @@ EMAIL__HOST="smtp.gmail.com"
 
 # Nested: api_keys.openai
 API_KEYS__OPENAI="sk-proj-xxx"
-```
-
-## Dashboard Callback Configuration
-
-Custom dashboard metrics function:
-
-```python
-# api/config.py
-
-def dashboard_callback(request, context):
-    """Custom dashboard with real-time metrics."""
-    from apps.profiles.models import Profile
-    from django.contrib.auth import get_user_model
-    from django.utils import timezone
-    from datetime import timedelta
-
-    User = get_user_model()
-
-    # Calculate metrics
-    total_users = User.objects.count()
-    total_profiles = Profile.objects.count()
-    recent_users = User.objects.filter(
-        date_joined__gte=timezone.now() - timedelta(days=7)
-    ).count()
-
-    # Add custom cards to dashboard
-    custom_cards = [
-        {
-            "title": "Total Users",
-            "value": str(total_users),
-            "description": "Registered users",
-            "icon": "people"
-        },
-        {
-            "title": "Profiles",
-            "value": str(total_profiles),
-            "description": "User profiles",
-            "icon": "account_circle"
-        },
-        {
-            "title": "New Users (7d)",
-            "value": str(recent_users),
-            "description": "Recent signups",
-            "icon": "person_add"
-        }
-    ]
-
-    context["cards"].extend(custom_cards)
-    return context
 ```
 
 ## Configuration Best Practices

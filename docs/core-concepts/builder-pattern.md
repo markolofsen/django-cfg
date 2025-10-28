@@ -51,12 +51,6 @@ apps = builder.build()
 
 2. **Auto-Enable Tasks:** Automatically adds `django_dramatiq` when knowbase or agents are enabled
 
-3. **Dashboard App Detection:** Extracts dashboard app from Unfold callback path
-   ```python
-   # From callback: "api.dashboard.callbacks.main_dashboard_callback"
-   # Extracts: "api.dashboard"
-   ```
-
 ### MiddlewareBuilder
 
 Builds the `MIDDLEWARE` list from your `DjangoConfig`.

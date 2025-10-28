@@ -29,6 +29,8 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { CommandExecuteRequestRequestSchema, type CommandExecuteRequestRequest } from '../schemas/CommandExecuteRequestRequest.schema'
+import { CommandHelpResponseSchema, type CommandHelpResponse } from '../schemas/CommandHelpResponse.schema'
 import { CommandsSummarySchema, type CommandsSummary } from '../schemas/CommandsSummary.schema'
 import { getAPIInstance } from '../../api-instance'
 
@@ -42,6 +44,34 @@ export async function getDashboardApiCommandsList(  client?: any
 ): Promise<any> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_commands.dashboardApiCommandsList()
+  return response
+}
+
+
+/**
+ * Get command help
+ *
+ * @method GET
+ * @path /cfg/dashboard/api/commands/{id}/help/
+ */
+export async function getDashboardApiCommandsHelpRetrieve(  id: string,  client?: any
+): Promise<CommandHelpResponse> {
+  const api = client || getAPIInstance()
+  const response = await api.cfg_dashboard_commands.dashboardApiCommandsHelpRetrieve(id)
+  return CommandHelpResponseSchema.parse(response)
+}
+
+
+/**
+ * Execute command
+ *
+ * @method POST
+ * @path /cfg/dashboard/api/commands/execute/
+ */
+export async function createDashboardApiCommandsExecuteCreate(  data: CommandExecuteRequestRequest,  client?: any
+): Promise<any> {
+  const api = client || getAPIInstance()
+  const response = await api.cfg_dashboard_commands.dashboardApiCommandsExecuteCreate(data)
   return response
 }
 

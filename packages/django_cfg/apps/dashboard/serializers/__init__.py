@@ -15,7 +15,12 @@ from .charts import (
     ActivityTrackerDaySerializer,
     RecentUserSerializer,
 )
-from .commands import CommandSerializer, CommandsSummarySerializer
+from .commands import (
+    CommandSerializer,
+    CommandsSummarySerializer,
+    CommandExecuteRequestSerializer,
+    CommandHelpResponseSerializer,
+)
 from .apizones import APIZoneSerializer, APIZonesSummarySerializer
 
 __all__ = [
@@ -48,6 +53,8 @@ __all__ = [
     # Commands
     'CommandSerializer',
     'CommandsSummarySerializer',
+    'CommandExecuteRequestSerializer',
+    'CommandHelpResponseSerializer',
 
     # API Zones
     'APIZoneSerializer',

@@ -1,1 +1,0 @@
-"""Centrifugo template tags."""

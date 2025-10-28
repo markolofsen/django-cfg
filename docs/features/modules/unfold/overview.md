@@ -64,7 +64,6 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "ENVIRONMENT": "django_cfg.core.environment.get_environment_name",
-    "DASHBOARD_CALLBACK": "django_cfg.modules.django_unfold.callbacks.dashboard_callback",
     "LOGIN": {
         "image": "/static/admin-login.jpg",
         "redirect_after": "/admin/",
@@ -130,144 +129,6 @@ class CustomThemeConfig(UnfoldThemeConfig):
 # Apply custom theme
 class MyConfig(DjangoConfig):
     unfold_theme_config: CustomThemeConfig = CustomThemeConfig()
-```
-
-## Dashboard System
-
-### Dashboard Manager
-
-```python
-from django_cfg.modules.django_unfold import DashboardManager, get_dashboard_manager
-
-# Get dashboard manager
-dashboard = get_dashboard_manager()
-
-# Add custom dashboard widgets
-dashboard.add_stat_card(
-    title="Total Users",
-    value=lambda: User.objects.count(),
-    icon="people",
-    color="blue"
-)
-
-dashboard.add_stat_card(
-    title="Active Sessions",
-    value=lambda: Session.objects.filter(expire_date__gt=timezone.now()).count(),
-    icon="timeline",
-    color="green"
-)
-
-dashboard.add_chart_widget(
-    title="User Registration Trend",
-    chart_type="line",
-    data_callback="myapp.callbacks.get_registration_data"
-)
-```
-
-### Custom Dashboard Callbacks
-
-Dashboard callbacks allow you to add custom widgets and metrics to your dashboard. Django-CFG provides a powerful **Dashboard Widgets System** with type-safe configuration and automatic template variable resolution.
-
-```python
-# config.py
-from django_cfg.modules.django_unfold.callbacks import UnfoldCallbacks
-from django_cfg.modules.django_unfold.models.dashboard import StatCard, StatsCardsWidget
-from django_cfg import Icons
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from datetime import timedelta
-
-User = get_user_model()
-
-def dashboard_callback(request, context):
-    """Custom dashboard with widgets."""
-
-    # 1. Get real data FIRST (before calling base callback)
-    total_users = User.objects.count()
-    week_ago = timezone.now() - timedelta(days=7)
-    recent_users = User.objects.filter(date_joined__gte=week_ago).count()
-    active_users = User.objects.filter(
-        last_login__gte=timezone.now() - timedelta(days=30)
-    ).count()
-
-    # 2. Create widgets with template variables
-    custom_widgets = [
-        StatsCardsWidget(
-            title="User Metrics",
-            cards=[
-                StatCard(
-                    title="Total Users",
-                    value="{{ total_users }}",  # Template variable - auto-resolved
-                    icon=Icons.PEOPLE,
-                    change="{{ recent_users_change }}",
-                    change_type="positive" if recent_users > 0 else "neutral",
-                    description="Registered users",
-                    color="primary"
-                ),
-                StatCard(
-                    title="Active Users",
-                    value="{{ active_users }}",
-                    icon=Icons.PERSON,
-                    description="Last 30 days",
-                    color="success"
-                ),
-            ]
-        )
-    ]
-
-    # 3. Add custom widgets and metrics to context BEFORE calling main callback
-    context.update({
-        # Widgets tab widgets (MUST be added before main_dashboard_callback!)
-        "custom_widgets": custom_widgets,
-
-        # Template variables for widgets (actual values)
-        "total_users": total_users,
-        "recent_users_change": f"+{recent_users}" if recent_users > 0 else "0",
-        "active_users": active_users,
-    })
-
-    # 4. NOW call base callback - it will pick up custom_widgets from context
-    unfold_callbacks = UnfoldCallbacks()
-    context = unfold_callbacks.main_dashboard_callback(request, context)
-
-    # 5. Add additional dashboard metadata (optional)
-    context.update({
-        "dashboard_title": "My Dashboard",
-        "dashboard_subtitle": "Real-time metrics",
-    })
-
-    return context
-```
-
-:::tip[Dashboard Widgets System]
-Django-CFG includes a powerful **Dashboard Widgets System** with:
-- **Type-Safe Configuration** - Define widgets using Pydantic models (`StatsCardsWidget`, `StatCard`)
-- **Template Variables** - Use `{{ variable }}` syntax for dynamic values
-- **Automatic Resolution** - Template variables automatically resolved from context
-- **Material Icons** - 2234+ icons with full IDE autocomplete (`Icons.*`)
-- **Real-Time Metrics** - System, RPC, and custom application metrics
-- **Tabbed Interface** - Widgets displayed in dedicated "Widgets" tab
-
-**Learn more**: [Dashboard Widgets Guide](./dashboard-widgets.md) - Complete widgets documentation
-:::
-
-#### Execution Order (CRITICAL)
-
-Always add `custom_widgets` to context **BEFORE** calling `main_dashboard_callback()`:
-
-```python
-def dashboard_callback(request, context):
-    # ✅ CORRECT
-    context.update({
-        "custom_widgets": custom_widgets,
-        "metric": 123
-    })
-    context = unfold_callbacks.main_dashboard_callback(request, context)
-
-def dashboard_callback_wrong(request, context):
-    # ❌ WRONG - widgets added too late
-    context = unfold_callbacks.main_dashboard_callback(request, context)
-    context.update({"custom_widgets": custom_widgets})  # Won't work!
 ```
 
 ## 🧭 Navigation System
@@ -501,10 +362,7 @@ UNFOLD = {
             "900": "#1e3a8a",
         }
     },
-    
-    # Dashboard
-    "DASHBOARD_CALLBACK": "django_cfg.modules.django_unfold.callbacks.dashboard_callback",
-    
+
     # Sidebar
     "SIDEBAR": {
         "show_search": True,
@@ -591,48 +449,45 @@ class MyConfig(DjangoConfig):
 ### Unit Tests
 
 ```python
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
-from django_cfg.modules.django_unfold import get_dashboard_manager, get_system_monitor
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
 class UnfoldIntegrationTest(TestCase):
     def setUp(self):
-        self.factory = RequestFactory()
+        self.client = Client()
+        self.api_client = APIClient()
         self.user = User.objects.create_superuser(
             username='admin',
             email='admin@example.com',
             password='password'
         )
-    
-    def test_dashboard_manager(self):
-        """Test dashboard manager functionality"""
-        dashboard = get_dashboard_manager()
-        
-        # Test stat card addition
-        dashboard.add_stat_card(
-            title="Test Metric",
-            value=lambda: 42,
-            icon="test",
-            color="blue"
-        )
-        
-        stats = dashboard.get_stat_cards()
-        self.assertIn("Test Metric", [card['title'] for card in stats])
-    
-    def test_system_monitor(self):
-        """Test system monitoring"""
-        monitor = get_system_monitor()
-        
-        # Test system metrics
-        metrics = monitor.get_system_metrics()
-        self.assertIn('cpu_usage', metrics)
-        self.assertIn('memory_usage', metrics)
-        
-        # Test Django metrics
-        django_metrics = monitor.get_django_metrics()
-        self.assertIn('total_users', django_metrics)
+        self.api_client.force_authenticate(user=self.user)
+
+    def test_dashboard_api(self):
+        """Test dashboard API endpoints"""
+        # Test statistics endpoint
+        response = self.api_client.get('/cfg/dashboard/api/statistics/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('user_statistics', response.data)
+
+        # Test health endpoint
+        response = self.api_client.get('/cfg/dashboard/api/health/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('database', response.data)
+
+    def test_admin_access(self):
+        """Test admin interface access"""
+        self.client.force_login(self.user)
+
+        # Test admin index loads
+        response = self.client.get('/admin/')
+        self.assertEqual(response.status_code, 200)
+
+        # Test Next.js dashboard iframe loads
+        self.assertContains(response, 'nextjs-dashboard-iframe')
     
     def test_navigation_generation(self):
         """Test navigation generation"""
@@ -648,7 +503,7 @@ class UnfoldIntegrationTest(TestCase):
 
 ## Related Documentation
 
-- [**Dashboard Widgets**](./dashboard-widgets.md) - Complete widgets guide with examples
+- [**What's New**](./CHANGELOG.md) - Latest features and updates
 - [**Configuration Guide**](/fundamentals/configuration) - Unfold configuration
 - [**Admin Interface**](/fundamentals/system/utilities) - Admin customization
 - [**Theme System**](/fundamentals/system/utilities) - Theming and styling
@@ -656,17 +511,17 @@ class UnfoldIntegrationTest(TestCase):
 
 ## What's New
 
-### Dashboard Widgets System (Latest)
+### Next.js Dashboard (Latest)
 
-Django-CFG now includes a **powerful widget system** for creating beautiful, type-safe dashboard widgets:
+Django-CFG now includes a **modern Next.js-based dashboard** with real-time capabilities:
 
-- ✅ **Type-Safe Widgets** - Define widgets using Pydantic models
-- ✅ **Template Variables** - Automatic template variable resolution
-- ✅ **Material Icons** - 2234+ icons with IDE autocomplete
-- ✅ **Real-Time Metrics** - System, RPC, and custom metrics
-- ✅ **Tabbed Interface** - Dedicated "Widgets" tab in dashboard
+- ✅ **Next.js Dashboard** - Modern React-based admin dashboard served via iframe
+- ✅ **REST API Backend** - Complete API at `/cfg/dashboard/api/` for all dashboard data
+- ✅ **Type-Safe** - Full TypeScript + Pydantic type safety
+- ✅ **Real-Time** - WebSocket support via Centrifugo integration
+- ✅ **Auto Navigation** - Automatically adapts to enabled Django-CFG modules
 
-**Learn more**: [Dashboard Widgets Guide](./dashboard-widgets.md)
+**Learn more**: [What's New in Unfold](./CHANGELOG.md)
 
 The Unfold Admin module provides a beautiful, modern admin interface for your Django applications! 🎨
 

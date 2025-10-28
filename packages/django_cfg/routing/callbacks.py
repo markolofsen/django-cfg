@@ -10,50 +10,9 @@ from typing import Any, Dict, List
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection
 from django.http import HttpRequest
 
 from ..modules.base import BaseCfgModule
-
-
-def dashboard_callback(request: HttpRequest, context: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Default dashboard callback for Unfold admin.
-    
-    Returns enhanced context with dashboard data.
-    """
-    User = get_user_model()
-
-    # Get basic stats
-    user_count = User.objects.count()
-
-    # Database info
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM django_session")
-        session_count = cursor.fetchone()[0]
-
-    # Add dashboard data to context
-    context.update({
-        "dashboard": [
-            {
-                "title": "System Overview",
-                "metric": f"{user_count} users",
-                "footer": f"{session_count} active sessions",
-                "chart": {
-                    "labels": ["Users", "Sessions"],
-                    "data": [user_count, session_count],
-                }
-            },
-            {
-                "title": "Quick Actions",
-                "metric": "Admin Tools",
-                "footer": "Manage your system",
-                "link": "/admin/",
-            }
-        ]
-    })
-
-    return context
 
 
 def environment_callback(request: HttpRequest) -> Dict[str, Any]:
@@ -187,11 +146,10 @@ def badge_callback(request: HttpRequest) -> List[Dict[str, Any]]:
 def get_unfold_callbacks() -> Dict[str, str]:
     """
     Get callback function paths for Unfold configuration.
-    
+
     Returns dictionary mapping callback types to function paths.
     """
     return {
-        "dashboard_callback": "django_cfg.routing.callbacks.dashboard_callback",
         "environment_callback": "django_cfg.routing.callbacks.environment_callback",
         "permission_callback": "django_cfg.routing.callbacks.permission_callback",
         "search_callback": "django_cfg.routing.callbacks.search_callback",

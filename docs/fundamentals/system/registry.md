@@ -123,8 +123,7 @@ THIRD_PARTY_REGISTRY = {
     "UnfoldConfig": ("django_cfg.modules.django_unfold.models.config", "UnfoldConfig"),
     "UnfoldTheme": ("django_cfg.modules.django_unfold.models.config", "UnfoldTheme"),
     "NavigationItem": ("django_cfg.modules.django_unfold.models.navigation", "NavigationItem"),
-    "StatCard": ("django_cfg.modules.django_unfold.models.dashboard", "StatCard"),
-    
+
     # DRF Integration
     "DRFConfig": ("django_cfg.models.drf", "DRFConfig"),
     "DRFPaginationConfig": ("django_cfg.models.drf", "DRFPaginationConfig"),

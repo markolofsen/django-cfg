@@ -1,13 +1,12 @@
 """
 Django CFG Unfold Module
 
-Provides complete Unfold admin interface integration with dashboard,
-navigation, theming, and callback support.
+Provides complete Unfold admin interface integration with
+navigation and theming support.
 """
 
-from .callbacks import UnfoldCallbacks
-from .dashboard import DashboardManager, get_dashboard_manager
 from .models import *
+from .navigation import NavigationManager, get_navigation_manager
 from .system_monitor import SystemMonitor
 from .tailwind import get_css_variables, get_unfold_colors
 
@@ -20,19 +19,10 @@ def get_system_monitor() -> SystemMonitor:
         globals()['_system_monitor'] = SystemMonitor()
     return globals()['_system_monitor']
 
-def get_unfold_callbacks() -> UnfoldCallbacks:
-    """Get the global unfold callbacks instance."""
-    global _unfold_callbacks
-    if '_unfold_callbacks' not in globals():
-        globals()['_unfold_callbacks'] = UnfoldCallbacks()
-    return globals()['_unfold_callbacks']
-
 # Export main components
 __all__ = [
-    'DashboardManager',
-    'get_dashboard_manager',
-    'UnfoldCallbacks',
-    'get_unfold_callbacks',
+    'NavigationManager',
+    'get_navigation_manager',
     'SystemMonitor',
     'get_system_monitor',
     'get_unfold_colors',
@@ -48,15 +38,6 @@ __all__ = [
     'NavigationSection',
     'NavigationItemType',
     'SiteDropdownItem',
-    'StatCard',
-    'SystemHealthItem',
-    'QuickAction',
-    'DashboardWidget',
-    'DashboardData',
-    'ChartDataset',
-    'ChartData',
-    'TabConfiguration',
-    'TabItem',
 ]
 
 # Version info

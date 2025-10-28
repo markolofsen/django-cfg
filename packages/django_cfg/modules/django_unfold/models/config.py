@@ -13,7 +13,6 @@ from django_cfg.modules.django_admin.icons import Icons
 
 from .dropdown import SiteDropdownItem
 from .navigation import NavigationSection
-from .tabs import TabConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,6 @@ class UnfoldTheme(BaseModel):
     sidebar: UnfoldSidebar = Field(default_factory=UnfoldSidebar, description="Sidebar config")
 
     # Dashboard
-    dashboard_callback: Optional[str] = Field(None, description="Dashboard callback function")
     environment_callback: Optional[str] = Field(None, description="Environment callback function")
 
     # Navigation
@@ -115,11 +113,11 @@ class UnfoldTheme(BaseModel):
             # Project has custom navigation - add it first
             nav_items.extend([group.to_dict() for group in self.navigation])
 
-        # Add default navigation from dashboard manager
+        # Add default navigation from navigation manager
         try:
-            from ..dashboard import DashboardManager
-            dashboard = DashboardManager()
-            default_nav_items = dashboard.get_navigation_config()
+            from ..navigation import NavigationManager
+            nav_manager = NavigationManager()
+            default_nav_items = nav_manager.get_navigation_config()
             nav_items.extend(default_nav_items)
         except ImportError:
             pass
@@ -139,10 +137,6 @@ class UnfoldTheme(BaseModel):
         # Site dropdown menu
         if self.site_dropdown:
             settings["SITE_DROPDOWN"] = [item.to_dict() for item in self.site_dropdown]
-
-        # Dashboard callback
-        if self.dashboard_callback:
-            settings["DASHBOARD_CALLBACK"] = self.dashboard_callback
 
         # Environment callback
         if self.environment_callback:
@@ -224,11 +218,6 @@ class UnfoldConfig(BaseModel):
         description="Enable custom dashboard"
     )
 
-    dashboard_callback: Optional[str] = Field(
-        default="django_cfg.routing.callbacks.dashboard_callback",
-        description="Dashboard callback function path"
-    )
-
     environment_callback: Optional[str] = Field(
         default="django_cfg.routing.callbacks.environment_callback",
         description="Environment callback function path"
@@ -288,12 +277,6 @@ class UnfoldConfig(BaseModel):
     site_dropdown_items: List[Dict[str, Any]] = Field(
         default_factory=list,
         description="Site dropdown menu items (legacy)"
-    )
-
-    # Tab configurations
-    tab_configurations: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="Tab configurations for admin"
     )
 
     @field_validator('theme')
@@ -441,9 +424,6 @@ class UnfoldConfig(BaseModel):
         }
 
         # Add callbacks if configured
-        if self.dashboard_callback:
-            unfold_settings["DASHBOARD_CALLBACK"] = self.dashboard_callback
-
         if self.environment_callback:
             unfold_settings["ENVIRONMENT"] = self.environment_callback
 
@@ -459,11 +439,11 @@ class UnfoldConfig(BaseModel):
             """Generate navigation - called when Django is ready, not during settings init."""
             nav_items = []
 
-            # Get default navigation from dashboard manager first
+            # Get default navigation from navigation manager first
             try:
-                from ..dashboard import DashboardManager
-                dashboard = DashboardManager()
-                nav_items = dashboard.get_navigation_config()
+                from ..navigation import NavigationManager
+                nav_manager = NavigationManager()
+                nav_items = nav_manager.get_navigation_config()
             except Exception:
                 pass
 
@@ -514,10 +494,10 @@ class UnfoldConfig(BaseModel):
         # Add site dropdown - combine default from dashboard + project dropdown
         dropdown_items = []
 
-        # First add default dropdown from dashboard manager
+        # First add default dropdown items
         try:
-            from ..dashboard import DashboardManager
-            dropdown_items.extend(DashboardManager._get_default_dropdown_items())
+            from django_cfg.config import get_default_dropdown_items
+            dropdown_items.extend([item.to_dict() for item in get_default_dropdown_items()])
         except (ImportError, Exception):
             pass
 
@@ -529,10 +509,6 @@ class UnfoldConfig(BaseModel):
 
         if dropdown_items:
             unfold_settings["SITE_DROPDOWN"] = dropdown_items
-
-        # Add tabs if configured
-        if self.tab_configurations:
-            unfold_settings["TABS"] = self.tab_configurations
 
         # Command interface - Enhanced for better UX
         unfold_settings["COMMAND"] = {
@@ -586,7 +562,6 @@ class UnfoldDashboardConfig(BaseModel):
     show_theme_switcher: bool = Field(default=True, description="Show theme switcher (requires theme=None)")
 
     # Callbacks
-    dashboard_callback: Optional[str] = Field(None, description="Dashboard callback path")
     environment_callback: Optional[str] = Field(None, description="Environment callback path")
 
     # Navigation configuration
@@ -599,12 +574,6 @@ class UnfoldDashboardConfig(BaseModel):
     site_dropdown_items: List[SiteDropdownItem] = Field(
         default_factory=list,
         description="Site dropdown items"
-    )
-
-    # Tab configurations
-    tab_configurations: List[TabConfiguration] = Field(
-        default_factory=list,
-        description="Tab configurations"
     )
 
     def to_unfold_dict(self) -> Dict[str, Any]:
@@ -630,9 +599,6 @@ class UnfoldDashboardConfig(BaseModel):
             base_config["THEME"] = self.theme
 
         # Add callbacks if configured
-        if self.dashboard_callback:
-            base_config["DASHBOARD_CALLBACK"] = self.dashboard_callback
-
         if self.environment_callback:
             base_config["ENVIRONMENT"] = self.environment_callback
 
@@ -652,25 +618,5 @@ class UnfoldDashboardConfig(BaseModel):
         # Convert site dropdown
         if self.site_dropdown_items:
             base_config["SITE_DROPDOWN"] = [item.to_dict() for item in self.site_dropdown_items]
-
-        # Convert tabs
-        if self.tab_configurations:
-            tabs = []
-            for tab in self.tab_configurations:
-                tab_items = []
-                for item in tab.items:
-                    tab_item = {
-                        "title": item.title,
-                        "link": item.get_link_for_unfold() if hasattr(item, 'get_link_for_unfold') else item.link,
-                    }
-                    if item.permission:
-                        tab_item["permission"] = item.permission
-                    tab_items.append(tab_item)
-
-                tabs.append({
-                    "models": tab.models,
-                    "items": tab_items,
-                })
-            base_config["TABS"] = tabs
 
         return base_config

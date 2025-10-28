@@ -203,7 +203,9 @@ export class APIClient {
       headers?: Record<string, string>;
     }
   ): Promise<T> {
-    const url = new URL(path, this.baseUrl);
+    // Build URL - handle both absolute and relative paths
+    // When baseUrl is empty (static builds), path is used as-is (relative to current origin)
+    const url = this.baseUrl ? `${this.baseUrl}${path}` : path;
     const startTime = Date.now();
 
     // Build headers - start with custom headers from options
@@ -223,7 +225,7 @@ export class APIClient {
     if (this.logger) {
       this.logger.logRequest({
         method,
-        url: url.toString(),
+        url: url,
         headers,
         body: options?.formData || options?.body,
         timestamp: startTime,
@@ -234,7 +236,7 @@ export class APIClient {
       // Make request via HTTP adapter
       const response = await this.httpClient.request<T>({
         method,
-        url: url.toString(),
+        url: url,
         headers,
         params: options?.params,
         body: options?.body,
@@ -249,7 +251,7 @@ export class APIClient {
           response.status,
           response.statusText,
           response.data,
-          url.toString()
+          url
         );
 
         // Log error
@@ -257,7 +259,7 @@ export class APIClient {
           this.logger.logError(
             {
               method,
-              url: url.toString(),
+              url: url,
               headers,
               body: options?.formData || options?.body,
               timestamp: startTime,
@@ -279,7 +281,7 @@ export class APIClient {
         this.logger.logResponse(
           {
             method,
-            url: url.toString(),
+            url: url,
             headers,
             body: options?.formData || options?.body,
             timestamp: startTime,
@@ -305,15 +307,15 @@ export class APIClient {
 
       // Wrap other errors as NetworkError
       const networkError = error instanceof Error
-        ? new NetworkError(error.message, url.toString(), error)
-        : new NetworkError('Unknown error', url.toString());
+        ? new NetworkError(error.message, url, error)
+        : new NetworkError('Unknown error', url);
 
       // Log network error
       if (this.logger) {
         this.logger.logError(
           {
             method,
-            url: url.toString(),
+            url: url,
             headers,
             body: options?.formData || options?.body,
             timestamp: startTime,

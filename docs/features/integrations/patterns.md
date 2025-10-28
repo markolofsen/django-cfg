@@ -182,11 +182,7 @@ class UnfoldIntegration:
     def _configure_dashboard_integration(dashboard: "DashboardConfig") -> Dict[str, Any]:
         """Configure dashboard integration with Unfold"""
         config = {}
-        
-        # Dashboard callback
-        if dashboard.stats_callbacks:
-            config['DASHBOARD_CALLBACK'] = 'django_cfg.integrations.unfold.dashboard_callback'
-        
+
         # Navigation configuration
         if dashboard.navigation:
             config['NAVIGATION'] = [

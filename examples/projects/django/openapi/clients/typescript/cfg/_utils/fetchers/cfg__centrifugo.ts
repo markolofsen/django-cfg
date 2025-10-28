@@ -35,20 +35,6 @@ import { getAPIInstance } from '../../api-instance'
  * API operation
  *
  * @method GET
- * @path /cfg/centrifugo/admin/api/monitor/channels/
- */
-export async function getCentrifugoAdminApiMonitorChannelsRetrieve(  client?: any
-): Promise<any> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo.adminApiMonitorChannelsRetrieve()
-  return response
-}
-
-
-/**
- * API operation
- *
- * @method GET
  * @path /cfg/centrifugo/monitor/channels/
  */
 export async function getCentrifugoMonitorChannelsRetrieve(  client?: any

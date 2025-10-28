@@ -272,7 +272,6 @@ enable_maintenance: bool = True
 unfold: UnfoldConfig = UnfoldConfig(
     site_title="My Admin",
     theme="auto",  # auto/light/dark
-    dashboard_callback="myapp.dashboard.callback",
 )
 ```
 
@@ -286,31 +285,24 @@ unfold: UnfoldConfig = UnfoldConfig(
 
 ---
 
-### 5. 📊 **Real-Time Dashboard**
+### 5. 📊 **Next.js Dashboard**
 
 **Problem**: Building executive dashboards takes **weeks**.
 
-**Solution**: **Built-in dashboard** with live metrics.
+**Solution**: **Modern Next.js dashboard** with REST API backend.
 
 ```python
-from django_cfg.apps.unfold.dashboard import DashboardManager, MetricCard
+# Automatic dashboard at /admin/ with built-in endpoints:
+# - /cfg/dashboard/api/statistics/ - User & app stats
+# - /cfg/dashboard/api/health/ - System health checks
+# - /cfg/dashboard/api/charts/ - Chart data
+# - /cfg/dashboard/api/commands/ - Django commands
 
-class MyDashboard(DashboardManager):
-    def get_dashboard_cards(self) -> list[MetricCard]:
-        return [
-            MetricCard(
-                title="Active Users",
-                value=self.get_active_users_count(),
-                trend="+12%",
-                icon="users"
-            ),
-            MetricCard(
-                title="Revenue (MTD)",
-                value=f"${self.get_monthly_revenue():,.2f}",
-                trend="+8.5%",
-                icon="dollar-sign"
-            ),
-        ]
+# Dashboard automatically displays:
+# - Real-time metrics
+# - System health
+# - Interactive charts
+# - Command execution
 ```
 
 **Displays**:

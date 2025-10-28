@@ -2218,6 +2218,9 @@ export const OPENAPI_SCHEMA = {
           "help": {
             "type": "string"
           },
+          "is_allowed": {
+            "type": "boolean"
+          },
           "is_core": {
             "type": "boolean"
           },
@@ -2225,6 +2228,9 @@ export const OPENAPI_SCHEMA = {
             "type": "boolean"
           },
           "name": {
+            "type": "string"
+          },
+          "risk_level": {
             "type": "string"
           }
         },
@@ -2234,6 +2240,64 @@ export const OPENAPI_SCHEMA = {
           "is_core",
           "is_custom",
           "name"
+        ],
+        "type": "object"
+      },
+      "CommandExecuteRequestRequest": {
+        "description": "Request serializer for command execution.",
+        "properties": {
+          "args": {
+            "description": "Positional arguments for the command",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "description": "Name of the Django management command",
+            "minLength": 1,
+            "type": "string"
+          },
+          "options": {
+            "additionalProperties": {},
+            "description": "Named options for the command (e.g., {\u0027verbosity\u0027: \u00272\u0027})",
+            "type": "object"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "type": "object"
+      },
+      "CommandHelpResponse": {
+        "description": "Response serializer for command help.",
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "help_text": {
+            "type": "string"
+          },
+          "is_allowed": {
+            "type": "boolean"
+          },
+          "risk_level": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "status"
         ],
         "type": "object"
       },
@@ -7982,845 +8046,6 @@ export const OPENAPI_SCHEMA = {
         "x-async-capable": false
       }
     },
-    "/cfg/centrifugo/admin/api/monitor/channels/": {
-      "get": {
-        "description": "Get statistics per channel.",
-        "operationId": "cfg_centrifugo_admin_api_monitor_channels_retrieve",
-        "responses": {
-          "200": {
-            "description": "No response body"
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "tags": [
-          "centrifugo"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/monitor/health/": {
-      "get": {
-        "description": "Returns the current health status of the Centrifugo client.",
-        "operationId": "cfg_centrifugo_admin_api_monitor_health_retrieve",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthCheck"
-                }
-              }
-            },
-            "description": ""
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Service unavailable"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get Centrifugo health status",
-        "tags": [
-          "Centrifugo Monitoring"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/monitor/overview/": {
-      "get": {
-        "description": "Returns overview statistics for Centrifugo publishes.",
-        "operationId": "cfg_centrifugo_admin_api_monitor_overview_retrieve",
-        "parameters": [
-          {
-            "description": "Statistics period in hours (default: 24)",
-            "in": "query",
-            "name": "hours",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OverviewStats"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid parameters"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get overview statistics",
-        "tags": [
-          "Centrifugo Monitoring"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/monitor/publishes/": {
-      "get": {
-        "description": "Returns a list of recent Centrifugo publishes with their details.",
-        "operationId": "cfg_centrifugo_admin_api_monitor_publishes_retrieve",
-        "parameters": [
-          {
-            "description": "Filter by channel name",
-            "in": "query",
-            "name": "channel",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Number of publishes to return (default: 50, max: 200)",
-            "in": "query",
-            "name": "count",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Offset for pagination (default: 0)",
-            "in": "query",
-            "name": "offset",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Filter by status (success, failed, timeout, pending, partial)",
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RecentPublishes"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid parameters"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get recent publishes",
-        "tags": [
-          "Centrifugo Monitoring"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/monitor/timeline/": {
-      "get": {
-        "description": "Returns statistics grouped by channel.",
-        "operationId": "cfg_centrifugo_admin_api_monitor_timeline_retrieve",
-        "parameters": [
-          {
-            "description": "Statistics period in hours (default: 24)",
-            "in": "query",
-            "name": "hours",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Time interval: \u0027hour\u0027 or \u0027day\u0027 (default: hour)",
-            "in": "query",
-            "name": "interval",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChannelList"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid parameters"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get channel statistics",
-        "tags": [
-          "Centrifugo Monitoring"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/server/auth/token/": {
-      "post": {
-        "description": "Returns JWT token and config for WebSocket connection to Centrifugo.",
-        "operationId": "cfg_centrifugo_admin_api_server_auth_token_create",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "config": {
-                      "properties": {
-                        "centrifugo_url": {
-                          "type": "string"
-                        },
-                        "expires_at": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "token": {
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Centrifugo not configured"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get connection token for dashboard",
-        "tags": [
-          "Centrifugo Admin API"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/server/channels/": {
-      "post": {
-        "description": "Returns list of active channels with optional pattern filter.",
-        "operationId": "cfg_centrifugo_admin_api_server_channels_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoChannelsRequestRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CentrifugoChannelsResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "List active channels",
-        "tags": [
-          "Centrifugo Admin API"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/server/history/": {
-      "post": {
-        "description": "Returns message history for a channel.",
-        "operationId": "cfg_centrifugo_admin_api_server_history_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoHistoryRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CentrifugoHistoryResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get channel history",
-        "tags": [
-          "Centrifugo Admin API"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/server/info/": {
-      "post": {
-        "description": "Returns server information including node count, version, and uptime.",
-        "operationId": "cfg_centrifugo_admin_api_server_info_create",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CentrifugoInfoResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get Centrifugo server info",
-        "tags": [
-          "Centrifugo Admin API"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/server/presence-stats/": {
-      "post": {
-        "description": "Returns quick statistics about channel presence (num_clients, num_users).",
-        "operationId": "cfg_centrifugo_admin_api_server_presence_stats_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoPresenceStatsRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CentrifugoPresenceStatsResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get channel presence statistics",
-        "tags": [
-          "Centrifugo Admin API"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/server/presence/": {
-      "post": {
-        "description": "Returns list of clients currently subscribed to a channel.",
-        "operationId": "cfg_centrifugo_admin_api_server_presence_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/CentrifugoPresenceRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CentrifugoPresenceResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Get channel presence",
-        "tags": [
-          "Centrifugo Admin API"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/testing/connection-token/": {
-      "post": {
-        "description": "Generate JWT token for WebSocket connection to Centrifugo.",
-        "operationId": "cfg_centrifugo_admin_api_testing_connection_token_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/ConnectionTokenRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConnectionTokenResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid request"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Generate connection token",
-        "tags": [
-          "Centrifugo Testing"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/testing/publish-test/": {
-      "post": {
-        "description": "Publish test message to Centrifugo via wrapper with optional ACK tracking.",
-        "operationId": "cfg_centrifugo_admin_api_testing_publish_test_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishTestRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishTestRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishTestRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublishTestResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid request"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Publish test message",
-        "tags": [
-          "Centrifugo Testing"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/testing/publish-with-logging/": {
-      "post": {
-        "description": "Publish message using CentrifugoClient with database logging. This will create CentrifugoLog records.",
-        "operationId": "cfg_centrifugo_admin_api_testing_publish_with_logging_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishTestRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishTestRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishTestRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublishTestResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid request"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Publish with database logging",
-        "tags": [
-          "Centrifugo Testing"
-        ],
-        "x-async-capable": false
-      }
-    },
-    "/cfg/centrifugo/admin/api/testing/send-ack/": {
-      "post": {
-        "description": "Manually send ACK for a message to the wrapper. Pass message_id in request body.",
-        "operationId": "cfg_centrifugo_admin_api_testing_send_ack_create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ManualAckRequestRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/ManualAckRequestRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/ManualAckRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ManualAckResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Invalid request"
-                }
-              }
-            },
-            "description": ""
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Server error"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "summary": "Send manual ACK",
-        "tags": [
-          "Centrifugo Testing"
-        ],
-        "x-async-capable": false
-      }
-    },
     "/cfg/centrifugo/monitor/channels/": {
       "get": {
         "description": "Get statistics per channel.",
@@ -9934,6 +9159,9 @@ export const OPENAPI_SCHEMA = {
         },
         "security": [
           {
+            "jwtAuth": []
+          },
+          {
             "cookieAuth": []
           },
           {
@@ -9941,6 +9169,80 @@ export const OPENAPI_SCHEMA = {
           }
         ],
         "summary": "Get all commands",
+        "tags": [
+          "Dashboard - Commands"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/commands/execute/": {
+      "post": {
+        "description": "Execute a Django management command and stream output in Server-Sent Events format",
+        "operationId": "cfg_dashboard_api_commands_execute_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandExecuteRequestRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandExecuteRequestRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandExecuteRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Command execution started (SSE stream)"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid request"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Command not allowed"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Execute command",
         "tags": [
           "Dashboard - Commands"
         ],
@@ -9965,6 +9267,9 @@ export const OPENAPI_SCHEMA = {
         },
         "security": [
           {
+            "jwtAuth": []
+          },
+          {
             "cookieAuth": []
           },
           {
@@ -9972,6 +9277,50 @@ export const OPENAPI_SCHEMA = {
           }
         ],
         "summary": "Get commands summary",
+        "tags": [
+          "Dashboard - Commands"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/cfg/dashboard/api/commands/{id}/help/": {
+      "get": {
+        "description": "Get detailed help text for a specific Django management command",
+        "operationId": "cfg_dashboard_api_commands_help_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandHelpResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Get command help",
         "tags": [
           "Dashboard - Commands"
         ],
