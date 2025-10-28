@@ -13,10 +13,17 @@ import type { RouteDefinition, RouteMetadata, MenuItem, BreadcrumbItem } from '.
 
 /**
  * Define a route with automatic basePath injection
+ *
+ * NOTE: For static builds, Next.js automatically prepends basePath to <Link> hrefs,
+ * so we don't add it here. For dev mode, we need to add it manually.
  */
 export function defineRoute(path: string, metadata: RouteMetadata): RouteDefinition {
+  // In static builds, Next.js handles basePath automatically
+  // In dev mode, we need to add it manually for consistency
+  const fullPath = settings.isStaticBuild ? path : `${settings.basePath}${path}`;
+
   return {
-    path: `${settings.basePath}${path}`,
+    path: fullPath,
     metadata,
   };
 }
@@ -44,13 +51,15 @@ export function isAuthRoute(path: string): boolean {
 
 export function getUnauthenticatedRedirect(path: string): string | null {
   if (isPrivateRoute(path) || isAdminRoute(path)) {
-    return `${settings.basePath}/auth`;
+    // In static builds, Next.js handles basePath automatically
+    return settings.isStaticBuild ? '/auth' : `${settings.basePath}/auth`;
   }
   return null;
 }
 
 export function redirectToAuth(): string {
-  return `${settings.basePath}/auth`;
+  // In static builds, Next.js handles basePath automatically
+  return settings.isStaticBuild ? '/auth' : `${settings.basePath}/auth`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -115,7 +124,9 @@ export function generateBreadcrumbs(
   currentPath: string,
   options: { homeLabel?: string; homePath?: string; includeHome?: boolean } = {}
 ): BreadcrumbItem[] {
-  const { homeLabel = 'Home', homePath = '/', includeHome = true } = options;
+  // In static builds, Next.js handles basePath automatically
+  const defaultHomePath = settings.isStaticBuild ? '/' : settings.basePath || '/';
+  const { homeLabel = 'Home', homePath = defaultHomePath, includeHome = true } = options;
   const breadcrumbs: BreadcrumbItem[] = [];
 
   if (includeHome && currentPath !== homePath) {

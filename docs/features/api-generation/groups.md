@@ -183,16 +183,8 @@ Each group gets its own OpenAPI schema URL:
 
 ```
 /schema/core/schema/         # OpenAPI JSON
-/schema/core/swagger/        # Swagger UI
-/schema/core/redoc/          # Redoc documentation
-
-/schema/shop/schema/
-/schema/shop/swagger/
-/schema/shop/redoc/
-
-/schema/content/schema/
-/schema/content/swagger/
-/schema/content/redoc/
+/schema/shop/schema/         # OpenAPI JSON
+/schema/content/schema/      # OpenAPI JSON
 ```
 
 ## Examples
@@ -516,7 +508,17 @@ urlpatterns = add_django_cfg_urls(urlpatterns)
 
 ### drf-spectacular Configuration
 
-Django-CFG automatically configures `drf-spectacular` for each group based on your `openapi_client` settings.
+Django-CFG automatically configures `drf-spectacular` for each group based on your `openapi_client` settings:
+
+```python
+# Automatic configuration from openapi_client settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': config.openapi_client.drf_title,
+    'DESCRIPTION': config.openapi_client.drf_description,
+    'VERSION': config.openapi_client.drf_version,
+    # ... other settings auto-configured
+}
+```
 
 ## Next Steps
 
@@ -525,5 +527,5 @@ Django-CFG automatically configures `drf-spectacular` for each group based on yo
 - **[Django Client Module](/features/modules/django-client/overview)** - Deep dive
 
 :::tip Group Testing
-Access `/schema/{group}/swagger/` to test your group's API interactively in Swagger UI before generating clients.
+Access `/schema/{group}/schema/` to download your group's OpenAPI schema before generating clients.
 :::

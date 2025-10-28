@@ -347,33 +347,45 @@ report = Report.objects.create(...)  # Automatically goes to analytics_db
 
 **Problem**: API documentation takes **hours of manual setup**.
 
-**Solution**: **OpenAPI/Swagger** generated automatically.
+**Solution**: **OpenAPI/TypeScript** clients generated automatically.
 
 ```python
 openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
-    api_prefix="api/v2",
-    zones={
-        "public": OpenAPIGroupConfig(
-            apps=["blog", "products"],
-            title="Public API",
-            public=True,
+    enabled=True,
+    generate_package_files=True,
+    generate_zod_schemas=True,
+    generate_fetchers=True,
+    generate_swr_hooks=True,
+    api_prefix="api",
+    output_dir="openapi",
+    drf_title="My App API",
+    drf_description="Complete API documentation",
+    drf_version="1.0.0",
+    groups=[
+        OpenAPIGroupConfig(
+            name="profiles",
+            apps=["apps.profiles"],
+            title="Profiles API",
+            description="User profiles management",
+            version="1.0.0",
         ),
-        "partner": OpenAPIGroupConfig(
-            apps=["integrations"],
-            title="Partner API",
-            auth_required=True,
-            rate_limit="1000/hour",
+        OpenAPIGroupConfig(
+            name="trading",
+            apps=["apps.trading"],
+            title="Trading API",
+            description="Trading operations",
+            version="1.0.0",
         ),
-    }
+    ],
 )
 ```
 
 **Automatically provides**:
-- ✅ `/api/public/docs/` - Swagger UI
-- ✅ `/api/public/redoc/` - ReDoc
-- ✅ **Auto-generated TypeScript** clients
+- ✅ **Auto-generated TypeScript** clients with Zod validation
 - ✅ **Auto-generated Python** clients
-- ✅ **Zone-based architecture**
+- ✅ **SWR hooks** for React/Next.js
+- ✅ **Type-safe fetchers** with error handling
+- ✅ **Group-based architecture** for API organization
 
 ---
 
@@ -586,7 +598,8 @@ response = client.chat_completion([
 | **Multi-Database** | 2-3 days | DatabaseConfig | **95% faster** |
 | **Background Tasks** | 2-3 days | Built-in | **95% faster** |
 | **Modern Admin** | 1-2 weeks | Out of box | **99% faster** |
-| **API Documentation** | 1 week | Auto-generated | **99% faster** |
+| **Next.js Admin** | 2-3 weeks | 1 config line | **99% faster** |
+| **API TypeScript Clients** | 1 week | Auto-generated | **99% faster** |
 | **Newsletter System** | 2-3 weeks | 1 config line | **99% faster** |
 | **Lead Management** | 2-3 weeks | 1 config line | **99% faster** |
 | **AI Agents** | 3-4 weeks | Built-in framework | **95% faster** |

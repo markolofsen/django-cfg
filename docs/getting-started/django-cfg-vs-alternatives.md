@@ -41,7 +41,11 @@ import { TechArticleSchema, FAQPageSchema } from '@site/src/components/Schema';
     },
     {
       question: 'Is Django-CFG better than pydantic-settings?',
-      answer: 'Yes, Django-CFG is built specifically for Django and includes Django ORM integration, automatic INSTALLED_APPS/MIDDLEWARE configuration, and 9 production-ready apps. Pydantic-settings is a generic library without Django-specific optimizations.'
+      answer: 'Yes, Django-CFG is built specifically for Django and includes Django ORM integration, automatic INSTALLED_APPS/MIDDLEWARE configuration, built-in Next.js admin integration, and 9 production-ready apps. Pydantic-settings is a generic library without Django-specific optimizations.'
+    },
+    {
+      question: 'Does Django-CFG include a modern admin interface?',
+      answer: 'Yes! Django-CFG is the only Django configuration library with built-in Next.js admin integration. You get three-in-one architecture (public site + user dashboard + admin panel) and dual admin strategy (Django Unfold for 90% CRUD + Next.js for 10% complex features) with zero configuration.'
     }
   ]}
 />
@@ -54,7 +58,8 @@ import { TechArticleSchema, FAQPageSchema } from '@site/src/components/Schema';
 **Bottom Line**: Choose based on your needs:
 - **Simple projects** (< 10 config values): django-environ or python-decouple
 - **Production applications** (type safety critical): Django-CFG or pydantic-settings
-- **Django-specific features** (built-in apps, agents): Django-CFG (only option)
+- **Django-specific features** (built-in apps, Next.js admin, AI agents): Django-CFG (only option)
+- **Modern admin interfaces** (React-based dashboards): Django-CFG (built-in Next.js integration)
 
 TAGS: comparison, alternatives, decision-guide, django-environ, pydantic-settings, python-decouple
 DEPENDS_ON: [django, pydantic, configuration-management]
@@ -72,6 +77,7 @@ USED_BY: [developers, tech-leads, architects]
 | **Django Integration** | ✅ Native | ⚠️ Partial | ❌ Generic | ❌ Generic | ✅ Native |
 | **Nested Config** | ✅ Models | ❌ Flat | ❌ Flat | ✅ Models | ⚠️ Dicts |
 | **Built-in Apps** | ✅ 9 apps | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Next.js Admin** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **AI Agents** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Multi-DB Routing** | ✅ Automatic | ❌ Manual | ❌ Manual | ❌ Manual | ⚠️ Manual |
 | **Lines of Code** | ✅ 30-50 | ⚠️ 150-200 | ⚠️ 150-200 | ⚠️ 100-150 | ❌ 200-500+ |
@@ -265,6 +271,237 @@ class MyConfig(DjangoConfig):
 ```
 
 **Migration time**: 1-2 days for typical project
+
+---
+
+## Built-in Next.js Admin Integration
+
+### The Django-CFG Advantage: Modern Admin Out of the Box
+
+One of Django-CFG's **unique features** that no other configuration library provides: **built-in Next.js admin integration** with zero configuration.
+
+**What you get**:
+- 🌐 **Three-in-One Architecture** - Public website + User dashboard + Admin panel in ONE Next.js project
+- ⚙️ **Dual Admin Strategy** - Django Unfold for quick CRUD (90%) + Next.js for complex features (10%)
+- ✨ **Zero Configuration** - One line of config, everything auto-detected
+- 🔐 **Auto JWT Authentication** - Token injection into Next.js iframe automatically
+- 🎨 **Theme Synchronization** - Dark/light mode synced across all interfaces
+- 📦 **Auto TypeScript Generation** - API clients from Django models
+- 🚀 **ZIP Deployment** - ~7MB vs ~20MB uncompressed (60% smaller Docker images)
+- ⚡ **Hot Reload Dev Mode** - Auto-detection of dev servers on ports 3000/3001
+
+---
+
+### Code Comparison: Admin Setup
+
+**Without Django-CFG** (Manual Setup):
+```python
+# settings.py - Traditional approach
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'corsheaders',  # Need to install
+    'rest_framework',  # Need to install
+    'rest_framework_simplejwt',  # Need to install
+    # ... manual configuration
+]
+
+# Manual CORS setup
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://yourdomain.com"
+]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# Manual JWT setup
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+# Manual static files for Next.js build
+STATICFILES_DIRS = [
+    BASE_DIR / 'nextjs_build/out',
+]
+
+# Then manually:
+# 1. Set up Next.js project structure
+# 2. Configure API routes
+# 3. Write TypeScript interfaces manually
+# 4. Set up authentication flow
+# 5. Handle theme synchronization
+# 6. Configure build pipeline
+# 7. Set up deployment
+
+# Total: 200+ lines + multiple hours of setup
+```
+
+**With Django-CFG** (One Line):
+```python
+# config.py
+from django_cfg import DjangoConfig, NextJsAdminConfig
+
+class MyConfig(DjangoConfig):
+    project_name = "My Project"
+
+    # That's it! One line for full Next.js admin:
+    nextjs_admin = NextJsAdminConfig(
+        project_path="../django_admin",
+    )
+
+# Everything else is automatic:
+# ✅ JWT authentication configured
+# ✅ CORS settings auto-generated
+# ✅ Theme sync enabled
+# ✅ Static files configured
+# ✅ TypeScript generation ready
+# ✅ Dev mode auto-detection
+# ✅ Production ZIP deployment
+
+# Total: 1 line + zero manual setup
+```
+
+---
+
+### Three-in-One Architecture
+
+**Traditional approach** requires 3 separate projects:
+
+```
+my-project/
+├── django-backend/        # Django API
+├── public-website/        # Landing pages (separate Next.js)
+├── user-dashboard/        # User features (separate Next.js)
+└── admin-panel/           # Admin UI (separate Next.js or Django admin)
+
+Problems:
+❌ 4 separate codebases to maintain
+❌ Duplicate components and logic
+❌ Multiple deployment pipelines
+❌ Inconsistent styling and UX
+❌ Complex authentication across projects
+```
+
+**Django-CFG approach** - ONE Next.js project:
+
+```
+my-project/
+├── django/                # Django backend + config
+└── admin/                 # ONE Next.js project for everything
+    ├── app/
+    │   ├── (public)/      # Public website (/)
+    │   ├── private/       # User dashboard (/private)
+    │   └── admin/         # Admin panel (/admin)
+    ├── components/        # Shared components
+    ├── lib/              # Shared utilities
+    └── api/              # Auto-generated TypeScript clients
+
+Benefits:
+✅ Single codebase, shared components
+✅ Consistent design system
+✅ One deployment pipeline
+✅ Unified authentication
+✅ Easy code reuse
+```
+
+---
+
+### Dual Admin Strategy: 90/10 Rule
+
+**The Problem**: Django admin is great for CRUD but limited for complex features. Full React admin is powerful but overkill for simple tasks.
+
+**Django-CFG Solution**: Best of both worlds with **dual admin tabs**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Django Admin (Unfold)                     │
+│                                                               │
+│  [Tab 1: Built-in]           [Tab 2: Next.js Admin]         │
+│  ┌──────────────────┐        ┌────────────────────┐         │
+│  │ Quick CRUD       │        │ Complex Features    │         │
+│  │ • Users          │        │ • Analytics         │         │
+│  │ • Posts          │        │ • Real-time data    │         │
+│  │ • Settings       │        │ • Custom workflows  │         │
+│  │ (Django Unfold)  │        │ (React + Charts)    │         │
+│  └──────────────────┘        └────────────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Usage pattern**:
+- **90% of tasks** → Tab 1 (Built-in) - Quick CRUD operations with Django Unfold
+- **10% of tasks** → Tab 2 (Next.js) - Complex dashboards, analytics, custom workflows
+
+**No migration needed** - start with built-in admin, add Next.js features as needed!
+
+---
+
+### Auto TypeScript Generation
+
+```bash
+# One command generates everything:
+python manage.py generate_clients --typescript
+
+# Output:
+# ✅ Generated TypeScript clients from Django models
+# ✅ Copied to Next.js project
+# ✅ Built Next.js static export
+# ✅ Created ZIP archive (~7MB)
+
+# Use in Next.js:
+import { CfgClient } from '@/api/generated/cfg';
+
+const client = new CfgClient();
+const users = await client.users.list();  // Fully typed!
+```
+
+---
+
+### Why This Matters
+
+**Other configuration libraries** focus only on settings management. **Django-CFG** provides a complete modern Django + Next.js stack:
+
+| Feature | django-environ | pydantic-settings | Django-CFG |
+|---------|----------------|-------------------|------------|
+| **Admin Interface** | Django admin only | Django admin only | Django + Next.js dual admin |
+| **API Generation** | Manual | Manual | ✅ Auto TypeScript |
+| **Authentication** | Manual JWT setup | Manual JWT setup | ✅ Auto JWT injection |
+| **Theme Sync** | N/A | N/A | ✅ Built-in |
+| **Three-in-One** | N/A | N/A | ✅ Public + Private + Admin |
+| **Setup Time** | Hours | Hours | **5 minutes** |
+
+---
+
+### Real-World Use Case
+
+**Scenario**: You need an analytics dashboard with real-time charts, custom filters, and complex data visualization.
+
+**With django-environ or pydantic-settings**:
+1. Set up separate React/Next.js project ⏱️ 2 hours
+2. Configure CORS and authentication ⏱️ 3 hours
+3. Write API endpoints ⏱️ 4 hours
+4. Write TypeScript interfaces manually ⏱️ 2 hours
+5. Set up theme synchronization ⏱️ 2 hours
+6. Configure deployment pipeline ⏱️ 3 hours
+
+**Total: 16+ hours of work**
+
+**With Django-CFG**:
+1. Add one line: `nextjs_admin = NextJsAdminConfig(project_path="../admin")` ⏱️ 1 minute
+2. Run `python manage.py generate_clients --typescript` ⏱️ 2 minutes
+3. Create React component in `admin/app/admin/analytics/page.tsx` ⏱️ Your actual feature work
+
+**Total: 3 minutes setup + your feature work**
+
+---
+
+### Learn More
+
+See the complete [Next.js Admin Integration documentation](/features/integrations/nextjs-admin) for:
+- [Core Concepts](/features/integrations/nextjs-admin/concepts) - Three-in-One + Dual Admin philosophy
+- [Quick Start](/features/integrations/nextjs-admin/quick-start) - 5-minute setup guide
+- [Configuration](/features/integrations/nextjs-admin/configuration) - All options
+- [Examples](/features/integrations/nextjs-admin/examples) - Real-world patterns
 
 ---
 
@@ -719,11 +956,15 @@ Q3: Is this Django-only or multi-framework?
 ├─ Multi-framework → Use pydantic-settings
 └─ Django-only → Continue to Q4
 
-Q4: Do you want built-in apps or AI features?
+Q4: Do you need modern admin interfaces (React/Next.js)?
+├─ YES → Use Django-CFG ✅ (only option with built-in Next.js)
+└─ NO → Continue to Q5
+
+Q5: Do you want built-in apps or AI features?
 ├─ NO → Use pydantic-settings
 └─ YES → Use Django-CFG ✅
 
-Q5: Is your team comfortable with Pydantic?
+Q6: Is your team comfortable with Pydantic?
 ├─ NO → Use django-environ (simpler)
 └─ YES → Use Django-CFG ✅
 ```
@@ -748,7 +989,9 @@ Q5: Is your team comfortable with Pydantic?
 **Choose Django-CFG if you need**:
 - ✅ Type safety (Pydantic v2)
 - ✅ IDE autocomplete
+- ✅ **Next.js admin integration** (three-in-one + dual admin strategy)
 - ✅ Built-in apps (support, accounts, AI agents)
+- ✅ Auto TypeScript generation from Django models
 - ✅ Minimal configuration code
 - ✅ Django-specific optimizations
 - ✅ Automatic security settings
@@ -773,6 +1016,21 @@ Q5: Is your team comfortable with Pydantic?
 ---
 
 ## Frequently Asked Questions
+
+### Does Django-CFG include a modern admin interface?
+
+Yes! Django-CFG is the **only** Django configuration library with **built-in Next.js admin integration**:
+
+- **Three-in-One Architecture** - Public site + User dashboard + Admin panel in ONE Next.js project
+- **Dual Admin Strategy** - Django Unfold (90% quick CRUD) + Next.js (10% complex features)
+- **Zero Configuration** - One line: `nextjs_admin = NextJsAdminConfig(project_path="../admin")`
+- **Auto Features** - JWT auth, theme sync, TypeScript generation, ZIP deployment
+
+**Setup time**: 5 minutes vs 16+ hours manual setup with other libraries.
+
+See [Next.js Admin Integration docs](/features/integrations/nextjs-admin) for details.
+
+---
 
 ### Can I use Django-CFG with django-environ together?
 

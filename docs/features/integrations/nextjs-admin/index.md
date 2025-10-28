@@ -22,14 +22,35 @@ Django-CFG provides seamless integration for embedding custom Next.js admin dash
 
 ## Overview
 
-The Next.js Admin integration enables you to:
+**The all-in-one solution for Django + Next.js admin interfaces.**
 
-- **Dual Admin Interface** - Run both built-in Django Unfold admin and custom Next.js admin simultaneously
-- **Automatic API Generation** - Auto-generate TypeScript clients from your Django APIs
-- **Unified Authentication** - Share JWT tokens between Django and Next.js seamlessly
-- **Theme Synchronization** - Automatic dark/light mode sync between interfaces
-- **Docker-Ready Deployment** - ZIP-based packaging with auto-extraction on first request
-- **Development Hot Reload** - Full hot-reload support during development
+Django-CFG brings you a revolutionary approach: **three interfaces in ONE Next.js project** with **dual admin strategy** that combines the best of both worlds.
+
+### Three-in-One Architecture
+
+Build everything in a single Next.js codebase:
+- 🌐 **Public Website** (`/`) - Landing pages, marketing content
+- 👤 **User Dashboard** (`/private`) - User-specific features and data
+- ⚙️ **Admin Panel** (`/admin`) - Management interface with full React power
+
+**Shared components, shared layouts, shared API clients** - write once, use everywhere!
+
+### Dual Admin Strategy
+
+- **Tab 1: Built-in Admin** - Quick CRUD with Django Unfold (90% of tasks)
+- **Tab 2: Next.js Admin** - Unlimited customization with React (10% complex features)
+
+**No migration needed** - start simple, scale when needed!
+
+### Key Features
+
+- ✅ **Zero Configuration** - One line of config, smart defaults for everything
+- ✅ **Auto-Generated APIs** - TypeScript clients from Django models automatically
+- ✅ **Auto-Detected Dev Mode** - No env variables, Django detects dev servers (ports 3000/3001)
+- ✅ **JWT Authentication** - Seamless token injection, no setup required
+- ✅ **ZIP Deployment** - ~7MB single file vs ~20MB uncompressed (60% smaller Docker images)
+- ✅ **Hot Reload** - Full dev experience with instant feedback
+- ✅ **Theme Sync** - Dark/light mode synchronized across all interfaces
 
 ## Architecture
 
@@ -170,20 +191,33 @@ python manage.py runserver
 ## What's Next?
 
 <div className="row">
-  <div className="col col--6">
+  <div className="col col--4">
+    <div className="card">
+      <div className="card__header">
+        <h3>💡 Core Concepts</h3>
+      </div>
+      <div className="card__body">
+        <p>Understand the philosophy, three-in-one architecture, and dual admin strategy.</p>
+      </div>
+      <div className="card__footer">
+        <a href="./concepts" className="button button--primary button--block">Concepts →</a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--4">
     <div className="card">
       <div className="card__header">
         <h3>🚀 Quick Setup</h3>
       </div>
       <div className="card__body">
-        <p>Get your Next.js admin running in minutes with our quick setup guide.</p>
+        <p>Get your Next.js admin running in 5 minutes with our quick setup guide.</p>
       </div>
       <div className="card__footer">
         <a href="./quick-start" className="button button--primary button--block">Quick Start →</a>
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--4">
     <div className="card">
       <div className="card__header">
         <h3>⚙️ Configuration</h3>
@@ -192,30 +226,30 @@ python manage.py runserver
         <p>Learn about all configuration options and customization possibilities.</p>
       </div>
       <div className="card__footer">
-        <a href="./configuration" className="button button--primary button--block">Configuration →</a>
+        <a href="./configuration" className="button button--secondary button--block">Configure →</a>
       </div>
     </div>
   </div>
 </div>
 
-<div className="row">
-  <div className="col col--6">
+<div className="row margin-top--lg">
+  <div className="col col--4">
     <div className="card">
       <div className="card__header">
         <h3>🔧 How It Works</h3>
       </div>
       <div className="card__body">
-        <p>Understand the architecture and how components work together.</p>
+        <p>Deep dive into the technical architecture and implementation details.</p>
       </div>
       <div className="card__footer">
         <a href="./how-it-works" className="button button--secondary button--block">Learn More →</a>
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--4">
     <div className="card">
       <div className="card__header">
-        <h3>🚢 Production Deployment</h3>
+        <h3>🚢 Deployment</h3>
       </div>
       <div className="card__body">
         <p>Deploy your Next.js admin to production with Docker and best practices.</p>
@@ -225,15 +259,59 @@ python manage.py runserver
       </div>
     </div>
   </div>
+  <div className="col col--4">
+    <div className="card">
+      <div className="card__header">
+        <h3>💼 Examples</h3>
+      </div>
+      <div className="card__body">
+        <p>Real-world examples and patterns for common use cases and integrations.</p>
+      </div>
+      <div className="card__footer">
+        <a href="./examples" className="button button--secondary button--block">Examples →</a>
+      </div>
+    </div>
+  </div>
 </div>
+
+## Why django-cfg Next.js Integration?
+
+### vs Django Unfold
+- ✅ **Both included** - Keep Unfold for quick CRUD, add Next.js for complex features
+- ✅ **No ceiling** - When Unfold limitations hit, switch to Tab 2 with full React power
+- ✅ **Progressive** - Start simple, scale without migration
+
+### vs React Admin
+- ✅ **Zero setup** - One line of config vs complex setup
+- ✅ **Built-in + Custom** - Best of both worlds, not just custom
+- ✅ **Auto-generated** - TypeScript clients from Django automatically
+
+### vs Retool
+- ✅ **Free & Open Source** - No $$$$ monthly fees
+- ✅ **Your code** - Full control, no lock-in
+- ✅ **Self-hosted** - Your infrastructure, your data
+
+### The django-cfg Way
+
+```python
+# Literally one line:
+nextjs_admin=NextJsAdminConfig(project_path="../admin")
+```
+
+**That's it!** Everything else just works 🎉
 
 ## Resources
 
-- [Configuration Reference](./configuration)
-- [API Generation](./api-generation)
-- [Troubleshooting Guide](./troubleshooting)
-- [Examples](./examples)
+- [Core Concepts](./concepts) - Philosophy and architecture
+- [Configuration Reference](./configuration) - All options
+- [API Generation](./api-generation) - Auto-generate TypeScript
+- [Troubleshooting Guide](./troubleshooting) - Common issues
+- [Examples](./examples) - Real-world patterns
 
-:::tip Pro Tip
-Start with the minimal configuration and customize only what you need. The smart defaults are designed to work for most use cases.
+:::tip The Magic Formula
+**One Next.js project** = Public site + User dashboard + Admin panel
+
+**Dual admin strategy** = Quick CRUD (Unfold) + Unlimited power (Next.js)
+
+**Zero configuration** = Smart defaults + Auto-detection
 :::

@@ -79,7 +79,27 @@
 {% block content %}
     <!-- Main Container -->
     {% component "unfold/components/container.html" %}
-        <div x-data="{ activeTab: 'builtin' }">
+        <div x-data="{
+            activeTab: 'builtin',
+            previousTab: 'builtin',
+            switchTab(tab) {
+                if (this.previousTab !== tab) {
+                    // Reset iframe to initial URL when switching tabs
+                    this.resetIframe(this.previousTab);
+                    this.previousTab = tab;
+                }
+                this.activeTab = tab;
+            },
+            resetIframe(tab) {
+                // Reset the iframe that was just hidden
+                const iframeId = tab === 'builtin' ? 'nextjs-dashboard-iframe-builtin' : 'nextjs-dashboard-iframe-nextjs';
+                const iframe = document.getElementById(iframeId);
+                if (iframe) {
+                    const originalSrc = iframe.getAttribute('data-original-src') || iframe.src;
+                    iframe.src = originalSrc;
+                }
+            }
+        }">
             {% if is_frontend_dev_mode %}
             <!-- Development Mode Badge -->
             <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 mb-4" role="alert">
@@ -106,7 +126,7 @@
                         }
                     </style>
                     <nav class="-mb-px flex space-x-8 px-4" aria-label="Dashboard Tabs">
-                        <button @click="activeTab = 'builtin'"
+                        <button @click="switchTab('builtin')"
                                 class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
                                 :class="activeTab === 'builtin'
                                     ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
@@ -115,7 +135,7 @@
                             <span>Built-in Dashboard</span>
                         </button>
 
-                        <button @click="activeTab = 'nextjs'"
+                        <button @click="switchTab('nextjs')"
                                 class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
                                 :class="activeTab === 'nextjs'
                                     ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
@@ -140,6 +160,7 @@
                         id="nextjs-dashboard-iframe-builtin"
                         class="nextjs-dashboard-iframe"
                         src="{% nextjs_admin_url %}"
+                        data-original-src="{% nextjs_admin_url %}"
                         title="Next.js Dashboard"
                         sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
                         scrolling="no"
@@ -160,6 +181,7 @@
                         id="nextjs-dashboard-iframe-nextjs"
                         class="nextjs-dashboard-iframe nextjs-external-iframe"
                         src="{% nextjs_external_admin_url %}"
+                        data-original-src="{% nextjs_external_admin_url %}"
                         title="{% nextjs_external_admin_title %}"
                         sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
                         scrolling="no"
@@ -225,22 +247,62 @@
 
                 // Debounce timer for resize events (prevents jittery iframe height changes)
                 let resizeTimer = null;
+                let loadTimeout = null;
 
                 // iframe load event
                 iframe.addEventListener('load', function() {
+                    // Clear the fallback timeout
+                    if (loadTimeout) {
+                        clearTimeout(loadTimeout);
+                        loadTimeout = null;
+                    }
+
                     setTimeout(() => {
                         sendDataToIframe();
                     }, 100);
                 });
 
-                // Fallback: Show iframe after 5 seconds
-                setTimeout(() => {
-                    if (!iframe.classList.contains('loaded')) {
+                // iframe error event - fallback to static files
+                iframe.addEventListener('error', function() {
+                    console.warn('[Django-CFG] iframe failed to load, falling back to static files');
+                    handleLoadFailure();
+                });
+
+                // Timeout fallback - if iframe doesn't load in 3 seconds
+                loadTimeout = setTimeout(() => {
+                    if (!iframe.classList.contains('loaded') && isDevMode) {
+                        console.warn('[Django-CFG] Dev server timeout, falling back to static files');
+                        handleLoadFailure();
+                    } else if (!iframe.classList.contains('loaded')) {
                         console.log('[Django-CFG] Timeout - showing iframe anyway');
                         if (loading) loading.classList.add('hidden');
                         iframe.classList.add('loaded');
                     }
-                }, 5000);
+                }, 3000);
+
+                // Handle load failure - switch to static files
+                function handleLoadFailure() {
+                    if (!isDevMode) return; // Already using static files
+
+                    const originalSrc = iframe.getAttribute('data-original-src');
+                    if (!originalSrc) return;
+
+                    // Extract path from dev server URL
+                    const devUrl = new URL(originalSrc);
+                    const pathPart = devUrl.pathname.replace('/admin', '').replace(/^\//, '');
+
+                    // Build static files URL
+                    const staticUrl = `/cfg/admin/admin/${pathPart}`;
+
+                    console.log('[Django-CFG] Switching to static files:', staticUrl);
+                    iframe.src = staticUrl;
+
+                    // Show iframe after switching
+                    setTimeout(() => {
+                        if (loading) loading.classList.add('hidden');
+                        iframe.classList.add('loaded');
+                    }, 500);
+                }
 
                 // Send theme and auth data to iframe
                 function sendDataToIframe() {

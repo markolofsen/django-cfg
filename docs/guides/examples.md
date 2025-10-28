@@ -209,35 +209,48 @@ class CustomStatisticsService(StatisticsService):
 
 ## 📚 API Documentation Examples
 
-Auto-generated OpenAPI/Swagger documentation with zone-based architecture.
+Auto-generated OpenAPI documentation with TypeScript and Python clients.
 
-### Multi-Zone API Setup
+### Multi-Group API Setup
 ```python
 from django_cfg import OpenAPIClientConfig, OpenAPIGroupConfig
 
 class MyConfig(DjangoConfig):
     openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
-        api_prefix="api/v2",
-        zones={
-            "public": OpenAPIGroupConfig(
+        enabled=True,
+        generate_package_files=True,
+        generate_zod_schemas=True,
+        generate_fetchers=True,
+        generate_swr_hooks=True,
+        api_prefix="api",
+        output_dir="openapi",
+        drf_title="My App API",
+        drf_description="Complete API documentation",
+        drf_version="1.0.0",
+        groups=[
+            OpenAPIGroupConfig(
+                name="public",
                 apps=["blog", "products"],
                 title="Public API",
-                public=True,
+                description="Public-facing API endpoints",
+                version="1.0.0",
             ),
-            "partner": OpenAPIGroupConfig(
+            OpenAPIGroupConfig(
+                name="partner",
                 apps=["integrations"],
                 title="Partner API",
-                auth_required=True,
-                rate_limit="1000/hour",
+                description="Partner integration endpoints",
+                version="1.0.0",
             ),
-        }
+        ],
     )
 ```
 
 **Automatically provides**:
-- `/api/public/docs/` - Swagger UI
-- `/api/public/redoc/` - ReDoc
-- Auto-generated TypeScript/Python clients
+- **TypeScript clients** with Zod validation schemas
+- **Python clients** with type hints
+- **SWR hooks** for React/Next.js integration
+- **Type-safe fetchers** with error handling
 
 **See**: [Sample Project API Documentation](./sample-project/api-documentation)
 

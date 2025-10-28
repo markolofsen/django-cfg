@@ -12,8 +12,13 @@ const nextConfig: NextConfig = {
   ...(isStaticBuild && {
     output: "export",
     distDir: "out",
-    basePath,  // Django serves from /cfg/admin/
-    assetPrefix: basePath,  // All assets prefixed with /cfg/admin
+    basePath,  // Django serves from /cfg/nextjs-admin/
+    assetPrefix: basePath,  // All assets prefixed with /cfg/nextjs-admin
+  }),
+
+  // Standalone output for Docker deployment
+  ...(!isStaticBuild && {
+    output: "standalone",
   }),
 
   // Environment variables

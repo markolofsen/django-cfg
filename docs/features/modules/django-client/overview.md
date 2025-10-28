@@ -215,17 +215,29 @@ Organize large APIs into logical groups:
 # Django-CFG configuration
 openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
     enabled=True,
+    generate_package_files=True,
+    generate_zod_schemas=True,
+    generate_fetchers=True,
+    generate_swr_hooks=True,
+    api_prefix="api",
+    output_dir="openapi",
+    drf_title="My App API",
+    drf_description="Complete API documentation",
+    drf_version="1.0.0",
     groups=[
         OpenAPIGroupConfig(
             name="core",
             apps=["users", "accounts"],
             title="Core API",
-            description="User management and authentication"
+            description="User management and authentication",
+            version="1.0.0",
         ),
         OpenAPIGroupConfig(
             name="billing",
             apps=["payments", "subscriptions"],
-            title="Billing API"
+            title="Billing API",
+            description="Payment processing",
+            version="1.0.0",
         ),
     ],
 )

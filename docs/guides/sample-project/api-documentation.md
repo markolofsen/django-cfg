@@ -13,10 +13,11 @@ The Django-CFG sample project includes a comprehensive REST API with auto-genera
 
 The sample project provides:
 - **Auto-generated OpenAPI schema** - Standard API documentation
-- **Swagger UI** - Interactive API testing interface
 - **JWT Authentication** - Secure token-based auth
 - **Versioned endpoints** - API versioning support
 - **Type-safe serializers** - DRF integration
+- **Auto-generated TypeScript clients** - With Zod validation
+- **Auto-generated Python clients** - With type hints
 
 ## API Configuration
 
@@ -150,34 +151,6 @@ GET    /api/metrics/                 # System metrics
 ```
 
 ## Accessing API Documentation
-
-### Swagger UI
-
-Visit the interactive API documentation:
-
-```
-http://127.0.0.1:8000/api/schema/swagger-ui/
-```
-
-Features:
-- Interactive endpoint testing
-- Request/response examples
-- Authentication testing
-- Schema visualization
-
-### ReDoc
-
-Alternative documentation interface:
-
-```
-http://127.0.0.1:8000/api/schema/redoc/
-```
-
-Features:
-- Clean, readable layout
-- Responsive design
-- Search functionality
-- Code samples in multiple languages
 
 ### OpenAPI Schema
 

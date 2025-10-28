@@ -170,11 +170,10 @@ def nextjs_admin_url(path=''):
     Get the URL for Next.js Admin Panel (Built-in Dashboard - Tab 1).
 
     Auto-detects development mode with priority:
-        1. If port 3000 is available → use static files (Tab 2 gets dev server)
-        2. If only port 3001 is available → http://localhost:3001/admin/{path}
-        3. Otherwise → /cfg/admin/admin/{path} (static files)
+        1. If port 3001 is available → http://localhost:3001/admin/{path} (dev server)
+        2. Otherwise → /cfg/admin/admin/{path} (static files)
 
-    This ensures only ONE tab shows dev server at a time.
+    Note: Port 3000 is reserved for external Next.js admin (Tab 2).
 
     Usage in template:
         {% load django_cfg %}
@@ -188,20 +187,15 @@ def nextjs_admin_url(path=''):
         # Production mode: always use static files
         return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
 
-    # Check which ports are available
-    port_3000_available = _is_port_available('localhost', 3000)
+    # Check if port 3001 is available for Tab 1 (built-in admin)
     port_3001_available = _is_port_available('localhost', 3001)
 
-    # Priority: if port 3000 is running, Tab 2 gets it, Tab 1 uses static
-    if port_3000_available:
-        # Solution project is running - use static files for Tab 1
-        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
-    elif port_3001_available:
-        # Dev project is running - use dev server for Tab 1
+    if port_3001_available:
+        # Dev server is running on 3001 - use it
         base_url = 'http://localhost:3001/admin'
         return f'{base_url}/{path}' if path else base_url
     else:
-        # No dev server - use static files
+        # No dev server or dev server stopped - use static files
         return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
 
 
