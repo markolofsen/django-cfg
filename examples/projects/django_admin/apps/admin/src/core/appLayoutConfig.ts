@@ -49,7 +49,7 @@ export const appLayoutConfig: AppLayoutConfig = {
   // Route configuration
   routes: {
     auth: routes.public.auth.path,
-    defaultCallback: routes.admin.overview.path,
+    defaultCallback: routes.private.home.path,
     defaultAuthCallback: routes.public.auth.path,
     detectors: {
       isPublicRoute,

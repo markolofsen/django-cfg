@@ -28,21 +28,24 @@ logger = logging.getLogger(__name__)
 
 class ZipExtractionMixin:
     """
-    Mixin for automatic ZIP extraction with smart update detection.
+    Mixin for automatic ZIP extraction with age-based refresh.
 
     Provides intelligent ZIP archive handling:
     - Auto-extraction when directory doesn't exist
-    - Auto-reextraction when ZIP is modified < 5 minutes ago
-    - Timestamp comparison to avoid unnecessary extractions
+    - Auto-reextraction when extracted directory is older than 10 minutes
+    - Simple age-based logic (no ZIP timestamp comparison needed)
 
     Usage:
         class MyView(ZipExtractionMixin, View):
             app_name = 'myapp'  # Will look for myapp.zip
     """
 
+    # Maximum age of extracted directory before re-extraction (in seconds)
+    MAX_DIRECTORY_AGE = 600  # 10 minutes = 600 seconds
+
     def extract_zip_if_needed(self, base_dir: Path, zip_path: Path, app_name: str) -> bool:
         """
-        Extract ZIP archive if needed based on modification times.
+        Extract ZIP archive if needed based on directory age.
 
         Args:
             base_dir: Target directory for extraction
@@ -57,33 +60,25 @@ class ZipExtractionMixin:
         # Priority 1: If directory doesn't exist at all - always extract
         if not base_dir.exists():
             should_extract = True
-            logger.info(f"[{app_name}] Directory {base_dir} doesn't exist, will extract")
+            logger.info(f"[{app_name}] Directory doesn't exist, will extract")
 
-        # Priority 2: Directory exists - check if ZIP is fresh and needs update
-        elif zip_path.exists():
-            # Get ZIP modification time
-            zip_mtime = datetime.fromtimestamp(zip_path.stat().st_mtime)
-            time_since_modification = (datetime.now() - zip_mtime).total_seconds()
+        # Priority 2: Directory exists - check if it's too old
+        else:
+            # Get directory modification time
+            dir_mtime = datetime.fromtimestamp(base_dir.stat().st_mtime)
+            directory_age = (datetime.now() - dir_mtime).total_seconds()
 
-            # If ZIP was modified less than 5 minutes ago - check for updates
-            if time_since_modification < 300:  # 5 minutes = 300 seconds
-                # Compare ZIP time with directory time
-                dir_mtime = datetime.fromtimestamp(base_dir.stat().st_mtime)
-
-                # If ZIP is newer than directory, re-extract
-                if zip_mtime > dir_mtime:
-                    logger.info(f"[{app_name}] ZIP is fresh ({time_since_modification:.0f}s) and newer, re-extracting")
-                    try:
-                        shutil.rmtree(base_dir)
-                        should_extract = True
-                    except Exception as e:
-                        logger.error(f"[{app_name}] Failed to remove old directory: {e}")
-                        return False
-                else:
-                    logger.debug(f"[{app_name}] ZIP is fresh but directory is up-to-date")
+            # If directory is older than MAX_DIRECTORY_AGE - re-extract
+            if directory_age > self.MAX_DIRECTORY_AGE:
+                logger.info(f"[{app_name}] Directory is old ({directory_age:.0f}s > {self.MAX_DIRECTORY_AGE}s), re-extracting")
+                try:
+                    shutil.rmtree(base_dir)
+                    should_extract = True
+                except Exception as e:
+                    logger.error(f"[{app_name}] Failed to remove old directory: {e}")
+                    return False
             else:
-                # ZIP is old (> 5 min) - use existing directory, no checks needed
-                logger.debug(f"[{app_name}] ZIP is old ({time_since_modification:.0f}s), using existing")
+                logger.debug(f"[{app_name}] Directory is fresh ({directory_age:.0f}s), using existing")
 
         # Extract ZIP if needed
         if should_extract:
@@ -102,7 +97,7 @@ class ZipExtractionMixin:
                 logger.error(f"[{app_name}] ZIP not found: {zip_path}")
                 return False
 
-        # Directory exists and is up-to-date
+        # Directory exists and is fresh
         return True
 
 
@@ -113,17 +108,18 @@ class NextJSStaticView(ZipExtractionMixin, View):
 
     Features:
     - Serves Next.js static export files like a static file server
-    - Smart ZIP extraction: auto-updates when archive modified < 5 minutes ago
+    - Smart ZIP extraction: auto-refreshes when directory older than 10 minutes
     - Automatically injects JWT tokens for authenticated users
     - Tokens injected into HTML responses only
     - Handles Next.js client-side routing (.html fallback)
     - Automatically serves index.html for directory paths
     - X-Frame-Options exempt to allow embedding in iframes
 
-    ZIP Update Logic:
-    - If ZIP modified < 5 minutes ago: removes old files and re-extracts
-    - If ZIP modified > 5 minutes ago: uses existing extraction
-    - This enables hot-reload during development while staying fast in production
+    ZIP Extraction Logic:
+    - If directory doesn't exist: extract from ZIP
+    - If directory older than 10 minutes: remove and re-extract
+    - If directory fresh (< 10 min): use existing files
+    - This enables auto-refresh during development while caching in production
 
     Path resolution examples:
     - /cfg/admin/              → /cfg/admin/index.html

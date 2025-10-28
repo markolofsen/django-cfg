@@ -4,8 +4,8 @@ Views for Next.js admin integration.
 Serves Next.js static files with SPA routing support and JWT injection.
 
 Features:
-- Automatic extraction of ZIP archives with smart update detection
-- Auto-reextraction when ZIP is modified within last 5 minutes
+- Automatic extraction of ZIP archives with age-based refresh
+- Auto-reextraction when directory is older than 10 minutes
 - SPA routing with fallback strategies
 - JWT token injection for authenticated users
 """
@@ -31,13 +31,19 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
 
     Features:
     - Serves Next.js static build files
+    - Smart ZIP extraction: auto-refreshes when directory older than 10 minutes
     - Automatic JWT token injection for authenticated users
     - SPA routing support (path/to/route → path/to/route/index.html)
     - Development mode support (proxies to dev server conceptually)
 
+    ZIP Extraction Logic:
+    - If directory doesn't exist: extract from ZIP
+    - If directory older than 10 minutes: remove and re-extract
+    - If directory fresh (< 10 min): use existing files
+
     URL Examples:
-        /cfg/admin/                    → private.html (or index.html)
-        /cfg/admin/private/centrifugo  → private/centrifugo/index.html
+        /cfg/admin/                    → admin/index.html
+        /cfg/admin/crypto              → admin/crypto/index.html
         /cfg/admin/_next/static/...    → _next/static/...
     """
 
