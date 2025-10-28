@@ -143,6 +143,10 @@ class InstalledAppsBuilder:
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
 
+        # Next.js Admin Integration
+        if self.config.nextjs_admin:
+            apps.append("django_cfg.modules.nextjs_admin")
+
         return apps
 
     def _get_optional_apps(self) -> List[str]:

@@ -1,9 +1,4 @@
-/**
- * CFG API Contexts
- *
- * Centralized React contexts for all CFG API modules
- * Uses generated SWR hooks for optimal data fetching and caching
- */
-
-// App Providers (Main SWR Config)
+export { TradingProvider, useTrading } from './TradingContext';
+export { CryptoProvider, useCrypto } from './CryptoContext';
 export { AppProviders } from './AppProviders';
+export { PrivateProvider } from './PrivateProvider';

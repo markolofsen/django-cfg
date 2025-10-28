@@ -13,6 +13,9 @@ MODULES_REGISTRY = {
     # Centrifugo module
     "DjangoCfgCentrifugoConfig": ("django_cfg.apps.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
+    # Next.js Admin Integration
+    "NextJsAdminConfig": ("django_cfg.modules.nextjs_admin", "NextJsAdminConfig"),
+
     # Import/Export integration (simple re-exports)
     "ImportForm": ("django_cfg.modules.django_import_export", "ImportForm"),
     "ExportForm": ("django_cfg.modules.django_import_export", "ExportForm"),

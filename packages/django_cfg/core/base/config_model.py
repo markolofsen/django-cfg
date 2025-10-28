@@ -32,6 +32,7 @@ from ...models import (
 from ...models.ngrok import NgrokConfig
 from ...models.payments import PaymentsConfig
 from ...models.tasks import TaskConfig
+from ...modules.nextjs_admin import NextJsAdminConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
 
@@ -350,6 +351,15 @@ class DjangoConfig(BaseModel):
     custom_middleware: List[str] = Field(
         default_factory=list,
         description="Custom middleware classes (standard middleware added automatically)",
+    )
+
+    # === Next.js Admin Integration ===
+    nextjs_admin: Optional["NextJsAdminConfig"] = Field(
+        default=None,
+        description=(
+            "Next.js admin panel integration. "
+            "Example: NextJsAdminConfig(project_path='../django_admin')"
+        ),
     )
 
     # === Internal State (Private) ===

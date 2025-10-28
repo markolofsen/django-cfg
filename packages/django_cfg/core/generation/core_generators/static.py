@@ -68,6 +68,11 @@ class StaticFilesGenerator:
 
         # Set paths relative to base directory (always set, auto-detects from manage.py)
         base_dir = self.config.base_dir
+
+        # Note: Next.js admin static files are copied to static/nextjs_admin/
+        # during generate_client command (if auto_build=True)
+        # No need to add separate path to STATICFILES_DIRS
+
         settings.update({
             "STATIC_ROOT": base_dir / "staticfiles",
             "MEDIA_ROOT": base_dir / "media",

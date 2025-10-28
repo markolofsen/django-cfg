@@ -39,13 +39,18 @@ export class FetchAdapter implements HttpClientAdapter {
     const { method, url, headers, body, params, formData } = request;
 
     // Build URL with query params
-    const finalUrl = new URL(url);
+    let finalUrl = url;
     if (params) {
+      const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
-          finalUrl.searchParams.append(key, String(value));
+          searchParams.append(key, String(value));
         }
       });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        finalUrl = url.includes('?') ? `${url}&${queryString}` : `${url}?${queryString}`;
+      }
     }
 
     // Build headers
@@ -65,7 +70,7 @@ export class FetchAdapter implements HttpClientAdapter {
     }
 
     // Make request
-    const response = await fetch(finalUrl.toString(), {
+    const response = await fetch(finalUrl, {
       method,
       headers: finalHeaders,
       body: requestBody,

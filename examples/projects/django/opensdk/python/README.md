@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ```python
 import asyncio
 from client import CentrifugoRPCClient, APIClient
-from models import HealthCheckResult
+from models import UserPresenceParams
 
 async def main():
     # Create RPC client
@@ -65,10 +65,10 @@ asyncio.run(main())
 ## Generated Models
 
 Available Pydantic models:
-- `HealthCheckResult`
-- `HealthCheckParams`
-- `UserPresenceResult`
 - `UserPresenceParams`
+- `HealthCheckParams`
+- `HealthCheckResult`
+- `UserPresenceResult`
 
 ## Generated Methods
 

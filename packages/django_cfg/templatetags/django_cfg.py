@@ -187,3 +187,74 @@ def is_frontend_dev_mode():
         {% endif %}
     """
     return os.environ.get('DJANGO_CFG_FRONTEND_DEV_MODE', '').lower() in ('true', '1', 'yes')
+
+
+@register.simple_tag
+def has_nextjs_external_admin():
+    """
+    Check if external Next.js admin is configured.
+
+    Returns True if NextJsAdminConfig is set in Django config.
+
+    Usage in template:
+        {% load django_cfg %}
+        {% has_nextjs_external_admin as is_enabled %}
+        {% if is_enabled %}
+            <div>External Next.js Admin Available</div>
+        {% endif %}
+    """
+    try:
+        from django_cfg.core.config import get_current_config
+        config = get_current_config()
+        return config and config.nextjs_admin is not None
+    except Exception:
+        return False
+
+
+@register.simple_tag
+def nextjs_external_admin_url(route=''):
+    """
+    Get URL for external Next.js admin (Tab 2).
+
+    Always returns relative URL (Django serves from static/nextjs_admin.zip):
+        Returns /cfg/nextjs-admin/{route}
+
+    Usage in template:
+        {% load django_cfg %}
+        <iframe src="{% nextjs_external_admin_url %}"></iframe>
+        <iframe src="{% nextjs_external_admin_url 'dashboard' %}"></iframe>
+    """
+    try:
+        from django_cfg.core.config import get_current_config
+
+        config = get_current_config()
+        if not config or not config.nextjs_admin:
+            return ''
+
+        route = route.strip().lstrip('/')
+
+        # Always use relative URL - Django serves from extracted ZIP
+        return f"/cfg/nextjs-admin/{route}" if route else "/cfg/nextjs-admin/"
+    except Exception:
+        return ''
+
+
+@register.simple_tag
+def nextjs_external_admin_title():
+    """
+    Get tab title for external Next.js admin.
+
+    Returns custom title from config or default "Next.js Admin".
+
+    Usage in template:
+        {% load django_cfg %}
+        <button>{% nextjs_external_admin_title %}</button>
+    """
+    try:
+        from django_cfg.core.config import get_current_config
+        config = get_current_config()
+        if not config or not config.nextjs_admin:
+            return 'Next.js Admin'
+        return config.nextjs_admin.get_tab_title()
+    except Exception:
+        return 'Next.js Admin'

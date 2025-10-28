@@ -1,5 +1,3 @@
-"use client";
-
 import React, { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
 
@@ -11,7 +9,7 @@ interface AppProvidersProps {
  * Main App Providers
  *
  * Wraps the app with SWR configuration and context providers.
- * Individual contexts can override these settings if needed.
+ * SWR is already integrated in the generated API clients.
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (

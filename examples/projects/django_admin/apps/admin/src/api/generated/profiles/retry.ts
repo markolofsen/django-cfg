@@ -1,0 +1,175 @@
+/**
+ * Retry Configuration and Utilities
+ *
+ * Provides automatic retry logic for failed HTTP requests using p-retry.
+ * Retries only on network errors and server errors (5xx), not client errors (4xx).
+ */
+
+import pRetry, { AbortError } from 'p-retry';
+import { APIError, NetworkError } from './errors';
+
+/**
+ * Information about a failed retry attempt.
+ */
+export interface FailedAttemptInfo {
+  /** The error that caused the failure */
+  error: Error;
+  /** The attempt number (1-indexed) */
+  attemptNumber: number;
+  /** Number of retries left */
+  retriesLeft: number;
+}
+
+/**
+ * Retry configuration options.
+ *
+ * Uses exponential backoff with jitter by default to avoid thundering herd.
+ */
+export interface RetryConfig {
+  /**
+   * Maximum number of retry attempts.
+   * @default 3
+   */
+  retries?: number;
+
+  /**
+   * Exponential backoff factor.
+   * @default 2
+   */
+  factor?: number;
+
+  /**
+   * Minimum wait time between retries (ms).
+   * @default 1000
+   */
+  minTimeout?: number;
+
+  /**
+   * Maximum wait time between retries (ms).
+   * @default 60000
+   */
+  maxTimeout?: number;
+
+  /**
+   * Add randomness to wait times (jitter).
+   * Helps avoid thundering herd problem.
+   * @default true
+   */
+  randomize?: boolean;
+
+  /**
+   * Callback called on each failed attempt.
+   */
+  onFailedAttempt?: (info: FailedAttemptInfo) => void;
+}
+
+/**
+ * Default retry configuration.
+ */
+export const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
+  retries: 3,
+  factor: 2,
+  minTimeout: 1000,
+  maxTimeout: 60000,
+  randomize: true,
+  onFailedAttempt: () => {},
+};
+
+/**
+ * Determine if an error should trigger a retry.
+ *
+ * Retries on:
+ * - Network errors (connection refused, timeout, etc.)
+ * - Server errors (5xx status codes)
+ * - Rate limiting (429 status code)
+ *
+ * Does NOT retry on:
+ * - Client errors (4xx except 429)
+ * - Authentication errors (401, 403)
+ * - Not found (404)
+ *
+ * @param error - The error to check
+ * @returns true if should retry, false otherwise
+ */
+export function shouldRetry(error: any): boolean {
+  // Always retry network errors
+  if (error instanceof NetworkError) {
+    return true;
+  }
+
+  // For API errors, check status code
+  if (error instanceof APIError) {
+    const status = error.statusCode;
+
+    // Retry on 5xx server errors
+    if (status >= 500 && status < 600) {
+      return true;
+    }
+
+    // Retry on 429 (rate limit)
+    if (status === 429) {
+      return true;
+    }
+
+    // Do NOT retry on 4xx client errors
+    return false;
+  }
+
+  // Retry on unknown errors (might be network issues)
+  return true;
+}
+
+/**
+ * Wrap a function with retry logic.
+ *
+ * @param fn - Async function to retry
+ * @param config - Retry configuration
+ * @returns Result of the function
+ *
+ * @example
+ * ```typescript
+ * const result = await withRetry(
+ *   async () => fetch('https://api.example.com/users'),
+ *   { retries: 5, minTimeout: 2000 }
+ * );
+ * ```
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  config?: RetryConfig
+): Promise<T> {
+  const finalConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
+
+  return pRetry(
+    async () => {
+      try {
+        return await fn();
+      } catch (error) {
+        // Check if we should retry this error
+        if (!shouldRetry(error)) {
+          // Abort retry immediately for non-retryable errors
+          throw new AbortError(error as Error);
+        }
+
+        // Re-throw error to trigger retry
+        throw error;
+      }
+    },
+    {
+      retries: finalConfig.retries,
+      factor: finalConfig.factor,
+      minTimeout: finalConfig.minTimeout,
+      maxTimeout: finalConfig.maxTimeout,
+      randomize: finalConfig.randomize,
+      onFailedAttempt: finalConfig.onFailedAttempt ? (error) => {
+        // Adapt p-retry's FailedAttemptError to our FailedAttemptInfo
+        const pRetryError = error as any;  // p-retry's internal type
+        finalConfig.onFailedAttempt!({
+          error: pRetryError as Error,
+          attemptNumber: pRetryError.attemptNumber,
+          retriesLeft: pRetryError.retriesLeft,
+        });
+      } : undefined,
+    }
+  );
+}

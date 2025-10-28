@@ -10,16 +10,18 @@ Workflow:
     2. Generate Centrifugo WebSocket RPC clients
     3. Copy Centrifugo TypeScript RPC clients → demo app (rpc/generated/)
     4. Copy Profiles + Trading + Crypto → demo app (api/generated/)
-    5. Build @api package
 
 Architecture:
+    - Next.js admin (django_admin/apps/admin):
+        - src/api/generated/: Auto-copied via NextJsAdminConfig
     - Demo app:
         - api/generated/: Profiles + Trading + Crypto OpenAPI clients
         - rpc/generated/: Centrifugo WebSocket RPC clients (TypeScript)
     - opensdk/: Full Centrifugo WebSocket RPC clients (Python, TypeScript, Go)
 
 Note:
-    - CFG clients are NOT copied to @api package (Step 3 disabled)
+    - Next.js admin gets clients via NextJsAdminConfig.auto_copy_api
+    - @api package build disabled (directory doesn't exist)
 """
 
 import shutil
@@ -132,33 +134,34 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f'❌ Failed to copy {group}: {e}'))
 
         # Step 6: Build @api package
-        self.stdout.write('\n🔨 Building @api package...')
-        api_package_dir = projects_root / "frontend" / "packages" / "api"
+        # NOTE: Disabled - @api package directory doesn't exist
+        # self.stdout.write('\n🔨 Building @api package...')
+        # api_package_dir = projects_root / "frontend" / "packages" / "api"
 
-        try:
-            result = subprocess.run(
-                ['pnpm', 'build'],
-                cwd=str(api_package_dir),
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            self.stdout.write(self.style.SUCCESS('✅ @api package built successfully'))
-            if result.stdout:
-                self.stdout.write(result.stdout)
-        except subprocess.CalledProcessError as e:
-            self.stdout.write(self.style.ERROR(f'❌ Build failed: {e}'))
-            if e.stdout:
-                self.stdout.write(e.stdout)
-            if e.stderr:
-                self.stdout.write(self.style.ERROR(e.stderr))
-            return
-        except FileNotFoundError:
-            self.stdout.write(self.style.ERROR('❌ pnpm not found. Please install pnpm.'))
-            return
+        # try:
+        #     result = subprocess.run(
+        #         ['pnpm', 'build'],
+        #         cwd=str(api_package_dir),
+        #         capture_output=True,
+        #         text=True,
+        #         check=True
+        #     )
+        #     self.stdout.write(self.style.SUCCESS('✅ @api package built successfully'))
+        #     if result.stdout:
+        #         self.stdout.write(result.stdout)
+        # except subprocess.CalledProcessError as e:
+        #     self.stdout.write(self.style.ERROR(f'❌ Build failed: {e}'))
+        #     if e.stdout:
+        #         self.stdout.write(e.stdout)
+        #     if e.stderr:
+        #         self.stdout.write(self.style.ERROR(e.stderr))
+        #     return
+        # except FileNotFoundError:
+        #     self.stdout.write(self.style.ERROR('❌ pnpm not found. Please install pnpm.'))
+        #     return
 
         self.stdout.write(self.style.SUCCESS('\n🎉 API generation completed!'))
-        self.stdout.write(self.style.SUCCESS('   📦 @api package: CFG endpoints (shared)'))
         self.stdout.write(self.style.SUCCESS('   🎨 demo app: Profiles + Trading + Crypto in api/generated/'))
         self.stdout.write(self.style.SUCCESS('   🔌 demo app: Centrifugo WebSocket RPC clients in rpc/generated/'))
         self.stdout.write(self.style.SUCCESS('   📂 opensdk: Full clients (Python, TypeScript, Go)'))
+        self.stdout.write(self.style.SUCCESS('   🎯 Next.js admin: Auto-copied via NextJsAdminConfig'))

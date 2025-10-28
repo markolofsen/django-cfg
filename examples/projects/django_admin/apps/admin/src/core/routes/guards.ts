@@ -4,12 +4,12 @@
  * Route protection and redirect logic
  */
 
-import type { BitAPIRoutes } from './definitions';
+import type { DjangoCfgRoutes } from './definitions';
 
 /**
  * Check if path is a public route
  */
-export function isPublicRoute(routes: BitAPIRoutes, path: string): boolean {
+export function isPublicRoute(routes: DjangoCfgRoutes, path: string): boolean {
   return routes.public.getAllRoutes().some((r) => path === r.path || path.startsWith(r.path));
 }
 
@@ -23,14 +23,14 @@ export function isPrivateRoute(path: string): boolean {
 /**
  * Check if path is the auth route
  */
-export function isAuthRoute(routes: BitAPIRoutes, path: string): boolean {
+export function isAuthRoute(routes: DjangoCfgRoutes, path: string): boolean {
   return path.startsWith(routes.public.auth);
 }
 
 /**
  * Get redirect path for unauthenticated users
  */
-export function getUnauthenticatedRedirect(routes: BitAPIRoutes, path: string): string | null {
+export function getUnauthenticatedRedirect(routes: DjangoCfgRoutes, path: string): string | null {
   if (isPrivateRoute(path)) {
     return routes.public.auth;
   }
@@ -40,6 +40,6 @@ export function getUnauthenticatedRedirect(routes: BitAPIRoutes, path: string): 
 /**
  * Get auth redirect path
  */
-export function redirectToAuth(routes: BitAPIRoutes): string {
+export function redirectToAuth(routes: DjangoCfgRoutes): string {
   return routes.public.auth;
 }
