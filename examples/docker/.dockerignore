@@ -73,7 +73,10 @@ node_modules/
 # Media and static files
 media/
 staticfiles/
+
+# Exclude static folder but include nextjs_admin.zip
 static/
+!static/nextjs_admin.zip
 
 # Database files
 *.sqlite3

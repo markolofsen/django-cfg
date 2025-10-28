@@ -4,8 +4,9 @@ JWT tokens are automatically injected into HTML responses for authenticated user
 This is specific to Next.js frontend apps only.
 
 Features:
-- Automatic extraction of ZIP archives with timestamp comparison
-- Auto-reextraction when ZIP is newer than extracted directory
+- Automatic extraction of ZIP archives with metadata comparison (size + mtime)
+- Auto-reextraction when ZIP content changes (size or timestamp)
+- Marker file (.zip_meta) tracks ZIP metadata for reliable comparison
 - Cache busting (no-store headers for HTML)
 - SPA routing with fallback strategies
 - JWT token injection for authenticated users
@@ -29,12 +30,13 @@ logger = logging.getLogger(__name__)
 
 class ZipExtractionMixin:
     """
-    Mixin for automatic ZIP extraction with timestamp-based refresh.
+    Mixin for automatic ZIP extraction with metadata-based refresh.
 
     Provides intelligent ZIP archive handling:
     - Auto-extraction when directory doesn't exist
-    - Auto-reextraction when ZIP is newer than extracted directory
-    - Timestamp comparison ensures fresh builds are always deployed
+    - Auto-reextraction when ZIP metadata changes (size or mtime)
+    - Marker file (.zip_meta) tracks ZIP state for reliable comparison
+    - Works correctly in Docker where timestamps can be misleading
 
     Usage:
         class MyView(ZipExtractionMixin, View):
@@ -43,12 +45,16 @@ class ZipExtractionMixin:
 
     def extract_zip_if_needed(self, base_dir: Path, zip_path: Path, app_name: str) -> bool:
         """
-        Extract ZIP archive if needed based on ZIP modification time comparison.
+        Extract ZIP archive if needed based on ZIP metadata (size + mtime) comparison.
 
         Logic:
         1. If directory doesn't exist → extract
-        2. If ZIP is newer than directory → remove and re-extract
-        3. If directory is newer than ZIP → use existing
+        2. If marker file doesn't exist → extract
+        3. If ZIP metadata changed (size or mtime) → remove and re-extract
+        4. If metadata matches → use existing
+
+        Uses marker file (.zip_meta) to track ZIP metadata. More reliable than
+        just mtime comparison, especially in Docker where timestamps can be misleading.
 
         Args:
             base_dir: Target directory for extraction
@@ -65,30 +71,40 @@ class ZipExtractionMixin:
             logger.error(f"[{app_name}] ZIP not found: {zip_path}")
             return False
 
-        # Get ZIP modification time
-        zip_mtime = datetime.fromtimestamp(zip_path.stat().st_mtime)
+        # Get ZIP metadata (size + mtime for reliable comparison)
+        zip_stat = zip_path.stat()
+        current_meta = f"{zip_stat.st_size}:{zip_stat.st_mtime}"
+
+        # Marker file stores ZIP metadata
+        marker_file = base_dir / '.zip_meta'
 
         # Priority 1: If directory doesn't exist at all - always extract
         if not base_dir.exists():
             should_extract = True
             logger.info(f"[{app_name}] Directory doesn't exist, will extract")
 
-        # Priority 2: Directory exists - compare timestamps
-        else:
-            # Get directory modification time
-            dir_mtime = datetime.fromtimestamp(base_dir.stat().st_mtime)
+        # Priority 2: Marker file doesn't exist - extract (first run or corrupted)
+        elif not marker_file.exists():
+            should_extract = True
+            logger.info(f"[{app_name}] No marker file found, will extract")
 
-            # If ZIP is newer than directory - re-extract
-            if zip_mtime > dir_mtime:
-                logger.info(f"[{app_name}] ZIP is newer (ZIP: {zip_mtime}, DIR: {dir_mtime}), re-extracting")
-                try:
-                    shutil.rmtree(base_dir)
-                    should_extract = True
-                except Exception as e:
-                    logger.error(f"[{app_name}] Failed to remove old directory: {e}")
-                    return False
-            else:
-                logger.debug(f"[{app_name}] Directory is up-to-date (DIR: {dir_mtime} >= ZIP: {zip_mtime})")
+        # Priority 3: Compare stored metadata with current ZIP metadata
+        else:
+            try:
+                stored_meta = marker_file.read_text().strip()
+                if stored_meta != current_meta:
+                    logger.info(f"[{app_name}] ZIP metadata changed (stored: {stored_meta}, current: {current_meta}), re-extracting")
+                    try:
+                        shutil.rmtree(base_dir)
+                        should_extract = True
+                    except Exception as e:
+                        logger.error(f"[{app_name}] Failed to remove old directory: {e}")
+                        return False
+                else:
+                    logger.info(f"[{app_name}] ZIP unchanged (meta: {current_meta}), using existing directory")
+            except Exception as e:
+                logger.warning(f"[{app_name}] Failed to read marker file: {e}, will re-extract")
+                should_extract = True
 
         # Extract ZIP if needed
         if should_extract:
@@ -97,7 +113,10 @@ class ZipExtractionMixin:
                 base_dir.parent.mkdir(parents=True, exist_ok=True)
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     zip_ref.extractall(base_dir)
-                logger.info(f"[{app_name}] Successfully extracted {zip_path.name}")
+
+                # Write marker file with current metadata
+                marker_file.write_text(current_meta)
+                logger.info(f"[{app_name}] Successfully extracted {zip_path.name} and saved marker (meta: {current_meta})")
                 return True
             except Exception as e:
                 logger.error(f"[{app_name}] Failed to extract: {e}")
@@ -114,7 +133,7 @@ class NextJSStaticView(ZipExtractionMixin, View):
 
     Features:
     - Serves Next.js static export files like a static file server
-    - Smart ZIP extraction: auto-refreshes when ZIP is newer than directory
+    - Smart ZIP extraction: compares ZIP metadata (size + mtime) with marker file
     - Automatically injects JWT tokens for authenticated users
     - Tokens injected into HTML responses only
     - Handles Next.js client-side routing (.html fallback)
@@ -123,9 +142,10 @@ class NextJSStaticView(ZipExtractionMixin, View):
 
     ZIP Extraction Logic:
     - If directory doesn't exist: extract from ZIP
-    - If ZIP is newer than directory: remove and re-extract
-    - If directory is up-to-date: use existing files
-    - This ensures fresh builds are always deployed automatically
+    - If marker file missing: extract from ZIP
+    - If ZIP metadata changed: remove and re-extract
+    - If metadata matches: use existing files
+    - Marker file (.zip_meta) ensures reliable comparison in Docker
 
     Path resolution examples:
     - /cfg/admin/              → /cfg/admin/index.html

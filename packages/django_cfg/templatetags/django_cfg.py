@@ -6,7 +6,6 @@ Provides template tags for accessing django-cfg configuration constants.
 
 import os
 import socket
-import time
 from django import template
 from django.conf import settings
 from django.utils.safestring import mark_safe
@@ -184,13 +183,9 @@ def nextjs_admin_url(path=''):
     # Normalize path - remove leading/trailing slashes
     path = path.strip('/')
 
-    # Add cache busting parameter (timestamp in milliseconds)
-    cache_buster = f'_={int(time.time() * 1000)}'
-
     if not settings.DEBUG:
-        # Production mode: always use static files with cache buster
-        base_url = f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
-        return f'{base_url}?{cache_buster}'
+        # Production mode: always use static files
+        return f'/cfg/admin/{path}' if path else '/cfg/admin/'
 
     # Check if port 3001 is available for Tab 1 (built-in admin)
     port_3001_available = _is_port_available('localhost', 3001)
@@ -198,13 +193,11 @@ def nextjs_admin_url(path=''):
     if port_3001_available:
         # Dev server is running on 3001 - use it (builtin admin has no /admin prefix)
         base_url = 'http://localhost:3001'
-        url = f'{base_url}/{path}' if path else base_url
-        return f'{url}?{cache_buster}'
+        return f'{base_url}/{path}' if path else base_url
     else:
-        # No dev server or dev server stopped - use static files with cache buster
+        # No dev server or dev server stopped - use static files
         # Static files are served from /cfg/admin/ but ZIP contains files in root (no /admin prefix)
-        base_url = f'/cfg/admin/{path}' if path else '/cfg/admin/'
-        return f'{base_url}?{cache_buster}'
+        return f'/cfg/admin/{path}' if path else '/cfg/admin/'
 
 
 @register.simple_tag
@@ -280,20 +273,15 @@ def nextjs_external_admin_url(route=''):
 
         route = route.strip('/')
 
-        # Add cache busting parameter (timestamp in milliseconds)
-        cache_buster = f'_={int(time.time() * 1000)}'
-
         # Auto-detect development mode: DEBUG=True + port 3000 available
         if settings.DEBUG and _is_port_available('localhost', 3000):
             # Development mode: solution project on port 3000
             # Routes start with /admin in Next.js (e.g., /admin, /admin/crypto)
             base_url = 'http://localhost:3000/admin'
-            url = f'{base_url}/{route}' if route else base_url
-            return f'{url}?{cache_buster}'
+            return f'{base_url}/{route}' if route else base_url
         else:
             # Production mode: use relative URL - Django serves from extracted ZIP with /admin prefix
-            base_url = f"/cfg/nextjs-admin/admin/{route}" if route else "/cfg/nextjs-admin/admin/"
-            return f'{base_url}?{cache_buster}'
+            return f"/cfg/nextjs-admin/admin/{route}" if route else "/cfg/nextjs-admin/admin/"
     except Exception:
         return ''
 
