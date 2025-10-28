@@ -5,8 +5,8 @@ Serves Next.js static files with SPA routing support and JWT injection.
 
 Features:
 - Priority-based ZIP resolution (solution project → package fallback)
-- Automatic extraction with timestamp comparison (ZIP mtime vs directory mtime)
-- Cache busting (no-store headers + timestamp query params)
+- Automatic extraction with metadata comparison (ZIP size + mtime vs marker file)
+- Cache busting (no-store headers for HTML)
 - SPA routing with fallback strategies
 - JWT token injection for authenticated users
 
@@ -15,8 +15,9 @@ ZIP Resolution Priority:
 2. Package fallback: django_cfg/static/frontend/nextjs_admin.zip → django_cfg/static/frontend/nextjs_admin/
 
 Extraction Logic:
-- Compares ZIP mtime with directory mtime
-- Re-extracts only when ZIP is newer
+- Marker file (.zip_meta) tracks ZIP metadata (size:mtime)
+- Re-extracts when metadata changes (size or timestamp)
+- Reliable in Docker where timestamps can be misleading
 - Ensures fresh builds are deployed automatically
 """
 
@@ -42,7 +43,7 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
     Features:
     - Serves Next.js static build files
     - Priority-based ZIP resolution (solution first, package fallback)
-    - Smart ZIP extraction: compares ZIP mtime vs directory mtime
+    - Smart ZIP extraction: metadata comparison (size + mtime) with marker file
     - Cache busting: no-store headers for HTML files
     - Automatic JWT token injection for authenticated users
     - SPA routing support (path/to/route → path/to/route/index.html)
@@ -53,9 +54,10 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
 
     ZIP Extraction Logic:
     - If directory doesn't exist: extract from ZIP
-    - If ZIP is newer than directory: remove and re-extract
-    - If directory is up-to-date: use existing files
-    - Ensures fresh builds are deployed automatically
+    - If marker file missing: extract from ZIP
+    - If ZIP metadata changed: remove and re-extract
+    - If metadata matches: use existing files
+    - Marker file (.zip_meta) ensures reliable comparison in Docker
 
     URL Examples:
         /cfg/nextjs-admin/admin/                    → admin/index.html
