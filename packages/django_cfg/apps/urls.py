@@ -133,9 +133,22 @@ urlpatterns = [
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_client.urls')),
-    path('cfg/admin/', include('django_cfg.apps.frontend.urls')),  # Next.js admin panel
     path('cfg/dashboard/', include('django_cfg.apps.dashboard.urls')),  # Dashboard API
 ]
+
+# Built-in Frontend Admin (always available at /cfg/admin/)
+urlpatterns.append(path('cfg/admin/', include('django_cfg.apps.frontend.urls')))
+
+# External Next.js Admin Integration (conditional - available when configured)
+try:
+    from django_cfg.core.config import get_current_config
+    _config = get_current_config()
+    if _config and _config.nextjs_admin:
+        # Add external Next.js admin at /cfg/nextjs-admin/
+        urlpatterns.append(path('cfg/nextjs-admin/', include('django_cfg.modules.nextjs_admin.urls')))
+except Exception:
+    # Next.js admin not configured - skip
+    pass
 
 # Django-CFG apps - conditionally registered based on config
 # Map app paths to URL patterns (with cfg/ prefix from add_django_cfg_urls)

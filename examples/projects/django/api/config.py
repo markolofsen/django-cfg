@@ -40,6 +40,7 @@ from django_cfg import (
     ApiKeys,
     AxesConfig,
     DjangoCfgCentrifugoConfig,
+    NextJsAdminConfig,
 )
 
 # Import environment configuration
@@ -290,6 +291,26 @@ class DjangoCfgConfig(DjangoConfig):
                 version="1.0.0",
             ),
         ],
+    )
+
+    # === Next.js Admin Integration ===
+    nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(
+        # Path to Next.js admin project (relative to manage.py directory)
+        project_path="../django_admin/apps/admin",
+        # Customize where TypeScript clients are copied
+        api_output_path="src/api/generated",
+        # Enable automatic building of Next.js static export after API generation
+        auto_build=True,
+        # Optional: enable/disable auto-copy after generate_client (default: True)
+        # auto_copy_api=True,
+        # Optional: static files URL prefix (default: /cfg/admin/)
+        # static_url="/cfg/admin/",
+        # Optional: Next.js dev server URL (default: http://localhost:3001)
+        # dev_url="http://localhost:3001",
+        # Optional: iframe route for default view (default: /private)
+        # iframe_route="/private",
+        # Optional: tab title in admin (default: Next.js Admin)
+        # tab_title="Dashboard",
     )
 
 

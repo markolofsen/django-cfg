@@ -1,60 +1,59 @@
 /**
- * BaseClient for Django-CFG API
+ * BaseClient for Demo App API Services
  *
- * Base class for all Django-CFG services with unified API access.
+ * Base class for all demo app services.
  *
  * Architecture:
- * - Accounts: Authentication, user profiles
- * - Tasks: Task management and monitoring
- * - Payments: Payment processing and webhooks
- * - Newsletter: Email campaigns, subscriptions, bulk emails
- * - Knowbase: Knowledge base management
- * - Leads: Lead capture and management
- * - Support: Support tickets
- * - Centrifugo: Real-time notifications and monitoring
+ * - Profiles Group: User profiles management
+ * - Trading Group: Portfolio and orders management
+ * - Crypto Group: Coins, exchanges, and wallets
  *
- * Uses generated TypeScript client with full type safety.
+ * Uses unified response pattern: { success, boolean; data?: T; error?: string; fieldErrors?: Record<string, string[]> }
  */
 
-import { API, LocalStorageAdapter } from './generated/cfg';
-import { APIError } from './generated/cfg/errors';
+import { API as ProfilesAPI, LocalStorageAdapter as ProfilesStorage } from './generated/profiles';
+import { API as TradingAPI, LocalStorageAdapter as TradingStorage } from './generated/trading';
+import { API as CryptoAPI, LocalStorageAdapter as CryptoStorage } from './generated/crypto';
+import { APIError } from './generated/profiles/errors';
 import { settings } from '@/core/settings';
 
+// Get base URL from environment
+const baseUrl = settings.api.baseUrl;
 
-// Get API URL from environment
-const apiUrl = settings.api.baseUrl;
-const storage = {
-  storage: new LocalStorageAdapter(),
-}
+// API endpoints for each group
+const profilesUrl = `${baseUrl}/api/profiles`;
+const tradingUrl = `${baseUrl}/api/trading`;
+const cryptoUrl = `${baseUrl}/api/crypto`;
 
-// Create singleton CFG API instance
-const api = new API(apiUrl, storage);
+// Create singleton API instances for each group
+const profilesApi = new ProfilesAPI(profilesUrl, { storage: new ProfilesStorage() });
+const tradingApi = new TradingAPI(tradingUrl, { storage: new TradingStorage() });
+const cryptoApi = new CryptoAPI(cryptoUrl, { storage: new CryptoStorage() });
 
 export class BaseClient {
   /**
-   * Django-CFG API client
-   *
-   * Available endpoints:
-   * - this.cfgApi.cfg_accounts - User accounts
-   * - this.cfgApi.cfg_accounts_auth - Authentication
-   * - this.cfgApi.cfg_accounts_user_profile - User profiles
-   * - this.cfgApi.cfg_tasks - Task management
-   * - this.cfgApi.cfg_payments - Payments
-   * - this.cfgApi.cfg_newsletter - Newsletter
-   * - this.cfgApi.cfg_newsletter_bulk_email - Bulk emails
-   * - this.cfgApi.cfg_newsletter_campaigns - Email campaigns
-   * - this.cfgApi.cfg_newsletter_subscriptions - Subscriptions
-   * - this.cfgApi.cfg_knowbase - Knowledge base
-   * - this.cfgApi.cfg_leads - Lead management
-   * - this.cfgApi.cfg_leads_lead_submission - Lead submission
-   * - this.cfgApi.cfg_support - Support tickets
-   * - this.cfgApi.cfg_centrifugo_centrifugo_admin_api - Centrifugo admin
-   * - this.cfgApi.cfg_centrifugo_centrifugo_monitoring - Centrifugo monitoring
-   * - this.cfgApi.cfg_health - Health checks
-   * - this.cfgApi.cfg_endpoints - Endpoints listing
+   * Profiles API client
+   * Available: this.profilesApi.profiles__api__profiles
    */
-  protected static api = api;
+  protected static profilesApi = profilesApi;
+
+  /**
+   * Trading API client
+   * Available:
+   * - this.tradingApi.trading_trading.portfolios
+   * - this.tradingApi.trading_trading.orders
+   */
+  protected static tradingApi = tradingApi;
+
+  /**
+   * Crypto API client
+   * Available:
+   * - this.cryptoApi.crypto_crypto.coins
+   * - this.cryptoApi.crypto_crypto.exchanges
+   * - this.cryptoApi.crypto_crypto.wallets
+   */
+  protected static cryptoApi = cryptoApi;
 }
 
-// Export API instance and error classes
-export { api, APIError };
+// Export API instances and error classes
+export { profilesApi, tradingApi as tradingClient, cryptoApi as cryptoClient, APIError };

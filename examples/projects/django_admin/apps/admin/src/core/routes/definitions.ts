@@ -1,14 +1,17 @@
 /**
- * Route Definitions for BitAPI
+ * Route Definitions
  *
- * All route definitions with metadata for menu generation
+ * All route definitions in one place - simple and clear
  */
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutDashboard, Radio, User, LogIn,
-  Book, Shield, FileText, Cookie, Palette
+  LayoutDashboard, MessageSquare, BriefcaseIcon, Code,
+  LogIn, User, CreditCard, LifeBuoy, Bug,
+  Book, Shield, FileText, Cookie, Wallet, TrendingUp, Bitcoin, Building2,
+  FileQuestion, ServerCrash, Wrench, Lock
 } from 'lucide-react';
+import { isDevelopment } from '../settings';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -21,6 +24,7 @@ export interface RouteMetadata {
   protected: boolean;
   group?: string;  // For menu grouping
   order?: number;  // Order within group
+  show?: boolean;
 }
 
 export interface RouteDefinition {
@@ -56,7 +60,7 @@ abstract class BaseRouteGroup {
 export class PublicRoutes extends BaseRouteGroup {
   readonly home = this.route('/', {
     label: 'Home',
-    description: 'BitAPI Dashboard home',
+    description: 'Dashboard home page',
     icon: LayoutDashboard,
     protected: false,
     group: 'main',
@@ -70,49 +74,75 @@ export class PublicRoutes extends BaseRouteGroup {
     protected: false,
   });
 
-  readonly docs = this.route('/docs', {
-    label: 'Documentation',
-    description: 'API documentation and guides',
-    icon: Book,
+  readonly support = this.route('/support', {
+    label: 'Support',
+    description: 'User support',
+    icon: LifeBuoy,
     protected: false,
-    group: 'resources',
-    order: 1,
   });
 
-  readonly privacy = this.route('/privacy', {
+  // External documentation link (not a route, but kept for reference)
+  readonly docsExternal = 'https://djangocfg.com';
+
+  readonly error404 = this.route('/404', {
+    label: '404 Page',
+    description: 'Not Found error page',
+    icon: FileQuestion,
+    protected: false,
+    group: 'debug',
+    order: 3,
+  });
+
+  readonly error500 = this.route('/500', {
+    label: '500 Page',
+    description: 'Server Error page',
+    icon: ServerCrash,
+    protected: false,
+    group: 'debug',
+    order: 4,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Legal Routes (No authentication required)
+// ─────────────────────────────────────────────────────────────────────────
+
+export class LegalRoutes extends BaseRouteGroup {
+  
+  readonly privacy = this.route('/legal/privacy', {
     label: 'Privacy Policy',
     description: 'Privacy policy and data protection',
     icon: Shield,
     protected: false,
-    group: 'resources',
-    order: 2,
+    group: 'legal',
+    order: 1,
   });
 
-  readonly terms = this.route('/terms', {
+  readonly terms = this.route('/legal/terms', {
     label: 'Terms of Service',
     description: 'Terms and conditions',
     icon: FileText,
     protected: false,
-    group: 'resources',
-    order: 3,
+    group: 'legal',
+    order: 2,
   });
 
-  readonly cookies = this.route('/cookies', {
+  readonly cookies = this.route('/legal/cookies', {
     label: 'Cookie Policy',
     description: 'Cookie usage and preferences',
     icon: Cookie,
     protected: false,
-    group: 'security',
-    order: 2,
+    group: 'legal',
+    order: 3,
   });
 
-  readonly security = this.route('/security', {
+  readonly security = this.route('/legal/security', {
     label: 'Security Policy',
     description: 'Security practices and policies',
     icon: Shield,
     protected: false,
-    group: 'security',
-    order: 1,
+    group: 'legal',
+    order: 4,
   });
 }
 
@@ -122,22 +152,30 @@ export class PublicRoutes extends BaseRouteGroup {
 
 export class PrivateRoutes extends BaseRouteGroup {
   readonly overview = this.route('/private', {
-    label: 'Overview',
-    description: 'Dashboard overview',
+    label: 'Dashboard',
+    description: 'Main dashboard overview',
     icon: LayoutDashboard,
     protected: true,
     group: 'main',
     order: 1,
   });
 
-
-  readonly centrifugo = this.route('/private/centrifugo', {
-    label: 'Centrifugo',
-    description: 'Real-time messaging and monitoring',
-    icon: Radio,
+  readonly trading = this.route('/private/trading', {
+    label: 'Trading',
+    description: 'Manage trading portfolio and orders',
+    icon: TrendingUp,
     protected: true,
-    group: 'system',
+    group: 'main',
     order: 2,
+  });
+
+  readonly crypto = this.route('/private/crypto', {
+    label: 'Cryptocurrency',
+    description: 'Manage cryptocurrency data and wallets',
+    icon: Bitcoin,
+    protected: true,
+    group: 'main',
+    order: 3,
   });
 
   readonly profile = this.route('/private/profile', {
@@ -151,27 +189,43 @@ export class PrivateRoutes extends BaseRouteGroup {
 
   readonly ui = this.route('/private/ui', {
     label: 'UI Components',
-    description: 'Component showcase and documentation',
-    icon: Palette,
+    description: 'UI component library and showcase',
+    icon: LayoutDashboard,
     protected: true,
-    group: 'development',
-    order: 1,
+    group: 'developer',
+    order: 2,
+    // show: isDevelopment,
   });
 
+  // Dynamic order routes
+  orderDetail(id: string): string {
+    return `/private/trading/orders/${id}`;
+  }
+
+  // Dynamic coin routes
+  coinDetail(id: string): string {
+    return `/private/crypto/coins/${id}`;
+  }
+
+  exchangeDetail(id: string): string {
+    return `/private/crypto/exchanges/${id}`;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 // Routes Container
 // ─────────────────────────────────────────────────────────────────────────
 
-export class BitAPIRoutes {
+export class DjangoCfgRoutes {
   readonly public = new PublicRoutes();
   readonly private = new PrivateRoutes();
-
+  readonly legal = new LegalRoutes();
+  
   getAllRoutes(): RouteDefinition[] {
     return [
       ...this.public.getAllRoutes(),
       ...this.private.getAllRoutes(),
+      ...this.legal.getAllRoutes(),
     ];
   }
 
@@ -181,7 +235,7 @@ export class BitAPIRoutes {
 
   getRouteLabel(path: string): string {
     const route = this.getRouteByPath(path);
-    return route?.metadata.label || 'BitAPI';
+    return route?.metadata.label || 'No label';
   }
 
   getRouteDescription(path: string): string | undefined {

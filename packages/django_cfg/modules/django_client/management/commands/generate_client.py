@@ -510,6 +510,13 @@ class Command(BaseCommand):
                 import traceback
                 traceback.print_exc()
 
+        # Build and copy to Next.js admin (if configured)
+        if typescript and success_count > 0:
+            # First copy API clients
+            self._copy_to_nextjs_admin(service)
+            # Then build Next.js (so clients are included in build)
+            self._build_nextjs_admin()
+
         # Summary
         self.stdout.write("\n" + "=" * 60)
         if error_count == 0:
@@ -525,3 +532,218 @@ class Command(BaseCommand):
             self.stdout.write(f"  TypeScript: {service.config.get_typescript_clients_dir()}")
         if go:
             self.stdout.write(f"  Go:         {service.config.get_go_clients_dir()}")
+
+    def _copy_to_nextjs_admin(self, service):
+        """Copy TypeScript clients to Next.js admin project (if configured)."""
+        try:
+            from django_cfg.core.config import get_current_config
+            from pathlib import Path
+            import shutil
+
+            config = get_current_config()
+            if not config or not config.nextjs_admin:
+                return
+
+            nextjs_config = config.nextjs_admin
+            if not nextjs_config.auto_copy_api:
+                return
+
+            # Resolve Next.js project path
+            base_dir = config.base_dir
+            project_path = Path(nextjs_config.project_path)
+            if not project_path.is_absolute():
+                project_path = base_dir / project_path
+
+            if not project_path.exists():
+                self.stdout.write(self.style.WARNING(
+                    f"\n⚠️  Next.js project not found: {project_path}"
+                ))
+                return
+
+            # Resolve API output path
+            api_output_path = project_path / nextjs_config.get_api_output_path()
+
+            # Source: TypeScript clients directory
+            ts_source = service.config.get_typescript_clients_dir()
+
+            if not ts_source.exists():
+                return
+
+            self.stdout.write(f"\n📦 Copying TypeScript clients to Next.js admin...")
+
+            # Copy each group
+            copied_count = 0
+            for group_dir in ts_source.iterdir():
+                if not group_dir.is_dir():
+                    continue
+
+                group_name = group_dir.name
+                target_dir = api_output_path / group_name
+
+                # Remove old
+                if target_dir.exists():
+                    shutil.rmtree(target_dir)
+
+                # Copy new
+                shutil.copytree(group_dir, target_dir)
+                copied_count += 1
+
+                self.stdout.write(f"  ✅ {group_name} → {target_dir.relative_to(project_path)}")
+
+            if copied_count > 0:
+                self.stdout.write(self.style.SUCCESS(
+                    f"\n✅ Copied {copied_count} group(s) to Next.js admin!"
+                ))
+
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"\n❌ Failed to copy to Next.js admin: {e}"))
+            import traceback
+            traceback.print_exc()
+
+    def _build_nextjs_admin(self):
+        """Build Next.js admin static export (if configured)."""
+        try:
+            from django_cfg.core.config import get_current_config
+            from pathlib import Path
+            import subprocess
+            import shutil
+
+            config = get_current_config()
+            if not config or not config.nextjs_admin:
+                return
+
+            nextjs_config = config.nextjs_admin
+            if not nextjs_config.auto_build:
+                return
+
+            # Resolve Next.js project path
+            base_dir = config.base_dir
+            project_path = Path(nextjs_config.project_path)
+            if not project_path.is_absolute():
+                project_path = base_dir / project_path
+
+            if not project_path.exists():
+                self.stdout.write(self.style.WARNING(
+                    f"\n⚠️  Next.js project not found: {project_path}"
+                ))
+                return
+
+            self.stdout.write(f"\n🏗️  Building Next.js admin static export...")
+
+            # Check if pnpm is available
+            pnpm_path = shutil.which('pnpm')
+            if not pnpm_path:
+                self.stdout.write(self.style.WARNING(
+                    "\n⚠️  pnpm not found. Skipping Next.js build."
+                ))
+                self.stdout.write("   Install pnpm or set auto_build=False in NextJsAdminConfig")
+                return
+
+            # Run pnpm build with NEXT_PUBLIC_STATIC_BUILD=true for static export
+            try:
+                import os
+                env = os.environ.copy()
+                env['NEXT_PUBLIC_STATIC_BUILD'] = 'true'
+
+                result = subprocess.run(
+                    [pnpm_path, 'build'],
+                    cwd=str(project_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 minutes timeout
+                    env=env,
+                )
+
+                if result.returncode == 0:
+                    self.stdout.write(self.style.SUCCESS(
+                        f"\n✅ Next.js admin built successfully!"
+                    ))
+
+                    # Check build output
+                    static_output = project_path / nextjs_config.get_static_output_path()
+                    if static_output.exists():
+                        self.stdout.write(self.style.SUCCESS(
+                            f"   📁 Build output: {static_output.relative_to(base_dir)}"
+                        ))
+
+                        # Create ZIP archive for Django static (Docker-ready)
+                        django_static_zip = base_dir / "static" / "nextjs_admin.zip"
+
+                        try:
+                            # Ensure static directory exists
+                            django_static_zip.parent.mkdir(parents=True, exist_ok=True)
+
+                            # Remove old ZIP if exists
+                            if django_static_zip.exists():
+                                django_static_zip.unlink()
+
+                            # Check if zip command is available
+                            zip_path = shutil.which('zip')
+                            if not zip_path:
+                                self.stdout.write(self.style.WARNING(
+                                    "   ⚠️  zip command not found. Falling back to Python zipfile..."
+                                ))
+                                # Fallback to Python zipfile
+                                import zipfile
+                                with zipfile.ZipFile(django_static_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                                    for file_path in static_output.rglob('*'):
+                                        if file_path.is_file():
+                                            arcname = file_path.relative_to(static_output)
+                                            zipf.write(file_path, arcname)
+                            else:
+                                # Use system zip command (faster)
+                                subprocess.run(
+                                    [zip_path, '-r', '-q', str(django_static_zip), '.'],
+                                    cwd=str(static_output),
+                                    check=True
+                                )
+
+                            # Get ZIP size
+                            zip_size_mb = django_static_zip.stat().st_size / (1024 * 1024)
+
+                            self.stdout.write(self.style.SUCCESS(
+                                f"   ✅ Created ZIP archive: {django_static_zip.relative_to(base_dir)} ({zip_size_mb:.1f}MB)"
+                            ))
+
+                            # Copy ZIP to django_cfg package static/frontend directory
+                            import django_cfg
+                            django_cfg_static_zip = Path(django_cfg.__file__).parent / 'static' / 'frontend' / 'nextjs_admin.zip'
+                            django_cfg_static_zip.parent.mkdir(parents=True, exist_ok=True)
+
+                            if django_cfg_static_zip.exists():
+                                django_cfg_static_zip.unlink()
+
+                            shutil.copy2(django_static_zip, django_cfg_static_zip)
+
+                            self.stdout.write(self.style.SUCCESS(
+                                f"   ✅ Copied ZIP to django_cfg: {django_cfg_static_zip.relative_to(Path(django_cfg.__file__).parent)}"
+                            ))
+
+                        except Exception as zip_error:
+                            self.stdout.write(self.style.ERROR(
+                                f"   ❌ Failed to create ZIP archive: {zip_error}"
+                            ))
+                    else:
+                        self.stdout.write(self.style.WARNING(
+                            f"   ⚠️  Build output not found at: {static_output.relative_to(base_dir)}"
+                        ))
+                else:
+                    self.stdout.write(self.style.ERROR(
+                        f"\n❌ Next.js build failed with exit code {result.returncode}"
+                    ))
+                    if result.stderr:
+                        self.stdout.write(self.style.ERROR(f"   Error: {result.stderr[:500]}"))
+
+            except subprocess.TimeoutExpired:
+                self.stdout.write(self.style.ERROR(
+                    "\n❌ Next.js build timed out (5 minutes)"
+                ))
+            except Exception as build_error:
+                self.stdout.write(self.style.ERROR(
+                    f"\n❌ Build command failed: {build_error}"
+                ))
+
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"\n❌ Failed to build Next.js admin: {e}"))
+            import traceback
+            traceback.print_exc()

@@ -2,15 +2,22 @@
 
 JWT tokens are automatically injected into HTML responses for authenticated users.
 This is specific to Next.js frontend apps only.
+
+Features:
+- Automatic extraction of ZIP archives on first request
+- SPA routing with fallback strategies
+- JWT token injection for authenticated users
 """
 
 import logging
+import zipfile
 from pathlib import Path
 from django.http import Http404, HttpResponse, FileResponse
 from django.views.static import serve
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils.decorators import method_decorator
+from django.shortcuts import render
 from rest_framework_simplejwt.tokens import RefreshToken
 
 logger = logging.getLogger(__name__)
@@ -45,8 +52,21 @@ class NextJSStaticView(View):
 
         base_dir = Path(django_cfg.__file__).parent / 'static' / 'frontend' / self.app_name
 
+        # Check if ZIP archive exists and extract if needed
         if not base_dir.exists():
-            raise Http404(f"Frontend app '{self.app_name}' not found. Run 'make build-admin' to build it.")
+            zip_path = Path(django_cfg.__file__).parent / 'static' / 'frontend' / f'{self.app_name}.zip'
+            if zip_path.exists():
+                logger.info(f"Extracting {self.app_name}.zip to {base_dir}...")
+                try:
+                    base_dir.parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(base_dir)
+                    logger.info(f"Successfully extracted {self.app_name}.zip")
+                except Exception as e:
+                    logger.error(f"Failed to extract {self.app_name}.zip: {e}")
+                    return render(request, 'frontend/404.html', status=404)
+            else:
+                return render(request, 'frontend/404.html', status=404)
 
         original_path = path  # Store for logging
 

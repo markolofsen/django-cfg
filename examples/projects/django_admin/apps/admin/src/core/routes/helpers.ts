@@ -4,7 +4,7 @@
  * Utility functions for routes
  */
 
-import type { BitAPIRoutes } from './definitions';
+import type { DjangoCfgRoutes } from './definitions';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Page Titles
@@ -13,7 +13,7 @@ import type { BitAPIRoutes } from './definitions';
 /**
  * Get page title for a given path
  */
-export function getPageTitle(routes: BitAPIRoutes, path: string): string {
+export function getPageTitle(routes: DjangoCfgRoutes, path: string): string {
   // Try exact match first
   const label = routes.getRouteLabel(path);
   if (label) {
@@ -60,7 +60,7 @@ export interface BreadcrumbItem {
 /**
  * Generate breadcrumbs for current path
  */
-export function generateBreadcrumbs(routes: BitAPIRoutes, currentPath: string): BreadcrumbItem[] {
+export function generateBreadcrumbs(routes: DjangoCfgRoutes, currentPath: string): BreadcrumbItem[] {
   const breadcrumbs: BreadcrumbItem[] = [];
 
   // Add home if not on home page

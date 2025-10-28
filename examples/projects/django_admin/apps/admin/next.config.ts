@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const isStaticBuild = process.env.NEXT_PUBLIC_STATIC_BUILD === 'true';
-const basePath = isStaticBuild ? '/cfg/admin' : '';
+const basePath = isStaticBuild ? '/cfg/nextjs-admin' : '';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

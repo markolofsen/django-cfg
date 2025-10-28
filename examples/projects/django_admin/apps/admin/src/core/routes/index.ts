@@ -16,7 +16,6 @@
  * ```
  */
 
-import { BitAPIRoutes } from './definitions';
 import {
   generateDashboardMenu,
   generatePublicNavigation,
@@ -34,6 +33,7 @@ import {
   isActive,
   generateBreadcrumbs as generateBreadcrumbsFn,
 } from './helpers';
+import { DjangoCfgRoutes } from './definitions';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Singleton Instance
@@ -42,7 +42,7 @@ import {
 /**
  * Global routes instance
  */
-export const routes = new BitAPIRoutes();
+export const routes = new DjangoCfgRoutes();
 
 // ─────────────────────────────────────────────────────────────────────────
 // Pre-generated Menus
@@ -112,7 +112,6 @@ export { isActive };
 export type {
   RouteMetadata,
   RouteDefinition,
-  BitAPIRoutes,
   PublicRoutes,
   PrivateRoutes,
 } from './definitions';
