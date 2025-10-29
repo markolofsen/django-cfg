@@ -174,30 +174,30 @@ def nextjs_admin_url(path=''):
         2. Otherwise → /cfg/admin/admin/{path} (static files)
 
     Note: Port 3000 is reserved for external Next.js admin (Tab 2).
+    Both tabs use /admin route for consistency.
 
     Usage in template:
         {% load django_cfg %}
         <iframe src="{% nextjs_admin_url %}"></iframe>
-        <iframe src="{% nextjs_admin_url 'centrifugo' %}"></iframe>
+        <iframe src="{% nextjs_admin_url 'crypto' %}"></iframe>
     """
     # Normalize path - remove leading/trailing slashes
     path = path.strip('/')
 
     if not settings.DEBUG:
-        # Production mode: always use static files
-        return f'/cfg/admin/{path}' if path else '/cfg/admin/'
+        # Production mode: always use static files with /admin route
+        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
 
     # Check if port 3001 is available for Tab 1 (built-in admin)
     port_3001_available = _is_port_available('localhost', 3001)
 
     if port_3001_available:
-        # Dev server is running on 3001 - use it (builtin admin has no /admin prefix)
-        base_url = 'http://localhost:3001'
+        # Dev server is running on 3001 - use /admin route for consistency
+        base_url = 'http://localhost:3001/admin'
         return f'{base_url}/{path}' if path else base_url
     else:
-        # No dev server or dev server stopped - use static files
-        # Static files are served from /cfg/admin/ but ZIP contains files in root (no /admin prefix)
-        return f'/cfg/admin/{path}' if path else '/cfg/admin/'
+        # No dev server - use static files with /admin route
+        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
 
 
 @register.simple_tag
