@@ -8,8 +8,7 @@ export const isStaticBuild = process.env.NEXT_PUBLIC_STATIC_BUILD === 'true';
 
 // Base path - comes from next.config.ts
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8765';
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
 
 export const settings = {
   app: {
@@ -38,9 +37,9 @@ export const settings = {
     // Main API URL for authentication and CFG services
     // For static builds, NEXT_PUBLIC_API_URL is '' (empty string) to use relative paths
     // Use nullish coalescing (??) instead of || to allow empty string
-    baseUrl,
+    baseUrl: apiUrl,
     // WebSocket RPC URL (Django Channels)
-    wsUrl,
+    wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8765',
     // Centrifugo WebSocket URL (NOTE: now received from API via connection-token endpoint)
     // centrifugoWsUrl: DEPRECATED - use tokenResponse.centrifugo_url from API
   },

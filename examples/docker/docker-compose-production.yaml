@@ -19,7 +19,6 @@ services:
     volumes:
       - "../files/django-logs:/app/logs"
       - "../files/django-media:/app/media"
-      - "django-static:/app/static"
     networks:
       - dokploy-network
     healthcheck:
@@ -118,6 +117,3 @@ services:
 networks:
   dokploy-network:
     external: true
-
-volumes:
-  django-static:

@@ -63,7 +63,7 @@ class NavigationManager(BaseCfgModule):
                     separator=True,
                     collapsible=True,
                     items=[
-                        NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/private/centrifugo"),
+                        NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/centrifugo"),
                         NavigationItem(title="Logs", icon=Icons.LIST_ALT, link=str(reverse_lazy("admin:django_cfg_centrifugo_centrifugolog_changelist"))),
                     ]
                 )

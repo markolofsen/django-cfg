@@ -16,9 +16,12 @@ import { API as TradingAPI, LocalStorageAdapter as TradingStorage } from './gene
 import { API as CryptoAPI, LocalStorageAdapter as CryptoStorage } from './generated/crypto';
 import { APIError } from './generated/profiles/errors';
 import { settings } from '@/core/settings';
+import consola from 'consola';
 
 // Get base URL from environment
 const baseUrl = settings.api.baseUrl;
+
+consola.log('[BaseClient] baseUrl', baseUrl);
 
 // Create singleton API instances for each group
 // NOTE: The generated clients already include the full path (e.g., /api/trading/orders/)
