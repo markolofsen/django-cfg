@@ -8,6 +8,7 @@ export const isStaticBuild = process.env.NEXT_PUBLIC_STATIC_BUILD === 'true';
 
 // Base path - comes from next.config.ts
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+// API URL: empty string for static builds (relative paths), or localhost for dev
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
 
 export const settings = {
@@ -63,7 +64,7 @@ export const settings = {
   },
 
   admin: {
-    url: `${baseUrl}/admin/`,
+    url: `https://api.djangocfg.com/admin/`,
     demo: {
       email: 'admin@example.com',
       password: 'admin123',

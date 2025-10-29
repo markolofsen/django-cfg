@@ -710,19 +710,11 @@ class Command(BaseCommand):
                             self.stdout.write(self.style.SUCCESS(
                                 f"   ✅ Created ZIP archive: {django_static_zip.relative_to(base_dir)} ({zip_size_mb:.1f}MB)"
                             ))
-
-                            # Copy ZIP to django_cfg package static/frontend directory
-                            import django_cfg
-                            django_cfg_static_zip = Path(django_cfg.__file__).parent / 'static' / 'frontend' / 'nextjs_admin.zip'
-                            django_cfg_static_zip.parent.mkdir(parents=True, exist_ok=True)
-
-                            if django_cfg_static_zip.exists():
-                                django_cfg_static_zip.unlink()
-
-                            shutil.copy2(django_static_zip, django_cfg_static_zip)
-
                             self.stdout.write(self.style.SUCCESS(
-                                f"   ✅ Copied ZIP to django_cfg: {django_cfg_static_zip.relative_to(Path(django_cfg.__file__).parent)}"
+                                f"   📍 ZIP location: {django_static_zip.relative_to(base_dir)}"
+                            ))
+                            self.stdout.write(self.style.SUCCESS(
+                                "   ℹ️  This ZIP is used by NextJsAdminView (Tab 2: External Admin)"
                             ))
 
                         except Exception as zip_error:
