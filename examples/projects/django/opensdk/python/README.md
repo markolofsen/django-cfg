@@ -66,8 +66,8 @@ asyncio.run(main())
 
 Available Pydantic models:
 - `UserPresenceParams`
-- `HealthCheckParams`
 - `HealthCheckResult`
+- `HealthCheckParams`
 - `UserPresenceResult`
 
 ## Generated Methods

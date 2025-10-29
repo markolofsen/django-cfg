@@ -10,11 +10,6 @@ export interface UserPresenceParams {
   status: string;
 }
 
-export interface HealthCheckParams {
-  /** Include detailed system info */
-  include_details?: boolean;
-}
-
 export interface HealthCheckResult {
   /** System status: healthy, degraded, unhealthy */
   status: string;
@@ -24,6 +19,11 @@ export interface HealthCheckResult {
   database: string;
   /** Cache status */
   cache: string;
+}
+
+export interface HealthCheckParams {
+  /** Include detailed system info */
+  include_details?: boolean;
 }
 
 export interface UserPresenceResult {

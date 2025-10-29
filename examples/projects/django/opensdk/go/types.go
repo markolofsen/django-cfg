@@ -10,12 +10,6 @@ type UserPresenceParams struct {
 	Status string `json:"status"`
 }
 
-// Health check request parameters.
-type HealthCheckParams struct {
-	// Include detailed system info
-	IncludeDetails *bool `json:"include_details"`
-}
-
 // Health check response.
 type HealthCheckResult struct {
 	// System status: healthy, degraded, unhealthy
@@ -26,6 +20,12 @@ type HealthCheckResult struct {
 	Database string `json:"database"`
 	// Cache status
 	Cache string `json:"cache"`
+}
+
+// Health check request parameters.
+type HealthCheckParams struct {
+	// Include detailed system info
+	IncludeDetails *bool `json:"include_details"`
 }
 
 // User presence response.

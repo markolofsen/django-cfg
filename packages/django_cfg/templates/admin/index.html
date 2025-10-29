@@ -136,6 +136,7 @@
         <div x-data="{
             activeTab: 'builtin',
             previousTab: 'builtin',
+            currentNextjsPath: '',
             switchTab(tab) {
                 if (this.previousTab !== tab) {
                     // Reset iframe to initial URL when switching tabs
@@ -151,6 +152,34 @@
                 if (iframe) {
                     const originalSrc = iframe.getAttribute('data-original-src') || iframe.src;
                     iframe.src = originalSrc;
+                }
+                // Reset path when resetting iframe
+                if (tab === 'nextjs') {
+                    this.currentNextjsPath = '';
+                }
+            },
+            openInNewWindow() {
+                // Get the current iframe URL for the External Admin tab
+                const iframe = document.getElementById('nextjs-dashboard-iframe-nextjs');
+                if (!iframe) return;
+
+                // Get base URL from iframe src or data-original-src
+                let baseUrl = iframe.src || iframe.getAttribute('data-original-src');
+
+                // If we have a tracked path from postMessage, use it
+                if (this.currentNextjsPath) {
+                    try {
+                        const url = new URL(baseUrl);
+                        // Replace pathname with tracked path
+                        url.pathname = this.currentNextjsPath;
+                        baseUrl = url.toString();
+                    } catch (e) {
+                        console.warn('[Django-CFG] Failed to construct URL with path:', e);
+                    }
+                }
+
+                if (baseUrl) {
+                    window.open(baseUrl, '_blank', 'noopener,noreferrer');
                 }
             }
         }">
@@ -200,12 +229,25 @@
                         </button>
                     </nav>
 
-                    <!-- Version info -->
-                    <div class="py-4 text-xs text-gray-400 dark:text-gray-500">
-                        {% load django_cfg %}
-                        <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700">
-                            {% lib_name %}
-                        </a>
+                    <!-- Actions & Version info -->
+                    <div class="flex items-center gap-4 py-4">
+                        <!-- Open in new window button (only for External Admin tab) -->
+                        <button @click="openInNewWindow()"
+                                x-show="activeTab === 'nextjs'"
+                                title="Open in new window"
+                                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-all duration-150"
+                                style="display: none;">
+                            <span class="material-icons" style="font-size: 16px;">open_in_new</span>
+                            <span>Open in New Window</span>
+                        </button>
+
+                        <!-- Version info -->
+                        <div class="text-xs text-gray-400 dark:text-gray-500">
+                            {% load django_cfg %}
+                            <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700">
+                                {% lib_name %}
+                            </a>
+                        </div>
                     </div>
                 </div>
                 </div>
@@ -419,7 +461,18 @@
                             break;
 
                         case 'iframe-navigation':
-                            // console.log('[Django-CFG] iframe navigated to:', data.path);
+                            console.log('[Django-CFG] iframe navigated to:', data?.path);
+                            // Track current path for "Open in New Window" button
+                            if (iframe.id === 'nextjs-dashboard-iframe-nextjs' && data?.path) {
+                                // Update Alpine.js data
+                                const alpineEl = document.querySelector('[x-data]');
+                                if (alpineEl && window.Alpine) {
+                                    const alpineData = window.Alpine.$data(alpineEl);
+                                    if (alpineData) {
+                                        alpineData.currentNextjsPath = data.path;
+                                    }
+                                }
+                            }
                             break;
 
                         default:

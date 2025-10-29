@@ -14,17 +14,17 @@ class UserPresenceParams(BaseModel):
     status: str = Field(..., description='Status: online, away, busy, offline')
 
 
-class HealthCheckParams(BaseModel):
-    """Health check request parameters."""
-    include_details: Optional[bool] = Field(None, description='Include detailed system info')
-
-
 class HealthCheckResult(BaseModel):
     """Health check response."""
     status: str = Field(..., description='System status: healthy, degraded, unhealthy')
     uptime_seconds: int = Field(..., description='System uptime in seconds')
     database: str = Field(..., description='Database status')
     cache: str = Field(..., description='Cache status')
+
+
+class HealthCheckParams(BaseModel):
+    """Health check request parameters."""
+    include_details: Optional[bool] = Field(None, description='Include detailed system info')
 
 
 class UserPresenceResult(BaseModel):
@@ -37,7 +37,7 @@ class UserPresenceResult(BaseModel):
 
 __all__ = [
     "UserPresenceParams",
-    "HealthCheckParams",
     "HealthCheckResult",
+    "HealthCheckParams",
     "UserPresenceResult",
 ]

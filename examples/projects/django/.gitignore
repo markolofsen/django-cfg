@@ -60,7 +60,7 @@ poetry.lock
 logs
 db/*
 media/*
-openapi/archive
+openapi/
 
 # Generated SDK clients
 # opensdk/
