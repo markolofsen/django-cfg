@@ -673,7 +673,11 @@ class Command(BaseCommand):
                         ))
 
                         # Create ZIP archive for Django static (Docker-ready)
-                        django_static_zip = base_dir / "static" / "nextjs_admin.zip"
+                        # Use solution project's BASE_DIR from Django settings
+                        from django.conf import settings as django_settings
+                        solution_base_dir = django_settings.BASE_DIR
+
+                        django_static_zip = nextjs_config.get_static_zip_path(solution_base_dir)
 
                         try:
                             # Ensure static directory exists
@@ -707,11 +711,14 @@ class Command(BaseCommand):
                             # Get ZIP size
                             zip_size_mb = django_static_zip.stat().st_size / (1024 * 1024)
 
+                            # Show relative path from solution BASE_DIR
+                            relative_zip_path = django_static_zip.relative_to(solution_base_dir)
+
                             self.stdout.write(self.style.SUCCESS(
-                                f"   ✅ Created ZIP archive: {django_static_zip.relative_to(base_dir)} ({zip_size_mb:.1f}MB)"
+                                f"   ✅ Created ZIP archive: {relative_zip_path} ({zip_size_mb:.1f}MB)"
                             ))
                             self.stdout.write(self.style.SUCCESS(
-                                f"   📍 ZIP location: {django_static_zip.relative_to(base_dir)}"
+                                f"   📍 ZIP location: {django_static_zip}"
                             ))
                             self.stdout.write(self.style.SUCCESS(
                                 "   ℹ️  This ZIP is used by NextJsAdminView (Tab 2: External Admin)"
@@ -729,17 +736,30 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(
                         f"\n❌ Next.js build failed with exit code {result.returncode}"
                     ))
+
+                    # Show full error output
                     if result.stderr:
-                        self.stdout.write(self.style.ERROR(f"   Error: {result.stderr[:500]}"))
+                        self.stdout.write(self.style.ERROR(f"\n   stderr:\n{result.stderr}"))
+                    if result.stdout:
+                        self.stdout.write(self.style.ERROR(f"\n   stdout:\n{result.stdout}"))
+
+                    # Exit on build failure
+                    raise CommandError(
+                        f"Next.js build failed with exit code {result.returncode}. "
+                        "Fix the build errors and try again."
+                    )
 
             except subprocess.TimeoutExpired:
                 self.stdout.write(self.style.ERROR(
                     "\n❌ Next.js build timed out (5 minutes)"
                 ))
+                raise CommandError("Next.js build timed out after 5 minutes")
+
             except Exception as build_error:
                 self.stdout.write(self.style.ERROR(
                     f"\n❌ Build command failed: {build_error}"
                 ))
+                raise CommandError(f"Next.js build command failed: {build_error}")
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Failed to build Next.js admin: {e}"))
