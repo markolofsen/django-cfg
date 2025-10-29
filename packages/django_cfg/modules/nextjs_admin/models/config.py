@@ -165,6 +165,19 @@ class NextJsAdminConfig(BaseModel):
         """Get tab title with default."""
         return self.tab_title or "Next.js Admin"
 
+    def get_static_zip_path(self, solution_base_dir):
+        """
+        Get path to nextjs_admin.zip for Django static serving.
+
+        Args:
+            solution_base_dir: Solution project BASE_DIR (from settings.BASE_DIR)
+
+        Returns:
+            Path: Path to nextjs_admin.zip (e.g., solution/projects/django/static/nextjs_admin.zip)
+        """
+        from pathlib import Path
+        return Path(solution_base_dir) / "static" / "nextjs_admin.zip"
+
     # =================================================================
     # Validators
     # =================================================================
