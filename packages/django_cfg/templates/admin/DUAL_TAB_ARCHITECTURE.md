@@ -180,6 +180,63 @@ resetIframe(tab) {
 **Why Reset?**
 This ensures that when users switch back to a tab, it starts from the home page rather than whatever route they navigated to previously.
 
+### Open in New Window
+
+The External Admin tab (Tab 2) includes an "Open in New Window" button that allows users to break out of the iframe and work in a dedicated browser window/tab:
+
+```javascript
+openInNewWindow() {
+    // Get the current iframe URL for the External Admin tab
+    const iframe = document.getElementById('nextjs-dashboard-iframe-nextjs');
+    if (iframe) {
+        const currentUrl = iframe.src || iframe.getAttribute('data-original-src');
+        if (currentUrl) {
+            window.open(currentUrl, '_blank', 'noopener,noreferrer');
+        }
+    }
+}
+```
+
+**Features:**
+- Only visible when External Admin tab is active (`x-show="activeTab === 'nextjs'"`)
+- Opens current iframe URL in new window with `noopener,noreferrer` security flags
+- Preserves current route via `postMessage` tracking (see below)
+- Styled as action button with icon and text label
+
+**How Route Tracking Works:**
+
+In **production** (same-origin), `iframe.src` updates automatically:
+```javascript
+// iframe.src reflects current URL automatically
+window.open(iframe.src, '_blank');
+```
+
+In **development** (cross-origin), we track navigation via `postMessage`:
+```javascript
+// iframe sends navigation events
+case 'iframe-navigation':
+    if (data?.path) {
+        alpineData.currentNextjsPath = data.path;  // Track path
+    }
+
+// Button uses tracked path
+openInNewWindow() {
+    const url = new URL(baseUrl);
+    url.pathname = this.currentNextjsPath;  // Apply tracked path
+    window.open(url.toString(), '_blank');
+}
+```
+
+**Why postMessage?**
+Cross-origin iframes cannot access `iframe.src` due to browser security (CORS). The iframe must explicitly send navigation events via `postMessage`.
+
+**Why This is Useful:**
+- Full browser features (address bar, bookmarks, etc.)
+- No iframe sandbox restrictions
+- Easier debugging (browser DevTools)
+- Better for complex workflows that require multiple windows
+- Copy/paste and other browser features work better
+
 ## Static File Serving
 
 ### Built-in Admin (Tab 1)

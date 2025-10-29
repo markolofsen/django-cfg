@@ -114,6 +114,45 @@ services:
       - "traefik.http.routers.djangocfg-web.tls.certresolver=letsencrypt"
       - "traefik.http.services.djangocfg-web.loadbalancer.server.port=3001"
 
+  # Demo Database Auto-Resetter (for demo environment only)
+  demo-resetter:
+    build:
+      context: ..
+      dockerfile: docker/services/demo-resetter/Dockerfile
+    image: django-cfg-demo-resetter:latest
+    container_name: django-cfg-demo-resetter
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      # Configuration
+      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-10}
+      DJANGO_CONTAINER_NAME: django-cfg-django
+
+      # Admin user configuration
+      DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-admin}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@example.com}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123}
+      DEMO_ADMIN_FIRSTNAME: ${DEMO_ADMIN_FIRSTNAME:-Demo}
+      DEMO_ADMIN_LASTNAME: ${DEMO_ADMIN_LASTNAME:-Admin}
+    volumes:
+      # Mount docker socket to execute commands in Django container
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dokploy-network
+    depends_on:
+      django:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "db-reset.sh"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Only run if ENABLE_DEMO_RESET is true
+    profiles:
+      - demo-reset
+
 networks:
   dokploy-network:
     external: true
