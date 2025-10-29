@@ -61,7 +61,11 @@ class CryptoFieldsConfig(BaseModel):
     # === Django Revision Settings (for django-audit-fields dependency) ===
     ignore_git_dir: bool = Field(
         default=True,
-        description="Ignore git directory for django-revision (set DJANGO_REVISION_IGNORE_WORKING_DIR=True)"
+        description=(
+            "Ignore git directory for django-revision. "
+            "When True, version is discovered from: package metadata → pyproject.toml → VERSION file. "
+            "Prevents 'not recommended' warning from settings.REVISION fallback."
+        )
     )
 
     def to_django_settings(self, base_dir: Path, is_production: bool, debug: bool) -> dict:
@@ -108,13 +112,52 @@ class CryptoFieldsConfig(BaseModel):
         }
 
         # Disable django-revision git integration (required by django-audit-fields)
-        # RevisionField will use package metadata or pyproject.toml instead
+        # RevisionField will use package metadata, pyproject.toml, or VERSION file instead
         if self.ignore_git_dir:
             settings["DJANGO_REVISION_IGNORE_WORKING_DIR"] = True
-            # Completely disable django-revision metadata checks to avoid errors
-            settings["DJANGO_REVISION_IGNORE_METADATA"] = True
-            # Set static revision to satisfy django-revision requirements
-            settings["REVISION"] = "1.0.0"
+            # Allow django-revision to discover version from:
+            # 1. Package metadata (version())
+            # 2. pyproject.toml [project][version]
+            # 3. VERSION file (BASE_DIR/VERSION)
+            # Do NOT set REVISION here to avoid "not recommended" warning
+
+            # Create VERSION file if it doesn't exist (prevents fallback to settings.REVISION)
+            version_file = base_dir / "VERSION"
+            if not version_file.exists():
+                try:
+                    # Try to get version from pyproject.toml or package metadata
+                    version_to_write = "1.0.0"  # Default fallback
+
+                    # Try pyproject.toml first
+                    pyproject_file = base_dir / "pyproject.toml"
+                    if pyproject_file.exists():
+                        try:
+                            import tomllib
+                        except ImportError:
+                            # Python < 3.11
+                            try:
+                                import tomli as tomllib  # type: ignore
+                            except ImportError:
+                                tomllib = None  # type: ignore
+
+                        if tomllib:
+                            try:
+                                with open(pyproject_file, "rb") as f:
+                                    pyproject_data = tomllib.load(f)
+                                    version_to_write = pyproject_data.get("project", {}).get("version", version_to_write)
+                            except Exception:
+                                pass  # Use default version
+
+                    # Write VERSION file
+                    version_file.write_text(version_to_write + "\n")
+
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"Created VERSION file at {version_file} with version {version_to_write}")
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Could not create VERSION file: {e}")
 
         return settings
 

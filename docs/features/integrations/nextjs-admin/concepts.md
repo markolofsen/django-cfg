@@ -39,13 +39,6 @@ graph TB
     D -.X.-> H
     D -.X.-> I
     E -.X.-> J
-
-    style A fill:#ff6b6b
-    style F fill:#51cf66
-    style G fill:#51cf66
-    style H fill:#51cf66
-    style I fill:#51cf66
-    style J fill:#51cf66
 ```
 
 **The gap**: Django Admin is great for 90% of tasks, but **hits a ceiling** for complex requirements.
@@ -76,11 +69,6 @@ graph LR
 
     D --> E
     D --> F
-
-    style A fill:#e3f2fd
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style D fill:#c8e6c9
 ```
 
 **One codebase, three interfaces:**
@@ -120,11 +108,6 @@ graph TB
 
     C --> E
     D --> F
-
-    style A fill:#bbdefb
-    style B fill:#ffccbc
-    style C fill:#c8e6c9
-    style D fill:#ffecb3
 ```
 
 ### When to Use Each Tab
@@ -175,10 +158,6 @@ sequenceDiagram
     Note over NextJS: import { OrdersClient }<br/>const orders = await client.list()
 
     NextJS-->>Django: 7. Type-safe API calls
-
-    style Dev fill:#e1f5fe
-    style Generator fill:#f3e5f5
-    style NextJS fill:#c8e6c9
 ```
 
 ### What You Get
@@ -238,11 +217,6 @@ sequenceDiagram
     Note over NextJSIframe: Authorization: Bearer <token>
 
     DjangoAPI->>NextJSIframe: 9. Authenticated response
-
-    style User fill:#e1f5fe
-    style DjangoAdmin fill:#c8e6c9
-    style NextJSIframe fill:#fff3e0
-    style LocalStorage fill:#f3e5f5
 ```
 
 **Zero configuration needed** - authentication "just works"!
@@ -282,11 +256,6 @@ graph TB
     C -->|No| F
 
     G --> H
-
-    style D fill:#c8e6c9
-    style E fill:#c8e6c9
-    style F fill:#ffecb3
-    style H fill:#bbdefb
 ```
 
 **How it works:**
@@ -333,11 +302,6 @@ graph LR
     E --> F
     F --> G
     G --> H
-
-    style C fill:#c8e6c9
-    style D fill:#c8e6c9
-    style G fill:#ffecb3
-    style H fill:#bbdefb
 ```
 
 ### Why ZIP Instead of Direct Copy?
@@ -374,10 +338,6 @@ sequenceDiagram
     NextJSIframe->>NextJSIframe: Apply dark mode styles
 
     Note over DjangoUnfold,NextJSIframe: Both UIs stay in sync!
-
-    style DjangoUnfold fill:#c8e6c9
-    style NextJSIframe fill:#fff3e0
-    style LocalStorage fill:#f3e5f5
 ```
 
 **Bidirectional sync:**
@@ -463,11 +423,6 @@ graph TB
     D --> E
     E --> F
     E --> G
-
-    style B fill:#c8e6c9
-    style D fill:#fff3e0
-    style F fill:#f3e5f5
-    style G fill:#e1f5fe
 ```
 
 **Growth path:**
