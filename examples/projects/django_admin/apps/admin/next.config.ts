@@ -24,10 +24,10 @@ const nextConfig: NextConfig = {
   // Environment variables
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
-    // For static builds, use empty string for relative paths to same domain
-    ...(isStaticBuild && {
-      NEXT_PUBLIC_API_URL: '',
-    }),
+    // API URL based on build mode:
+    // - Static build: '' (empty string) for relative paths to same domain
+    // - Dev server: 'http://localhost:8000' for local development
+    NEXT_PUBLIC_API_URL: isStaticBuild ? '' : 'http://localhost:8000',
   },
 
   // Disable features not supported in static export
