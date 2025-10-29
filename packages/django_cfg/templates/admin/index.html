@@ -291,66 +291,16 @@
 
                 const iframeUrl = new URL(iframeSrc, window.location.origin);
                 const iframeOrigin = iframeUrl.origin;
-                const isDevMode = iframeOrigin !== window.location.origin;
 
                 // Debounce timer for resize events (prevents jittery iframe height changes)
                 let resizeTimer = null;
-                let loadTimeout = null;
 
                 // iframe load event
                 iframe.addEventListener('load', function() {
-                    // Clear the fallback timeout
-                    if (loadTimeout) {
-                        clearTimeout(loadTimeout);
-                        loadTimeout = null;
-                    }
-
                     setTimeout(() => {
                         sendDataToIframe();
                     }, 100);
                 });
-
-                // iframe error event - fallback to static files
-                iframe.addEventListener('error', function() {
-                    console.warn('[Django-CFG] iframe failed to load, falling back to static files');
-                    handleLoadFailure();
-                });
-
-                // Timeout fallback - if iframe doesn't load in 3 seconds
-                loadTimeout = setTimeout(() => {
-                    if (!iframe.classList.contains('loaded') && isDevMode) {
-                        console.warn('[Django-CFG] Dev server timeout, falling back to static files');
-                        handleLoadFailure();
-                    } else if (!iframe.classList.contains('loaded')) {
-                        console.log('[Django-CFG] Timeout - showing iframe anyway');
-                        if (loading) loading.classList.add('hidden');
-                        iframe.classList.add('loaded');
-                    }
-                }, 3000);
-
-                // Handle load failure - switch to static files
-                function handleLoadFailure() {
-                    if (!isDevMode) return; // Already using static files
-
-                    const originalSrc = iframe.getAttribute('data-original-src');
-                    if (!originalSrc) return;
-
-                    // Extract path from dev server URL
-                    const devUrl = new URL(originalSrc);
-                    const pathPart = devUrl.pathname.replace('/admin', '').replace(/^\//, '');
-
-                    // Build static files URL
-                    const staticUrl = `/cfg/admin/admin/${pathPart}`;
-
-                    console.log('[Django-CFG] Switching to static files:', staticUrl);
-                    iframe.src = staticUrl;
-
-                    // Show iframe after switching
-                    setTimeout(() => {
-                        if (loading) loading.classList.add('hidden');
-                        iframe.classList.add('loaded');
-                    }, 500);
-                }
 
                 // Send theme and auth data to iframe
                 function sendDataToIframe() {

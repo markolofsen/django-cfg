@@ -39,8 +39,7 @@ const nextConfig: NextConfig = {
     "@djangocfg/ui",
     "@djangocfg/layouts",
     "@djangocfg/markdown",
-    "@djangocfg/api",
-    "react-ts-tradingview-widgets"
+    "@djangocfg/api"
   ],
 
   webpack: (config, { isServer }) => {

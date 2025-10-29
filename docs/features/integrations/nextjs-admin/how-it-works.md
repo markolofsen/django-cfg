@@ -40,10 +40,10 @@ graph TB
     G -->|Receives| R[JWT Tokens]
     G -->|Calls| S[Django APIs]
 
-    style B fill:#e1f5ff
-    style G fill:#fff3cd
-    style L fill:#d4edda
-    style R fill:#f8d7da
+    style B fill:#1e3a8a
+    style G fill:#92400e
+    style L fill:#166534
+    style R fill:#9f1239
 ```
 
 ## Component Breakdown

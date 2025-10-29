@@ -243,22 +243,24 @@ class Command(BaseCommand):
             current_price = Decimal(str(price * (1 + price_variance))).quantize(Decimal('0.00000001'))
             market_cap_final = Decimal(str(market_cap * (1 + price_variance))).quantize(Decimal('0.01'))
 
-            coin = Coin.objects.create(
+            coin, created = Coin.objects.update_or_create(
                 symbol=symbol,
-                name=name,
-                slug=slug,
-                current_price_usd=current_price,
-                market_cap_usd=market_cap_final,
-                volume_24h_usd=Decimal(str(market_cap * random.uniform(0.05, 0.15))).quantize(Decimal('0.01')),
-                price_change_24h_percent=Decimal(str(random.uniform(-15, 25))).quantize(Decimal('0.01')),
-                price_change_7d_percent=Decimal(str(random.uniform(-25, 40))).quantize(Decimal('0.01')),
-                price_change_30d_percent=Decimal(str(random.uniform(-30, 60))).quantize(Decimal('0.01')),
-                rank=i + 1,
-                is_active=True,
-                is_tradeable=True,
-                logo_url=f'https://cryptoicons.org/api/icon/{symbol.lower()}/200',
-                website=f'https://{slug}.org',
-                description=fake.text(max_nb_chars=500)
+                defaults={
+                    'name': name,
+                    'slug': slug,
+                    'current_price_usd': current_price,
+                    'market_cap_usd': market_cap_final,
+                    'volume_24h_usd': Decimal(str(market_cap * random.uniform(0.05, 0.15))).quantize(Decimal('0.01')),
+                    'price_change_24h_percent': Decimal(str(random.uniform(-15, 25))).quantize(Decimal('0.01')),
+                    'price_change_7d_percent': Decimal(str(random.uniform(-25, 40))).quantize(Decimal('0.01')),
+                    'price_change_30d_percent': Decimal(str(random.uniform(-30, 60))).quantize(Decimal('0.01')),
+                    'rank': i + 1,
+                    'is_active': True,
+                    'is_tradeable': True,
+                    'logo_url': f'https://cryptoicons.org/api/icon/{symbol.lower()}/200',
+                    'website': f'https://{slug}.org',
+                    'description': fake.text(max_nb_chars=500)
+                }
             )
             coins.append(coin)
 
@@ -281,22 +283,24 @@ class Command(BaseCommand):
             current_price = Decimal(str(random.uniform(0.0001, 1000))).quantize(Decimal('0.00000001'))
             market_cap = Decimal(str(random.uniform(100000, 1000000000))).quantize(Decimal('0.01'))
 
-            coin = Coin.objects.create(
+            coin, created = Coin.objects.update_or_create(
                 symbol=symbol,
-                name=name,
-                slug=slug,
-                current_price_usd=current_price,
-                market_cap_usd=market_cap,
-                volume_24h_usd=Decimal(str(float(market_cap) * random.uniform(0.01, 0.1))).quantize(Decimal('0.01')),
-                price_change_24h_percent=Decimal(str(random.uniform(-50, 100))).quantize(Decimal('0.01')),
-                price_change_7d_percent=Decimal(str(random.uniform(-70, 150))).quantize(Decimal('0.01')),
-                price_change_30d_percent=Decimal(str(random.uniform(-80, 200))).quantize(Decimal('0.01')),
-                rank=len(top_coins) + i + 1,
-                is_active=random.choice([True, True, True, False]),  # 75% active
-                is_tradeable=random.choice([True, True, True, False]),  # 75% tradeable
-                logo_url=f'https://cryptoicons.org/api/icon/{symbol.lower()}/200',
-                website=f'https://{slug}.com',
-                description=fake.text(max_nb_chars=500)
+                defaults={
+                    'name': name,
+                    'slug': slug,
+                    'current_price_usd': current_price,
+                    'market_cap_usd': market_cap,
+                    'volume_24h_usd': Decimal(str(float(market_cap) * random.uniform(0.01, 0.1))).quantize(Decimal('0.01')),
+                    'price_change_24h_percent': Decimal(str(random.uniform(-50, 100))).quantize(Decimal('0.01')),
+                    'price_change_7d_percent': Decimal(str(random.uniform(-70, 150))).quantize(Decimal('0.01')),
+                    'price_change_30d_percent': Decimal(str(random.uniform(-80, 200))).quantize(Decimal('0.01')),
+                    'rank': len(top_coins) + i + 1,
+                    'is_active': random.choice([True, True, True, False]),  # 75% active
+                    'is_tradeable': random.choice([True, True, True, False]),  # 75% tradeable
+                    'logo_url': f'https://cryptoicons.org/api/icon/{symbol.lower()}/200',
+                    'website': f'https://{slug}.com',
+                    'description': fake.text(max_nb_chars=500)
+                }
             )
             coins.append(coin)
 
@@ -323,22 +327,24 @@ class Command(BaseCommand):
             # Add some variance
             volume_final = Decimal(str(volume * random.uniform(0.85, 1.15))).quantize(Decimal('0.01'))
 
-            exchange = Exchange.objects.create(
-                name=name,
+            exchange, created = Exchange.objects.update_or_create(
                 code=code,
-                slug=name.lower().replace('.', ''),
-                website=f'https://{code.lower()}.com',
-                logo_url=f'https://{code.lower()}.com/logo.png',
-                volume_24h_usd=volume_final,
-                num_markets=markets + random.randint(-50, 50),
-                num_coins=random.randint(50, 500),
-                maker_fee_percent=Decimal(str(maker_fee)),
-                taker_fee_percent=Decimal(str(taker_fee)),
-                supports_api=True,
-                is_verified=random.choice([True, True, False]),  # 66% verified
-                rank=i + 1,
-                is_active=True,
-                description=fake.text(max_nb_chars=500)
+                defaults={
+                    'name': name,
+                    'slug': name.lower().replace('.', ''),
+                    'website': f'https://{code.lower()}.com',
+                    'logo_url': f'https://{code.lower()}.com/logo.png',
+                    'volume_24h_usd': volume_final,
+                    'num_markets': markets + random.randint(-50, 50),
+                    'num_coins': random.randint(50, 500),
+                    'maker_fee_percent': Decimal(str(maker_fee)),
+                    'taker_fee_percent': Decimal(str(taker_fee)),
+                    'supports_api': True,
+                    'is_verified': random.choice([True, True, False]),  # 66% verified
+                    'rank': i + 1,
+                    'is_active': True,
+                    'description': fake.text(max_nb_chars=500)
+                }
             )
             exchanges.append(exchange)
 

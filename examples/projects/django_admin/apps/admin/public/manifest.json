@@ -1,7 +1,7 @@
 {
-  "short_name": "StockAPI",
-  "name": "StockAPI Cloud",
-  "description": "",
+  "short_name": "Django CFG",
+  "name": "Django CFG Admin",
+  "description": "Django CFG Admin Panel",
   "start_url": "/",
   "lang": "en-EN",
   "dir": "ltr",

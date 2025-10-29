@@ -54,23 +54,36 @@ Build everything in a single Next.js codebase:
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Django Admin (Unfold)                     │
-│                                                               │
-│  [Built-in Dashboard]  [External Next.js Admin]  [...]      │
-│  ┌────────────────┐  ┌────────────────────────┐            │
-│  │  Tab 1:        │  │  Tab 2:                 │            │
-│  │  Built-in      │  │  Your Custom            │            │
-│  │  Dashboard     │  │  Next.js Admin          │            │
-│  │                │  │                         │            │
-│  │  (iframe)      │  │  (iframe)               │            │
-│  └────────────────┘  └────────────────────────┘            │
-└─────────────────────────────────────────────────────────────┘
-         │                          │
-         ├─── JWT Auth ─────────────┤
-         ├─── Theme Sync ───────────┤
-         └─── API Calls ────────────┘
+```mermaid
+graph TB
+    subgraph "Django Admin - Unfold"
+        TABS[Tab Navigation]
+
+        subgraph "Tab 1: Built-in Dashboard"
+            IFRAME1[Django-CFG Admin<br/>iframe]
+        end
+
+        subgraph "Tab 2: External Next.js Admin"
+            IFRAME2[Your Custom Admin<br/>iframe]
+        end
+    end
+
+    subgraph "Features"
+        AUTH[JWT Authentication]
+        THEME[Theme Synchronization]
+        API[API Calls]
+    end
+
+    TABS --> IFRAME1
+    TABS --> IFRAME2
+
+    IFRAME1 --> AUTH
+    IFRAME1 --> THEME
+    IFRAME1 --> API
+
+    IFRAME2 --> AUTH
+    IFRAME2 --> THEME
+    IFRAME2 --> API
 ```
 
 ## Key Features
