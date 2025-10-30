@@ -22,6 +22,14 @@ class ImportExportMixin(BaseImportExportMixin):
     import_form_class = ImportForm
     export_form_class = ExportForm
 
+    def changelist_view(self, request, extra_context=None):
+        """Add import/export permissions to context."""
+        if extra_context is None:
+            extra_context = {}
+        extra_context['has_import_permission'] = self.has_import_permission(request)
+        extra_context['has_export_permission'] = self.has_export_permission(request)
+        return super().changelist_view(request, extra_context)
+
 
 class ImportExportModelAdmin(BaseImportExportModelAdmin):
     """Django-CFG enhanced ImportExportModelAdmin with custom templates and Unfold forms."""

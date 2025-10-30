@@ -1,0 +1,7 @@
+{% load admin_urls i18n %}
+
+{% if has_import_permission %}
+    <a href="import/" class="bg-green-600 flex items-center h-9 justify-center -my-1 rounded-full w-9 hover:bg-green-700" title="{% trans 'Import' %}">
+        <span class="material-symbols-outlined text-white">upload</span>
+    </a>
+{% endif %}

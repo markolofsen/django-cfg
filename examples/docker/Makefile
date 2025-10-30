@@ -84,3 +84,37 @@ dev: build local status ## Full dev setup
 
 quick: local status ## Quick start (no rebuild)
 	@echo "$(GREEN)Services started$(NC)"
+
+##@ Background Services (Redis, Centrifugo, ReArq)
+
+services: ## Start background services (Redis, Centrifugo, ReArq)
+	@echo "$(BLUE)Starting background services (Redis, Centrifugo, ReArq)...$(NC)"
+	@docker compose -f docker-compose-local-services.yml --env-file .env.local up -d
+
+services-down: ## Stop background services
+	@echo "$(YELLOW)Stopping background services...$(NC)"
+	@docker compose -f docker-compose-local-services.yml down
+
+services-restart: ## Restart background services
+	@docker compose -f docker-compose-local-services.yml --env-file .env.local restart
+
+services-logs: ## Show logs for background services
+	@docker compose -f docker-compose-local-services.yml logs -f --tail=100
+
+services-status: ## Show status of background services
+	@docker compose -f docker-compose-local-services.yml ps
+
+services-build: ## Build background services
+	@echo "$(BLUE)Building background services...$(NC)"
+	@docker compose -f docker-compose-local-services.yml --env-file .env.local build
+
+rearq: services ## Start ReArq (task queue) with services
+	@echo ""
+	@echo "$(GREEN)✓ ReArq is ready!$(NC)"
+	@echo ""
+	@echo "$(BLUE)Access points:$(NC)"
+	@echo "  • ReArq Web UI:   http://localhost:7380/"
+	@echo "  • API Docs:       http://localhost:7380/docs"
+	@echo "  • Redis:          localhost:7379"
+	@echo "  • Centrifugo:     http://localhost:7320/"
+	@echo ""

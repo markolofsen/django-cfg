@@ -1,0 +1,39 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        /* Object Tools - Admin toolbar buttons */
+        .object-tools {
+            display: flex !important;
+            gap: 1rem !important; /* 16px gap between groups */
+            align-items: center !important;
+        }
+
+        /* Remove extra spacing from individual object-tools items */
+        .object-tools > * {
+            margin: 0 !important;
+        }
+
+        /* Import/Export button group */
+        .import-export-group {
+            display: flex !important;
+            gap: 0.5rem !important; /* 8px gap between import/export buttons */
+            align-items: center !important;
+        }
+
+        /* Separator before import/export group */
+        .import-export-separator {
+            margin: 0 0.5rem !important; /* 8px margin on each side */
+        }
+    </style>
+{% endblock %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <span class="block bg-base-200 h-5 w-px dark:bg-base-700 import-export-separator"></span>
+    <div class="import-export-group">
+        {% include "admin/import_export/change_list_import_item.html" %}
+        {% include "admin/import_export/change_list_export_item.html" %}
+    </div>
+{% endblock %}
