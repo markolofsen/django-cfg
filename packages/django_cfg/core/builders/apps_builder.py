@@ -160,7 +160,7 @@ class InstalledAppsBuilder:
 
         # Auto-enable tasks if needed by other features
         if self.config.should_enable_tasks():
-            apps.append("django_dramatiq")  # Add django_dramatiq first
+            # No external app needed - ReArq is embedded
             apps.append("django_cfg.apps.tasks")
 
         # Add DRF Tailwind theme module (uses Tailwind via CDN)

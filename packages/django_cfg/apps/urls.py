@@ -175,7 +175,6 @@ APP_URL_MAP = {
     ],
     "django_cfg.apps.tasks": [
         ("cfg/tasks/", "django_cfg.apps.tasks.urls"),
-        ("cfg/tasks/admin/", "django_cfg.apps.tasks.urls_admin"),
     ],
     "django_cfg.apps.payments": [
         ("cfg/payments/", "django_cfg.apps.payments.urls"),

@@ -315,7 +315,7 @@ class DjangoConfig(BaseModel):
     # === Background Task Processing ===
     tasks: Optional[TaskConfig] = Field(
         default=None,
-        description="Background task processing configuration (Dramatiq)",
+        description="Background task processing configuration (ReArq)",
     )
 
     # === Centrifugo Configuration ===

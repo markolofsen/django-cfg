@@ -49,7 +49,7 @@ apps = builder.build()
 
 1. **Accounts Before Admin:** Automatically inserts `django_cfg.apps.accounts` before `django.contrib.admin` for proper migration order
 
-2. **Auto-Enable Tasks:** Automatically adds `django_dramatiq` when knowbase or agents are enabled
+2. **Auto-Enable Tasks:** Automatically adds `django_rearq` when knowbase or agents are enabled
 
 ### MiddlewareBuilder
 
@@ -247,7 +247,7 @@ def test_tasks_auto_enabled_with_knowbase():
     builder = InstalledAppsBuilder(config)
     apps = builder.build()
 
-    assert "django_dramatiq" in apps
+    assert "django_rearq" in apps
     assert "django_cfg.apps.tasks" in apps
 ```
 

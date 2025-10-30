@@ -590,7 +590,7 @@ After migration, you'll have:
 | **Admin Interface** | Basic Django admin | Modern Unfold admin |
 | **API Docs** | Manual setup | Auto-generated |
 | **User Management** | Basic User model | OTP auth + profiles |
-| **Background Tasks** | Manual Celery setup | Built-in Dramatiq |
+| **Background Tasks** | Manual Celery setup | Built-in ReArq |
 | **Support System** | Build from scratch | Ready-to-use |
 | **Newsletter** | Third-party service | Built-in system |
 | **Lead Management** | Custom solution | Built-in CRM |
@@ -703,7 +703,7 @@ python manage.py migrate --dry-run
 - **[AI Agents](/ai-agents/introduction)** - AI workflow automation
 
 **Integrations:**
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Background tasks
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks
 - **[Ngrok Integration](/features/integrations/ngrok/overview)** - Webhook testing
 - **[Email Module](/features/modules/email/overview)** - Email configuration
 

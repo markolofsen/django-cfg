@@ -2,7 +2,7 @@
 Django SaaS Knowledge Assistant
 
 Enterprise-grade RAG (Retrieval-Augmented Generation) application built on Django 5.2
-with pgvector semantic search, Dramatiq background processing, and comprehensive
+with pgvector semantic search, ReArq background processing, and comprehensive
 API endpoints for document management and AI-powered chat.
 
 Key Features:
@@ -10,7 +10,7 @@ Key Features:
 - Semantic search using pgvector cosine similarity
 - RAG-powered chat with context retrieval
 - Multi-tenant user isolation
-- Background processing with Dramatiq
+- Background processing with ReArq
 - Cost tracking for LLM usage monitoring
 - Comprehensive admin interface with Unfold styling
 - Type-safe APIs with Pydantic v2 validation

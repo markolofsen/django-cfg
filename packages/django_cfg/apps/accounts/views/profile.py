@@ -4,6 +4,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from django_cfg.mixins import ClientAPIMixin
 from ..serializers.profile import (
     AvatarUploadSerializer,
     UserProfileUpdateSerializer,
@@ -22,10 +23,13 @@ User = get_user_model()
         401: {"description": "Authentication credentials were not provided."}
     }
 )
-class UserProfileView(generics.RetrieveAPIView):
-    """Get current user profile details."""
+class UserProfileView(ClientAPIMixin, generics.RetrieveAPIView):
+    """
+    Get current user profile details.
+
+    Requires authenticated user (JWT or Session).
+    """
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
@@ -56,10 +60,13 @@ class UserProfileView(generics.RetrieveAPIView):
         )
     ]
 )
-class UserProfileUpdateView(generics.UpdateAPIView):
-    """Update current user profile."""
+class UserProfileUpdateView(ClientAPIMixin, generics.UpdateAPIView):
+    """
+    Update current user profile.
+
+    Requires authenticated user (JWT or Session).
+    """
     serializer_class = UserProfileUpdateSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
@@ -102,10 +109,13 @@ class UserProfileUpdateView(generics.UpdateAPIView):
         )
     ]
 )
-class UserProfilePartialUpdateView(generics.UpdateAPIView):
-    """Partially update current user profile."""
+class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
+    """
+    Partially update current user profile.
+
+    Requires authenticated user (JWT or Session).
+    """
     serializer_class = UserProfileUpdateSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user

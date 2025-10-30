@@ -303,21 +303,22 @@ print(result)
 ### Queue Integration
 
 ```python
-# Use with Celery/Dramatiq for background processing
+# Use with ReArq for background processing
 from django_cfg.modules.django_email import send_bulk_email_task
 
 # Queue bulk email task
-task_id = send_bulk_email_task.delay(
+task_id = await send_bulk_email_task.enqueue(
     template="newsletter",
     recipients=recipients,
     context={'month': 'December', 'year': '2023'}
 )
 
 # Check task status
-from celery.result import AsyncResult
-result = AsyncResult(task_id)
+from rearq import ReArq
+arq = ReArq()
+result = await arq.get_job_result(task_id)
 print(f"Status: {result.status}")
-print(f"Progress: {result.info}")
+print(f"Result: {result.result}")
 ```
 
 ## Multi-Provider Support

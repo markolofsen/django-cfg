@@ -1,8 +1,0 @@
-{
-  "label": "Dramatiq",
-  "position": 2,
-  "link": {
-    "type": "generated-index",
-    "description": "Task queue integration with Dramatiq and Django-CFG. Learn how to configure background tasks, define workers, and monitor task execution."
-  }
-}

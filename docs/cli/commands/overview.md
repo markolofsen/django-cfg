@@ -249,20 +249,20 @@ Vector search and knowledge management.
 <details>
   <summary>
 
-### [🔄 Background Tasks](./background-tasks.md) — 4 commands
+### 🔄 Background Tasks — ReArq Integration
 
   </summary>
 
-Dramatiq worker management.
+ReArq worker management via native CLI.
 
 | Command | Description |
 |---------|-------------|
-| `rundramatiq` | Start background workers |
-| `task_status` | Show task status |
-| `task_clear` | Clear task queues |
+| `rearq main:rearq worker` | Start background workers |
+| `rearq main:rearq timer` | Start cron task scheduler |
+| `rearq main:rearq server` | Start monitoring server |
 | `test_tasks` | Test task processing |
 
-**[Full Documentation →](./background-tasks.md)**
+**[Full Documentation →](/features/integrations/rearq/overview)**
 
 </details>
 

@@ -222,7 +222,7 @@ docker history djangocfg-demo:latest --human --no-trunc | head -20
 **Problem**: `collectstatic` causing infinite loops and container restarts
 
 **Symptoms**:
-- `django-dramatiq` container constantly restarting
+- `django-rearq` container constantly restarting
 - Stuck at `Collecting static files...` step
 - Health checks never passing
 
@@ -438,6 +438,6 @@ tail -f build.log
 
 ---
 
-TAGS: docker, build-optimization, multi-stage-builds, performance, turborepo
+TAGS: docker, build-optimization, multi-stage-builds, performance, turborepo, rearq
 DEPENDS_ON: [docker, turborepo, nextjs, poetry]
 USED_BY: [development, production, ci-cd]

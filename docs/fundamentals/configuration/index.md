@@ -92,7 +92,7 @@ config = load_config()  # Reads config.yaml
 
 - [**Email**](./email) - Email services (SendGrid, SMTP, Console)
 - [**Telegram**](/features/modules/telegram/overview) - Telegram bot configuration
-- [**Background Tasks**](/features/modules/tasks/overview) - Dramatiq task configuration
+- [**Background Tasks**](/features/modules/tasks/overview) - ReArq task configuration
 
 ### Django Integrations
 

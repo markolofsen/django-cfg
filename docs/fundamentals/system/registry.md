@@ -73,7 +73,7 @@ CORE_REGISTRY = {
     
     # Task models
     "TaskConfig": ("django_cfg.models.tasks", "TaskConfig"),
-    "DramatiqConfig": ("django_cfg.models.tasks", "DramatiqConfig"),
+    "RearqConfig": ("django_cfg.models.tasks", "RearqConfig"),
 
     # Utils
     "version_check": ("django_cfg.utils.version_check", "version_check"),

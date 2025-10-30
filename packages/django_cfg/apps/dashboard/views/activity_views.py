@@ -10,26 +10,24 @@ import logging
 
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from django_cfg.mixins import AdminAPIMixin
 from ..services import StatisticsService, SystemHealthService
 from ..serializers import ActivityEntrySerializer, QuickActionSerializer
 
 logger = logging.getLogger(__name__)
 
 
-class ActivityViewSet(viewsets.GenericViewSet):
+class ActivityViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     Activity Tracking ViewSet
 
     Provides endpoints for recent activity and quick actions.
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
 
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAdminUser]
     serializer_class = ActivityEntrySerializer
 
     @extend_schema(

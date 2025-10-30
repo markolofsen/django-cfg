@@ -74,7 +74,7 @@ def info(verbose: bool):
         "🌐 Service Integrations": ["twilio", "sendgrid", "openai", "telegram-bot-api"],
         "🎨 Admin & UI": ["django-unfold", "django-constance"],
         "📊 API & Documentation": ["djangorestframework", "drf-spectacular"],
-        "⚡ Background Processing": ["dramatiq", "redis"],
+        "⚡ Background Processing": ["rearq", "redis"],
         "🛠️  Development Tools": ["ngrok"],
     }
 

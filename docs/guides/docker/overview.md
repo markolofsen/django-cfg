@@ -59,7 +59,7 @@ graph TB
 
 #### Backend Services
 - **Django API** - Main application server (port 8300)
-- **Django Dramatiq** - Background task workers
+- **Django ReArq** - Background task workers
 - **WebSocket RPC** - Real-time communication (port 9065)
 
 #### Frontend Services
@@ -100,7 +100,7 @@ djangocfg_traefik  Up (healthy)        380/tcp, 743/tcp, 8390/tcp
 djangocfg_postgres Up (healthy)        5432/tcp
 djangocfg_redis    Up (healthy)        6379/tcp
 django             Up (healthy)        8300/tcp
-django-dramatiq    Up (healthy)        -
+django-rearq       Up (healthy)        -
 websocket          Up (healthy)        9065/tcp, 9066/tcp
 frontend-demo      Up (healthy)        3300/tcp
 frontend-web       Up (healthy)        3301/tcp
@@ -316,7 +316,7 @@ Django-CFG Docker setup uses advanced techniques to minimize build times:
 
 - **Connection pooling** - PostgreSQL connection reuse
 - **Redis caching** - Multi-tier caching strategy
-- **Dramatiq workers** - Configurable processes and threads
+- **ReArq workers** - Configurable processes and threads
 - **Nginx/Traefik** - Reverse proxy with load balancing
 
 ---
@@ -393,8 +393,8 @@ docker exec djangocfg_postgres pg_isready -U postgres
 - **[Environment Detection](/fundamentals/configuration/environment)** - Multi-environment
 
 ### Integrations
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Background tasks
-- **[Background Task Commands](/cli/commands/background-tasks)** - Manage workers via CLI
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks
+- **[Background Task Commands](/features/integrations/rearq/overview)** - Manage workers via CLI
 - **[Centrifugo WebSocket RPC](/features/integrations/centrifugo/)** - Real-time communication
 
 ---

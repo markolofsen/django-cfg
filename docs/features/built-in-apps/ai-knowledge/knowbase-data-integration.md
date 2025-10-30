@@ -30,7 +30,7 @@ Automatic AI integration for Django models with real-time vectorization and sema
 **Dependencies**:
 - `django_cfg.apps.knowbase.models.ExternalData`
 - Django signals (`post_save`, `post_delete`)
-- Dramatiq background tasks
+- ReArq background tasks
 - OpenAI embeddings API
 
 **Exports**:
@@ -469,6 +469,6 @@ def get_external_content(self):
 
 ---
 
-**DEPENDS_ON**: [django_cfg.apps.knowbase, Django signals, Dramatiq, OpenAI API]  
+**DEPENDS_ON**: [django_cfg.apps.knowbase, Django signals, ReArq, OpenAI API]
 **USED_BY**: [Product catalogs, User profiles, Content management, Documentation systems]  
 **TAGS**: `mixin, auto-integration, real-time-sync, django-models, ai-search`

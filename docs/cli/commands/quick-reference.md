@@ -182,24 +182,26 @@ python manage.py process_pending_payments --limit 100
 python manage.py cleanup_expired_data --days 30
 ```
 
-## 🔄 Background Tasks (Dramatiq)
+## 🔄 Background Tasks (ReArq)
 
 ```bash
-# Start workers
-python manage.py rundramatiq
+# Start async worker
+rearq main:rearq worker
 
-# Start with specific queues
-python manage.py rundramatiq --queues default,high,low
+# Start cron task scheduler
+rearq main:rearq timer
 
-# Development mode with auto-restart
-python manage.py rundramatiq --watch
+# Start monitoring web interface
+rearq main:rearq server
+
+# Start worker with specific queues
+rearq main:rearq worker --queues default,high,low
 
 # Show task status
 python manage.py task_status
 
-# Clear queues
-python manage.py task_clear --all
-python manage.py task_clear --queue default
+# Test task processing
+python manage.py test_tasks
 ```
 
 ## 🌐 URLs & Routing
@@ -314,7 +316,7 @@ python manage.py runserver_ngrok
 | **Maintenance** | 3 | Maintenance mode, Cloudflare sync |
 | **Payments** | 6 | Currency, provider, payment management |
 | **Accounts** | 1 | OTP authentication testing |
-| **Background Tasks** | 4 | Dramatiq worker management |
+| **Background Tasks** | 4 | ReArq worker management |
 | **Development** | 8 | Server, ngrok, scripts, testing |
 | **Built-in Apps** | 4 | Support, newsletter, leads stats |
 
@@ -358,7 +360,7 @@ python manage.py test_twilio --to "+1234567890"
 - **[Knowledge Base](./knowbase)** - Vector search commands
 - **[Maintenance](./maintenance)** - Maintenance mode commands
 - **[Payments](./payments)** - Payment management commands
-- **[Background Tasks](./background-tasks)** - Dramatiq commands
+- **[Background Tasks](/features/integrations/rearq/overview)** - ReArq commands
 - **[Development](./development)** - Development tools
 
 ---

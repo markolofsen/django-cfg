@@ -103,7 +103,7 @@ DATABASE_URL=postgresql://postgres:password@postgres:5432/djangocfg
 **Port**: `6379` (internal)
 **Databases**:
 - DB 0: Django cache
-- DB 1: Dramatiq task queue
+- DB 1: ReArq task queue
 - DB 2: Centrifugo broker
 
 ```yaml
@@ -119,7 +119,7 @@ redis:
 **Environment variables**:
 ```bash
 REDIS_URL=redis://redis:6379/0
-REDIS_DRAMATIQ_URL=redis://redis:6379/1
+REDIS_REARQ_URL=redis://redis:6379/1
 ```
 
 ---
@@ -151,27 +151,25 @@ django:
 - Volume-mounted media files
 - Hot-reload enabled
 
-#### Django Dramatiq Workers
+#### Django ReArq Workers
 
-**Container**: `django-dramatiq`
+**Container**: `django-rearq`
 **Purpose**: Background task processing
 
 ```yaml
-django-dramatiq:
+django-rearq:
   image: djangocfg-django:latest
   environment:
     SKIP_MIGRATIONS: "true"
-    DRAMATIQ_PROCESSES: 2
-    DRAMATIQ_THREADS: 4
-  command: ["/entrypoint.sh", "python", "manage.py", "rundramatiq"]
+    REARQ_WORKERS: 2
+  command: ["/entrypoint.sh", "rearq", "main:rearq", "worker"]
   depends_on:
     django:
       condition: service_healthy
 ```
 
 **Configuration**:
-- `DRAMATIQ_PROCESSES`: Number of worker processes (default: 2)
-- `DRAMATIQ_THREADS`: Threads per process (default: 4)
+- `REARQ_WORKERS`: Number of worker processes (default: 2)
 - Skips migrations (handled by main Django service)
 
 #### WebSocket RPC Server
@@ -343,9 +341,8 @@ POSTGRES_PASSWORD=your_password_here
 DJANGO_SECRET_KEY=your-secret-key-here
 DJANGO_DEBUG=true
 
-# Dramatiq
-DRAMATIQ_PROCESSES=2
-DRAMATIQ_THREADS=4
+# ReArq
+REARQ_WORKERS=2
 
 # API Keys (optional)
 ANTHROPIC_API_KEY=sk-ant-your-key
@@ -487,9 +484,8 @@ See [Build Optimization](./build-optimization) for details.
 ### Improve Runtime Performance
 
 ```yaml
-# Increase worker threads
-DRAMATIQ_PROCESSES=4
-DRAMATIQ_THREADS=8
+# Increase workers
+REARQ_WORKERS=4
 
 # Increase Redis memory
 redis:

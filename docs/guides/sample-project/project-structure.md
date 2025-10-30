@@ -420,7 +420,7 @@ To understand how these work together:
 2. Review [Multi-Database Setup](./multi-database) for data layer
 3. Explore [Admin Interface](./admin-interface) for management UI
 4. Check [API Documentation](./api-documentation) for REST API
-5. Learn [Background Tasks](./background-tasks) for async processing
+5. Learn [Background Tasks](/features/integrations/rearq/overview) for async processing
 
 ## Related Topics
 

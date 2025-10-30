@@ -1,22 +1,16 @@
 """
-URLs for Django CFG Tasks app.
+ReArq Tasks API URLs.
 
-Provides RESTful endpoints for task queue management and monitoring using ViewSets and routers.
+REST API endpoints for task monitoring and management.
 """
-
-from django.urls import include, path
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import TaskManagementViewSet
+from .views import TaskLogViewSet
 
-app_name = 'tasks'
+app_name = 'django_cfg_tasks'
 
-# Main router for ViewSets
 router = DefaultRouter()
-router.register(r'', TaskManagementViewSet, basename='task-management')
+router.register(r'logs', TaskLogViewSet, basename='tasklog')
 
-urlpatterns = [
-    # RESTful API endpoints using ViewSets
-    path('api/', include(router.urls)),
-
-]
+urlpatterns = router.urls

@@ -101,9 +101,9 @@ services:
     ports:
       - "6379:6379"
 
-  dramatiq:
+  rearq:
     build: .
-    command: python manage.py rundramatiq
+    command: rearq main:rearq worker
     environment:
       - DJANGO_SETTINGS_MODULE=api.settings
       - IS_PROD=true
@@ -361,7 +361,7 @@ docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py collectstatic --noinput
 
 # 5. Restart services
-docker-compose restart web dramatiq
+docker-compose restart web rearq
 
 # 6. Verify deployment
 curl http://localhost/cfg/status/
@@ -475,7 +475,7 @@ docker-compose logs -f
 
 # View specific service
 docker-compose logs -f web
-docker-compose logs -f dramatiq
+docker-compose logs -f rearq
 
 # View last 100 lines
 docker-compose logs --tail=100 web
@@ -668,6 +668,6 @@ docker-compose exec web ls -la /app/static/
 - [Configuration](./configuration) - Production configuration setup
 - [Multi-Database Setup](./multi-database) - Database deployment
 - [Service Integrations](./service-integrations) - External service configuration
-- [Background Tasks](./background-tasks) - Worker deployment
+- [Background Tasks](/features/integrations/rearq/overview) - Worker deployment
 
 Proper deployment ensures your Django-CFG application runs reliably in production!

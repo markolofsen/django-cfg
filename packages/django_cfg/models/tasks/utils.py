@@ -84,41 +84,30 @@ def get_default_task_config(debug: bool = False) -> 'TaskConfig':
 
     Example:
         >>> config = get_default_task_config(debug=True)
-        >>> config.dramatiq.processes
-        2
+        >>> config.rearq.max_jobs
+        10
     """
-    from .backends import DramatiqConfig, WorkerConfig
+    from .backends import RearqConfig
     from .config import TaskConfig
-
-    smart_queues = get_smart_queues(debug)
 
     if debug:
         # Development defaults
         return TaskConfig(
-            dramatiq=DramatiqConfig(
-                processes=2,
-                threads=4,
-                prometheus_enabled=False,
-                queues=smart_queues,
-            ),
-            worker=WorkerConfig(
-                log_level="DEBUG",
-                health_check_enabled=False,
+            rearq=RearqConfig(
+                redis_url="redis://localhost:6379/0",
+                db_url="sqlite://./rearq.db",
+                max_jobs=5,
+                job_timeout=300,
             )
         )
     else:
         # Production defaults
         return TaskConfig(
-            dramatiq=DramatiqConfig(
-                processes=8,
-                threads=16,
-                prometheus_enabled=True,
-                queues=smart_queues,
-            ),
-            worker=WorkerConfig(
-                log_level="INFO",
-                health_check_enabled=True,
-                restart_on_memory_limit=True,
+            rearq=RearqConfig(
+                redis_url="redis://localhost:6379/0",
+                db_url="postgresql://localhost/rearq",
+                max_jobs=20,
+                job_timeout=600,
             )
         )
 
@@ -138,7 +127,7 @@ def validate_task_config(config: 'TaskConfig', redis_url: Optional[str] = None) 
 
     Example:
         >>> config = get_default_task_config()
-        >>> validate_task_config(config, "redis://localhost:6379/1")
+        >>> validate_task_config(config, "redis://localhost:6379/0")
         True
     """
     if not config.enabled:
@@ -156,12 +145,11 @@ def validate_task_config(config: 'TaskConfig', redis_url: Optional[str] = None) 
             logger.error(f"Invalid Redis URL: {e}")
             return False
 
-    # Check if Dramatiq is available
+    # Check if ReArq is available
     try:
-        import django_dramatiq
-        import dramatiq
+        import rearq
     except ImportError as e:
-        logger.error(f"Dramatiq dependencies not available: {e}")
+        logger.error(f"ReArq dependencies not available: {e}")
         return False
 
     return True

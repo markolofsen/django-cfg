@@ -12,9 +12,9 @@ import logging
 
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+
+from django_cfg.mixins import AdminAPIMixin
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from ..services import ChartsService, StatisticsService
@@ -27,15 +27,14 @@ from ..serializers import (
 logger = logging.getLogger(__name__)
 
 
-class ChartsViewSet(viewsets.GenericViewSet):
+class ChartsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     Charts ViewSet
 
     Provides endpoints for dashboard charts and analytics.
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
 
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAdminUser]
     serializer_class = ChartDataSerializer
 
     @extend_schema(

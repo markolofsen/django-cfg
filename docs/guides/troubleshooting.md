@@ -41,8 +41,8 @@ import TabItem from '@theme/TabItem';
       answer: 'Run "python manage.py collectstatic --noinput" to collect static files. WhiteNoise is configured automatically in Django-CFG. Check STATIC_ROOT with "python manage.py show_config | grep STATIC".'
     },
     {
-      question: 'How do I fix "Tasks not being processed" with Dramatiq?',
-      answer: 'Start the Dramatiq worker with "python manage.py rundramatiq" or specify queues with "python manage.py rundramatiq --queues default high_priority". Check worker status with "python manage.py task_status".'
+      question: 'How do I fix "Tasks not being processed" with ReArq?',
+      answer: 'Start the ReArq worker with "rearq main:rearq worker" or specify queues with "rearq main:rearq worker --queues default high_priority". Check worker status with "rearq main:rearq info".'
     },
     {
       question: 'How do I debug configuration issues in Django-CFG?',
@@ -532,25 +532,25 @@ Worker not running.
 
 **Solution:**
 ```bash
-# Start Dramatiq worker
-python manage.py rundramatiq
+# Start ReArq worker
+rearq main:rearq worker
 
 # Or with specific queues
-python manage.py rundramatiq --queues default high_priority
+rearq main:rearq worker --queues default high_priority
 
 # Check worker status
-python manage.py task_status
+rearq main:rearq info
 ```
 
 :::warning[Worker Must Be Running]
-Dramatiq requires a **separate worker process** to execute tasks:
+ReArq requires a **separate worker process** to execute tasks:
 - ❌ **Common mistake**: Enqueueing tasks without running worker
-- ✅ **Development**: Run `python manage.py rundramatiq` in separate terminal
+- ✅ **Development**: Run `rearq main:rearq worker` in separate terminal
 - ✅ **Production**: Use process manager (systemd, supervisor, Docker)
 
 **Check if worker is running:**
 ```bash
-ps aux | grep rundramatiq  # Should show running process
+ps aux | grep rearq_worker  # Should show running process
 ```
 :::
 </details>
@@ -593,9 +593,9 @@ redis-cli info | grep uptime  # Show uptime
 **Configure custom Redis URL:**
 ```python
 # In config.py
-DRAMATIQ_BROKER = {
-    "BROKER": "redis://localhost:6379/0",
-}
+tasks: TaskConfig = TaskConfig(
+    redis_url="redis://localhost:6379/0",
+)
 ```
 :::
 </details>
@@ -609,10 +609,10 @@ Tasks enqueued but status shows "pending" forever.
 **Solution:**
 ```bash
 # Check worker logs
-python manage.py rundramatiq --verbose
+rearq main:rearq worker --verbose
 
 # Clear stuck tasks
-python manage.py task_clear
+rearq main:rearq flush
 
 # Restart worker
 # Kill existing worker and start fresh
@@ -621,20 +621,20 @@ python manage.py task_clear
 :::tip[Debugging Stuck Tasks]
 **Common causes of stuck tasks:**
 1. **Worker crashed** - Check logs for exceptions
-2. **Task timeout** - Increase timeout in `@dramatiq.actor(time_limit=...)`
+2. **Task timeout** - Increase timeout in task config
 3. **Deadlock** - Task waiting for another task
 4. **Queue mismatch** - Task sent to queue worker isn't watching
 
 **Debug steps:**
 ```bash
 # 1. Check worker is processing
-python manage.py rundramatiq --verbose  # Watch logs
+rearq main:rearq worker --verbose  # Watch logs
 
 # 2. Check Redis has messages
-redis-cli LLEN "dramatiq:default.DQ"  # Queue length
+redis-cli LLEN "arq:queue:default"  # Queue length
 
 # 3. Manually retry task
-python manage.py retry_task <task_id>
+rearq main:rearq retry <task_id>
 ```
 :::
 </details>

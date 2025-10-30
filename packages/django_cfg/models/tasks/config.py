@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 class TaskBackend(str, Enum):
     """Supported task backends."""
-    DRAMATIQ = "dramatiq"
-    # Future: CELERY = "celery"
+    REARQ = "rearq"
 
 
 class QueuePriority(str, Enum):
@@ -56,7 +55,7 @@ class TaskConfig(BaseModel, BaseCfgAutoModule):
         description="Enable background task processing"
     )
     backend: TaskBackend = Field(
-        default=TaskBackend.DRAMATIQ,
+        default=TaskBackend.REARQ,
         description="Task processing backend"
     )
 
@@ -67,23 +66,16 @@ class TaskConfig(BaseModel, BaseCfgAutoModule):
         self._config = None
 
     # === Backend-Specific Configuration ===
-    dramatiq: 'DramatiqConfig' = Field(
+    rearq: 'RearqConfig' = Field(
         default_factory=lambda: None,
-        description="Dramatiq-specific configuration"
-    )
-    worker: 'WorkerConfig' = Field(
-        default_factory=lambda: None,
-        description="Worker configuration"
+        description="ReArq-specific configuration"
     )
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize backend configs with defaults after model creation."""
-        if self.dramatiq is None:
-            from .backends import DramatiqConfig
-            self.dramatiq = DramatiqConfig()
-        if self.worker is None:
-            from .backends import WorkerConfig
-            self.worker = WorkerConfig()
+        if self.rearq is None:
+            from .backends import RearqConfig
+            self.rearq = RearqConfig()
 
     # === Environment-Specific Overrides ===
     dev_processes: Optional[int] = Field(
@@ -120,124 +112,26 @@ class TaskConfig(BaseModel, BaseCfgAutoModule):
 
         return v
 
-    def get_effective_processes(self, debug: bool = False) -> int:
+    def to_django_settings(self) -> Dict[str, Any]:
         """
-        Get effective number of processes based on environment.
-
-        Args:
-            debug: Whether in debug mode
+        Generate Django settings for task system.
 
         Returns:
-            Number of worker processes to use
+            Dictionary with task configuration for Django settings
 
         Example:
             >>> config = TaskConfig()
-            >>> config.get_effective_processes(debug=True)
-            2
-        """
-        if debug and self.dev_processes is not None:
-            return self.dev_processes
-        elif not debug and self.prod_processes is not None:
-            return self.prod_processes
-        else:
-            return self.dramatiq.processes
-
-    def get_effective_queues(self) -> List[str]:
-        """
-        Get effective queue configuration.
-
-        Returns:
-            List of queue names
-
-        Example:
-            >>> config = TaskConfig()
-            >>> config.get_effective_queues()
-            ['default', 'high', 'low']
-        """
-        return self.dramatiq.queues
-
-    def get_redis_config(self, redis_url: str) -> Dict[str, Any]:
-        """
-        Generate Redis configuration for Dramatiq.
-
-        Args:
-            redis_url: Redis connection URL
-
-        Returns:
-            Dictionary with Redis connection parameters
-
-        Example:
-            >>> config = TaskConfig()
-            >>> config.get_redis_config("redis://localhost:6379/1")
-            {'host': 'localhost', 'port': 6379, 'db': 1, 'password': None}
-        """
-        from urllib.parse import urlparse
-
-        # Parse Redis URL
-        parsed = urlparse(redis_url)
-
-        # Build Redis config
-        config = {
-            "host": parsed.hostname or "localhost",
-            "port": parsed.port or 6379,
-            "db": self.dramatiq.redis_db,
-            "password": parsed.password,
-        }
-
-        # Add SSL if specified
-        if parsed.scheme == "rediss":
-            config["ssl"] = True
-
-        return config
-
-    def get_dramatiq_settings(self, redis_url: str) -> Dict[str, Any]:
-        """
-        Generate complete Dramatiq settings for Django.
-
-        Args:
-            redis_url: Redis connection URL
-
-        Returns:
-            Dictionary with complete Dramatiq configuration
-
-        Example:
-            >>> config = TaskConfig()
-            >>> settings = config.get_dramatiq_settings("redis://localhost:6379/1")
-            >>> "DRAMATIQ_BROKER" in settings
+            >>> settings = config.to_django_settings()
+            >>> "REARQ_REDIS_URL" in settings
             True
         """
-        from urllib.parse import urlparse
+        if not self.enabled:
+            return {}
 
-        redis_config = self.get_redis_config(redis_url)
-        parsed = urlparse(redis_url)
+        if self.backend == TaskBackend.REARQ:
+            return self.rearq.to_django_settings()
 
-        # Build Redis URL with correct database
-        redis_url_with_db = redis_url
-        if parsed.path and parsed.path != "/":
-            # Replace existing database in URL
-            redis_url_with_db = redis_url.replace(parsed.path, f"/{self.dramatiq.redis_db}")
-        else:
-            # Add database to URL
-            redis_url_with_db = f"{redis_url.rstrip('/')}/{self.dramatiq.redis_db}"
-
-        return {
-            "DRAMATIQ_BROKER": {
-                "BROKER": "dramatiq.brokers.redis.RedisBroker",
-                "OPTIONS": {
-                    "url": redis_url_with_db,
-                    **redis_config
-                },
-            },
-            "DRAMATIQ_RESULT_BACKEND": {
-                "BACKEND": "dramatiq.results.backends.redis.RedisBackend",
-                "BACKEND_OPTIONS": {
-                    "url": redis_url_with_db,
-                    **redis_config
-                },
-            },
-            "DRAMATIQ_MIDDLEWARE": self.dramatiq.middleware,
-            "DRAMATIQ_QUEUES": self.dramatiq.queues,
-        }
+        return {}
 
     def get_smart_defaults(self):
         """
@@ -303,7 +197,7 @@ class TaskConfig(BaseModel, BaseCfgAutoModule):
 
 
 # Resolve forward references for Pydantic v2
-from .backends import DramatiqConfig, WorkerConfig
+from .backends import RearqConfig
 
 TaskConfig.model_rebuild()
 
@@ -311,6 +205,5 @@ __all__ = [
     "TaskConfig",
     "TaskBackend",
     "QueuePriority",
-    "DramatiqConfig",
-    "WorkerConfig",
+    "RearqConfig",
 ]

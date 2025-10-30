@@ -953,7 +953,7 @@ class EnvironmentConfig(BaseModel):
 - **[AI Agents](/ai-agents/introduction)** - AI workflow automation
 
 **Integrations:**
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Background tasks
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks
 - **[Ngrok Integration](/features/integrations/ngrok/overview)** - Webhook testing
 - **[Integrations Overview](/features/integrations/overview)** - All integrations
 

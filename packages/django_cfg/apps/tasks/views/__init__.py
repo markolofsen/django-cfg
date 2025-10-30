@@ -1,16 +1,10 @@
 """
-Views package for Django CFG Tasks app.
+ReArq Tasks API Views.
 
-Provides organized views structure:
-- api: DRF ViewSets for API endpoints
-- dashboard: Dashboard template views
-- base: Shared functionality and mixins
+ViewSets for task monitoring and management.
 """
-
-from .api import TaskManagementViewSet
-from .dashboard import dashboard_view
+from .task_log import TaskLogViewSet
 
 __all__ = [
-    'TaskManagementViewSet',
-    'dashboard_view'
+    "TaskLogViewSet",
 ]

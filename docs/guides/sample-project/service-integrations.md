@@ -577,11 +577,10 @@ def handle_orders_command(update, context):
 Send emails asynchronously:
 
 ```python
-import dramatiq
+from arq import ArqRedis
 from django_cfg import DjangoEmailService
 
-@dramatiq.actor(queue_name="email")
-def send_welcome_email_async(user_id):
+async def send_welcome_email_async(ctx, user_id):
     """Send welcome email in background."""
     from django.contrib.auth import get_user_model
 
@@ -597,32 +596,34 @@ def send_welcome_email_async(user_id):
     )
 
 # Usage
-def handle_user_registration(user):
+async def handle_user_registration(user):
     """Handle new user registration."""
-    send_welcome_email_async.send(user.id)
+    redis = await ArqRedis.create()
+    await redis.enqueue_job('send_welcome_email_async', user.id)
 ```
 
-See [Background Tasks](./background-tasks) for async processing details.
+See [Background Tasks](/features/integrations/rearq/overview) for async processing details.
 
 ### Background SMS Sending
 
 Send SMS asynchronously:
 
 ```python
-import dramatiq
+from arq import ArqRedis
 from django_cfg.modules.django_twilio.service import UnifiedOTPService
 
-@dramatiq.actor(queue_name="sms")
-def send_sms_async(phone_number, message):
+async def send_sms_async(ctx, phone_number, message):
     """Send SMS in background."""
     twilio = UnifiedOTPService()
     twilio.send_sms(to=phone_number, body=message)
 
 # Usage
-def handle_order_creation(order):
+async def handle_order_creation(order):
     """Handle new order creation."""
     if order.user.phone:
-        send_sms_async.send(
+        redis = await ArqRedis.create()
+        await redis.enqueue_job(
+            'send_sms_async',
             order.user.phone,
             f"Order #{order.id} confirmed! Total: ${order.total}"
         )
@@ -764,7 +765,7 @@ class ServiceIntegrationTest(TestCase):
 ## Related Topics
 
 - [Configuration](./configuration) - Service configuration setup
-- [Background Tasks](./background-tasks) - Async service usage
+- [Background Tasks](/features/integrations/rearq/overview) - Async service usage
 - [Authentication](./authentication) - OTP via SMS/email
 
 External service integrations enhance application capabilities!

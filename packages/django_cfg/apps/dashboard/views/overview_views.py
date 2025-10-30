@@ -10,9 +10,9 @@ from datetime import datetime
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+
+from django_cfg.mixins import AdminAPIMixin
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from ..services import StatisticsService, SystemHealthService, ChartsService
@@ -21,16 +21,15 @@ from ..serializers import DashboardOverviewSerializer
 logger = logging.getLogger(__name__)
 
 
-class OverviewViewSet(viewsets.GenericViewSet):
+class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     Dashboard Overview ViewSet
 
     Provides a single endpoint that returns all dashboard data at once.
     Useful for initial page load.
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
 
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAdminUser]
     serializer_class = DashboardOverviewSerializer
 
     @extend_schema(

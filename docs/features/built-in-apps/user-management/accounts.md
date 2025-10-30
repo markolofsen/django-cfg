@@ -650,6 +650,6 @@ class OTPViewSet(viewsets.GenericViewSet):
 
 **Advanced Features:**
 - [**AI Agents**](/ai-agents/introduction)** - User-specific AI agents
-- [**Background Tasks**](/features/integrations/dramatiq/overview)** - Async email sending
+- [**Background Tasks**](/features/integrations/rearq/overview)** - Async email sending
 
 The Accounts app provides a complete, secure, and scalable user authentication system for your Django-CFG projects! 🚀
