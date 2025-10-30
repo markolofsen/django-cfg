@@ -1,5 +1,11 @@
 {% load static %}
-{# Multi-Section Markdown Documentation Block with Management Commands - Used with unfold hooks #}
+{# Multi-Section Markdown Documentation Block with Management Commands and Mermaid Support #}
+
+{# Load Mermaid resources once per page #}
+{% if documentation_config.enable_plugins and not mermaid_loaded %}
+    {{ mermaid_resources|safe }}
+    {% with mermaid_loaded=True %}{% endwith %}
+{% endif %}
 
 {% if documentation_config and documentation_sections or management_commands %}
 <div class="mb-6">
