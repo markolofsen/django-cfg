@@ -8,8 +8,10 @@ from django.db import models
 from pydantic import BaseModel, ConfigDict, Field
 
 from .action_config import ActionConfig
+from .background_task_config import BackgroundTaskConfig
 from .field_config import FieldConfig
 from .fieldset_config import FieldsetConfig
+from .resource_config import ResourceConfig
 
 
 class AdminConfig(BaseModel):
@@ -127,7 +129,17 @@ class AdminConfig(BaseModel):
 
     # Import/Export options
     import_export_enabled: bool = Field(False, description="Enable import/export functionality")
-    resource_class: Optional[Type] = Field(None, description="Resource class for import/export")
+    resource_class: Optional[Type] = Field(None, description="Custom Resource class for import/export")
+    resource_config: Optional[ResourceConfig] = Field(
+        None,
+        description="Declarative resource configuration (alternative to resource_class)"
+    )
+
+    # Background task processing
+    background_task_config: Optional[BackgroundTaskConfig] = Field(
+        None,
+        description="Configuration for background task processing"
+    )
 
     def get_display_field_config(self, field_name: str) -> Optional[FieldConfig]:
         """Get FieldConfig for a specific field."""
