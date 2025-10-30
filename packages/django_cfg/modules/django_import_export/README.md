@@ -74,8 +74,26 @@ The module automatically works with:
 - Django-cfg configuration system
 - All original django-import-export features
 
+## Custom Templates
+
+This module includes custom templates for proper Unfold integration:
+
+### Button Styling
+- Import/Export buttons are styled as round icon buttons matching Unfold's design
+- Import button: Green with upload icon
+- Export button: Blue with download icon
+- Positioned next to the "Add" button in the admin interface
+
+### Template Locations
+Templates are located in `templates/admin/import_export/`:
+- `change_list_import_export.html` - For both import and export
+- `change_list_import.html` - Import only
+- `change_list_export.html` - Export only
+- `change_list_import_item.html` - Import button template
+- `change_list_export_item.html` - Export button template
+
 ## Full Documentation
 
 For complete documentation, see the official [django-import-export docs](https://django-import-export.readthedocs.io/).
 
-This module adds no additional functionality - it's purely for convenience and consistency within the django-cfg ecosystem.
+This module adds custom Unfold-styled templates for better visual integration with the admin interface.

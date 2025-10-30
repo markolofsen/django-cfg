@@ -1,0 +1,132 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG - Local Services (Centrifugo, Redis, ReArq)
+# ═════════════════════════════════════════════════════════════════
+# Run Centrifugo + Redis + ReArq for development/testing
+
+name: djangocfg-services
+
+services:
+  # Redis for ACK tracking, caching, and task queue
+  redis:
+    image: redis:7-alpine
+    container_name: djangocfg_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --databases 16
+    ports:
+      - "7379:6379"  # Different port to avoid conflicts with main Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - services-network
+    volumes:
+      - redis_data:/data
+
+  # Centrifugo WebSocket server
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: djangocfg_centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    env_file:
+      - .env.local
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    ports:
+      - "7320:8000"  # Centrifugo (Django-CFG: base 7300 +20)
+    networks:
+      - services-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  # ReArq Worker (Background tasks processor)
+  rearq_worker:
+    build:
+      context: .
+      dockerfile: services/rearq/Dockerfile
+    container_name: djangocfg_rearq_worker
+    restart: unless-stopped
+    environment:
+      REARQ_REDIS_HOST: redis
+      REARQ_REDIS_PORT: 6379
+      REARQ_REDIS_DB: 1
+    networks:
+      - services-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["rearq", "main:rearq", "worker", "--queue", "default", "--queue", "high_priority", "--queue", "low_priority"]
+    # Override healthcheck: worker doesn't expose HTTP port, check process instead
+    healthcheck:
+      test: ["CMD-SHELL", "grep -qa 'rearq.*worker' /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ReArq Server (Web UI + API)
+  rearq_server:
+    build:
+      context: .
+      dockerfile: services/rearq/Dockerfile
+    container_name: djangocfg_rearq_server
+    restart: unless-stopped
+    environment:
+      REARQ_REDIS_HOST: redis
+      REARQ_REDIS_PORT: 6379
+      REARQ_REDIS_DB: 1
+      # Use SQLite for Web UI metadata (lightweight, no separate database needed)
+      REARQ_DB_URL: sqlite:///app/rearq.db
+      PYTHONPATH: /app:/rearq_config
+    ports:
+      - "7380:8080"  # ReArq Web UI (Django-CFG: base 7300 +80)
+    networks:
+      - services-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - rearq_data:/app
+    # Use uvicorn directly with our server wrapper instead of rearq CLI
+    # Override entrypoint to skip it and run uvicorn directly from /rearq_config
+    entrypoint: []
+    working_dir: /rearq_config
+    command: ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port 8080"]
+
+networks:
+  services-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  rearq_data:
+    driver: local

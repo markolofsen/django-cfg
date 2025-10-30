@@ -96,42 +96,57 @@ class TemplateSettingsGenerator:
 
     def _discover_app_templates(self) -> List[Path]:
         """
-        Auto-discover template directories from django-cfg apps.
+        Auto-discover template directories from django-cfg apps and modules.
 
         Looks for:
         - app/templates/
         - app/admin_interface/templates/
         - app/frontend/templates/
+        - modules/*/templates/
 
         Returns:
             List of discovered template directory paths
         """
         app_templates = []
 
-        # Find django-cfg apps directory
+        # Find django-cfg directory
         django_cfg_dir = Path(__file__).parent.parent.parent.parent
+
+        # Scan apps directory
         apps_dir = django_cfg_dir / 'apps'
+        if apps_dir.exists():
+            for app_dir in apps_dir.iterdir():
+                if not app_dir.is_dir():
+                    continue
 
-        if not apps_dir.exists():
-            return app_templates
+                # Skip special directories
+                if app_dir.name.startswith(('@', '_', '.')):
+                    continue
 
-        # Scan each app directory
-        for app_dir in apps_dir.iterdir():
-            if not app_dir.is_dir():
-                continue
+                # Look for common template directory patterns
+                possible_template_dirs = [
+                    app_dir / 'templates',
+                    app_dir / 'admin_interface' / 'templates',
+                    app_dir / 'frontend' / 'templates',
+                ]
 
-            # Skip special directories
-            if app_dir.name.startswith(('@', '_', '.')):
-                continue
+                for template_dir in possible_template_dirs:
+                    if template_dir.exists() and template_dir.is_dir():
+                        app_templates.append(template_dir)
 
-            # Look for common template directory patterns
-            possible_template_dirs = [
-                app_dir / 'templates',
-                app_dir / 'admin_interface' / 'templates',
-                app_dir / 'frontend' / 'templates',
-            ]
+        # Scan modules directory for templates
+        modules_dir = django_cfg_dir / 'modules'
+        if modules_dir.exists():
+            for module_dir in modules_dir.iterdir():
+                if not module_dir.is_dir():
+                    continue
 
-            for template_dir in possible_template_dirs:
+                # Skip special directories
+                if module_dir.name.startswith(('@', '_', '.')):
+                    continue
+
+                # Check if module has templates directory
+                template_dir = module_dir / 'templates'
                 if template_dir.exists() and template_dir.is_dir():
                     app_templates.append(template_dir)
 

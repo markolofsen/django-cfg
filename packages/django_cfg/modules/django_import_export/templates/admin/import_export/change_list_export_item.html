@@ -1,0 +1,7 @@
+{% load admin_urls i18n %}
+
+{% if has_export_permission %}
+    <a href="export/{{ cl.get_query_string }}" class="bg-blue-600 flex items-center h-9 justify-center -my-1 rounded-full w-9 hover:bg-blue-700" title="{% trans 'Export' %}">
+        <span class="material-symbols-outlined text-white">download</span>
+    </a>
+{% endif %}

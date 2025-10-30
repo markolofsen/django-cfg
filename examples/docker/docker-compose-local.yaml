@@ -120,45 +120,17 @@ services:
       - "traefik.http.routers.djangocfg-api.service=djangocfg-api"
       - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
 
-  django-dramatiq:
-    image: djangocfg-django:latest
-    container_name: django-dramatiq
-    restart: unless-stopped
-    env_file:
-      - .env.local
-    environment:
-      # Django Core
-      DJANGO_SETTINGS_MODULE: api.settings
+  # ReArq removed - use docker-compose-local-services.yml for task queue
+  # See: solution/docker/services/rearq/README.md
 
-      # Dramatiq
-      DRAMATIQ_PROCESSES: ${DRAMATIQ_PROCESSES:-2}
-      DRAMATIQ_THREADS: ${DRAMATIQ_THREADS:-4}
+  # django-dramatiq service removed - replaced with ReArq
+  # To enable task queue, run:
+  # docker compose -f docker-compose-local-services.yml up -d
 
-      # AI API Keys
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-
-      # Admin creation
-      DJANGO_CREATE_ADMIN: "false"
-    volumes:
-      - ../../volumes/django/media:/app/media:rw
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      django:
-        condition: service_healthy
-    command: >
-      sh -c "python manage.py rundramatiq
-      --processes $${DRAMATIQ_PROCESSES:-2}
-      --threads $${DRAMATIQ_THREADS:-4}"
-    healthcheck:
-      test: ["CMD-SHELL", "pgrep -f rundramatiq > /dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+  _placeholder_for_removed_dramatiq:
+    image: tianon/true  # Minimal placeholder image
+    container_name: _dramatiq_removed
+    restart: "no"
     deploy:
       resources:
         limits:
