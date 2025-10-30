@@ -205,7 +205,7 @@ with logger.timer("database_query"):
 
 ### Tasks Module (`DjangoTasks`)
 
-Background task processing with Dramatiq:
+Background task processing with ReArq:
 
 ```python
 from django_cfg.modules.django_tasks import DjangoTasks
@@ -539,7 +539,7 @@ class MyProjectConfig(DjangoConfig):
 - **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses LLM, Tasks modules
 
 **Integrations:**
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Background task processing
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Background task processing
 - **[Ngrok Integration](/features/integrations/ngrok/overview)** - Webhook testing
 - **[API Generation](/features/api-generation/overview)** - Auto-generate API clients
 - **[Integrations Overview](/features/integrations/overview)** - All integrations

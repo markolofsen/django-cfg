@@ -6,7 +6,8 @@ sidebar_position: 0
 keywords:
   - django-cfg integrations
   - django third-party integrations
-  - dramatiq integration
+  - rearq integration
+  - async task queue
   - ngrok integration
 ---
 
@@ -22,24 +23,27 @@ Django-CFG provides seamless integrations with essential third-party services an
 <Tabs groupId="integration-categories">
   <TabItem value="tasks" label="🔄 Background Tasks" default>
 
-### [Dramatiq Integration](./dramatiq/overview)
+### [ReArq Integration](./rearq/overview)
 
-Production-ready background task processing with Redis:
+Production-ready async task queue with Redis and Tortoise ORM:
 
 **Core Features:**
-- ✅ **Redis-backed** message broker with automatic configuration
+- ✅ **Async-first** architecture with native Python async/await
+- ✅ **Redis-backed** queue with job persistence (PostgreSQL/MySQL/SQLite)
 - ✅ **Type-safe** task definitions with Pydantic validation
 - ✅ **Worker management** via CLI commands
-- ✅ **Monitoring** with built-in metrics and dashboards
-- ✅ **Error handling** with automatic retries and dead letter queues
+- ✅ **Cron scheduling** with decorator-based configuration
+- ✅ **Monitoring** with FastAPI server, Django REST API, and Admin interface
+- ✅ **Retry logic** with exponential backoff and max attempts
 
 **Use Cases:**
 - Async email sending ([Email Module](/features/modules/email/overview))
 - Payment processing ([Payment System](/features/built-in-apps/payments/overview))
 - Document processing ([AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview))
 - Bulk operations (Newsletter campaigns, data imports)
+- Scheduled tasks (cleanup jobs, report generation)
 
-[**Full Dramatiq Guide →**](./dramatiq/overview)
+[**Full ReArq Guide →**](./rearq/overview)
 
   </TabItem>
   <TabItem value="development" label="🔧 Development Tools">
@@ -139,27 +143,28 @@ Common patterns and best practices:
 
 ## Quick Start
 
-### Enable Dramatiq for Background Tasks
+### Enable ReArq for Background Tasks
 
 ```yaml
 # config.dev.yaml
-dramatiq:
+tasks:
   enabled: true
-  broker: "redis://localhost:6379/0"
-  result_backend: "redis://localhost:6379/1"
+  redis_url: "redis://localhost:6379/0"
+  db_url: "sqlite:///rearq.db"
 ```
 
 ```python
 # tasks.py
-import dramatiq
+from django_cfg.apps.tasks import task
 
-@dramatiq.actor
-def send_welcome_email(user_id: int):
-    # Task runs in background
+@task()
+async def send_welcome_email(user_id: int):
+    """Task runs asynchronously in background."""
+    # Async task code here
     pass
 ```
 
-[**Full Dramatiq Guide →**](./dramatiq/overview)
+[**Full ReArq Guide →**](./rearq/overview)
 
 ### Enable Ngrok for Webhook Testing
 
@@ -188,13 +193,14 @@ All integrations use [Pydantic v2](/fundamentals/core/type-safety) for validatio
 
 ```python
 from django_cfg import DjangoConfig
-from django_cfg.models import DramatiqConfig, NgrokConfig
+from django_cfg.models import RearqConfig, NgrokConfig
 
 class MyConfig(DjangoConfig):
-    # Dramatiq configuration
-    dramatiq: DramatiqConfig | None = DramatiqConfig(
+    # ReArq configuration
+    tasks: RearqConfig | None = RearqConfig(
         enabled=True,
-        broker="redis://localhost:6379/0"
+        redis_url="redis://localhost:6379/0",
+        db_url="sqlite:///rearq.db"
     )
 
     # Ngrok configuration
@@ -222,7 +228,7 @@ class MyConfig(DjangoConfig):
 
 Integrations automatically configure Django settings:
 
-- **Dramatiq**: Adds middleware, configures broker, sets up workers
+- **ReArq**: Registers tasks app, configures Redis/DB connections, initializes workers
 - **Ngrok**: Updates ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, generates public URL
 - **Auth**: Configures authentication backends, middleware, JWT settings
 
@@ -232,7 +238,7 @@ Integrations automatically configure Django settings:
 
 | Integration | Type | Production Ready | Auto-Config | CLI Tools |
 |-------------|------|------------------|-------------|-----------|
-| **Dramatiq** | Background Tasks | ✅ Yes | ✅ Yes | ✅ `rundramatiq` |
+| **ReArq** | Async Task Queue | ✅ Yes | ✅ Yes | ✅ `rearq_worker`, `rearq_timer`, `rearq_server` |
 | **Ngrok** | Development Tool | ⚠️ Dev Only | ✅ Yes | ✅ `runserver_ngrok` |
 | **Auth** | Security | ✅ Yes | ✅ Yes | ✅ `test_auth` |
 | **Twilio** | Communication | ✅ Yes | ✅ Yes | ✅ `test_sms` |
@@ -260,18 +266,19 @@ class ProductionConfig(DjangoConfig):
     # Ngrok only for development
     ngrok: None = None
 
-    # Dramatiq for production background tasks
-    dramatiq: DramatiqConfig = DramatiqConfig(
+    # ReArq for production background tasks
+    tasks: RearqConfig = RearqConfig(
         enabled=True,
-        broker="${REDIS_URL}"
+        redis_url="${REDIS_URL}",
+        db_url="${DATABASE_URL}"
     )
 ```
 
 ### 3. Test Integrations Before Production
 
 ```bash
-# Test Dramatiq workers
-python manage.py test_dramatiq
+# Test ReArq workers
+rearq main:rearq worker --test
 
 # Test Twilio SMS
 python manage.py test_sms +1234567890
@@ -287,9 +294,11 @@ python manage.py runserver_ngrok --test
 ### Core Integrations
 
 **Background Processing:**
-- **[Dramatiq Overview](./dramatiq/overview)** - Complete background task guide
-- **[Dramatiq Configuration](./dramatiq/configuration)** - Setup and configuration
-- **[Dramatiq Examples](./dramatiq/examples)** - Real-world task patterns
+- **[ReArq Overview](./rearq/overview)** - Complete async task queue guide
+- **[ReArq Configuration](./rearq/configuration)** - Setup and configuration
+- **[ReArq Examples](./rearq/examples)** - Real-world task patterns
+- **[ReArq Monitoring](./rearq/monitoring)** - Task monitoring and analytics
+- **[ReArq Deployment](./rearq/deployment)** - Production deployment guide
 
 **Development Tools:**
 - **[Ngrok Overview](./ngrok/overview)** - Webhook testing guide
@@ -312,16 +321,16 @@ python manage.py runserver_ngrok --test
 - **[Environment Detection](/fundamentals/configuration/environment)** - Environment-specific integrations
 
 **Infrastructure:**
-- **[Redis Configuration](/fundamentals/configuration/cache)** - Redis setup for Dramatiq
+- **[Redis Configuration](/fundamentals/configuration/cache)** - Redis setup for ReArq
 - **[Security Settings](/fundamentals/configuration/security)** - Webhook signature verification
 - **[Environment Variables](/fundamentals/configuration/environment)** - Manage API keys securely
 
 ### Related Features
 
 **Apps Using Integrations:**
-- **[Payment System](/features/built-in-apps/payments/overview)** - Uses Dramatiq for async processing
-- **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses Dramatiq for document processing
-- **[Newsletter](/features/built-in-apps/user-management/newsletter)** - Uses Dramatiq for bulk emails
+- **[Payment System](/features/built-in-apps/payments/overview)** - Uses ReArq for async processing
+- **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses ReArq for document processing
+- **[Newsletter](/features/built-in-apps/user-management/newsletter)** - Uses ReArq for bulk emails
 
 **Other Modules:**
 - **[Modules Overview](/features/modules/overview)** - All available modules
@@ -330,7 +339,6 @@ python manage.py runserver_ngrok --test
 ### Tools & Guides
 
 **CLI Commands:**
-- **[Background Task Commands](/cli/commands/background-tasks)** - Manage Dramatiq workers
 - **[CLI Introduction](/cli/introduction)** - All CLI tools
 
 **Guides:**
@@ -343,14 +351,15 @@ python manage.py runserver_ngrok --test
 ## Next Steps
 
 **New to Integrations?**
-1. Start with [Dramatiq Overview](./dramatiq/overview) for background tasks
+1. Start with [ReArq Overview](./rearq/overview) for async background tasks
 2. Try [Ngrok Overview](./ngrok/overview) for webhook testing
 3. Review [Integration Patterns](./patterns) for best practices
 
 **Ready for Production?**
 1. Review [Production Config](/guides/production-config)
-2. Set up [Redis](/fundamentals/configuration/cache) for Dramatiq
+2. Set up [Redis](/fundamentals/configuration/cache) for ReArq
 3. Configure [environment variables](/fundamentals/configuration/environment) for secrets
+4. Deploy ReArq workers using [ReArq Deployment](./rearq/deployment) guide
 
 **Need Help?**
 - [Troubleshooting Guide](/guides/troubleshooting)

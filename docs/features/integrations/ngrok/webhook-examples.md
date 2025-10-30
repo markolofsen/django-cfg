@@ -593,7 +593,7 @@ def webhook_handler(request):
 - [**Payment Examples**](/features/built-in-apps/payments/examples) - Real payment flows
 
 **Related Integrations:**
-- [**Dramatiq Integration**](/features/integrations/dramatiq/overview) - Process webhooks async
+- [**ReArq Integration**](/features/integrations/rearq/overview) - Process webhooks async
 - [**Background Tasks**](/features/built-in-apps/operations/tasks) - Async webhook processing
 - [**Integrations Overview**](/features/integrations/overview) - All integrations
 

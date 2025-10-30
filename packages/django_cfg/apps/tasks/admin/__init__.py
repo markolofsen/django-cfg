@@ -1,11 +1,4 @@
-"""
-Tasks admin interfaces using Django-CFG admin system.
+"""Admin configuration for tasks app."""
+from .config import tasklog_config
 
-Enhanced Dramatiq task management with Material Icons and optimized queries.
-"""
-
-from .tasks_admin import TaskAdmin
-
-__all__ = [
-    'TaskAdmin',
-]
+__all__ = ["tasklog_config"]

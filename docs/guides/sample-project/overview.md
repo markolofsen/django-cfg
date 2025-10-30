@@ -37,7 +37,7 @@ graph TB
 
     subgraph "Background Processing"
         QUEUE[Redis Queue]
-        WORKER[Dramatiq Workers]
+        WORKER[ReArq Workers]
     end
 
     subgraph "External Services"
@@ -77,7 +77,7 @@ graph TB
 - **🎨 Admin Customization** - Modern Unfold interface with dashboards
 - **📊 API Documentation** - Auto-generated OpenAPI/Swagger
 - **🔐 Authentication System** - OTP-based user management
-- **⚡ Background Tasks** - Dramatiq integration
+- **⚡ Background Tasks** - ReArq integration
 - **📱 Service Integrations** - Twilio, SendGrid, Telegram
 - **🐳 Docker Deployment** - Production-ready containerization
 
@@ -149,13 +149,13 @@ Production-ready integrations with:
 See [Service Integrations](./service-integrations) for configuration.
 
 ### Background Task Processing
-Dramatiq integration for:
+ReArq integration for:
 - Asynchronous email sending
 - Order processing
 - Scheduled cleanup tasks
 - Scalable worker management
 
-See [Background Tasks](./background-tasks) for task examples.
+See [Background Tasks](/features/integrations/rearq/overview) for task examples.
 
 ## Project Structure Overview
 
@@ -310,7 +310,7 @@ Now that you have an overview, explore these topics:
 4. **[Admin Interface](./admin-interface)** - Customize the admin dashboard
 5. **[API Documentation](./api-documentation)** - Explore the REST API
 6. **[Authentication](./authentication)** - Implement OTP authentication
-7. **[Background Tasks](./background-tasks)** - Process tasks asynchronously
+7. **[Background Tasks](/features/integrations/rearq/overview)** - Process tasks asynchronously
 8. **[Service Integrations](./service-integrations)** - Connect external services
 9. **[Deployment](./deployment)** - Deploy to production with Docker
 

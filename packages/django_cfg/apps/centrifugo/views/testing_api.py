@@ -17,11 +17,10 @@ from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.utils import extend_schema
 from pydantic import BaseModel, Field
 from rest_framework import status, viewsets
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from django_cfg.mixins import AdminAPIMixin
 from ..services import get_centrifugo_config
 from ..services.client import CentrifugoClient
 
@@ -94,17 +93,15 @@ class ManualAckResponse(BaseModel):
 # ========================================================================
 
 
-class CentrifugoTestingAPIViewSet(viewsets.ViewSet):
+class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
     """
     Centrifugo Testing API ViewSet.
 
     Provides endpoints for interactive testing of Centrifugo integration
     from the dashboard. Includes connection token generation, test message
     publishing, and manual ACK management.
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
-
-    # authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAdminUser]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

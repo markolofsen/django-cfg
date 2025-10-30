@@ -22,7 +22,7 @@ The Tasks app provides:
 - **Task statistics** and performance metrics
 - **Interactive web interface** with modern UI
 - **REST API** for programmatic access
-- **Background task processing** with Dramatiq integration
+- **Background task processing** with ReArq integration
 
 ## Quick Start
 
@@ -182,16 +182,16 @@ def get_task_dashboard_data():
 
 def get_queue_status():
     """Get status of all task queues"""
-    from ...modules.django_tasks import DjangoTasks
-    
-    task_manager = DjangoTasks()
+    from ...models.tasks import TaskManager
+
+    task_manager = TaskManager()
     return task_manager.get_queue_status()
 
 def get_worker_status():
     """Get status of all workers"""
-    from ...modules.django_tasks import DjangoTasks
-    
-    task_manager = DjangoTasks()
+    from ...models.tasks import TaskManager
+
+    task_manager = TaskManager()
     return task_manager.get_worker_status()
 ```
 
@@ -200,11 +200,11 @@ def get_worker_status():
 ### Queue Operations
 
 ```python
-from django_cfg.modules.django_tasks import DjangoTasks
+from django_cfg.models.tasks import TaskManager
 
 class QueueManager:
     def __init__(self):
-        self.task_manager = DjangoTasks()
+        self.task_manager = TaskManager()
     
     def pause_queue(self, queue_name: str):
         """Pause a specific queue"""
@@ -233,7 +233,7 @@ class QueueManager:
 ```python
 class WorkerManager:
     def __init__(self):
-        self.task_manager = DjangoTasks()
+        self.task_manager = TaskManager()
     
     def start_worker(self, queue_names: list = None):
         """Start a new worker"""
@@ -484,19 +484,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ```bash
 # Start task workers
-python manage.py rundramatiq --processes 4 --threads 8
+rearq worker --processes 4 --threads 8
 
 # Check task status
-python manage.py task_status --verbose
+rearq status --verbose
 
 # Clear task queues
-python manage.py task_clear --queue=default
+rearq clear --queue default
 
 # Task statistics
-python manage.py task_stats --days=7
+rearq stats --days 7
 
 # Monitor task performance
-python manage.py task_monitor --interval=5
+rearq monitor --interval 5
 ```
 
 ### Custom Management Commands
@@ -504,17 +504,17 @@ python manage.py task_monitor --interval=5
 ```python
 # management/commands/task_monitor.py
 from django.core.management.base import BaseCommand
-from django_cfg.modules.django_tasks import DjangoTasks
+from django_cfg.models.tasks import TaskManager
 
 class Command(BaseCommand):
     help = 'Monitor task queues in real-time'
-    
+
     def add_arguments(self, parser):
         parser.add_argument('--interval', type=int, default=5, help='Update interval in seconds')
-    
+
     def handle(self, *args, **options):
         interval = options['interval']
-        task_manager = DjangoTasks()
+        task_manager = TaskManager()
         
         while True:
             # Display queue status
@@ -538,26 +538,26 @@ class Command(BaseCommand):
 
 ```python
 # Create custom tasks for monitoring
-import dramatiq
+from django_cfg.apps.tasks import task
 
-@dramatiq.actor(queue_name="monitoring")
+@task(queue="monitoring")
 def system_health_check():
     """Periodic system health check task"""
     from django_cfg.apps.tasks.views import TaskManagementViewSet
-    
+
     # Perform health checks
     stats = get_task_statistics()
-    
+
     if stats['success_rate'] < 90:
         send_alert("Task success rate below 90%")
-    
+
     if stats['pending_tasks'] > 1000:
         send_alert("High number of pending tasks")
 
 # Schedule periodic tasks
-from django_cfg.modules.django_tasks import DjangoTasks
+from django_cfg.models.tasks import TaskManager
 
-task_manager = DjangoTasks()
+task_manager = TaskManager()
 task_manager.schedule_periodic_task(
     system_health_check,
     interval=300  # Every 5 minutes
@@ -589,13 +589,13 @@ class TaskWebhookView(APIView):
 
 ## Related Documentation
 
-- [**Dramatiq Integration**](/features/integrations/dramatiq/overview) - Background task processing
+- [**ReArq Integration**](/features/integrations/rearq/overview) - Background task processing
 - [**Configuration Guide**](/fundamentals/configuration) - Task configuration
 - [**Deployment Guide**](/deployment/environment-setup) - Production setup
 - [**Monitoring Guide**](/deployment/monitoring) - System monitoring
 
 The Task Management system provides comprehensive task monitoring for your Django applications! ⚙️
 
-TAGS: tasks, queues, workers, monitoring, dashboard, dramatiq
-DEPENDS_ON: [dramatiq, redis, configuration]
+TAGS: tasks, queues, workers, monitoring, dashboard, rearq
+DEPENDS_ON: [rearq, redis, configuration]
 USED_BY: [all-apps, background-processing, monitoring]

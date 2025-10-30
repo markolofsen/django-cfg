@@ -371,7 +371,7 @@ python manage.py shell -c "from django.core.cache import cache; print(cache.get(
 
 **CPU usage > 90%:**
 - Check for infinite loops
-- Review Dramatiq worker count
+- Review ReArq worker count
 - Optimize database queries
 - Enable query caching
 

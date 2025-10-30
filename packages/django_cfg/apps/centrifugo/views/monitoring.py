@@ -13,11 +13,10 @@ from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from django_cfg.mixins import AdminAPIMixin
 from ..models import CentrifugoLog
 from ..serializers import (
     ChannelListSerializer,
@@ -31,7 +30,7 @@ from ..services import get_centrifugo_config
 logger = get_logger("centrifugo.monitoring")
 
 
-class CentrifugoMonitorViewSet(viewsets.ViewSet):
+class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.ViewSet):
     """
     ViewSet for Centrifugo monitoring and statistics.
 
@@ -40,10 +39,8 @@ class CentrifugoMonitorViewSet(viewsets.ViewSet):
     - Overview statistics
     - Recent publishes
     - Channel-level statistics
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
-
-    # authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAdminUser]
 
     @extend_schema(
         tags=["Centrifugo Monitoring"],

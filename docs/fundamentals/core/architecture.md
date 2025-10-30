@@ -188,7 +188,7 @@ class CacheConfig(BaseModel):
 - **`cache.py`** - Redis/Memcached cache configuration
 - **`security.py`** - Security headers and CORS settings
 - **`email.py`** - SMTP/SendGrid email configuration
-- **`tasks.py`** - Dramatiq background task configuration
+- **`tasks.py`** - ReArq background task configuration
 - **`api.py`** - DRF and API documentation settings
 
 ### 4. **Built-in Apps** (`django_cfg/apps/`)
@@ -279,9 +279,9 @@ logger.info("Application started")
 class Command(BaseCommand):
     """Interactive multi-database migration tool."""
     
-# django_cfg/management/commands/rundramatiq.py  
+# django_cfg/management/commands/rearq_worker.py
 class Command(BaseCommand):
-    """Production-ready Dramatiq worker management."""
+    """Production-ready ReArq worker management."""
     
 # django_cfg/management/commands/validate_config.py
 class Command(BaseCommand):
@@ -291,7 +291,7 @@ class Command(BaseCommand):
 **Command Categories:**
 - **Database**: `migrator`, `migrate_all`, `check_databases`
 - **Configuration**: `validate_config`, `show_config`, `check_settings`
-- **Tasks**: `rundramatiq`, `task_status`, `task_clear`
+- **Tasks**: `rearq_worker`, `task_status`, `task_clear`
 - **Communication**: `test_email`, `test_telegram`, `test_twilio`
 - **Development**: `runserver_ngrok`, `generate`, `tree`
 
@@ -353,7 +353,7 @@ graph TB
     subgraph "Third-Party"
         DRF[Django REST Framework]
         UNFOLD[Unfold Admin]
-        DRAMATIQ[Dramatiq Tasks]
+        REARQ[ReArq Tasks]
     end
 
     subgraph "Django Framework"
@@ -388,7 +388,7 @@ graph TB
 
     GENERATOR --> DRF
     GENERATOR --> UNFOLD
-    GENERATOR --> DRAMATIQ
+    GENERATOR --> REARQ
 ```
 
 ## Component Interaction Flow

@@ -122,25 +122,8 @@ services:
 
   # ReArq removed - use docker-compose-local-services.yml for task queue
   # See: solution/docker/services/rearq/README.md
-
-  # django-dramatiq service removed - replaced with ReArq
   # To enable task queue, run:
   # docker compose -f docker-compose-local-services.yml up -d
-
-  _placeholder_for_removed_dramatiq:
-    image: tianon/true  # Minimal placeholder image
-    container_name: _dramatiq_removed
-    restart: "no"
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          memory: 512M
-    networks:
-      - djangocfg-network
-      - djangocfg_django_network
 
   centrifugo:
     image: centrifugo/centrifugo:v6

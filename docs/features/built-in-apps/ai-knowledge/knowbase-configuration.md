@@ -31,7 +31,7 @@ Complete AI-powered knowledge management system with document processing, semant
 **Dependencies**:
 - `PostgreSQL` with `pgvector` extension
 - `Redis` for caching and task queues
-- `Dramatiq` for background processing
+- `ReArq` for background processing
 - `OpenAI API` for embeddings and chat
 - `Django 5.0+` with `django-cfg`
 
@@ -269,7 +269,7 @@ export interface SearchResult {
 
 1. **Upload** → User uploads document via API or admin interface
 2. **Validation** → File type, size, and content validation
-3. **Background Task** → Dramatiq task queued for processing
+3. **Background Task** → ReArq task queued for processing
 4. **Text Extraction** → Extract text from PDF, DOCX, TXT, etc.
 5. **Chunking** → Split text into semantic chunks with overlap
 6. **Embedding Generation** → Generate vector embeddings via OpenAI
@@ -476,7 +476,7 @@ response = chat_service.query(
 
 3. **Start Background Workers**
    ```bash
-   python manage.py rundramatiq
+   rearq
    ```
 
 4. **Access Admin Interface**

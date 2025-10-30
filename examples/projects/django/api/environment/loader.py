@@ -214,7 +214,10 @@ class EnvironmentConfig(BaseSettings):
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
 
     # Cache
-    redis_url: Optional[str] = Field(default=None, description="Redis connection URL")
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis connection URL",
+    )
 
     # Security domains
     security_domains: Optional[list[str]] = Field(
@@ -225,6 +228,7 @@ class EnvironmentConfig(BaseSettings):
             "localhost",
             "127.0.0.1",
             # Docker exposed ports for CSRF (CORS uses regex for all ports)
+            "localhost:3777",  # Next.js Admin App
             "localhost:7301",  # Django API
             "localhost:7310",  # Frontend Demo
             "localhost:7311",  # Frontend Web

@@ -518,7 +518,7 @@ agent_safety: AgentSafetyConfig = AgentSafetyConfig(
 ### Tools & Deployment
 
 **Background Processing:**
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Async document processing
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Async document processing
 - **[Background Tasks](/features/built-in-apps/operations/tasks)** - Task management
 
 **CLI & Deployment:**

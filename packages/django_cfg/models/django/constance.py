@@ -164,14 +164,8 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
         app_fields = []
         config = self.get_config()
 
-        # Get fields from tasks app (only if knowbase or agents are enabled)
-        if config and config.should_enable_tasks():
-            try:
-                from django_cfg.modules.django_tasks import extend_constance_config_with_tasks
-                tasks_fields = extend_constance_config_with_tasks()
-                app_fields.extend(tasks_fields)
-            except (ImportError, Exception):
-                pass
+        # Note: Tasks constance fields removed - ReArq doesn't use dynamic config
+        # Task configuration is managed via TaskConfig model
 
         # Get fields from knowbase app (only if enabled)
         if config and config.enable_knowbase:

@@ -1,7 +1,7 @@
 """
 Background tasks generator.
 
-Handles Dramatiq task queue configuration.
+Handles ReArq task queue configuration.
 Size: ~100 lines (focused on task processing)
 """
 
@@ -19,7 +19,7 @@ class TasksSettingsGenerator:
     Generates background task processing settings.
 
     Responsibilities:
-    - Configure Dramatiq task queue
+    - Configure ReArq task queue
     - Auto-detect if tasks should be enabled
     - Set up task configuration
 
@@ -44,7 +44,7 @@ class TasksSettingsGenerator:
         Generate task processing settings.
 
         Returns:
-            Dictionary with Dramatiq configuration
+            Dictionary with ReArq configuration
 
         Example:
             >>> generator = TasksSettingsGenerator(config)
@@ -52,41 +52,37 @@ class TasksSettingsGenerator:
         """
         # Check if tasks should be enabled
         if not self.config.should_enable_tasks():
-            logger.debug("⏭️  Dramatiq disabled (no tasks/knowbase/agents)")
+            logger.debug("⏭️  Tasks disabled")
             return {}
 
         try:
-            return self._generate_dramatiq_settings()
+            return self._generate_rearq_settings()
         except ImportError as e:
-            logger.warning(f"Failed to import django_tasks module: {e}")
+            logger.warning(f"Failed to import ReArq: {e}")
             return {}
         except Exception as e:
-            logger.error(f"Failed to generate Dramatiq settings: {e}")
+            logger.error(f"Failed to generate ReArq settings: {e}")
             return {}
 
-    def _generate_dramatiq_settings(self) -> Dict[str, Any]:
+    def _generate_rearq_settings(self) -> Dict[str, Any]:
         """
-        Generate Dramatiq-specific settings.
+        Generate ReArq-specific settings.
 
         Returns:
-            Dictionary with Dramatiq configuration
+            Dictionary with ReArq configuration
         """
         from django_cfg.models.tasks import TaskConfig
-        from django_cfg.modules.django_tasks import generate_dramatiq_settings_from_config
 
         # Auto-initialize TaskConfig if needed
         task_config = TaskConfig.auto_initialize_if_needed()
         if task_config is None:
             return {}
 
-        # Generate Dramatiq settings
-        dramatiq_settings = generate_dramatiq_settings_from_config()
-        if not dramatiq_settings:
-            return {}
+        # Generate settings via standard method
+        settings = task_config.to_django_settings()
 
-        logger.info("✅ Dramatiq enabled (tasks/knowbase/agents required)")
-
-        return dramatiq_settings
+        logger.info("✅ ReArq tasks enabled")
+        return settings
 
 
 __all__ = ["TasksSettingsGenerator"]

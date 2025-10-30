@@ -78,7 +78,7 @@ class MyConfig(DjangoConfig):
     enable_agents: bool = True        # AI workflow automation
     enable_knowbase: bool = True      # AI knowledge management
 
-    # ✅ Background tasks (Dramatiq)
+    # ✅ Background tasks (ReArq)
     # ✅ Webhook testing (ngrok)
     # ✅ Email, SMS, Telegram (Twilio integration)
     # ✅ Currency conversion (14K+ currencies)
@@ -393,23 +393,23 @@ openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
 
 **Problem**: Setting up Celery/RQ takes **days**.
 
-**Solution**: **Built-in Dramatiq** integration.
+**Solution**: **Built-in ReArq** integration.
 
 ```python
-import dramatiq
-from django_cfg.modules.dramatiq import get_broker
+from django_cfg.apps.tasks import task
 
-@dramatiq.actor(queue_name="high", max_retries=3)
-def process_document(document_id: str) -> dict:
+@task(queue="high", job_retry=3)
+async def process_document(document_id: str) -> dict:
     """Process document asynchronously."""
-    document = Document.objects.get(id=document_id)
+    from asgiref.sync import sync_to_async
+    document = await sync_to_async(Document.objects.get)(id=document_id)
     # Your processing logic
     return {"status": "completed"}
 
 # Queue task
-process_document.send(document_id="123")
+job = await process_document.delay(document_id="123")
 
-# CLI: python manage.py rundramatiq --processes 4
+# CLI: rearq main:rearq worker --queues high
 ```
 
 **Features**:
@@ -419,6 +419,7 @@ process_document.send(document_id="123")
 - ✅ **Task monitoring** commands
 - ✅ **Docker ready**
 - ✅ **Production tested**
+- ✅ **Async-first** design
 
 ---
 
@@ -541,7 +542,7 @@ response = client.chat_completion([
 | **👤 User Management** | 🟡 Basic User model | ✅ **OTP + SMS + Profiles** |
 | **📧 Communication** | 🟡 Basic email | ✅ **Email + SMS + Telegram** |
 | **💱 Currency** | ❌ Manual API | ✅ **14K+ currencies built-in** |
-| **🔄 Background Tasks** | 🟡 Manual Celery | ✅ **Built-in Dramatiq** |
+| **🔄 Background Tasks** | 🟡 Manual Celery | ✅ **Built-in ReArq** |
 | **🌐 Webhook Testing** | 🟡 Manual ngrok | ✅ **Integrated ngrok** |
 | **🚀 Production Deploy** | 🟡 Manual config | ✅ **Zero-config Docker** |
 | **💡 IDE Support** | 🟡 Basic | ✅ **Full IntelliSense** |

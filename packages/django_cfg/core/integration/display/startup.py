@@ -429,7 +429,7 @@ class StartupDisplayManager(BaseDisplayManager):
                 task_table.add_row("Queue", "[yellow]default[/yellow]")
 
             # Add worker command
-            task_table.add_row("Start Workers", "[bright_blue]poetry run python manage.py rundramatiq[/bright_blue]")
+            task_table.add_row("Start Workers", "[bright_blue]poetry run python manage.py runrearq[/bright_blue]")
 
             task_panel = self.create_full_width_panel(
                 task_table,

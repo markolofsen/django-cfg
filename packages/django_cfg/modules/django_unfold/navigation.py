@@ -4,14 +4,18 @@ Default Navigation Configuration for Django CFG Unfold
 Provides default navigation sections based on enabled django-cfg modules.
 """
 
-from typing import Any, Dict, List
+import logging
+import traceback
+from typing import Any, Dict, List, Optional
 
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, NoReverseMatch
 
 from django_cfg.modules.django_admin.icons import Icons
 from django_cfg.modules.base import BaseCfgModule
 
 from .models.navigation import NavigationItem, NavigationSection
+
+logger = logging.getLogger(__name__)
 
 
 class NavigationManager(BaseCfgModule):
@@ -39,19 +43,92 @@ class NavigationManager(BaseCfgModule):
                 self._config_loaded = True
         return self._config
 
+    def _safe_reverse(self, url_name: str, fallback: Optional[str] = None) -> Optional[str]:
+        """
+        Safely resolve URL with error logging.
+
+        Args:
+            url_name: Django URL name to reverse
+            fallback: Optional fallback URL if reverse fails
+
+        Returns:
+            Resolved URL string or fallback, None if both fail
+        """
+        try:
+            return str(reverse_lazy(url_name))
+        except NoReverseMatch as e:
+            logger.error(
+                f"Failed to reverse URL '{url_name}': {e}\n"
+                f"Traceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
+            )
+            if fallback:
+                logger.warning(f"Using fallback URL: {fallback}")
+                return fallback
+            return None
+        except Exception as e:
+            logger.error(
+                f"Unexpected error reversing URL '{url_name}': {e}\n"
+                f"Traceback:\n{''.join(traceback.format_exc())}"
+            )
+            return fallback
+
+    def _create_nav_item(
+        self,
+        title: str,
+        icon: str,
+        url_name: str,
+        fallback_link: Optional[str] = None
+    ) -> Optional[NavigationItem]:
+        """
+        Create NavigationItem with safe URL resolution.
+
+        Args:
+            title: Navigation item title
+            icon: Icon identifier
+            url_name: Django URL name to reverse
+            fallback_link: Optional fallback URL
+
+        Returns:
+            NavigationItem or None if URL resolution fails
+        """
+        link = self._safe_reverse(url_name, fallback_link)
+        if link is None:
+            logger.warning(f"Skipping navigation item '{title}' - URL '{url_name}' could not be resolved")
+            return None
+
+        return NavigationItem(title=title, icon=icon, link=link)
+
     def get_navigation_config(self) -> List[Dict[str, Any]]:
         """Get complete default navigation configuration for Unfold sidebar."""
+        # Dashboard section with safe URL resolution
+        dashboard_items = []
+
+        # Overview
+        overview_item = self._create_nav_item("Overview", Icons.DASHBOARD, "admin:index")
+        if overview_item:
+            dashboard_items.append(overview_item)
+
+        # Settings
+        settings_item = self._create_nav_item("Settings", Icons.SETTINGS, "admin:constance_config_changelist")
+        if settings_item:
+            dashboard_items.append(settings_item)
+
+        # Health Check
+        health_item = self._create_nav_item("Health Check", Icons.HEALTH_AND_SAFETY, "django_cfg_drf_health", "/cfg/health/")
+        if health_item:
+            dashboard_items.append(health_item)
+
+        # Endpoints Status
+        endpoints_item = self._create_nav_item("Endpoints Status", Icons.API, "endpoints_status_drf", "/cfg/endpoints/")
+        if endpoints_item:
+            dashboard_items.append(endpoints_item)
+
         navigation_sections = [
             NavigationSection(
                 title="Dashboard",
                 separator=True,
                 collapsible=True,
-                items=[
-                    NavigationItem(title="Overview", icon=Icons.DASHBOARD, link=str(reverse_lazy("admin:index"))),
-                    NavigationItem(title="Settings", icon=Icons.SETTINGS, link=str(reverse_lazy("admin:constance_config_changelist"))),
-                    NavigationItem(title="Health Check", icon=Icons.HEALTH_AND_SAFETY, link=str(reverse_lazy("django_cfg_drf_health"))),
-                    NavigationItem(title="Endpoints Status", icon=Icons.API, link=str(reverse_lazy("endpoints_status_drf"))),
-                ]
+                items=dashboard_items
             ),
         ]
 
@@ -69,29 +146,51 @@ class NavigationManager(BaseCfgModule):
                 )
             )
 
-        # Add Operations section (System & Monitoring tools)
-        operations_items = []
-
-        # Background Tasks (if enabled)
+        # Background Tasks section (if enabled)
         if self.should_enable_tasks():
-            operations_items.extend([
-                NavigationItem(title="Background Tasks", icon=Icons.TASK, link=str(reverse_lazy("admin:django_dramatiq_task_changelist"))),
-                NavigationItem(title="Task Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link=str(reverse_lazy("dashboard"))),
-            ])
+            tasks_items = []
+
+            tasks_items.append(
+                NavigationItem(title="Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/admin/admin/tasks")
+            )
+
+            # Try to add Tasks Logs with safe URL resolution
+            logs_item = self._create_nav_item(
+                title="Logs",
+                icon=Icons.TASK,
+                url_name="admin:django_cfg_tasks_tasklog_changelist",
+                fallback_link="/admin/django_cfg_tasks/tasklog/"
+            )
+            if logs_item:
+                tasks_items.append(logs_item)
+
+            navigation_sections.append(NavigationSection(
+                title="Background Tasks",
+                separator=True,
+                collapsible=True,
+                items=tasks_items
+            ))
+
+        # System Operations section
+        system_items = []
 
         # Maintenance Mode (if enabled)
         if self.is_maintenance_enabled():
-            operations_items.append(
-                NavigationItem(title="Maintenance", icon=Icons.BUILD, link=str(reverse_lazy("admin:maintenance_cloudflaresite_changelist")))
+            maintenance_item = self._create_nav_item(
+                title="Maintenance",
+                icon=Icons.BUILD,
+                url_name="admin:maintenance_cloudflaresite_changelist"
             )
+            if maintenance_item:
+                system_items.append(maintenance_item)
 
-        # Add Operations section if there are any items
-        if operations_items:
+        # Add System Operations section if there are any items
+        if system_items:
             navigation_sections.append(NavigationSection(
-                title="Operations",
+                title="System Operations",
                 separator=True,
                 collapsible=True,
-                items=operations_items
+                items=system_items
             ))
 
         # Add Accounts section if enabled

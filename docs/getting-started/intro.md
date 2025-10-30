@@ -719,7 +719,7 @@ class MyConfig(DjangoConfig):
 
 - **Unfold:** Modern admin interface (replaces default Django admin)
 - **Django-CFG API Client Generation:** API zones with automatic OpenAPI documentation
-- **Dramatiq:** Background task processing (auto-enabled when needed)
+- **ReArq:** Background task processing (auto-enabled when needed)
 - **Twilio:** SMS/voice integration
 - **Telegram:** Bot integration for notifications
 - **Email:** SendGrid, SMTP, or console backend
@@ -767,7 +767,7 @@ settings.py globals
 
 - [Database Configuration](/fundamentals/configuration) - Multiple databases, routing
 - [Caching Setup](/fundamentals/configuration) - Redis, in-memory, database caching
-- [Background Tasks](/features/integrations/dramatiq/overview) - Async task processing
+- [Background Tasks](/features/integrations/rearq/overview) - Async task processing
 - [AI Agents](/ai-agents/introduction) - Build AI-powered workflows
 
 ## Resources

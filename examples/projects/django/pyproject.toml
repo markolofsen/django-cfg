@@ -22,9 +22,6 @@ psutil = "^5.9.0"
 click = "^8.1.0"
 faker = "^37.5.3"
 django-admin-rangefilter = "^0.13.3"
-dramatiq = {version = ">=1.18.0,<2.0", extras = ["redis"]}
-django-dramatiq = ">=0.14.0,<1.0"
-redis = ">=6.4.0,<7.0"
 markdown = "^3.9"
 
 [tool.poetry.group.local]

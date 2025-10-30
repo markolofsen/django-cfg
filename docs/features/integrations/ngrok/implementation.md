@@ -351,14 +351,14 @@ class Command(BaseCommand):
         )
 ```
 
-### Background Tasks (Dramatiq)
+### Background Tasks (ReArq)
 
 ```python
-import dramatiq
+from rearq.decorators import task
 from django_cfg.modules.django_ngrok import get_webhook_url
 
-@dramatiq.actor
-def send_webhook_notification(user_id: int):
+@task
+async def send_webhook_notification(user_id: int):
     """Send webhook URL to user via email."""
     from django.core.mail import send_mail
 
@@ -460,7 +460,7 @@ else:
 
 **Related Features:**
 - [**Payments App**](/features/built-in-apps/payments/overview) - Payment webhooks
-- [**Background Tasks**](/features/integrations/dramatiq/overview) - Async webhook processing
+- [**Background Tasks**](/features/integrations/rearq/overview) - Async webhook processing
 - [**Integrations Overview**](/features/integrations/overview) - All integrations
 
 ### Configuration & Setup

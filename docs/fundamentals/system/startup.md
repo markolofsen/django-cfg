@@ -62,7 +62,7 @@ Django CFG v1.2.30 • production • My Project • 🚨 UPDATE AVAILABLE
 #### Main Information Panels
 - **Django CFG Configuration**: Version, environment, project info, health endpoint
 - **Update Notifications**: Version comparison and upgrade instructions
-- **Background Tasks**: Dramatiq status, queue configuration, worker commands
+- **Background Tasks**: ReArq status, queue configuration, worker commands
 - **Management Commands**: Complete breakdown of available CLI tools
 
 #### Dynamic Configuration
@@ -272,7 +272,7 @@ When using ngrok for local development, the system automatically detects and dis
 - Direct upgrade commands provided
 
 ### Background Tasks
-- Dramatiq queue status and configuration
+- ReArq queue status and configuration
 - Worker startup commands
 - Task-related management commands
 

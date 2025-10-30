@@ -11,7 +11,7 @@ keywords:
 
 # Django Tasks Module
 
-The **django_tasks module** (`django_cfg.modules.django_tasks`) provides a service layer for background task processing using Dramatiq.
+The **django_tasks module** (`django_cfg.modules.django_tasks`) provides a service layer for background task processing using ReArq.
 
 ## ⚠️ Module vs App Clarification
 
@@ -206,9 +206,9 @@ class MyConfig(DjangoConfig):
 
 See [TaskConfig documentation](/fundamentals/configuration) for all options.
 
-### Direct Dramatiq Configuration
+### Direct ReArq Configuration
 
-For advanced Dramatiq configuration:
+For advanced ReArq configuration:
 
 ```python
 # config.py
@@ -216,22 +216,16 @@ from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
     @property
-    def dramatiq_settings(self) -> dict:
+    def rearq_settings(self) -> dict:
         return {
-            'BROKER': 'redis',
-            'OPTIONS': {
-                'url': 'redis://localhost:6379/0',
-                'connection_pool_kwargs': {
-                    'max_connections': 20
-                }
+            'REDIS_URL': 'redis://localhost:6379/0',
+            'REDIS_POOL_SETTINGS': {
+                'max_connections': 20
             },
-            'MIDDLEWARE': [
-                'dramatiq.middleware.Prometheus',
-                'dramatiq.middleware.AgeLimit',
-                'dramatiq.middleware.TimeLimit',
-                'dramatiq.middleware.Callbacks',
-                'dramatiq.middleware.Retries',
-            ]
+            'TASK_TIMEOUT': 300,
+            'MAX_RETRIES': 3,
+            'RETRY_DELAY': 60,
+            'KEEP_RESULTS': 3600
         }
 ```
 
@@ -362,7 +356,7 @@ def tracked_task(data: dict):
 - ✅ Defining background tasks with `@task` decorator
 - ✅ Managing task queues programmatically
 - ✅ Accessing task service for monitoring
-- ✅ Configuring Dramatiq workers
+- ✅ Configuring ReArq workers
 
 ### Use the APP (`django_cfg.apps.tasks`) when:
 - ✅ Storing task execution history in database
@@ -381,11 +375,11 @@ Most projects use **both**:
 
 - [**TaskConfig**](/fundamentals/configuration) - Configuration options
 - [**Tasks App**](/features/built-in-apps/operations/tasks) - Django app with models and UI
-- [**Dramatiq Integration**](/features/integrations/dramatiq/overview) - Full Dramatiq documentation
-- [**CLI Commands**](/cli/commands/overview) - `manage.py rundramatiq` and task commands
+- [**ReArq Integration**](/features/integrations/rearq/overview) - Full ReArq documentation
+- [**CLI Commands**](/cli/commands/overview) - `manage.py rearq` and task commands
 
 ---
 
-TAGS: tasks, background-jobs, dramatiq, async, queue, workers, module
-DEPENDS_ON: [dramatiq, configuration, redis]
+TAGS: tasks, background-jobs, rearq, async, queue, workers, module
+DEPENDS_ON: [rearq, configuration, redis]
 USED_BY: [tasks-app, ai-agents, email, processing]

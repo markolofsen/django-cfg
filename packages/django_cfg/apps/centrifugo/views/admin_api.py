@@ -11,11 +11,10 @@ from django.http import JsonResponse
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from django_cfg.mixins import AdminAPIMixin
 from ..serializers import (
     CentrifugoInfoRequest,
     CentrifugoInfoResponse,
@@ -33,16 +32,14 @@ from ..services import get_centrifugo_config
 logger = get_logger("centrifugo.admin_api")
 
 
-class CentrifugoAdminAPIViewSet(viewsets.ViewSet):
+class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
     """
     Centrifugo Admin API Proxy ViewSet.
 
     Provides type-safe proxy endpoints to Centrifugo server API.
-    All requests are authenticated via Django session and proxied to Centrifugo.
+    All requests are authenticated via Django session/JWT and proxied to Centrifugo.
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
-
-    # authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAdminUser]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

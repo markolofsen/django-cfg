@@ -10,9 +10,9 @@ import logging
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+
+from django_cfg.mixins import AdminAPIMixin
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from ..services import APIZonesService
@@ -21,15 +21,14 @@ from ..serializers import APIZoneSerializer, APIZonesSummarySerializer
 logger = logging.getLogger(__name__)
 
 
-class APIZonesViewSet(viewsets.GenericViewSet):
+class APIZonesViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     API Zones ViewSet
 
     Provides endpoints for OpenAPI zones (groups) management.
+    Requires admin authentication (JWT, Session, or Basic Auth).
     """
 
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAdminUser]
     serializer_class = APIZoneSerializer
     pagination_class = None  # Disable pagination for zones list
 

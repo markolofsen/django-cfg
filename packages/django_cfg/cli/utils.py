@@ -166,7 +166,7 @@ def get_standard_dependencies() -> Dict[str, str]:
         "drf-spectacular": "drf_spectacular",
 
         # Tasks & Background Processing
-        "dramatiq": "dramatiq",
+        "rearq": "rearq",
         "redis": "redis",
 
         # Development

@@ -75,6 +75,12 @@ class Command(BaseCommand):
 
         # Utility options
         parser.add_argument(
+            "--no-build",
+            action="store_true",
+            help="Skip Next.js admin build (useful when calling from Makefile)",
+        )
+
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Dry run - validate configuration but don't generate files",
@@ -515,7 +521,13 @@ class Command(BaseCommand):
             # First copy API clients
             self._copy_to_nextjs_admin(service)
             # Then build Next.js (so clients are included in build)
-            self._build_nextjs_admin()
+            # Skip build if --no-build flag is set
+            if not options.get("no_build"):
+                self._build_nextjs_admin()
+            else:
+                self.stdout.write(self.style.WARNING(
+                    "\n⏭️  Skipping Next.js build (--no-build flag set)"
+                ))
 
         # Summary
         self.stdout.write("\n" + "=" * 60)

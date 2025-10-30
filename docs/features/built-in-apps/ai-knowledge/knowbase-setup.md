@@ -165,13 +165,13 @@ redis-cli ping  # Should return PONG
 ### Background Workers
 
 ```bash
-# Start Dramatiq workers for background processing
-python manage.py rundramatiq
+# Start ReArq workers for background processing
+rearq
 
 # Production: Use supervisor or systemd
 # /etc/supervisor/conf.d/knowbase-workers.conf
 [program:knowbase-workers]
-command=/path/to/venv/bin/python manage.py rundramatiq
+command=/path/to/venv/bin/rearq
 directory=/path/to/project
 user=www-data
 autostart=true
@@ -358,7 +358,7 @@ export interface ConfigValidationResult {
 4. **Service Registration** → Register Knowbase services with Django
 5. **Database Setup** → Configure database routing and connections
 6. **Cache Configuration** → Set up Redis caching and sessions
-7. **Background Tasks** → Initialize Dramatiq task queues
+7. **Background Tasks** → Initialize ReArq task queues
 8. **URL Registration** → Register API endpoints and admin interfaces
 
 **Modules**:
@@ -540,7 +540,7 @@ class DevelopmentConfig(DjangoConfig):
 - [ ] Install PostgreSQL with pgvector extension
 - [ ] Set up Redis server
 - [ ] Run `python manage.py migrate`
-- [ ] Start background workers with `python manage.py rundramatiq`
+- [ ] Start background workers with `rearq`
 
 ### Production Deployment
 
@@ -737,7 +737,7 @@ enable_knowbase: bool = True
 
 # Start system
 python manage.py migrate
-python manage.py rundramatiq
+rearq
 
 # Test integration
 python manage.py shell

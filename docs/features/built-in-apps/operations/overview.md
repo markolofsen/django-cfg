@@ -44,7 +44,7 @@ service.disable_maintenance()
 
 ## Tasks App
 
-**Asynchronous task processing with Dramatiq**
+**Asynchronous task processing with ReArq**
 
 - **⚡ Background Jobs** - Process tasks asynchronously
 - **🔄 Retry Logic** - Automatic retry with exponential backoff
@@ -58,13 +58,13 @@ service.disable_maintenance()
 # Define and run background tasks
 from django_cfg.apps.tasks import task
 
-@task
+@task()
 def send_email_task(user_id, subject, message):
     # Process in background
     pass
 
 # Queue task
-send_email_task.send(user_id=123, subject="Hello", message="World")
+send_email_task.delay(user_id=123, subject="Hello", message="World")
 ```
 
 ---
@@ -81,7 +81,7 @@ service.disable_maintenance()
 
 ### 2. **Use Tasks for Heavy Processing**
 ```python
-@task
+@task()
 def process_large_dataset(dataset_id):
     # Long-running data processing
     pass
@@ -103,12 +103,12 @@ failed_tasks = TaskResult.objects.filter(status='failed')
 
 **Operations Features:**
 - **[Maintenance Documentation](./maintenance)** - Complete maintenance app guide
-- **[Tasks Documentation](./tasks)** - Dramatiq task processing guide
+- **[Tasks Documentation](./tasks)** - ReArq task processing guide
 - **[Built-in Apps Overview](/features/built-in-apps/overview)** - All available apps
 
 **Background Processing:**
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Background tasks framework
-- **[Background Task Commands](/cli/commands/background-tasks)** - Manage workers via CLI
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks framework
+- **[Background Task Commands](/features/integrations/rearq/overview)** - Manage workers via CLI
 - **[Production Config](/guides/production-config)** - Production task setup
 
 ### Configuration & Setup

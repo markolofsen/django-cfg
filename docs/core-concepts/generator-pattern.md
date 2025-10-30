@@ -85,7 +85,7 @@ Coordinates all specialized generators.
 11. **Session Settings** - SESSION_ENGINE
 12. **Third-Party Settings** - Unfold, Constance, etc.
 13. **API Settings** - DRF, Spectacular, JWT
-14. **Tasks Settings** - Dramatiq
+14. **Tasks Settings** - ReArq
 
 ## Specialized Generators
 
@@ -389,9 +389,9 @@ Generates background task settings.
 **Location:** `django_cfg.core.generation.integration_generators.tasks`
 
 **Generates:**
-- `DRAMATIQ_BROKER` - Task broker configuration
-- `DRAMATIQ_RESULT_BACKEND` - Result storage
-- `DRAMATIQ_TASKS_DATABASE` - Task database
+- `REARQ_BROKER` - Task broker configuration
+- `REARQ_RESULT_BACKEND` - Result storage
+- `REARQ_TASKS_DATABASE` - Task database
 
 ## Creating Custom Generators
 

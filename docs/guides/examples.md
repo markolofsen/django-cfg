@@ -78,9 +78,9 @@ Examples showing multi-currency support across different industries.
 
 ## 🔄 Background Tasks Examples
 
-Production-ready background task processing with Dramatiq.
+Production-ready background task processing with ReArq.
 
-### **[Dramatiq Examples](../features/integrations/dramatiq/examples)**
+### **[ReArq Examples](../features/integrations/rearq/overview)**
 - Email campaign processing
 - Document processing pipelines
 - Data synchronization
@@ -389,7 +389,7 @@ user = OTPService.verify_phone_otp("+1234567890", "123456")
 → Check [AI Agents Examples](/ai-agents/examples)
 
 **Setting up Background Tasks?**
-→ Explore [Dramatiq Examples](../features/integrations/dramatiq/examples)
+→ Explore [ReArq Examples](../features/integrations/rearq/overview)
 
 **Testing Webhooks?**
 → Learn [Ngrok Integration](../features/integrations/ngrok/overview)

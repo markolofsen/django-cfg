@@ -49,7 +49,7 @@ CORE_REGISTRY = {
 
     # Task and queue models
     "TaskConfig": ("django_cfg.models.tasks.config", "TaskConfig"),
-    "DramatiqConfig": ("django_cfg.models.tasks.config", "DramatiqConfig"),
+    "RearqConfig": ("django_cfg.models.tasks.config", "RearqConfig"),
 
     # Payment system models (BaseCfgAutoModule)
     "PaymentsConfig": ("django_cfg.models.payments.config", "PaymentsConfig"),

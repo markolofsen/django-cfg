@@ -21,14 +21,8 @@ class KnowbaseConfig(AppConfig):
         # Connect post-migrate signal for database setup
         post_migrate.connect(self.create_pgvector_extension, sender=self)
 
-        # Initialize task system and auto-start worker if configured
-        try:
-            from django_cfg.modules.django_tasks import initialize_task_system
-            initialize_task_system()
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to initialize task system: {e}")
+        # Note: Task system initialization removed - ReArq doesn't need it
+        # Tasks are auto-discovered from decorated functions
 
     def create_pgvector_extension(self, sender, **kwargs):
         """Create pgvector extension and indexes if they don't exist."""

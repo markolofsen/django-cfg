@@ -41,6 +41,8 @@ from django_cfg import (
     AxesConfig,
     DjangoCfgCentrifugoConfig,
     NextJsAdminConfig,
+    TaskConfig,
+    RearqConfig,
 )
 
 # Import environment configuration
@@ -85,7 +87,7 @@ class DjangoCfgConfig(DjangoConfig):
     wsgi_application: str = "api.wsgi.application"
 
     # === Django CFG Features ===
-    startup_info_mode: StartupInfoMode = StartupInfoMode.FULL  # FULL shows all info, SHORT for essential, NONE for minimal
+    startup_info_mode: StartupInfoMode = StartupInfoMode.SHORT  # FULL shows all info, SHORT for essential, NONE for minimal
     
     enable_support: bool = True
     enable_accounts: bool = True
@@ -127,6 +129,20 @@ class DjangoCfgConfig(DjangoConfig):
         )
         if env.centrifugo.enabled
         else None
+    )
+
+    # === Background Tasks Configuration (ReArq) ===
+    tasks: Optional[TaskConfig] = TaskConfig(
+        enabled=True,
+        rearq=RearqConfig(
+            redis_url=env.redis_url,  # Fallback if env.redis_url is None
+            db_url="sqlite:///rearq.db",  # Or use PostgreSQL in production
+            max_jobs=10,
+            job_timeout=300,
+            job_retry=3,
+            job_retry_after=60,
+            keep_job_days=7,
+        )
     )
 
     # === API Keys Configuration ===

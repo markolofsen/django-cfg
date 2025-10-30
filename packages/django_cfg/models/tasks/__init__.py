@@ -2,25 +2,24 @@
 Task processing configuration models for Django-CFG.
 
 This module provides type-safe Pydantic models for configuring background task
-processing with Dramatiq, including worker management, queue configuration,
+processing with ReArq, including worker management, queue configuration,
 and monitoring settings.
 
 Architecture:
     config.py - Main TaskConfig and enums
-    backends.py - DramatiqConfig and WorkerConfig
+    backends.py - RearqConfig
     utils.py - Utility functions
 
 Example:
     ```python
-    from django_cfg.models.tasks import TaskConfig, DramatiqConfig
+    from django_cfg.models.tasks import TaskConfig, RearqConfig
 
     # Basic configuration
     tasks = TaskConfig(
         enabled=True,
-        dramatiq=DramatiqConfig(
-            processes=4,
-            threads=8,
-            queues=["default", "high", "low"],
+        rearq=RearqConfig(
+            redis_url="redis://localhost:6379/0",
+            max_jobs=10,
         )
     )
 
@@ -30,7 +29,7 @@ Example:
     ```
 """
 
-from .backends import DramatiqConfig, WorkerConfig
+from .backends import RearqConfig
 from .config import QueuePriority, TaskBackend, TaskConfig
 from .utils import get_default_task_config, get_smart_queues, validate_task_config
 
@@ -41,8 +40,7 @@ __all__ = [
     "QueuePriority",
 
     # Backend configurations
-    "DramatiqConfig",
-    "WorkerConfig",
+    "RearqConfig",
 
     # Utility functions
     "get_default_task_config",

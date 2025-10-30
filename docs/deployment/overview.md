@@ -86,8 +86,8 @@ pip install django-cfg
 # Run with gunicorn
 gunicorn api.wsgi:application
 
-# Start Dramatiq workers
-python manage.py rundramatiq
+# Start ReArq workers
+rearq main:rearq worker
 ```
 
 **Recommended guides**:
@@ -115,10 +115,10 @@ All deployment methods require:
 [Cache Configuration Guide →](/fundamentals/configuration/cache)
 
 ### Background Tasks
-- **Dramatiq** - Built-in task processing
+- **ReArq** - Built-in task processing
 - **Celery** - Alternative (requires additional setup)
 
-[Dramatiq Integration →](/features/integrations/dramatiq/overview)
+[ReArq Integration →](/features/integrations/rearq/overview)
 
 ### Reverse Proxy
 - **Nginx** - Recommended

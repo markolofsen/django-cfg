@@ -5,17 +5,22 @@ REST API ViewSets for tickets and messages.
 """
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
-from rest_framework import permissions, viewsets
+from rest_framework import viewsets
 
+from django_cfg.mixins import ClientAPIMixin
 from ..models import Message, Ticket
 from ..serializers import MessageCreateSerializer, MessageSerializer, TicketSerializer
 
 
-class TicketViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing support tickets."""
+class TicketViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    """
+    ViewSet for managing support tickets.
+
+    Requires authenticated user (JWT or Session).
+    Staff users can see all tickets, regular users see only their own.
+    """
 
     serializer_class = TicketSerializer
-    permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'uuid'
     lookup_url_kwarg = 'uuid'
 
@@ -32,11 +37,15 @@ class TicketViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class MessageViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing support messages."""
+class MessageViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    """
+    ViewSet for managing support messages.
+
+    Requires authenticated user (JWT or Session).
+    Users can only access messages for their own tickets.
+    """
 
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'uuid'
     lookup_url_kwarg = 'uuid'
 

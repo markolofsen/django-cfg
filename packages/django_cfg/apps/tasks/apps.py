@@ -1,17 +1,15 @@
-"""
-Django CFG Tasks App Configuration
-"""
-
+"""Django AppConfig for tasks app."""
 from django.apps import AppConfig
 
 
 class TasksConfig(AppConfig):
-    """Configuration for Django CFG Tasks app."""
+    """Django app configuration for ReArq tasks."""
 
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'django_cfg.apps.tasks'
-    verbose_name = 'Background Tasks'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "django_cfg.apps.tasks"
+    verbose_name = "Background Tasks"
 
     def ready(self):
         """Initialize app when Django starts."""
-        pass
+        # Import services to ensure client is available
+        from . import services  # noqa: F401

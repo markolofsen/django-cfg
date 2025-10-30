@@ -5,15 +5,20 @@ Base views for knowledge base API.
 import logging
 
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+
+from django_cfg.mixins import ClientAPIMixin
 
 logger = logging.getLogger(__name__)
 
 
-class BaseKnowledgeViewSet(viewsets.ModelViewSet):
-    """Base ViewSet with common knowledge base functionality."""
+class BaseKnowledgeViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    """
+    Base ViewSet with common knowledge base functionality.
 
-    permission_classes = [IsAuthenticated]
+    Requires authenticated user (JWT or Session).
+    Automatically filters queryset by user and sets user on creation.
+    """
+
     lookup_field = 'pk'
 
     def get_queryset(self):

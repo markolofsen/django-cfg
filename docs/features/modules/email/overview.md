@@ -253,7 +253,7 @@ send_bulk_email(
 - **[Support App](/features/built-in-apps/user-management/support)** - Support ticket emails
 
 **Background Processing:**
-- **[Dramatiq Integration](/features/integrations/dramatiq/overview)** - Async email sending
+- **[ReArq Integration](/features/integrations/rearq/overview)** - Async email sending
 - **[Background Tasks](/features/built-in-apps/operations/tasks)** - Task queue management
 
 ### Tools & Deployment

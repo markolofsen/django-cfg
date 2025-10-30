@@ -28,7 +28,7 @@ The Docker setup includes:
 - **PostgreSQL + pgvector** - Database with vector extension for embeddings
 - **Redis** - Caching and task queue management
 - **Django Application** - Web server with health checks
-- **Dramatiq Workers** - Background task processing
+- **ReArq Workers** - Background task processing
 - **Nginx Proxy** - Production reverse proxy
 
 ## Quick Start
@@ -371,9 +371,9 @@ case "$1" in
         echo "Starting Django server..."
         exec python manage.py runserver 0.0.0.0:8000
         ;;
-    rundramatiq)
-        echo "Starting Dramatiq workers..."
-        exec python manage.py rundramatiq --processes ${DRAMATIQ_PROCESSES:-2} --threads ${DRAMATIQ_THREADS:-4}
+    rearq_worker)
+        echo "Starting ReArq workers..."
+        exec rearq main:rearq worker
         ;;
     migrate)
         echo "Running migrations only..."
@@ -390,7 +390,7 @@ case "$1" in
     help)
         echo "Available commands:"
         echo "  runserver    - Start Django development server (default)"
-        echo "  rundramatiq  - Start Dramatiq workers"
+        echo "  rearq_worker - Start ReArq workers"
         echo "  migrate      - Run database migrations"
         echo "  shell        - Django interactive shell"
         echo "  bash         - Debug shell"
@@ -440,11 +440,10 @@ DATABASE_VEHICLES_URL=postgresql://carapis:carapis_password@carapis_postgres:543
 
 # Redis Configuration
 REDIS_URL=redis://carapis_redis:6379/0
-DRAMATIQ_REDIS_DB=2
+REARQ_REDIS_DB=2
 
-# Dramatiq Configuration
-DRAMATIQ_PROCESSES=2
-DRAMATIQ_THREADS=4
+# ReArq Configuration
+REARQ_WORKERS=2
 
 # Logging Configuration
 LOG_LEVEL=INFO
@@ -507,7 +506,7 @@ docker compose logs -f
 
 # Specific service logs
 docker compose logs -f carapis-django
-docker compose logs -f carapis-dramatiq
+docker compose logs -f carapis-rearq
 docker compose logs -f carapis_postgres
 docker compose logs -f carapis_redis
 
@@ -527,8 +526,8 @@ docker compose exec carapis_redis redis-cli info memory
 # PostgreSQL connections
 docker compose exec carapis_postgres psql -U carapis -d carapis_db -c "SELECT count(*) FROM pg_stat_activity;"
 
-# Dramatiq queue status
-docker compose exec carapis_redis redis-cli -n 2 LLEN dramatiq:queue:knowledge
+# ReArq queue status
+docker compose exec carapis_redis redis-cli -n 2 LLEN rearq:queue:default
 ```
 
 ## Management Scripts
@@ -584,15 +583,15 @@ case "$1" in
 esac
 ```
 
-### Dramatiq Debug Script
+### ReArq Debug Script
 
 ```bash
 #!/bin/bash
-# scripts/debug-dramatiq.sh
+# scripts/debug-rearq.sh
 
 set -e
 
-echo "🔍 Debugging Dramatiq integration..."
+echo "🔍 Debugging ReArq integration..."
 
 # Check if services are running
 echo "📊 Service status:"
@@ -604,11 +603,11 @@ docker compose exec carapis_redis redis-cli ping
 
 # Check task queue
 echo "📋 Task queue status:"
-docker compose exec carapis_redis redis-cli -n 2 LLEN dramatiq:queue:knowledge
+docker compose exec carapis_redis redis-cli -n 2 LLEN rearq:queue:default
 
 # Check worker logs
 echo "📝 Recent worker logs:"
-docker compose logs --tail=20 carapis-dramatiq
+docker compose logs --tail=20 carapis-rearq
 
 # Test document processing (if available)
 if [ "$1" = "test_document" ]; then
@@ -639,16 +638,16 @@ docker compose logs carapis_postgres
 docker compose exec carapis_postgres psql -U carapis -d carapis_db
 ```
 
-**Dramatiq Worker Issues:**
+**ReArq Worker Issues:**
 ```bash
 # Check worker logs
-docker compose logs -f carapis-dramatiq
+docker compose logs -f carapis-rearq
 
 # Restart workers
-docker compose restart carapis-dramatiq
+docker compose restart carapis-rearq
 
 # Test task processing
-./scripts/debug-dramatiq.sh test_document
+./scripts/debug-rearq.sh test_document
 ```
 
 **Performance Issues:**
@@ -736,8 +735,8 @@ docker volume prune -f
 ### Background Processing
 
 **Task Processing:**
-- [**Dramatiq Integration**](/features/integrations/dramatiq/overview) - Background task processing
-- [**Background Task Commands**](/cli/commands/background-tasks) - Manage workers via CLI
+- [**ReArq Integration**](/features/integrations/rearq/overview) - Background task processing
+- [**Background Task Commands**](/features/integrations/rearq/overview) - Manage workers via CLI
 - [**Tasks App**](/features/built-in-apps/operations/tasks) - Built-in task management
 
 ### Configuration & Setup
@@ -761,6 +760,6 @@ docker volume prune -f
 
 This Docker setup provides a robust, scalable foundation for Django-CFG applications! 🐳
 
-TAGS: docker, production, postgresql, redis, dramatiq, nginx, deployment
+TAGS: docker, production, postgresql, redis, rearq, nginx, deployment
 DEPENDS_ON: [django-cfg, postgresql, redis, docker-compose]
 USED_BY: [production-deployment, development, ci-cd]

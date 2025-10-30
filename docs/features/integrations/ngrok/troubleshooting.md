@@ -383,7 +383,7 @@ ngrok: NgrokConfig = NgrokConfig(
 
 ```python
 # Process webhooks asynchronously
-import dramatiq
+from rearq.decorators import task
 from django.http import JsonResponse
 
 @csrf_exempt
@@ -392,12 +392,12 @@ def stripe_webhook(request):
     # Process webhook in background
 
     payload = request.body
-    process_stripe_webhook.send(payload.decode())
+    process_stripe_webhook.delay(payload.decode())
 
     return JsonResponse({"status": "received"})
 
-@dramatiq.actor
-def process_stripe_webhook(payload: str):
+@task
+async def process_stripe_webhook(payload: str):
     # Process webhook in background
     # ...
     pass
@@ -555,19 +555,19 @@ def webhook_handler(request):
 Process webhooks asynchronously:
 
 ```python
-import dramatiq
+from rearq.decorators import task
 from django.http import JsonResponse
 
 @csrf_exempt
 def webhook_handler(request):
     # Immediately acknowledge receipt
     payload = request.body.decode()
-    process_webhook_task.send(payload)
+    process_webhook_task.delay(payload)
 
     return JsonResponse({"status": "received"})
 
-@dramatiq.actor
-def process_webhook_task(payload: str):
+@task
+async def process_webhook_task(payload: str):
     # Process in background
     # ...
     pass
@@ -677,6 +677,6 @@ ngrok: NgrokConfig = NgrokConfig(
 
 ## See Also
 
-- [Dramatiq Integration](/features/integrations/dramatiq/overview) - Background task processing
+- [ReArq Integration](/features/integrations/rearq/overview) - Background task processing
 - [Configuration Guide](/fundamentals/configuration) - DjangoConfig reference
 - [Deployment Guide](/guides/docker/production) - Production deployment

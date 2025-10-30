@@ -19,6 +19,7 @@ services:
     volumes:
       - "../files/django-logs:/app/logs"
       - "../files/django-media:/app/media"
+      - "../projects/django:/app:rw"
     networks:
       - dokploy-network
     healthcheck:

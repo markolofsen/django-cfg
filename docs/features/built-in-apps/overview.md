@@ -73,11 +73,11 @@ Leverage AI for knowledge management and automation (see [AI Agents Framework](/
 
 ### Site Maintenance and Background Processing
 
-Operational tools for reliable service delivery (powered by [Dramatiq](/features/integrations/dramatiq/overview)):
+Operational tools for reliable service delivery (powered by [ReArq](/features/integrations/rearq/overview)):
 
 **Core Features:**
 - **🔧 Maintenance** - Cloudflare site maintenance with Page Rules (simplified!)
-- **🔄 Tasks** - Asynchronous [background job processing](/features/integrations/dramatiq/overview)
+- **🔄 Tasks** - Asynchronous [background job processing](/features/integrations/rearq/overview)
 - **📊 Monitoring** - System health and performance tracking
 - **🤖 Automation** - Operational workflow automation
 
@@ -111,7 +111,7 @@ class MyProjectConfig(DjangoConfig):
     enable_knowbase: bool = True
     enable_agents: bool = True
 
-    # Operations (see /features/integrations/dramatiq/overview)
+    # Operations (see /features/integrations/rearq/overview)
     enable_maintenance: bool = True
     tasks: TaskConfig | None = TaskConfig()  # Background task processing
 ```

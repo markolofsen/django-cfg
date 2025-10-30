@@ -64,7 +64,8 @@ class CryptoFieldsSettingsGenerator:
         return crypto_config.to_django_settings(
             base_dir=self.config.base_dir,
             is_production=self.config.is_production,
-            debug=self.config.debug
+            debug=self.config.debug,
+            project_version=self.config.project_version
         )
 
 
