@@ -11,6 +11,7 @@ from .decorators import (
 )
 from .displays import DateTimeDisplay, MoneyDisplay, UserDisplay
 from .html_builder import HtmlBuilder
+from .markdown_renderer import MarkdownRenderer
 
 __all__ = [
     # Display utilities
@@ -23,6 +24,8 @@ __all__ = [
     "CounterBadge",
     # HTML Builder
     "HtmlBuilder",
+    # Markdown Renderer
+    "MarkdownRenderer",
     # Decorators
     "computed_field",
     "badge_field",

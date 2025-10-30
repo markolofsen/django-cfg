@@ -81,3 +81,7 @@ static/
 # Database files
 *.sqlite3
 *.db
+
+# Temporary files
+tmp/
+*.tmp

@@ -5,6 +5,7 @@ Configuration models for declarative Django Admin.
 from .action_config import ActionConfig
 from .admin_config import AdminConfig
 from .background_task_config import BackgroundTaskConfig
+from .documentation_config import DocumentationConfig, DocumentationSection
 from .field_config import (
     FieldConfig,
     BadgeField,
@@ -12,6 +13,7 @@ from .field_config import (
     CurrencyField,
     DateTimeField,
     ImageField,
+    MarkdownField,
     TextField,
     UserField,
 )
@@ -25,12 +27,15 @@ __all__ = [
     "ActionConfig",
     "ResourceConfig",
     "BackgroundTaskConfig",
+    "DocumentationConfig",
+    "DocumentationSection",
     # Specialized Field Types
     "BadgeField",
     "BooleanField",
     "CurrencyField",
     "DateTimeField",
     "ImageField",
+    "MarkdownField",
     "TextField",
     "UserField",
 ]

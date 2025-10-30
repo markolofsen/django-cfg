@@ -1,5 +1,7 @@
 """
-Admin for Coin model using django-cfg admin system v2.0.
+Admin for Coin model using django-cfg admin system v2.0 with Markdown documentation.
+
+Example of declarative markdown documentation configuration.
 """
 
 from django.contrib import admin
@@ -9,6 +11,7 @@ from django_cfg.modules.django_admin import (
     BadgeField,
     BooleanField,
     CurrencyField,
+    DocumentationConfig,
     FieldsetConfig,
     Icons,
 )
@@ -16,7 +19,7 @@ from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from apps.crypto.models import Coin
 
-# Declarative Pydantic Config
+# Declarative Pydantic Config with Markdown Documentation
 coin_admin_config = AdminConfig(
     model=Coin,
 
@@ -94,11 +97,33 @@ coin_admin_config = AdminConfig(
 
     # Auto-populate slug from name
     prepopulated_fields={'slug': ('name',)},
+
+    # 📚 Markdown Documentation Configuration
+    # Directory mode: Automatically discovers all .md files recursively
+    # Each file becomes a collapsible section
+    documentation=DocumentationConfig(
+        source_dir="docs",  # ← Relative to app! Scans apps/crypto/docs/**/*.md
+        title="📚 Coin Documentation",
+        collapsible=True,
+        default_open=False,
+        max_height="600px",
+        show_on_changelist=True,   # Show above the list
+        show_on_changeform=True,   # Show on edit/add page
+        enable_plugins=True,
+        sort_sections=True          # Sort sections alphabetically
+    ),
 )
 
 
 @admin.register(Coin)
 class CoinAdmin(PydanticAdmin):
-    """Enhanced admin for Coin model using new Pydantic approach."""
+    """
+    Enhanced admin for Coin model using declarative Pydantic config.
+
+    Documentation is configured via DocumentationConfig in AdminConfig.
+    PydanticAdmin automatically uses unfold's template hooks to render documentation:
+    - Above the list on changelist page (via list_before_template)
+    - Before fieldsets on changeform page (via change_form_before_template)
+    """
 
     config = coin_admin_config

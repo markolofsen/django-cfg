@@ -3,6 +3,7 @@ PydanticAdmin - Declarative admin base class.
 """
 
 import logging
+from pathlib import Path
 from typing import Any, List, Optional
 
 from django.utils.safestring import mark_safe
@@ -151,6 +152,56 @@ class PydanticAdminMixin:
                 return original_changelist_view(self, request, extra_context)
 
             cls.changelist_view = changelist_view_with_import_export
+
+        # Documentation configuration
+        if config.documentation:
+            cls._setup_documentation(config)
+
+    @classmethod
+    def _setup_documentation(cls, config: AdminConfig):
+        """
+        Setup documentation using unfold's template hooks.
+
+        Uses unfold's built-in hooks:
+        - list_before_template: Shows documentation before changelist table
+        - change_form_before_template: Shows documentation before fieldsets
+        """
+        doc_config = config.documentation
+
+        # Set unfold template hooks
+        if doc_config.show_on_changelist:
+            cls.list_before_template = "django_admin/documentation_block.html"
+
+        if doc_config.show_on_changeform:
+            cls.change_form_before_template = "django_admin/documentation_block.html"
+
+        # Store documentation config for access in views
+        cls.documentation_config = doc_config
+
+    def _get_app_path(self) -> Optional[Path]:
+        """
+        Detect the app path for relative file resolution.
+
+        Returns:
+            Path to the app directory or None
+        """
+        if not self.model:
+            return None
+
+        try:
+            # Get app label from model
+            app_label = self.model._meta.app_label
+
+            # Try to get app config
+            from django.apps import apps
+            app_config = apps.get_app_config(app_label)
+
+            if app_config and hasattr(app_config, 'path'):
+                return Path(app_config.path)
+        except Exception as e:
+            logger.warning(f"Could not detect app path for {self.model}: {e}")
+
+        return None
 
     @classmethod
     def _generate_resource_class(cls, config: AdminConfig):
@@ -451,6 +502,46 @@ class PydanticAdminMixin:
                 filtered_fieldsets.append((name, options))
 
         return tuple(filtered_fieldsets)
+
+    def changelist_view(self, request, extra_context=None):
+        """Override to add documentation context to changelist."""
+        if extra_context is None:
+            extra_context = {}
+
+        # Add documentation context if configured
+        if hasattr(self, 'documentation_config') and self.documentation_config:
+            doc_config = self.documentation_config
+            app_path = self._get_app_path()
+
+            if doc_config.show_on_changelist:
+                extra_context['documentation_config'] = doc_config
+                extra_context['documentation_sections'] = doc_config.get_sections(app_path)
+
+                # Add management commands if enabled
+                if doc_config.show_management_commands:
+                    extra_context['management_commands'] = doc_config._discover_management_commands(app_path)
+
+        return super().changelist_view(request, extra_context)
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        """Override to add documentation context to changeform."""
+        if extra_context is None:
+            extra_context = {}
+
+        # Add documentation context if configured
+        if hasattr(self, 'documentation_config') and self.documentation_config:
+            doc_config = self.documentation_config
+            app_path = self._get_app_path()
+
+            if doc_config.show_on_changeform:
+                extra_context['documentation_config'] = doc_config
+                extra_context['documentation_sections'] = doc_config.get_sections(app_path)
+
+                # Add management commands if enabled
+                if doc_config.show_management_commands:
+                    extra_context['management_commands'] = doc_config._discover_management_commands(app_path)
+
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         """

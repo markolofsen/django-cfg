@@ -1,0 +1,23 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block field_sets %}
+    {# Markdown documentation before fieldsets #}
+    {% if adminform.model_admin.documentation_config %}
+        {% with config=adminform.model_admin.documentation_config %}
+            {% if config.show_on_changeform %}
+                <div class="mb-6">
+                    {% include "django_admin/markdown_docs_block.html" with
+                        content=config.content
+                        title=config.title
+                        collapsible=config.collapsible
+                        default_open=config.default_open
+                        max_height=config.max_height
+                    %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

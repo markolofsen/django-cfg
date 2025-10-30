@@ -1,5 +1,5 @@
 """
-Admin for Exchange model using django-cfg admin system v2.0.
+Admin for Exchange model using django-cfg admin system v2.0 with Markdown documentation.
 """
 
 from django.contrib import admin
@@ -11,12 +11,13 @@ from django_cfg.modules.django_admin import (
     CurrencyField,
     FieldsetConfig,
     Icons,
+    MarkdownField,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from apps.crypto.models import Exchange
 
-# Declarative Pydantic Config
+# Declarative Pydantic Config with Markdown Documentation
 exchange_admin_config = AdminConfig(
     model=Exchange,
 
@@ -57,6 +58,25 @@ exchange_admin_config = AdminConfig(
             name="is_verified",
             title="Verified"
         ),
+        # Full documentation from static file
+        MarkdownField(
+            name="get_documentation",
+            title="📚 Exchange Documentation",
+            source_file="apps/crypto/docs/exchange_documentation.md",
+            collapsible=True,
+            default_open=False,
+            max_height="600px",
+            header_icon="business"
+        ),
+        # Dynamic API integration guide (generated from model method)
+        MarkdownField(
+            name="get_api_guide",
+            title="🔌 API Integration Guide",
+            collapsible=True,
+            default_open=False,
+            max_height="500px",
+            header_icon="api"
+        ),
     ],
 
     # Filters and search
@@ -74,15 +94,19 @@ exchange_admin_config = AdminConfig(
         ),
         FieldsetConfig(
             title="Trading Data",
-            fields=["volume_24h_usd", "rank", "trading_pairs_count"]
+            fields=["volume_24h_usd", "rank", "num_markets", "num_coins"]
+        ),
+        FieldsetConfig(
+            title="Fees",
+            fields=["maker_fee_percent", "taker_fee_percent"]
         ),
         FieldsetConfig(
             title="Features & Status",
-            fields=["is_active", "is_verified", "supports_api", "api_url"]
+            fields=["is_active", "is_verified", "supports_api"]
         ),
         FieldsetConfig(
             title="Links",
-            fields=["website_url", "logo_url"]
+            fields=["website", "logo_url"]
         ),
         FieldsetConfig(
             title="Timestamps",
@@ -101,6 +125,11 @@ exchange_admin_config = AdminConfig(
 
 @admin.register(Exchange)
 class ExchangeAdmin(PydanticAdmin):
-    """Enhanced admin for Exchange model using new Pydantic approach."""
+    """
+    Enhanced admin for Exchange model using declarative Pydantic config.
+
+    Documentation is configured via MarkdownField in display_fields.
+    Demonstrates both static file and dynamic method-based markdown content.
+    """
 
     config = exchange_admin_config

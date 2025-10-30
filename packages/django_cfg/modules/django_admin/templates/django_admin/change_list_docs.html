@@ -1,0 +1,23 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content_title %}
+    {{ block.super }}
+
+    {# Markdown documentation above the list #}
+    {% if cl.model_admin.documentation_config %}
+        {% with config=cl.model_admin.documentation_config %}
+            {% if config.show_on_changelist %}
+                <div class="mt-4">
+                    {% include "django_admin/markdown_docs_block.html" with
+                        content=config.content
+                        title=config.title
+                        collapsible=config.collapsible
+                        default_open=config.default_open
+                        max_height=config.max_height
+                    %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    {% endif %}
+{% endblock %}
