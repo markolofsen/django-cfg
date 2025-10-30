@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .action_config import ActionConfig
 from .background_task_config import BackgroundTaskConfig
+from .documentation_config import DocumentationConfig
 from .field_config import FieldConfig
 from .fieldset_config import FieldsetConfig
 from .resource_config import ResourceConfig
@@ -139,6 +140,12 @@ class AdminConfig(BaseModel):
     background_task_config: Optional[BackgroundTaskConfig] = Field(
         None,
         description="Configuration for background task processing"
+    )
+
+    # Documentation
+    documentation: Optional[DocumentationConfig] = Field(
+        None,
+        description="Markdown documentation configuration"
     )
 
     def get_display_field_config(self, field_name: str) -> Optional[FieldConfig]:
