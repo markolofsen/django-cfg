@@ -46,6 +46,7 @@ Example:
 from .config import (
     ActionConfig,
     AdminConfig,
+    BackgroundTaskConfig,
     BadgeField,
     BooleanField,
     CurrencyField,
@@ -53,6 +54,7 @@ from .config import (
     FieldConfig,
     FieldsetConfig,
     ImageField,
+    ResourceConfig,
     TextField,
     UserField,
 )
@@ -101,6 +103,8 @@ __all__ = [
     "FieldConfig",
     "FieldsetConfig",
     "ActionConfig",
+    "ResourceConfig",
+    "BackgroundTaskConfig",
     # Specialized Field Types
     "BadgeField",
     "BooleanField",
