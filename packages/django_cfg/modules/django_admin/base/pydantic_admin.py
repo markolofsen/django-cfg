@@ -521,6 +521,11 @@ class PydanticAdminMixin:
                 if doc_config.show_management_commands:
                     extra_context['management_commands'] = doc_config._discover_management_commands(app_path)
 
+                # Add Mermaid resources if plugins enabled
+                if doc_config.enable_plugins:
+                    from django_cfg.modules.django_admin.utils.mermaid_plugin import get_mermaid_resources
+                    extra_context['mermaid_resources'] = get_mermaid_resources()
+
         return super().changelist_view(request, extra_context)
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
@@ -540,6 +545,11 @@ class PydanticAdminMixin:
                 # Add management commands if enabled
                 if doc_config.show_management_commands:
                     extra_context['management_commands'] = doc_config._discover_management_commands(app_path)
+
+                # Add Mermaid resources if plugins enabled
+                if doc_config.enable_plugins:
+                    from django_cfg.modules.django_admin.utils.mermaid_plugin import get_mermaid_resources
+                    extra_context['mermaid_resources'] = get_mermaid_resources()
 
         return super().changeform_view(request, object_id, form_url, extra_context)
 

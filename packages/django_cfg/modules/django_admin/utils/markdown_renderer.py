@@ -58,16 +58,32 @@ class MarkdownRenderer:
     _md_without_plugins = None
 
     @classmethod
-    def _get_markdown_parser(cls, enable_plugins: bool = True):
-        """Get or create markdown parser instance (singleton pattern)."""
+    def _get_markdown_parser(cls, enable_plugins: bool = True, enable_mermaid: bool = True):
+        """
+        Get or create markdown parser instance (singleton pattern).
+
+        Args:
+            enable_plugins: Enable standard mistune plugins
+            enable_mermaid: Enable Mermaid diagram support
+        """
         if not MISTUNE_AVAILABLE:
             return None
 
         if enable_plugins:
             if cls._md_with_plugins is None:
-                cls._md_with_plugins = mistune.create_markdown(
+                # Import Mermaid plugin
+                from .mermaid_plugin import mermaid_plugin
+
+                # Create markdown with standard plugins
+                md = mistune.create_markdown(
                     plugins=['strikethrough', 'table', 'url', 'task_lists', 'def_list']
                 )
+
+                # Add Mermaid plugin if enabled
+                if enable_mermaid:
+                    md = mermaid_plugin(md)
+
+                cls._md_with_plugins = md
             return cls._md_with_plugins
         else:
             if cls._md_without_plugins is None:
