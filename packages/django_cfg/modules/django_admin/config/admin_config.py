@@ -148,6 +148,13 @@ class AdminConfig(BaseModel):
         description="Markdown documentation configuration"
     )
 
+    # Encrypted fields options
+    show_encrypted_fields_as_plain_text: bool = Field(
+        False,
+        description="Show encrypted fields (django-crypto-fields) as plain text instead of password masked. "
+                    "WARNING: This exposes sensitive data in the admin interface. Use only in trusted environments."
+    )
+
     def get_display_field_config(self, field_name: str) -> Optional[FieldConfig]:
         """Get FieldConfig for a specific field."""
         for field_config in self.display_fields:

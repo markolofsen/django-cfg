@@ -558,12 +558,14 @@ class PydanticAdminMixin:
         Override form field for specific database field types.
 
         Automatically detects and customizes encrypted fields from django-crypto-fields.
+        Respects the show_encrypted_fields_as_plain_text setting from AdminConfig.
+        Uses custom widgets with copy-to-clipboard functionality.
         """
         # Check if this is an EncryptedTextField or EncryptedCharField
         field_class_name = db_field.__class__.__name__
         if 'Encrypted' in field_class_name and ('TextField' in field_class_name or 'CharField' in field_class_name):
             from django import forms
-            from django.forms.widgets import PasswordInput
+            from ..widgets import EncryptedFieldWidget, EncryptedPasswordWidget
 
             # Determine placeholder based on field name
             placeholder = "Enter value"
@@ -574,16 +576,25 @@ class PydanticAdminMixin:
             elif 'passphrase' in db_field.name.lower():
                 placeholder = "Enter Passphrase (if required)"
 
-            # Return CharField with PasswordInput widget for security
-            # render_value=True shows masked value (••••••) after save
+            # Widget attributes
+            widget_attrs = {
+                'placeholder': placeholder,
+            }
+
+            # Decide widget based on config
+            show_plain_text = getattr(self.config, 'show_encrypted_fields_as_plain_text', False)
+
+            if show_plain_text:
+                # Show as plain text with copy button
+                widget = EncryptedFieldWidget(attrs=widget_attrs, show_copy_button=True)
+            else:
+                # Show as password (masked) with copy button
+                # render_value=True shows masked value (••••••) after save
+                widget = EncryptedPasswordWidget(attrs=widget_attrs, render_value=True, show_copy_button=True)
+
+            # Return CharField with appropriate widget
             return forms.CharField(
-                widget=PasswordInput(
-                    attrs={
-                        'placeholder': placeholder,
-                        'class': 'appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500'
-                    },
-                    render_value=True  # Show masked value after save
-                ),
+                widget=widget,
                 required=not db_field.blank and not db_field.null,
                 help_text=db_field.help_text or "This field is encrypted at rest",
                 label=db_field.verbose_name if hasattr(db_field, 'verbose_name') else db_field.name.replace('_', ' ').title()
