@@ -227,8 +227,11 @@ class DjangoQ2ScheduleConfig(BaseModel):
             "next_run": timezone.now() + timedelta(seconds=10),
         }
 
+        # Convert args list to tuple for Django-Q2 scheduler compatibility
+        # Django-Q2 scheduler.py:66-69 expects tuple format, not list
+        # If list is provided, scheduler wraps it: (list,) instead of converting list -> tuple
         if self.args:
-            config["args"] = self.args
+            config["args"] = tuple(self.args) if isinstance(self.args, list) else self.args
 
         if self.kwargs:
             config["kwargs"] = self.kwargs
@@ -464,10 +467,12 @@ class DjangoQ2Config(BaseModel):
             "orm": "default",
         }
 
-        # Only add django_redis if broker is actually Redis
+        # CRITICAL FIX: Django-Q2 uses 'redis' parameter, NOT 'broker'!
+        # The 'broker' parameter is ignored by django-q2.
+        # We must set 'redis' parameter to the broker_url string.
         if self.broker_class == "redis":
-            # Don't set django_redis - let Django-Q2 connect directly via broker URL
-            pass
+            # Set redis parameter to broker_url (Django-Q2 accepts redis:// URL string)
+            cluster_config["redis"] = broker_url
 
         settings = {
             "Q_CLUSTER": cluster_config
