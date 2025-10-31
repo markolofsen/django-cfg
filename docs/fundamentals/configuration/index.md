@@ -81,7 +81,7 @@ config = load_config()  # Reads config.yaml
 ### Infrastructure
 
 - [**Database**](./database) - Database configuration
-- [**Cache**](./cache) - Cache backends (Redis, LocMem, Dummy)
+- [**Cache**](./cache) - ✨ **Auto Redis cache** from `redis_url` (Redis, LocMem, Dummy)
 - [**Logging**](/deployment/logging) - Logging configuration
 
 ### Deployment

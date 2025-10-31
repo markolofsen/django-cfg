@@ -22,10 +22,11 @@ from .commands import (
     CommandHelpResponseSerializer,
 )
 from .apizones import APIZoneSerializer, APIZonesSummarySerializer
-from .crontab import (
-    CrontabJobSerializer,
-    CrontabJobsSerializer,
-    CrontabStatusSerializer,
+from .django_q2 import (
+    DjangoQ2ScheduleSerializer,
+    DjangoQ2TaskSerializer,
+    DjangoQ2StatusSerializer,
+    DjangoQ2SummarySerializer,
 )
 
 __all__ = [
@@ -65,8 +66,9 @@ __all__ = [
     'APIZoneSerializer',
     'APIZonesSummarySerializer',
 
-    # Crontab
-    'CrontabJobSerializer',
-    'CrontabJobsSerializer',
-    'CrontabStatusSerializer',
+    # Django-Q2
+    'DjangoQ2ScheduleSerializer',
+    'DjangoQ2TaskSerializer',
+    'DjangoQ2StatusSerializer',
+    'DjangoQ2SummarySerializer',
 ]

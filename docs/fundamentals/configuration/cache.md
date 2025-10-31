@@ -10,11 +10,18 @@ import TabItem from '@theme/TabItem';
 
 # Cache Models
 
-:::tip[Automatic Backend Selection]
-Django-CFG automatically selects the **best cache backend** based on your environment and configuration - Redis for production, LocMem for development, DummyCache as safe fallback.
+:::tip[✨ Automatic Redis Cache - Zero Configuration!]
+Simply set `redis_url` in your config and Django-CFG **automatically creates a Redis cache** for you! No need for explicit `cache_default` configuration.
+
+```python
+class MyConfig(DjangoConfig):
+    redis_url: str = "redis://localhost:6379/0"  # That's it! 🎉
+```
+
+Django-CFG auto-selects the **best cache backend**: Redis for production, LocMem for development, DummyCache as safe fallback.
 :::
 
-Django-CFG provides `CacheConfig` model for type-safe cache configuration with automatic backend selection.
+Django-CFG provides `CacheConfig` model for type-safe cache configuration with **automatic Redis setup from `redis_url`**.
 
 ## CacheConfig
 
@@ -98,36 +105,124 @@ class CacheConfig(BaseModel):
         return config
 ```
 
+## 🎯 How Auto Cache Works
+
+Django-CFG uses a **3-tier priority** system for cache configuration:
+
+```mermaid
+graph TD
+    A[Cache Configuration] --> B{cache_default set?}
+    B -->|Yes| C[Use explicit CacheConfig]
+    B -->|No| D{redis_url set?}
+    D -->|Yes| E[✨ AUTO-CREATE Redis cache]
+    D -->|No| F[Fallback cache]
+    F --> G{Environment?}
+    G -->|Development| H[LocMemCache]
+    G -->|Production| I[FileBasedCache/tmp]
+    E --> J[RedisCache - No tmp!]
+```
+
+### Priority Order:
+
+1. **Explicit `cache_default`** - You have full control
+2. **Auto from `redis_url`** ✨ - Magic happens here!
+3. **Smart fallback** - LocMem (dev) or FileBased (prod)
+
+### Auto-Creation Logic
+
+When `redis_url` is set but `cache_default` is None:
+
+```python
+# In CacheSettingsGenerator.generate():
+if self.config.cache_default:
+    # User provided explicit config
+    caches["default"] = self.config.cache_default.to_django_config(...)
+elif self.config.redis_url:
+    # ✨ AUTO-MAGIC: Create Redis cache automatically
+    logger.info(f"Auto-creating Redis cache from redis_url: {self.config.redis_url}")
+    caches["default"] = self._get_redis_cache_config()
+else:
+    # Fallback to LocMem (dev) or FileBased (prod)
+    caches["default"] = self._get_default_cache_config()
+```
+
+**Auto-generated config includes:**
+- `timeout=300` (5 minutes)
+- `max_connections=50`
+- `key_prefix=project_name.lower().replace(" ", "_")`
+
 ## Smart Backend Selection
 
 Django-CFG automatically selects the best cache backend based on environment and configuration:
 
-| Scenario | Backend | Reason |
-|----------|---------|--------|
-| Production + Redis URL | **RedisCache** | Production-ready, distributed |
-| Staging + Redis URL | **RedisCache** | Production-like testing |
-| Development + Redis URL | **RedisCache** | Local Redis for testing |
-| Development + No Redis | **LocMemCache** | Fast in-memory cache |
-| Production + No Redis | **DummyCache** | No cache (safe fallback) |
+| Scenario | Backend | redis_url | cache_default | Result |
+|----------|---------|-----------|---------------|--------|
+| **Production + redis_url** | **RedisCache** | ✅ Set | ❌ None | ✨ **Auto-created!** |
+| **Production + explicit** | **RedisCache** | ✅ Set | ✅ Set | Manual control |
+| **Development + redis_url** | **RedisCache** | ✅ Set | ❌ None | ✨ **Auto-created!** |
+| **Development + No Redis** | **LocMemCache** | ❌ None | ❌ None | Fallback |
+| **Production + No Redis** | **FileBasedCache** | ❌ None | ❌ None | ⚠️ Creates tmp/ |
 
 ## Usage Examples
 
 <Tabs>
-  <TabItem value="redis" label="Redis (Production)" default>
+  <TabItem value="auto-redis" label="✨ Auto Redis (Recommended)" default>
 
-```python title="config.py"
+```python title="config.py - Automatic Magic!"
 from django_cfg import DjangoConfig
-from django_cfg.models import CacheConfig
 
 class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
     debug: bool = False
 
+    # 🎉 MAGIC: Just set redis_url - cache auto-created!
+    redis_url: str = "redis://localhost:6379/0"
+    # No cache_default needed! Django-CFG handles it automatically
+```
+
+**What Django-CFG auto-generates:**
+```python
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/0',
+        'TIMEOUT': 300,
+        'KEY_PREFIX': 'my_config',  # Auto from project_name
+        'VERSION': 1,
+        'OPTIONS': {
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50
+            }
+        }
+    }
+}
+```
+
+:::tip[Why This Works]
+Django-CFG's `CacheSettingsGenerator` automatically:
+1. Detects `redis_url` is set
+2. Creates `CacheConfig` with smart defaults
+3. Generates Redis cache configuration
+4. No tmp/ directory created! ✅
+:::
+
+  </TabItem>
+  <TabItem value="explicit-redis" label="Explicit Redis (Advanced)">
+
+```python title="config.py - Manual Control"
+from django_cfg import DjangoConfig, CacheConfig
+
+class MyConfig(DjangoConfig):
+    secret_key: str = "your-secret-key"
+    debug: bool = False
+    redis_url: str = "redis://localhost:6379/0"  # Still used by tasks
+
+    # Override auto-magic with explicit config
     cache_default: CacheConfig = CacheConfig(
         redis_url="redis://localhost:6379/0",
-        timeout=300,  # 5 minutes
-        key_prefix="myapp",
-        max_connections=50
+        timeout=600,  # Custom: 10 minutes
+        key_prefix="myapp",  # Custom prefix
+        max_connections=100  # Custom pool size
     )
 ```
 

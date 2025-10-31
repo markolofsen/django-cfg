@@ -213,11 +213,9 @@ class MyConfig(DjangoConfig):
         )
     }
 
-    # Cache - optional, with smart defaults
-    cache_default: CacheConfig | None = CacheConfig(
-        backend="redis",
-        location=f"redis://{env.redis.host}:{env.redis.port}/0"
-    )
+    # Cache - auto-created from redis_url! ✨
+    redis_url: str = f"redis://{env.redis.host}:{env.redis.port}/0"
+    # No cache_default needed - Django-CFG creates it automatically!
 
     # Email - type-safe with validation
     email: EmailConfig = EmailConfig(
@@ -293,10 +291,8 @@ class ECommerceConfig(DjangoConfig):
         ),
     }
 
-    cache_default: CacheConfig = CacheConfig(
-        backend="redis",
-        location=f"redis://{env.redis.host}:6379/0"
-    )
+    # Auto Redis cache - just set redis_url! ✨
+    redis_url: str = f"redis://{env.redis.host}:6379/0"
 
     enable_support: bool = True  # Customer support tickets
     enable_newsletter: bool = True  # Marketing campaigns

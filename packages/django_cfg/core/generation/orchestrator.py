@@ -78,7 +78,7 @@ class SettingsOrchestrator:
             settings.update(self._generate_third_party_settings())
             settings.update(self._generate_api_settings())
             settings.update(self._generate_tasks_settings())
-            settings.update(self._generate_crontab_settings())
+            settings.update(self._generate_django_q2_settings())
             settings.update(self._generate_tailwind_settings())
 
             # Apply additional settings (user overrides)
@@ -224,17 +224,17 @@ class SettingsOrchestrator:
         except Exception as e:
             raise ConfigurationError(f"Failed to generate tasks settings: {e}") from e
 
-    def _generate_crontab_settings(self) -> Dict[str, Any]:
-        """Generate crontab scheduling settings."""
-        if not hasattr(self.config, "crontab") or not self.config.crontab:
+    def _generate_django_q2_settings(self) -> Dict[str, Any]:
+        """Generate Django-Q2 task scheduling settings."""
+        if not hasattr(self.config, "django_q2") or not self.config.django_q2:
             return {}
 
         try:
-            from .integration_generators.crontab import CrontabSettingsGenerator
-            generator = CrontabSettingsGenerator(self.config.crontab)
+            from .integration_generators.django_q2 import DjangoQ2SettingsGenerator
+            generator = DjangoQ2SettingsGenerator(self.config.django_q2, parent_config=self.config)
             return generator.generate()
         except Exception as e:
-            raise ConfigurationError(f"Failed to generate crontab settings: {e}") from e
+            raise ConfigurationError(f"Failed to generate Django-Q2 settings: {e}") from e
 
     def _generate_tailwind_settings(self) -> Dict[str, Any]:
         """Generate Tailwind CSS settings."""

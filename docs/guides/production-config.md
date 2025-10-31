@@ -166,15 +166,13 @@ class MyProductionConfig(DjangoConfig):
     }
 
     # === Cache Configuration ===
-    cache_default: Optional[CacheConfig] = (
-        CacheConfig(
-            redis_url=env.redis.url,
-            timeout=300,
-            key_prefix=f"{env.app.slug}_cache",
-        )
-        if env.redis.url
-        else None
-    )
+    # ✨ AUTO-MAGIC: Just set redis_url - cache auto-created!
+    redis_url: Optional[str] = env.redis.url
+    # Django-CFG automatically creates CacheConfig with:
+    # - timeout=300 (5 minutes)
+    # - key_prefix=project_name.lower()
+    # - max_connections=50
+    # Override with explicit cache_default if needed
 
     # === Email Configuration ===
     email: Optional[EmailConfig] = (

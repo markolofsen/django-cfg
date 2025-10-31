@@ -289,11 +289,9 @@ class MyConfig(DjangoConfig):
     }
     # Auto-generates router class!
 
-    # Cache (3 lines → 20+ lines)
-    cache_default: CacheConfig = CacheConfig(
-        backend="redis",
-        location=f"redis://{env.redis.host}:6379/0"
-    )
+    # Cache (1 line → 20+ lines) ✨
+    redis_url: str = f"redis://{env.redis.host}:6379/0"
+    # Auto-creates full cache config!
 
     # Email (5 lines → 25+ lines)
     email: EmailConfig = EmailConfig(

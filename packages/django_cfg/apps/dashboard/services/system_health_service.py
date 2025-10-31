@@ -191,73 +191,86 @@ class SystemHealthService:
                 'health_percentage': 0,
             }
 
-    def check_crontab_health(self) -> Dict[str, Any]:
+    def check_django_q2_health(self) -> Dict[str, Any]:
         """
-        Check crontab/scheduled jobs configuration and status.
+        Check Django-Q2 task scheduling configuration and status.
 
         Returns:
-            Health status dictionary with job count and configuration details
+            Health status dictionary with schedule count and cluster status
         """
         try:
             from django_cfg.core.config import get_current_config
 
             config = get_current_config()
 
-            # Check if crontab is configured
-            if not hasattr(config, 'crontab') or not config.crontab:
+            # Check if django_q2 is configured
+            if not hasattr(config, 'django_q2') or not config.django_q2:
                 return {
-                    'component': 'crontab',
+                    'component': 'django_q2',
                     'status': 'info',
-                    'description': 'Crontab scheduling not configured',
+                    'description': 'Django-Q2 scheduling not configured',
                     'last_check': datetime.now().isoformat(),
                     'health_percentage': 100,
                     'details': {
                         'enabled': False,
-                        'jobs_count': 0,
+                        'schedules_count': 0,
                     }
                 }
 
-            crontab_config = config.crontab
+            django_q2_config = config.django_q2
 
             # Check if enabled
-            if not crontab_config.enabled:
+            if not django_q2_config.enabled:
                 return {
-                    'component': 'crontab',
+                    'component': 'django_q2',
                     'status': 'warning',
-                    'description': 'Crontab scheduling is disabled',
+                    'description': 'Django-Q2 scheduling is disabled',
                     'last_check': datetime.now().isoformat(),
                     'health_percentage': 50,
                     'details': {
                         'enabled': False,
-                        'jobs_count': len(crontab_config.jobs),
+                        'schedules_count': len(django_q2_config.schedules) if django_q2_config.schedules else 0,
                     }
                 }
 
-            # Count enabled jobs
-            enabled_jobs = [job for job in crontab_config.jobs if job.enabled]
-            jobs_count = len(enabled_jobs)
+            # Count schedules
+            schedules_count = len(django_q2_config.schedules) if django_q2_config.schedules else 0
+
+            # Try to check cluster status from database
+            cluster_running = False
+            try:
+                from django_q.models import Schedule, Task
+                from django.utils import timezone
+                from datetime import timedelta
+
+                # Check for recent task activity
+                recent_task = Task.objects.filter(
+                    started__gte=timezone.now() - timedelta(minutes=5)
+                ).exists()
+                cluster_running = recent_task
+            except Exception:
+                pass
 
             return {
-                'component': 'crontab',
+                'component': 'django_q2',
                 'status': 'healthy',
-                'description': f'{jobs_count} scheduled job(s) configured',
+                'description': f'{schedules_count} schedule(s) configured, cluster {"running" if cluster_running else "idle"}',
                 'last_check': datetime.now().isoformat(),
                 'health_percentage': 100,
                 'details': {
                     'enabled': True,
-                    'jobs_count': jobs_count,
-                    'total_jobs': len(crontab_config.jobs),
-                    'lock_jobs': crontab_config.lock_jobs,
-                    'comment': crontab_config.comment,
+                    'schedules_count': schedules_count,
+                    'cluster_running': cluster_running,
+                    'workers': django_q2_config.workers,
                 }
             }
 
         except Exception as e:
-            self.logger.error(f"Crontab health check failed: {e}")
+            self.logger.error(f"Django-Q2 health check failed: {e}")
             return {
-                'component': 'crontab',
+                'component': 'django_q2',
                 'status': 'error',
-                'description': f'Crontab check error: {str(e)}',
+                'description': f'Django-Q2 check error: {str(e)}',
                 'last_check': datetime.now().isoformat(),
                 'health_percentage': 0,
             }
@@ -276,7 +289,7 @@ class SystemHealthService:
             self.check_cache_health(),
             self.check_queue_health(),
             self.check_storage_health(),
-            self.check_crontab_health(),
+            self.check_django_q2_health(),
         ]
 
         return checks

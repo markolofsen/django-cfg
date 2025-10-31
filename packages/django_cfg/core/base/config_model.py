@@ -20,7 +20,7 @@ from ...models import (
     ApiKeys,
     AxesConfig,
     CacheConfig,
-    CrontabConfig,
+    DjangoQ2Config,
     CryptoFieldsConfig,
     DatabaseConfig,
     DRFConfig,
@@ -217,9 +217,19 @@ class DjangoConfig(BaseModel):
     )
 
     # === Cache Configuration ===
+    # Redis URL - used for automatic cache configuration if cache_default is not set
+    redis_url: Optional[str] = Field(
+        default=None,
+        description=(
+            "Redis connection URL (redis://host:port/db). "
+            "If set and cache_default is None, automatically creates RedisCache backend. "
+            "Also used by tasks (ReArq, Django-Q2) if they don't specify broker_url."
+        ),
+    )
+
     cache_default: Optional[CacheConfig] = Field(
         default=None,
-        description="Default cache backend",
+        description="Default cache backend (auto-created from redis_url if not set)",
     )
 
     cache_sessions: Optional[CacheConfig] = Field(
@@ -319,10 +329,10 @@ class DjangoConfig(BaseModel):
         description="Background task processing configuration (ReArq)",
     )
 
-    # === Crontab Scheduling ===
-    crontab: Optional[CrontabConfig] = Field(
+    # === Django-Q2 Task Scheduling ===
+    django_q2: Optional[DjangoQ2Config] = Field(
         default=None,
-        description="Crontab scheduling configuration (django-crontab integration)",
+        description="Django-Q2 task scheduling and queue configuration",
     )
 
     # === Centrifugo Configuration ===

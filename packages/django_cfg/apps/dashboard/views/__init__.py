@@ -11,7 +11,7 @@ from .activity_views import ActivityViewSet
 from .charts_views import ChartsViewSet
 from .commands_views import CommandsViewSet
 from .apizones_views import APIZonesViewSet
-from .crontab_views import CrontabViewSet
+from .django_q2_views import DjangoQ2ViewSet
 
 __all__ = [
     'OverviewViewSet',
@@ -21,5 +21,5 @@ __all__ = [
     'ChartsViewSet',
     'CommandsViewSet',
     'APIZonesViewSet',
-    'CrontabViewSet',
+    'DjangoQ2ViewSet',
 ]

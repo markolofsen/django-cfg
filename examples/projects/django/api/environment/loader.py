@@ -213,10 +213,12 @@ class EnvironmentConfig(BaseSettings):
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
 
-    # Cache
-    redis_url: str = Field(
+    # Cache Configuration
+    # IMPORTANT: Redis URL for django-cfg CacheConfig
+    # If not set, django-cfg will fallback to FileBasedCache in production
+    redis_url: Optional[str] = Field(
         default="redis://localhost:6379/0",
-        description="Redis connection URL",
+        description="Redis connection URL for cache backend (required for production)",
     )
 
     # Security domains
