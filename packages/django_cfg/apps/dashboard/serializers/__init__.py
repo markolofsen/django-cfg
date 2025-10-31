@@ -22,6 +22,11 @@ from .commands import (
     CommandHelpResponseSerializer,
 )
 from .apizones import APIZoneSerializer, APIZonesSummarySerializer
+from .crontab import (
+    CrontabJobSerializer,
+    CrontabJobsSerializer,
+    CrontabStatusSerializer,
+)
 
 __all__ = [
     # Base
@@ -59,4 +64,9 @@ __all__ = [
     # API Zones
     'APIZoneSerializer',
     'APIZonesSummarySerializer',
+
+    # Crontab
+    'CrontabJobSerializer',
+    'CrontabJobsSerializer',
+    'CrontabStatusSerializer',
 ]

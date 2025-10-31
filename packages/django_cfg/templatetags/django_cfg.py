@@ -81,6 +81,14 @@ def lib_site_url():
 
 
 @register.simple_tag
+def lib_docs_url():
+    """Get the library documentation URL."""
+    # Lazy import to avoid AppRegistryNotReady error
+    from django_cfg.config import LIB_SITE_URL
+    return LIB_SITE_URL
+
+
+@register.simple_tag
 def lib_health_url():
     """Get the library health URL."""
     # Lazy import to avoid AppRegistryNotReady error

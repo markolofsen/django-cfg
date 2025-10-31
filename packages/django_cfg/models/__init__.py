@@ -34,6 +34,7 @@ from .base.module import BaseCfgAutoModule
 # Django-specific
 from .django.axes import AxesConfig
 from .django.constance import ConstanceConfig, ConstanceField
+from .django.crontab import CrontabConfig, CrontabJobConfig
 from .django.crypto_fields import CryptoFieldsConfig
 from .django.environment import EnvironmentConfig
 from .django.openapi import OpenAPIClientConfig
@@ -79,6 +80,8 @@ __all__ = [
     "EnvironmentConfig",
     "ConstanceConfig",
     "ConstanceField",
+    "CrontabConfig",
+    "CrontabJobConfig",
     "OpenAPIClientConfig",
     "UnfoldConfig",
     "AxesConfig",

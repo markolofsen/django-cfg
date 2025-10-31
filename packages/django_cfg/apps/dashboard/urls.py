@@ -21,6 +21,7 @@ from .views import (
     ChartsViewSet,
     CommandsViewSet,
     APIZonesViewSet,
+    CrontabViewSet,
 )
 
 app_name = 'django_cfg_dashboard'
@@ -34,6 +35,7 @@ router.register(r'activity', ActivityViewSet, basename='activity')
 router.register(r'charts', ChartsViewSet, basename='charts')
 router.register(r'commands', CommandsViewSet, basename='commands')
 router.register(r'zones', APIZonesViewSet, basename='zones')
+router.register(r'crontab', CrontabViewSet, basename='crontab')
 
 urlpatterns = [
     # RESTful API endpoints using ViewSets

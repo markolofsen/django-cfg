@@ -176,7 +176,7 @@ def get_django_cfg_urls_info() -> dict:
         Dictionary with complete URL integration info
     """
     from django_cfg.config import (
-        LIB_DOCS_URL,
+        LIB_SITE_URL,
         LIB_GITHUB_URL,
         LIB_HEALTH_URL,
         LIB_NAME,
@@ -205,7 +205,7 @@ def get_django_cfg_urls_info() -> dict:
             "prefix": "cfg/",
             "description": LIB_NAME,
             "site_url": LIB_SITE_URL,
-            "docs_url": LIB_DOCS_URL,
+            "docs_url": LIB_SITE_URL,
             "github_url": LIB_GITHUB_URL,
             "support_url": LIB_SUPPORT_URL,
             "health_url": LIB_HEALTH_URL,

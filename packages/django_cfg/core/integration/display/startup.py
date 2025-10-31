@@ -116,7 +116,7 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Get library info
             from django_cfg.config import (
-                LIB_DOCS_URL,
+                LIB_SITE_URL,
                 LIB_GITHUB_URL,
                 LIB_SITE_URL,
                 LIB_SUPPORT_URL,
@@ -138,7 +138,7 @@ class StartupDisplayManager(BaseDisplayManager):
             info_table.add_row("🔍 Env Source", env_source)
 
             info_table.add_row("🌐 Site", LIB_SITE_URL)
-            info_table.add_row("📚 Docs", LIB_DOCS_URL)
+            info_table.add_row("📚 Docs", LIB_SITE_URL)
             info_table.add_row("🐙 GitHub", LIB_GITHUB_URL)
             info_table.add_row("🆘 Support", LIB_SUPPORT_URL)
 

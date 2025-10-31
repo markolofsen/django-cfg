@@ -266,6 +266,8 @@ self.html.span(
 
 ### inline()
 
+Join items with separator, preserving SafeString HTML.
+
 ```python
 self.html.inline(
     items: List[Any],
@@ -274,6 +276,28 @@ self.html.inline(
     css_class: str = ""
 ) -> SafeString
 ```
+
+**Usage:**
+```python
+# Join multiple elements with separator
+def stats_display(self, obj):
+    return self.html.inline([
+        self.html.icon_text(Icons.EDIT, obj.posts_count),
+        self.html.icon_text(Icons.CHAT, obj.comments_count),
+    ])
+
+# Use empty separator for adjacent elements
+def balance_display(self, obj):
+    return self.html.inline([
+        f'<strong>{obj.amount}</strong>',
+        f'<span class="text-gray-500 ml-1">{obj.currency}</span>',
+    ], separator="")
+```
+
+**Important:**
+- Preserves SafeString HTML without escaping
+- Use `separator=""` for adjacent HTML elements
+- Use default `separator=" | "` for visual separation
 
 ### icon()
 
@@ -323,6 +347,39 @@ self.html.empty(
     text: str = "—"
 ) -> SafeString
 ```
+
+### uuid_short()
+
+Shorten UUID to first N characters with tooltip.
+
+```python
+self.html.uuid_short(
+    uuid_value: Any,
+    length: int = 6,           # Number of characters to show
+    show_tooltip: bool = True  # Show full UUID on hover
+) -> SafeString
+```
+
+**Usage:**
+```python
+# Basic usage - shows first 6 chars with tooltip
+def id_display(self, obj):
+    return self.html.uuid_short(obj.id)  # "a1b2c3"
+
+# Custom length
+def id_display(self, obj):
+    return self.html.uuid_short(obj.id, length=8)  # "a1b2c3d4"
+
+# Without tooltip
+def id_display(self, obj):
+    return self.html.uuid_short(obj.id, show_tooltip=False)
+```
+
+**Features:**
+- Removes dashes for cleaner display
+- Shows tooltip with full UUID on hover
+- Styled as inline code block
+- Perfect for admin list displays
 
 ## Display Utilities
 

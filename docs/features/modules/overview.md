@@ -231,6 +231,42 @@ tasks.schedule_periodic(
 
 **Features:** Async task execution, scheduled/delayed tasks, periodic/cron tasks, task monitoring and retries, priority queues, and dead letter queues.
 
+---
+
+### Cron Scheduling Module
+
+Type-safe cron job scheduling with django-crontab:
+
+```python
+from django_cfg import CrontabConfig, CrontabJobConfig
+
+# In config.py
+crontab = CrontabConfig(
+    enabled=True,
+    lock_jobs=True,
+    jobs=[
+        # Sync data every 5 minutes
+        CrontabJobConfig(
+            name="sync_data",
+            command="sync_data",
+            minute="*/5",
+            hour="*",
+        ),
+        # Daily cleanup at 2 AM
+        CrontabJobConfig(
+            name="cleanup",
+            command="cleanup_old_data",
+            minute="0",
+            hour="2",
+        ),
+    ],
+)
+```
+
+**Features:** Type-safe configuration, automatic crontab management, lock files for concurrency control, management commands support, schedule validation, and production-ready error handling.
+
+**Learn more:** [Scheduling Module Documentation](./scheduling/overview)
+
   </TabItem>
   <TabItem value="development" label="🔧 Development Tools">
 
@@ -513,6 +549,7 @@ class MyProjectConfig(DjangoConfig):
 - **[Health Overview](./health/overview)** - System monitoring
 - **[Import/Export Overview](./import-export/overview)** - Data management
 - **[Unfold Overview](./unfold/overview)** - Modern admin interface
+- **[Scheduling Overview](./scheduling/overview)** - Cron job scheduling
 
 ### Related Documentation
 
@@ -521,10 +558,11 @@ class MyProjectConfig(DjangoConfig):
 - **[Email Module](./email/overview)** - Production email service integration
 - **[Telegram Module](./telegram/overview)** - Telegram bot and notifications
 - **[LLM Module](./llm/overview)** - Multi-provider LLM integration
-- **[Tasks Module](./tasks/overview)** - Background task management
+- **[Tasks Module](/features/built-in-apps/operations/tasks)** - Background task management
 - **[Health Module](./health/overview)** - System health checks
 - **[Import/Export Module](./import-export/overview)** - Data import/export utilities
 - **[Unfold Module](./unfold/overview)** - Modern admin interface
+- **[Scheduling Module](./scheduling/overview)** - Type-safe cron job scheduling
 
 **Configuration & Setup:**
 - **[Configuration Guide](/fundamentals/configuration)** - Configure modules
@@ -539,7 +577,7 @@ class MyProjectConfig(DjangoConfig):
 - **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses LLM, Tasks modules
 
 **Integrations:**
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Background task processing
+- **[ReArq Integration](/features/built-in-apps/operations/tasks)** - Background task processing
 - **[Ngrok Integration](/features/integrations/ngrok/overview)** - Webhook testing
 - **[API Generation](/features/api-generation/overview)** - Auto-generate API clients
 - **[Integrations Overview](/features/integrations/overview)** - All integrations

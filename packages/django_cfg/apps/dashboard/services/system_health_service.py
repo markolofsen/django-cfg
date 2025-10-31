@@ -191,6 +191,77 @@ class SystemHealthService:
                 'health_percentage': 0,
             }
 
+    def check_crontab_health(self) -> Dict[str, Any]:
+        """
+        Check crontab/scheduled jobs configuration and status.
+
+        Returns:
+            Health status dictionary with job count and configuration details
+        """
+        try:
+            from django_cfg.core.config import get_current_config
+
+            config = get_current_config()
+
+            # Check if crontab is configured
+            if not hasattr(config, 'crontab') or not config.crontab:
+                return {
+                    'component': 'crontab',
+                    'status': 'info',
+                    'description': 'Crontab scheduling not configured',
+                    'last_check': datetime.now().isoformat(),
+                    'health_percentage': 100,
+                    'details': {
+                        'enabled': False,
+                        'jobs_count': 0,
+                    }
+                }
+
+            crontab_config = config.crontab
+
+            # Check if enabled
+            if not crontab_config.enabled:
+                return {
+                    'component': 'crontab',
+                    'status': 'warning',
+                    'description': 'Crontab scheduling is disabled',
+                    'last_check': datetime.now().isoformat(),
+                    'health_percentage': 50,
+                    'details': {
+                        'enabled': False,
+                        'jobs_count': len(crontab_config.jobs),
+                    }
+                }
+
+            # Count enabled jobs
+            enabled_jobs = [job for job in crontab_config.jobs if job.enabled]
+            jobs_count = len(enabled_jobs)
+
+            return {
+                'component': 'crontab',
+                'status': 'healthy',
+                'description': f'{jobs_count} scheduled job(s) configured',
+                'last_check': datetime.now().isoformat(),
+                'health_percentage': 100,
+                'details': {
+                    'enabled': True,
+                    'jobs_count': jobs_count,
+                    'total_jobs': len(crontab_config.jobs),
+                    'lock_jobs': crontab_config.lock_jobs,
+                    'comment': crontab_config.comment,
+                }
+            }
+
+        except Exception as e:
+            self.logger.error(f"Crontab health check failed: {e}")
+            return {
+                'component': 'crontab',
+                'status': 'error',
+                'description': f'Crontab check error: {str(e)}',
+                'last_check': datetime.now().isoformat(),
+                'health_percentage': 0,
+            }
+
     def get_all_health_checks(self) -> List[Dict[str, Any]]:
         """
         Run all health checks and return aggregated results.
@@ -205,6 +276,7 @@ class SystemHealthService:
             self.check_cache_health(),
             self.check_queue_health(),
             self.check_storage_health(),
+            self.check_crontab_health(),
         ]
 
         return checks

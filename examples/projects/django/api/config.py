@@ -43,6 +43,8 @@ from django_cfg import (
     NextJsAdminConfig,
     TaskConfig,
     RearqConfig,
+    CrontabConfig,
+    CrontabJobConfig,
 )
 
 # Import environment configuration
@@ -305,6 +307,58 @@ class DjangoCfgConfig(DjangoConfig):
                 title="Crypto API",
                 description="Crypto operations management",
                 version="1.0.0",
+            ),
+        ],
+    )
+
+    # === Cron Scheduling Configuration ===
+    crontab: Optional[CrontabConfig] = CrontabConfig(
+        enabled=True,
+        command_prefix='DJANGO_SETTINGS_MODULE=api.settings',
+        lock_jobs=True,
+        comment="Django-CFG Demo Project - Automated Tasks",
+        jobs=[
+            # Update cryptocurrency prices every 5 minutes
+            CrontabJobConfig(
+                name="update_coin_prices_frequent",
+                job_type="command",
+                command="update_coin_prices",
+                command_args=["--limit=50"],
+                command_kwargs={"verbosity": 0},
+                minute="*/5",
+                hour="*",
+                comment="Update top 50 coin prices every 5 minutes (quiet mode)",
+            ),
+            # Update all coin prices hourly with verbose output
+            CrontabJobConfig(
+                name="update_coin_prices_hourly",
+                job_type="command",
+                command="update_coin_prices",
+                command_args=["--limit=100"],
+                command_kwargs={"verbosity": 1},
+                minute="0",
+                hour="*",
+                comment="Update top 100 coin prices hourly (verbose for monitoring)",
+            ),
+            # Import new coins daily at 3 AM
+            CrontabJobConfig(
+                name="import_new_coins_daily",
+                job_type="command",
+                command="import_coins",
+                minute="0",
+                hour="3",
+                comment="Import new coins from CoinGecko daily at 3 AM",
+            ),
+            # Generate daily crypto market report at 9 AM (weekdays)
+            CrontabJobConfig(
+                name="generate_daily_report",
+                job_type="command",
+                command="generate_report",
+                command_args=["--type=daily"],
+                minute="0",
+                hour="9",
+                day_of_week="1-5",
+                comment="Generate daily crypto market report at 9 AM (weekdays only)",
             ),
         ],
     )

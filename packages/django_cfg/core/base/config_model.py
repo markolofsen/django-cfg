@@ -20,6 +20,7 @@ from ...models import (
     ApiKeys,
     AxesConfig,
     CacheConfig,
+    CrontabConfig,
     CryptoFieldsConfig,
     DatabaseConfig,
     DRFConfig,
@@ -316,6 +317,12 @@ class DjangoConfig(BaseModel):
     tasks: Optional[TaskConfig] = Field(
         default=None,
         description="Background task processing configuration (ReArq)",
+    )
+
+    # === Crontab Scheduling ===
+    crontab: Optional[CrontabConfig] = Field(
+        default=None,
+        description="Crontab scheduling configuration (django-crontab integration)",
     )
 
     # === Centrifugo Configuration ===

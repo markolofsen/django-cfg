@@ -4,6 +4,7 @@ Universal HTML builder for Django Admin display methods.
 
 from pathlib import Path
 from typing import Any, List, Optional, Union
+import re
 
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
@@ -119,8 +120,17 @@ class HtmlBuilder:
         if css_class:
             classes += f" {css_class}"
 
-        # Join items with separator
-        joined = format_html(separator.join(['{}'] * len(items)), *items)
+        # Convert items to strings, keeping SafeString as-is
+        from django.utils.safestring import SafeString, mark_safe
+        processed_items = []
+        for item in items:
+            if isinstance(item, (SafeString, str)):
+                processed_items.append(item)
+            else:
+                processed_items.append(escape(str(item)))
+
+        # Join with separator
+        joined = mark_safe(separator.join(str(item) for item in processed_items))
 
         return format_html('<span class="{}">{}</span>', classes, joined)
 
@@ -318,6 +328,44 @@ class HtmlBuilder:
             css_class=css_class,
             max_height=max_height,
             enable_plugins=enable_plugins
+        )
+
+    @staticmethod
+    def uuid_short(uuid_value: Any, length: int = 6, show_tooltip: bool = True) -> SafeString:
+        """
+        Shorten UUID to first N characters with optional tooltip.
+
+        Args:
+            uuid_value: UUID string or UUID object
+            length: Number of characters to show (default: 6)
+            show_tooltip: Show full UUID on hover (default: True)
+
+        Usage:
+            html.uuid_short(obj.id)  # "a1b2c3..."
+            html.uuid_short(obj.id, length=8)  # "a1b2c3d4..."
+            html.uuid_short(obj.id, show_tooltip=False)  # Just short version
+
+        Returns:
+            SafeString with shortened UUID
+        """
+        uuid_str = str(uuid_value)
+
+        # Remove dashes for cleaner display
+        uuid_clean = uuid_str.replace('-', '')
+
+        # Take first N characters
+        short_uuid = uuid_clean[:length]
+
+        if show_tooltip:
+            return format_html(
+                '<code class="font-mono text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded cursor-help" title="{}">{}</code>',
+                uuid_str,
+                short_uuid
+            )
+
+        return format_html(
+            '<code class="font-mono text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded">{}</code>',
+            short_uuid
         )
 
     @staticmethod
