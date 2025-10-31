@@ -302,6 +302,19 @@ class DjangoQ2Config(BaseModel):
         )
         ```
 
+    Schedule Synchronization (AUTOMATIC):
+        When Django-Q2 is enabled, schedules are automatically synced after migrations.
+
+        The module 'django_cfg.modules.django_q2' is automatically added to INSTALLED_APPS
+        when django_q2.enabled=True, so you don't need to add it manually.
+
+        It uses Django's post_migrate signal to sync schedules from config to database.
+
+        Manual sync (optional):
+        ```bash
+        python manage.py sync_django_q_schedules
+        ```
+
     Admin interface:
         - Visit /admin/django_q/ to view tasks and schedules
         - Monitor task execution, failures, and performance

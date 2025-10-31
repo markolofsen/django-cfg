@@ -67,7 +67,8 @@ django_q2 = DjangoQ2Config(
 ### "Declarative Over Imperative"
 Tasks defined in `config.py` automatically sync to database:
 
-- ✅ **No Manual Setup** - Schedules created from configuration
+- ✅ **Auto-Sync on Migrate** - Schedules automatically synced after `python manage.py migrate`
+- ✅ **No Manual Commands** - No need to run `sync_django_q_schedules` manually
 - ✅ **Version Controlled** - Tasks tracked in source control
 - ✅ **Environment Aware** - Different schedules per environment
 - ✅ **Type Validated** - Catch errors before deployment
@@ -255,7 +256,7 @@ config = Config()
 
 ### 2. Run Migrations
 
-Django-Q2 requires database tables:
+Django-Q2 requires database tables and automatically syncs schedules:
 
 ```bash
 # Apply migrations
@@ -264,7 +265,13 @@ python manage.py migrate
 # You should see:
 # Running migrations:
 #   Applying django_q.0001_initial... OK
+#   Syncing 2 Django-Q2 schedule(s)...
+#     ✓ Created schedule: Sync data (frequent)
+#     ✓ Created schedule: Daily cleanup
+#   ✅ Django-Q2 schedules synced: 2 created, 0 updated
 ```
+
+**Schedules are automatically synced!** No need to run manual commands.
 
 ### 3. Start Cluster
 
@@ -608,9 +615,10 @@ django_q2 = DjangoQ2Config(enabled=True)
 ```
 
 This automatically:
-1. Adds `django_q` to INSTALLED_APPS
+1. Adds `django_q` and `django_cfg.modules.django_q2` to INSTALLED_APPS
 2. Generates Q_CLUSTER settings
 3. Configures broker and workers
+4. Syncs schedules to database after each `migrate`
 
 ### Database Migration
 
