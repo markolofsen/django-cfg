@@ -166,6 +166,8 @@ class InstalledAppsBuilder:
         # Add django-q2 if enabled
         if hasattr(self.config, "django_q2") and self.config.django_q2 and self.config.django_q2.enabled:
             apps.append("django_q")
+            # Auto-add django_q2 module for automatic schedule synchronization
+            apps.append("django_cfg.modules.django_q2")
 
         # Add DRF Tailwind theme module (uses Tailwind via CDN)
         if self.config.enable_drf_tailwind:
