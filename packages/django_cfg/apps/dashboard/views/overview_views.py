@@ -56,14 +56,28 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             health_service = SystemHealthService()
             charts_service = ChartsService()
 
+            # Get app statistics and convert to list format
+            app_stats_dict = stats_service.get_app_statistics()
+            app_statistics_list = [
+                {
+                    'app_name': app_label,
+                    'statistics': {
+                        'name': app_data.get('name', ''),
+                        'total_records': app_data.get('total_records', 0),
+                        'model_count': app_data.get('model_count', 0),
+                    }
+                }
+                for app_label, app_data in app_stats_dict.get('apps', {}).items()
+            ]
+
             data = {
                 # Statistics
                 'stat_cards': stats_service.get_stat_cards(),
                 'user_statistics': stats_service.get_user_statistics(),
-                'app_statistics': stats_service.get_app_statistics(),
+                'app_statistics': app_statistics_list,
 
                 # System
-                'system_health': health_service.get_all_health_checks(),
+                'system_health': health_service.get_overall_health_status(),
                 'system_metrics': stats_service.get_system_metrics(),
 
                 # Activity

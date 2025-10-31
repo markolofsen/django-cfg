@@ -11,6 +11,7 @@ from .charts_service import ChartsService
 from .commands_service import CommandsService
 from .apizones_service import APIZonesService
 from .overview_service import OverviewService
+from .crontab_service import CrontabService
 
 __all__ = [
     'StatisticsService',
@@ -19,4 +20,5 @@ __all__ = [
     'CommandsService',
     'APIZonesService',
     'OverviewService',
+    'CrontabService',
 ]

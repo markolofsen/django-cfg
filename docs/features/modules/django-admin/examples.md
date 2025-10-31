@@ -629,6 +629,166 @@ class ExchangeAdmin(PydanticAdmin):
     api_link_display.short_description = "API"
 ```
 
+## Wallet Balance Admin
+
+Exchange wallet balances with UUID shortening and custom avatar displays.
+
+```python
+"""
+Wallet Balance Admin - Cryptocurrency exchange example
+Features: UUID shortening, custom avatars, balance displays, SafeString HTML
+"""
+
+from decimal import Decimal
+from django.contrib import admin
+from django_cfg.modules.django_admin import (
+    AdminConfig, DateTimeField, FieldsetConfig, Icons, computed_field,
+)
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+wallet_config = AdminConfig(
+    model=MarketAccountWallet,
+
+    # Performance optimization
+    select_related=[
+        'account', 'account__account', 'account__account__exchange',
+        'account__account__user', 'coin'
+    ],
+
+    # List display with custom fields
+    list_display=[
+        'id_display',           # Shortened UUID
+        'wallet_display',       # Custom avatar + text
+        'coin_display',         # Badge
+        'balance_total_display',
+        'balance_available_display',
+        'balance_locked_display',
+        'value_usd_display',
+        'last_sync_display',
+    ],
+
+    # Filters
+    list_filter=[
+        'account__market_type',
+        'account__account__exchange',
+        'coin__is_stable',
+        'account__is_active',
+    ],
+
+    # Search
+    search_fields=[
+        'id', 'coin__symbol', 'coin__label',
+        'account__account__name', 'account__account__user__email',
+    ],
+
+    # Ordering by balance
+    ordering=['-balance_total', 'coin__symbol'],
+    list_per_page=50,
+
+    readonly_fields=['id', 'created_at', 'updated_at', 'last_sync_at'],
+)
+
+
+@admin.register(MarketAccountWallet)
+class MarketAccountWalletAdmin(PydanticAdmin):
+    config = wallet_config
+
+    @computed_field("ID")
+    def id_display(self, obj):
+        """Short UUID with tooltip."""
+        return self.html.uuid_short(obj.id, length=6)
+
+    @computed_field("Wallet")
+    def wallet_display(self, obj):
+        """Custom avatar with account info."""
+        if not obj.account or not obj.account.account:
+            return self.html.empty("Unknown")
+
+        account = obj.account.account
+        market_type = obj.account.market_type
+        header_text = f"{account.name} ({market_type})"
+        subtitle_text = f"{account.exchange.name} - {account.user.email}"
+        initials = account.name[:2].upper()
+
+        # Use inline styles for perfect circular avatar
+        from django.utils.safestring import mark_safe
+        return mark_safe(
+            f'<div class="flex items-center gap-3">'
+            f'<div class="flex items-center justify-center rounded-full '
+            f'bg-primary-100 text-primary-600 font-semibold flex-shrink-0" '
+            f'style="width: 40px; height: 40px; min-width: 40px; min-height: 40px;">'
+            f'{initials}'
+            f'</div>'
+            f'<div class="flex-1 min-w-0">'
+            f'<div class="font-medium truncate">{header_text}</div>'
+            f'<div class="text-sm text-gray-500 truncate">{subtitle_text}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    @computed_field("Coin")
+    def coin_display(self, obj):
+        """Coin badge."""
+        if not obj.coin:
+            return self.html.empty("Unknown")
+        return self.html.badge(obj.coin.symbol, variant="info", icon=Icons.CURRENCY_BITCOIN)
+
+    @computed_field("Total")
+    def balance_total_display(self, obj):
+        """Total balance with currency."""
+        if obj.balance_total <= 0:
+            return self.html.span("0.00", "text-gray-500")
+
+        precision = obj.coin.precision_display if obj.coin else 8
+        formatted = f"{obj.balance_total:.{precision}f}".rstrip('0').rstrip('.')
+        symbol = obj.coin.symbol if obj.coin else ''
+
+        # Use inline with empty separator for adjacent HTML
+        return self.html.inline([
+            f'<strong>{formatted}</strong>',
+            f'<span class="text-gray-500 ml-1">{symbol}</span>',
+        ], separator="")
+
+    @computed_field("Available")
+    def balance_available_display(self, obj):
+        """Available balance."""
+        if obj.balance_available <= 0:
+            return self.html.span("0.00", "text-gray-500")
+
+        precision = obj.coin.precision_display if obj.coin else 8
+        formatted = f"{obj.balance_available:.{precision}f}".rstrip('0').rstrip('.')
+        symbol = obj.coin.symbol if obj.coin else ''
+
+        return self.html.inline([
+            self.html.span(formatted, "text-green-600 font-semibold"),
+            f'<span class="text-gray-500 ml-1">{symbol}</span>',
+        ], separator="")
+
+    @computed_field("Value USD")
+    def value_usd_display(self, obj):
+        """USD value badge."""
+        if not obj.coin or not obj.coin.price_usd:
+            return self.html.span("—", "text-gray-500")
+
+        value_usd = obj.balance_total * obj.coin.price_usd
+        if value_usd < Decimal('0.01'):
+            return self.html.span("< $0.01", "text-gray-500")
+
+        return self.html.badge(
+            f"${value_usd:,.2f}",
+            variant="success",
+            icon=Icons.ATTACH_MONEY,
+        )
+```
+
+**Key Features:**
+- `uuid_short()` for clean ID display with tooltip
+- Custom circular avatar with fixed proportions
+- `inline()` with `separator=""` for adjacent HTML elements
+- Tailwind CSS classes for styling
+- `mark_safe()` for complex HTML structures
+- Perfect for financial/crypto applications
+
 ## Common Patterns
 
 ### Pattern 1: Conditional Badges

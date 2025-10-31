@@ -78,6 +78,7 @@ class SettingsOrchestrator:
             settings.update(self._generate_third_party_settings())
             settings.update(self._generate_api_settings())
             settings.update(self._generate_tasks_settings())
+            settings.update(self._generate_crontab_settings())
             settings.update(self._generate_tailwind_settings())
 
             # Apply additional settings (user overrides)
@@ -222,6 +223,18 @@ class SettingsOrchestrator:
             return generator.generate()
         except Exception as e:
             raise ConfigurationError(f"Failed to generate tasks settings: {e}") from e
+
+    def _generate_crontab_settings(self) -> Dict[str, Any]:
+        """Generate crontab scheduling settings."""
+        if not hasattr(self.config, "crontab") or not self.config.crontab:
+            return {}
+
+        try:
+            from .integration_generators.crontab import CrontabSettingsGenerator
+            generator = CrontabSettingsGenerator(self.config.crontab)
+            return generator.generate()
+        except Exception as e:
+            raise ConfigurationError(f"Failed to generate crontab settings: {e}") from e
 
     def _generate_tailwind_settings(self) -> Dict[str, Any]:
         """Generate Tailwind CSS settings."""

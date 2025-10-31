@@ -79,6 +79,14 @@
             border: 1px solid rgba(209, 213, 219, 0.2);
             border-radius: 0.375rem; /* rounded-md */
             overflow: hidden;
+            min-height: 400px;
+        }
+
+        /* On mobile, use more screen space */
+        @media (max-width: 768px) {
+            .iframe-container {
+                min-height: calc(100vh - 200px);
+            }
         }
 
         .dark .iframe-container {
@@ -147,7 +155,15 @@
             },
             resetIframe(tab) {
                 // Reset the iframe that was just hidden
-                const iframeId = tab === 'builtin' ? 'nextjs-dashboard-iframe-builtin' : 'nextjs-dashboard-iframe-nextjs';
+                let iframeId;
+                if (tab === 'builtin') {
+                    iframeId = 'nextjs-dashboard-iframe-builtin';
+                } else if (tab === 'nextjs') {
+                    iframeId = 'nextjs-dashboard-iframe-nextjs';
+                } else if (tab === 'docs') {
+                    iframeId = 'nextjs-dashboard-iframe-docs';
+                }
+
                 const iframe = document.getElementById(iframeId);
                 if (iframe) {
                     const originalSrc = iframe.getAttribute('data-original-src') || iframe.src;
@@ -159,15 +175,24 @@
                 }
             },
             openInNewWindow() {
-                // Get the current iframe URL for the External Admin tab
-                const iframe = document.getElementById('nextjs-dashboard-iframe-nextjs');
+                // Get iframe ID based on active tab
+                let iframeId;
+                if (this.activeTab === 'builtin') {
+                    iframeId = 'nextjs-dashboard-iframe-builtin';
+                } else if (this.activeTab === 'nextjs') {
+                    iframeId = 'nextjs-dashboard-iframe-nextjs';
+                } else if (this.activeTab === 'docs') {
+                    iframeId = 'nextjs-dashboard-iframe-docs';
+                }
+
+                const iframe = document.getElementById(iframeId);
                 if (!iframe) return;
 
                 // Get base URL from iframe src or data-original-src
                 let baseUrl = iframe.src || iframe.getAttribute('data-original-src');
 
-                // If we have a tracked path from postMessage, use it
-                if (this.currentNextjsPath) {
+                // If we have a tracked path from postMessage (only for nextjs tab), use it
+                if (this.activeTab === 'nextjs' && this.currentNextjsPath) {
                     try {
                         const url = new URL(baseUrl);
                         // Replace pathname with tracked path
@@ -207,16 +232,43 @@
                         .dark [style*="border-bottom-color"] {
                             border-bottom-color: rgba(75, 85, 99, 0.2) !important;
                         }
+
+                        /* Mobile: Scrollable tabs */
+                        .tabs-container {
+                            overflow-x: auto;
+                            -webkit-overflow-scrolling: touch;
+                            scrollbar-width: thin;
+                            scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+                        }
+
+                        .tabs-container::-webkit-scrollbar {
+                            height: 4px;
+                        }
+
+                        .tabs-container::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+
+                        .tabs-container::-webkit-scrollbar-thumb {
+                            background-color: rgba(156, 163, 175, 0.3);
+                            border-radius: 2px;
+                        }
+
+                        .tabs-container::-webkit-scrollbar-thumb:hover {
+                            background-color: rgba(156, 163, 175, 0.5);
+                        }
                     </style>
-                    <div class="flex items-center justify-between px-4">
-                        <nav class="-mb-px flex space-x-8" aria-label="Dashboard Tabs">
+                    <div class="tabs-container">
+                        <div class="flex items-center justify-between px-4 min-w-max">
+                            <nav class="-mb-px flex space-x-2 sm:space-x-4 md:space-x-8" aria-label="Dashboard Tabs">
                         <button @click="switchTab('builtin')"
                                 class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
                                 :class="activeTab === 'builtin'
                                     ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-700'">
                             <span class="material-icons text-base">dashboard</span>
-                            <span>Built-in Dashboard</span>
+                            <span class="hidden sm:inline">Built-in Dashboard</span>
+                            <span class="sm:hidden">Built-in</span>
                         </button>
 
                         <button @click="switchTab('nextjs')"
@@ -225,31 +277,40 @@
                                     ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-700'">
                             <span class="material-icons text-base">web</span>
-                            <span>{% nextjs_external_admin_title %}</span>
-                        </button>
-                    </nav>
-
-                    <!-- Actions & Version info -->
-                    <div class="flex items-center gap-4 py-4">
-                        <!-- Open in new window button (only for External Admin tab) -->
-                        <button @click="openInNewWindow()"
-                                x-show="activeTab === 'nextjs'"
-                                title="Open in new window"
-                                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-all duration-150"
-                                style="display: none;">
-                            <span class="material-icons" style="font-size: 16px;">open_in_new</span>
-                            <span>Open in New Window</span>
+                            <span class="hidden sm:inline">{% nextjs_external_admin_title %}</span>
+                            <span class="sm:hidden">Admin</span>
                         </button>
 
-                        <!-- Version info -->
-                        <div class="text-xs text-gray-400 dark:text-gray-500">
-                            {% load django_cfg %}
-                            <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700">
-                                {% lib_name %}
-                            </a>
+                        <button @click="switchTab('docs')"
+                                class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
+                                :class="activeTab === 'docs'
+                                    ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-700'">
+                            <span class="material-icons text-base">description</span>
+                            <span>Docs</span>
+                        </button>
+                            </nav>
+
+                            <!-- Actions & Version info -->
+                            <div class="flex items-center gap-2 md:gap-4 py-4">
+                                <!-- Open in new window button (available for all tabs) -->
+                                <button @click="openInNewWindow()"
+                                        title="Open in new window"
+                                        class="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-all duration-150 whitespace-nowrap">
+                                    <span class="material-icons" style="font-size: 16px;">open_in_new</span>
+                                    <span class="hidden sm:inline">Open in New Window</span>
+                                </button>
+
+                                <!-- Version info -->
+                                <div class="text-xs text-gray-400 dark:text-gray-500 hidden md:block">
+                                    {% load django_cfg %}
+                                    <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700">
+                                        {% lib_name %}
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
                 </div>
             </div>
             {% endif %}
@@ -293,6 +354,25 @@
                 </div>
             </div>
             {% endif %}
+
+            <!-- Docs Tab Content -->
+            <div x-show="activeTab === 'docs'" style="display: none;">
+                <div class="iframe-container">
+                    <div class="iframe-loading" id="iframe-loading-docs">
+                        <div class="spinner"></div>
+                        <p id="loading-text-docs">Loading documentation...</p>
+                    </div>
+
+                    <iframe
+                        id="nextjs-dashboard-iframe-docs"
+                        class="nextjs-dashboard-iframe"
+                        src="{% lib_docs_url %}"
+                        data-original-src="{% lib_docs_url %}"
+                        title="Documentation"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
+                    ></iframe>
+                </div>
+            </div>
         </div>
     {% endcomponent %}
 {% endblock %}
@@ -301,185 +381,328 @@
     {{ block.super }}
     <script>
         (function() {
-            // Built-in dashboard iframe
-            const iframeBuiltin = document.getElementById('nextjs-dashboard-iframe-builtin');
-            const loadingBuiltin = document.getElementById('iframe-loading-builtin');
-
-            // External Next.js admin iframe (if exists)
-            const iframeNextjs = document.getElementById('nextjs-dashboard-iframe-nextjs');
-            const loadingNextjs = document.getElementById('iframe-loading-nextjs');
-
-            // Setup both iframes immediately (always loaded, not lazy-loaded)
-            if (iframeBuiltin) {
-                setupIframe(iframeBuiltin, loadingBuiltin);
-            }
-
-            if (iframeNextjs) {
-                setupIframe(iframeNextjs, loadingNextjs);
-            }
+            'use strict';
 
             /**
-             * Setup iframe communication and JWT injection
+             * MessageBridge - Handles postMessage communication with internal Next.js iframes
              */
-            function setupIframe(iframe, loading) {
-                if (!iframe) return;
-
-                // Get iframe origin from src attribute
-                const iframeSrc = iframe.src || iframe.getAttribute('src');
-                if (!iframeSrc) {
-                    console.warn('[Django-CFG] iframe has no src attribute');
-                    return;
+            class MessageBridge {
+                constructor(iframe, origin) {
+                    this.iframe = iframe;
+                    this.origin = origin;
+                    this.themeObserver = null;
                 }
 
-                const iframeUrl = new URL(iframeSrc, window.location.origin);
-                const iframeOrigin = iframeUrl.origin;
-
-                // Debounce timer for resize events (prevents jittery iframe height changes)
-                let resizeTimer = null;
-
-                // iframe load event
-                iframe.addEventListener('load', function() {
-                    setTimeout(() => {
-                        sendDataToIframe();
-                    }, 100);
-                });
-
-                // Send theme and auth data to iframe
-                function sendDataToIframe() {
-                    if (!iframe || !iframe.contentWindow) {
-                        console.error('[Django-CFG] iframe or contentWindow not available');
-                        return;
-                    }
+                /**
+                 * Send theme data to iframe
+                 */
+                sendTheme() {
+                    if (!this.iframe?.contentWindow) return;
 
                     const htmlElement = document.documentElement;
                     const isDark = htmlElement.classList.contains('dark');
+                    const themeMode = this._getThemeMode();
 
-                    // Get theme mode from Alpine.js
-                    let themeMode = 'auto';
-                    if (window.Alpine && window.Alpine.$data) {
-                        try {
-                            const alpineData = window.Alpine.$data(htmlElement);
-                            if (alpineData && alpineData.adminTheme) {
-                                themeMode = alpineData.adminTheme;
-                            }
-                        } catch (e) {
-                            console.warn('[Django-CFG] Failed to get Alpine data:', e);
-                        }
-                    }
-
-                    // Get JWT tokens from localStorage
-                    const authToken = localStorage.getItem('auth_token');
-                    const refreshToken = localStorage.getItem('refresh_token');
-
-                    // Send theme
                     try {
-                        iframe.contentWindow.postMessage({
+                        this.iframe.contentWindow.postMessage({
                             type: 'parent-theme',
                             data: {
                                 theme: isDark ? 'dark' : 'light',
                                 themeMode: themeMode
                             }
-                        }, iframeOrigin);
+                        }, this.origin);
                     } catch (e) {
-                        console.error('[Django-CFG] Failed to send theme message:', e);
-                    }
-
-                    // Send auth tokens
-                    if (authToken) {
-                        try {
-                            iframe.contentWindow.postMessage({
-                                type: 'parent-auth',
-                                data: {
-                                    authToken: authToken,
-                                    refreshToken: refreshToken
-                                }
-                            }, iframeOrigin);
-                        } catch (e) {
-                            console.error('[Django-CFG] Failed to send auth message:', e);
-                        }
+                        console.error('[Django-CFG] Failed to send theme:', e);
                     }
                 }
 
-                // Watch for theme changes
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                            sendDataToIframe();
-                        }
-                    });
-                });
+                /**
+                 * Send auth tokens to iframe
+                 */
+                sendAuth() {
+                    if (!this.iframe?.contentWindow) return;
 
-                observer.observe(document.documentElement, {
-                    attributes: true,
-                    attributeFilter: ['class']
-                });
+                    const authToken = localStorage.getItem('auth_token');
+                    const refreshToken = localStorage.getItem('refresh_token');
 
-                // Listen for messages from iframe
-                window.addEventListener('message', (event) => {
-                    if (event.origin !== iframeOrigin) {
-                        return;
+                    if (!authToken) return;
+
+                    try {
+                        this.iframe.contentWindow.postMessage({
+                            type: 'parent-auth',
+                            data: { authToken, refreshToken }
+                        }, this.origin);
+                    } catch (e) {
+                        console.error('[Django-CFG] Failed to send auth:', e);
                     }
+                }
 
-                    const { type, data } = event.data || {};
+                /**
+                 * Send all data (theme + auth)
+                 */
+                sendAllData() {
+                    this.sendTheme();
+                    this.sendAuth();
+                }
 
+                /**
+                 * Start watching for theme changes
+                 */
+                watchThemeChanges() {
+                    this.themeObserver = new MutationObserver(() => {
+                        this.sendTheme();
+                    });
+
+                    this.themeObserver.observe(document.documentElement, {
+                        attributes: true,
+                        attributeFilter: ['class']
+                    });
+                }
+
+                /**
+                 * Stop watching
+                 */
+                destroy() {
+                    if (this.themeObserver) {
+                        this.themeObserver.disconnect();
+                        this.themeObserver = null;
+                    }
+                }
+
+                /**
+                 * Get theme mode from Alpine.js
+                 */
+                _getThemeMode() {
+                    if (!window.Alpine?.$$data) return 'auto';
+
+                    try {
+                        const alpineData = window.Alpine.$data(document.documentElement);
+                        return alpineData?.adminTheme || 'auto';
+                    } catch (e) {
+                        return 'auto';
+                    }
+                }
+            }
+
+            /**
+             * InternalIframeHandler - Handles Next.js internal iframes with postMessage
+             */
+            class InternalIframeHandler {
+                constructor(iframe, loading, origin) {
+                    this.iframe = iframe;
+                    this.loading = loading;
+                    this.origin = origin;
+                    this.messageBridge = new MessageBridge(iframe, origin);
+                    this.messageListener = null;
+                }
+
+                init() {
+                    this._setupLoadHandler();
+                    this._setupMessageListener();
+                    this.messageBridge.watchThemeChanges();
+                }
+
+                _setupLoadHandler() {
+                    this.iframe.addEventListener('load', () => {
+                        setTimeout(() => {
+                            this.messageBridge.sendAllData();
+                        }, 100);
+                    });
+                }
+
+                _setupMessageListener() {
+                    this.messageListener = (event) => {
+                        if (event.origin !== this.origin) return;
+
+                        const { type, data } = event.data || {};
+                        this._handleMessage(type, data);
+                    };
+
+                    window.addEventListener('message', this.messageListener);
+                }
+
+                _handleMessage(type, data) {
                     switch (type) {
                         case 'iframe-ready':
-                            sendDataToIframe();
+                            this.messageBridge.sendAllData();
                             break;
 
                         case 'iframe-auth-status':
-                            console.log('[Django-CFG] Auth status received:', data);
+                            console.log('[Django-CFG] Auth status:', data);
                             break;
 
                         case 'iframe-resize':
-                            // DISABLED: Fixed height 80vh instead of dynamic resize
-                            // if (data?.height && typeof data.height === 'number') {
-                            //     // First resize - show iframe immediately
-                            //     if (!iframe.classList.contains('loaded')) {
-                            //         console.log('[Django-CFG] First resize received - showing iframe');
-                            //         if (loading) loading.classList.add('hidden');
-                            //         iframe.classList.add('loaded');
-                            //     }
-                            //
-                            //     // Debounce resize updates (300ms delay)
-                            //     if (resizeTimer) {
-                            //         clearTimeout(resizeTimer);
-                            //     }
-                            //
-                            //     resizeTimer = setTimeout(() => {
-                            //         const newHeight = Math.max(600, data.height + 50);
-                            //         iframe.style.height = newHeight + 'px';
-                            //     }, 300);
-                            // }
-
-                            // Show iframe on first resize event
-                            if (!iframe.classList.contains('loaded')) {
-                                console.log('[Django-CFG] First resize received - showing iframe');
-                                if (loading) loading.classList.add('hidden');
-                                iframe.classList.add('loaded');
-                            }
+                            this._handleResize();
                             break;
 
                         case 'iframe-navigation':
-                            console.log('[Django-CFG] iframe navigated to:', data?.path);
-                            // Track current path for "Open in New Window" button
-                            if (iframe.id === 'nextjs-dashboard-iframe-nextjs' && data?.path) {
-                                // Update Alpine.js data
-                                const alpineEl = document.querySelector('[x-data]');
-                                if (alpineEl && window.Alpine) {
-                                    const alpineData = window.Alpine.$data(alpineEl);
-                                    if (alpineData) {
-                                        alpineData.currentNextjsPath = data.path;
-                                    }
-                                }
-                            }
-                            break;
-
-                        default:
+                            this._handleNavigation(data?.path);
                             break;
                     }
-                });
+                }
+
+                _handleResize() {
+                    if (this.iframe.classList.contains('loaded')) return;
+
+                    console.log('[Django-CFG] First resize - showing iframe');
+                    this.loading?.classList.add('hidden');
+                    this.iframe.classList.add('loaded');
+                }
+
+                _handleNavigation(path) {
+                    if (!path) return;
+
+                    console.log('[Django-CFG] Navigation:', path);
+
+                    // Track path for "Open in New Window" (only for nextjs tab)
+                    if (this.iframe.id === 'nextjs-dashboard-iframe-nextjs') {
+                        this._updateAlpinePath(path);
+                    }
+                }
+
+                _updateAlpinePath(path) {
+                    const alpineEl = document.querySelector('[x-data]');
+                    if (!alpineEl || !window.Alpine) return;
+
+                    const alpineData = window.Alpine.$data(alpineEl);
+                    if (alpineData) {
+                        alpineData.currentNextjsPath = path;
+                    }
+                }
+
+                destroy() {
+                    this.messageBridge.destroy();
+                    if (this.messageListener) {
+                        window.removeEventListener('message', this.messageListener);
+                    }
+                }
             }
+
+            /**
+             * ExternalIframeHandler - Handles external iframes (docs) without postMessage
+             */
+            class ExternalIframeHandler {
+                constructor(iframe, loading) {
+                    this.iframe = iframe;
+                    this.loading = loading;
+                    this.LOAD_TIMEOUT = 5000;
+                }
+
+                init() {
+                    this._setupLoadHandler();
+                    this._setupErrorHandler();
+                    this._setupTimeout();
+                }
+
+                _setupLoadHandler() {
+                    this.iframe.addEventListener('load', () => {
+                        console.log('[Django-CFG] External iframe loaded');
+                        this._showIframe();
+                    });
+                }
+
+                _setupErrorHandler() {
+                    this.iframe.addEventListener('error', () => {
+                        console.error('[Django-CFG] External iframe failed to load');
+                        this._showError();
+                    });
+                }
+
+                _setupTimeout() {
+                    setTimeout(() => {
+                        if (!this.iframe.classList.contains('loaded')) {
+                            console.log('[Django-CFG] Timeout - showing iframe anyway');
+                            this._showIframe();
+                        }
+                    }, this.LOAD_TIMEOUT);
+                }
+
+                _showIframe() {
+                    this.loading?.classList.add('hidden');
+                    this.iframe.classList.add('loaded');
+                }
+
+                _showError() {
+                    const loadingText = this.loading?.querySelector('p');
+                    if (loadingText) {
+                        loadingText.textContent = 'Failed to load. Please check your connection.';
+                    }
+                }
+
+                destroy() {
+                    // No cleanup needed for external iframes
+                }
+            }
+
+            /**
+             * IframeManager - Factory for creating appropriate iframe handlers
+             */
+            class IframeManager {
+                constructor() {
+                    this.handlers = [];
+                }
+
+                /**
+                 * Register an iframe for management
+                 */
+                register(iframeId, loadingId, options = {}) {
+                    const iframe = document.getElementById(iframeId);
+                    const loading = document.getElementById(loadingId);
+
+                    if (!iframe) {
+                        console.warn(`[Django-CFG] Iframe not found: ${iframeId}`);
+                        return;
+                    }
+
+                    const handler = this._createHandler(iframe, loading, options);
+                    if (handler) {
+                        handler.init();
+                        this.handlers.push(handler);
+                    }
+                }
+
+                /**
+                 * Create appropriate handler based on iframe type
+                 */
+                _createHandler(iframe, loading, options) {
+                    const src = iframe.src || iframe.getAttribute('src');
+                    if (!src) {
+                        console.warn('[Django-CFG] Iframe has no src');
+                        return null;
+                    }
+
+                    const url = new URL(src, window.location.origin);
+                    const isExternal = options.external || url.origin !== window.location.origin;
+
+                    if (isExternal) {
+                        return new ExternalIframeHandler(iframe, loading);
+                    } else {
+                        return new InternalIframeHandler(iframe, loading, url.origin);
+                    }
+                }
+
+                /**
+                 * Cleanup all handlers
+                 */
+                destroy() {
+                    this.handlers.forEach(handler => handler.destroy());
+                    this.handlers = [];
+                }
+            }
+
+            // Initialize iframe manager
+            const manager = new IframeManager();
+
+            // Register all iframes
+            manager.register('nextjs-dashboard-iframe-builtin', 'iframe-loading-builtin');
+            manager.register('nextjs-dashboard-iframe-nextjs', 'iframe-loading-nextjs');
+            manager.register('nextjs-dashboard-iframe-docs', 'iframe-loading-docs', { external: true });
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                manager.destroy();
+            });
+
         })();
     </script>
 {% endblock %}
