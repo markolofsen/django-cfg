@@ -204,6 +204,9 @@ class DjangoQ2ScheduleConfig(BaseModel):
         Returns:
             Dictionary for ORM.create() or schedule creation
         """
+        from django.utils import timezone
+        from datetime import timedelta
+
         # Map our schedule types to Django-Q2 constants
         type_mapping = {
             "once": "O",
@@ -220,13 +223,15 @@ class DjangoQ2ScheduleConfig(BaseModel):
             "name": self.name,
             "func": self.func,
             "schedule_type": type_mapping.get(self.schedule_type, self.schedule_type.upper()),
+            # Set next_run to NOW + 10 seconds for immediate execution on qcluster start
+            "next_run": timezone.now() + timedelta(seconds=10),
         }
 
         if self.args:
-            config["args"] = str(self.args)
+            config["args"] = self.args
 
         if self.kwargs:
-            config["kwargs"] = str(self.kwargs)
+            config["kwargs"] = self.kwargs
 
         if self.schedule_type == "cron" and self.cron:
             config["cron"] = self.cron

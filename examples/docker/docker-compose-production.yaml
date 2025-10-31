@@ -36,6 +36,37 @@ services:
       - "traefik.http.routers.djangocfg-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
 
+  # Django-Q2 Cluster (Task Scheduler + Background Worker)
+  qcluster:
+    image: django-cfg-django:latest
+    container_name: django-cfg-qcluster
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/django-logs:/app/logs"
+      - "../projects/django:/app:rw"
+    depends_on:
+      - django
+    command: poetry run python manage.py qcluster
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f qcluster > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - dokploy-network
+
   # Centrifugo WebSocket Server
   centrifugo:
     image: centrifugo/centrifugo:v6
