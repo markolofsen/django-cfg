@@ -58,13 +58,18 @@ class CacheSettingsGenerator:
 
         # Default cache - always provide one
         if self.config.cache_default:
+            # User explicitly configured cache_default
             caches["default"] = self.config.cache_default.to_django_config(
                 self.config.env_mode,
                 self.config.debug,
                 "default"
             )
+        elif self.config.redis_url:
+            # Auto-create Redis cache from redis_url
+            logger.info(f"Auto-creating Redis cache from redis_url: {self.config.redis_url}")
+            caches["default"] = self._get_redis_cache_config()
         else:
-            # Create default cache backend
+            # Fallback to default cache backend (LocMem/FileBased depending on env)
             caches["default"] = self._get_default_cache_config()
 
         # Sessions cache
@@ -88,9 +93,30 @@ class CacheSettingsGenerator:
 
         return settings
 
+    def _get_redis_cache_config(self) -> Dict[str, Any]:
+        """
+        Auto-create Redis cache from config.redis_url.
+
+        Returns:
+            Dictionary with Redis cache backend configuration
+        """
+        from ....models.infrastructure.cache import CacheConfig
+
+        redis_cache = CacheConfig(
+            redis_url=self.config.redis_url,
+            timeout=300,  # 5 minutes default
+            max_connections=50,
+            key_prefix=self.config.project_name.lower().replace(" ", "_") if self.config.project_name else "django",
+        )
+        return redis_cache.to_django_config(
+            self.config.env_mode,
+            self.config.debug,
+            "default"
+        )
+
     def _get_default_cache_config(self) -> Dict[str, Any]:
         """
-        Get default cache configuration.
+        Get default cache configuration (fallback when no redis_url).
 
         Returns:
             Dictionary with default cache backend configuration

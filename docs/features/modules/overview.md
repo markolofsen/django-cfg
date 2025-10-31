@@ -233,39 +233,39 @@ tasks.schedule_periodic(
 
 ---
 
-### Cron Scheduling Module
+### Django-Q2 Task Scheduling Module
 
-Type-safe cron job scheduling with django-crontab:
+Type-safe task scheduling with Django-Q2 for distributed async tasks:
 
 ```python
-from django_cfg import CrontabConfig, CrontabJobConfig
+from django_cfg import DjangoQ2Config, DjangoQ2ScheduleConfig
 
 # In config.py
-crontab = CrontabConfig(
+django_q2 = DjangoQ2Config(
     enabled=True,
-    lock_jobs=True,
-    jobs=[
+    workers=4,
+    schedules=[
         # Sync data every 5 minutes
-        CrontabJobConfig(
-            name="sync_data",
+        DjangoQ2ScheduleConfig(
+            name="Sync data",
+            schedule_type="minutes",
+            minutes=5,
             command="sync_data",
-            minute="*/5",
-            hour="*",
         ),
         # Daily cleanup at 2 AM
-        CrontabJobConfig(
-            name="cleanup",
+        DjangoQ2ScheduleConfig(
+            name="Cleanup",
+            schedule_type="cron",
+            cron="0 2 * * *",
             command="cleanup_old_data",
-            minute="0",
-            hour="2",
         ),
     ],
 )
 ```
 
-**Features:** Type-safe configuration, automatic crontab management, lock files for concurrency control, management commands support, schedule validation, and production-ready error handling.
+**Features:** Type-safe configuration, distributed task processing, async task execution, scheduled/cron/interval tasks, built-in admin interface, automatic retries, result storage, task monitoring via Dashboard API, and production-ready error handling.
 
-**Learn more:** [Scheduling Module Documentation](./scheduling/overview)
+**Learn more:** [Django-Q2 Scheduling Module Documentation](./scheduling/overview)
 
   </TabItem>
   <TabItem value="development" label="🔧 Development Tools">
@@ -549,7 +549,7 @@ class MyProjectConfig(DjangoConfig):
 - **[Health Overview](./health/overview)** - System monitoring
 - **[Import/Export Overview](./import-export/overview)** - Data management
 - **[Unfold Overview](./unfold/overview)** - Modern admin interface
-- **[Scheduling Overview](./scheduling/overview)** - Cron job scheduling
+- **[Scheduling Overview](./scheduling/overview)** - Django-Q2 task scheduling
 
 ### Related Documentation
 
@@ -562,7 +562,7 @@ class MyProjectConfig(DjangoConfig):
 - **[Health Module](./health/overview)** - System health checks
 - **[Import/Export Module](./import-export/overview)** - Data import/export utilities
 - **[Unfold Module](./unfold/overview)** - Modern admin interface
-- **[Scheduling Module](./scheduling/overview)** - Type-safe cron job scheduling
+- **[Scheduling Module](./scheduling/overview)** - Django-Q2 distributed task scheduling
 
 **Configuration & Setup:**
 - **[Configuration Guide](/fundamentals/configuration)** - Configure modules

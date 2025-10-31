@@ -11,7 +11,7 @@ from .charts_service import ChartsService
 from .commands_service import CommandsService
 from .apizones_service import APIZonesService
 from .overview_service import OverviewService
-from .crontab_service import CrontabService
+from .django_q2_service import DjangoQ2Service
 
 __all__ = [
     'StatisticsService',
@@ -20,5 +20,5 @@ __all__ = [
     'CommandsService',
     'APIZonesService',
     'OverviewService',
-    'CrontabService',
+    'DjangoQ2Service',
 ]

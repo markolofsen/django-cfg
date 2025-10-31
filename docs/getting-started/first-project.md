@@ -538,20 +538,14 @@ redis_url: "redis://localhost:6379/0"
 Update **core/config.py:**
 
 ```python
-from django_cfg import DjangoConfig, DatabaseConfig, CacheConfig
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class SaaSConfig(DjangoConfig):
     # ... existing config ...
 
-    # Cache (if Redis URL provided)
-    cache_default: CacheConfig | None = (
-        CacheConfig(
-            redis_url=env.redis_url,
-            timeout=300,
-        )
-        if env.redis_url
-        else None
-    )
+    # ✨ Auto Redis cache - just set redis_url!
+    redis_url: str | None = env.redis_url
+    # Django-CFG automatically creates CacheConfig if redis_url is set
 ```
 
 ## Troubleshooting

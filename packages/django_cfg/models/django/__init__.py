@@ -6,7 +6,7 @@ Django integrations and extensions.
 
 from .axes import AxesConfig
 from .constance import ConstanceConfig, ConstanceField
-from .crontab import CrontabConfig, CrontabJobConfig
+from .django_q2 import DjangoQ2Config, DjangoQ2ScheduleConfig
 from .environment import EnvironmentConfig
 from .openapi import OpenAPIClientConfig
 
@@ -14,8 +14,8 @@ __all__ = [
     "EnvironmentConfig",
     "ConstanceConfig",
     "ConstanceField",
-    "CrontabConfig",
-    "CrontabJobConfig",
+    "DjangoQ2Config",
+    "DjangoQ2ScheduleConfig",
     "OpenAPIClientConfig",
     "AxesConfig",
 ]

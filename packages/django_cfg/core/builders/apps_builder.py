@@ -163,9 +163,9 @@ class InstalledAppsBuilder:
             # No external app needed - ReArq is embedded
             apps.append("django_cfg.apps.tasks")
 
-        # Add django-crontab if enabled
-        if hasattr(self.config, "crontab") and self.config.crontab and self.config.crontab.enabled:
-            apps.append("django_crontab")
+        # Add django-q2 if enabled
+        if hasattr(self.config, "django_q2") and self.config.django_q2 and self.config.django_q2.enabled:
+            apps.append("django_q")
 
         # Add DRF Tailwind theme module (uses Tailwind via CDN)
         if self.config.enable_drf_tailwind:

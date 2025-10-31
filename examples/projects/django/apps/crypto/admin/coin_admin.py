@@ -102,7 +102,7 @@ coin_admin_config = AdminConfig(
     # Directory mode: Automatically discovers all .md files recursively
     # Each file becomes a collapsible section
     documentation=DocumentationConfig(
-        source_dir="docs",  # ← Relative to app! Scans apps/crypto/docs/**/*.md
+        source_dir="apps/crypto/@docs",  # ← Relative to app! Scans apps/crypto/docs/**/*.md
         title="📚 Coin Documentation",
         collapsible=True,
         default_open=False,

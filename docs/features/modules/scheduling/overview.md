@@ -1,26 +1,27 @@
 ---
-title: Cron Scheduling System
-description: Type-safe cron job scheduling with django-crontab integration for automated task execution
+title: Django-Q2 Task Scheduling
+description: Type-safe task scheduling with Django-Q2 integration for distributed async tasks and scheduled job execution
 sidebar_label: Overview & Philosophy
 sidebar_position: 1
 tags:
   - scheduling
-  - cron
-  - django-crontab
+  - django-q2
+  - async-tasks
   - automation
   - background-jobs
 keywords:
-  - django-cfg cron
-  - django crontab
+  - django-cfg scheduling
+  - django-q2
   - scheduled tasks
-  - cron jobs
+  - async tasks
+  - distributed tasks
 ---
 
-# Cron Scheduling System
+# Django-Q2 Task Scheduling
 
 > **📚 Part of**: [Modules](/features/modules/overview) - Explore all django-cfg modules
 
-Type-safe cron job scheduling with declarative configuration, automatic crontab management, and production-ready features for django-cfg projects.
+Type-safe task scheduling with Django-Q2 integration for async task execution, scheduled jobs, and distributed task processing in django-cfg projects.
 
 ---
 
@@ -28,15 +29,15 @@ Type-safe cron job scheduling with declarative configuration, automatic crontab 
 
 ### For Developers
 - [Quick Start](#quick-start) - Get started in 5 minutes
-- [Configuration](#configuration) - Declarative cron setup
-- [Job Types](#job-types) - Commands and callables
+- [Configuration](#configuration) - Declarative task setup
+- [Schedule Types](#schedule-types) - Cron, intervals, and one-time tasks
 - [Examples](#examples) - Practical code examples
 
 ### For DevOps
-- [Installation](#installation) - System crontab setup
-- [Management](#management) - Update and monitor jobs
+- [Installation](#installation) - Django-Q2 setup
+- [Management](#management) - Cluster and task management
 - [Production](#production-best-practices) - Production deployment
-- [Timezone Awareness](#7-timezone-awareness) - Critical timezone configuration
+- [Monitoring](#monitoring) - Task monitoring and debugging
 - [Troubleshooting](#troubleshooting) - Common issues
 
 ---
@@ -44,41 +45,64 @@ Type-safe cron job scheduling with declarative configuration, automatic crontab 
 ## Philosophy
 
 ### "Type-Safe Configuration"
-Define cron jobs with Pydantic models, not string manipulation:
+Define scheduled tasks with Pydantic models, not dictionaries:
 
 ```python
-from django_cfg import CrontabConfig, CrontabJobConfig
+from django_cfg import DjangoQ2Config, DjangoQ2ScheduleConfig
 
-crontab = CrontabConfig(
+django_q2 = DjangoQ2Config(
     enabled=True,
-    lock_jobs=True,  # Prevent concurrent execution
-    jobs=[
-        CrontabJobConfig(
-            name="sync_balances",
+    workers=4,
+    schedules=[
+        DjangoQ2ScheduleConfig(
+            name="Sync balances",
+            schedule_type="minutes",
+            minutes=5,
             command="sync_account_balances",
-            minute="*/5",
-            hour="*",
         ),
     ],
 )
 ```
 
 ### "Declarative Over Imperative"
-Jobs defined in `config.py` automatically sync to system crontab:
+Tasks defined in `config.py` automatically sync to database:
 
-- ✅ **No Manual Editing** - No need to manually edit crontab files
-- ✅ **Version Controlled** - Jobs tracked in source control
+- ✅ **No Manual Setup** - Schedules created from configuration
+- ✅ **Version Controlled** - Tasks tracked in source control
 - ✅ **Environment Aware** - Different schedules per environment
 - ✅ **Type Validated** - Catch errors before deployment
 
 ### "Production-Ready Features"
 Built for enterprise applications:
 
-- ✅ **Lock Files** - Prevent overlapping job execution
-- ✅ **Error Handling** - Configurable retry and error modes
-- ✅ **Environment Prefixes** - Set DJANGO_SETTINGS_MODULE automatically
-- ✅ **Job Management** - Enable/disable jobs without code changes
-- ✅ **Monitoring** - Track execution via Django logs
+- ✅ **Distributed** - Multi-worker task processing
+- ✅ **Async** - Both scheduled and ad-hoc async tasks
+- ✅ **Reliable** - Redis/database backed with retries
+- ✅ **Monitored** - Built-in admin interface and dashboard
+- ✅ **Scalable** - Horizontal scaling with multiple clusters
+
+### "Auto-Magic Configuration" 🎉
+Zero-boilerplate Redis setup:
+
+```python
+class MyConfig(DjangoConfig):
+    # Step 1: Set redis_url once
+    redis_url: Optional[str] = env.redis_url  # e.g., "redis://redis:6379/0"
+
+    # Step 2: Django-Q2 automatically uses it!
+    django_q2 = DjangoQ2Config(
+        enabled=True,
+        # broker_url is auto-detected from config.redis_url! ✨
+        workers=4,
+        schedules=[...],
+    )
+```
+
+**Benefits:**
+- ✅ **DRY Principle** - Set `redis_url` once, use everywhere
+- ✅ **Auto-Cache** - Redis cache automatically created too
+- ✅ **No Duplication** - Broker URL automatically configured
+- ✅ **Type-Safe** - Pydantic validation for all settings
 
 ---
 
@@ -87,26 +111,91 @@ Built for enterprise applications:
 ### Django Integration
 - **Management Commands** - Schedule any Django command
 - **Python Callables** - Schedule any Python function
-- **Settings Integration** - Automatic settings module injection
-- **ORM Access** - Full Django ORM available in jobs
+- **ORM Access** - Full Django ORM available in tasks
+- **Admin Interface** - Built-in Django admin for monitoring
 
-### Schedule Control
-- **Cron Syntax** - Full cron expression support
-- **Flexible Timing** - Minutes, hours, days, weeks, months
-- **Validation** - Schedule validation at configuration time
-- **Common Patterns** - Pre-defined schedules for common use cases
+### Schedule Types
+- **Cron Expressions** - Traditional cron syntax
+- **Intervals** - Minutes, hourly, daily, weekly, monthly, yearly
+- **One-Time** - Run once at scheduled time
+- **Flexible** - Mix and match schedule types
 
 ### Reliability
-- **Lock Mechanism** - Distributed lock files prevent concurrent runs
-- **Error Modes** - Configure retry, ignore, or fail behavior
-- **Logging** - Comprehensive execution logging
-- **Monitoring** - Track job execution in system logs
+- **Retries** - Automatic task retry on failure
+- **Result Storage** - Task results saved to database
+- **Hooks** - Post-execution callbacks
+- **Timeouts** - Configurable task timeouts
 
-### Management
-- **CLI Commands** - Add, remove, show jobs via `manage.py`
-- **Live Updates** - Update schedules without downtime
-- **Job Control** - Enable/disable individual jobs
-- **Dry Run** - Test jobs before scheduling
+### Async Tasks
+- **On-Demand** - Queue tasks from anywhere in your code
+- **Task Groups** - Group related tasks
+- **Task Chains** - Execute tasks sequentially
+- **Scheduled** - Run tasks at specific times
+
+### Monitoring
+- **Django Admin** - View tasks, schedules, and results
+- **Dashboard API** - REST API for monitoring
+- **Logging** - Comprehensive execution logging
+- **Metrics** - Track success/failure rates
+
+---
+
+## Migration from django-crontab
+
+Django-Q2 is the modern replacement for django-crontab with significant improvements:
+
+### Why Migrate?
+
+| Feature | django-crontab | Django-Q2 |
+|---------|---------------|-----------|
+| **Maintenance** | ❌ Unmaintained | ✅ Active (Django 5.x support) |
+| **Async Tasks** | ❌ No | ✅ Yes |
+| **Admin Interface** | ❌ No | ✅ Built-in |
+| **Distributed** | ❌ No | ✅ Yes |
+| **Result Storage** | ❌ No | ✅ Yes |
+| **Retries** | ❌ Manual | ✅ Automatic |
+| **Monitoring** | ❌ Logs only | ✅ Admin + Dashboard API |
+
+### Migration Guide
+
+**Before (django-crontab):**
+```python
+from django_cfg import CrontabConfig, CrontabJobConfig
+
+crontab = CrontabConfig(
+    jobs=[
+        CrontabJobConfig(
+            name="sync_data",
+            command="sync_data",
+            minute="*/5",
+            hour="*",
+        ),
+    ],
+)
+```
+
+**After (Django-Q2):**
+```python
+from django_cfg import DjangoQ2Config, DjangoQ2ScheduleConfig
+
+django_q2 = DjangoQ2Config(
+    enabled=True,
+    schedules=[
+        DjangoQ2ScheduleConfig(
+            name="Sync data",
+            schedule_type="minutes",
+            minutes=5,
+            command="sync_data",
+        ),
+    ],
+)
+```
+
+**Schedule Mapping:**
+- `*/5 * * * *` → `schedule_type="minutes", minutes=5`
+- `0 * * * *` → `schedule_type="hourly"`
+- `0 2 * * *` → `schedule_type="cron", cron="0 2 * * *"`
+- `0 9 * * 1-5` → `schedule_type="cron", cron="0 9 * * 1-5"`
 
 ---
 
@@ -114,13 +203,13 @@ Built for enterprise applications:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| CrontabConfig Model | ✅ Complete | Type-safe Pydantic configuration |
-| CrontabJobConfig Model | ✅ Complete | Individual job configuration |
-| Settings Generator | ✅ Complete | Auto-generate CRONJOBS settings |
-| Apps Integration | ✅ Complete | Auto-add django_crontab to INSTALLED_APPS |
-| Schedule Validation | ✅ Complete | Cron syntax validation |
-| Lock Files | ✅ Complete | Prevent concurrent execution |
-| Management Commands | ✅ Complete | Via django-crontab CLI |
+| DjangoQ2Config Model | ✅ Complete | Type-safe Pydantic configuration |
+| DjangoQ2ScheduleConfig Model | ✅ Complete | Individual schedule configuration |
+| Settings Generator | ✅ Complete | Auto-generate Q_CLUSTER settings |
+| Apps Integration | ✅ Complete | Auto-add django_q to INSTALLED_APPS |
+| Schedule Validation | ✅ Complete | Type validation and schedule syntax |
+| Dashboard API | ✅ Complete | REST API for monitoring |
+| Management Commands | ✅ Complete | Via django-q2 CLI |
 | Documentation | ✅ Complete | Full docs with examples |
 
 ---
@@ -129,40 +218,34 @@ Built for enterprise applications:
 
 ### 1. Configuration
 
-Add cron configuration to your django-cfg settings:
+Add Django-Q2 configuration to your django-cfg settings:
 
 ```python title="config.py"
-from django_cfg import DjangoConfig, CrontabConfig, CrontabJobConfig
+from django_cfg import DjangoConfig, DjangoQ2Config, DjangoQ2ScheduleConfig
 
 class Config(DjangoConfig):
     project_name = "My Project"
 
-    # Enable cron scheduling
-    crontab = CrontabConfig(
+    # Enable Django-Q2 scheduling
+    django_q2 = DjangoQ2Config(
         enabled=True,
-        command_prefix='DJANGO_SETTINGS_MODULE=myproject.settings',
-        lock_jobs=True,
-        comment="My Project automated tasks",
-        jobs=[
+        workers=4,  # Number of worker processes
+        schedules=[
             # Sync data every 5 minutes
-            CrontabJobConfig(
-                name="sync_data_frequent",
-                job_type="command",
+            DjangoQ2ScheduleConfig(
+                name="Sync data (frequent)",
+                schedule_type="minutes",
+                minutes=5,
                 command="sync_data",
                 command_args=["--ignore-errors"],
                 command_kwargs={"verbosity": 0},
-                minute="*/5",
-                hour="*",
-                comment="Frequent data sync (quiet mode)",
             ),
             # Daily cleanup at 2 AM
-            CrontabJobConfig(
-                name="cleanup_daily",
-                job_type="command",
+            DjangoQ2ScheduleConfig(
+                name="Daily cleanup",
+                schedule_type="cron",
+                cron="0 2 * * *",
                 command="cleanup_old_data",
-                minute="0",
-                hour="2",
-                comment="Daily cleanup at 2 AM",
             ),
         ],
     )
@@ -170,34 +253,49 @@ class Config(DjangoConfig):
 config = Config()
 ```
 
-### 2. Install Jobs
+### 2. Run Migrations
 
-Add jobs to system crontab:
+Django-Q2 requires database tables:
 
 ```bash
-# Activate virtual environment
-source .venv/bin/activate
+# Apply migrations
+python manage.py migrate
 
-# Add jobs to crontab
-python manage.py crontab add
-
-# Verify installation
-python manage.py crontab show
+# You should see:
+# Running migrations:
+#   Applying django_q.0001_initial... OK
 ```
 
-### 3. Verify
+### 3. Start Cluster
 
-Check system crontab:
+Start the Django-Q2 worker cluster:
 
 ```bash
-# View crontab entries
-crontab -l
+# Start cluster (development)
+python manage.py qcluster
 
 # Expected output:
-# BEGIN My Project automated tasks
-# */5 * * * * DJANGO_SETTINGS_MODULE=myproject.settings /path/.venv/bin/python /path/manage.py crontab run abc123
-# 0 2 * * * DJANGO_SETTINGS_MODULE=myproject.settings /path/.venv/bin/python /path/manage.py crontab run xyz789
-# END My Project automated tasks
+# INFO: Q Cluster django_cfg_cluster starting.
+# INFO: Process-1 ready for work at 12345
+# INFO: Process-2 ready for work at 12346
+# ...
+```
+
+### 4. Verify
+
+Check schedules in Django admin:
+
+```
+http://localhost:8000/admin/django_q/schedule/
+```
+
+Or via shell:
+
+```python
+python manage.py shell
+>>> from django_q.models import Schedule
+>>> Schedule.objects.all()
+<QuerySet [<Schedule: Sync data (frequent)>, <Schedule: Daily cleanup>]>
 ```
 
 ---
@@ -207,16 +305,15 @@ crontab -l
 ### Minimal Configuration
 
 ```python
-from django_cfg import CrontabConfig, CrontabJobConfig
+from django_cfg import DjangoQ2Config, DjangoQ2ScheduleConfig
 
-crontab = CrontabConfig(
+django_q2 = DjangoQ2Config(
     enabled=True,
-    jobs=[
-        CrontabJobConfig(
-            name="my_job",
+    schedules=[
+        DjangoQ2ScheduleConfig(
+            name="My task",
+            schedule_type="hourly",
             command="my_command",
-            minute="0",
-            hour="*",
         ),
     ],
 )
@@ -225,122 +322,172 @@ crontab = CrontabConfig(
 ### Complete Configuration
 
 ```python
-crontab = CrontabConfig(
-    # Enable/disable all jobs
+django_q2 = DjangoQ2Config(
+    # Enable/disable Django-Q2
     enabled=True,
 
-    # Environment prefix (injected before every command)
-    command_prefix='DJANGO_SETTINGS_MODULE=myproject.settings',
+    # Worker configuration
+    workers=4,                    # Number of worker processes
+    timeout=300,                  # Task timeout in seconds
+    retry=3600,                   # Retry failed tasks after N seconds
 
-    # Environment suffix (appended after every command)
-    command_suffix='',
+    # Broker configuration - AUTO-MAGIC! 🎉
+    # broker_url automatically uses config.redis_url (no need to specify!)
+    # Just set: redis_url: Optional[str] = env.redis_url in your DjangoConfig
+    broker_class="redis",         # redis or orm
 
-    # Use lock files to prevent concurrent execution
-    lock_jobs=True,
+    # Queue configuration
+    queue_limit=50,               # Max tasks in queue
 
-    # Comment added to crontab file
-    comment="My Project automated tasks",
+    # Result storage
+    save_limit=250,               # Max successful tasks to save
+    cached=500,                   # Max tasks to cache
 
-    # Job definitions
-    jobs=[
-        CrontabJobConfig(
-            # Job identification
-            name="unique_job_name",
+    # Monitoring
+    monitor_interval=30,          # Seconds between monitor checks
+    log_level="INFO",             # DEBUG, INFO, WARNING, ERROR
+
+    # Advanced
+    compress=False,               # Compress task data
+    catch_up=True,                # Run missed scheduled tasks
+    sync=False,                   # Sync mode (for testing)
+
+    # Schedules
+    schedules=[
+        DjangoQ2ScheduleConfig(
+            # Task identification
+            name="Unique task name",
             enabled=True,
-            comment="Optional job description",
 
-            # Job type: "command" or "callable"
-            job_type="command",
+            # Schedule type
+            schedule_type="minutes",  # cron, minutes, hourly, daily, weekly, monthly, yearly, once
 
-            # For management commands
-            command="my_management_command",
-            command_args=["--flag", "value"],
-            command_kwargs={"verbosity": 1},
+            # For schedule_type="minutes"
+            minutes=5,
 
-            # Schedule (cron format)
-            minute="*/5",        # 0-59, *, */N, comma-separated
-            hour="*",            # 0-23, *, */N, comma-separated
-            day_of_week="*",     # 0-6 (Sun=0), *, */N
-            day_of_month="*",    # 1-31, *, */N
-            month_of_year="*",   # 1-12, *, */N
+            # For schedule_type="cron"
+            cron="0 2 * * *",
+
+            # Task configuration
+            command="my_command",                # Django management command
+            command_args=["--flag", "value"],    # Command arguments
+            command_kwargs={"verbosity": 1},     # Command kwargs
+
+            # Or use function directly
+            func="myapp.tasks.my_function",      # Python callable
+            args=[1, 2, 3],                       # Function args
+            kwargs={"key": "value"},              # Function kwargs
+
+            # Task options
+            timeout=60,                           # Override default timeout
+            repeats=-1,                           # -1 = infinite, N = repeat N times
+            hook="myapp.tasks.on_complete",       # Post-execution hook
+            cluster="my_cluster",                 # Specific cluster name
         ),
     ],
 )
 ```
 
-### Schedule Patterns
-
-```python
-# Every 5 minutes
-CrontabJobConfig(name="every_5min", command="task", minute="*/5", hour="*")
-
-# Every hour at :30
-CrontabJobConfig(name="hourly", command="task", minute="30", hour="*")
-
-# Every 2 hours
-CrontabJobConfig(name="every_2h", command="task", minute="0", hour="*/2")
-
-# Daily at 2:00 AM
-CrontabJobConfig(name="daily", command="task", minute="0", hour="2")
-
-# Weekdays at 9:00 AM
-CrontabJobConfig(name="weekdays", command="task", minute="0", hour="9", day_of_week="1-5")
-
-# First day of month at 3:00 AM
-CrontabJobConfig(name="monthly", command="task", minute="0", hour="3", day_of_month="1")
-
-# Multiple times (at :00, :15, :30, :45)
-CrontabJobConfig(name="4times", command="task", minute="0,15,30,45", hour="*")
-```
-
 ---
 
-## Job Types
+## Schedule Types
 
-### Management Commands
+### Minutes Interval
 
-Schedule Django management commands:
+Run every N minutes:
 
 ```python
-CrontabJobConfig(
-    name="sync_data",
-    job_type="command",
-    command="sync_data",              # Command name
-    command_args=["--force"],          # Positional arguments
-    command_kwargs={"verbosity": 1},   # Keyword arguments
-    minute="*/10",
-    hour="*",
+DjangoQ2ScheduleConfig(
+    name="Every 5 minutes",
+    schedule_type="minutes",
+    minutes=5,
+    command="my_task",
 )
 ```
 
-**Generated Django call:**
-```python
-django.core.management.call_command('sync_data', '--force', verbosity=1)
-```
+### Hourly
 
-### Python Callables
-
-Schedule any Python function:
+Run every hour (at minute 0):
 
 ```python
-CrontabJobConfig(
-    name="cleanup_task",
-    job_type="callable",
-    callable_path="myapp.tasks.cleanup_old_files",
-    callable_args=[],
-    callable_kwargs={"days": 7},
-    minute="0",
-    hour="3",
+DjangoQ2ScheduleConfig(
+    name="Every hour",
+    schedule_type="hourly",
+    command="my_task",
 )
 ```
 
-**Function signature:**
+### Daily
+
+Run every day at midnight:
+
 ```python
-# myapp/tasks.py
-def cleanup_old_files(days: int = 7):
-    """Clean up files older than N days."""
-    # Your implementation
-    pass
+DjangoQ2ScheduleConfig(
+    name="Daily",
+    schedule_type="daily",
+    command="my_task",
+)
+```
+
+### Weekly
+
+Run every week (Sunday at midnight):
+
+```python
+DjangoQ2ScheduleConfig(
+    name="Weekly",
+    schedule_type="weekly",
+    command="my_task",
+)
+```
+
+### Monthly
+
+Run first day of every month:
+
+```python
+DjangoQ2ScheduleConfig(
+    name="Monthly",
+    schedule_type="monthly",
+    command="my_task",
+)
+```
+
+### Yearly
+
+Run January 1st every year:
+
+```python
+DjangoQ2ScheduleConfig(
+    name="Yearly",
+    schedule_type="yearly",
+    command="my_task",
+)
+```
+
+### Cron Expression
+
+Full cron syntax support:
+
+```python
+DjangoQ2ScheduleConfig(
+    name="Complex schedule",
+    schedule_type="cron",
+    cron="0 9 * * 1-5",  # 9 AM on weekdays
+    command="my_task",
+)
+```
+
+### Once
+
+Run once at scheduled time:
+
+```python
+DjangoQ2ScheduleConfig(
+    name="One-time task",
+    schedule_type="once",
+    func="myapp.tasks.setup",
+)
 ```
 
 ---
@@ -352,26 +499,24 @@ def cleanup_old_files(days: int = 7):
 #### Data Synchronization
 
 ```python
-jobs=[
+schedules=[
     # Frequent quiet sync every 5 minutes
-    CrontabJobConfig(
-        name="sync_balances_frequent",
+    DjangoQ2ScheduleConfig(
+        name="Sync balances (frequent)",
+        schedule_type="minutes",
+        minutes=5,
         command="sync_account_balances",
         command_args=["--ignore-errors"],
         command_kwargs={"verbosity": 0},
-        minute="*/5",
-        comment="Sync balances (quiet)",
     ),
 
     # Verbose hourly sync for monitoring
-    CrontabJobConfig(
-        name="sync_balances_verbose",
+    DjangoQ2ScheduleConfig(
+        name="Sync balances (verbose)",
+        schedule_type="hourly",
         command="sync_account_balances",
         command_args=["--verbose"],
         command_kwargs={"verbosity": 1},
-        minute="0",
-        hour="*",
-        comment="Sync balances (verbose for logs)",
     ),
 ]
 ```
@@ -379,39 +524,33 @@ jobs=[
 #### Daily Reports
 
 ```python
-CrontabJobConfig(
-    name="generate_daily_report",
+DjangoQ2ScheduleConfig(
+    name="Daily report",
+    schedule_type="cron",
+    cron="0 9 * * 1-5",  # 9 AM on weekdays
     command="generate_report",
     command_args=["--type=daily", "--email-admins"],
-    minute="0",
-    hour="9",
-    day_of_week="1-5",  # Weekdays only
-    comment="Daily report at 9 AM (weekdays)",
 )
 ```
 
 #### Database Maintenance
 
 ```python
-jobs=[
+schedules=[
     # Clean old sessions daily at 2 AM
-    CrontabJobConfig(
-        name="cleanup_sessions",
+    DjangoQ2ScheduleConfig(
+        name="Cleanup sessions",
+        schedule_type="cron",
+        cron="0 2 * * *",
         command="clearsessions",
-        minute="0",
-        hour="2",
-        comment="Django session cleanup",
     ),
 
     # Database vacuum weekly (Sunday 3 AM)
-    CrontabJobConfig(
-        name="vacuum_db",
-        job_type="callable",
-        callable_path="myapp.maintenance.vacuum_database",
-        minute="0",
-        hour="3",
-        day_of_week="0",
-        comment="Weekly database vacuum",
+    DjangoQ2ScheduleConfig(
+        name="Vacuum database",
+        schedule_type="cron",
+        cron="0 3 * * 0",
+        func="myapp.maintenance.vacuum_database",
     ),
 ]
 ```
@@ -419,13 +558,24 @@ jobs=[
 #### Cache Warming
 
 ```python
-CrontabJobConfig(
-    name="warm_cache",
+DjangoQ2ScheduleConfig(
+    name="Warm cache",
+    schedule_type="minutes",
+    minutes=15,
     command="warm_cache",
     command_args=["--endpoints=/api/popular/,/api/trending/"],
-    minute="*/15",
-    hour="8-22",  # Only during business hours
-    comment="Warm cache every 15min (8 AM - 10 PM)",
+)
+```
+
+#### Function-Based Tasks
+
+```python
+DjangoQ2ScheduleConfig(
+    name="Cleanup old files",
+    schedule_type="daily",
+    func="myapp.tasks.cleanup_old_files",
+    kwargs={"days": 7},
+    hook="myapp.tasks.notify_admin",  # Called after completion
 )
 ```
 
@@ -433,443 +583,406 @@ CrontabJobConfig(
 
 ## Installation
 
-### Adding Jobs
+### Prerequisites
 
 ```bash
-# Show what will be added (dry run)
-python manage.py crontab show
+# Install Redis (recommended broker)
+# Ubuntu/Debian
+sudo apt-get install redis-server
+sudo systemctl start redis
 
-# Add jobs to system crontab
-python manage.py crontab add
+# macOS
+brew install redis
+brew services start redis
 
-# Verify installation
-crontab -l | grep "My Project"
+# Verify Redis
+redis-cli ping  # Should return "PONG"
 ```
 
-### Updating Jobs
+### Setup
 
-After changing `config.py`:
+Django-Q2 is automatically configured when you enable it in django-cfg:
 
-```bash
-# Remove old jobs
-python manage.py crontab remove
-
-# Add updated jobs
-python manage.py crontab add
-
-# Or combine:
-python manage.py crontab remove && python manage.py crontab add
+```python
+django_q2 = DjangoQ2Config(enabled=True)
 ```
 
-### Removing Jobs
+This automatically:
+1. Adds `django_q` to INSTALLED_APPS
+2. Generates Q_CLUSTER settings
+3. Configures broker and workers
+
+### Database Migration
 
 ```bash
-# Remove all django-cfg jobs
-python manage.py crontab remove
-
-# Verify removal
-crontab -l
+python manage.py migrate
 ```
 
 ---
 
 ## Management
 
-### Viewing Jobs
+### Start Cluster
 
 ```bash
-# Show active jobs via Django
-python manage.py crontab show
+# Development (foreground)
+python manage.py qcluster
+
+# Production (with supervisor/systemd)
+# See Production Best Practices below
+```
+
+### Monitor Cluster
+
+```bash
+# Monitor in separate terminal
+python manage.py qmonitor
+
+# Expected output:
+# ┌─────────────────────────────────────┐
+# │   CLUSTER MONITOR                   │
+# ├─────────────────────────────────────┤
+# │ Workers: 4                          │
+# │ Status: Running                     │
+# │ Queued: 0                           │
+# │ Success: 142                        │
+# │ Failures: 3                         │
+# └─────────────────────────────────────┘
+```
+
+### Check Statistics
+
+```bash
+# View cluster statistics
+python manage.py qinfo
 
 # Output:
-# Currently active jobs in crontab:
-# abc123 -> ('*/5 * * * *', 'django.core.management.call_command',
-#            ['sync_data'], {'verbosity': 0})
+# Cluster: django_cfg_cluster
+# Workers: 4
+# ...
 ```
 
-### Testing Jobs
+### Django Admin
 
-```bash
-# Run job manually by hash
-python manage.py crontab run abc123
+View tasks and schedules in Django admin:
 
-# Run command directly for testing
-python manage.py sync_data --dry-run
-python manage.py sync_data --verbose
+```
+http://localhost:8000/admin/django_q/
 ```
 
-### Enabling/Disabling Jobs
+Available views:
+- `/admin/django_q/schedule/` - Scheduled tasks
+- `/admin/django_q/success/` - Successful tasks
+- `/admin/django_q/failure/` - Failed tasks
+- `/admin/django_q/ormq/` - Queued tasks (ORM broker)
+
+### Dashboard API
+
+Query tasks via REST API:
 
 ```python
-# In config.py - disable individual job
-CrontabJobConfig(
-    name="my_job",
-    enabled=False,  # Job won't be added to crontab
-    # ...
-)
-
-# Or disable all jobs
-crontab = CrontabConfig(
-    enabled=False,  # All jobs disabled
-    jobs=[...],
-)
-```
-
-After changing:
-
-```bash
-python manage.py crontab remove
-python manage.py crontab add
+# GET /cfg/dashboard/api/django_q2/
+{
+  "status": {
+    "cluster_running": true,
+    "total_schedules": 3,
+    "recent_tasks": 10,
+    "successful_tasks": 142,
+    "failed_tasks": 3
+  },
+  "schedules": [...],
+  "recent_tasks": [...]
+}
 ```
 
 ---
 
 ## Production Best Practices
 
-### 1. Use Lock Files
-
-Prevent overlapping job execution:
+### 1. Use Redis Broker (Auto-Configured!)
 
 ```python
-crontab = CrontabConfig(
-    lock_jobs=True,  # Creates lock files in /tmp/
-    jobs=[...],
+# Step 1: Set redis_url once in your DjangoConfig
+class MyConfig(DjangoConfig):
+    redis_url: Optional[str] = env.redis_url  # e.g., "redis://redis:6379/0"
+
+    # Step 2: Django-Q2 automatically uses it! 🎉
+    django_q2 = DjangoQ2Config(
+        enabled=True,
+        broker_class="redis",  # Recommended for production
+        # broker_url is auto-detected from config.redis_url!
+    )
+```
+
+### 2. Configure Workers
+
+```python
+django_q2 = DjangoQ2Config(
+    workers=4,      # Start with CPU count
+    timeout=300,    # 5 minutes default
+    retry=3600,     # Retry after 1 hour
 )
 ```
 
-**Lock file behavior:**
-- Created before job starts
-- Deleted after job completes
-- Prevents duplicate execution
-- Located in `/tmp/[project]_[job_hash].lock`
+### 3. Supervisor Configuration
 
-### 2. Configure Error Handling
-
-```python
-# Ignore errors and continue
-CrontabJobConfig(
-    command="sync_data",
-    command_args=["--ignore-errors"],
-    command_kwargs={"verbosity": 0},  # Quiet mode
-)
-
-# Verbose mode for monitoring
-CrontabJobConfig(
-    command="sync_data",
-    command_kwargs={"verbosity": 1},  # Log everything
-)
+```ini title="/etc/supervisor/conf.d/django-q2.conf"
+[program:django-q2]
+command=/path/to/venv/bin/python /path/to/manage.py qcluster
+directory=/path/to/project
+user=www-data
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/var/log/django-q2.log
 ```
 
-### 3. Dual-Mode Scheduling
-
-Run jobs frequently (quiet) and less frequently (verbose):
-
-```python
-jobs=[
-    # Every 5 minutes - quiet
-    CrontabJobConfig(
-        name="sync_quiet",
-        command="sync_data",
-        command_args=["--ignore-errors"],
-        command_kwargs={"verbosity": 0},
-        minute="*/5",
-    ),
-
-    # Every hour - verbose (for monitoring)
-    CrontabJobConfig(
-        name="sync_verbose",
-        command="sync_data",
-        command_kwargs={"verbosity": 1},
-        minute="0",
-        hour="*",
-    ),
-]
+```bash
+# Start with supervisor
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start django-q2
 ```
 
-### 4. Stagger Job Execution
+### 4. Systemd Service
 
-Avoid resource contention:
+```ini title="/etc/systemd/system/django-q2.service"
+[Unit]
+Description=Django-Q2 Cluster
+After=network.target redis.service postgresql.service
 
-```python
-jobs=[
-    CrontabJobConfig(name="job1", minute="0", hour="*"),   # :00
-    CrontabJobConfig(name="job2", minute="15", hour="*"),  # :15
-    CrontabJobConfig(name="job3", minute="30", hour="*"),  # :30
-    CrontabJobConfig(name="job4", minute="45", hour="*"),  # :45
-]
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/project
+Environment="DJANGO_SETTINGS_MODULE=myproject.settings"
+ExecStart=/path/to/venv/bin/python /path/to/manage.py qcluster
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-### 5. Environment Configuration
+```bash
+# Enable and start
+sudo systemctl enable django-q2
+sudo systemctl start django-q2
+sudo systemctl status django-q2
+```
 
-Set environment variables:
+### 5. Multiple Clusters
 
 ```python
-crontab = CrontabConfig(
-    command_prefix='DJANGO_SETTINGS_MODULE=myproject.settings LOG_LEVEL=info',
-    jobs=[...],
+# Separate clusters for different task types
+DjangoQ2Config(
+    workers=2,
+    schedules=[
+        DjangoQ2ScheduleConfig(
+            name="Heavy task",
+            cluster="heavy",
+            command="heavy_computation",
+        ),
+        DjangoQ2ScheduleConfig(
+            name="Light task",
+            cluster="light",
+            command="quick_update",
+        ),
+    ],
 )
 ```
 
-### 6. Logging Configuration
-
-Configure Django logging for cron jobs:
+### 6. Error Handling
 
 ```python
-# In Django settings
+# Task with retry and hooks
+DjangoQ2ScheduleConfig(
+    name="Important task",
+    command="critical_sync",
+    timeout=60,
+    repeats=-1,  # Infinite retries
+    hook="myapp.tasks.on_complete",
+)
+```
+
+```python
+# myapp/tasks.py
+def on_complete(task):
+    """Hook called after task completion."""
+    if task.success:
+        print(f"Task {task.name} succeeded")
+    else:
+        # Send alert
+        send_alert(f"Task {task.name} failed: {task.result}")
+```
+
+### 7. Monitoring
+
+```python
+# Enable comprehensive logging
+django_q2 = DjangoQ2Config(
+    log_level="INFO",
+    save_limit=1000,  # Keep more history
+)
+```
+
+### 8. Result Storage
+
+```python
+django_q2 = DjangoQ2Config(
+    save_limit=250,   # Successful tasks
+    cached=500,       # Cached results
+)
+```
+
+---
+
+## Monitoring
+
+### Django Admin
+
+Monitor tasks in real-time:
+
+1. Navigate to `/admin/django_q/`
+2. View scheduled tasks: `/admin/django_q/schedule/`
+3. Check successful tasks: `/admin/django_q/success/`
+4. Review failures: `/admin/django_q/failure/`
+
+### Dashboard API Endpoints
+
+```bash
+# Get cluster status and schedules
+curl http://localhost:8000/cfg/dashboard/api/django_q2/
+
+# Get all schedules
+curl http://localhost:8000/cfg/dashboard/api/django_q2/schedules/
+
+# Get recent tasks
+curl http://localhost:8000/cfg/dashboard/api/django_q2/tasks/?limit=50
+
+# Get cluster status only
+curl http://localhost:8000/cfg/dashboard/api/django_q2/status/
+```
+
+### Command Line
+
+```bash
+# Check cluster info
+python manage.py qinfo
+
+# Monitor cluster
+python manage.py qmonitor
+
+# Memory usage
+python manage.py qmemory
+```
+
+### Logging
+
+```python
+# Configure Django logging for django-q
 LOGGING = {
     'handlers': {
-        'cron_file': {
+        'django_q': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': 'logs/cron.log',
+            'filename': 'logs/django-q.log',
             'maxBytes': 10485760,  # 10MB
             'backupCount': 5,
-            'formatter': 'verbose',
         },
     },
     'loggers': {
-        'django.core.management': {
-            'handlers': ['cron_file'],
+        'django_q': {
+            'handlers': ['django_q'],
             'level': 'INFO',
         },
     },
 }
 ```
 
-### 7. Timezone Awareness
-
-**Critical:** System cron executes jobs in the **server's timezone**, not Django's `TIME_ZONE` setting.
-
-#### Check Server Timezone
-
-```bash
-# View current timezone
-date
-timedatectl  # On systemd systems
-
-# Expected output:
-# Time zone: UTC (UTC, +0000)
-```
-
-#### Configure Server Timezone
-
-```bash
-# Set timezone to UTC (recommended for servers)
-sudo timedatectl set-timezone UTC
-
-# Or set to specific timezone
-sudo timedatectl set-timezone America/New_York
-
-# Verify
-date
-```
-
-#### Django vs System Time
-
-```python
-# Django settings (affects application logic)
-TIME_ZONE = 'America/New_York'  # Django's timezone
-USE_TZ = True                    # Enable timezone support
-
-# ⚠️ Important: Cron jobs run in SERVER timezone, not Django's TIME_ZONE
-```
-
-#### Best Practices
-
-**1. Use UTC on servers (recommended):**
-```bash
-# Server timezone = UTC
-sudo timedatectl set-timezone UTC
-```
-
-```python
-# Django settings
-TIME_ZONE = 'UTC'
-USE_TZ = True
-
-# Cron jobs
-CrontabJobConfig(
-    name="daily_report",
-    command="generate_report",
-    minute="0",
-    hour="9",  # 9:00 UTC
-)
-```
-
-**2. Or explicitly handle timezone differences:**
-```python
-# If server is UTC, but you want jobs at EST times:
-# 9 AM EST = 2 PM UTC (EST is UTC-5, or UTC-4 during DST)
-CrontabJobConfig(
-    name="daily_report_est",
-    command="generate_report",
-    minute="0",
-    hour="14",  # 2 PM UTC = 9 AM EST (standard time)
-    comment="Daily report at 9 AM EST (14:00 UTC)",
-)
-```
-
-**3. Document timezone in job comments:**
-```python
-CrontabJobConfig(
-    name="sync_markets",
-    command="sync_exchange_markets",
-    minute="0",
-    hour="2",
-    comment="Daily sync at 2 AM UTC (9 PM EST previous day)",
-)
-```
-
-#### Common Timezone Pitfall
-
-```python
-# ❌ WRONG: Assuming cron uses Django's TIME_ZONE
-# Django settings: TIME_ZONE = 'America/New_York'
-CrontabJobConfig(
-    hour="9",  # You expect 9 AM EST
-)
-# But if server is UTC, this runs at 9 AM UTC = 4 AM EST!
-
-# ✅ CORRECT: Calculate based on server timezone
-CrontabJobConfig(
-    hour="14",  # 9 AM EST = 14:00 UTC
-    comment="9 AM EST (14:00 UTC)",
-)
-```
-
-#### Verify Job Execution Times
-
-```bash
-# After installing cron jobs, verify they run at expected times
-crontab -l
-
-# Monitor first execution
-tail -f /var/log/syslog | grep CRON
-tail -f logs/cron.log
-
-# Check what time job actually ran
-python manage.py shell
->>> from django.utils import timezone
->>> timezone.now()  # Current time in Django's timezone
-```
-
 ---
 
 ## Troubleshooting
 
-### Jobs Not Running
+### Cluster Not Starting
 
-**Check crontab installation:**
-
-```bash
-# Verify jobs are in crontab
-crontab -l | grep "My Project"
-
-# Check system cron logs
-tail -f /var/log/syslog | grep CRON  # Ubuntu/Debian
-tail -f /var/log/cron                # CentOS/RHEL
-```
-
-**Verify paths:**
+**Check dependencies:**
 
 ```bash
-# Check Python path
-which python
-.venv/bin/python --version
+# Verify Redis is running
+redis-cli ping
 
-# Check manage.py path
-ls -la manage.py
-```
-
-### Jobs Stuck/Long Running
-
-**Check lock files:**
-
-```bash
-# Find lock files
-find /tmp -name "*myproject*.lock" -type f
-
-# Remove stale locks (older than 1 hour)
-find /tmp -name "*myproject*.lock" -type f -mmin +60 -delete
-```
-
-### Permission Errors
-
-```bash
-# Check crontab access
-crontab -l
-
-# Check log directory permissions
-ls -la logs/
-chmod 755 logs
-
-# Check manage.py permissions
-chmod +x manage.py
-```
-
-### Database Connection Errors
-
-```bash
-# Test database connection
+# Check database connection
 python manage.py dbshell
-
-# Check DATABASE_URL
-cat .env | grep DATABASE_URL
-
-# Verify settings
-python manage.py check
 ```
 
-### Command Not Found
-
-**Ensure command exists:**
-
-```bash
-# List all commands
-python manage.py help
-
-# Test command manually
-python manage.py [command_name] --help
-```
-
-### Jobs Running at Wrong Time
-
-**Timezone mismatch:**
-
-```bash
-# Check server timezone
-date
-timedatectl
-
-# Check if it matches your expectations
-# Cron runs in SERVER timezone, NOT Django's TIME_ZONE
-```
-
-**Solution:**
+**Check configuration:**
 
 ```python
-# If server is UTC but you want EST times:
-# Calculate hour offset: 9 AM EST = 14:00 UTC (EST is UTC-5)
-CrontabJobConfig(
-    name="morning_job",
-    hour="14",  # 9 AM EST in UTC
-    comment="Runs at 9 AM EST (14:00 UTC)",
+python manage.py shell
+>>> from django.conf import settings
+>>> settings.Q_CLUSTER
+>>> 'django_q' in settings.INSTALLED_APPS
+True
+```
+
+### Tasks Not Running
+
+**Verify schedules in database:**
+
+```python
+python manage.py shell
+>>> from django_q.models import Schedule
+>>> Schedule.objects.filter(repeats__gt=0)
+```
+
+**Check cluster is running:**
+
+```bash
+# Should see workers running
+python manage.py qmonitor
+
+# Check logs
+tail -f logs/django-q.log
+```
+
+### High Memory Usage
+
+```bash
+# Monitor memory
+python manage.py qmemory
+
+# Reduce workers or cached results
+```
+
+```python
+django_q2 = DjangoQ2Config(
+    workers=2,      # Reduce workers
+    cached=100,     # Reduce cache
 )
 ```
 
-**Quick check:**
-```bash
-# After job should have run, check logs
-tail -f /var/log/syslog | grep CRON
-tail -f logs/cron.log
+### Failed Tasks
 
-# Verify time in Django shell
+```bash
+# View failures in admin
+/admin/django_q/failure/
+
+# Or via shell
 python manage.py shell
->>> from django.utils import timezone
->>> timezone.now()
+>>> from django_q.models import Failure
+>>> for f in Failure.objects.all()[:10]:
+...     print(f.name, f.result)
 ```
 
-See [Timezone Awareness](#7-timezone-awareness) for detailed configuration.
+### Redis Connection Errors
+
+```python
+# Test Redis connection
+import redis
+r = redis.Redis(host='localhost', port=6379, db=0)
+r.ping()  # Should return True
+```
 
 ---
 
@@ -882,19 +995,19 @@ See [Timezone Awareness](#7-timezone-awareness) for detailed configuration.
 │                     Django Application                       │
 │                                                               │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │          django_cfg.models.crontab                     │ │
+│  │          django_cfg.models.django_q2                   │ │
 │  │                                                         │ │
-│  │  ├─ CrontabConfig (main configuration)                │ │
-│  │  ├─ CrontabJobConfig (individual jobs)                │ │
+│  │  ├─ DjangoQ2Config (cluster configuration)            │ │
+│  │  ├─ DjangoQ2ScheduleConfig (scheduled tasks)          │ │
 │  │  ├─ Schedule validation                               │ │
 │  │  └─ Django settings generation                        │ │
 │  └────────────────────────────────────────────────────────┘ │
 │                            │                                 │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │     django_cfg.core.generation.crontab                 │ │
+│  │     django_cfg.core.generation.django_q2               │ │
 │  │                                                         │ │
-│  │  ├─ CrontabSettingsGenerator                          │ │
-│  │  └─ CRONJOBS settings generation                      │ │
+│  │  ├─ DjangoQ2SettingsGenerator                         │ │
+│  │  └─ Q_CLUSTER settings generation                     │ │
 │  └────────────────────────────────────────────────────────┘ │
 └───────────────────────────┬─────────────────────────────────┘
                             │
@@ -902,94 +1015,62 @@ See [Timezone Awareness](#7-timezone-awareness) for detailed configuration.
          ┌──────────────────────────────────────┐
          │     Django Settings (settings.py)    │
          │                                       │
-         │  • CRONJOBS = [(schedule, cmd), ...] │
-         │  • CRONTAB_COMMAND_PREFIX            │
-         │  • CRONTAB_LOCK_JOBS                 │
-         │  • CRONTAB_COMMENT                   │
+         │  • Q_CLUSTER = {...}                 │
+         │  • INSTALLED_APPS += ['django_q']    │
          └──────────────────────────────────────┘
                             │
                             ▼
          ┌──────────────────────────────────────┐
-         │       django-crontab package         │
+         │         django-q2 package             │
          │                                       │
-         │  manage.py crontab add/remove/show   │
+         │  • Worker cluster                    │
+         │  • Task scheduler                    │
+         │  • Result storage                    │
+         │  manage.py qcluster/qmonitor/qinfo   │
          └──────────────────────────────────────┘
                             │
-                            ▼
-         ┌──────────────────────────────────────┐
-         │      System Crontab (/var/cron)      │
-         │                                       │
-         │  */5 * * * * /path/python ...        │
-         │  0 2 * * * /path/python ...          │
-         └──────────────────────────────────────┘
+                     ┌──────┴──────┐
+                     │             │
+                     ▼             ▼
+         ┌──────────────┐  ┌──────────────┐
+         │    Redis      │  │  PostgreSQL  │
+         │   (Broker)    │  │  (Storage)   │
+         │               │  │              │
+         │  Task Queue   │  │  Schedules   │
+         │               │  │  Results     │
+         └──────────────┘  └──────────────┘
 ```
 
 ### Execution Flow
 
-1. **Configuration**: Define jobs in `config.py` using `CrontabConfig`
-2. **Generation**: django-cfg generates `CRONJOBS` in Django settings
-3. **Registration**: django-crontab added to `INSTALLED_APPS` automatically
-4. **Installation**: Run `manage.py crontab add` to install to system crontab
-5. **Execution**: System cron executes jobs at scheduled times
-6. **Monitoring**: View execution logs in Django logs and syslog
-
----
-
-## Cron Syntax Reference
-
-### Format
-
-```
-┌───────────── minute (0-59)
-│ ┌───────────── hour (0-23)
-│ │ ┌───────────── day of month (1-31)
-│ │ │ ┌───────────── month (1-12)
-│ │ │ │ ┌───────────── day of week (0-6) (Sunday=0)
-│ │ │ │ │
-* * * * *
-```
-
-### Special Characters
-
-| Character | Meaning | Example |
-|-----------|---------|---------|
-| `*` | Any value | `* * * * *` = every minute |
-| `*/N` | Every N units | `*/5 * * * *` = every 5 minutes |
-| `,` | List of values | `0,30 * * * *` = at :00 and :30 |
-| `-` | Range of values | `9-17 * * * *` = 9 AM to 5 PM |
-
-### Common Schedules
-
-```python
-"* * * * *"      # Every minute
-"*/5 * * * *"    # Every 5 minutes
-"0 * * * *"      # Every hour
-"0 */2 * * *"    # Every 2 hours
-"0 0 * * *"      # Daily at midnight
-"0 2 * * *"      # Daily at 2 AM
-"0 9 * * 1-5"    # Weekdays at 9 AM
-"0 0 * * 0"      # Sundays at midnight
-"0 0 1 * *"      # First day of month
-"0 0 1 1 *"      # January 1st (yearly)
-```
+1. **Configuration**: Define schedules in `config.py` using `DjangoQ2Config`
+2. **Generation**: django-cfg generates `Q_CLUSTER` in Django settings
+3. **Registration**: django_q added to `INSTALLED_APPS` automatically
+4. **Migration**: Run migrations to create database tables
+5. **Cluster**: Start worker cluster with `manage.py qcluster`
+6. **Scheduling**: Scheduler creates tasks based on schedules
+7. **Execution**: Workers process tasks from broker
+8. **Storage**: Results saved to database
+9. **Monitoring**: View in admin or via Dashboard API
 
 ---
 
 ## See Also
 
 ### Core Documentation
-- **[Getting Started](/getting-started/intro)** - Set up django-cfg with cron
+- **[Getting Started](/getting-started/intro)** - Set up django-cfg with Django-Q2
 - **[Configuration Guide](/fundamentals/configuration)** - Configure your project
 - **[Type Safety](/fundamentals/core/type-safety)** - Pydantic configuration
 
 ### Related Features
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Async task queue (alternative to cron)
 - **[Modules Overview](/features/modules/overview)** - All available modules
-- **[Email Module](/features/modules/email/overview)** - Send emails from cron jobs
+- **[Email Module](/features/modules/email/overview)** - Send emails from tasks
 - **[Telegram Module](/features/modules/telegram/overview)** - Telegram notifications
+- **[Dashboard](/features/modules/django-admin/overview)** - Monitor tasks in admin
 
 ### External Documentation
-- **[django-crontab](https://github.com/kraiz/django-crontab)** - Underlying crontab package
+- **[Django-Q2](https://github.com/GDay/django-q2)** - Official Django-Q2 documentation
+- **[Django-Q Docs](https://django-q2.readthedocs.io/)** - Complete user guide
 - **[Crontab Guru](https://crontab.guru/)** - Interactive cron schedule editor
 
 ---

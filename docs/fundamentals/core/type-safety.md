@@ -350,11 +350,8 @@ class MyConfig(DjangoConfig):
         )
     }
 
-    # Cache - optional, with smart defaults
-    cache_default: CacheConfig | None = CacheConfig(
-        backend="redis",
-        location=f"redis://{env.redis.host}:{env.redis.port}/0"
-    )
+    # Cache - auto from redis_url! ✨
+    redis_url: str = f"redis://{env.redis.host}:{env.redis.port}/0"
 
     # Email - type-safe with validation
     email: EmailConfig = EmailConfig(
@@ -555,12 +552,9 @@ class ProductionConfig(DjangoConfig):
         )
     }
 
-    # Cache configuration (optional, see /fundamentals/configuration/cache for advanced setup)
-    cache_default: CacheConfig | None = CacheConfig(
-        backend="redis",
-        location=f"redis://{env.redis.host}:{env.redis.port}/0",
-        timeout=300,
-    ) if env.redis else None
+    # Cache configuration (auto-created from redis_url! ✨)
+    redis_url: str | None = f"redis://{env.redis.host}:{env.redis.port}/0" if env.redis else None
+    # See /fundamentals/configuration/cache for advanced setup
 
     # Email configuration (optional)
     email: EmailConfig | None = EmailConfig(

@@ -43,8 +43,8 @@ from django_cfg import (
     NextJsAdminConfig,
     TaskConfig,
     RearqConfig,
-    CrontabConfig,
-    CrontabJobConfig,
+    DjangoQ2Config,
+    DjangoQ2ScheduleConfig,
 )
 
 # Import environment configuration
@@ -172,6 +172,11 @@ class DjangoCfgConfig(DjangoConfig):
     databases: Dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
+
+    # === Cache Configuration ===
+    # MAGIC: Django-cfg auto-creates Redis cache from redis_url!
+    # No need for explicit cache_default - it's handled automatically in CacheSettingsGenerator
+    redis_url: Optional[str] = env.redis_url  # That's it! 🎉
 
     # === Email Configuration ===
     email: Optional[EmailConfig] = EmailConfig(
@@ -311,54 +316,43 @@ class DjangoCfgConfig(DjangoConfig):
         ],
     )
 
-    # === Cron Scheduling Configuration ===
-    crontab: Optional[CrontabConfig] = CrontabConfig(
+    # === Django-Q2 Task Scheduling Configuration ===
+    # MAGIC: broker_url automatically uses redis_url from config! 🎉
+    django_q2: Optional[DjangoQ2Config] = DjangoQ2Config(
         enabled=True,
-        command_prefix='DJANGO_SETTINGS_MODULE=api.settings',
-        lock_jobs=True,
-        comment="Django-CFG Demo Project - Automated Tasks",
-        jobs=[
+        workers=4,
+        schedules=[
             # Update cryptocurrency prices every 5 minutes
-            CrontabJobConfig(
-                name="update_coin_prices_frequent",
-                job_type="command",
+            DjangoQ2ScheduleConfig(
+                name="Update coin prices (frequent)",
+                schedule_type="minutes",
+                minutes=5,
                 command="update_coin_prices",
                 command_args=["--limit=50"],
                 command_kwargs={"verbosity": 0},
-                minute="*/5",
-                hour="*",
-                comment="Update top 50 coin prices every 5 minutes (quiet mode)",
             ),
             # Update all coin prices hourly with verbose output
-            CrontabJobConfig(
-                name="update_coin_prices_hourly",
-                job_type="command",
+            DjangoQ2ScheduleConfig(
+                name="Update coin prices (hourly)",
+                schedule_type="hourly",
                 command="update_coin_prices",
                 command_args=["--limit=100"],
                 command_kwargs={"verbosity": 1},
-                minute="0",
-                hour="*",
-                comment="Update top 100 coin prices hourly (verbose for monitoring)",
             ),
             # Import new coins daily at 3 AM
-            CrontabJobConfig(
-                name="import_new_coins_daily",
-                job_type="command",
+            DjangoQ2ScheduleConfig(
+                name="Import new coins (daily)",
+                schedule_type="cron",
+                cron="0 3 * * *",  # Daily at 3 AM
                 command="import_coins",
-                minute="0",
-                hour="3",
-                comment="Import new coins from CoinGecko daily at 3 AM",
             ),
             # Generate daily crypto market report at 9 AM (weekdays)
-            CrontabJobConfig(
-                name="generate_daily_report",
-                job_type="command",
+            DjangoQ2ScheduleConfig(
+                name="Generate daily report",
+                schedule_type="cron",
+                cron="0 9 * * 1-5",  # 9 AM on weekdays
                 command="generate_report",
                 command_args=["--type=daily"],
-                minute="0",
-                hour="9",
-                day_of_week="1-5",
-                comment="Generate daily crypto market report at 9 AM (weekdays only)",
             ),
         ],
     )

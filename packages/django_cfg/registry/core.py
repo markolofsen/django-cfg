@@ -38,9 +38,9 @@ CORE_REGISTRY = {
     # Security - Django Crypto Fields
     "CryptoFieldsConfig": ("django_cfg.models.django.crypto_fields", "CryptoFieldsConfig"),
 
-    # Scheduling - Django Crontab
-    "CrontabConfig": ("django_cfg.models.django.crontab", "CrontabConfig"),
-    "CrontabJobConfig": ("django_cfg.models.django.crontab", "CrontabJobConfig"),
+    # Scheduling - Django-Q2
+    "DjangoQ2Config": ("django_cfg.models.django.django_q2", "DjangoQ2Config"),
+    "DjangoQ2ScheduleConfig": ("django_cfg.models.django.django_q2", "DjangoQ2ScheduleConfig"),
 
     # Limits models
     "LimitsConfig": ("django_cfg.models.api.limits", "LimitsConfig"),
