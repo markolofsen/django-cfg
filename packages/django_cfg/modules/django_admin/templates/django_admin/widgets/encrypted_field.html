@@ -1,0 +1,80 @@
+{% comment %}
+Template for encrypted text field with copy button.
+Based on unfold/widgets/text.html with added copy functionality.
+{% endcomment %}
+
+<div class="max-w-2xl relative w-full">
+    {% if widget.prefix %}
+        <span class="absolute left-3 top-0 bottom-0 flex items-center justify-center">
+            {{ widget.prefix }}
+        </span>
+    {% endif %}
+
+    {% if widget.prefix_icon %}
+        <span class="material-symbols-outlined absolute left-3 top-0 bottom-0 flex items-center justify-center text-base-400 dark:text-base-500">
+            {{ widget.prefix_icon }}
+        </span>
+    {% endif %}
+
+    {% include "django/forms/widgets/input.html" %}
+
+    {% if widget.suffix %}
+        <span class="absolute right-3 top-0 bottom-0 flex items-center justify-center">
+            {{ widget.suffix }}
+        </span>
+    {% endif %}
+
+    {% if widget.suffix_icon %}
+        <span class="material-symbols-outlined absolute right-3 top-0 bottom-0 flex items-center justify-center text-base-400 dark:text-base-500">
+            {{ widget.suffix_icon }}
+        </span>
+    {% endif %}
+
+    {% if widget.show_copy_button %}
+        <button
+            type="button"
+            onclick="copyEncryptedField(this)"
+            class="material-symbols-outlined absolute right-3 top-0 bottom-0 flex items-center justify-center text-base-400 hover:text-primary-600 dark:text-base-500 dark:hover:text-primary-500 cursor-pointer transition-colors"
+            title="Copy to clipboard"
+        >
+            content_copy
+        </button>
+    {% endif %}
+</div>
+
+<script>
+function copyEncryptedField(button) {
+    // Get the input field (previous sibling of button's parent)
+    const container = button.parentElement;
+    const input = container.querySelector('input');
+
+    if (!input || !input.value) {
+        return;
+    }
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(input.value).then(() => {
+        // Visual feedback - change icon temporarily
+        const originalIcon = button.textContent;
+        button.textContent = 'check';
+        button.classList.add('text-green-600', 'dark:text-green-500');
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+            button.textContent = originalIcon;
+            button.classList.remove('text-green-600', 'dark:text-green-500');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Show error feedback
+        const originalIcon = button.textContent;
+        button.textContent = 'error';
+        button.classList.add('text-red-600', 'dark:text-red-500');
+
+        setTimeout(() => {
+            button.textContent = originalIcon;
+            button.classList.remove('text-red-600', 'dark:text-red-500');
+        }, 2000);
+    });
+}
+</script>

@@ -45,6 +45,7 @@ DEFAULT_APPS: List[str] = [
     # Django CFG Core
     "django_cfg",
     "django_cfg.modules.django_client",
+    "django_cfg.modules.django_admin",
 ]
 
 # Default middleware stack

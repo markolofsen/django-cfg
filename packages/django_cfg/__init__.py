@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "1.4.118"
+__version__ = "1.4.119"
 __license__ = "MIT"
 
 # Import registry for organized lazy loading
