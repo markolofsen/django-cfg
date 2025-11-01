@@ -208,3 +208,45 @@ def _render_image(obj: Any, field: str, config: Dict[str, Any]) -> str:
 
 # Image widget
 WidgetRegistry.register("image", _render_image)
+
+
+def _render_short_uuid(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """Render a shortened UUID with tooltip."""
+    from django.utils.safestring import mark_safe
+
+    # Get UUID value
+    uuid_value = getattr(obj, field, None)
+
+    if not uuid_value:
+        return config.get('empty_value', "—")
+
+    # Convert to string and remove dashes
+    uuid_str = str(uuid_value).replace('-', '')
+
+    # Get configuration
+    length = config.get('length', 8)
+    show_full_on_hover = config.get('show_full_on_hover', True)
+    copy_on_click = config.get('copy_on_click', True)
+
+    # Truncate to specified length
+    short_uuid = uuid_str[:length]
+
+    # Build HTML
+    if show_full_on_hover:
+        title_attr = f' title="{uuid_value}"'
+    else:
+        title_attr = ''
+
+    if copy_on_click:
+        # Add click-to-copy functionality
+        copy_attr = f' onclick="navigator.clipboard.writeText(\'{uuid_value}\'); this.style.backgroundColor=\'#e8f5e9\'; setTimeout(() => this.style.backgroundColor=\'\', 500);" style="cursor: pointer;"'
+    else:
+        copy_attr = ''
+
+    html = f'<code{title_attr}{copy_attr}>{short_uuid}</code>'
+
+    return mark_safe(html)
+
+
+# ShortUUID widget
+WidgetRegistry.register("short_uuid", _render_short_uuid)

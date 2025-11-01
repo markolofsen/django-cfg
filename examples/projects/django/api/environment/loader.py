@@ -216,7 +216,7 @@ class EnvironmentConfig(BaseSettings):
     # Cache Configuration
     # IMPORTANT: Redis URL for django-cfg CacheConfig
     # If not set, django-cfg will fallback to FileBasedCache in production
-    redis_url: Optional[str] = Field(
+    redis_url: str = Field(
         default="redis://localhost:6379/0",
         description="Redis connection URL for cache backend (required for production)",
     )

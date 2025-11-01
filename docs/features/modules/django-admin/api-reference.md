@@ -176,6 +176,18 @@ class UserField(FieldConfig):
     # Inherits header=True for sticky column
 ```
 
+### ShortUUIDField
+
+Shortened UUID display with tooltip.
+
+```python
+class ShortUUIDField(FieldConfig):
+    ui_widget: Literal["short_uuid"] = "short_uuid"
+    length: int = 8                    # Number of characters to display
+    copy_on_click: bool = True         # Enable click-to-copy
+    show_full_on_hover: bool = True    # Show full UUID in tooltip
+```
+
 ## Configuration Classes
 
 ### FieldsetConfig
@@ -583,6 +595,7 @@ from django_cfg.modules.django_admin import (
     BooleanField,
     CurrencyField,
     DateTimeField,
+    ShortUUIDField,
     TextField,
     UserField,
 )
