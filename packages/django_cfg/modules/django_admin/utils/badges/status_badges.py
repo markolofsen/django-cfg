@@ -9,9 +9,9 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
-from ..icons import Icons
-from ..models.badge_models import StatusBadgeConfig
-from ..models.base import BadgeVariant
+from ...icons import Icons
+from ...models.badge_models import StatusBadgeConfig
+from ...models.base import BadgeVariant
 
 logger = logging.getLogger(__name__)
 

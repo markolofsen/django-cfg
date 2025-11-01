@@ -251,105 +251,70 @@ class WithdrawalRequestAdmin(PydanticAdmin):
         if not obj.pk:
             return "Save to see details"
 
-        # Build details list
-        details = []
-
-        details.append(self.html.inline([
-            self.html.span("Withdrawal ID:", "font-semibold"),
-            self.html.span(str(obj.id), "")
-        ], separator=" "))
-
-        details.append(self.html.inline([
-            self.html.span("User:", "font-semibold"),
-            self.html.span(f"{obj.user.username} ({obj.user.email})", "")
-        ], separator=" "))
-
-        details.append(self.html.inline([
-            self.html.span("Amount:", "font-semibold"),
-            self.html.span(f"${obj.amount_usd:.2f} USD", "")
-        ], separator=" "))
-
-        details.append(self.html.inline([
-            self.html.span("Currency:", "font-semibold"),
-            self.html.span(obj.currency.code, "")
-        ], separator=" "))
-
-        details.append(self.html.inline([
-            self.html.span("Wallet Address:", "font-semibold"),
-            self.html.span(f"<code>{obj.wallet_address}</code>", "")
-        ], separator=" "))
-
-        details.append(self.html.inline([
-            self.html.span("Status:", "font-semibold"),
-            self.html.span(obj.get_status_display(), "")
-        ], separator=" "))
-
-        if obj.network_fee_usd:
-            details.append(self.html.inline([
-                self.html.span("Network Fee:", "font-semibold"),
-                self.html.span(f"${obj.network_fee_usd:.2f} USD", "")
-            ], separator=" "))
-
-        if obj.service_fee_usd:
-            details.append(self.html.inline([
-                self.html.span("Service Fee:", "font-semibold"),
-                self.html.span(f"${obj.service_fee_usd:.2f} USD", "")
-            ], separator=" "))
-
-        if obj.total_fee_usd:
-            details.append(self.html.inline([
-                self.html.span("Total Fee:", "font-semibold"),
-                self.html.span(f"${obj.total_fee_usd:.2f} USD", "")
-            ], separator=" "))
-
-        if obj.final_amount_usd:
-            details.append(self.html.inline([
-                self.html.span("Final Amount:", "font-semibold"),
-                self.html.span(f"${obj.final_amount_usd:.2f} USD", "")
-            ], separator=" "))
-
-        if obj.admin_user:
-            details.append(self.html.inline([
-                self.html.span("Approved By:", "font-semibold"),
-                self.html.span(obj.admin_user.username, "")
-            ], separator=" "))
-
-        if obj.admin_notes:
-            details.append(self.html.inline([
-                self.html.span("Admin Notes:", "font-semibold"),
-                self.html.span(obj.admin_notes, "")
-            ], separator=" "))
-
-        if obj.transaction_hash:
-            details.append(self.html.inline([
-                self.html.span("Transaction Hash:", "font-semibold"),
-                self.html.span(f"<code>{obj.transaction_hash}</code>", "")
-            ], separator=" "))
-
-        if obj.crypto_amount:
-            details.append(self.html.inline([
-                self.html.span("Crypto Amount:", "font-semibold"),
-                self.html.span(f"{obj.crypto_amount:.8f} {obj.currency.token}", "")
-            ], separator=" "))
-
-        if obj.approved_at:
-            details.append(self.html.inline([
-                self.html.span("Approved At:", "font-semibold"),
-                self.html.span(str(obj.approved_at), "")
-            ], separator=" "))
-
-        if obj.completed_at:
-            details.append(self.html.inline([
-                self.html.span("Completed At:", "font-semibold"),
-                self.html.span(str(obj.completed_at), "")
-            ], separator=" "))
-
-        if obj.rejected_at:
-            details.append(self.html.inline([
-                self.html.span("Rejected At:", "font-semibold"),
-                self.html.span(str(obj.rejected_at), "")
-            ], separator=" "))
-
-        return "<br>".join(details)
+        return self.html.breakdown(
+            self.html.key_value("Withdrawal ID", str(obj.id)),
+            self.html.key_value(
+                "User",
+                f"{obj.user.username} ({obj.user.email})"
+            ),
+            self.html.key_value(
+                "Amount",
+                self.html.number(obj.amount_usd, precision=2, prefix="$", suffix=" USD")
+            ),
+            self.html.key_value("Currency", obj.currency.code),
+            self.html.key_value(
+                "Wallet Address",
+                self.html.code(obj.wallet_address)
+            ),
+            self.html.key_value("Status", obj.get_status_display()),
+            self.html.key_value(
+                "Network Fee",
+                self.html.number(obj.network_fee_usd, precision=2, prefix="$", suffix=" USD")
+            ) if obj.network_fee_usd else None,
+            self.html.key_value(
+                "Service Fee",
+                self.html.number(obj.service_fee_usd, precision=2, prefix="$", suffix=" USD")
+            ) if obj.service_fee_usd else None,
+            self.html.key_value(
+                "Total Fee",
+                self.html.number(obj.total_fee_usd, precision=2, prefix="$", suffix=" USD")
+            ) if obj.total_fee_usd else None,
+            self.html.key_value(
+                "Final Amount",
+                self.html.number(obj.final_amount_usd, precision=2, prefix="$", suffix=" USD")
+            ) if obj.final_amount_usd else None,
+            self.html.key_value(
+                "Approved By",
+                obj.admin_user.username
+            ) if obj.admin_user else None,
+            self.html.key_value(
+                "Admin Notes",
+                obj.admin_notes
+            ) if obj.admin_notes else None,
+            self.html.key_value(
+                "Transaction Hash",
+                self.html.code(obj.transaction_hash)
+            ) if obj.transaction_hash else None,
+            self.html.key_value(
+                "Crypto Amount",
+                self.html.inline(
+                    self.html.number(obj.crypto_amount, precision=8),
+                    obj.currency.token,
+                    separator=" "
+                )
+            ) if obj.crypto_amount else None,
+            self.html.key_value(
+                "Approved At",
+                str(obj.approved_at)
+            ) if obj.approved_at else None,
+            self.html.key_value(
+                "Completed At",
+                str(obj.completed_at)
+            ) if obj.completed_at else None,
+            self.html.key_value(
+                "Rejected At",
+                str(obj.rejected_at)
+            ) if obj.rejected_at else None
+        )
 
     withdrawal_details_display.short_description = "Withdrawal Details"

@@ -255,34 +255,178 @@ from django_cfg.modules.django_admin import annotated_field
 def method_name(self, obj): ...
 ```
 
-## HTML Builder (self.html)
+## HTML Utilities
 
-### badge()
+HTML utilities provide rich formatting for readonly fields and custom display methods in Django Admin.
+
+### Using in Admin Classes
+
+**The primary way to use HTML utilities is through `self.html.*` in admin methods:**
 
 ```python
-self.html.badge(
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+class MyAdmin(PydanticAdmin):
+    def my_readonly_field(self, obj):
+        """Custom display using self.html utilities."""
+        return self.html.inline([
+            self.html.badge(obj.status, variant="success"),
+            self.html.span(f"Items: {obj.count}", "font-semibold"),
+        ])
+
+    def another_display(self, obj):
+        """Format numbers and UUIDs."""
+        return self.html.inline([
+            self.html.number(obj.price, precision=2, prefix="$"),
+            self.html.uuid_short(obj.id, length=6),
+        ])
+```
+
+All methods available on `self.html`:
+- **Basic**: `icon()`, `span()`, `text()`, `div()`, `link()`, `empty()`
+- **Code**: `code()`, `code_block()`
+- **Badges**: `badge()`
+- **Composition**: `inline()`, `icon_text()`, `header()`
+- **Formatting**: `number()`, `uuid_short()`
+- **Key-Value**: `key_value()`, `breakdown()`, `divider()`, `key_value_list()`
+- **Progress**: `segment()`, `progress_bar()`
+- **Markdown**: `markdown()`, `markdown_docs()`
+
+### Module Structure (Advanced)
+
+For advanced use cases outside admin classes, you can import modules directly:
+
+```python
+from django_cfg.modules.django_admin.utils import (
+    BaseElements,           # Basic HTML: icon, span, text, div, link, empty
+    CodeElements,          # Code blocks: code, code_block
+    BadgeElements,         # Badges: badge
+    CompositionElements,   # Composition: inline, icon_text, header
+    FormattingElements,    # Formatting: number, uuid_short
+    KeyValueElements,      # Key-value: key_value, breakdown, divider
+    ProgressElements,      # Progress: segment, progress_bar
+    MarkdownIntegration,   # Markdown: markdown, markdown_docs
+)
+```
+
+### BaseElements
+
+Basic HTML building blocks.
+
+#### icon()
+
+```python
+BaseElements.icon(
+    icon_name: str,
+    size: str = "xs",          # xs, sm, base, lg, xl
+    css_class: str = ""
+) -> SafeString
+```
+
+#### span()
+
+```python
+BaseElements.span(
+    text: Any,
+    css_class: str = ""
+) -> SafeString
+```
+
+#### text()
+
+Styled text with semantic variants.
+
+```python
+BaseElements.text(
+    content: Any,
+    variant: str | None = None,    # success, warning, danger, info, primary
+    size: str | None = None,       # xs, sm, base, lg, xl, 2xl
+    weight: str | None = None,     # normal, medium, semibold, bold
+    muted: bool = False
+) -> SafeString
+```
+
+#### div()
+
+```python
+BaseElements.div(
+    content: Any,
+    css_class: str = ""
+) -> SafeString
+```
+
+#### link()
+
+```python
+BaseElements.link(
+    url: str,
+    text: str,
+    css_class: str = "",
+    target: str = ""           # _blank, _self, etc.
+) -> SafeString
+```
+
+#### empty()
+
+```python
+BaseElements.empty(
+    text: str = "—"
+) -> SafeString
+```
+
+### CodeElements
+
+Code display utilities.
+
+#### code()
+
+Inline code block.
+
+```python
+CodeElements.code(
+    text: Any,
+    css_class: str = ""
+) -> SafeString
+```
+
+#### code_block()
+
+Multi-line code block with syntax highlighting support.
+
+```python
+CodeElements.code_block(
+    text: Any,
+    language: str | None = None,    # json, python, bash, etc.
+    max_height: str | None = None,  # "400px", "20rem"
+    variant: str = "default"        # default, warning, danger, success, info
+) -> SafeString
+```
+
+### BadgeElements
+
+Badge rendering.
+
+#### badge()
+
+```python
+BadgeElements.badge(
     text: Any,
     variant: str = "primary",  # primary, success, warning, danger, info, secondary
     icon: str | None = None    # Material icon name
 ) -> SafeString
 ```
 
-### span()
+### CompositionElements
 
-```python
-self.html.span(
-    text: Any,
-    css_class: str = ""
-) -> SafeString
-```
+Element composition utilities.
 
-### inline()
+#### inline()
 
 Join items with separator, preserving SafeString HTML.
 
 ```python
-self.html.inline(
-    items: List[Any],
+CompositionElements.inline(
+    *items,
     separator: str = " | ",
     size: str = "small",       # small, medium, large
     css_class: str = ""
@@ -293,38 +437,19 @@ self.html.inline(
 ```python
 # Join multiple elements with separator
 def stats_display(self, obj):
-    return self.html.inline([
-        self.html.icon_text(Icons.EDIT, obj.posts_count),
-        self.html.icon_text(Icons.CHAT, obj.comments_count),
-    ])
-
-# Use empty separator for adjacent elements
-def balance_display(self, obj):
-    return self.html.inline([
-        f'<strong>{obj.amount}</strong>',
-        f'<span class="text-gray-500 ml-1">{obj.currency}</span>',
-    ], separator="")
+    return CompositionElements.inline(
+        CompositionElements.icon_text(Icons.EDIT, obj.posts_count),
+        CompositionElements.icon_text(Icons.CHAT, obj.comments_count),
+        separator=" | "
+    )
 ```
 
-**Important:**
-- Preserves SafeString HTML without escaping
-- Use `separator=""` for adjacent HTML elements
-- Use default `separator=" | "` for visual separation
+#### icon_text()
 
-### icon()
+Icon or emoji with text.
 
 ```python
-self.html.icon(
-    icon_name: str,
-    size: str = "xs",          # xs, sm, base, lg, xl
-    css_class: str = ""
-) -> SafeString
-```
-
-### icon_text()
-
-```python
-self.html.icon_text(
+CompositionElements.icon_text(
     icon_or_text: str | Any,
     text: Any = None,
     icon_size: str = "xs",
@@ -332,66 +457,169 @@ self.html.icon_text(
 ) -> SafeString
 ```
 
-### link()
+#### header()
+
+Header with avatar, title, and subtitle.
 
 ```python
-self.html.link(
-    url: str,
-    text: str,
-    css_class: str = "",
-    target: str = ""           # _blank, _self, etc.
+CompositionElements.header(
+    title: str,
+    subtitle: str | None = None,
+    initials: str | None = None,
+    avatar_variant: str = "primary"
 ) -> SafeString
 ```
 
-### div()
+### FormattingElements
+
+Number and UUID formatting.
+
+#### number()
+
+Smart number formatting with precision handling.
 
 ```python
-self.html.div(
-    content: Any,
+FormattingElements.number(
+    value: Any,
+    precision: int = 8,
+    thousands_separator: bool = True,
+    strip_zeros: bool = True,
+    min_threshold: float | None = None,
+    compact: bool = False,              # Use K/M/B/T suffixes
+    prefix: str = "",
+    suffix: str = "",
     css_class: str = ""
 ) -> SafeString
 ```
 
-### empty()
-
+**Usage:**
 ```python
-self.html.empty(
-    text: str = "—"
-) -> SafeString
+# Currency
+FormattingElements.number(1234.56, precision=2, prefix="$")  # "$1,234.56"
+
+# Compact notation
+FormattingElements.number(1500000, compact=True, prefix="$")  # "$1.5M"
+
+# Crypto balance
+FormattingElements.number(0.00012345, precision=8)  # "0.00012345"
 ```
 
-### uuid_short()
+#### uuid_short()
 
-Shorten UUID to first N characters with tooltip.
+Shorten UUID with tooltip.
 
 ```python
-self.html.uuid_short(
+FormattingElements.uuid_short(
     uuid_value: Any,
     length: int = 6,           # Number of characters to show
     show_tooltip: bool = True  # Show full UUID on hover
 ) -> SafeString
 ```
 
-**Usage:**
+### KeyValueElements
+
+Key-value pair utilities.
+
+#### key_value()
+
+Single key-value pair.
+
 ```python
-# Basic usage - shows first 6 chars with tooltip
-def id_display(self, obj):
-    return self.html.uuid_short(obj.id)  # "a1b2c3"
-
-# Custom length
-def id_display(self, obj):
-    return self.html.uuid_short(obj.id, length=8)  # "a1b2c3d4"
-
-# Without tooltip
-def id_display(self, obj):
-    return self.html.uuid_short(obj.id, show_tooltip=False)
+KeyValueElements.key_value(
+    key: str,
+    value: Any,
+    icon: str | None = None,
+    indent: bool = False,
+    divider: bool = False,
+    value_variant: str | None = None,
+    value_size: str | None = None
+) -> SafeString
 ```
 
-**Features:**
-- Removes dashes for cleaner display
-- Shows tooltip with full UUID on hover
-- Styled as inline code block
-- Perfect for admin list displays
+#### breakdown()
+
+Combine multiple key-value pairs.
+
+```python
+KeyValueElements.breakdown(*items) -> SafeString
+```
+
+#### divider()
+
+```python
+KeyValueElements.divider(css_class: str = "my-2") -> SafeString
+```
+
+### ProgressElements
+
+Progress bar utilities.
+
+#### segment()
+
+Create progress bar segment.
+
+```python
+ProgressElements.segment(
+    percentage: float,
+    variant: str = 'primary',
+    label: str = ''
+) -> dict
+```
+
+#### progress_bar()
+
+Multi-segment progress bar.
+
+```python
+ProgressElements.progress_bar(
+    *segments,
+    width: str = "w-full max-w-xs",
+    height: str = "h-6",
+    show_labels: bool = True,
+    rounded: bool = True
+) -> SafeString
+```
+
+**Usage:**
+```python
+ProgressElements.progress_bar(
+    ProgressElements.segment(60, variant='success', label='Available'),
+    ProgressElements.segment(40, variant='warning', label='Locked')
+)
+```
+
+### MarkdownIntegration
+
+Markdown rendering integration.
+
+#### markdown()
+
+Render markdown text.
+
+```python
+MarkdownIntegration.markdown(
+    text: str,
+    css_class: str = "",
+    max_height: str | None = None,
+    enable_plugins: bool = True
+) -> SafeString
+```
+
+#### markdown_docs()
+
+Render markdown documentation with collapsible UI.
+
+```python
+MarkdownIntegration.markdown_docs(
+    content: str | Path,
+    collapsible: bool = True,
+    title: str = "Documentation",
+    icon: str = "description",
+    max_height: str | None = "500px",
+    enable_plugins: bool = True,
+    default_open: bool = False
+) -> SafeString
+```
 
 ## Display Utilities
 
@@ -604,16 +832,34 @@ from django_cfg.modules.django_admin import (
 from django_cfg.modules.django_admin import Icons
 
 # Decorators
-from django_cfg.modules.django_admin import (
+from django_cfg.modules.django_admin.utils import (
     computed_field,
     annotated_field,
+    badge_field,
+    currency_field,
+)
+
+# HTML utilities (new modular structure)
+from django_cfg.modules.django_admin.utils import (
+    BaseElements,           # Basic HTML elements
+    CodeElements,          # Code blocks
+    BadgeElements,         # Badges
+    CompositionElements,   # Element composition
+    FormattingElements,    # Number/UUID formatting
+    KeyValueElements,      # Key-value pairs
+    ProgressElements,      # Progress bars
+    MarkdownIntegration,   # Markdown rendering
 )
 
 # Display utilities
-from django_cfg.modules.django_admin.utils.displays import (
+from django_cfg.modules.django_admin.utils import (
     UserDisplay,
     MoneyDisplay,
     DateTimeDisplay,
+    StatusBadge,
+    ProgressBadge,
+    CounterBadge,
+    MarkdownRenderer,
 )
 
 # Display configs
@@ -621,6 +867,12 @@ from django_cfg.modules.django_admin.models.display_models import (
     UserDisplayConfig,
     MoneyDisplayConfig,
     DateTimeDisplayConfig,
+)
+
+# Badge configs
+from django_cfg.modules.django_admin.models.badge_models import (
+    StatusBadgeConfig,
+    BadgeConfig,
 )
 
 # Base admin

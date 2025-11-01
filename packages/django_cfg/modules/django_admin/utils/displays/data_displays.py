@@ -12,8 +12,8 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
-from ..icons import Icons
-from ..models.display_models import DateTimeDisplayConfig, MoneyDisplayConfig, UserDisplayConfig
+from ...icons import Icons
+from ...models.display_models import DateTimeDisplayConfig, MoneyDisplayConfig, UserDisplayConfig
 
 logger = logging.getLogger(__name__)
 

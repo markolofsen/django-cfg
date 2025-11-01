@@ -256,10 +256,11 @@ class CloudflareSiteAdmin(PydanticAdmin):
         if not logs:
             return "No maintenance logs yet"
 
-        log_list = []
-        for log in logs:
-            status_text = "Success" if log.status == MaintenanceLog.Status.SUCCESS else "Failed" if log.status == MaintenanceLog.Status.FAILED else "Pending"
-            log_list.append(f"{status_text} {log.action} - {log.created_at.strftime('%Y-%m-%d %H:%M')}")
+        # Declarative log list generation
+        log_list = [
+            f"{('✅ Success' if log.status == MaintenanceLog.Status.SUCCESS else '❌ Failed' if log.status == MaintenanceLog.Status.FAILED else '⏳ Pending')} {log.action} - {log.created_at.strftime('%Y-%m-%d %H:%M')}"
+            for log in logs
+        ]
 
         return "\n".join(log_list)
     logs_preview.short_description = "Recent Logs"

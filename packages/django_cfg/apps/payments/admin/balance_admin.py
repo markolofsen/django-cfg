@@ -187,48 +187,38 @@ class UserBalanceAdmin(PydanticAdmin):
         if not obj.pk:
             return "Save to see breakdown"
 
-        # Build breakdown list
-        details = []
-
-        # Current Balance
-        details.append(self.html.inline([
-            self.html.span("Current Balance:", "font-semibold"),
-            self.html.span(f"${obj.balance_usd:.2f} USD", "")
-        ], separator=" "))
-
-        # Total Deposited
-        details.append(self.html.inline([
-            self.html.span("Total Deposited:", "font-semibold"),
-            self.html.span(f"${obj.total_deposited:.2f} USD", "")
-        ], separator=" "))
-
-        # Total Withdrawn
-        details.append(self.html.inline([
-            self.html.span("Total Withdrawn:", "font-semibold"),
-            self.html.span(f"${obj.total_withdrawn:.2f} USD", "")
-        ], separator=" "))
-
         # Calculate net
         net = obj.total_deposited - obj.total_withdrawn
-        details.append(self.html.inline([
-            self.html.span("Net Deposits:", "font-semibold"),
-            self.html.span(f"${net:.2f} USD", "")
-        ], separator=" "))
-
-        if obj.last_transaction_at:
-            details.append(self.html.inline([
-                self.html.span("Last Transaction:", "font-semibold"),
-                self.html.span(str(obj.last_transaction_at), "")
-            ], separator=" "))
 
         # Transaction count
         txn_count = Transaction.objects.filter(user=obj.user).count()
-        details.append(self.html.inline([
-            self.html.span("Total Transactions:", "font-semibold"),
-            self.html.span(str(txn_count), "")
-        ], separator=" "))
 
-        return "<br>".join(details)
+        return self.html.breakdown(
+            self.html.key_value(
+                "Current Balance",
+                self.html.number(obj.balance_usd, precision=2, prefix="$", suffix=" USD")
+            ),
+            self.html.key_value(
+                "Total Deposited",
+                self.html.number(obj.total_deposited, precision=2, prefix="$", suffix=" USD")
+            ),
+            self.html.key_value(
+                "Total Withdrawn",
+                self.html.number(obj.total_withdrawn, precision=2, prefix="$", suffix=" USD")
+            ),
+            self.html.key_value(
+                "Net Deposits",
+                self.html.number(net, precision=2, prefix="$", suffix=" USD")
+            ),
+            self.html.key_value(
+                "Last Transaction",
+                str(obj.last_transaction_at)
+            ) if obj.last_transaction_at else None,
+            self.html.key_value(
+                "Total Transactions",
+                str(txn_count)
+            )
+        )
 
     balance_breakdown_display.short_description = "Balance Breakdown"
 

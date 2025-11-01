@@ -32,11 +32,11 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "1.4.120"
+__version__ = "1.5.1"
 __license__ = "MIT"
 
 # Import registry for organized lazy loading
-from .config import LIB_NAME
+from .config import LIB_NAME, is_feature_available, require_feature, register_feature
 from .registry import DJANGO_CFG_REGISTRY
 
 # Get author from library config
@@ -55,5 +55,9 @@ def __getattr__(name: str):
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
-# Export all registered components
-__all__ = list(DJANGO_CFG_REGISTRY.keys())
+# Export all registered components + feature detection
+__all__ = list(DJANGO_CFG_REGISTRY.keys()) + [
+    "is_feature_available",
+    "require_feature",
+    "register_feature",
+]

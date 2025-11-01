@@ -523,7 +523,7 @@ class PydanticAdminMixin:
 
                 # Add Mermaid resources if plugins enabled
                 if doc_config.enable_plugins:
-                    from django_cfg.modules.django_admin.utils.mermaid_plugin import get_mermaid_resources
+                    from django_cfg.modules.django_admin.utils.markdown.mermaid_plugin import get_mermaid_resources
                     extra_context['mermaid_resources'] = get_mermaid_resources()
 
         return super().changelist_view(request, extra_context)
@@ -548,7 +548,7 @@ class PydanticAdminMixin:
 
                 # Add Mermaid resources if plugins enabled
                 if doc_config.enable_plugins:
-                    from django_cfg.modules.django_admin.utils.mermaid_plugin import get_mermaid_resources
+                    from django_cfg.modules.django_admin.utils.markdown.mermaid_plugin import get_mermaid_resources
                     extra_context['mermaid_resources'] = get_mermaid_resources()
 
         return super().changeform_view(request, object_id, form_url, extra_context)

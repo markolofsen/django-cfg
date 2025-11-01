@@ -30,6 +30,7 @@ from ...models import (
     TelegramConfig,
     UnfoldConfig,
 )
+from ...models.api.grpc import GRPCConfig
 from ...models.ngrok import NgrokConfig
 from ...models.payments import PaymentsConfig
 from ...models.tasks import TaskConfig
@@ -350,6 +351,11 @@ class DjangoConfig(BaseModel):
     spectacular: Optional[SpectacularConfig] = Field(
         default=None,
         description="Extended DRF Spectacular configuration (supplements OpenAPI Client)",
+    )
+
+    grpc: Optional[GRPCConfig] = Field(
+        default=None,
+        description="gRPC framework configuration (server, authentication, proto generation)",
     )
 
     # === Limits Configuration ===

@@ -104,7 +104,7 @@ class TaskLogAdmin(PydanticAdmin):
                 data["kwargs"] = obj.kwargs
 
             formatted = json.dumps(data, indent=2)
-            return f'<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 400px; overflow: auto; font-size: 12px; line-height: 1.5;">{formatted}</pre>'
+            return self.html.code_block(formatted, language="json", max_height="400px")
         except Exception:
             return str(data)
 
@@ -114,20 +114,18 @@ class TaskLogAdmin(PydanticAdmin):
         """Display error information if task failed."""
         if obj.is_successful or obj.status in ["queued", "in_progress"]:
             return self.html.inline(
-                [
-                    self.html.icon(Icons.CHECK_CIRCLE, size="sm"),
-                    self.html.span("No errors", "text-green-600"),
-                ]
+                self.html.icon(Icons.CHECK_CIRCLE, size="sm"),
+                self.html.text("No errors", variant="success"),
+                separator=" "
             )
 
         if not obj.error_message:
             return self.html.empty("No error message")
 
         return self.html.inline(
-            [
-                self.html.icon(Icons.ERROR, size="sm"),
-                self.html.span(obj.error_message, "text-red-600 font-mono text-sm"),
-            ]
+            self.html.icon(Icons.ERROR, size="sm"),
+            self.html.code(obj.error_message, css_class="text-font-danger-light dark:text-font-danger-dark text-sm"),
+            separator=" "
         )
 
     error_details_display.short_description = "Error Details"
@@ -136,10 +134,9 @@ class TaskLogAdmin(PydanticAdmin):
         """Display retry information."""
         if obj.retry_count == 0:
             return self.html.inline(
-                [
-                    self.html.icon(Icons.CHECK_CIRCLE, size="sm"),
-                    self.html.span("No retries", "text-gray-600"),
-                ]
+                self.html.icon(Icons.CHECK_CIRCLE, size="sm"),
+                self.html.text("No retries", muted=True),
+                separator=" "
             )
 
         # Show retry count with warning if high
@@ -153,59 +150,35 @@ class TaskLogAdmin(PydanticAdmin):
             variant = "info"
             icon = Icons.TIMER
 
-        return self.html.inline(
-            [
-                self.html.badge(f"{obj.retry_count} retries", variant=variant, icon=icon),
-            ]
-        )
+        return self.html.badge(f"{obj.retry_count} retries", variant=variant, icon=icon)
 
     retry_info_display.short_description = "Retry Info"
 
     def performance_summary(self, obj):
         """Display performance summary."""
-        stats = []
-
         # Duration
+        duration_line = None
         if obj.duration_ms is not None:
             if obj.duration_ms < 1000:
                 duration_str = f"{obj.duration_ms}ms"
             else:
                 duration_str = f"{obj.duration_ms / 1000:.2f}s"
-            stats.append(
-                self.html.inline(
-                    [
-                        self.html.span("Duration:", "font-semibold"),
-                        self.html.span(duration_str, "text-gray-600"),
-                    ],
-                    separator=" ",
-                )
-            )
+            duration_line = self.html.key_value("Duration", duration_str)
 
         # Retry count
+        retry_line = None
         if obj.retry_count > 0:
-            stats.append(
-                self.html.inline(
-                    [
-                        self.html.span("Retries:", "font-semibold"),
-                        self.html.badge(str(obj.retry_count), variant="warning"),
-                    ],
-                    separator=" ",
-                )
+            retry_line = self.html.key_value(
+                "Retries",
+                self.html.badge(str(obj.retry_count), variant="warning")
             )
 
         # Worker ID
+        worker_line = None
         if obj.worker_id:
-            stats.append(
-                self.html.inline(
-                    [
-                        self.html.span("Worker:", "font-semibold"),
-                        self.html.span(obj.worker_id, "text-gray-600 font-mono text-xs"),
-                    ],
-                    separator=" ",
-                )
-            )
+            worker_line = self.html.key_value("Worker", self.html.code(obj.worker_id, css_class="text-xs"))
 
-        return "<br>".join(stats) if stats else self.html.empty()
+        return self.html.breakdown(duration_line, retry_line, worker_line) if (duration_line or retry_line or worker_line) else self.html.empty()
 
     performance_summary.short_description = "Performance"
 

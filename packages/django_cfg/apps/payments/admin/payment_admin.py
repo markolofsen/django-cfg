@@ -209,93 +209,69 @@ class PaymentAdmin(PydanticAdmin):
         age = timezone.now() - obj.created_at
         age_text = f"{age.days} days, {age.seconds // 3600} hours"
 
-        # Build details list
-        details = []
-
-        # Basic info
-        details.append(self.html.inline([
-            self.html.span("Internal ID:", "font-semibold"),
-            self.html.span(obj.internal_payment_id, "")
-        ], separator=" "))
-
-        details.append(self.html.inline([
-            self.html.span("Age:", "font-semibold"),
-            self.html.span(age_text, "")
-        ], separator=" "))
-
-        # Provider info
-        if obj.provider_payment_id:
-            details.append(self.html.inline([
-                self.html.span("Provider Payment ID:", "font-semibold"),
-                self.html.span(obj.provider_payment_id, "")
-            ], separator=" "))
-
         # Transaction details
+        transaction_value = None
         if obj.transaction_hash:
             explorer_link = obj.get_explorer_link()
             if explorer_link:
-                details.append(self.html.inline([
-                    self.html.span("Transaction:", "font-semibold"),
-                    self.html.span(f'<a href="{explorer_link}" target="_blank">{obj.transaction_hash[:16]}...</a>', "")
-                ], separator=" "))
+                transaction_value = self.html.link(
+                    explorer_link,
+                    f"{obj.transaction_hash[:16]}...",
+                    target="_blank"
+                )
             else:
-                details.append(self.html.inline([
-                    self.html.span("Transaction Hash:", "font-semibold"),
-                    self.html.span(obj.transaction_hash, "")
-                ], separator=" "))
+                transaction_value = self.html.code(obj.transaction_hash)
 
-        if obj.confirmations_count > 0:
-            details.append(self.html.inline([
-                self.html.span("Confirmations:", "font-semibold"),
+        return self.html.breakdown(
+            self.html.key_value("Internal ID", obj.internal_payment_id),
+            self.html.key_value("Age", age_text),
+            self.html.key_value(
+                "Provider Payment ID",
+                obj.provider_payment_id
+            ) if obj.provider_payment_id else None,
+            self.html.key_value(
+                "Transaction",
+                transaction_value
+            ) if obj.transaction_hash else None,
+            self.html.key_value(
+                "Confirmations",
                 self.html.badge(str(obj.confirmations_count), variant="info", icon=Icons.CHECK_CIRCLE)
-            ], separator=" "))
-
-        if obj.pay_address:
-            details.append(self.html.inline([
-                self.html.span("Pay Address:", "font-semibold"),
-                self.html.span(f'<code>{obj.pay_address}</code>', "")
-            ], separator=" "))
-
-        if obj.pay_amount:
-            details.append(self.html.inline([
-                self.html.span("Pay Amount:", "font-semibold"),
-                self.html.span(f'{obj.pay_amount:.8f} {obj.currency.token}', "")
-            ], separator=" "))
-
-        if obj.actual_amount:
-            details.append(self.html.inline([
-                self.html.span("Actual Amount:", "font-semibold"),
-                self.html.span(f'{obj.actual_amount:.8f} {obj.currency.token}', "")
-            ], separator=" "))
-
-        # URLs
-        if obj.payment_url:
-            details.append(self.html.inline([
-                self.html.span("Payment URL:", "font-semibold"),
-                self.html.span(f'<a href="{obj.payment_url}" target="_blank">Open</a>', "")
-            ], separator=" "))
-
-        # Expiration
-        if obj.expires_at:
-            if obj.is_expired:
-                details.append(self.html.inline([
-                    self.html.span("Expired:", "font-semibold"),
-                    self.html.badge(f"Yes ({obj.expires_at})", variant="danger", icon=Icons.ERROR)
-                ], separator=" "))
-            else:
-                details.append(self.html.inline([
-                    self.html.span("Expires At:", "font-semibold"),
-                    self.html.span(str(obj.expires_at), "")
-                ], separator=" "))
-
-        # Description
-        if obj.description:
-            details.append(self.html.inline([
-                self.html.span("Description:", "font-semibold"),
-                self.html.span(obj.description, "")
-            ], separator=" "))
-
-        return "<br>".join(details)
+            ) if obj.confirmations_count > 0 else None,
+            self.html.key_value(
+                "Pay Address",
+                self.html.code(obj.pay_address)
+            ) if obj.pay_address else None,
+            self.html.key_value(
+                "Pay Amount",
+                self.html.inline(
+                    self.html.number(obj.pay_amount, precision=8),
+                    obj.currency.token,
+                    separator=" "
+                )
+            ) if obj.pay_amount else None,
+            self.html.key_value(
+                "Actual Amount",
+                self.html.inline(
+                    self.html.number(obj.actual_amount, precision=8),
+                    obj.currency.token,
+                    separator=" "
+                )
+            ) if obj.actual_amount else None,
+            self.html.key_value(
+                "Payment URL",
+                self.html.link(obj.payment_url, "Open", target="_blank")
+            ) if obj.payment_url else None,
+            self.html.key_value(
+                "Expired",
+                self.html.badge(f"Yes ({obj.expires_at})", variant="danger", icon=Icons.ERROR)
+            ) if obj.expires_at and obj.is_expired else (
+                self.html.key_value("Expires At", str(obj.expires_at)) if obj.expires_at else None
+            ),
+            self.html.key_value(
+                "Description",
+                obj.description
+            ) if obj.description else None
+        )
 
     payment_details_display.short_description = "Payment Details"
 
@@ -306,8 +282,12 @@ class PaymentAdmin(PydanticAdmin):
 
         qr_url = obj.get_qr_code_url(size=200)
         if qr_url:
-            return (
-                f'<img src="{qr_url}" alt="QR Code" style="max-width:200px;"><br>'
-                f'<small>Scan to pay: <code>{obj.pay_address}</code></small>'
+            from django.utils.html import format_html
+            img_html = format_html('<img src="{}" alt="QR Code" style="max-width:200px;">', qr_url)
+            caption = self.html.inline(
+                self.html.text("Scan to pay:", size="sm"),
+                self.html.code(obj.pay_address),
+                separator=" "
             )
-        return self.html.span(f"Address: {obj.pay_address}", "text-sm")
+            return self.html.breakdown(img_html, caption)
+        return self.html.text(f"Address: {obj.pay_address}", size="sm")

@@ -53,6 +53,9 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.is_centrifugo_enabled():
         enabled_apps.append("django_cfg.apps.centrifugo")
 
+    if base_module.is_grpc_enabled():
+        enabled_apps.append("django_cfg.apps.grpc")
+
     return enabled_apps
 
 
@@ -84,7 +87,7 @@ def get_default_cfg_group():
         name="cfg",
         apps=get_enabled_cfg_apps(),
         title="Django-CFG API",
-        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Payments, Dashboard",
+        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Payments, Centrifugo, gRPC, Dashboard",
         version="1.0.0",
     )
 
@@ -182,6 +185,9 @@ APP_URL_MAP = {
     ],
     "django_cfg.apps.centrifugo": [
         ("cfg/centrifugo/", "django_cfg.apps.centrifugo.urls"),
+    ],
+    "django_cfg.apps.grpc": [
+        ("cfg/grpc/", "django_cfg.apps.grpc.urls"),
     ],
 }
 

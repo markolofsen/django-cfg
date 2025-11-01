@@ -146,6 +146,34 @@ class NavigationManager(BaseCfgModule):
                 )
             )
 
+        # gRPC Dashboard (if enabled)
+        if self.is_grpc_enabled():
+            grpc_items = []
+
+            # Monitoring API endpoint
+            grpc_items.append(
+                NavigationItem(title="Monitor", icon=Icons.MONITOR_HEART, link="/cfg/grpc/monitor/overview/")
+            )
+
+            # Request Logs with safe URL resolution
+            logs_item = self._create_nav_item(
+                title="Request Logs",
+                icon=Icons.LIST_ALT,
+                url_name="admin:grpc_grpcrequestlog_changelist",
+                fallback_link="/admin/grpc/grpcrequestlog/"
+            )
+            if logs_item:
+                grpc_items.append(logs_item)
+
+            navigation_sections.append(
+                NavigationSection(
+                    title="gRPC",
+                    separator=True,
+                    collapsible=True,
+                    items=grpc_items
+                )
+            )
+
         # Background Tasks section (if enabled)
         if self.should_enable_tasks():
             tasks_items = []
