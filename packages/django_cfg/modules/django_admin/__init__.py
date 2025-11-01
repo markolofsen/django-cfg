@@ -57,6 +57,7 @@ from .config import (
     ImageField,
     MarkdownField,
     ResourceConfig,
+    ShortUUIDField,
     TextField,
     UserField,
 )
@@ -116,6 +117,7 @@ __all__ = [
     "DateTimeField",
     "ImageField",
     "MarkdownField",
+    "ShortUUIDField",
     "TextField",
     "UserField",
     # Advanced

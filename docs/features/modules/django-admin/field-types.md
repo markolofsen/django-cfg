@@ -1,6 +1,6 @@
 ---
 title: Field Types Reference
-description: Complete reference for all Django Admin field types including BadgeField, CurrencyField, DateTimeField, UserField, and more.
+description: Complete reference for all Django Admin field types including BadgeField, CurrencyField, DateTimeField, ShortUUIDField, UserField, and more.
 sidebar_label: Field Types
 sidebar_position: 3
 keywords:
@@ -9,6 +9,7 @@ keywords:
   - CurrencyField
   - DateTimeField
   - ImageField
+  - ShortUUIDField
   - UserField
 ---
 
@@ -30,6 +31,7 @@ Django Admin provides specialized field types that automatically handle formatti
 | **CurrencyField** | Formatted currency | Prices, totals, balances |
 | **DateTimeField** | Formatted dates/times | Created, updated, published |
 | **ImageField** | Images with captions | QR codes, photos, avatars |
+| **ShortUUIDField** | Shortened UUIDs with tooltip | Primary keys, unique identifiers |
 | **TextField** | Text with truncation | Descriptions, content |
 | **UserField** | User display with avatar | Authors, assignees, owners |
 
@@ -569,6 +571,7 @@ from django_cfg.modules.django_admin import (
     CurrencyField,
     DateTimeField,
     Icons,
+    ShortUUIDField,
     UserField,
 )
 
@@ -830,6 +833,110 @@ ImageField(
 )
 ```
 
+## ShortUUIDField
+
+Display shortened UUIDs with hover tooltip showing full value.
+
+### Parameters
+
+```python
+class ShortUUIDField(FieldConfig):
+    name: str                          # Field name
+    title: str | None = None           # Display title
+    length: int = 8                    # Number of characters to display
+    copy_on_click: bool = True         # Enable click-to-copy
+    show_full_on_hover: bool = True    # Show full UUID in tooltip
+    empty_value: str = "—"             # Value when None
+    ordering: str | None = None        # Sort field
+```
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import ShortUUIDField
+
+# Simple shortened UUID
+ShortUUIDField(
+    name="id",
+    title="ID",
+    length=8,
+)
+
+# Longer display
+ShortUUIDField(
+    name="uuid",
+    title="UUID",
+    length=12,
+)
+
+# With ordering
+ShortUUIDField(
+    name="id",
+    title="ID",
+    length=8,
+    ordering="id",
+)
+```
+
+### Examples
+
+<Tabs>
+  <TabItem value="basic" label="Basic UUID" default>
+
+```python
+display_fields=[
+    ShortUUIDField(
+        name="id",
+        title="ID",
+        length=8,
+    ),
+]
+```
+
+**Renders as:** `a1b2c3d4` (with full UUID on hover)
+
+  </TabItem>
+  <TabItem value="custom-length" label="Custom Length">
+
+```python
+display_fields=[
+    ShortUUIDField(
+        name="transaction_id",
+        title="Transaction",
+        length=12,
+        ordering="transaction_id",
+    ),
+]
+```
+
+**Renders as:** `a1b2c3d4e5f6`
+
+  </TabItem>
+  <TabItem value="multiple" label="Multiple IDs">
+
+```python
+display_fields=[
+    ShortUUIDField(name="id", title="ID", length=8),
+    ShortUUIDField(name="parent_id", title="Parent", length=8),
+    ShortUUIDField(name="reference_id", title="Reference", length=10),
+]
+```
+
+  </TabItem>
+</Tabs>
+
+:::tip[Perfect for List Views]
+ShortUUIDField is ideal for admin list views where you need to display UUIDs without taking up too much space. Users can hover to see the full UUID or click to copy it.
+:::
+
+:::info[Automatic Formatting]
+ShortUUIDField automatically:
+- Removes dashes for cleaner display
+- Shows tooltip with full UUID on hover
+- Enables click-to-copy functionality
+- Styles as inline code block
+:::
+
 ## Best Practices
 
 ### 1. Choose the Right Field Type
@@ -841,6 +948,7 @@ ImageField(
 | Money/Prices | CurrencyField |
 | Dates/Times | DateTimeField |
 | Images/Photos/QR | ImageField |
+| UUIDs/IDs | ShortUUIDField |
 | Long Text | TextField |
 | User Relations | UserField |
 

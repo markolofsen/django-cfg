@@ -14,6 +14,7 @@ from .field_config import (
     DateTimeField,
     ImageField,
     MarkdownField,
+    ShortUUIDField,
     TextField,
     UserField,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "DateTimeField",
     "ImageField",
     "MarkdownField",
+    "ShortUUIDField",
     "TextField",
     "UserField",
 ]
