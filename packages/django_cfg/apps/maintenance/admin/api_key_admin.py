@@ -177,18 +177,17 @@ class CloudflareApiKeyAdmin(PydanticAdmin):
         if not sites:
             return "No sites using this key"
 
-        site_list = []
-        for site in sites:
-            status_emoji = "Maintenance" if site.maintenance_active else "Active"
-            site_list.append(f"{status_emoji} {site.name} ({site.domain})")
-
-        result = "\n".join(site_list)
+        # Declarative site list generation
+        site_items = [
+            f"{'🔧 Maintenance' if site.maintenance_active else '✅ Active'} {site.name} ({site.domain})"
+            for site in sites
+        ]
 
         total_count = obj.cloudflaresite_set.count()
         if total_count > 10:
-            result += f"\n... and {total_count - 10} more sites"
+            site_items.append(f"... and {total_count - 10} more sites")
 
-        return result
+        return "\n".join(site_items)
     sites_using_key.short_description = "Sites Using This Key"
 
     def changelist_view(self, request, extra_context=None):

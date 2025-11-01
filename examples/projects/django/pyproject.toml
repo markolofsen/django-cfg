@@ -23,6 +23,10 @@ click = "^8.1.0"
 faker = "^37.5.3"
 django-admin-rangefilter = "^0.13.3"
 markdown = "^3.9"
+grpcio = "^1.76.0"
+grpcio-tools = "^1.76.0"
+protobuf = "^6.33.0"
+djangogrpcframework = "^0.2.1"
 
 [tool.poetry.group.local]
 optional = true

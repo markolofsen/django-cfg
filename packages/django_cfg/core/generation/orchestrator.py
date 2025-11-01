@@ -78,6 +78,7 @@ class SettingsOrchestrator:
             settings.update(self._generate_third_party_settings())
             settings.update(self._generate_api_settings())
             settings.update(self._generate_tasks_settings())
+            settings.update(self._generate_grpc_settings())
             settings.update(self._generate_django_q2_settings())
             settings.update(self._generate_tailwind_settings())
 
@@ -223,6 +224,15 @@ class SettingsOrchestrator:
             return generator.generate()
         except Exception as e:
             raise ConfigurationError(f"Failed to generate tasks settings: {e}") from e
+
+    def _generate_grpc_settings(self) -> Dict[str, Any]:
+        """Generate gRPC framework settings."""
+        try:
+            from .integration_generators.grpc_generator import GRPCSettingsGenerator
+            generator = GRPCSettingsGenerator(self.config)
+            return generator.generate()
+        except Exception as e:
+            raise ConfigurationError(f"Failed to generate gRPC settings: {e}") from e
 
     def _generate_django_q2_settings(self) -> Dict[str, Any]:
         """Generate Django-Q2 task scheduling settings."""

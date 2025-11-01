@@ -13,6 +13,12 @@ MODULES_REGISTRY = {
     # Centrifugo module
     "DjangoCfgCentrifugoConfig": ("django_cfg.apps.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
+    # gRPC module
+    "GRPCConfig": ("django_cfg.models.api.grpc", "GRPCConfig"),
+    "GRPCServerConfig": ("django_cfg.models.api.grpc", "GRPCServerConfig"),
+    "GRPCAuthConfig": ("django_cfg.models.api.grpc", "GRPCAuthConfig"),
+    "GRPCProtoConfig": ("django_cfg.models.api.grpc", "GRPCProtoConfig"),
+
     # Next.js Admin Integration
     "NextJsAdminConfig": ("django_cfg.modules.nextjs_admin", "NextJsAdminConfig"),
 

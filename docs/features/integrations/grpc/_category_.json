@@ -1,0 +1,9 @@
+{
+  "label": "gRPC Integration",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Production-ready gRPC server with Django integration, JWT auth, request logging, and auto-discovery"
+  },
+  "collapsed": true
+}

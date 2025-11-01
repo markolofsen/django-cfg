@@ -40,6 +40,10 @@ from django_cfg import (
     ApiKeys,
     AxesConfig,
     DjangoCfgCentrifugoConfig,
+    GRPCConfig,
+    GRPCServerConfig,
+    GRPCAuthConfig,
+    GRPCProtoConfig,
     NextJsAdminConfig,
     TaskConfig,
     RearqConfig,
@@ -131,6 +135,31 @@ class DjangoCfgConfig(DjangoConfig):
         )
         if env.centrifugo.enabled
         else None
+    )
+
+    # === gRPC Configuration ===
+    grpc: Optional[GRPCConfig] = GRPCConfig(
+        enabled=True,
+        server=GRPCServerConfig(
+            host="[::]",
+            port=50051,
+            max_workers=10,
+            enable_reflection=True,  # Enable reflection for grpcurl
+            enable_health_check=True,
+        ),
+        auth=GRPCAuthConfig(
+            enabled=True,
+            require_auth=False,  # Allow public methods
+            jwt_algorithm="HS256",
+        ),
+        proto=GRPCProtoConfig(
+            auto_generate=True,
+            output_dir="protos",
+            package_prefix="api",
+        ),
+        # Auto-register apps (scan these apps for gRPC services)
+        auto_register_apps=True,
+        enabled_apps=["core", "apps.profiles", "apps.trading", "apps.crypto"],
     )
 
     # === Background Tasks Configuration (ReArq) ===

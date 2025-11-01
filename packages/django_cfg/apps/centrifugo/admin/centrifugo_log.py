@@ -96,7 +96,7 @@ class CentrifugoLogAdmin(PydanticAdmin):
 
         try:
             formatted = json.dumps(obj.data, indent=2)
-            return f'<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 400px; overflow: auto; font-size: 12px; line-height: 1.5;">{formatted}</pre>'
+            return self.html.code_block(formatted, language="json", max_height="400px")
         except Exception:
             return str(obj.data)
 
@@ -106,37 +106,22 @@ class CentrifugoLogAdmin(PydanticAdmin):
         """Display error information if publish failed."""
         if obj.is_successful or obj.status == "pending":
             return self.html.inline(
-                [
-                    self.html.icon(Icons.CHECK_CIRCLE, size="sm"),
-                    self.html.span("No errors", "text-green-600"),
-                ]
+                self.html.icon(Icons.CHECK_CIRCLE, size="sm"),
+                self.html.text("No errors", variant="success"),
+                separator=" "
             )
 
-        details = []
+        error_code_line = self.html.key_value(
+            "Error Code",
+            self.html.badge(obj.error_code, variant="danger", icon=Icons.ERROR)
+        ) if obj.error_code else None
 
-        if obj.error_code:
-            details.append(
-                self.html.inline(
-                    [
-                        self.html.span("Error Code:", "font-semibold"),
-                        self.html.badge(obj.error_code, variant="danger", icon=Icons.ERROR),
-                    ],
-                    separator=" ",
-                )
-            )
+        error_msg_line = self.html.key_value(
+            "Message",
+            self.html.text(obj.error_message, variant="danger")
+        ) if obj.error_message else None
 
-        if obj.error_message:
-            details.append(
-                self.html.inline(
-                    [
-                        self.html.span("Message:", "font-semibold"),
-                        self.html.span(obj.error_message, "text-red-600"),
-                    ],
-                    separator=" ",
-                )
-            )
-
-        return "<br>".join(details) if details else self.html.empty()
+        return self.html.breakdown(error_code_line, error_msg_line) if (error_code_line or error_msg_line) else self.html.empty()
 
     error_details_display.short_description = "Error Details"
 
@@ -145,57 +130,34 @@ class CentrifugoLogAdmin(PydanticAdmin):
         if not obj.wait_for_ack:
             return self.html.empty("No ACK tracking")
 
-        stats = []
-
         # ACK timeout
-        if obj.ack_timeout:
-            stats.append(
-                self.html.inline(
-                    [
-                        self.html.span("Timeout:", "font-semibold"),
-                        self.html.span(f"{obj.ack_timeout}s", "text-gray-600"),
-                    ],
-                    separator=" ",
-                )
-            )
+        timeout_line = self.html.key_value(
+            "Timeout",
+            f"{obj.ack_timeout}s"
+        ) if obj.ack_timeout else None
 
         # ACKs received
-        stats.append(
-            self.html.inline(
-                [
-                    self.html.span("ACKs Received:", "font-semibold"),
-                    self.html.badge(str(obj.acks_received), variant="info"),
-                ],
-                separator=" ",
-            )
+        received_line = self.html.key_value(
+            "ACKs Received",
+            self.html.badge(str(obj.acks_received), variant="info")
         )
 
         # ACKs expected (if known)
-        if obj.acks_expected:
-            stats.append(
-                self.html.inline(
-                    [
-                        self.html.span("ACKs Expected:", "font-semibold"),
-                        self.html.span(str(obj.acks_expected), "text-gray-600"),
-                    ],
-                    separator=" ",
-                )
+        expected_line = self.html.key_value(
+            "ACKs Expected",
+            str(obj.acks_expected)
+        ) if obj.acks_expected else None
+
+        # Delivery rate
+        rate_line = None
+        if obj.acks_expected and obj.delivery_rate is not None:
+            rate_pct = obj.delivery_rate * 100
+            rate_line = self.html.key_value(
+                "Delivery Rate",
+                self.html.number(rate_pct, precision=1, suffix="%")
             )
 
-            # Delivery rate
-            if obj.delivery_rate is not None:
-                rate_pct = obj.delivery_rate * 100
-                stats.append(
-                    self.html.inline(
-                        [
-                            self.html.span("Delivery Rate:", "font-semibold"),
-                            self.html.span(f"{rate_pct:.1f}%", "text-blue-600"),
-                        ],
-                        separator=" ",
-                    )
-                )
-
-        return "<br>".join(stats) if stats else self.html.empty()
+        return self.html.breakdown(timeout_line, received_line, expected_line, rate_line)
 
     delivery_stats_display.short_description = "Delivery Statistics"
 

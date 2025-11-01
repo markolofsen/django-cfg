@@ -140,6 +140,9 @@ class InstalledAppsBuilder:
         if self.config.centrifugo and self.config.centrifugo.enabled:
             apps.append("django_cfg.apps.centrifugo")
 
+        if self.config.grpc and self.config.grpc.enabled:
+            apps.append("django_cfg.apps.grpc")
+
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
 
