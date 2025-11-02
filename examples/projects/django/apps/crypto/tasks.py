@@ -10,10 +10,8 @@ import random
 from decimal import Decimal
 from typing import Optional
 
-from django.utils import timezone
-from django.db.models import Count, Avg, Sum
-
-from apps.crypto.models import Coin
+# NOTE: Django models and utilities imported lazily inside functions
+# to avoid Django settings initialization issues when RQ imports this module
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +32,10 @@ def update_coin_prices(limit: int = 100, verbosity: int = 0, days: Optional[int]
     Returns:
         dict with update statistics
     """
+    # Lazy imports to avoid Django settings initialization issues
+    from django.utils import timezone
+    from apps.crypto.models import Coin
+
     if verbosity > 0:
         logger.info(f"Starting coin price update (limit={limit}, force={force})")
 
@@ -130,6 +132,10 @@ def import_coins(source: str = "demo", batch_size: int = 10) -> dict:
     Returns:
         dict with import statistics
     """
+    # Lazy imports to avoid Django settings initialization issues
+    from django.utils import timezone
+    from apps.crypto.models import Coin
+
     logger.info(f"Starting coin import from {source} (batch_size={batch_size})")
 
     # Demo coin data
@@ -209,6 +215,11 @@ def generate_report(report_type: str = "daily") -> dict:
     Returns:
         dict with report data
     """
+    # Lazy imports to avoid Django settings initialization issues
+    from django.utils import timezone
+    from django.db.models import Count, Avg, Sum
+    from apps.crypto.models import Coin
+
     logger.info(f"Generating {report_type} crypto market report")
 
     # Get statistics
