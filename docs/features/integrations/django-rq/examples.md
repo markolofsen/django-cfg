@@ -21,13 +21,11 @@ Comprehensive collection of real-world examples demonstrating Django-RQ usage in
 ### Basics
 - [Simple Task](#simple-task)
 - [Task with Arguments](#task-with-arguments)
-- [Task with Return Value](#task-with-return-value)
-- [Enqueue from Views](#enqueue-from-views)
 
 ### Real-World Examples
-- [Update Cryptocurrency Prices](#update-cryptocurrency-prices)
-- [Import Data](#import-data)
-- [Generate Reports](#generate-reports)
+- [Update Cryptocurrency Prices](#real-world-example-update-cryptocurrency-prices)
+- [Import Data](#real-world-example-import-data)
+- [Generate Reports](#real-world-example-generate-reports)
 - [Send Emails](#send-emails)
 
 ### Advanced Patterns
