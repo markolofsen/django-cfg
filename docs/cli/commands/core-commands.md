@@ -101,7 +101,7 @@ django-cfg info --verbose
 - 🌐 Service integrations (Twilio, SendGrid, OpenAI)
 - Admin & UI packages (Unfold, Constance)
 - 📊 API & documentation tools (DRF, Spectacular)
-- Background processing (ReArq, Redis)
+- Background processing (Django-RQ, Redis)
 - Development tools (Ngrok)
 
 ---
@@ -844,7 +844,7 @@ python manage.py runserver
 
 - **[Quick Reference](./quick-reference)** - Fast command lookup
 - **[AI Agents Commands](./ai-agents)** - Agent management
-- **[Background Tasks Commands](/features/integrations/rearq/overview)** - ReArq workers
+- **[Background Tasks Commands](/features/integrations/django-rq/overview)** - Django-RQ workers
 - **[Development Commands](./development)** - Development tools
 
 ---

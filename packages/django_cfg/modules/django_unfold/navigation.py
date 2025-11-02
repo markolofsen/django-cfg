@@ -140,7 +140,7 @@ class NavigationManager(BaseCfgModule):
                     separator=True,
                     collapsible=True,
                     items=[
-                        NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/centrifugo"),
+                        NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/dashboard/centrifugo"),
                         NavigationItem(title="Logs", icon=Icons.LIST_ALT, link=str(reverse_lazy("admin:django_cfg_centrifugo_centrifugolog_changelist"))),
                     ]
                 )
@@ -173,31 +173,6 @@ class NavigationManager(BaseCfgModule):
                     items=grpc_items
                 )
             )
-
-        # Background Tasks section (if enabled)
-        if self.should_enable_tasks():
-            tasks_items = []
-
-            tasks_items.append(
-                NavigationItem(title="Dashboard", icon=Icons.SETTINGS_APPLICATIONS, link="/cfg/admin/admin/tasks")
-            )
-
-            # Try to add Tasks Logs with safe URL resolution
-            logs_item = self._create_nav_item(
-                title="Logs",
-                icon=Icons.TASK,
-                url_name="admin:django_cfg_tasks_tasklog_changelist",
-                fallback_link="/admin/django_cfg_tasks/tasklog/"
-            )
-            if logs_item:
-                tasks_items.append(logs_item)
-
-            navigation_sections.append(NavigationSection(
-                title="Background Tasks",
-                separator=True,
-                collapsible=True,
-                items=tasks_items
-            ))
 
         # System Operations section
         system_items = []

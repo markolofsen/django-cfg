@@ -215,7 +215,7 @@ user_context = {
 **Advanced Configuration:**
 - **[Configuration Models](/fundamentals/configuration)** - Complete API reference
 - **[Email Configuration](/features/modules/email/overview)** - SMTP setup for notifications
-- **[Background Tasks](/features/integrations/rearq/overview)** - Async email processing
+- **[Background Tasks](/features/integrations/django-rq/overview)** - Async email processing
 
 ### Guides & Tutorials
 

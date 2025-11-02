@@ -96,7 +96,7 @@ class MyService(BaseService):
 - ✅ Abort helper methods
 - ✅ Context utilities
 
-  </TabItem>
+</TabItem>
   <TabItem value="readonly" label="ReadOnlyService">
 
 ### ReadOnlyService
@@ -129,7 +129,7 @@ class ProductCatalogService(ReadOnlyService):
 - ✅ Optimized for queries
 - ✅ Streaming support
 
-  </TabItem>
+</TabItem>
   <TabItem value="auth" label="AuthRequiredService">
 
 ### AuthRequiredService
@@ -166,7 +166,7 @@ class AccountService(AuthRequiredService):
 - ✅ Auto-reject unauthenticated requests
 - ✅ Simplified code (no auth checks needed)
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## 🔧 BaseService API Reference
@@ -761,4 +761,4 @@ class UserServiceTestCase(TestCase):
 
 ---
 
-**Next:** Learn about [interceptors](./interceptors.md) or explore [authentication](./authentication.md).
+**Next:** Explore [authentication](./authentication.md) to secure your services.

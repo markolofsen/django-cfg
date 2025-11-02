@@ -518,7 +518,7 @@ agent_safety: AgentSafetyConfig = AgentSafetyConfig(
 ### Tools & Deployment
 
 **Background Processing:**
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Async document processing
+- **[Django-RQ Integration](/features/integrations/django-rq/overview)** - Async document processing
 - **[Background Tasks](/features/built-in-apps/operations/tasks)** - Task management
 
 **CLI & Deployment:**

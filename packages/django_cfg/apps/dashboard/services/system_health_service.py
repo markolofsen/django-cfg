@@ -9,6 +9,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Literal
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,7 +106,7 @@ class SystemHealthService:
 
     def check_queue_health(self) -> Dict[str, Any]:
         """
-        Check task queue (ReArq) health via Redis connection.
+        Check task queue (Django-RQ) health via Redis connection.
 
         Returns:
             Health status dictionary
@@ -191,90 +192,6 @@ class SystemHealthService:
                 'health_percentage': 0,
             }
 
-    def check_django_q2_health(self) -> Dict[str, Any]:
-        """
-        Check Django-Q2 task scheduling configuration and status.
-
-        Returns:
-            Health status dictionary with schedule count and cluster status
-        """
-        try:
-            from django_cfg.core.config import get_current_config
-
-            config = get_current_config()
-
-            # Check if django_q2 is configured
-            if not hasattr(config, 'django_q2') or not config.django_q2:
-                return {
-                    'component': 'django_q2',
-                    'status': 'info',
-                    'description': 'Django-Q2 scheduling not configured',
-                    'last_check': datetime.now().isoformat(),
-                    'health_percentage': 100,
-                    'details': {
-                        'enabled': False,
-                        'schedules_count': 0,
-                    }
-                }
-
-            django_q2_config = config.django_q2
-
-            # Check if enabled
-            if not django_q2_config.enabled:
-                return {
-                    'component': 'django_q2',
-                    'status': 'warning',
-                    'description': 'Django-Q2 scheduling is disabled',
-                    'last_check': datetime.now().isoformat(),
-                    'health_percentage': 50,
-                    'details': {
-                        'enabled': False,
-                        'schedules_count': len(django_q2_config.schedules) if django_q2_config.schedules else 0,
-                    }
-                }
-
-            # Count schedules
-            schedules_count = len(django_q2_config.schedules) if django_q2_config.schedules else 0
-
-            # Try to check cluster status from database
-            cluster_running = False
-            try:
-                from django_q.models import Schedule, Task
-                from django.utils import timezone
-                from datetime import timedelta
-
-                # Check for recent task activity
-                recent_task = Task.objects.filter(
-                    started__gte=timezone.now() - timedelta(minutes=5)
-                ).exists()
-                cluster_running = recent_task
-            except Exception:
-                pass
-
-            return {
-                'component': 'django_q2',
-                'status': 'healthy',
-                'description': f'{schedules_count} schedule(s) configured, cluster {"running" if cluster_running else "idle"}',
-                'last_check': datetime.now().isoformat(),
-                'health_percentage': 100,
-                'details': {
-                    'enabled': True,
-                    'schedules_count': schedules_count,
-                    'cluster_running': cluster_running,
-                    'workers': django_q2_config.workers,
-                }
-            }
-
-        except Exception as e:
-            self.logger.error(f"Django-Q2 health check failed: {e}")
-            return {
-                'component': 'django_q2',
-                'status': 'error',
-                'description': f'Django-Q2 check error: {str(e)}',
-                'last_check': datetime.now().isoformat(),
-                'health_percentage': 0,
-            }
-
     def get_all_health_checks(self) -> List[Dict[str, Any]]:
         """
         Run all health checks and return aggregated results.
@@ -289,7 +206,6 @@ class SystemHealthService:
             self.check_cache_health(),
             self.check_queue_health(),
             self.check_storage_health(),
-            self.check_django_q2_health(),
         ]
 
         return checks
@@ -328,42 +244,84 @@ class SystemHealthService:
         Get quick action buttons for dashboard.
 
         Returns:
-            List of quick action dictionaries
+            List of quick action dictionaries with safe URL resolution
 
-        %%AI_HINT: Actions link to admin pages or trigger common tasks%%
+        %%AI_HINT: Actions link to admin pages or API endpoints%%
         """
+        from django.urls import reverse, NoReverseMatch
+
+        def safe_reverse(url_name: str, fallback: str) -> str:
+            """Safely reverse URL with fallback."""
+            try:
+                return reverse(url_name)
+            except NoReverseMatch:
+                self.logger.debug(f"Could not reverse URL '{url_name}', using fallback: {fallback}")
+                return fallback
+
         actions = [
             {
-                'title': 'User Management',
-                'description': 'Manage users and permissions',
-                'icon': 'people',
-                'link': '/admin/auth/user/',
+                'title': 'Admin Panel',
+                'description': 'Open Django admin interface',
+                'icon': 'admin_panel_settings',
+                'link': safe_reverse('admin:index', '/admin/'),
                 'color': 'primary',
                 'category': 'admin',
             },
             {
-                'title': 'View Logs',
-                'description': 'Check system logs',
-                'icon': 'description',
-                'link': '/admin/django_cfg/logs/',
-                'color': 'secondary',
-                'category': 'system',
+                'title': 'User Management',
+                'description': 'Manage users and permissions',
+                'icon': 'people',
+                'link': safe_reverse('admin:auth_user_changelist', '/admin/auth/user/'),
+                'color': 'primary',
+                'category': 'admin',
             },
             {
-                'title': 'Clear Cache',
-                'description': 'Clear application cache',
-                'icon': 'refresh',
-                'link': '/cfg/admin/cache/clear/',
-                'color': 'warning',
-                'category': 'system',
+                'title': 'Settings',
+                'description': 'Configure application settings',
+                'icon': 'settings',
+                'link': safe_reverse('admin:constance_config_changelist', '/admin/constance/config/'),
+                'color': 'default',
+                'category': 'admin',
             },
             {
-                'title': 'Run Backup',
-                'description': 'Create system backup',
-                'icon': 'backup',
-                'link': '/cfg/admin/backup/create/',
+                'title': 'System Health',
+                'description': 'Check system health status',
+                'icon': 'favorite',
+                'link': '/cfg/dashboard/api/system/health/',
                 'color': 'success',
-                'category': 'system',
+                'category': 'monitoring',
+            },
+            {
+                'title': 'RQ Workers',
+                'description': 'Monitor task queue workers',
+                'icon': 'work',
+                'link': '/cfg/rq/workers/',
+                'color': 'info',
+                'category': 'monitoring',
+            },
+            {
+                'title': 'RQ Jobs',
+                'description': 'View and manage background jobs',
+                'icon': 'assignment',
+                'link': '/cfg/rq/jobs/',
+                'color': 'secondary',
+                'category': 'monitoring',
+            },
+            {
+                'title': 'RQ Schedules',
+                'description': 'Manage scheduled tasks',
+                'icon': 'schedule',
+                'link': '/cfg/rq/schedules/',
+                'color': 'info',
+                'category': 'monitoring',
+            },
+            {
+                'title': 'Commands',
+                'description': 'Execute Django management commands',
+                'icon': 'terminal',
+                'link': '/cfg/dashboard/api/commands/',
+                'color': 'warning',
+                'category': 'admin',
             },
         ]
 

@@ -51,7 +51,7 @@ docker/
 └── scripts/
     ├── entrypoint.sh              # Universal container entrypoint
     ├── build-and-run.sh           # Management script
-    └── debug-dramatiq.sh          # Dramatiq debugging
+    └── debug-django-rq.sh          # Django-RQ debugging
 ```
 
 ### Basic Commands
@@ -132,7 +132,7 @@ environment:
 
 **Configuration:**
 - **Port:** 6380 (external) → 6379 (internal)
-- **Databases:** DB 0 (cache), DB 2 (Dramatiq tasks)
+- **Databases:** DB 0 (cache), DB 2 (Django-RQ tasks)
 - **Custom config:** Optimized `redis.conf`
 
 ```yaml
@@ -198,19 +198,19 @@ carapis-django:
     start_period: 60s
 ```
 
-### Dramatiq Workers
+### Django-RQ Workers
 
 **Configuration:**
 - **Processes:** 2 (configurable via `DRAMATIQ_PROCESSES`)
 - **Threads:** 4 per process (configurable via `DRAMATIQ_THREADS`)
-- **Command:** `rundramatiq` (Django-CFG 1.1.67+)
+- **Command:** `rundjango-rq` (Django-CFG 1.1.67+)
 
 ```yaml
-carapis-dramatiq:
+carapis-django-rq:
   build:
     context: ..
     dockerfile: docker/Dockerfile.django
-  container_name: carapis_dramatiq
+  container_name: carapis_django-rq
   restart: unless-stopped
   env_file:
     - env.production
@@ -224,7 +224,7 @@ carapis-dramatiq:
       condition: service_healthy
     carapis_redis:
       condition: service_healthy
-  command: ["rundramatiq"]
+  command: ["rundjango-rq"]
   healthcheck:
     test: ["CMD", "ps", "aux"]
     interval: 30s
@@ -330,7 +330,7 @@ graph TD
     B --> E[Django Application]
     D --> E
     E --> F[Web Server Running]
-    B --> G[Dramatiq Workers]
+    B --> G[Django-RQ Workers]
     D --> G
     G --> H[Task Processing Active]
 ```
@@ -735,8 +735,8 @@ docker volume prune -f
 ### Background Processing
 
 **Task Processing:**
-- [**ReArq Integration**](/features/integrations/rearq/overview) - Background task processing
-- [**Background Task Commands**](/features/integrations/rearq/overview) - Manage workers via CLI
+- [**ReArq Integration**](/features/integrations/django-rq/overview) - Background task processing
+- [**Background Task Commands**](/features/integrations/django-rq/overview) - Manage workers via CLI
 - [**Tasks App**](/features/built-in-apps/operations/tasks) - Built-in task management
 
 ### Configuration & Setup

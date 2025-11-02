@@ -1,10 +1,13 @@
 """
 Management command to update cryptocurrency prices from external API.
+
+This is a CLI wrapper around the RQ task function.
+Business logic is in apps.crypto.tasks.update_coin_prices
 """
 
 from django.core.management.base import BaseCommand
 
-from apps.crypto.models import Coin
+from apps.crypto.tasks import update_coin_prices
 
 
 class Command(BaseCommand):
@@ -12,63 +15,47 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--coin',
-            type=str,
-            help='Update specific coin by symbol (e.g., BTC, ETH)',
-        )
-        parser.add_argument(
             '--limit',
             type=int,
             default=100,
             help='Maximum number of coins to update (default: 100)',
         )
         parser.add_argument(
+            '--verbosity',
+            type=int,
+            default=1,
+            choices=[0, 1, 2],
+            help='Output verbosity: 0=quiet, 1=normal, 2=verbose',
+        )
+        parser.add_argument(
             '--force',
             action='store_true',
             help='Force update even if data is recent',
         )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Show what would be updated without making changes',
-        )
 
     def handle(self, *args, **options):
-        coin_symbol = options.get('coin')
-        limit = options.get('limit')
-        force = options.get('force')
-        dry_run = options.get('dry_run')
+        limit = options.get('limit', 100)
+        verbosity = options.get('verbosity', 1)
+        force = options.get('force', False)
 
-        if dry_run:
+        # Use the task function directly
+        result = update_coin_prices(
+            limit=limit,
+            verbosity=verbosity,
+            force=force
+        )
+
+        # Display results
+        if result['success']:
             self.stdout.write(
-                self.style.WARNING('DRY RUN MODE - No changes will be made')
-            )
-
-        if coin_symbol:
-            self.stdout.write(f'Updating prices for {coin_symbol}...')
-            # Update specific coin logic here
-            queryset = Coin.objects.filter(symbol__iexact=coin_symbol)
-        else:
-            self.stdout.write(f'Updating prices for top {limit} coins...')
-            # Update all coins logic here
-            queryset = Coin.objects.filter(is_active=True)[:limit]
-
-        updated_count = 0
-        for coin in queryset:
-            if not dry_run:
-                # API call and update logic would go here
-                pass
-
-            updated_count += 1
-            self.stdout.write(
-                self.style.SUCCESS(f'✓ Updated {coin.symbol}: ${coin.current_price_usd}')
-            )
-
-        if dry_run:
-            self.stdout.write(
-                self.style.WARNING(f'Would update {updated_count} coins (dry run)')
+                self.style.SUCCESS(
+                    f"✓ Price update completed:\n"
+                    f"  - Updated: {result['updated']}\n"
+                    f"  - Skipped: {result['skipped']}\n"
+                    f"  - Failed: {result['failed']}"
+                )
             )
         else:
             self.stdout.write(
-                self.style.SUCCESS(f'Successfully updated {updated_count} coins')
+                self.style.ERROR(f"✗ Price update failed: {result.get('message')}")
             )

@@ -602,7 +602,7 @@ async def handle_user_registration(user):
     await redis.enqueue_job('send_welcome_email_async', user.id)
 ```
 
-See [Background Tasks](/features/integrations/rearq/overview) for async processing details.
+See [Background Tasks](/features/integrations/django-rq/overview) for async processing details.
 
 ### Background SMS Sending
 
@@ -765,7 +765,7 @@ class ServiceIntegrationTest(TestCase):
 ## Related Topics
 
 - [Configuration](./configuration) - Service configuration setup
-- [Background Tasks](/features/integrations/rearq/overview) - Async service usage
+- [Background Tasks](/features/integrations/django-rq/overview) - Async service usage
 - [Authentication](./authentication) - OTP via SMS/email
 
 External service integrations enhance application capabilities!

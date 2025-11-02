@@ -182,7 +182,7 @@ python manage.py process_pending_payments --limit 100
 python manage.py cleanup_expired_data --days 30
 ```
 
-## 🔄 Background Tasks (ReArq)
+## 🔄 Background Tasks (Django-RQ)
 
 ```bash
 # Start async worker
@@ -316,7 +316,7 @@ python manage.py runserver_ngrok
 | **Maintenance** | 3 | Maintenance mode, Cloudflare sync |
 | **Payments** | 6 | Currency, provider, payment management |
 | **Accounts** | 1 | OTP authentication testing |
-| **Background Tasks** | 4 | ReArq worker management |
+| **Background Tasks** | 4 | Django-RQ worker management |
 | **Development** | 8 | Server, ngrok, scripts, testing |
 | **Built-in Apps** | 4 | Support, newsletter, leads stats |
 
@@ -360,7 +360,7 @@ python manage.py test_twilio --to "+1234567890"
 - **[Knowledge Base](./knowbase)** - Vector search commands
 - **[Maintenance](./maintenance)** - Maintenance mode commands
 - **[Payments](./payments)** - Payment management commands
-- **[Background Tasks](/features/integrations/rearq/overview)** - ReArq commands
+- **[Background Tasks](/features/integrations/django-rq/overview)** - Django-RQ commands
 - **[Development](./development)** - Development tools
 
 ---

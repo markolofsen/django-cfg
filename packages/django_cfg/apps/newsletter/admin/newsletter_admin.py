@@ -243,19 +243,20 @@ class EmailLogAdmin(PydanticAdmin):
     @computed_field("Tracking")
     def tracking_display(self, obj: EmailLog) -> str:
         """Display tracking status with badges."""
-        badges = []
+        # Declarative approach - no imperative .append()
+        opened_badge = (
+            self.html.badge("Opened", variant="success", icon=Icons.VISIBILITY)
+            if obj.is_opened else
+            self.html.badge("Not Opened", variant="secondary", icon=Icons.VISIBILITY_OFF)
+        )
 
-        if obj.is_opened:
-            badges.append(self.html.badge("Opened", variant="success", icon=Icons.VISIBILITY))
-        else:
-            badges.append(self.html.badge("Not Opened", variant="secondary", icon=Icons.VISIBILITY_OFF))
+        clicked_badge = (
+            self.html.badge("Clicked", variant="info", icon=Icons.MOUSE)
+            if obj.is_clicked else
+            self.html.badge("Not Clicked", variant="secondary", icon=Icons.TOUCH_APP)
+        )
 
-        if obj.is_clicked:
-            badges.append(self.html.badge("Clicked", variant="info", icon=Icons.MOUSE))
-        else:
-            badges.append(self.html.badge("Not Clicked", variant="secondary", icon=Icons.TOUCH_APP))
-
-        return " | ".join(badges)
+        return self.html.inline(opened_badge, clicked_badge, separator=" | ")
 
 
 # ===== Newsletter Admin Config =====

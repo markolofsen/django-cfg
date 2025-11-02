@@ -21,8 +21,8 @@ class KnowbaseConfig(AppConfig):
         # Connect post-migrate signal for database setup
         post_migrate.connect(self.create_pgvector_extension, sender=self)
 
-        # Note: Task system initialization removed - ReArq doesn't need it
-        # Tasks are auto-discovered from decorated functions
+        # Note: Task system initialization removed - tasks are handled by Django-RQ
+        # Background tasks can be scheduled using django_rq.enqueue()
 
     def create_pgvector_extension(self, sender, **kwargs):
         """Create pgvector extension and indexes if they don't exist."""

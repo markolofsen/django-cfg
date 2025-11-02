@@ -642,7 +642,7 @@ GRPCServerConfig(
 
 - **[Setup Guide](./setup.md)** - Configure gRPC in your project
 - **[Backend Guide](./backend-guide.md)** - Create gRPC services
-- **[Interceptors](./interceptors.md)** - Using interceptors
+- **[Authentication](./authentication.md)** - JWT authentication
 - **[Monitoring](./monitoring.md)** - Logging and metrics
 
 ---

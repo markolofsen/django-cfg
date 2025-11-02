@@ -249,11 +249,11 @@ Vector search and knowledge management.
 <details>
   <summary>
 
-### 🔄 Background Tasks — ReArq Integration
+### 🔄 Background Tasks — Django-RQ Integration
 
   </summary>
 
-ReArq worker management via native CLI.
+Django-RQ worker management via native CLI.
 
 | Command | Description |
 |---------|-------------|
@@ -262,7 +262,7 @@ ReArq worker management via native CLI.
 | `rearq main:rearq server` | Start monitoring server |
 | `test_tasks` | Test task processing |
 
-**[Full Documentation →](/features/integrations/rearq/overview)**
+**[Full Documentation →](/features/integrations/django-rq/overview)**
 
 </details>
 

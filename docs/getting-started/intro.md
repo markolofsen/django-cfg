@@ -763,7 +763,7 @@ settings.py globals
 
 - [Database Configuration](/fundamentals/configuration) - Multiple databases, routing
 - [Caching Setup](/fundamentals/configuration) - Redis, in-memory, database caching
-- [Background Tasks](/features/integrations/rearq/overview) - Async task processing
+- [Background Tasks](/features/integrations/django-rq/overview) - Async task processing
 - [AI Agents](/ai-agents/introduction) - Build AI-powered workflows
 
 ## Resources

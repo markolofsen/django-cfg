@@ -33,7 +33,7 @@ export const OPENAPI_SCHEMA = {
               "stop_loss"
             ],
             "type": "string",
-            "x-spec-enum-id": "7ae341549edd1dc5"
+            "x-spec-enum-id": "38b904933b9ff162"
           },
           "portfolio": {
             "type": "integer"
@@ -67,7 +67,7 @@ export const OPENAPI_SCHEMA = {
             ],
             "readOnly": true,
             "type": "string",
-            "x-spec-enum-id": "7146ae5d4fbefc4c"
+            "x-spec-enum-id": "15fb348b9f94c2df"
           },
           "symbol": {
             "description": "Trading pair (e.g., BTC/USDT)",
@@ -111,7 +111,7 @@ export const OPENAPI_SCHEMA = {
               "stop_loss"
             ],
             "type": "string",
-            "x-spec-enum-id": "7ae341549edd1dc5"
+            "x-spec-enum-id": "38b904933b9ff162"
           },
           "price": {
             "format": "decimal",
@@ -157,7 +157,7 @@ export const OPENAPI_SCHEMA = {
               "stop_loss"
             ],
             "type": "string",
-            "x-spec-enum-id": "7ae341549edd1dc5"
+            "x-spec-enum-id": "38b904933b9ff162"
           },
           "price": {
             "format": "decimal",
@@ -204,7 +204,7 @@ export const OPENAPI_SCHEMA = {
               "stop_loss"
             ],
             "type": "string",
-            "x-spec-enum-id": "7ae341549edd1dc5"
+            "x-spec-enum-id": "38b904933b9ff162"
           },
           "portfolio": {
             "type": "integer"
@@ -381,7 +381,7 @@ export const OPENAPI_SCHEMA = {
               "stop_loss"
             ],
             "type": "string",
-            "x-spec-enum-id": "7ae341549edd1dc5"
+            "x-spec-enum-id": "38b904933b9ff162"
           },
           "portfolio": {
             "type": "integer"

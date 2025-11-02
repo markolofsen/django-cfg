@@ -19,7 +19,7 @@ class QuickActionSerializer(serializers.Serializer):
     icon = serializers.CharField(help_text="Material icon name")
     link = serializers.CharField(help_text="Action URL")
     color = serializers.ChoiceField(
-        choices=['primary', 'success', 'warning', 'danger', 'secondary'],
+        choices=['primary', 'success', 'warning', 'danger', 'secondary', 'info', 'default'],
         default='primary',
         help_text="Button color theme"
     )

@@ -1,0 +1,9 @@
+{
+  "label": "Centrifugo WebSocket RPC",
+  "position": 4,
+  "link": {
+    "type": "doc",
+    "id": "integrations/centrifugo/index"
+  },
+  "collapsed": true
+}

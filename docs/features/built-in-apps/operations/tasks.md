@@ -22,7 +22,7 @@ The Tasks app provides:
 - **Task statistics** and performance metrics
 - **Interactive web interface** with modern UI
 - **REST API** for programmatic access
-- **Background task processing** with ReArq integration
+- **Background task processing** with Django-RQ integration
 
 ## Quick Start
 
@@ -484,19 +484,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ```bash
 # Start task workers
-rearq worker --processes 4 --threads 8
+django-rq worker --processes 4 --threads 8
 
 # Check task status
-rearq status --verbose
+django-rq status --verbose
 
 # Clear task queues
-rearq clear --queue default
+django-rq clear --queue default
 
 # Task statistics
-rearq stats --days 7
+django-rq stats --days 7
 
 # Monitor task performance
-rearq monitor --interval 5
+django-rq monitor --interval 5
 ```
 
 ### Custom Management Commands
@@ -589,13 +589,13 @@ class TaskWebhookView(APIView):
 
 ## Related Documentation
 
-- [**ReArq Integration**](/features/integrations/rearq/overview) - Background task processing
+- [**Django-RQ Integration**](/features/integrations/django-rq/overview) - Background task processing
 - [**Configuration Guide**](/fundamentals/configuration) - Task configuration
 - [**Deployment Guide**](/deployment/environment-setup) - Production setup
 - [**Monitoring Guide**](/deployment/monitoring) - System monitoring
 
 The Task Management system provides comprehensive task monitoring for your Django applications! ⚙️
 
-TAGS: tasks, queues, workers, monitoring, dashboard, rearq
-DEPENDS_ON: [rearq, redis, configuration]
+TAGS: tasks, queues, workers, monitoring, dashboard, django-rq
+DEPENDS_ON: [django-rq, redis, configuration]
 USED_BY: [all-apps, background-processing, monitoring]

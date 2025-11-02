@@ -156,16 +156,14 @@ class BaseCfgModule(ABC):
         """
         return self._get_config_key('enable_knowbase', False)
 
-    def should_enable_tasks(self) -> bool:
+    def should_enable_rq(self) -> bool:
         """
-        Check if django-cfg Tasks is enabled.
-        Auto-enables if knowbase or agents are enabled.
+        Check if django-cfg RQ is enabled.
         
         Returns:
-            True if Tasks is enabled, False otherwise
+            True if RQ is enabled, False otherwise
         """
-
-        return self.get_config().should_enable_tasks()
+        return self.get_config().should_enable_rq()
 
     def is_maintenance_enabled(self) -> bool:
         """

@@ -1,11 +1,12 @@
 /**
  * AdminNav Component
  *
- * Compact horizontal navigation tabs for admin routes
+ * Responsive navigation for admin routes
+ * - Desktop: Full-width flex tabs with equal spacing
+ * - Mobile: Auto-converts to Sheet menu with burger button
+ *
  * Automatically generated from admin routes
  * Designed to be embedded in Django iframe
- *
- * Uses Tabs component from @djangocfg/ui for consistent styling
  */
 
 import { useRouter } from 'next/router';
@@ -28,30 +29,33 @@ export function AdminNav() {
   )?.path || navItems[0]?.path || '/admin';
 
   return (
-    <div className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mb-4">
-      <div className="container max-w-screen-2xl">
-        <Tabs value={activeTab}>
-          <TabsList className="h-14 w-full justify-start rounded-none border-0 bg-transparent p-0">
-            {navItems.map((route) => {
-              const Icon = route.metadata.icon;
+    <Tabs
+      value={activeTab}
+      mobileSheet
+      mobileTitleText="Admin Panel"
+      mobileSheetTitle="Navigation"
+      sticky
+    >
+      <TabsList fullWidth>
+        {navItems.map((route) => {
+          const Icon = route.metadata.icon;
 
-              return (
-                <TabsTrigger
-                  key={route.path}
-                  value={route.path}
-                  className="h-14 gap-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted/50"
-                  asChild
-                >
-                  <Link href={route.path}>
-                    {Icon && <Icon className="h-4 w-4" />}
-                    <span>{route.metadata.label}</span>
-                  </Link>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </Tabs>
-      </div>
-    </div>
+          return (
+            <TabsTrigger
+              key={route.path}
+              value={route.path}
+              flexEqual
+              className="gap-2"
+              asChild
+            >
+              <Link href={route.path}>
+                {Icon && <Icon className="h-4 w-4" />}
+                <span>{route.metadata.label}</span>
+              </Link>
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+    </Tabs>
   );
 }

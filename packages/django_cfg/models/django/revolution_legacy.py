@@ -106,7 +106,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             leads_enabled = base_module.is_leads_enabled()
             knowbase_enabled = base_module.is_knowbase_enabled()
             agents_enabled = base_module.is_agents_enabled()
-            tasks_enabled = base_module.should_enable_tasks()
+            tasks_enabled = base_module.should_enable_rearq()
             payments_enabled = base_module.is_payments_enabled()
 
             # Add Support zone if enabled

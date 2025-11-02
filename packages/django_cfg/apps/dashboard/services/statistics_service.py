@@ -64,7 +64,7 @@ class StatisticsService:
                 'superusers': superusers,
             }
         except Exception as e:
-            self.logger.error(f"Error getting user statistics: {e}")
+            self.logger.error(f"Error getting user statistics: {e}", exc_info=True)
             return {
                 'total_users': 0,
                 'active_users': 0,
@@ -145,20 +145,29 @@ class StatisticsService:
 
     def _get_model_stats(self, model) -> Optional[Dict[str, Any]]:
         """Get statistics for a specific model."""
+        from django.db import OperationalError, ProgrammingError
+
         try:
+            # Just try to count - if table doesn't exist, exception will be caught
+            count = model.objects.count()
+
             # Get basic model info
             model_stats = {
                 "name": model._meta.verbose_name_plural
                 or model._meta.verbose_name
                 or model._meta.model_name,
-                "count": model.objects.count(),
+                "count": count,
                 "fields_count": len(model._meta.fields),
                 "admin_url": f"admin:{model._meta.app_label}_{model._meta.model_name}_changelist",
             }
 
             return model_stats
 
+        except (OperationalError, ProgrammingError):
+            # Table doesn't exist or other DB error - skip this model silently
+            return None
         except Exception:
+            # Any other error - skip this model silently
             return None
 
     def get_stat_cards(self) -> List[Dict[str, Any]]:

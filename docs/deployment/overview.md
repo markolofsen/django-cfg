@@ -118,7 +118,7 @@ All deployment methods require:
 - **ReArq** - Built-in task processing
 - **Celery** - Alternative (requires additional setup)
 
-[ReArq Integration →](/features/integrations/rearq/overview)
+[ReArq Integration →](/features/integrations/django-rq/overview)
 
 ### Reverse Proxy
 - **Nginx** - Recommended

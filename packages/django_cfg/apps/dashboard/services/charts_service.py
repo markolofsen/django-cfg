@@ -11,6 +11,7 @@ from typing import Any, Dict, List
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class ChartsService:
             # Get registration counts by date
             registration_data = (
                 User.objects.filter(date_joined__date__gte=start_date)
-                .extra({'date': "date(date_joined)"})
+                .annotate(date=TruncDate('date_joined'))
                 .values('date')
                 .annotate(count=Count('id'))
                 .order_by('date')
@@ -138,7 +139,7 @@ class ChartsService:
             # Get login activity (users who logged in each day)
             activity_data = (
                 User.objects.filter(last_login__date__gte=start_date, last_login__isnull=False)
-                .extra({'date': "date(last_login)"})
+                .annotate(date=TruncDate('last_login'))
                 .values('date')
                 .annotate(count=Count('id'))
                 .order_by('date')
@@ -192,7 +193,7 @@ class ChartsService:
             # Get activity data by date
             activity_data = (
                 User.objects.filter(last_login__date__gte=start_date, last_login__isnull=False)
-                .extra({'date': "date(last_login)"})
+                .annotate(date=TruncDate('last_login'))
                 .values('date')
                 .annotate(count=Count('id'))
                 .order_by('date')

@@ -450,14 +450,8 @@ Explore the complete gRPC integration documentation:
 - **[Architecture](./architecture.md)** - Detailed architecture and design patterns
 - **[Setup Guide](./setup.md)** - Installation and configuration
 - **[Backend Guide](./backend-guide.md)** - Creating gRPC services
-- **[Interceptors](./interceptors.md)** - Using and creating interceptors
 - **[Authentication](./authentication.md)** - JWT auth setup and usage
-- **[Discovery](./discovery.md)** - Service auto-discovery system
 - **[Monitoring](./monitoring.md)** - Request logging and metrics
-- **[Client Usage](./client-usage.md)** - Using gRPC clients
-- **[Examples](./examples.md)** - Real-world examples
-- **[API Reference](./api-reference.md)** - Complete API documentation
-- **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 
 ## 🎯 Use Cases
 
@@ -484,7 +478,7 @@ Ready to build your first gRPC service?
 
 1. **[Setup Guide](./setup.md)** - Configure gRPC in your project
 2. **[Backend Guide](./backend-guide.md)** - Create your first service
-3. **[Examples](./examples.md)** - Learn from real examples
+3. **[Authentication](./authentication.md)** - Secure your services with JWT
 
 ---
 

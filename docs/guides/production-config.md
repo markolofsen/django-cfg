@@ -939,7 +939,7 @@ Common alert channels for production:
 
 **Performance:**
 - **[Cache Configuration](/fundamentals/configuration/cache)** - Redis, Memcached setup
-- **[Background Tasks](/features/integrations/rearq/overview)** - Async processing
+- **[Background Tasks](/features/integrations/django-rq/overview)** - Async processing
 - **[Database Optimization](/fundamentals/database)** - Connection pooling, read replicas
 
 ### Features & Integration

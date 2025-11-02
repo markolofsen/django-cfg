@@ -416,20 +416,20 @@ class StartupDisplayManager(BaseDisplayManager):
             task_table.add_column("Value", style="white")
 
             # Show real tasks status
-            tasks_enabled = self.config.should_enable_tasks()
+            tasks_enabled = self.config.should_enable_rq()
             if tasks_enabled:
                 task_table.add_row("Tasks Enabled", "[green]True[/green]")
             else:
                 task_table.add_row("Tasks Enabled", "[yellow]False[/yellow]")
 
-            if hasattr(self.config, 'tasks') and self.config.tasks:
-                queue_name = getattr(self.config.tasks, 'queue_name', 'default')
-                task_table.add_row("Queue", f"[yellow]{queue_name}[/yellow]")
+            if hasattr(self.config, 'django_rq') and self.config.django_rq:
+                queue_names = ', '.join(self.config.django_rq.get_queue_names())
+                task_table.add_row("Queues", f"[yellow]{queue_names}[/yellow]")
             else:
-                task_table.add_row("Queue", "[yellow]default[/yellow]")
+                task_table.add_row("Queues", "[yellow]default[/yellow]")
 
             # Add worker command
-            task_table.add_row("Start Workers", "[bright_blue]poetry run python manage.py runrearq[/bright_blue]")
+            task_table.add_row("Start Workers", "[bright_blue]poetry run python manage.py rqworker default[/bright_blue]")
 
             task_panel = self.create_full_width_panel(
                 task_table,
@@ -465,13 +465,6 @@ class StartupDisplayManager(BaseDisplayManager):
             payments_count = 0
 
             config = self.config
-            if config and config.should_enable_tasks():
-                try:
-                    from django_cfg.modules.django_tasks import extend_constance_config_with_tasks
-                    tasks_fields = extend_constance_config_with_tasks()
-                    tasks_count = len(tasks_fields)
-                except:
-                    pass
 
             if config and config.enable_knowbase:
                 try:
@@ -623,13 +616,6 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Try to get individual app field counts
             config = self.config
-            if config and config.should_enable_tasks():
-                try:
-                    from django_cfg.modules.django_tasks import extend_constance_config_with_tasks
-                    tasks_fields = extend_constance_config_with_tasks()
-                    tasks_count = len(tasks_fields)
-                except:
-                    pass
 
             if config and config.enable_knowbase:
                 try:

@@ -303,7 +303,7 @@ print(result)
 ### Queue Integration
 
 ```python
-# Use with ReArq for background processing
+# Use with Django-RQ for background processing
 from django_cfg.modules.django_email import send_bulk_email_task
 
 # Queue bulk email task
@@ -314,8 +314,8 @@ task_id = await send_bulk_email_task.enqueue(
 )
 
 # Check task status
-from rearq import ReArq
-arq = ReArq()
+from rearq import Django-RQ
+arq = Django-RQ()
 result = await arq.get_job_result(task_id)
 print(f"Status: {result.status}")
 print(f"Result: {result.result}")

@@ -120,9 +120,51 @@ services:
       - "traefik.http.routers.djangocfg-api.service=djangocfg-api"
       - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
 
-  # ReArq removed - use docker-compose-local-services.yml for task queue
-  # See: solution/docker/services/rearq/README.md
-  # To enable task queue, run:
+  # RQ Worker (Background Tasks Processor)
+  # Optional: uncomment to run locally, or use docker-compose-local-services.yml
+  # rq-worker:
+  #   image: djangocfg-django:latest
+  #   container_name: djangocfg_rq_worker
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env.local
+  #   environment:
+  #     DJANGO_SETTINGS_MODULE: api.settings
+  #   volumes:
+  #     - ../../volumes/django/media:/app/media:rw
+  #   depends_on:
+  #     django:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   command: poetry run python manage.py rqworker default high low knowledge
+  #   networks:
+  #     - djangocfg-network
+  #     - djangocfg_django_network
+
+  # RQ Scheduler (Scheduled Tasks - Cron-like)
+  # Optional: uncomment to run scheduled tasks locally
+  # rq-scheduler:
+  #   image: djangocfg-django:latest
+  #   container_name: djangocfg_rq_scheduler
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env.local
+  #   environment:
+  #     DJANGO_SETTINGS_MODULE: api.settings
+  #   volumes:
+  #     - ../../volumes/django/media:/app/media:rw
+  #   depends_on:
+  #     django:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   command: poetry run python manage.py rqscheduler
+  #   networks:
+  #     - djangocfg-network
+  #     - djangocfg_django_network
+
+  # For separate RQ services, use: docker-compose-local-services.yml
   # docker compose -f docker-compose-local-services.yml up -d
 
   centrifugo:

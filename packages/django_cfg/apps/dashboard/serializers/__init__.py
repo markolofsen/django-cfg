@@ -22,12 +22,6 @@ from .commands import (
     CommandHelpResponseSerializer,
 )
 from .apizones import APIZoneSerializer, APIZonesSummarySerializer
-from .django_q2 import (
-    DjangoQ2ScheduleSerializer,
-    DjangoQ2TaskSerializer,
-    DjangoQ2StatusSerializer,
-    DjangoQ2SummarySerializer,
-)
 
 __all__ = [
     # Base
@@ -65,10 +59,4 @@ __all__ = [
     # API Zones
     'APIZoneSerializer',
     'APIZonesSummarySerializer',
-
-    # Django-Q2
-    'DjangoQ2ScheduleSerializer',
-    'DjangoQ2TaskSerializer',
-    'DjangoQ2StatusSerializer',
-    'DjangoQ2SummarySerializer',
 ]

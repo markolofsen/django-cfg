@@ -97,6 +97,28 @@ def lib_health_url():
 
 
 @register.simple_tag
+def is_dev():
+    """
+    Check if project is in development mode.
+
+    Returns True if the current DjangoConfig has is_development = True.
+
+    Usage in template:
+        {% load django_cfg %}
+        {% is_dev as is_development %}
+        {% if is_development %}
+            <div>Development Mode</div>
+        {% endif %}
+    """
+    try:
+        from django_cfg.core.config import get_current_config
+        config = get_current_config()
+        return config and config.is_development
+    except Exception:
+        return False
+
+
+@register.simple_tag
 def lib_subtitle():
     """Get the library subtitle/tagline."""
     return "The AI-First Django Framework That Thinks For You"
@@ -187,7 +209,6 @@ def inject_jwt_tokens_script(context):
         // Store JWT tokens in localStorage for Next.js app
         localStorage.setItem('auth_token', '{access_token}');
         localStorage.setItem('refresh_token', '{refresh_token}');
-        console.log('JWT tokens injected successfully');
     }} catch (e) {{
         console.error('Failed to inject JWT tokens:', e);
     }}
@@ -342,3 +363,42 @@ def nextjs_external_admin_title():
         return config.nextjs_admin.get_tab_title()
     except Exception:
         return 'Next.js Admin'
+
+
+@register.simple_tag(takes_context=True)
+def generate_jwt_tokens(context):
+    """
+    Generate JWT tokens for the current authenticated user.
+
+    Returns a dict with 'access' and 'refresh' tokens for use in templates.
+
+    Usage:
+        {% load django_cfg %}
+        {% generate_jwt_tokens as jwt_tokens %}
+        localStorage.setItem('auth_token', '{{ jwt_tokens.access }}');
+        localStorage.setItem('refresh_token', '{{ jwt_tokens.refresh }}');
+    """
+    from django.contrib.auth.models import AnonymousUser
+
+    request = context.get('request')
+    if not request:
+        return {'access': '', 'refresh': ''}
+
+    user = getattr(request, 'user', None)
+    if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+        return {'access': '', 'refresh': ''}
+
+    try:
+        # Generate tokens for the authenticated user
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        return {
+            'access': access_token,
+            'refresh': refresh_token
+        }
+    except ImportError:
+        return {'access': '', 'refresh': ''}
+    except Exception as e:
+        return {'access': '', 'refresh': ''}

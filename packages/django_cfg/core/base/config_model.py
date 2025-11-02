@@ -20,9 +20,9 @@ from ...models import (
     ApiKeys,
     AxesConfig,
     CacheConfig,
-    DjangoQ2Config,
     CryptoFieldsConfig,
     DatabaseConfig,
+    DjangoRQConfig,
     DRFConfig,
     EmailConfig,
     LimitsConfig,
@@ -33,7 +33,6 @@ from ...models import (
 from ...models.api.grpc import GRPCConfig
 from ...models.ngrok import NgrokConfig
 from ...models.payments import PaymentsConfig
-from ...models.tasks import TaskConfig
 from ...modules.nextjs_admin import NextJsAdminConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
@@ -224,7 +223,7 @@ class DjangoConfig(BaseModel):
         description=(
             "Redis connection URL (redis://host:port/db). "
             "If set and cache_default is None, automatically creates RedisCache backend. "
-            "Also used by tasks (ReArq, Django-Q2) if they don't specify broker_url."
+            "Also used by Django-RQ if queues don't specify connection details."
         ),
     )
 
@@ -324,16 +323,10 @@ class DjangoConfig(BaseModel):
         description="Enable modern Tailwind CSS theme for Django REST Framework Browsable API",
     )
 
-    # === Background Task Processing ===
-    tasks: Optional[TaskConfig] = Field(
+    # === Django-RQ Task Queue & Scheduler ===
+    django_rq: Optional[DjangoRQConfig] = Field(
         default=None,
-        description="Background task processing configuration (ReArq)",
-    )
-
-    # === Django-Q2 Task Scheduling ===
-    django_q2: Optional[DjangoQ2Config] = Field(
-        default=None,
-        description="Django-Q2 task scheduling and queue configuration",
+        description="Django-RQ task queue and scheduler configuration (sync tasks, cron scheduling)",
     )
 
     # === Centrifugo Configuration ===
@@ -641,28 +634,19 @@ class DjangoConfig(BaseModel):
             **kwargs
         )
 
-    def should_enable_tasks(self) -> bool:
+    def should_enable_rq(self) -> bool:
         """
-        Determine if background tasks should be enabled.
+        Determine if Django-RQ should be enabled.
 
-        Tasks are enabled if:
-        1. Explicitly configured via tasks field
-        2. Knowledge base is enabled (requires background processing)
-        3. Agents are enabled (requires background processing)
+        Django-RQ is enabled if explicitly configured via django_rq field.
 
         Returns:
-            True if tasks should be enabled, False otherwise
+            True if Django-RQ should be enabled, False otherwise
         """
-        # Check if explicitly configured
-        if hasattr(self, 'tasks') and self.tasks and self.tasks.enabled:
-            return True
-
-        # Check if features that require tasks are enabled
-        if self.enable_knowbase or self.enable_agents:
+        if hasattr(self, 'django_rq') and self.django_rq and self.django_rq.enabled:
             return True
 
         return False
-
 
 # Export main class
 __all__ = ["DjangoConfig"]

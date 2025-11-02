@@ -23,7 +23,6 @@ class InstalledAppsBuilder:
     - Combine default Django/third-party apps
     - Add django-cfg apps based on enabled features
     - Handle special ordering (accounts before admin)
-    - Auto-enable tasks if needed
     - Auto-detect dashboard apps from Unfold
     - Add project-specific apps
     - Remove duplicates while preserving order
@@ -161,16 +160,10 @@ class InstalledAppsBuilder:
         """
         apps = []
 
-        # Auto-enable tasks if needed by other features
-        if self.config.should_enable_tasks():
-            # No external app needed - ReArq is embedded
-            apps.append("django_cfg.apps.tasks")
-
-        # Add django-q2 if enabled
-        if hasattr(self.config, "django_q2") and self.config.django_q2 and self.config.django_q2.enabled:
-            apps.append("django_q")
-            # Auto-add django_q2 module for automatic schedule synchronization
-            apps.append("django_cfg.modules.django_q2")
+        # Add Django-RQ if enabled
+        if hasattr(self.config, "django_rq") and self.config.django_rq and self.config.django_rq.enabled:
+            apps.append("django_rq")  # Core django-rq package
+            apps.append("django_cfg.apps.rq")  # Django-CFG monitoring & API
 
         # Add DRF Tailwind theme module (uses Tailwind via CDN)
         if self.config.enable_drf_tailwind:

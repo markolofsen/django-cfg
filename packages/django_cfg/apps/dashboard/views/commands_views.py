@@ -12,14 +12,12 @@ import json
 import logging
 
 from django.http import StreamingHttpResponse
+from django_cfg.mixins import SuperAdminAPIMixin
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from ..permissions import IsSuperAdmin
 from ..services import CommandsService
 from ..serializers import (
     CommandSerializer,
@@ -31,15 +29,14 @@ from ..serializers import (
 logger = logging.getLogger(__name__)
 
 
-class CommandsViewSet(viewsets.GenericViewSet):
+class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
     """
     Commands ViewSet
 
     Provides endpoints for Django management commands discovery.
+    Requires superuser privileges for all operations.
     """
 
-    authentication_classes = [JWTAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsSuperAdmin]  # Only superusers can access commands
     serializer_class = CommandSerializer
     pagination_class = None  # Disable pagination for commands list
 

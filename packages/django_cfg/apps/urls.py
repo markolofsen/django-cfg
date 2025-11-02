@@ -44,14 +44,14 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.is_agents_enabled():
         enabled_apps.append("django_cfg.apps.agents")
 
-    if base_module.should_enable_tasks():
-        enabled_apps.append("django_cfg.apps.tasks")
-
     if base_module.is_payments_enabled():
         enabled_apps.append("django_cfg.apps.payments")
 
     if base_module.is_centrifugo_enabled():
         enabled_apps.append("django_cfg.apps.centrifugo")
+
+    if base_module.should_enable_rq():
+        enabled_apps.append("django_cfg.apps.rq")
 
     if base_module.is_grpc_enabled():
         enabled_apps.append("django_cfg.apps.grpc")
@@ -176,15 +176,14 @@ APP_URL_MAP = {
     "django_cfg.apps.agents": [
         ("cfg/agents/", "django_cfg.apps.agents.urls"),
     ],
-    "django_cfg.apps.tasks": [
-        ("cfg/tasks/", "django_cfg.apps.tasks.urls"),
-    ],
     "django_cfg.apps.payments": [
         ("cfg/payments/", "django_cfg.apps.payments.urls"),
-        # Payments v2.0: No separate urls_admin (uses Django Admin only)
     ],
     "django_cfg.apps.centrifugo": [
         ("cfg/centrifugo/", "django_cfg.apps.centrifugo.urls"),
+    ],
+    "django_cfg.apps.rq": [
+        ("cfg/rq/", "django_cfg.apps.rq.urls"),
     ],
     "django_cfg.apps.grpc": [
         ("cfg/grpc/", "django_cfg.apps.grpc.urls"),

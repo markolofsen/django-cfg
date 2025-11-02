@@ -346,7 +346,7 @@ ngrok: NgrokConfig = NgrokConfig(
 - [**Payment Examples**](/features/built-in-apps/payments/examples) - Real payment flows
 
 **Related Integrations:**
-- [**ReArq Integration**](/features/integrations/rearq/overview) - Async webhooks
+- [**Django-RQ Integration**](/features/integrations/django-rq/overview) - Async webhooks
 - [**Integrations Overview**](/features/integrations/overview) - All integrations
 
 ### Tools & Development
