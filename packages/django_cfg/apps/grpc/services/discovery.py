@@ -5,13 +5,16 @@ Automatically discovers and registers gRPC services from Django apps.
 """
 
 import importlib
-import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.apps import apps
-from django.conf import settings
+from django_grpc_framework import generics
 
-logger = logging.getLogger(__name__)
+from django_cfg.modules.django_logging import get_logger
+
+from .config_helper import get_enabled_apps, get_grpc_config
+
+logger = get_logger("grpc.discovery")
 
 
 class ServiceDiscovery:
@@ -39,12 +42,22 @@ class ServiceDiscovery:
 
     def __init__(self):
         """Initialize service discovery."""
-        self.grpc_config = getattr(settings, "GRPC_FRAMEWORK", {})
-        self.auto_register = self.grpc_config.get("AUTO_REGISTER_APPS", True)
-        self.enabled_apps = self.grpc_config.get("ENABLED_APPS", [])
-        self.custom_services = self.grpc_config.get("CUSTOM_SERVICES", {})
+        # Get config from django-cfg using Pydantic2 pattern
+        self.config = get_grpc_config()
+
+        if self.config:
+            self.auto_register = self.config.auto_register_apps
+            self.enabled_apps = self.config.enabled_apps if self.config.auto_register_apps else []
+            self.custom_services = self.config.custom_services
+        else:
+            # Fallback if config not available
+            self.auto_register = False
+            self.enabled_apps = []
+            self.custom_services = {}
+            logger.warning("gRPC config not found, service discovery disabled")
 
         # Common module names where services might be defined
+        # Dynamically check which modules exist instead of hardcoding
         self.service_modules = [
             "grpc_services",
             "grpc_handlers",
@@ -199,10 +212,8 @@ class ServiceDiscovery:
         if not isinstance(obj, type):
             return False
 
-        # Check for django-grpc-framework service
+        # Check for django-grpc-framework service (DRF is default in django-cfg)
         try:
-            from django_grpc_framework import generics
-
             # Check if it inherits from any generics service
             if issubclass(obj, (
                 generics.Service,
@@ -210,9 +221,9 @@ class ServiceDiscovery:
                 generics.ReadOnlyModelService,
             )):
                 return True
-
-        except ImportError:
-            logger.debug("django-grpc-framework not installed, skipping service check")
+        except (TypeError, AttributeError):
+            # Not a valid subclass check
+            pass
 
         # Check for grpc servicer (has add_to_server method)
         if hasattr(obj, "add_to_server") and callable(getattr(obj, "add_to_server")):
@@ -299,9 +310,126 @@ class ServiceDiscovery:
             logger.error(f"Error loading custom service {service_path}: {e}", exc_info=True)
             return None
 
+    def get_registered_services(self) -> List[Dict[str, Any]]:
+        """
+        Get list of registered services with metadata.
+
+        Returns:
+            List of service dictionaries with metadata
+
+        Example:
+            >>> discovery = ServiceDiscovery()
+            >>> services = discovery.get_registered_services()
+            >>> services[0]
+            {
+                'name': 'myapp.UserService',
+                'full_name': '/myapp.UserService',
+                'methods': ['GetUser', 'ListUsers'],
+                'description': 'User management service',
+                'file_path': 'apps/myapp/grpc_services.py',
+                'class_name': 'UserService'
+            }
+        """
+        services_metadata = []
+        discovered_services = self.discover_services()
+
+        for service_class, add_to_server_func in discovered_services:
+            metadata = self._extract_service_metadata(service_class)
+            if metadata:
+                services_metadata.append(metadata)
+
+        return services_metadata
+
+    def get_service_by_name(self, service_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get service metadata by name.
+
+        Args:
+            service_name: Service name (e.g., 'myapp.UserService')
+
+        Returns:
+            Service metadata dictionary or None
+
+        Example:
+            >>> discovery = ServiceDiscovery()
+            >>> service = discovery.get_service_by_name('myapp.UserService')
+            >>> service['methods']
+            ['GetUser', 'ListUsers', 'CreateUser']
+        """
+        services = self.get_registered_services()
+        for service in services:
+            if service.get('name') == service_name:
+                return service
+        return None
+
+    def _extract_service_metadata(self, service_class: Any) -> Optional[Dict[str, Any]]:
+        """
+        Extract metadata from a service class.
+
+        Args:
+            service_class: gRPC service class
+
+        Returns:
+            Service metadata dictionary
+
+        """
+        try:
+            class_name = service_class.__name__
+            module_name = service_class.__module__
+
+            # Extract service name (usually ClassName without 'Service' suffix)
+            service_name = class_name
+            if service_name.endswith('Service'):
+                service_name = service_name[:-7]  # Remove 'Service' suffix
+
+            # Build full service name
+            # Try to get package from module name
+            package = module_name.split('.')[0] if module_name else ''
+            full_name = f"/{package}.{service_name}"
+
+            # Extract methods
+            methods = []
+            for attr_name in dir(service_class):
+                if attr_name.startswith('_'):
+                    continue
+                attr = getattr(service_class, attr_name)
+                if callable(attr) and not attr_name.startswith('_'):
+                    # Check if it's likely a gRPC method (not internal Django/Python method)
+                    if attr_name not in ['as_servicer', 'add_to_server', 'save', 'delete']:
+                        methods.append(attr_name)
+
+            # Get description from docstring
+            description = ''
+            if service_class.__doc__:
+                description = service_class.__doc__.strip().split('\n')[0]
+
+            # Get file path
+            file_path = ''
+            if hasattr(service_class, '__module__'):
+                try:
+                    module = importlib.import_module(service_class.__module__)
+                    if hasattr(module, '__file__'):
+                        file_path = module.__file__ or ''
+                except Exception:
+                    pass
+
+            return {
+                'name': f"{package}.{class_name}",
+                'full_name': full_name,
+                'methods': methods,
+                'description': description,
+                'file_path': file_path,
+                'class_name': class_name,
+                'base_class': service_class.__bases__[0].__name__ if service_class.__bases__ else '',
+            }
+
+        except Exception as e:
+            logger.error(f"Error extracting metadata from {service_class}: {e}", exc_info=True)
+            return None
+
     def get_handlers_hook(self) -> Optional[Any]:
         """
-        Get the handlers hook function from ROOT_HANDLERS_HOOK setting.
+        Get the handlers hook function from config.
 
         Returns:
             Handlers hook function or None
@@ -312,10 +440,14 @@ class ServiceDiscovery:
             >>> if handlers_hook:
             ...     services = handlers_hook(server)
         """
-        handlers_hook_path = self.grpc_config.get("ROOT_HANDLERS_HOOK")
+        if not self.config:
+            logger.debug("No gRPC config available")
+            return None
+
+        handlers_hook_path = self.config.handlers_hook
 
         if not handlers_hook_path:
-            logger.debug("No ROOT_HANDLERS_HOOK configured")
+            logger.debug("No handlers_hook configured")
             return None
 
         try:

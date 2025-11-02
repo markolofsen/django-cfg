@@ -7,7 +7,10 @@ Public API endpoints for gRPC monitoring.
 from django.urls import include, path
 from rest_framework import routers
 
+from .views.config import GRPCConfigViewSet
 from .views.monitoring import GRPCMonitorViewSet
+from .views.services import GRPCServiceViewSet
+from .views.testing import GRPCTestingViewSet
 
 app_name = 'django_cfg_grpc'
 
@@ -16,6 +19,15 @@ router = routers.DefaultRouter()
 
 # Monitoring endpoints (Django logs based)
 router.register(r'monitor', GRPCMonitorViewSet, basename='monitor')
+
+# Configuration endpoints
+router.register(r'config', GRPCConfigViewSet, basename='config')
+
+# Service registry endpoints
+router.register(r'services', GRPCServiceViewSet, basename='services')
+
+# Testing endpoints
+router.register(r'test', GRPCTestingViewSet, basename='test')
 
 urlpatterns = [
     # Include router URLs
