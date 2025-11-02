@@ -573,7 +573,7 @@ Yes, Django-CFG Agents is production-ready with:
 **Related AI Features:**
 - **[LLM Module](/features/modules/llm/overview)** - Multi-provider LLM integration
 - **[Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Document processing & semantic search
-- **[Background Tasks](/features/integrations/rearq/overview)** - Async AI processing
+- **[Background Tasks](/features/integrations/django-rq/overview)** - Async AI processing
 
 ### Configuration & Setup
 

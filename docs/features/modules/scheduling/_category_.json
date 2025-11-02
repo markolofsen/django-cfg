@@ -1,9 +1,0 @@
-{
-  "label": "Cron Scheduling",
-  "position": 8,
-  "collapsed": true,
-  "link": {
-    "type": "doc",
-    "id": "modules/scheduling/overview"
-  }
-}

@@ -85,10 +85,10 @@ dev: build local status ## Full dev setup
 quick: local status ## Quick start (no rebuild)
 	@echo "$(GREEN)Services started$(NC)"
 
-##@ Background Services (Redis, Centrifugo, ReArq)
+##@ Background Services (Redis, Centrifugo, RQ)
 
-services: ## Start background services (Redis, Centrifugo, ReArq)
-	@echo "$(BLUE)Starting background services (Redis, Centrifugo, ReArq)...$(NC)"
+services: ## Start background services (Redis, Centrifugo, RQ)
+	@echo "$(BLUE)Starting background services (Redis, Centrifugo, RQ)...$(NC)"
 	@docker compose -f docker-compose-local-services.yml --env-file .env.local up -d
 
 services-down: ## Stop background services
@@ -108,13 +108,32 @@ services-build: ## Build background services
 	@echo "$(BLUE)Building background services...$(NC)"
 	@docker compose -f docker-compose-local-services.yml --env-file .env.local build
 
-rearq: services ## Start ReArq (task queue) with services
+rq: services ## Start RQ (task queue) with services
 	@echo ""
-	@echo "$(GREEN)✓ ReArq is ready!$(NC)"
+	@echo "$(GREEN)✓ RQ is ready!$(NC)"
 	@echo ""
 	@echo "$(BLUE)Access points:$(NC)"
-	@echo "  • ReArq Web UI:   http://localhost:7380/"
-	@echo "  • API Docs:       http://localhost:7380/docs"
+	@echo "  • RQ Dashboard:   https://api.djangocfg.com/cfg/admin/ → RQ tab"
 	@echo "  • Redis:          localhost:7379"
 	@echo "  • Centrifugo:     http://localhost:7320/"
 	@echo ""
+	@echo "$(YELLOW)Workers:$(NC)"
+	@echo "  • RQ Worker:      docker logs djangocfg_rq_worker -f"
+	@echo "  • RQ Scheduler:   docker logs djangocfg_rq_scheduler -f"
+	@echo ""
+
+##@ RQ Management
+
+rq-worker: ## Show RQ worker logs
+	@docker compose -f docker-compose-local-services.yml logs -f rq_worker
+
+rq-scheduler: ## Show RQ scheduler logs
+	@docker compose -f docker-compose-local-services.yml logs -f rq_scheduler
+
+rq-stats: ## Show RQ queue statistics
+	@echo "$(BLUE)RQ Queue Statistics:$(NC)"
+	@docker exec djangocfg_rq_worker python manage.py rqstats || echo "$(YELLOW)Worker not running$(NC)"
+
+rq-empty: ## Empty all RQ queues
+	@echo "$(YELLOW)Emptying all queues...$(NC)"
+	@docker exec djangocfg_rq_worker python manage.py rqempty default high low knowledge || echo "$(YELLOW)Worker not running$(NC)"

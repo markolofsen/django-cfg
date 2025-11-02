@@ -566,8 +566,8 @@ if slow_requests.count() > 10:
 - **[Architecture](./architecture.md)** - Logging architecture details
 - **[Setup Guide](./setup.md)** - Configuration options
 - **[Backend Guide](./backend-guide.md)** - Service development
-- **[Troubleshooting](./troubleshooting.md)** - Debug logging issues
+- **[Authentication](./authentication.md)** - JWT authentication
 
 ---
 
-**Next:** Learn about [client usage](./client-usage.md) or explore [examples](./examples.md).
+**Next:** Explore [architecture](./architecture.md) for detailed logging design.

@@ -184,10 +184,9 @@ class CloudflareApiKeyAdmin(PydanticAdmin):
         ]
 
         total_count = obj.cloudflaresite_set.count()
-        if total_count > 10:
-            site_items.append(f"... and {total_count - 10} more sites")
+        overflow_item = [f"... and {total_count - 10} more sites"] if total_count > 10 else []
 
-        return "\n".join(site_items)
+        return "\n".join(site_items + overflow_item)
     sites_using_key.short_description = "Sites Using This Key"
 
     def changelist_view(self, request, extra_context=None):

@@ -38,10 +38,6 @@ CORE_REGISTRY = {
     # Security - Django Crypto Fields
     "CryptoFieldsConfig": ("django_cfg.models.django.crypto_fields", "CryptoFieldsConfig"),
 
-    # Scheduling - Django-Q2
-    "DjangoQ2Config": ("django_cfg.models.django.django_q2", "DjangoQ2Config"),
-    "DjangoQ2ScheduleConfig": ("django_cfg.models.django.django_q2", "DjangoQ2ScheduleConfig"),
-
     # Limits models
     "LimitsConfig": ("django_cfg.models.api.limits", "LimitsConfig"),
 
@@ -51,9 +47,10 @@ CORE_REGISTRY = {
     # JWT models
     "JWTConfig": ("django_cfg.models.api.jwt", "JWTConfig"),
 
-    # Task and queue models
-    "TaskConfig": ("django_cfg.models.tasks.config", "TaskConfig"),
-    "RearqConfig": ("django_cfg.models.tasks.config", "RearqConfig"),
+    # Django-RQ models
+    "DjangoRQConfig": ("django_cfg.models.django.django_rq", "DjangoRQConfig"),
+    "RQQueueConfig": ("django_cfg.models.django.django_rq", "RQQueueConfig"),
+    "RQScheduleConfig": ("django_cfg.models.django.django_rq", "RQScheduleConfig"),
 
     # Payment system models (BaseCfgAutoModule)
     "PaymentsConfig": ("django_cfg.models.payments.config", "PaymentsConfig"),

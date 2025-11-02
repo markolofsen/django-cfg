@@ -44,7 +44,7 @@ service.disable_maintenance()
 
 ## Tasks App
 
-**Asynchronous task processing with ReArq**
+**Asynchronous task processing with Django-RQ**
 
 - **⚡ Background Jobs** - Process tasks asynchronously
 - **🔄 Retry Logic** - Automatic retry with exponential backoff
@@ -103,12 +103,12 @@ failed_tasks = TaskResult.objects.filter(status='failed')
 
 **Operations Features:**
 - **[Maintenance Documentation](./maintenance)** - Complete maintenance app guide
-- **[Tasks Documentation](./tasks)** - ReArq task processing guide
+- **[Tasks Documentation](./tasks)** - Django-RQ task processing guide
 - **[Built-in Apps Overview](/features/built-in-apps/overview)** - All available apps
 
 **Background Processing:**
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks framework
-- **[Background Task Commands](/features/integrations/rearq/overview)** - Manage workers via CLI
+- **[Django-RQ Integration](/features/integrations/django-rq/overview)** - Background tasks framework
+- **[Background Task Commands](/features/integrations/django-rq/overview)** - Manage workers via CLI
 - **[Production Config](/guides/production-config)** - Production task setup
 
 ### Configuration & Setup

@@ -1,9 +1,0 @@
-{
-  "label": "ReArq",
-  "position": 2,
-  "collapsed": false,
-  "link": {
-    "type": "generated-index",
-    "description": "Complete guide to async task queue processing with ReArq - the modern, production-ready task queue built on Redis and Tortoise ORM."
-  }
-}

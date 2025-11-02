@@ -8,6 +8,25 @@
     {{ block.super }}
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+
+    {# JWT Token Injection for iframe authentication #}
+    {% if user.is_authenticated %}
+    <script>
+    (function() {
+        try {
+            // console.log('[Django Admin] User is authenticated:', '{{ user.username }}', 'is_staff:', {{ user.is_staff|lower }}, 'is_superuser:', {{ user.is_superuser|lower }});
+            {% generate_jwt_tokens as jwt_tokens %}
+            // console.log('[Django Admin] JWT tokens generated - access:', '{{ jwt_tokens.access }}'.substring(0, 20) + '...', 'refresh:', '{{ jwt_tokens.refresh }}'.substring(0, 20) + '...');
+            localStorage.setItem('auth_token', '{{ jwt_tokens.access }}');
+            localStorage.setItem('refresh_token', '{{ jwt_tokens.refresh }}');
+            // console.log('[Django Admin] Tokens saved to localStorage');
+        } catch (e) {
+            console.error('[Django Admin] Failed to inject JWT tokens:', e);
+        }
+    })();
+    </script>
+    {% endif %}
+
     <style>
         /* Make content container full height and full width */
         #content {
@@ -224,8 +243,7 @@
             {% endif %}
 
             <!-- Tab Navigation -->
-            {% has_nextjs_external_admin as is_external_enabled %}
-            {% if is_external_enabled %}
+            {% is_dev as is_development %}
             <div>
                 <div class="border-b border-gray-300 dark:border-gray-600" style="border-bottom-color: rgba(209, 213, 219, 0.2);">
                     <style>
@@ -281,6 +299,7 @@
                             <span class="sm:hidden">Admin</span>
                         </button>
 
+                        {% if is_development %}
                         <button @click="switchTab('docs')"
                                 class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
                                 :class="activeTab === 'docs'
@@ -289,9 +308,10 @@
                             <span class="material-icons text-base">description</span>
                             <span>Docs</span>
                         </button>
+                        {% endif %}
                             </nav>
 
-                            <!-- Actions & Version info -->
+                            <!-- Actions & Version -->
                             <div class="flex items-center gap-2 md:gap-4 py-4">
                                 <!-- Open in new window button (available for all tabs) -->
                                 <button @click="openInNewWindow()"
@@ -301,19 +321,19 @@
                                     <span class="hidden sm:inline">Open in New Window</span>
                                 </button>
 
-                                <!-- Version info -->
-                                <div class="text-xs text-gray-400 dark:text-gray-500 hidden md:block">
-                                    {% load django_cfg %}
-                                    <a href="{% lib_site_url %}" class="text-blue-600 hover:text-blue-700">
-                                        {% lib_name %}
-                                    </a>
-                                </div>
+                                <!-- Version info (always visible) -->
+                                {% load django_cfg %}
+                                <a href="{% lib_site_url %}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="text-xs font-medium text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-500 transition-colors duration-150 whitespace-nowrap">
+                                    {% lib_name %}
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            {% endif %}
 
             <!-- Built-in Dashboard Tab Content -->
             <div x-show="activeTab === 'builtin'" style="display: block;">
@@ -335,7 +355,6 @@
             </div>
 
             <!-- External Next.js Admin Tab Content -->
-            {% if is_external_enabled %}
             <div x-show="activeTab === 'nextjs'" style="display: none;">
                 <div class="iframe-container">
                     <div class="iframe-loading" id="iframe-loading-nextjs">
@@ -353,9 +372,9 @@
                     ></iframe>
                 </div>
             </div>
-            {% endif %}
 
-            <!-- Docs Tab Content -->
+            <!-- Docs Tab Content (Development Mode Only) -->
+            {% if is_development %}
             <div x-show="activeTab === 'docs'" style="display: none;">
                 <div class="iframe-container">
                     <div class="iframe-loading" id="iframe-loading-docs">
@@ -373,6 +392,7 @@
                     ></iframe>
                 </div>
             </div>
+            {% endif %}
         </div>
     {% endcomponent %}
 {% endblock %}
@@ -382,6 +402,8 @@
     <script>
         (function() {
             'use strict';
+
+            // console.log('[Django-CFG] Script loading... readyState:', document.readyState);
 
             /**
              * MessageBridge - Handles postMessage communication with internal Next.js iframes
@@ -397,20 +419,30 @@
                  * Send theme data to iframe
                  */
                 sendTheme() {
-                    if (!this.iframe?.contentWindow) return;
+                    if (!this.iframe?.contentWindow) {
+                        console.warn('[Django-CFG] sendTheme: iframe contentWindow not available');
+                        return;
+                    }
 
                     const htmlElement = document.documentElement;
                     const isDark = htmlElement.classList.contains('dark');
                     const themeMode = this._getThemeMode();
 
+                    // console.log('[Django-CFG] sendTheme: htmlElement classes:', htmlElement.className);
+                    // console.log('[Django-CFG] sendTheme: isDark:', isDark, 'themeMode:', themeMode);
+
                     try {
+                        // Use '*' in dev mode to handle localhost vs 127.0.0.1 mismatch
+                        const targetOrigin = '*'; // In production, use specific origin for security
+                        // console.log('[Django-CFG] Sending parent-theme message to iframe:', this.iframe.id);
                         this.iframe.contentWindow.postMessage({
                             type: 'parent-theme',
                             data: {
                                 theme: isDark ? 'dark' : 'light',
                                 themeMode: themeMode
                             }
-                        }, this.origin);
+                        }, targetOrigin);
+                        // console.log('[Django-CFG] parent-theme message sent successfully');
                     } catch (e) {
                         console.error('[Django-CFG] Failed to send theme:', e);
                     }
@@ -420,18 +452,30 @@
                  * Send auth tokens to iframe
                  */
                 sendAuth() {
-                    if (!this.iframe?.contentWindow) return;
+                    if (!this.iframe?.contentWindow) {
+                        console.warn('[Django-CFG] sendAuth: iframe contentWindow not available');
+                        return;
+                    }
 
                     const authToken = localStorage.getItem('auth_token');
                     const refreshToken = localStorage.getItem('refresh_token');
 
-                    if (!authToken) return;
+                    // console.log('[Django-CFG] sendAuth: authToken:', authToken ? authToken.substring(0, 20) + '...' : 'null', 'refreshToken:', refreshToken ? refreshToken.substring(0, 20) + '...' : 'null');
+
+                    if (!authToken) {
+                        console.warn('[Django-CFG] sendAuth: No auth token found in localStorage');
+                        return;
+                    }
 
                     try {
+                        // Use '*' in dev mode to handle localhost vs 127.0.0.1 mismatch
+                        const targetOrigin = '*'; // In production, use specific origin for security
+                        // console.log('[Django-CFG] Sending parent-auth message to iframe:', this.iframe.id);
                         this.iframe.contentWindow.postMessage({
                             type: 'parent-auth',
                             data: { authToken, refreshToken }
-                        }, this.origin);
+                        }, targetOrigin);
+                        // console.log('[Django-CFG] parent-auth message sent successfully');
                     } catch (e) {
                         console.error('[Django-CFG] Failed to send auth:', e);
                     }
@@ -441,8 +485,10 @@
                  * Send all data (theme + auth)
                  */
                 sendAllData() {
+                    // console.log('[Django-CFG] sendAllData called');
                     this.sendTheme();
                     this.sendAuth();
+                    // console.log('[Django-CFG] sendAllData completed');
                 }
 
                 /**
@@ -498,41 +544,33 @@
 
                 init() {
                     this._setupLoadHandler();
-                    this._setupMessageListener();
+                    // Message listener now handled globally by IframeManager
                     this.messageBridge.watchThemeChanges();
                 }
 
                 _setupLoadHandler() {
                     this.iframe.addEventListener('load', () => {
-                        setTimeout(() => {
-                            this.messageBridge.sendAllData();
-                        }, 100);
+                        // Hide loading indicator
+                        if (this.loading) {
+                            this.loading.classList.add('hidden');
+                        }
+                        this.iframe.classList.add('loaded');
+
+                        // Don't send auth immediately - wait for iframe-ready message
+                        // The iframe will send 'iframe-ready' when it's mounted and ready to receive messages
                     });
                 }
 
-                _setupMessageListener() {
-                    this.messageListener = (event) => {
-                        if (event.origin !== this.origin) return;
-
-                        const { type, data } = event.data || {};
-                        this._handleMessage(type, data);
-                    };
-
-                    window.addEventListener('message', this.messageListener);
-                }
-
-                _handleMessage(type, data) {
+                handleMessage(type, data) {
+                    // console.log('[Django-CFG] Received message from iframe:', type, data);
                     switch (type) {
                         case 'iframe-ready':
+                            // console.log('[Django-CFG] iframe-ready received, sending auth and theme data');
                             this.messageBridge.sendAllData();
                             break;
 
                         case 'iframe-auth-status':
-                            console.log('[Django-CFG] Auth status:', data);
-                            break;
-
-                        case 'iframe-resize':
-                            this._handleResize();
+                            // console.log('[Django-CFG] iframe-auth-status:', data);
                             break;
 
                         case 'iframe-navigation':
@@ -541,18 +579,8 @@
                     }
                 }
 
-                _handleResize() {
-                    if (this.iframe.classList.contains('loaded')) return;
-
-                    console.log('[Django-CFG] First resize - showing iframe');
-                    this.loading?.classList.add('hidden');
-                    this.iframe.classList.add('loaded');
-                }
-
                 _handleNavigation(path) {
                     if (!path) return;
-
-                    console.log('[Django-CFG] Navigation:', path);
 
                     // Track path for "Open in New Window" (only for nextjs tab)
                     if (this.iframe.id === 'nextjs-dashboard-iframe-nextjs') {
@@ -572,9 +600,7 @@
 
                 destroy() {
                     this.messageBridge.destroy();
-                    if (this.messageListener) {
-                        window.removeEventListener('message', this.messageListener);
-                    }
+                    // Message listener cleanup handled by IframeManager
                 }
             }
 
@@ -596,14 +622,12 @@
 
                 _setupLoadHandler() {
                     this.iframe.addEventListener('load', () => {
-                        console.log('[Django-CFG] External iframe loaded');
                         this._showIframe();
                     });
                 }
 
                 _setupErrorHandler() {
                     this.iframe.addEventListener('error', () => {
-                        console.error('[Django-CFG] External iframe failed to load');
                         this._showError();
                     });
                 }
@@ -611,7 +635,6 @@
                 _setupTimeout() {
                     setTimeout(() => {
                         if (!this.iframe.classList.contains('loaded')) {
-                            console.log('[Django-CFG] Timeout - showing iframe anyway');
                             this._showIframe();
                         }
                     }, this.LOAD_TIMEOUT);
@@ -629,6 +652,11 @@
                     }
                 }
 
+                handleMessage(type, data) {
+                    // External iframes don't handle postMessage
+                    // This is a no-op to prevent errors if called
+                }
+
                 destroy() {
                     // No cleanup needed for external iframes
                 }
@@ -640,24 +668,83 @@
             class IframeManager {
                 constructor() {
                     this.handlers = [];
+                    this.iframeMap = new Map(); // Map iframe contentWindow -> handler
+                    this._setupGlobalMessageListener();
+                }
+
+                /**
+                 * Setup ONE global message listener for ALL iframes
+                 */
+                _setupGlobalMessageListener() {
+                    // console.log('[Django-CFG] Setting up global message listener');
+                    window.addEventListener('message', (event) => {
+                        // console.log('[Django-CFG] Received message:', {
+                        //     type: event.data?.type,
+                        //     origin: event.origin,
+                        //     source: event.source,
+                        //     mapSize: this.iframeMap.size,
+                        //     mapKeys: Array.from(this.iframeMap.keys())
+                        // });
+
+                        // Find which handler should handle this message
+                        const handler = this.iframeMap.get(event.source);
+
+                        if (handler) {
+                            // console.log('[Django-CFG] Routing message to handler:', handler.iframe.id);
+                            const { type, data } = event.data || {};
+                            handler.handleMessage(type, data);
+                        } else {
+                            // Message from unknown source (browser extension, etc.)
+                            // console.log('[Django-CFG] Ignoring message from unknown source');
+                        }
+                    });
                 }
 
                 /**
                  * Register an iframe for management
                  */
                 register(iframeId, loadingId, options = {}) {
+                    // console.log('[Django-CFG] register() called for:', iframeId);
                     const iframe = document.getElementById(iframeId);
                     const loading = document.getElementById(loadingId);
 
                     if (!iframe) {
-                        console.warn(`[Django-CFG] Iframe not found: ${iframeId}`);
+                        console.warn('[Django-CFG] Iframe not found:', iframeId, '- skipping registration');
                         return;
                     }
 
+                    // console.log('[Django-CFG] Creating handler for iframe:', iframeId);
                     const handler = this._createHandler(iframe, loading, options);
+                    // console.log('[Django-CFG] Handler created:', !!handler, 'for iframe:', iframeId);
                     if (handler) {
+                        // console.log('[Django-CFG] Initializing handler for:', iframeId);
                         handler.init();
                         this.handlers.push(handler);
+                        // console.log('[Django-CFG] Handler added to handlers array for:', iframeId);
+
+                        // Register only InternalIframeHandler in the map for message routing
+                        // ExternalIframeHandler doesn't handle postMessage
+                        if (handler instanceof InternalIframeHandler) {
+                            // console.log('[Django-CFG] Handler is InternalIframeHandler, attempting registration for:', iframeId);
+                            // Try to register immediately if contentWindow is available
+                            if (iframe.contentWindow) {
+                                // console.log('[Django-CFG] contentWindow available, registering immediately');
+                                this.iframeMap.set(iframe.contentWindow, handler);
+                                // console.log('[Django-CFG] Registered handler immediately for iframe:', iframeId, 'map size:', this.iframeMap.size);
+                            } else {
+                                // console.log('[Django-CFG] contentWindow not available yet, waiting for load event');
+                                // Fallback: wait for load if contentWindow not available yet
+                                iframe.addEventListener('load', () => {
+                                    if (iframe.contentWindow) {
+                                        // console.log('[Django-CFG] Load event fired, registering handler');
+                                        this.iframeMap.set(iframe.contentWindow, handler);
+                                        // console.log('[Django-CFG] Registered handler on load for iframe:', iframeId, 'map size:', this.iframeMap.size);
+                                    }
+                                }, { once: true });
+                            }
+                        } else {
+                            // console.log('[Django-CFG] Handler is NOT InternalIframeHandler (is external), skipping map registration for:', iframeId);
+                        }
                     }
                 }
 
@@ -665,18 +752,29 @@
                  * Create appropriate handler based on iframe type
                  */
                 _createHandler(iframe, loading, options) {
+                    // console.log('[Django-CFG] _createHandler for iframe:', iframe.id);
                     const src = iframe.src || iframe.getAttribute('src');
+                    // console.log('[Django-CFG] iframe src:', src);
                     if (!src) {
                         console.warn('[Django-CFG] Iframe has no src');
                         return null;
                     }
 
                     const url = new URL(src, window.location.origin);
-                    const isExternal = options.external || url.origin !== window.location.origin;
+
+                    // Determine if this is an external iframe (docs, etc.)
+                    // Dev servers on localhost (ports 3000, 3777) are considered INTERNAL
+                    // because they need postMessage communication
+                    const isDevServer = url.hostname === 'localhost' && (url.port === '3000' || url.port === '3777');
+                    const isExternal = options.external && !isDevServer;
+
+                    // console.log('[Django-CFG] iframe url.origin:', url.origin, 'window.location.origin:', window.location.origin, 'isDevServer:', isDevServer, 'isExternal:', isExternal);
 
                     if (isExternal) {
+                        // console.log('[Django-CFG] Creating ExternalIframeHandler for:', iframe.id);
                         return new ExternalIframeHandler(iframe, loading);
                     } else {
+                        // console.log('[Django-CFG] Creating InternalIframeHandler for:', iframe.id);
                         return new InternalIframeHandler(iframe, loading, url.origin);
                     }
                 }
@@ -687,16 +785,43 @@
                 destroy() {
                     this.handlers.forEach(handler => handler.destroy());
                     this.handlers = [];
+                    this.iframeMap.clear();
                 }
             }
 
             // Initialize iframe manager
+            // console.log('[Django-CFG] Initializing IframeManager...');
             const manager = new IframeManager();
+            // console.log('[Django-CFG] IframeManager initialized');
 
-            // Register all iframes
-            manager.register('nextjs-dashboard-iframe-builtin', 'iframe-loading-builtin');
-            manager.register('nextjs-dashboard-iframe-nextjs', 'iframe-loading-nextjs');
-            manager.register('nextjs-dashboard-iframe-docs', 'iframe-loading-docs', { external: true });
+            // Register all iframes after DOM is ready
+            // This ensures iframe elements exist before we try to register them
+            function registerIframes() {
+                // console.log('[Django-CFG] registerIframes() called - DOM ready');
+                // console.log('[Django-CFG] Looking for iframes in DOM...');
+
+                const builtinIframe = document.getElementById('nextjs-dashboard-iframe-builtin');
+                const nextjsIframe = document.getElementById('nextjs-dashboard-iframe-nextjs');
+                // console.log('[Django-CFG] Found builtin iframe:', !!builtinIframe);
+                // console.log('[Django-CFG] Found nextjs iframe:', !!nextjsIframe);
+
+                manager.register('nextjs-dashboard-iframe-builtin', 'iframe-loading-builtin');
+                manager.register('nextjs-dashboard-iframe-nextjs', 'iframe-loading-nextjs');
+                {% if is_development %}
+                manager.register('nextjs-dashboard-iframe-docs', 'iframe-loading-docs', { external: true });
+                {% endif %}
+                // console.log('[Django-CFG] Iframe registration completed');
+            }
+
+            // Register iframes when DOM is ready
+            // console.log('[Django-CFG] Setting up DOM ready listener, readyState:', document.readyState);
+            if (document.readyState === 'loading') {
+                // console.log('[Django-CFG] DOM is loading, waiting for DOMContentLoaded...');
+                document.addEventListener('DOMContentLoaded', registerIframes);
+            } else {
+                // console.log('[Django-CFG] DOM already loaded, registering immediately...');
+                registerIframes();
+            }
 
             // Cleanup on page unload
             window.addEventListener('beforeunload', () => {

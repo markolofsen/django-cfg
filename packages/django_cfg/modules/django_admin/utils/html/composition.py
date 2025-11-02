@@ -60,7 +60,14 @@ class CompositionElements:
             # Material Icon
             icon_html = CompositionElements.icon(icon_str, size=icon_size)
 
-        return format_html('{}{}<span>{}</span>', icon_html, separator, escape(str(text)))
+        # DON'T escape SafeString - it's already safe HTML!
+        from django.utils.safestring import SafeString
+        if isinstance(text, SafeString):
+            text_html = text
+        else:
+            text_html = escape(str(text))
+
+        return format_html('{}{}<span>{}</span>', icon_html, separator, text_html)
 
     @staticmethod
     def inline(*items, separator: str = " | ",
@@ -107,7 +114,7 @@ class CompositionElements:
             else:
                 processed_items.append(escape(str(item)))
 
-        # Join with separator
+        # Join with separator - str() doesn't lose SafeString when joined then mark_safe'd
         joined = mark_safe(separator.join(str(item) for item in processed_items))
 
         return format_html('<span class="{}">{}</span>', classes, joined)

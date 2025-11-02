@@ -8,6 +8,7 @@ Endpoint for complete dashboard overview:
 import logging
 from datetime import datetime
 
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 
@@ -32,6 +33,11 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     serializer_class = DashboardOverviewSerializer
 
+    @transaction.non_atomic_requests
+    def dispatch(self, request, *args, **kwargs):
+        """Disable atomic requests for this viewset."""
+        return super().dispatch(request, *args, **kwargs)
+
     @extend_schema(
         summary="Get dashboard overview",
         description="Retrieve complete dashboard data including stats, health, actions, and metrics",
@@ -40,24 +46,19 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     )
     @action(detail=False, methods=['get'], url_path='', url_name='overview')
     def overview(self, request):
-        """
-        Get complete dashboard overview.
-
-        Returns all dashboard data in a single request:
-        - Statistics cards
-        - System health status
-        - Quick actions
-        - Recent activity
-        - System metrics
-        - User statistics
-        """
+        """Get complete dashboard overview."""
         try:
             stats_service = StatisticsService()
             health_service = SystemHealthService()
             charts_service = ChartsService()
 
-            # Get app statistics and convert to list format
-            app_stats_dict = stats_service.get_app_statistics()
+            # Get app statistics - wrapped in try/except since it queries all models
+            try:
+                app_stats_dict = stats_service.get_app_statistics()
+            except Exception as e:
+                logger.error(f"Error getting app stats: {e}")
+                app_stats_dict = {'apps': {}}
+
             app_statistics_list = [
                 {
                     'app_name': app_label,

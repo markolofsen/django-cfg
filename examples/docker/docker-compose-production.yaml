@@ -36,10 +36,10 @@ services:
       - "traefik.http.routers.djangocfg-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
 
-  # Django-Q2 Cluster (Task Scheduler + Background Worker)
-  qcluster:
+  # RQ Worker (Background Tasks Processor)
+  rq-worker:
     image: django-cfg-django:latest
-    container_name: django-cfg-qcluster
+    container_name: django-cfg-rq-worker
     restart: unless-stopped
     env_file:
       - .env.prod
@@ -50,9 +50,9 @@ services:
       - "../projects/django:/app:rw"
     depends_on:
       - django
-    command: poetry run python manage.py qcluster
+    command: poetry run python manage.py rqworker default high low knowledge
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f qcluster > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -64,6 +64,37 @@ services:
           memory: 1G
         reservations:
           memory: 256M
+    networks:
+      - dokploy-network
+
+  # RQ Scheduler (Scheduled Tasks - Cron-like)
+  rq-scheduler:
+    image: django-cfg-django:latest
+    container_name: django-cfg-rq-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/django-logs:/app/logs"
+      - "../projects/django:/app:rw"
+    depends_on:
+      - django
+    command: poetry run python manage.py rqscheduler
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 128M
     networks:
       - dokploy-network
 
@@ -146,84 +177,9 @@ services:
       - "traefik.http.routers.djangocfg-web.tls.certresolver=letsencrypt"
       - "traefik.http.services.djangocfg-web.loadbalancer.server.port=3001"
 
-  # ReArq Worker (Background tasks processor)
-  rearq-worker:
-    build:
-      context: .
-      dockerfile: services/rearq/Dockerfile
-    image: django-cfg-rearq-worker:latest
-    container_name: django-cfg-rearq-worker
-    restart: unless-stopped
-    env_file:
-      - .env.prod
-    environment:
-      REARQ_REDIS_HOST: shared-db-redis
-      REARQ_REDIS_PORT: 6379
-      REARQ_REDIS_DB: 1
-    networks:
-      - dokploy-network
-    command: ["rearq", "main:rearq", "worker", "--queue", "default", "--queue", "high_priority", "--queue", "low_priority"]
-    # Override healthcheck: worker doesn't expose HTTP port, check process instead
-    healthcheck:
-      test: ["CMD-SHELL", "grep -qa 'rearq.*worker' /proc/1/cmdline || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          memory: 128M
-
-  # ReArq Server (Web UI + API for task monitoring)
-  rearq-server:
-    build:
-      context: .
-      dockerfile: services/rearq/Dockerfile
-    image: django-cfg-rearq-server:latest
-    container_name: django-cfg-rearq-server
-    restart: unless-stopped
-    env_file:
-      - .env.prod
-    environment:
-      REARQ_REDIS_HOST: shared-db-redis
-      REARQ_REDIS_PORT: 6379
-      REARQ_REDIS_DB: 1
-      # Use SQLite for Web UI metadata (lightweight)
-      REARQ_DB_URL: sqlite:///app/rearq.db
-      PYTHONPATH: /app:/rearq_config
-    networks:
-      - dokploy-network
-    # Override entrypoint to run uvicorn directly
-    entrypoint: []
-    working_dir: /rearq_config
-    command: ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port 8080"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          memory: 128M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.djangocfg-rearq.rule=Host(`tasks.djangocfg.com`)"
-      - "traefik.http.routers.djangocfg-rearq.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-rearq.tls.certresolver=letsencrypt"
-      - "traefik.http.services.djangocfg-rearq.loadbalancer.server.port=8080"
-      # Optional: Add basic auth for security
-      # - "traefik.http.routers.djangocfg-rearq.middlewares=rearq-auth"
-      # - "traefik.http.middlewares.rearq-auth.basicauth.users=admin:$$apr1$$hash$$here"
+  # RQ Dashboard is integrated into Django Admin Next.js UI
+  # Access it at: https://api.djangocfg.com/cfg/admin/ → RQ tab
+  # No separate service needed!
 
   # Demo Database Auto-Resetter (for demo environment only)
   demo-resetter:

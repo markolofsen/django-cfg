@@ -566,4 +566,4 @@ except grpc.RpcError as e:
 
 ---
 
-**Next:** Learn about [service discovery](./discovery.md) or explore [monitoring](./monitoring.md).
+**Next:** Explore [monitoring](./monitoring.md) to track authenticated requests.

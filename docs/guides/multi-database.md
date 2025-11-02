@@ -570,7 +570,7 @@ print(user.blog_posts.all())  # QuerySet with post
 - [**Core Commands**](/cli/commands/core-commands) - Migration and database commands
 
 **Background Processing:**
-- [**ReArq Integration**](/features/integrations/rearq/overview) - Task routing per database
+- [**ReArq Integration**](/features/integrations/django-rq/overview) - Task routing per database
 - [**Background Tasks**](/features/built-in-apps/operations/tasks) - Database-aware tasks
 
 **Note:** All examples use YAML-based configuration via `env` loader. See [Configuration Guide](/getting-started/configuration) for setup.

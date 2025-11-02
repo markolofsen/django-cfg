@@ -6,8 +6,9 @@ sidebar_position: 0
 keywords:
   - django-cfg integrations
   - django third-party integrations
-  - rearq integration
-  - async task queue
+  - django-rq integration
+  - background tasks
+  - redis queue
   - ngrok integration
 ---
 
@@ -23,27 +24,27 @@ Django-CFG provides seamless integrations with essential third-party services an
 <Tabs groupId="integration-categories">
   <TabItem value="tasks" label="🔄 Background Tasks" default>
 
-### [ReArq Integration](./rearq/overview)
+### [Django-RQ Integration](./django-rq/overview)
 
-Production-ready async task queue with Redis and Tortoise ORM:
+Production-ready Redis-based task queue with built-in monitoring:
 
 **Core Features:**
-- ✅ **Async-first** architecture with native Python async/await
-- ✅ **Redis-backed** queue with job persistence (PostgreSQL/MySQL/SQLite)
-- ✅ **Type-safe** task definitions with Pydantic validation
-- ✅ **Worker management** via CLI commands
-- ✅ **Cron scheduling** with decorator-based configuration
-- ✅ **Monitoring** with FastAPI server, Django REST API, and Admin interface
-- ✅ **Retry logic** with exponential backoff and max attempts
+- ✅ **High performance** - 10,000+ jobs/second with low memory usage
+- ✅ **Redis-backed** queue with automatic job persistence
+- ✅ **Type-safe** configuration with Pydantic validation
+- ✅ **Worker management** via CLI commands (rqworker, rqscheduler)
+- ✅ **Cron scheduling** with RQ Scheduler for periodic tasks
+- ✅ **Built-in monitoring** - Django Admin, REST API, Prometheus metrics
+- ✅ **Job dependencies** and retry logic with exponential backoff
 
 **Use Cases:**
-- Async email sending ([Email Module](/features/modules/email/overview))
+- Email sending and notifications ([Email Module](/features/modules/email/overview))
 - Payment processing ([Payment System](/features/built-in-apps/payments/overview))
 - Document processing ([AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview))
 - Bulk operations (Newsletter campaigns, data imports)
 - Scheduled tasks (cleanup jobs, report generation)
 
-[**Full ReArq Guide →**](./rearq/overview)
+[**Full Django-RQ Guide →**](./django-rq/overview)
 
   </TabItem>
   <TabItem value="development" label="🔧 Development Tools">
@@ -143,28 +144,38 @@ Common patterns and best practices:
 
 ## Quick Start
 
-### Enable ReArq for Background Tasks
+### Enable Django-RQ for Background Tasks
 
-```yaml
-# config.dev.yaml
-tasks:
-  enabled: true
-  redis_url: "redis://localhost:6379/0"
-  db_url: "sqlite:///rearq.db"
+```python
+# api/config.py
+from django_cfg import DjangoConfig
+from django_cfg.models import DjangoRQConfig, RQQueueConfig
+
+class MyConfig(DjangoConfig):
+    redis_url: str = "redis://localhost:6379/0"
+
+    django_rq: DjangoRQConfig = DjangoRQConfig(
+        enabled=True,
+        queues=[
+            RQQueueConfig(queue="default"),
+        ],
+    )
 ```
 
 ```python
-# tasks.py
-from django_cfg.apps.tasks import task
-
-@task()
-async def send_welcome_email(user_id: int):
-    """Task runs asynchronously in background."""
-    # Async task code here
+# apps/myapp/tasks.py
+def send_welcome_email(user_id: int):
+    """Task runs in background worker."""
+    # Task code here
     pass
+
+# Enqueue from anywhere
+import django_rq
+queue = django_rq.get_queue('default')
+queue.enqueue('apps.myapp.tasks.send_welcome_email', user_id=123)
 ```
 
-[**Full ReArq Guide →**](./rearq/overview)
+[**Full Django-RQ Guide →**](./django-rq/overview)
 
 ### Enable Ngrok for Webhook Testing
 
@@ -193,14 +204,18 @@ All integrations use [Pydantic v2](/fundamentals/core/type-safety) for validatio
 
 ```python
 from django_cfg import DjangoConfig
-from django_cfg.models import RearqConfig, NgrokConfig
+from django_cfg.models import DjangoRQConfig, RQQueueConfig, NgrokConfig
 
 class MyConfig(DjangoConfig):
-    # ReArq configuration
-    tasks: RearqConfig | None = RearqConfig(
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Django-RQ configuration
+    django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
-        redis_url="redis://localhost:6379/0",
-        db_url="sqlite:///rearq.db"
+        queues=[
+            RQQueueConfig(queue="default"),
+            RQQueueConfig(queue="high"),
+        ],
     )
 
     # Ngrok configuration
@@ -228,7 +243,7 @@ class MyConfig(DjangoConfig):
 
 Integrations automatically configure Django settings:
 
-- **ReArq**: Registers tasks app, configures Redis/DB connections, initializes workers
+- **Django-RQ**: Configures RQ_QUEUES, Redis connections, worker management
 - **Ngrok**: Updates ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, generates public URL
 - **Auth**: Configures authentication backends, middleware, JWT settings
 
@@ -238,7 +253,7 @@ Integrations automatically configure Django settings:
 
 | Integration | Type | Production Ready | Auto-Config | CLI Tools |
 |-------------|------|------------------|-------------|-----------|
-| **ReArq** | Async Task Queue | ✅ Yes | ✅ Yes | ✅ `rearq_worker`, `rearq_timer`, `rearq_server` |
+| **Django-RQ** | Task Queue | ✅ Yes | ✅ Yes | ✅ `rqworker`, `rqscheduler`, `rqstats` |
 | **Ngrok** | Development Tool | ⚠️ Dev Only | ✅ Yes | ✅ `runserver_ngrok` |
 | **Auth** | Security | ✅ Yes | ✅ Yes | ✅ `test_auth` |
 | **Twilio** | Communication | ✅ Yes | ✅ Yes | ✅ `test_sms` |
@@ -266,19 +281,25 @@ class ProductionConfig(DjangoConfig):
     # Ngrok only for development
     ngrok: None = None
 
-    # ReArq for production background tasks
-    tasks: RearqConfig = RearqConfig(
+    # Django-RQ for production background tasks
+    django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
-        redis_url="${REDIS_URL}",
-        db_url="${DATABASE_URL}"
+        queues=[
+            RQQueueConfig(queue="high"),
+            RQQueueConfig(queue="default"),
+            RQQueueConfig(queue="low"),
+        ],
     )
 ```
 
 ### 3. Test Integrations Before Production
 
 ```bash
-# Test ReArq workers
-rearq main:rearq worker --test
+# Test Django-RQ workers
+python manage.py rqworker default
+
+# Check queue stats
+python manage.py rqstats
 
 # Test Twilio SMS
 python manage.py test_sms +1234567890
@@ -294,11 +315,11 @@ python manage.py runserver_ngrok --test
 ### Core Integrations
 
 **Background Processing:**
-- **[ReArq Overview](./rearq/overview)** - Complete async task queue guide
-- **[ReArq Configuration](./rearq/configuration)** - Setup and configuration
-- **[ReArq Examples](./rearq/examples)** - Real-world task patterns
-- **[ReArq Monitoring](./rearq/monitoring)** - Task monitoring and analytics
-- **[ReArq Deployment](./rearq/deployment)** - Production deployment guide
+- **[Django-RQ Overview](./django-rq/overview)** - Complete task queue guide
+- **[Django-RQ Architecture](./django-rq/architecture)** - System design and components
+- **[Django-RQ Configuration](./django-rq/configuration)** - Setup and configuration
+- **[Django-RQ Examples](./django-rq/examples)** - Real-world task patterns
+- **[Django-RQ Monitoring](./django-rq/monitoring)** - Task monitoring and observability
 
 **Development Tools:**
 - **[Ngrok Overview](./ngrok/overview)** - Webhook testing guide
@@ -321,16 +342,16 @@ python manage.py runserver_ngrok --test
 - **[Environment Detection](/fundamentals/configuration/environment)** - Environment-specific integrations
 
 **Infrastructure:**
-- **[Redis Configuration](/fundamentals/configuration/cache)** - Redis setup for ReArq
+- **[Redis Configuration](/fundamentals/configuration/cache)** - Redis setup for Django-RQ
 - **[Security Settings](/fundamentals/configuration/security)** - Webhook signature verification
 - **[Environment Variables](/fundamentals/configuration/environment)** - Manage API keys securely
 
 ### Related Features
 
 **Apps Using Integrations:**
-- **[Payment System](/features/built-in-apps/payments/overview)** - Uses ReArq for async processing
-- **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses ReArq for document processing
-- **[Newsletter](/features/built-in-apps/user-management/newsletter)** - Uses ReArq for bulk emails
+- **[Payment System](/features/built-in-apps/payments/overview)** - Uses Django-RQ for async processing
+- **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses Django-RQ for document processing
+- **[Newsletter](/features/built-in-apps/user-management/newsletter)** - Uses Django-RQ for bulk emails
 
 **Other Modules:**
 - **[Modules Overview](/features/modules/overview)** - All available modules
@@ -351,15 +372,15 @@ python manage.py runserver_ngrok --test
 ## Next Steps
 
 **New to Integrations?**
-1. Start with [ReArq Overview](./rearq/overview) for async background tasks
+1. Start with [Django-RQ Overview](./django-rq/overview) for background tasks
 2. Try [Ngrok Overview](./ngrok/overview) for webhook testing
 3. Review [Integration Patterns](./patterns) for best practices
 
 **Ready for Production?**
 1. Review [Production Config](/guides/production-config)
-2. Set up [Redis](/fundamentals/configuration/cache) for ReArq
+2. Set up [Redis](/fundamentals/configuration/cache) for Django-RQ
 3. Configure [environment variables](/fundamentals/configuration/environment) for secrets
-4. Deploy ReArq workers using [ReArq Deployment](./rearq/deployment) guide
+4. Deploy workers using [Django-RQ Monitoring](./django-rq/monitoring) guide
 
 **Need Help?**
 - [Troubleshooting Guide](/guides/troubleshooting)

@@ -951,7 +951,7 @@ class EnvironmentConfig(BaseModel):
 - **[AI Agents](/ai-agents/introduction)** - AI workflow automation
 
 **Integrations:**
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks
+- **[ReArq Integration](/features/integrations/django-rq/overview)** - Background tasks
 - **[Ngrok Integration](/features/integrations/ngrok/overview)** - Webhook testing
 - **[Integrations Overview](/features/integrations/overview)** - All integrations
 

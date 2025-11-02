@@ -18,7 +18,7 @@ class BackgroundTaskConfig(BaseModel):
         ```python
         background_config = BackgroundTaskConfig(
             enabled=True,
-            task_runner='rearq',
+            task_runner='django_rq',
             batch_size=100,
             timeout=300,
         )
@@ -35,9 +35,9 @@ class BackgroundTaskConfig(BaseModel):
         description="Enable background task processing"
     )
 
-    task_runner: Literal['rearq', 'celery', 'django_q', 'sync'] = Field(
-        'rearq',
-        description="Task runner to use for background operations"
+    task_runner: Literal['django_rq', 'sync'] = Field(
+        'sync',
+        description="Task runner to use for background operations (django_rq or sync)"
     )
 
     batch_size: int = Field(

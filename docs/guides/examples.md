@@ -80,7 +80,7 @@ Examples showing multi-currency support across different industries.
 
 Production-ready background task processing with ReArq.
 
-### **[ReArq Examples](../features/integrations/rearq/overview)**
+### **[ReArq Examples](../features/integrations/django-rq/overview)**
 - Email campaign processing
 - Document processing pipelines
 - Data synchronization
@@ -389,7 +389,7 @@ user = OTPService.verify_phone_otp("+1234567890", "123456")
 → Check [AI Agents Examples](/ai-agents/examples)
 
 **Setting up Background Tasks?**
-→ Explore [ReArq Examples](../features/integrations/rearq/overview)
+→ Explore [ReArq Examples](../features/integrations/django-rq/overview)
 
 **Testing Webhooks?**
 → Learn [Ngrok Integration](../features/integrations/ngrok/overview)

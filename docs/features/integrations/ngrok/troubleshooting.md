@@ -383,7 +383,7 @@ ngrok: NgrokConfig = NgrokConfig(
 
 ```python
 # Process webhooks asynchronously
-from rearq.decorators import task
+import django_rq
 from django.http import JsonResponse
 
 @csrf_exempt
@@ -555,7 +555,7 @@ def webhook_handler(request):
 Process webhooks asynchronously:
 
 ```python
-from rearq.decorators import task
+import django_rq
 from django.http import JsonResponse
 
 @csrf_exempt
@@ -677,6 +677,6 @@ ngrok: NgrokConfig = NgrokConfig(
 
 ## See Also
 
-- [ReArq Integration](/features/integrations/rearq/overview) - Background task processing
+- [Django-RQ Integration](/features/integrations/django-rq/overview) - Background task processing
 - [Configuration Guide](/fundamentals/configuration) - DjangoConfig reference
 - [Deployment Guide](/guides/docker/production) - Production deployment

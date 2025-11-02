@@ -668,6 +668,6 @@ docker-compose exec web ls -la /app/static/
 - [Configuration](./configuration) - Production configuration setup
 - [Multi-Database Setup](./multi-database) - Database deployment
 - [Service Integrations](./service-integrations) - External service configuration
-- [Background Tasks](/features/integrations/rearq/overview) - Worker deployment
+- [Background Tasks](/features/integrations/django-rq/overview) - Worker deployment
 
 Proper deployment ensures your Django-CFG application runs reliably in production!

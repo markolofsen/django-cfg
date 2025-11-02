@@ -1,7 +1,7 @@
 # ═════════════════════════════════════════════════════════════════
-# Django-CFG - Local Services (Centrifugo, Redis, ReArq)
+# Django-CFG - Local Services (Centrifugo, Redis, RQ)
 # ═════════════════════════════════════════════════════════════════
-# Run Centrifugo + Redis + ReArq for development/testing
+# Run Centrifugo + Redis + RQ for development/testing
 
 name: djangocfg-services
 
@@ -61,65 +61,62 @@ services:
         reservations:
           memory: 128M
 
-  # ReArq Worker (Background tasks processor)
-  rearq_worker:
+  # RQ Worker (Background tasks processor)
+  # Note: This requires Django project to be available
+  # Alternative: run `python manage.py rqworker` from Django project directly
+  rq_worker:
     build:
-      context: .
-      dockerfile: services/rearq/Dockerfile
-    container_name: djangocfg_rearq_worker
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    container_name: djangocfg_rq_worker
     restart: unless-stopped
+    env_file:
+      - .env.local
     environment:
-      REARQ_REDIS_HOST: redis
-      REARQ_REDIS_PORT: 6379
-      REARQ_REDIS_DB: 1
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw
     networks:
       - services-network
     depends_on:
       redis:
         condition: service_healthy
-    command: ["rearq", "main:rearq", "worker", "--queue", "default", "--queue", "high_priority", "--queue", "low_priority"]
-    # Override healthcheck: worker doesn't expose HTTP port, check process instead
+    command: poetry run python manage.py rqworker default high low knowledge
     healthcheck:
-      test: ["CMD-SHELL", "grep -qa 'rearq.*worker' /proc/1/cmdline || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # ReArq Server (Web UI + API)
-  rearq_server:
+  # RQ Scheduler (Scheduled Tasks - Cron-like)
+  rq_scheduler:
     build:
-      context: .
-      dockerfile: services/rearq/Dockerfile
-    container_name: djangocfg_rearq_server
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    container_name: djangocfg_rq_scheduler
     restart: unless-stopped
+    env_file:
+      - .env.local
     environment:
-      REARQ_REDIS_HOST: redis
-      REARQ_REDIS_PORT: 6379
-      REARQ_REDIS_DB: 1
-      # Use SQLite for Web UI metadata (lightweight, no separate database needed)
-      REARQ_DB_URL: sqlite:///app/rearq.db
-      PYTHONPATH: /app:/rearq_config
-    ports:
-      - "7380:8080"  # ReArq Web UI (Django-CFG: base 7300 +80)
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw
     networks:
       - services-network
     depends_on:
       redis:
         condition: service_healthy
+    command: poetry run python manage.py rqscheduler
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    volumes:
-      - rearq_data:/app
-    # Use uvicorn directly with our server wrapper instead of rearq CLI
-    # Override entrypoint to skip it and run uvicorn directly from /rearq_config
-    entrypoint: []
-    working_dir: /rearq_config
-    command: ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port 8080"]
+
+  # RQ Dashboard is integrated into Django Admin Next.js UI
+  # No separate web UI needed - access it via Django Admin at /cfg/admin/
 
 networks:
   services-network:
@@ -127,6 +124,4 @@ networks:
 
 volumes:
   redis_data:
-    driver: local
-  rearq_data:
     driver: local

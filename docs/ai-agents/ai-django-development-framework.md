@@ -65,7 +65,7 @@ import { SoftwareApplicationSchema, HowToSchema } from '@site/src/components/Sch
 # AI-Powered Django Development: Production-Ready AI Agents Framework
 
 
-The **only production-ready AI agent framework** built specifically for Django applications. Create [type-safe](/fundamentals/core/type-safety), orchestrated AI workflows with full [Django ORM integration](/fundamentals/system/django-integration), [background task processing](/features/integrations/rearq/overview), and enterprise monitoring.
+The **only production-ready AI agent framework** built specifically for Django applications. Create [type-safe](/fundamentals/core/type-safety), orchestrated AI workflows with full [Django ORM integration](/fundamentals/system/django-integration), [background task processing](/features/integrations/django-rq/overview), and enterprise monitoring.
 
 ```python
 # Traditional approach: Generic LLM calls, no types, no Django integration
@@ -157,7 +157,7 @@ class OrderProcessor(Agent[OrderInput, OrderResult]):
 |---------|----------------|----------------------|
 | **Type Safety** | None (suggestions only) | Full ([Pydantic v2](/fundamentals/core/type-safety)) |
 | **Django ORM Access** | No context | Native [integration](/fundamentals/system/django-integration) |
-| **Background Tasks** | No | Built-in ([ReArq](/features/integrations/rearq/overview)) |
+| **Background Tasks** | No | Built-in ([Django-RQ](/features/integrations/django-rq/overview)) |
 | **Cost Tracking** | No | Automatic token usage |
 | **Caching** | No | Response caching built-in |
 | **Admin Interface** | No | Django admin integration |
@@ -507,9 +507,10 @@ class ProductAnalyzer(Agent[ProductAnalysisInput, ProductAnalysisOutput]):
 
         return list(reviews)
 
-# Background task processing (see /features/integrations/rearq/overview)
-@rearq.task
-async def analyze_product_async(product_id: int):
+# Background task processing (see /features/integrations/django-rq/overview)
+import django_rq
+
+def analyze_product_async(product_id: int):
     """Process product analysis as background task"""
     agent = ProductAnalyzer()
 
@@ -625,9 +626,9 @@ class BusinessIntelligenceAgent(Agent[ReportInput, ReportOutput]):
         )
         return churned
 
-# Scheduled task (runs every Monday, see /features/integrations/rearq/overview for scheduling)
-@rearq.task(cron="0 9 * * 1")  # 9 AM every Monday
-async def generate_weekly_report():
+# Scheduled task (runs every Monday, see /features/integrations/django-rq/overview for scheduling)
+# Configured in config.py with RQScheduleConfig(cron="0 9 * * 1")
+def generate_weekly_report():
     """Auto-generate weekly executive report"""
     agent = BusinessIntelligenceAgent()
 
@@ -784,7 +785,7 @@ class MyConfig(DjangoConfig):
 - ✅ AI agent models and [admin interface](/features/modules/unfold/overview)
 - ✅ Pydantic AI dependencies
 - ✅ LLM cost tracking and [caching](/fundamentals/configuration/cache)
-- ✅ [Background task integration](/features/integrations/rearq/overview)
+- ✅ [Background task integration](/features/integrations/django-rq/overview)
 
 ---
 

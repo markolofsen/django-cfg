@@ -389,7 +389,7 @@ pip install rich
 - **[Monitoring Guide](/deployment/monitoring)** - Health checks and system monitoring
 - **[Environment Setup](/deployment/environment-setup)** - Configure logging levels
 - **[Production Config](/guides/production-config)** - Production logging best practices
-- **[ReArq Tasks](/features/integrations/rearq/overview)** - Task execution logging
+- **[ReArq Tasks](/features/integrations/django-rq/overview)** - Task execution logging
 
 ---
 

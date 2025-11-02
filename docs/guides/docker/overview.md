@@ -46,7 +46,7 @@ graph TB
     B --> F[PostgreSQL + pgvector]
     B --> G[Redis]
     C --> G
-    H[Django Dramatiq] --> F
+    H[Django Django-RQ] --> F
     H --> G
 ```
 
@@ -393,8 +393,8 @@ docker exec djangocfg_postgres pg_isready -U postgres
 - **[Environment Detection](/fundamentals/configuration/environment)** - Multi-environment
 
 ### Integrations
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Background tasks
-- **[Background Task Commands](/features/integrations/rearq/overview)** - Manage workers via CLI
+- **[ReArq Integration](/features/integrations/django-rq/overview)** - Background tasks
+- **[Background Task Commands](/features/integrations/django-rq/overview)** - Manage workers via CLI
 - **[Centrifugo WebSocket RPC](/features/integrations/centrifugo/)** - Real-time communication
 
 ---

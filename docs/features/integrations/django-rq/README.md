@@ -1,0 +1,194 @@
+# Django-RQ Documentation
+
+Complete documentation for Django-RQ integration in django-cfg.
+
+## 📚 Documentation Files
+
+### 1. [overview.md](./overview.md) - Introduction & Quick Start
+- **What**: High-level overview of Django-RQ integration
+- **Content**: Features, comparison with alternatives, quick start guide
+- **Diagrams**: 2 Mermaid diagrams (architecture overview, job lifecycle)
+- **Size**: 17 KB
+
+**Key Topics:**
+- Why Django-RQ vs Celery/Dramatiq
+- Key features and benefits
+- Quick configuration examples
+- Task examples
+- Performance benchmarks
+
+### 2. [architecture.md](./architecture.md) - System Design & Components
+- **What**: Deep dive into Django-RQ architecture
+- **Content**: Component interaction, data flow, deployment patterns
+- **Diagrams**: 15+ Mermaid diagrams
+- **Size**: 18 KB
+
+**Key Topics:**
+- System overview and components
+- Configuration layer (Pydantic models)
+- Task execution flow
+- Queue management strategy
+- Scheduler architecture
+- Monitoring architecture
+- Integration patterns
+- Performance optimization
+- Deployment architectures
+
+### 3. [configuration.md](./configuration.md) - Setup Guide
+- **What**: Complete configuration reference
+- **Content**: All config options with examples and best practices
+- **Size**: 22 KB
+
+**Key Topics:**
+- Minimal vs complete configuration
+- Configuration models (DjangoRQConfig, RQQueueConfig, RQScheduleConfig)
+- Queue configuration patterns
+- Schedule configuration (cron, interval, one-time)
+- Redis configuration (standard, SSL, Sentinel)
+- Environment-based configuration
+- Validation rules
+- Best practices
+
+### 4. [examples.md](./examples.md) - Real-World Examples
+- **What**: Comprehensive code examples
+- **Content**: Real tasks from solution/projects/django project
+- **Size**: 29 KB
+
+**Key Topics:**
+- Simple tasks
+- Real-world examples from crypto app:
+  - `update_coin_prices` - Update cryptocurrency prices
+  - `import_coins` - Import coin data
+  - `generate_report` - Generate market reports
+- Email tasks (welcome, bulk newsletter)
+- Long-running tasks with progress tracking
+- Task retry patterns
+- Job dependencies
+- Scheduled tasks
+- Error handling
+- Testing
+- Performance tips
+
+### 5. [monitoring.md](./monitoring.md) - Monitoring & Observability
+- **What**: Complete monitoring guide
+- **Content**: All monitoring methods and tools
+- **Size**: 9.3 KB
+
+**Key Topics:**
+- Django Admin interface
+- REST API endpoints
+- Prometheus metrics
+- CLI commands (rqstats, rqworker, rqscheduler)
+- Web dashboard
+- Best practices
+- Alerting setup
+- Troubleshooting
+
+### 6. [deployment.md](./deployment.md) - Production Deployment Guide
+- **What**: Complete deployment guide for all platforms
+- **Content**: Docker, Kubernetes, Cloud platforms, local development
+- **Size**: 25 KB
+
+**Key Topics:**
+- Docker Compose deployment (production & local)
+- Kubernetes manifests (Deployments, Services, ConfigMaps)
+- Cloud platforms (AWS ECS, GCP Cloud Run, Heroku)
+- Environment configuration
+- Scaling strategies (horizontal & vertical)
+- Health checks and monitoring
+- Security best practices
+- Troubleshooting guide
+- Migration checklist (ReArq → RQ, Celery → RQ)
+
+## 🎯 Documentation Statistics
+
+- **Total Files**: 6 markdown files + 1 category config
+- **Total Size**: ~120 KB
+- **Mermaid Diagrams**: 18+
+- **Code Examples**: 60+
+- **Real-world Tasks**: 3 (from solution project)
+- **Deployment Platforms**: 4 (Docker, K8s, AWS, GCP)
+
+## 📊 Mermaid Diagrams
+
+### overview.md (2 diagrams)
+1. Architecture Overview - Shows Django, Redis, Workers, Monitoring
+2. Component Interaction - Sequence diagram of job lifecycle
+
+### architecture.md (15 diagrams)
+1. System Overview - Complete component graph
+2. Configuration Models - Class diagram (Pydantic models)
+3. Django-RQ Integration - Sequence diagram
+4. Task Execution Flow - Detailed sequence diagram
+5. Queue Management - Multi-queue strategy
+6. Scheduler Architecture - Cron/interval/one-time scheduling
+7. Schedule Registration - Sequence diagram
+8. REST API Layer - API architecture
+9. Data Flow - API data flow sequence
+10. Pydantic Models - Class diagram (RQJobModel, RQQueueModel, etc.)
+11. Enqueue Patterns - Integration points
+12. Result Handling - Multiple result access methods
+13. Error Handling - State diagram with retry logic
+14. Worker Pool - Multi-process architecture
+15. Redis Data Structures - Key structure graph
+16. Connection Pooling - Sequence diagram
+17. Single-Server Deployment - Deployment diagram
+18. Multi-Server Deployment - HA deployment diagram
+
+## 🔗 References
+
+### Solution Project Examples
+Documentation is based on real code from:
+- `solution/projects/django/api/config.py` - Configuration example
+- `solution/projects/django/apps/crypto/tasks.py` - Task examples
+- `solution/projects/django/apps/crypto/management/commands/` - CLI examples
+
+### Implementation
+Documentation describes implementation in:
+- `projects/django-cfg-dev/src/django_cfg/apps/rq/` - RQ integration
+- `projects/django-cfg-dev/src/django_cfg/models/django/django_rq.py` - Config models
+
+## 🚀 Quick Links
+
+- **Start Here**: [overview.md](./overview.md) - Introduction & Quick Start
+- **Design Deep Dive**: [architecture.md](./architecture.md) - Architecture & Components
+- **Setup Guide**: [configuration.md](./configuration.md) - Configuration Reference
+- **Code Examples**: [examples.md](./examples.md) - Real-World Examples
+- **Operations**: [monitoring.md](./monitoring.md) - Monitoring & Observability
+- **Deployment**: [deployment.md](./deployment.md) - Production Deployment
+
+## 📝 Documentation Style
+
+- **Markdown**: GitHub-flavored markdown with Docusaurus extensions
+- **Code Examples**: Python with syntax highlighting
+- **Diagrams**: Mermaid.js for all visualizations
+- **Structure**: Hierarchical with clear sections
+- **Cross-references**: Links between related sections
+- **Best Practices**: Dedicated sections in each document
+- **Production-ready**: Focus on real-world usage
+
+## ✅ Coverage
+
+Documentation covers:
+- ✅ Quick start and setup
+- ✅ Complete configuration reference
+- ✅ System architecture and design
+- ✅ Real-world code examples
+- ✅ Monitoring and observability
+- ✅ Production deployment (Docker, K8s, Cloud)
+- ✅ Best practices and patterns
+- ✅ Troubleshooting guide
+- ✅ Performance optimization
+- ✅ Scaling strategies
+- ✅ Security checklist
+- ✅ Migration guides (ReArq, Celery)
+- ✅ Testing strategies
+
+## 📦 Integration with Docusaurus
+
+Files are ready for Docusaurus:
+- `_category_.json` - Sidebar configuration
+- Frontmatter with metadata (title, description, tags)
+- Proper sidebar positioning
+- Cross-document links
+- Mermaid diagram support

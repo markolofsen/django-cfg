@@ -35,7 +35,7 @@ from .base.module import BaseCfgAutoModule
 from .django.axes import AxesConfig
 from .django.constance import ConstanceConfig, ConstanceField
 from .django.crypto_fields import CryptoFieldsConfig
-from .django.django_q2 import DjangoQ2Config, DjangoQ2ScheduleConfig
+from .django.django_rq import DjangoRQConfig, RQQueueConfig
 from .django.environment import EnvironmentConfig
 from .django.openapi import OpenAPIClientConfig
 from .infrastructure.cache import CacheConfig
@@ -80,8 +80,8 @@ __all__ = [
     "EnvironmentConfig",
     "ConstanceConfig",
     "ConstanceField",
-    "DjangoQ2Config",
-    "DjangoQ2ScheduleConfig",
+    "DjangoRQConfig",
+    "RQQueueConfig",
     "OpenAPIClientConfig",
     "UnfoldConfig",
     "AxesConfig",

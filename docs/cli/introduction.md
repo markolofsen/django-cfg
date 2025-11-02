@@ -176,7 +176,7 @@ poetry run cli migrator     # Smart database detection
 ### Feature-Specific Commands
 - **[AI Agent Commands](/cli/commands/ai-agents)** - Manage AI workflows and agent execution
 - **[Knowledge Base Commands](/cli/commands/knowbase)** - Document ingestion and semantic search
-- **[Background Task Commands](/features/integrations/rearq/overview)** - Manage ReArq workers and tasks
+- **[Background Task Commands](/features/integrations/django-rq/overview)** - Manage Django-RQ workers and tasks
 - **[Payment Commands](/cli/commands/payments)** - Test payment integrations and webhooks
 - **[Maintenance Commands](/cli/commands/maintenance)** - Enable/disable maintenance mode
 
@@ -216,7 +216,7 @@ The CLI is designed to make Django development faster, safer, and more enjoyable
 **Feature Commands:**
 - **[AI Agent Commands](/cli/commands/ai-agents)** - Manage AI workflows and agents
 - **[Knowledge Base Commands](/cli/commands/knowbase)** - Document ingestion and search
-- **[Background Task Commands](/features/integrations/rearq/overview)** - Manage ReArq workers
+- **[Background Task Commands](/features/integrations/django-rq/overview)** - Manage Django-RQ workers
 - **[Payment Commands](/cli/commands/payments)** - Test payment integrations
 - **[Maintenance Commands](/cli/commands/maintenance)** - Site maintenance control
 

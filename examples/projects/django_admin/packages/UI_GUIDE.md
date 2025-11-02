@@ -82,7 +82,19 @@ Standard Tailwind classes for components
 </button>
 ```
 
-## Forms (8)
+## Forms (14)
+
+### Label
+Accessible label component for form inputs
+
+```tsx
+import { Label } from '@djangocfg/ui';
+
+<div className="space-y-2">
+  <Label htmlFor="email">Email address</Label>
+  <Input id="email" type="email" placeholder="Enter your email" />
+</div>
+```
 
 ### Button
 Interactive button with multiple variants and sizes
@@ -187,7 +199,115 @@ import { Slider } from '@djangocfg/ui';
 <Slider defaultValue={[50]} max={100} step={1} className="w-[200px]" />
 ```
 
-## Layout (5)
+### Combobox
+Searchable dropdown with autocomplete
+
+```tsx
+import { Combobox } from '@djangocfg/ui';
+
+<Combobox
+  options={[
+    { value: "javascript", label: "JavaScript" },
+    { value: "typescript", label: "TypeScript" },
+    { value: "python", label: "Python" },
+    { value: "rust", label: "Rust" },
+  ]}
+  placeholder="Select language..."
+  searchPlaceholder="Search language..."
+  emptyText="No language found."
+/>
+```
+
+### InputOTP
+One-time password input component
+
+```tsx
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@djangocfg/ui';
+
+<InputOTP maxLength={6}>
+  <InputOTPGroup>
+    <InputOTPSlot index={0} />
+    <InputOTPSlot index={1} />
+    <InputOTPSlot index={2} />
+    <InputOTPSlot index={3} />
+    <InputOTPSlot index={4} />
+    <InputOTPSlot index={5} />
+  </InputOTPGroup>
+</InputOTP>
+```
+
+### PhoneInput
+International phone number input with country selector
+
+```tsx
+import { PhoneInput } from '@djangocfg/ui';
+
+<PhoneInput
+  defaultCountry="US"
+  placeholder="Enter phone number"
+  className="max-w-sm"
+/>
+```
+
+### Form
+React Hook Form wrapper with form validation
+
+```tsx
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@djangocfg/ui';
+
+// Requires react-hook-form
+import { useForm } from 'react-hook-form';
+
+function MyForm() {
+  const form = useForm();
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Username</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter username" {...field} />
+              </FormControl>
+              <FormDescription>
+                Your public display name
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </form>
+    </Form>
+  );
+}
+```
+
+### Field
+Advanced field component with label, description and validation
+
+```tsx
+import { Field, FieldGroup, FieldSet, FieldLegend } from '@djangocfg/ui';
+
+<FieldSet>
+  <FieldLegend>Account Information</FieldLegend>
+  <FieldGroup>
+    <Field>
+      <FieldLabel>Username</FieldLabel>
+      <Input placeholder="Enter username" />
+      <FieldDescription>
+        Your unique username for the platform
+      </FieldDescription>
+      <FieldError>Username is required</FieldError>
+    </Field>
+  </FieldGroup>
+</FieldSet>
+```
+
+## Layout (8)
 
 ### Card
 Container with header, content, and footer sections
@@ -259,7 +379,63 @@ import { Sticky } from '@djangocfg/ui';
 </Sticky>
 ```
 
-## Navigation (4)
+### ScrollArea
+Custom scrollable area with styled scrollbar
+
+```tsx
+import { ScrollArea, ScrollBar } from '@djangocfg/ui';
+
+<ScrollArea className="h-[200px] w-[350px] rounded-md border p-4">
+  <div className="space-y-4">
+    {Array.from({ length: 20 }).map((_, i) => (
+      <div key={i} className="text-sm">
+        Content item {i + 1}
+      </div>
+    ))}
+  </div>
+  <ScrollBar orientation="vertical" />
+</ScrollArea>
+```
+
+### Resizable
+Resizable panel layout with draggable handles
+
+```tsx
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@djangocfg/ui';
+
+<ResizablePanelGroup direction="horizontal" className="max-w-md rounded-lg border">
+  <ResizablePanel defaultSize={50}>
+    <div className="flex h-[200px] items-center justify-center p-6">
+      <span className="font-semibold">Panel One</span>
+    </div>
+  </ResizablePanel>
+  <ResizableHandle />
+  <ResizablePanel defaultSize={50}>
+    <div className="flex h-[200px] items-center justify-center p-6">
+      <span className="font-semibold">Panel Two</span>
+    </div>
+  </ResizablePanel>
+</ResizablePanelGroup>
+```
+
+### Section
+Semantic section container with header
+
+```tsx
+import { Section, SectionHeader } from '@djangocfg/ui';
+
+<Section>
+  <SectionHeader
+    title="Section Title"
+    description="Section description goes here"
+  />
+  <div className="p-4">
+    Section content goes here...
+  </div>
+</Section>
+```
+
+## Navigation (7)
 
 ### NavigationMenu
 Accessible navigation menu with dropdown support
@@ -390,6 +566,57 @@ import {
     </PaginationItem>
   </PaginationContent>
 </Pagination>
+```
+
+### BreadcrumbNavigation
+Enhanced breadcrumb component with automatic path generation
+
+```tsx
+import { BreadcrumbNavigation } from '@djangocfg/ui';
+
+<BreadcrumbNavigation
+  items={[
+    { label: "Home", href: "/" },
+    { label: "Products", href: "/products" },
+    { label: "Category", href: "/products/category" },
+    { label: "Item", href: "/products/category/item" },
+  ]}
+/>
+```
+
+### SSRPagination
+Server-side rendered pagination component
+
+```tsx
+import { SSRPagination } from '@djangocfg/ui';
+
+<SSRPagination
+  currentPage={2}
+  totalPages={10}
+  totalItems={100}
+  itemsPerPage={10}
+  hasNextPage={true}
+  hasPreviousPage={true}
+/>
+```
+
+### StaticPagination
+Client-side pagination component for static builds with callback support
+
+```tsx
+import { StaticPagination } from '@djangocfg/ui';
+
+const [currentPage, setCurrentPage] = useState(1);
+
+<StaticPagination
+  currentPage={currentPage}
+  totalPages={10}
+  totalItems={100}
+  itemsPerPage={10}
+  hasNextPage={currentPage < 10}
+  hasPreviousPage={currentPage > 1}
+  onPageChange={(page) => setCurrentPage(page)}
+/>
 ```
 
 ## Overlay (11)
@@ -714,7 +941,7 @@ import {
 </Menubar>
 ```
 
-## Feedback (5)
+## Feedback (6)
 
 ### Toast
 Toast notifications for user feedback
@@ -844,7 +1071,35 @@ import { Avatar, AvatarFallback, AvatarImage } from '@djangocfg/ui';
 </div>
 ```
 
-## Data (5)
+### Toaster
+Global toast notification container (works with Toast component)
+
+```tsx
+import { Toaster, useToast } from '@djangocfg/ui';
+
+// Add Toaster once in your app layout
+<Toaster />
+
+// Then use the useToast hook anywhere
+function MyComponent() {
+  const { toast } = useToast();
+
+  return (
+    <Button
+      onClick={() => {
+        toast({
+          title: "Scheduled: Catch up",
+          description: "Friday, February 10, 2023 at 5:57 PM",
+        });
+      }}
+    >
+      Show Toast
+    </Button>
+  );
+}
+```
+
+## Data (8)
 
 ### Table
 Responsive data table component
@@ -1001,7 +1256,87 @@ import { ToggleGroup, ToggleGroupItem } from '@djangocfg/ui';
 </div>
 ```
 
-## Specialized (2)
+### Calendar
+Date picker calendar component
+
+```tsx
+import { Calendar } from '@djangocfg/ui';
+
+<Calendar
+  mode="single"
+  selected={date}
+  onSelect={setDate}
+  className="rounded-md border"
+/>
+```
+
+### Carousel
+Image and content carousel with navigation
+
+```tsx
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@djangocfg/ui';
+
+<Carousel className="w-full max-w-xs">
+  <CarouselContent>
+    <CarouselItem>
+      <div className="p-6 border rounded-md">
+        <span className="text-4xl font-semibold">1</span>
+      </div>
+    </CarouselItem>
+    <CarouselItem>
+      <div className="p-6 border rounded-md">
+        <span className="text-4xl font-semibold">2</span>
+      </div>
+    </CarouselItem>
+    <CarouselItem>
+      <div className="p-6 border rounded-md">
+        <span className="text-4xl font-semibold">3</span>
+      </div>
+    </CarouselItem>
+  </CarouselContent>
+  <CarouselPrevious />
+  <CarouselNext />
+</Carousel>
+```
+
+### Chart
+Data visualization charts powered by Recharts
+
+```tsx
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@djangocfg/ui';
+
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
+
+const chartConfig = {
+  sales: { label: "Sales", color: "hsl(var(--chart-1))" },
+  profit: { label: "Profit", color: "hsl(var(--chart-2))" },
+};
+
+const chartData = [
+  { month: "Jan", sales: 400, profit: 240 },
+  { month: "Feb", sales: 300, profit: 180 },
+  { month: "Mar", sales: 500, profit: 300 },
+];
+
+<ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+  <BarChart data={chartData}>
+    <XAxis dataKey="month" />
+    <YAxis />
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <ChartLegend content={<ChartLegendContent />} />
+    <Bar dataKey="sales" fill="var(--color-sales)" />
+    <Bar dataKey="profit" fill="var(--color-profit)" />
+  </BarChart>
+</ChartContainer>
+```
+
+## Specialized (10)
 
 ### Sidebar
 Full-featured sidebar navigation component (23KB) with collapsible groups and icons
@@ -1084,6 +1419,142 @@ import { ImageWithFallback } from '@djangocfg/ui';
     }
   />
 </div>
+```
+
+### ButtonGroup
+Group buttons together with shared borders
+
+```tsx
+import { ButtonGroup, Button } from '@djangocfg/ui';
+
+<ButtonGroup orientation="horizontal">
+  <Button variant="outline">Left</Button>
+  <Button variant="outline">Center</Button>
+  <Button variant="outline">Right</Button>
+</ButtonGroup>
+```
+
+### Empty
+Empty state component for no data scenarios
+
+```tsx
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia } from '@djangocfg/ui';
+
+<Empty>
+  <EmptyHeader>
+    <EmptyMedia>
+      <svg>...</svg>
+    </EmptyMedia>
+    <EmptyTitle>No results found</EmptyTitle>
+    <EmptyDescription>
+      Try adjusting your search or filter to find what you're looking for.
+    </EmptyDescription>
+  </EmptyHeader>
+  <EmptyContent>
+    <Button>Clear filters</Button>
+  </EmptyContent>
+</Empty>
+```
+
+### Spinner
+Loading spinner indicator
+
+```tsx
+import { Spinner } from '@djangocfg/ui';
+
+<div className="flex gap-4 items-center">
+  <Spinner />
+  <Spinner className="size-6" />
+  <Spinner className="size-8" />
+</div>
+```
+
+### Kbd
+Keyboard key display component
+
+```tsx
+import { Kbd } from '@djangocfg/ui';
+
+<div className="flex gap-2">
+  <Kbd>⌘</Kbd>
+  <Kbd>K</Kbd>
+</div>
+```
+
+### TokenIcon
+Cryptocurrency token icon component
+
+```tsx
+import { TokenIcon } from '@djangocfg/ui';
+
+<div className="flex gap-4">
+  <TokenIcon symbol="btc" size={32} />
+  <TokenIcon symbol="eth" size={32} />
+  <TokenIcon symbol="usdt" size={32} />
+</div>
+```
+
+### Sonner (Toaster)
+Toast notifications powered by Sonner library
+
+```tsx
+import { Toaster } from '@djangocfg/ui';
+import { toast } from 'sonner';
+
+// Add Toaster to your app layout
+<Toaster />
+
+// Then use toast anywhere in your app
+toast.success('Operation completed!');
+toast.error('Something went wrong');
+toast.info('New message received');
+toast.promise(
+  fetchData(),
+  {
+    loading: 'Loading...',
+    success: 'Data loaded!',
+    error: 'Failed to load',
+  }
+);
+```
+
+### InputGroup
+Enhanced input with prefix/suffix addons
+
+```tsx
+import { InputGroup, Input } from '@djangocfg/ui';
+
+<InputGroup>
+  <InputGroupAddon align="inline-start">
+    <SearchIcon className="size-4" />
+  </InputGroupAddon>
+  <Input placeholder="Search..." />
+  <InputGroupAddon align="inline-end">
+    <Kbd>⌘K</Kbd>
+  </InputGroupAddon>
+</InputGroup>
+```
+
+### Item
+List item component with variants and layouts
+
+```tsx
+import { Item, ItemGroup } from '@djangocfg/ui';
+
+<ItemGroup>
+  <Item variant="outline" size="default">
+    <ItemIcon>
+      <FileIcon />
+    </ItemIcon>
+    <ItemContent>
+      <ItemTitle>Document.pdf</ItemTitle>
+      <ItemDescription>Updated 2 hours ago</ItemDescription>
+    </ItemContent>
+    <ItemAction>
+      <Button variant="ghost" size="sm">View</Button>
+    </ItemAction>
+  </Item>
+</ItemGroup>
 ```
 
 ## Blocks (7)

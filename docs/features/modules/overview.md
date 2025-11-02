@@ -205,7 +205,7 @@ with logger.timer("database_query"):
 
 ### Tasks Module (`DjangoTasks`)
 
-Background task processing with ReArq:
+Background task processing with Django-RQ:
 
 ```python
 from django_cfg.modules.django_tasks import DjangoTasks
@@ -233,39 +233,40 @@ tasks.schedule_periodic(
 
 ---
 
-### Django-Q2 Task Scheduling Module
+### Django-RQ Task Queue Module
 
-Type-safe task scheduling with Django-Q2 for distributed async tasks:
+Type-safe task scheduling with Django-RQ for background job processing:
 
 ```python
-from django_cfg import DjangoQ2Config, DjangoQ2ScheduleConfig
+from django_cfg import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
 
 # In config.py
-django_q2 = DjangoQ2Config(
+django_rq = DjangoRQConfig(
     enabled=True,
-    workers=4,
+    queues=[
+        RQQueueConfig(queue="default"),
+        RQQueueConfig(queue="high", default_timeout=3600),
+    ],
     schedules=[
         # Sync data every 5 minutes
-        DjangoQ2ScheduleConfig(
-            name="Sync data",
-            schedule_type="minutes",
-            minutes=5,
-            command="sync_data",
+        RQScheduleConfig(
+            func="myapp.tasks.sync_data",
+            interval=300,  # seconds
+            queue="default",
         ),
         # Daily cleanup at 2 AM
-        DjangoQ2ScheduleConfig(
-            name="Cleanup",
-            schedule_type="cron",
+        RQScheduleConfig(
+            func="myapp.tasks.cleanup_old_data",
             cron="0 2 * * *",
-            command="cleanup_old_data",
+            queue="default",
         ),
     ],
 )
 ```
 
-**Features:** Type-safe configuration, distributed task processing, async task execution, scheduled/cron/interval tasks, built-in admin interface, automatic retries, result storage, task monitoring via Dashboard API, and production-ready error handling.
+**Features:** High performance (10K+ jobs/sec), cron & interval scheduling, built-in monitoring (Admin, REST API, Prometheus), job dependencies, retry logic, type-safe configuration, and production-ready error handling.
 
-**Learn more:** [Django-Q2 Scheduling Module Documentation](./scheduling/overview)
+**Learn more:** [Django-RQ Integration Documentation](/features/integrations/django-rq/overview)
 
   </TabItem>
   <TabItem value="development" label="🔧 Development Tools">
@@ -549,7 +550,7 @@ class MyProjectConfig(DjangoConfig):
 - **[Health Overview](./health/overview)** - System monitoring
 - **[Import/Export Overview](./import-export/overview)** - Data management
 - **[Unfold Overview](./unfold/overview)** - Modern admin interface
-- **[Scheduling Overview](./scheduling/overview)** - Django-Q2 task scheduling
+- **[Background Tasks](/features/integrations/django-rq/overview)** - Django-RQ task queue
 
 ### Related Documentation
 
@@ -562,7 +563,7 @@ class MyProjectConfig(DjangoConfig):
 - **[Health Module](./health/overview)** - System health checks
 - **[Import/Export Module](./import-export/overview)** - Data import/export utilities
 - **[Unfold Module](./unfold/overview)** - Modern admin interface
-- **[Scheduling Module](./scheduling/overview)** - Django-Q2 distributed task scheduling
+- **[Background Tasks](/features/integrations/django-rq/overview)** - Django-RQ distributed task queue
 
 **Configuration & Setup:**
 - **[Configuration Guide](/fundamentals/configuration)** - Configure modules
@@ -577,7 +578,7 @@ class MyProjectConfig(DjangoConfig):
 - **[AI Knowledge Base](/features/built-in-apps/ai-knowledge/overview)** - Uses LLM, Tasks modules
 
 **Integrations:**
-- **[ReArq Integration](/features/built-in-apps/operations/tasks)** - Background task processing
+- **[Django-RQ Integration](/features/built-in-apps/operations/tasks)** - Background task processing
 - **[Ngrok Integration](/features/integrations/ngrok/overview)** - Webhook testing
 - **[API Generation](/features/api-generation/overview)** - Auto-generate API clients
 - **[Integrations Overview](/features/integrations/overview)** - All integrations

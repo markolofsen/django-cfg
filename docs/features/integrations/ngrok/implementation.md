@@ -351,10 +351,10 @@ class Command(BaseCommand):
         )
 ```
 
-### Background Tasks (ReArq)
+### Background Tasks (Django-RQ)
 
 ```python
-from rearq.decorators import task
+import django_rq
 from django_cfg.modules.django_ngrok import get_webhook_url
 
 @task
@@ -460,7 +460,7 @@ else:
 
 **Related Features:**
 - [**Payments App**](/features/built-in-apps/payments/overview) - Payment webhooks
-- [**Background Tasks**](/features/integrations/rearq/overview) - Async webhook processing
+- [**Background Tasks**](/features/integrations/django-rq/overview) - Async webhook processing
 - [**Integrations Overview**](/features/integrations/overview) - All integrations
 
 ### Configuration & Setup

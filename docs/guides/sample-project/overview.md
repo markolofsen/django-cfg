@@ -155,7 +155,7 @@ ReArq integration for:
 - Scheduled cleanup tasks
 - Scalable worker management
 
-See [Background Tasks](/features/integrations/rearq/overview) for task examples.
+See [Background Tasks](/features/integrations/django-rq/overview) for task examples.
 
 ## Project Structure Overview
 
@@ -310,7 +310,7 @@ Now that you have an overview, explore these topics:
 4. **[Admin Interface](./admin-interface)** - Customize the admin dashboard
 5. **[API Documentation](./api-documentation)** - Explore the REST API
 6. **[Authentication](./authentication)** - Implement OTP authentication
-7. **[Background Tasks](/features/integrations/rearq/overview)** - Process tasks asynchronously
+7. **[Background Tasks](/features/integrations/django-rq/overview)** - Process tasks asynchronously
 8. **[Service Integrations](./service-integrations)** - Connect external services
 9. **[Deployment](./deployment)** - Deploy to production with Docker
 

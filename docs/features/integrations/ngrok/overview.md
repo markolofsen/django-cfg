@@ -212,7 +212,7 @@ def create_payment(request):
 - **[Payment Examples](/features/built-in-apps/payments/examples)** - Real-world payment flows
 
 **Background Processing:**
-- **[ReArq Integration](/features/integrations/rearq/overview)** - Process webhooks asynchronously
+- **[Django-RQ Integration](/features/integrations/django-rq/overview)** - Process webhooks asynchronously
 - **[Background Tasks](/features/built-in-apps/operations/tasks)** - Task queue management
 
 ### Tools & Development

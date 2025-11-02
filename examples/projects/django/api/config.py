@@ -45,10 +45,9 @@ from django_cfg import (
     GRPCAuthConfig,
     GRPCProtoConfig,
     NextJsAdminConfig,
-    TaskConfig,
-    RearqConfig,
-    DjangoQ2Config,
-    DjangoQ2ScheduleConfig,
+    DjangoRQConfig,
+    RQQueueConfig,
+    RQScheduleConfig,
 )
 
 # Import environment configuration
@@ -162,18 +161,74 @@ class DjangoCfgConfig(DjangoConfig):
         enabled_apps=["core", "apps.profiles", "apps.trading", "apps.crypto"],
     )
 
-    # === Background Tasks Configuration (ReArq) ===
-    tasks: Optional[TaskConfig] = TaskConfig(
+    # === Django-RQ Background Tasks Configuration ===
+    # MAGIC: redis_url is automatically used from DjangoConfig.redis_url! 🎉
+    django_rq: Optional[DjangoRQConfig] = DjangoRQConfig(
         enabled=True,
-        rearq=RearqConfig(
-            redis_url=env.redis_url,  # Fallback if env.redis_url is None
-            db_url="sqlite:///rearq.db",  # Or use PostgreSQL in production
-            max_jobs=10,
-            job_timeout=300,
-            job_retry=3,
-            job_retry_after=60,
-            keep_job_days=7,
-        )
+        queues=[
+            # Default queue for general tasks
+            RQQueueConfig(
+                queue="default",
+                default_timeout=360,
+                default_result_ttl=500,
+            ),
+            # High priority queue for urgent tasks
+            RQQueueConfig(
+                queue="high",
+                default_timeout=180,
+                default_result_ttl=300,
+            ),
+            # Low priority queue for background tasks
+            RQQueueConfig(
+                queue="low",
+                default_timeout=600,
+                default_result_ttl=800,
+            ),
+            # Knowledge base queue (for enable_knowbase)
+            RQQueueConfig(
+                queue="knowledge",
+                default_timeout=600,
+                default_result_ttl=3600,
+            ),
+        ],
+        show_admin_link=True,
+        prometheus_enabled=True,
+        # RQ Scheduler - scheduled jobs (cron-like tasks)
+        schedules=[
+            # Update cryptocurrency prices every 5 minutes
+            RQScheduleConfig(
+                func="apps.crypto.tasks.update_coin_prices",
+                interval=300,  # Every 5 minutes
+                queue="default",
+                limit=50,
+                verbosity=0,
+                description="Update coin prices (frequent)",
+            ),
+            # Update all coin prices hourly with verbose output
+            RQScheduleConfig(
+                func="apps.crypto.tasks.update_coin_prices",
+                interval=3600,  # Every hour
+                queue="default",
+                limit=100,
+                verbosity=1,
+                description="Update coin prices (hourly)",
+            ),
+            # Import new coins daily
+            RQScheduleConfig(
+                func="apps.crypto.tasks.import_coins",
+                interval=86400,  # Every 24 hours
+                queue="low",
+                description="Import new coins (daily)",
+            ),
+            # Generate daily crypto market report
+            RQScheduleConfig(
+                func="apps.crypto.tasks.generate_report",
+                interval=86400,  # Every 24 hours
+                queue="low",
+                report_type="daily",
+                description="Generate daily crypto market report",
+            ),
+        ],
     )
 
     # === API Keys Configuration ===
@@ -345,46 +400,6 @@ class DjangoCfgConfig(DjangoConfig):
         ],
     )
 
-    # === Django-Q2 Task Scheduling Configuration ===
-    # MAGIC: broker_url automatically uses redis_url from config! 🎉
-    django_q2: Optional[DjangoQ2Config] = DjangoQ2Config(
-        enabled=True,
-        workers=4,
-        schedules=[
-            # Update cryptocurrency prices every 5 minutes
-            DjangoQ2ScheduleConfig(
-                name="Update coin prices (frequent)",
-                schedule_type="minutes",
-                minutes=5,
-                command="update_coin_prices",
-                command_args=["--limit=50"],
-                command_kwargs={"verbosity": 0},
-            ),
-            # Update all coin prices hourly with verbose output
-            DjangoQ2ScheduleConfig(
-                name="Update coin prices (hourly)",
-                schedule_type="hourly",
-                command="update_coin_prices",
-                command_args=["--limit=100"],
-                command_kwargs={"verbosity": 1},
-            ),
-            # Import new coins daily at 3 AM
-            DjangoQ2ScheduleConfig(
-                name="Import new coins (daily)",
-                schedule_type="cron",
-                cron="0 3 * * *",  # Daily at 3 AM
-                command="import_coins",
-            ),
-            # Generate daily crypto market report at 9 AM (weekdays)
-            DjangoQ2ScheduleConfig(
-                name="Generate daily report",
-                schedule_type="cron",
-                cron="0 9 * * 1-5",  # 9 AM on weekdays
-                command="generate_report",
-                command_args=["--type=daily"],
-            ),
-        ],
-    )
 
     # === Next.js Admin Integration ===
     nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(

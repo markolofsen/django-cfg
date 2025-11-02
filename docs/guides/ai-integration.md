@@ -335,7 +335,7 @@ class AIIntegrationTest(TestCase):
 ### Background Processing & Tools
 
 **Task Processing:**
-- [**ReArq Integration**](/features/integrations/rearq/overview) - Async AI processing
+- [**ReArq Integration**](/features/integrations/django-rq/overview) - Async AI processing
 - [**Background Tasks**](/features/built-in-apps/operations/tasks) - Task queue for AI jobs
 
 **CLI & Management:**

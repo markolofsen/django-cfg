@@ -505,7 +505,7 @@ Now that gRPC is configured, learn how to:
 - **[Create gRPC Services](./backend-guide.md)** - Build your first service
 - **[Add Authentication](./authentication.md)** - Secure your services with JWT
 - **[Monitor Requests](./monitoring.md)** - View logs and metrics
-- **[Use Interceptors](./interceptors.md)** - Add cross-cutting concerns
+- **[View Architecture](./architecture.md)** - Understand gRPC design patterns
 
 ---
 
