@@ -41,7 +41,15 @@ class BadgeElements:
         if icon:
             icon_html = format_html('<span class="material-symbols-outlined text-xs mr-1">{}</span>', icon)
 
+        # Check if text is already safe HTML (e.g., from self.html.number() or self.html.inline())
+        if isinstance(text, SafeString):
+            # Already safe, don't escape
+            text_html = text
+        else:
+            # Regular text, escape for safety
+            text_html = escape(str(text))
+
         return format_html(
             '<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {}">{}{}</span>',
-            css_classes, icon_html, escape(str(text))
+            css_classes, icon_html, text_html
         )
