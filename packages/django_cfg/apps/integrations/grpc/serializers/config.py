@@ -1,97 +1,109 @@
 """
-Pydantic serializers for gRPC configuration and server info.
+DRF serializers for gRPC configuration and server info.
 
 These serializers define the structure for configuration and server
 information endpoints.
 """
 
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class GRPCServerConfigSerializer(BaseModel):
+class GRPCServerConfigSerializer(serializers.Serializer):
     """gRPC server configuration details."""
 
-    host: str = Field(..., description="Server host address")
-    port: int = Field(..., description="Server port")
-    enabled: bool = Field(..., description="Whether gRPC server is enabled")
-    max_workers: int = Field(..., description="Maximum worker threads")
-    max_concurrent_rpcs: Optional[int] = Field(
-        None, description="Maximum concurrent RPCs"
+    host = serializers.CharField(help_text="Server host address")
+    port = serializers.IntegerField(help_text="Server port")
+    enabled = serializers.BooleanField(help_text="Whether gRPC server is enabled")
+    max_workers = serializers.IntegerField(help_text="Maximum worker threads")
+    max_concurrent_rpcs = serializers.IntegerField(
+        allow_null=True, required=False, help_text="Maximum concurrent RPCs"
     )
 
 
-class GRPCFrameworkConfigSerializer(BaseModel):
+class GRPCFrameworkConfigSerializer(serializers.Serializer):
     """gRPC framework configuration details."""
 
-    enabled: bool = Field(..., description="Whether framework is enabled")
-    auto_discover: bool = Field(..., description="Auto-discover services")
-    services_path: str = Field(..., description="Services discovery path pattern")
-    interceptors: List[str] = Field(
-        default_factory=list, description="Registered interceptors"
+    enabled = serializers.BooleanField(help_text="Whether framework is enabled")
+    auto_discover = serializers.BooleanField(help_text="Auto-discover services")
+    services_path = serializers.CharField(help_text="Services discovery path pattern")
+    interceptors = serializers.ListField(
+        child=serializers.CharField(),
+        default=list,
+        help_text="Registered interceptors",
     )
 
 
-class GRPCFeaturesSerializer(BaseModel):
+class GRPCFeaturesSerializer(serializers.Serializer):
     """gRPC features configuration."""
 
-    jwt_auth: bool = Field(..., description="JWT authentication enabled")
-    request_logging: bool = Field(..., description="Request logging enabled")
-    metrics: bool = Field(..., description="Metrics collection enabled")
-    reflection: bool = Field(..., description="gRPC reflection enabled")
+    jwt_auth = serializers.BooleanField(help_text="JWT authentication enabled")
+    request_logging = serializers.BooleanField(help_text="Request logging enabled")
+    metrics = serializers.BooleanField(help_text="Metrics collection enabled")
+    reflection = serializers.BooleanField(help_text="gRPC reflection enabled")
 
 
-class GRPCConfigSerializer(BaseModel):
+class GRPCConfigSerializer(serializers.Serializer):
     """Complete gRPC configuration response."""
 
-    server: GRPCServerConfigSerializer = Field(..., description="Server configuration")
-    framework: GRPCFrameworkConfigSerializer = Field(
-        ..., description="Framework configuration"
+    server = GRPCServerConfigSerializer(help_text="Server configuration")
+    framework = GRPCFrameworkConfigSerializer(help_text="Framework configuration")
+    features = GRPCFeaturesSerializer(help_text="Feature flags")
+    registered_services = serializers.IntegerField(
+        help_text="Number of registered services"
     )
-    features: GRPCFeaturesSerializer = Field(..., description="Feature flags")
-    registered_services: int = Field(..., description="Number of registered services")
-    total_methods: int = Field(..., description="Total number of methods")
+    total_methods = serializers.IntegerField(help_text="Total number of methods")
 
 
-class GRPCServiceInfoSerializer(BaseModel):
+class GRPCServiceInfoSerializer(serializers.Serializer):
     """Information about a single gRPC service."""
 
-    name: str = Field(..., description="Service name")
-    methods: List[str] = Field(default_factory=list, description="Service methods")
-    full_name: str = Field(..., description="Full service name with package")
-    description: str = Field("", description="Service description")
+    name = serializers.CharField(help_text="Service name")
+    methods = serializers.ListField(
+        child=serializers.CharField(), default=list, help_text="Service methods"
+    )
+    full_name = serializers.CharField(help_text="Full service name with package")
+    description = serializers.CharField(
+        default="", allow_blank=True, help_text="Service description"
+    )
 
 
-class GRPCInterceptorInfoSerializer(BaseModel):
+class GRPCInterceptorInfoSerializer(serializers.Serializer):
     """Information about an interceptor."""
 
-    name: str = Field(..., description="Interceptor name")
-    enabled: bool = Field(..., description="Whether interceptor is enabled")
+    name = serializers.CharField(help_text="Interceptor name")
+    enabled = serializers.BooleanField(help_text="Whether interceptor is enabled")
 
 
-class GRPCStatsSerializer(BaseModel):
+class GRPCStatsSerializer(serializers.Serializer):
     """Runtime statistics summary."""
 
-    total_requests: int = Field(..., description="Total number of requests")
-    success_rate: float = Field(..., description="Success rate percentage")
-    avg_duration_ms: float = Field(..., description="Average duration in milliseconds")
+    total_requests = serializers.IntegerField(help_text="Total number of requests")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
+    avg_duration_ms = serializers.FloatField(
+        help_text="Average duration in milliseconds"
+    )
 
 
-class GRPCServerInfoSerializer(BaseModel):
+class GRPCServerInfoSerializer(serializers.Serializer):
     """Complete gRPC server information response."""
 
-    server_status: str = Field(..., description="Server status (running, stopped)")
-    address: str = Field(..., description="Server address (host:port)")
-    started_at: Optional[str] = Field(None, description="Server start timestamp")
-    uptime_seconds: Optional[int] = Field(None, description="Server uptime in seconds")
-    services: List[GRPCServiceInfoSerializer] = Field(
-        default_factory=list, description="Registered services"
+    server_status = serializers.CharField(
+        help_text="Server status (running, stopped)"
     )
-    interceptors: List[GRPCInterceptorInfoSerializer] = Field(
-        default_factory=list, description="Active interceptors"
+    address = serializers.CharField(help_text="Server address (host:port)")
+    started_at = serializers.CharField(
+        allow_null=True, required=False, help_text="Server start timestamp"
     )
-    stats: GRPCStatsSerializer = Field(..., description="Runtime statistics")
+    uptime_seconds = serializers.IntegerField(
+        allow_null=True, required=False, help_text="Server uptime in seconds"
+    )
+    services = GRPCServiceInfoSerializer(
+        many=True, default=list, help_text="Registered services"
+    )
+    interceptors = GRPCInterceptorInfoSerializer(
+        many=True, default=list, help_text="Active interceptors"
+    )
+    stats = GRPCStatsSerializer(help_text="Runtime statistics")
 
 
 __all__ = [

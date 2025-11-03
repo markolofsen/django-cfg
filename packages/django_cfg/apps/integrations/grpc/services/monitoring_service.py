@@ -7,20 +7,13 @@ Provides business logic for gRPC monitoring and statistics.
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from django.conf import settings
 from django.db import models
 from django.db.models import Avg, Count, Max
 from django.db.models.functions import TruncDay, TruncHour
 from django_cfg.modules.django_logging import get_logger
 
 from ..models import GRPCRequestLog, GRPCServerStatus
-from ..serializers import (
-    GRPCHealthCheckSerializer,
-    GRPCOverviewStatsSerializer,
-    MethodStatsSerializer,
-    MonitoringServiceStatsSerializer,
-)
-from ..serializers.service_registry import RecentRequestSerializer
+from .config_helper import get_grpc_server_config
 
 logger = get_logger("grpc.monitoring_service")
 
@@ -45,7 +38,7 @@ class MonitoringService:
             >>> health['status']
             'healthy'
         """
-        grpc_server_config = getattr(settings, "GRPC_SERVER", {})
+        grpc_server_config = get_grpc_server_config()
 
         if not grpc_server_config:
             raise ValueError("gRPC not configured")
@@ -57,15 +50,13 @@ class MonitoringService:
         # Ensure enabled is always boolean, not None
         enabled = bool(is_running) if is_running is not None else False
 
-        health_data = GRPCHealthCheckSerializer(
-            status="healthy" if enabled else "stopped",
-            server_host=grpc_server_config.get("host", "[::]"),
-            server_port=grpc_server_config.get("port", 50051),
-            enabled=enabled,
-            timestamp=datetime.now().isoformat(),
-        )
-
-        return health_data.model_dump()
+        return {
+            "status": "healthy" if enabled else "stopped",
+            "server_host": grpc_server_config.host,
+            "server_port": grpc_server_config.port,
+            "enabled": enabled,
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def get_overview_statistics(self, hours: int = 24) -> Dict:
         """
@@ -88,8 +79,7 @@ class MonitoringService:
         stats = GRPCRequestLog.objects.get_statistics(hours=hours)
         stats["period_hours"] = hours
 
-        overview = GRPCOverviewStatsSerializer(**stats)
-        return overview.model_dump()
+        return stats
 
     def get_recent_requests(
         self,
@@ -160,19 +150,19 @@ class MonitoringService:
 
         services_list = []
         for stats in service_stats:
-            service_data = MonitoringServiceStatsSerializer(
-                service_name=stats["service_name"],
-                total=stats["total"],
-                successful=stats["successful"],
-                errors=stats["errors"],
-                avg_duration_ms=round(stats["avg_duration_ms"] or 0, 2),
-                last_activity_at=(
+            service_data = {
+                "service_name": stats["service_name"],
+                "total": stats["total"],
+                "successful": stats["successful"],
+                "errors": stats["errors"],
+                "avg_duration_ms": round(stats["avg_duration_ms"] or 0, 2),
+                "last_activity_at": (
                     stats["last_activity_at"].isoformat()
                     if stats["last_activity_at"]
                     else None
                 ),
-            )
-            services_list.append(service_data.model_dump())
+            }
+            services_list.append(service_data)
 
         return services_list
 
@@ -217,20 +207,20 @@ class MonitoringService:
 
         methods_list = []
         for stats in method_stats:
-            method_data = MethodStatsSerializer(
-                service_name=stats["service_name"],
-                method_name=stats["method_name"],
-                total=stats["total"],
-                successful=stats["successful"],
-                errors=stats["errors"],
-                avg_duration_ms=round(stats["avg_duration_ms"] or 0, 2),
-                last_activity_at=(
+            method_data = {
+                "service_name": stats["service_name"],
+                "method_name": stats["method_name"],
+                "total": stats["total"],
+                "successful": stats["successful"],
+                "errors": stats["errors"],
+                "avg_duration_ms": round(stats["avg_duration_ms"] or 0, 2),
+                "last_activity_at": (
                     stats["last_activity_at"].isoformat()
                     if stats["last_activity_at"]
                     else None
                 ),
-            )
-            methods_list.append(method_data.model_dump())
+            }
+            methods_list.append(method_data)
 
         return methods_list
 

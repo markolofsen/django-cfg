@@ -11,11 +11,6 @@ from django.db.models import Count
 from django_cfg.modules.django_logging import get_logger
 
 from ..models import GRPCRequestLog
-from ..serializers.testing import (
-    GRPCCallResponseSerializer,
-    GRPCExampleSerializer,
-    GRPCTestLogSerializer,
-)
 from ..testing import get_example
 from .service_registry import ServiceRegistryManager
 
@@ -75,18 +70,18 @@ class TestingService:
                 # Get example from registry
                 example_data = get_example(service_name, method_name)
                 if example_data:
-                    # Validate and serialize
-                    example = GRPCExampleSerializer(
-                        service=service_name,
-                        method=method_name,
-                        description=example_data.get(
+                    # Build dict directly
+                    example = {
+                        "service": service_name,
+                        "method": method_name,
+                        "description": example_data.get(
                             "description", f"{method_name} method"
                         ),
-                        request_example=example_data.get("request", {}),
-                        response_example=example_data.get("response", {}),
-                        notes=example_data.get("notes", ""),
-                    )
-                    examples.append(example.model_dump())
+                        "payload_example": example_data.get("request", {}),
+                        "expected_response": example_data.get("response", {}),
+                        "metadata_example": example_data.get("metadata", {}),
+                    }
+                    examples.append(example)
 
         return examples
 

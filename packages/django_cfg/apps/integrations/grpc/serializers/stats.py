@@ -2,21 +2,23 @@
 Statistics serializers for gRPC monitoring API.
 """
 
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class GRPCOverviewStatsSerializer(BaseModel):
+class GRPCOverviewStatsSerializer(serializers.Serializer):
     """Overview statistics for gRPC requests."""
 
-    total: int = Field(description="Total requests in period")
-    successful: int = Field(description="Successful requests")
-    errors: int = Field(description="Error requests")
-    cancelled: int = Field(description="Cancelled requests")
-    timeout: int = Field(description="Timeout requests")
-    success_rate: float = Field(description="Success rate percentage")
-    avg_duration_ms: float = Field(description="Average duration in milliseconds")
-    p95_duration_ms: float = Field(description="95th percentile duration in milliseconds")
-    period_hours: int = Field(description="Statistics period in hours")
+    total = serializers.IntegerField(help_text="Total requests in period")
+    successful = serializers.IntegerField(help_text="Successful requests")
+    errors = serializers.IntegerField(help_text="Error requests")
+    cancelled = serializers.IntegerField(help_text="Cancelled requests")
+    timeout = serializers.IntegerField(help_text="Timeout requests")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration in milliseconds")
+    p95_duration_ms = serializers.FloatField(
+        allow_null=True, help_text="95th percentile duration in milliseconds"
+    )
+    period_hours = serializers.IntegerField(help_text="Statistics period in hours")
 
 
 __all__ = ["GRPCOverviewStatsSerializer"]

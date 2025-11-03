@@ -1,202 +1,200 @@
 """
-Pydantic serializers for gRPC charts and statistics data.
+DRF serializers for gRPC charts and statistics data.
 
 These serializers define the structure for chart endpoints
 that provide time-series data for visualization.
 """
 
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class TimeSeriesDataPoint(BaseModel):
+class TimeSeriesDataPoint(serializers.Serializer):
     """Single data point in time series."""
 
-    timestamp: str = Field(..., description="ISO timestamp")
-    value: float = Field(..., description="Value at this timestamp")
-    label: Optional[str] = Field(None, description="Optional label for this point")
+    timestamp = serializers.CharField(help_text="ISO timestamp")
+    value = serializers.FloatField(help_text="Value at this timestamp")
+    label = serializers.CharField(
+        required=False, allow_null=True, help_text="Optional label for this point"
+    )
 
 
-class ServerUptimeDataPoint(BaseModel):
+class ServerUptimeDataPoint(serializers.Serializer):
     """Server uptime data point."""
 
-    timestamp: str = Field(..., description="ISO timestamp")
-    server_count: int = Field(..., description="Number of running servers")
-    servers: List[str] = Field(
-        default_factory=list, description="List of server addresses"
+    timestamp = serializers.CharField(help_text="ISO timestamp")
+    server_count = serializers.IntegerField(help_text="Number of running servers")
+    servers = serializers.ListField(
+        child=serializers.CharField(), default=list, help_text="List of server addresses"
     )
 
 
-class RequestVolumeDataPoint(BaseModel):
+class RequestVolumeDataPoint(serializers.Serializer):
     """Request volume data point."""
 
-    timestamp: str = Field(..., description="ISO timestamp")
-    total_requests: int = Field(..., description="Total requests in period")
-    successful_requests: int = Field(..., description="Successful requests")
-    failed_requests: int = Field(..., description="Failed requests")
-    success_rate: float = Field(..., description="Success rate percentage")
+    timestamp = serializers.CharField(help_text="ISO timestamp")
+    total_requests = serializers.IntegerField(help_text="Total requests in period")
+    successful_requests = serializers.IntegerField(help_text="Successful requests")
+    failed_requests = serializers.IntegerField(help_text="Failed requests")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
 
 
-class ResponseTimeDataPoint(BaseModel):
+class ResponseTimeDataPoint(serializers.Serializer):
     """Response time statistics data point."""
 
-    timestamp: str = Field(..., description="ISO timestamp")
-    avg_duration_ms: float = Field(..., description="Average duration")
-    p50_duration_ms: float = Field(..., description="P50 percentile")
-    p95_duration_ms: float = Field(..., description="P95 percentile")
-    p99_duration_ms: float = Field(..., description="P99 percentile")
-    min_duration_ms: float = Field(..., description="Minimum duration")
-    max_duration_ms: float = Field(..., description="Maximum duration")
+    timestamp = serializers.CharField(help_text="ISO timestamp")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration")
+    p50_duration_ms = serializers.FloatField(help_text="P50 percentile")
+    p95_duration_ms = serializers.FloatField(help_text="P95 percentile")
+    p99_duration_ms = serializers.FloatField(help_text="P99 percentile")
+    min_duration_ms = serializers.FloatField(help_text="Minimum duration")
+    max_duration_ms = serializers.FloatField(help_text="Maximum duration")
 
 
-class ServiceActivityDataPoint(BaseModel):
+class ServiceActivityDataPoint(serializers.Serializer):
     """Service activity data point."""
 
-    service_name: str = Field(..., description="Service name")
-    request_count: int = Field(..., description="Number of requests")
-    success_rate: float = Field(..., description="Success rate percentage")
-    avg_duration_ms: float = Field(..., description="Average duration")
+    service_name = serializers.CharField(help_text="Service name")
+    request_count = serializers.IntegerField(help_text="Number of requests")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration")
 
 
-class ServerLifecycleEvent(BaseModel):
+class ServerLifecycleEvent(serializers.Serializer):
     """Server lifecycle event."""
 
-    timestamp: str = Field(..., description="Event timestamp")
-    event_type: str = Field(
-        ..., description="Event type (started, stopped, error)"
+    timestamp = serializers.CharField(help_text="Event timestamp")
+    event_type = serializers.CharField(
+        help_text="Event type (started, stopped, error)"
     )
-    server_address: str = Field(..., description="Server address")
-    server_pid: int = Field(..., description="Server process ID")
-    uptime_seconds: Optional[int] = Field(
-        None, description="Uptime at event time (for stop events)"
+    server_address = serializers.CharField(help_text="Server address")
+    server_pid = serializers.IntegerField(help_text="Server process ID")
+    uptime_seconds = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="Uptime at event time (for stop events)",
     )
-    error_message: Optional[str] = Field(None, description="Error message if applicable")
+    error_message = serializers.CharField(
+        required=False, allow_null=True, help_text="Error message if applicable"
+    )
 
 
-class TimeSeriesChartData(BaseModel):
+class TimeSeriesChartData(serializers.Serializer):
     """Generic time series chart data."""
 
-    title: str = Field(..., description="Chart title")
-    series_name: str = Field(..., description="Series name")
-    data_points: List[TimeSeriesDataPoint] = Field(
-        default_factory=list, description="Data points"
-    )
-    period_hours: int = Field(..., description="Period in hours")
-    granularity: str = Field(
-        ..., description="Data granularity (hour, day, week)"
-    )
+    title = serializers.CharField(help_text="Chart title")
+    series_name = serializers.CharField(help_text="Series name")
+    data_points = TimeSeriesDataPoint(many=True, default=list, help_text="Data points")
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    granularity = serializers.CharField(help_text="Data granularity (hour, day, week)")
 
 
-class ServerUptimeChartSerializer(BaseModel):
+class ServerUptimeChartSerializer(serializers.Serializer):
     """Server uptime over time chart data."""
 
-    title: str = Field(default="Server Uptime", description="Chart title")
-    data_points: List[ServerUptimeDataPoint] = Field(
-        default_factory=list, description="Uptime data points"
+    title = serializers.CharField(default="Server Uptime", help_text="Chart title")
+    data_points = ServerUptimeDataPoint(
+        many=True, default=list, help_text="Uptime data points"
     )
-    period_hours: int = Field(..., description="Period in hours")
-    granularity: str = Field(..., description="Data granularity")
-    total_servers: int = Field(..., description="Total unique servers in period")
-    currently_running: int = Field(..., description="Currently running servers")
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    granularity = serializers.CharField(help_text="Data granularity")
+    total_servers = serializers.IntegerField(
+        help_text="Total unique servers in period"
+    )
+    currently_running = serializers.IntegerField(help_text="Currently running servers")
 
 
-class RequestVolumeChartSerializer(BaseModel):
+class RequestVolumeChartSerializer(serializers.Serializer):
     """Request volume over time chart data."""
 
-    title: str = Field(default="Request Volume", description="Chart title")
-    data_points: List[RequestVolumeDataPoint] = Field(
-        default_factory=list, description="Volume data points"
+    title = serializers.CharField(default="Request Volume", help_text="Chart title")
+    data_points = RequestVolumeDataPoint(
+        many=True, default=list, help_text="Volume data points"
     )
-    period_hours: int = Field(..., description="Period in hours")
-    granularity: str = Field(..., description="Data granularity")
-    total_requests: int = Field(..., description="Total requests in period")
-    avg_success_rate: float = Field(..., description="Average success rate")
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    granularity = serializers.CharField(help_text="Data granularity")
+    total_requests = serializers.IntegerField(help_text="Total requests in period")
+    avg_success_rate = serializers.FloatField(help_text="Average success rate")
 
 
-class ResponseTimeChartSerializer(BaseModel):
+class ResponseTimeChartSerializer(serializers.Serializer):
     """Response time over time chart data."""
 
-    title: str = Field(default="Response Time", description="Chart title")
-    data_points: List[ResponseTimeDataPoint] = Field(
-        default_factory=list, description="Response time data points"
+    title = serializers.CharField(default="Response Time", help_text="Chart title")
+    data_points = ResponseTimeDataPoint(
+        many=True, default=list, help_text="Response time data points"
     )
-    period_hours: int = Field(..., description="Period in hours")
-    granularity: str = Field(..., description="Data granularity")
-    overall_avg_ms: float = Field(..., description="Overall average duration")
-    overall_p95_ms: float = Field(..., description="Overall P95 duration")
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    granularity = serializers.CharField(help_text="Data granularity")
+    overall_avg_ms = serializers.FloatField(help_text="Overall average duration")
+    overall_p95_ms = serializers.FloatField(help_text="Overall P95 duration")
 
 
-class ServiceActivityChartSerializer(BaseModel):
+class ServiceActivityChartSerializer(serializers.Serializer):
     """Service activity comparison chart data."""
 
-    title: str = Field(default="Service Activity", description="Chart title")
-    services: List[ServiceActivityDataPoint] = Field(
-        default_factory=list, description="Service activity data"
+    title = serializers.CharField(default="Service Activity", help_text="Chart title")
+    services = ServiceActivityDataPoint(
+        many=True, default=list, help_text="Service activity data"
     )
-    period_hours: int = Field(..., description="Period in hours")
-    total_services: int = Field(..., description="Total number of services")
-    most_active_service: Optional[str] = Field(
-        None, description="Most active service name"
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    total_services = serializers.IntegerField(help_text="Total number of services")
+    most_active_service = serializers.CharField(
+        required=False, allow_null=True, help_text="Most active service name"
     )
 
 
-class ServerLifecycleChartSerializer(BaseModel):
+class ServerLifecycleChartSerializer(serializers.Serializer):
     """Server lifecycle events timeline."""
 
-    title: str = Field(default="Server Lifecycle", description="Chart title")
-    events: List[ServerLifecycleEvent] = Field(
-        default_factory=list, description="Lifecycle events"
+    title = serializers.CharField(default="Server Lifecycle", help_text="Chart title")
+    events = ServerLifecycleEvent(
+        many=True, default=list, help_text="Lifecycle events"
     )
-    period_hours: int = Field(..., description="Period in hours")
-    total_events: int = Field(..., description="Total number of events")
-    restart_count: int = Field(..., description="Number of server restarts")
-    error_count: int = Field(..., description="Number of error events")
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    total_events = serializers.IntegerField(help_text="Total number of events")
+    restart_count = serializers.IntegerField(help_text="Number of server restarts")
+    error_count = serializers.IntegerField(help_text="Number of error events")
 
 
-class ErrorDistributionDataPoint(BaseModel):
+class ErrorDistributionDataPoint(serializers.Serializer):
     """Error distribution data point."""
 
-    error_code: str = Field(..., description="gRPC status code")
-    count: int = Field(..., description="Number of occurrences")
-    percentage: float = Field(..., description="Percentage of total errors")
-    service_name: Optional[str] = Field(None, description="Service name if filtered")
+    error_code = serializers.CharField(help_text="gRPC status code")
+    count = serializers.IntegerField(help_text="Number of occurrences")
+    percentage = serializers.FloatField(help_text="Percentage of total errors")
+    service_name = serializers.CharField(
+        required=False, allow_null=True, help_text="Service name if filtered"
+    )
 
 
-class ErrorDistributionChartSerializer(BaseModel):
+class ErrorDistributionChartSerializer(serializers.Serializer):
     """Error distribution chart data."""
 
-    title: str = Field(default="Error Distribution", description="Chart title")
-    error_types: List[ErrorDistributionDataPoint] = Field(
-        default_factory=list, description="Error distribution data"
+    title = serializers.CharField(default="Error Distribution", help_text="Chart title")
+    error_types = ErrorDistributionDataPoint(
+        many=True, default=list, help_text="Error distribution data"
     )
-    period_hours: int = Field(..., description="Period in hours")
-    total_errors: int = Field(..., description="Total number of errors")
-    most_common_error: Optional[str] = Field(
-        None, description="Most common error code"
+    period_hours = serializers.IntegerField(help_text="Period in hours")
+    total_errors = serializers.IntegerField(help_text="Total number of errors")
+    most_common_error = serializers.CharField(
+        required=False, allow_null=True, help_text="Most common error code"
     )
 
 
-class DashboardChartsSerializer(BaseModel):
+class DashboardChartsSerializer(serializers.Serializer):
     """Combined dashboard charts data."""
 
-    server_uptime: ServerUptimeChartSerializer = Field(
-        ..., description="Server uptime chart"
+    server_uptime = ServerUptimeChartSerializer(help_text="Server uptime chart")
+    request_volume = RequestVolumeChartSerializer(help_text="Request volume chart")
+    response_time = ResponseTimeChartSerializer(help_text="Response time chart")
+    service_activity = ServiceActivityChartSerializer(help_text="Service activity chart")
+    error_distribution = ErrorDistributionChartSerializer(
+        help_text="Error distribution chart"
     )
-    request_volume: RequestVolumeChartSerializer = Field(
-        ..., description="Request volume chart"
+    period_hours = serializers.IntegerField(
+        help_text="Period in hours for all charts"
     )
-    response_time: ResponseTimeChartSerializer = Field(
-        ..., description="Response time chart"
-    )
-    service_activity: ServiceActivityChartSerializer = Field(
-        ..., description="Service activity chart"
-    )
-    error_distribution: ErrorDistributionChartSerializer = Field(
-        ..., description="Error distribution chart"
-    )
-    period_hours: int = Field(..., description="Period in hours for all charts")
-    generated_at: str = Field(..., description="When data was generated")
+    generated_at = serializers.CharField(help_text="When data was generated")
 
 
 __all__ = [

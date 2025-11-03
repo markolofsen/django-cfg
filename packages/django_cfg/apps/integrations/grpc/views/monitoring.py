@@ -67,7 +67,9 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         try:
             service = MonitoringService()
             health_data = service.get_health_status()
-            return Response(health_data)
+            serializer = GRPCHealthCheckSerializer(data=health_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except ValueError as e:
             return Response(
@@ -107,7 +109,9 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
             service = MonitoringService()
             stats = service.get_overview_statistics(hours=hours)
-            return Response(stats)
+            serializer = GRPCOverviewStatsSerializer(data=stats)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Overview stats validation error: {e}")
@@ -174,37 +178,35 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 # Serialize paginated data
                 requests_list = []
                 for req in page:
-                    req_serializer = RecentRequestSerializer(
-                        id=req.id,
-                        request_id=req.request_id,
-                        service_name=req.service_name,
-                        method_name=req.method_name,
-                        status=req.status,
-                        duration_ms=req.duration_ms or 0,
-                        grpc_status_code=req.grpc_status_code or "",
-                        error_message=req.error_message or "",
-                        created_at=req.created_at.isoformat(),
-                        client_ip=req.client_ip or "",
-                    )
-                    requests_list.append(req_serializer.model_dump())
+                    requests_list.append({
+                        "id": req.id,
+                        "request_id": req.request_id,
+                        "service_name": req.service_name,
+                        "method_name": req.method_name,
+                        "status": req.status,
+                        "duration_ms": req.duration_ms or 0,
+                        "grpc_status_code": req.grpc_status_code or "",
+                        "error_message": req.error_message or "",
+                        "created_at": req.created_at.isoformat(),
+                        "client_ip": req.client_ip or "",
+                    })
                 return self.get_paginated_response(requests_list)
 
             # No pagination fallback
             requests_list = []
             for req in queryset[:100]:
-                req_serializer = RecentRequestSerializer(
-                    id=req.id,
-                    request_id=req.request_id,
-                    service_name=req.service_name,
-                    method_name=req.method_name,
-                    status=req.status,
-                    duration_ms=req.duration_ms or 0,
-                    grpc_status_code=req.grpc_status_code or "",
-                    error_message=req.error_message or "",
-                    created_at=req.created_at.isoformat(),
-                    client_ip=req.client_ip or "",
-                )
-                requests_list.append(req_serializer.model_dump())
+                requests_list.append({
+                    "id": req.id,
+                    "request_id": req.request_id,
+                    "service_name": req.service_name,
+                    "method_name": req.method_name,
+                    "status": req.status,
+                    "duration_ms": req.duration_ms or 0,
+                    "grpc_status_code": req.grpc_status_code or "",
+                    "error_message": req.error_message or "",
+                    "created_at": req.created_at.isoformat(),
+                    "client_ip": req.client_ip or "",
+                })
             return Response({"requests": requests_list, "count": len(requests_list)})
 
         except ValueError as e:
@@ -251,7 +253,9 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 "total_services": len(services_list),
             }
 
-            return Response(response_data)
+            serializer = ServiceListSerializer(data=response_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Service stats validation error: {e}")
@@ -308,8 +312,9 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 "total_methods": len(methods_list),
             }
 
-            serializer = MethodListSerializer(**response_data)
-            return Response(serializer.model_dump())
+            serializer = MethodListSerializer(data=response_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Method stats validation error: {e}")
