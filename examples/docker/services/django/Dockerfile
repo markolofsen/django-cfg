@@ -36,8 +36,8 @@ WORKDIR /app
 # Copy pyproject.toml only (poetry.lock excluded in .dockerignore)
 COPY projects/django/pyproject.toml ./
 
-# Remove local dependencies group from pyproject.toml and install without lock file
-RUN python3 -c "import re; content = open('pyproject.toml').read(); content = re.sub(r'\[tool\.poetry\.group\.local[^\]]*\][^\[]*', '', content, flags=re.DOTALL); open('pyproject.toml', 'w').write(content)" && \
+# Remove local dependencies group from pyproject.toml and install
+RUN sed -i '/^\[tool\.poetry\.group\.local\]/,/^\[tool\.poetry\.group\.dev\]/{ /^\[tool\.poetry\.group\.dev\]/!d; }' pyproject.toml && \
     poetry install --only main --no-root --no-cache && \
     pip install --upgrade django-cfg && \
     rm -rf $POETRY_CACHE_DIR
