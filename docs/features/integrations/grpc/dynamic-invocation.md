@@ -293,11 +293,11 @@ for user_id in range(1, 100):
 
 ## 📚 Related Documentation
 
-- **[Backend Guide](./backend-guide.md)** - Creating gRPC services
-- **[REST API Testing](./rest-api-testing.md)** - Advanced REST API testing
-- **[Monitoring](./monitoring.md)** - Request logging and metrics
-- **[Setup Guide](./setup.md)** - gRPC configuration
+- **[Getting Started](./getting-started.md)** - Configure gRPC in your project
+- **[Configuration](./configuration.md)** - gRPC configuration options
+- **[Architecture](./architecture.md)** - gRPC system architecture
+- **[Concepts](./concepts.md)** - Core gRPC concepts
 
 ---
 
-**Next:** Learn about [REST API testing](./rest-api-testing.md) for advanced testing workflows.
+**Next:** Learn about [gRPC concepts](./concepts.md) and best practices.

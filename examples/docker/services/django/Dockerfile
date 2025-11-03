@@ -39,7 +39,7 @@ COPY projects/django/pyproject.toml ./
 # Remove local dependencies group from pyproject.toml and install
 RUN sed -i '/^\[tool\.poetry\.group\.local\]/,/^\[tool\.poetry\.group\.dev\]/{ /^\[tool\.poetry\.group\.dev\]/!d; }' pyproject.toml && \
     poetry install --only main --no-root --no-cache && \
-    pip install --upgrade django-cfg && \
+    pip install --upgrade django-cfg[full] && \
     rm -rf $POETRY_CACHE_DIR
 
 # Copy application code

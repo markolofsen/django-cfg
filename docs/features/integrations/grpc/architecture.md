@@ -681,11 +681,11 @@ GRPCServerConfig(
 
 ## 📚 Related Documentation
 
-- **[Setup Guide](./setup.md)** - Configure gRPC in your project
-- **[Backend Guide](./backend-guide.md)** - Create gRPC services
-- **[Authentication](./authentication.md)** - JWT authentication
-- **[Monitoring](./monitoring.md)** - Logging and metrics
+- **[Getting Started](./getting-started.md)** - Configure gRPC in your project
+- **[Configuration](./configuration.md)** - Configure gRPC settings
+- **[Concepts](./concepts.md)** - Core gRPC concepts
+- **[FAQ](./faq.md)** - Common questions and answers
 
 ---
 
-**Next:** Learn how to [setup gRPC](./setup.md) in your Django-CFG project.
+**Next:** Learn how to [get started with gRPC](./getting-started.md) in your Django-CFG project.

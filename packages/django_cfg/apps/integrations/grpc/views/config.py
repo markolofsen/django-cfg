@@ -86,8 +86,9 @@ class GRPCConfigViewSet(AdminAPIMixin, viewsets.ViewSet):
                 "total_methods": methods_count,
             }
 
-            serializer = GRPCConfigSerializer(**config_data)
-            return Response(serializer.model_dump())
+            serializer = GRPCConfigSerializer(data=config_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Config fetch error: {e}", exc_info=True)
@@ -177,8 +178,9 @@ class GRPCConfigViewSet(AdminAPIMixin, viewsets.ViewSet):
                 },
             }
 
-            serializer = GRPCServerInfoSerializer(**server_info_data)
-            return Response(serializer.model_dump())
+            serializer = GRPCServerInfoSerializer(data=server_info_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Server info error: {e}", exc_info=True)

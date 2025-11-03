@@ -85,8 +85,9 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 "total_examples": len(examples),
             }
 
-            serializer = GRPCExamplesListSerializer(**response_data)
-            return Response(serializer.model_dump())
+            serializer = GRPCExamplesListSerializer(data=response_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Examples fetch error: {e}", exc_info=True)
@@ -147,35 +148,33 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 # Serialize paginated data
                 logs_list = []
                 for log in page:
-                    log_serializer = GRPCTestLogSerializer(
-                        request_id=log.request_id,
-                        service=log.service_name,
-                        method=log.method_name,
-                        status=log.status,
-                        grpc_status_code=log.grpc_status_code or "",
-                        error_message=log.error_message or "",
-                        duration_ms=log.duration_ms or 0,
-                        created_at=log.created_at.isoformat(),
-                        user=log.user.username if log.user else None,
-                    )
-                    logs_list.append(log_serializer.model_dump())
+                    logs_list.append({
+                        "request_id": log.request_id,
+                        "service": log.service_name,
+                        "method": log.method_name,
+                        "status": log.status,
+                        "grpc_status_code": log.grpc_status_code or "",
+                        "error_message": log.error_message or "",
+                        "duration_ms": log.duration_ms or 0,
+                        "created_at": log.created_at.isoformat(),
+                        "user": log.user.username if log.user else None,
+                    })
                 return self.get_paginated_response(logs_list)
 
             # No pagination (shouldn't happen with default pagination)
             logs_list = []
             for log in queryset[:100]:  # Safety limit
-                log_serializer = GRPCTestLogSerializer(
-                    request_id=log.request_id,
-                    service=log.service_name,
-                    method=log.method_name,
-                    status=log.status,
-                    grpc_status_code=log.grpc_status_code or "",
-                    error_message=log.error_message or "",
-                    duration_ms=log.duration_ms or 0,
-                    created_at=log.created_at.isoformat(),
-                    user=log.user.username if log.user else None,
-                )
-                logs_list.append(log_serializer.model_dump())
+                logs_list.append({
+                    "request_id": log.request_id,
+                    "service": log.service_name,
+                    "method": log.method_name,
+                    "status": log.status,
+                    "grpc_status_code": log.grpc_status_code or "",
+                    "error_message": log.error_message or "",
+                    "duration_ms": log.duration_ms or 0,
+                    "created_at": log.created_at.isoformat(),
+                    "user": log.user.username if log.user else None,
+                })
             return Response({"logs": logs_list, "count": len(logs_list)})
 
         except Exception as e:
@@ -221,9 +220,10 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         from django.utils import timezone
 
         try:
-            # Validate request - Pydantic validation
-            serializer = GRPCCallRequestSerializer(**request.data)
-            data = serializer.model_dump()
+            # Validate request - DRF validation
+            serializer = GRPCCallRequestSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
 
             service_name = data["service"]
             method_name = data["method"]
@@ -275,21 +275,23 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             if response_data and isinstance(response_data, dict):
                 response_data = json.dumps(response_data)
 
-            response_serializer = GRPCCallResponseSerializer(
-                success=result["success"],
-                request_id=request_id,
-                service=result["service"],
-                method=result["method"],
-                status=log.status,
-                grpc_status_code=result["grpc_status_code"],
-                duration_ms=result["duration_ms"],
-                response=response_data,
-                error=result.get("error_message"),
-                metadata={},
-                timestamp=end_time.isoformat(),
-            )
+            response_data_dict = {
+                "success": result["success"],
+                "request_id": request_id,
+                "service": result["service"],
+                "method": result["method"],
+                "status": log.status,
+                "grpc_status_code": result["grpc_status_code"],
+                "duration_ms": result["duration_ms"],
+                "response": response_data,
+                "error": result.get("error_message"),
+                "metadata": {},
+                "timestamp": end_time.isoformat(),
+            }
 
-            return Response(response_serializer.model_dump(), status=status.HTTP_200_OK)
+            response_serializer = GRPCCallResponseSerializer(data=response_data_dict)
+            response_serializer.is_valid(raise_exception=True)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"gRPC call endpoint error: {e}", exc_info=True)

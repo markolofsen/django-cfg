@@ -2,44 +2,48 @@
 Services serializers for gRPC monitoring API.
 """
 
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class MonitoringServiceStatsSerializer(BaseModel):
+class MonitoringServiceStatsSerializer(serializers.Serializer):
     """Statistics for a single gRPC service (monitoring endpoint)."""
 
-    service_name: str = Field(description="Service name")
-    total: int = Field(description="Total requests")
-    successful: int = Field(description="Successful requests")
-    errors: int = Field(description="Error requests")
-    avg_duration_ms: float = Field(description="Average duration")
-    last_activity_at: str | None = Field(description="Last activity timestamp")
+    service_name = serializers.CharField(help_text="Service name")
+    total = serializers.IntegerField(help_text="Total requests")
+    successful = serializers.IntegerField(help_text="Successful requests")
+    errors = serializers.IntegerField(help_text="Error requests")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration")
+    last_activity_at = serializers.CharField(
+        allow_null=True, help_text="Last activity timestamp"
+    )
 
 
-class ServiceListSerializer(BaseModel):
+class ServiceListSerializer(serializers.Serializer):
     """List of gRPC services with statistics."""
 
-    services: list[MonitoringServiceStatsSerializer] = Field(description="Service statistics")
-    total_services: int = Field(description="Total number of services")
+    services = MonitoringServiceStatsSerializer(many=True, help_text="Service statistics")
+    total_services = serializers.IntegerField(help_text="Total number of services")
 
 
-class MethodStatsSerializer(BaseModel):
+class MethodStatsSerializer(serializers.Serializer):
     """Statistics for a single gRPC method."""
 
-    method_name: str = Field(description="Method name")
-    service_name: str = Field(description="Service name")
-    total: int = Field(description="Total requests")
-    successful: int = Field(description="Successful requests")
-    errors: int = Field(description="Error requests")
-    avg_duration_ms: float = Field(description="Average duration")
-    last_activity_at: str | None = Field(description="Last activity timestamp")
+    method_name = serializers.CharField(help_text="Method name")
+    service_name = serializers.CharField(help_text="Service name")
+    total = serializers.IntegerField(help_text="Total requests")
+    successful = serializers.IntegerField(help_text="Successful requests")
+    errors = serializers.IntegerField(help_text="Error requests")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration")
+    last_activity_at = serializers.CharField(
+        allow_null=True, help_text="Last activity timestamp"
+    )
 
 
-class MethodListSerializer(BaseModel):
+class MethodListSerializer(serializers.Serializer):
     """List of gRPC methods with statistics."""
 
-    methods: list[MethodStatsSerializer] = Field(description="Method statistics")
-    total_methods: int = Field(description="Total number of methods")
+    methods = MethodStatsSerializer(many=True, help_text="Method statistics")
+    total_methods = serializers.IntegerField(help_text="Total number of methods")
 
 
 __all__ = [

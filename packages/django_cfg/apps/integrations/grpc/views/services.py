@@ -83,8 +83,9 @@ class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
                 "total_services": len(services_list),
             }
 
-            serializer = ServiceListSerializer(**response_data)
-            return Response(serializer.model_dump())
+            serializer = ServiceListSerializer(data=response_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Service list error: {e}", exc_info=True)
@@ -216,8 +217,9 @@ class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
                 ],
             }
 
-            serializer = ServiceDetailSerializer(**service_detail)
-            return Response(serializer.model_dump())
+            serializer = ServiceDetailSerializer(data=service_detail)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Service detail error: {e}", exc_info=True)
@@ -275,8 +277,9 @@ class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
                 "total_methods": len(methods_list),
             }
 
-            serializer = ServiceMethodsSerializer(**response_data)
-            return Response(serializer.model_dump())
+            serializer = ServiceMethodsSerializer(data=response_data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Service methods error: {e}", exc_info=True)

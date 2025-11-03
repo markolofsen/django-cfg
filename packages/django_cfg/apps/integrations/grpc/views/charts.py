@@ -72,8 +72,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_server_uptime_data(hours)
-            serializer = ServerUptimeChartSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = ServerUptimeChartSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Server uptime chart error: {e}", exc_info=True)
             return Response(
@@ -94,8 +95,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_request_volume_data(hours)
-            serializer = RequestVolumeChartSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = RequestVolumeChartSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Request volume chart error: {e}", exc_info=True)
             return Response(
@@ -116,8 +118,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_response_time_data(hours)
-            serializer = ResponseTimeChartSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = ResponseTimeChartSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Response time chart error: {e}", exc_info=True)
             return Response(
@@ -138,8 +141,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_service_activity_data(hours)
-            serializer = ServiceActivityChartSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = ServiceActivityChartSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Service activity chart error: {e}", exc_info=True)
             return Response(
@@ -160,8 +164,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_server_lifecycle_data(hours)
-            serializer = ServerLifecycleChartSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = ServerLifecycleChartSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Server lifecycle chart error: {e}", exc_info=True)
             return Response(
@@ -182,8 +187,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_error_distribution_data(hours)
-            serializer = ErrorDistributionChartSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = ErrorDistributionChartSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Error distribution chart error: {e}", exc_info=True)
             return Response(
@@ -204,8 +210,9 @@ class GRPCChartsViewSet(AdminAPIMixin, viewsets.ViewSet):
         try:
             hours = self._validate_hours(request.GET.get("hours", "24"))
             data = ChartGeneratorService.generate_dashboard_data(hours)
-            serializer = DashboardChartsSerializer(**data)
-            return Response(serializer.model_dump())
+            serializer = DashboardChartsSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Dashboard charts error: {e}", exc_info=True)
             return Response(

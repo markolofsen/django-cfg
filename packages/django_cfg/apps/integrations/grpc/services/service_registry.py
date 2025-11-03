@@ -11,11 +11,6 @@ from django.db import models
 from django.db.models import Avg, Count
 
 from ..models import GRPCRequestLog, GRPCServerStatus
-from ..serializers.service_registry import (
-    MethodStatsSerializer,
-    MethodSummarySerializer,
-    ServiceSummarySerializer,
-)
 from django_cfg.modules.django_logging import get_logger
 
 logger = get_logger("grpc.service_registry")
@@ -183,23 +178,23 @@ class ServiceRegistryManager:
             # Extract package name
             package = service_name.split(".")[0] if "." in service_name else ""
 
-            # Validate and serialize data
-            service_summary = ServiceSummarySerializer(
-                name=service_name,
-                full_name=service.get("full_name", f"/{service_name}"),
-                package=package,
-                methods_count=len(service.get("methods", [])),
-                total_requests=total,
-                success_rate=round(success_rate, 2),
-                avg_duration_ms=round(stats["avg_duration"] or 0, 2),
-                last_activity_at=(
+            # Build dict directly
+            service_summary = {
+                "name": service_name,
+                "full_name": service.get("full_name", f"/{service_name}"),
+                "package": package,
+                "methods_count": len(service.get("methods", [])),
+                "total_requests": total,
+                "success_rate": round(success_rate, 2),
+                "avg_duration_ms": round(stats["avg_duration"] or 0, 2),
+                "last_activity_at": (
                     stats["last_activity"].isoformat()
                     if stats["last_activity"]
                     else None
                 ),
-            )
+            }
 
-            services_with_stats.append(service_summary.model_dump())
+            services_with_stats.append(service_summary)
 
         return services_with_stats
 
@@ -257,30 +252,29 @@ class ServiceRegistryManager:
             successful = stats["successful"] or 0
             success_rate = (successful / total * 100) if total > 0 else 0.0
 
-            # Create stats object first
-            method_stats = MethodStatsSerializer(
-                service_name=service_name,
-                method_name=method_name,
-                total=total,
-                successful=successful,
-                errors=stats["errors"] or 0,
-                avg_duration_ms=round(stats["avg_duration"] or 0, 2),
-                p50_duration_ms=p50,
-                p95_duration_ms=p95,
-                p99_duration_ms=p99,
-            )
+            # Build method stats dict
+            method_stats = {
+                "total_requests": total,
+                "successful": successful,
+                "errors": stats["errors"] or 0,
+                "success_rate": round(success_rate, 2),
+                "avg_duration_ms": round(stats["avg_duration"] or 0, 2),
+                "p50_duration_ms": p50,
+                "p95_duration_ms": p95,
+                "p99_duration_ms": p99,
+            }
 
-            # Validate and serialize method with stats
-            method_summary = MethodSummarySerializer(
-                name=method_name,
-                full_name=f"/{service_name}/{method_name}",
-                service_name=service_name,
-                request_type="",
-                response_type="",
-                stats=method_stats,
-            )
+            # Build method summary dict
+            method_summary = {
+                "name": method_name,
+                "full_name": f"/{service_name}/{method_name}",
+                "service_name": service_name,
+                "request_type": "",
+                "response_type": "",
+                "stats": method_stats,
+            }
 
-            methods_list.append(method_summary.model_dump())
+            methods_list.append(method_summary)
 
         return methods_list
 
