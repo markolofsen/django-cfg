@@ -51,6 +51,10 @@ class DjangoConfig(BaseModel):
         default=False,
         description="Django DEBUG setting"
     )
+    debug_warnings: bool = Field(
+        default=False,
+        description="Enable detailed warnings traceback (shows full stack trace for RuntimeWarnings)"
+    )
 
     # Note: ALLOWED_HOSTS is auto-generated from security_domains
     # See get_allowed_hosts() method and security_domains field

@@ -54,7 +54,7 @@ class InstalledAppsBuilder:
             >>> config = DjangoConfig(enable_support=True)
             >>> builder = InstalledAppsBuilder(config)
             >>> apps = builder.build()
-            >>> "django_cfg.apps.support" in apps
+            >>> "django_cfg.apps.business.support" in apps
             True
         """
         apps = []
@@ -91,7 +91,7 @@ class InstalledAppsBuilder:
             if app == "django.contrib.admin":
                 # Insert accounts before admin if enabled (for proper migration order)
                 if self.config.enable_accounts:
-                    apps.append("django_cfg.apps.accounts")
+                    apps.append("django_cfg.apps.business.accounts")
             apps.append(app)
 
         return apps
@@ -108,39 +108,39 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
-            "django_cfg.apps.dashboard",  # Dashboard API
+            "django_cfg.apps.system.dashboard",  # Dashboard API
         ]
 
         if self.config.enable_frontend:
-            apps.append("django_cfg.apps.frontend")
+            apps.append("django_cfg.apps.system.frontend")
 
         # Add optional apps based on configuration
         if self.config.enable_support:
-            apps.append("django_cfg.apps.support")
+            apps.append("django_cfg.apps.business.support")
 
         if self.config.enable_newsletter:
-            apps.append("django_cfg.apps.newsletter")
+            apps.append("django_cfg.apps.business.newsletter")
 
         if self.config.enable_leads:
-            apps.append("django_cfg.apps.leads")
+            apps.append("django_cfg.apps.business.leads")
 
         if self.config.enable_knowbase:
-            apps.append("django_cfg.apps.knowbase")
+            apps.append("django_cfg.apps.business.knowbase")
 
         if self.config.enable_agents:
-            apps.append("django_cfg.apps.agents")
+            apps.append("django_cfg.apps.business.agents")
 
         if self.config.enable_maintenance:
-            apps.append("django_cfg.apps.maintenance")
+            apps.append("django_cfg.apps.system.maintenance")
 
         if self.config.payments and self.config.payments.enabled:
-            apps.append("django_cfg.apps.payments")
+            apps.append("django_cfg.apps.business.payments")
 
         if self.config.centrifugo and self.config.centrifugo.enabled:
-            apps.append("django_cfg.apps.centrifugo")
+            apps.append("django_cfg.apps.integrations.centrifugo")
 
         if self.config.grpc and self.config.grpc.enabled:
-            apps.append("django_cfg.apps.grpc")
+            apps.append("django_cfg.apps.integrations.grpc")
 
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
@@ -163,7 +163,7 @@ class InstalledAppsBuilder:
         # Add Django-RQ if enabled
         if hasattr(self.config, "django_rq") and self.config.django_rq and self.config.django_rq.enabled:
             apps.append("django_rq")  # Core django-rq package
-            apps.append("django_cfg.apps.rq")  # Django-CFG monitoring & API
+            apps.append("django_cfg.apps.integrations.rq")  # Django-CFG monitoring & API
 
         # Add DRF Tailwind theme module (uses Tailwind via CDN)
         if self.config.enable_drf_tailwind:

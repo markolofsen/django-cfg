@@ -98,6 +98,48 @@ services:
     networks:
       - dokploy-network
 
+  # gRPC Server
+  grpc:
+    image: django-cfg-django:latest
+    container_name: django-cfg-grpc
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/django-logs:/app/logs"
+      - "../projects/django:/app:rw"
+    depends_on:
+      - django
+    command: poetry run python manage.py rungrpc
+    ports:
+      - "50051:50051"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rungrpc > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      # gRPC uses HTTP/2, so we need special configuration
+      - "traefik.http.routers.djangocfg-grpc.rule=Host(`grpc.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-grpc.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-grpc.tls.certresolver=letsencrypt"
+      - "traefik.http.services.djangocfg-grpc.loadbalancer.server.port=50051"
+      - "traefik.http.services.djangocfg-grpc.loadbalancer.server.scheme=h2c"
+
   # Centrifugo WebSocket Server
   centrifugo:
     image: centrifugo/centrifugo:v6

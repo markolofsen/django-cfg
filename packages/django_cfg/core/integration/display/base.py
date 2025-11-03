@@ -9,6 +9,7 @@ from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 # Panel width configuration - use fixed widths for consistent layout
 CONSOLE_WIDTH = 120  # Console width that fits most terminals
@@ -155,3 +156,53 @@ class BaseDisplayManager:
         """Print empty lines for spacing."""
         for _ in range(lines):
             self.console.print()
+
+    def create_header_text(self, show_update_check: bool = True) -> Text:
+        """
+        Create reusable header text for startup display.
+
+        Args:
+            show_update_check: Whether to check and display update availability
+
+        Returns:
+            Rich Text object with formatted header
+
+        Example:
+            >>> header = self.create_header_text()
+            >>> self.console.print(header)
+            # Output: 🚧 Django CFG v1.5.5 • development • Project Name
+        """
+        version = self.get_version()
+        panel_style, env_emoji, env_color = self.get_environment_style()
+
+        header_text = Text()
+        header_text.append(f"{env_emoji} Django CFG ", style="bold")
+        header_text.append(f"v{version}", style="cyan")
+        header_text.append(" • ", style="dim")
+        header_text.append(f"{self.config.env_mode}", style=env_color)
+
+        # Show debug_warnings if enabled
+        if self.config and self.config.debug_warnings:
+            header_text.append(" • ", style="dim")
+            header_text.append("🔍 warnings debug", style="yellow")
+
+        # Add project name
+        if self.config and self.config.project_name:
+            header_text.append(" • ", style="dim")
+            header_text.append(f"{self.config.project_name}", style="white")
+
+        # Check for critical updates
+        if show_update_check:
+            try:
+                from ..version_checker import get_version_info
+                version_info = get_version_info()
+                if version_info.get('update_available'):
+                    header_text.append(" • ", style="dim")
+                    header_text.append("🚨 UPDATE AVAILABLE", style="bold yellow")
+                    header_text.append(" (", style="dim")
+                    header_text.append("poetry add django-cfg@latest", style="bright_blue")
+                    header_text.append(")", style="dim")
+            except Exception:
+                pass
+
+        return header_text

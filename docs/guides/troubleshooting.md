@@ -47,6 +47,10 @@ import TabItem from '@theme/TabItem';
     {
       question: 'How do I debug configuration issues in Django-CFG?',
       answer: 'Use built-in debug commands: "python manage.py show_config --debug" to display configuration, "python manage.py validate_config --verbose" to validate settings, and "python manage.py check_settings" to check Django settings.'
+    },
+    {
+      question: 'How do I find where RuntimeWarning about database access is coming from?',
+      answer: 'Enable debug_warnings in your config (debug_warnings = True) or set DJANGO_CFG_DEBUG_WARNINGS=1. This shows full stack traceback for warnings, helping you identify exactly which file and line is causing the warning.'
     }
   ]}
 />
@@ -1044,6 +1048,98 @@ startup_info_mode = StartupInfoMode.NONE
 - 🔒 Reveals database queries
 - 🔒 Displays sensitive settings
 :::
+</details>
+
+<details>
+<summary>**Debug Warnings with Traceback**</summary>
+
+**Problem:**
+You see RuntimeWarnings like:
+```
+RuntimeWarning: Accessing the database during app initialization is discouraged.
+```
+
+But you don't know WHERE in your code it's happening.
+
+**Solution:**
+Enable `debug_warnings` to see full stack traceback:
+
+<Tabs groupId="debug-warnings-method">
+<TabItem value="config" label="Via Config (Recommended)">
+
+```python title="config.py"
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+
+    # Enable warnings traceback in development
+    debug_warnings: bool = True  # ← Shows full stack trace
+```
+
+</TabItem>
+<TabItem value="env" label="Via Environment Variable">
+
+```bash
+export DJANGO_CFG_DEBUG_WARNINGS=1
+python manage.py runserver
+```
+
+</TabItem>
+</Tabs>
+
+**Example Output:**
+```
+================================================================================
+⚠️  WARNING TRACEBACK (to help find the source)
+================================================================================
+  File "/path/to/your/code/apps.py", line 42, in ready
+    self.setup_database()
+  File "/path/to/your/code/apps.py", line 55, in setup_database
+    MyModel.objects.all()  # ← HERE IS THE PROBLEM!
+    ^^^^^^^^^^^^^^^^^^^^
+
+--------------------------------------------------------------------------------
+⚠️  WARNING MESSAGE:
+RuntimeWarning: Accessing the database during app initialization is discouraged.
+To fix this warning, avoid executing queries in AppConfig.ready() or when your
+app modules are imported.
+================================================================================
+```
+
+:::tip[Common Issues Found]
+**Database access in AppConfig.ready():**
+```python
+# ❌ Bad - queries during import
+def ready(self):
+    from .models import MyModel
+    MyModel.objects.create(...)
+
+# ✅ Good - use post_migrate signal
+def ready(self):
+    from django.db.models.signals import post_migrate
+    post_migrate.connect(self.setup_data, sender=self)
+```
+
+**Model queries at module level:**
+```python
+# ❌ Bad - runs during import
+from .models import MyModel
+DEFAULT_SETTINGS = MyModel.objects.first()
+
+# ✅ Good - lazy evaluation
+def get_default_settings():
+    from .models import MyModel
+    return MyModel.objects.first()
+```
+:::
+
+**What debug_warnings shows:**
+- 📍 Full stack trace to the exact line
+- 🎯 Which app/file is causing the warning
+- 🔍 Complete call chain from Django startup
+- ⚡ Works for RuntimeWarning, DeprecationWarning, etc.
+
 </details>
 
 <details>

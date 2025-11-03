@@ -63,6 +63,7 @@ class DjangoCfgConfig(DjangoConfig):
 
     # Keep env_mode as string like stockapis - prevents Pydantic enum conversion
     env_mode: str = env.env.env_mode
+    debug_warnings: bool = True
 
     # === Project Information ===
     project_name: str = env.app.name
@@ -158,7 +159,7 @@ class DjangoCfgConfig(DjangoConfig):
         ),
         # Auto-register apps (scan these apps for gRPC services)
         auto_register_apps=True,
-        enabled_apps=["core", "apps.profiles", "apps.trading", "apps.crypto"],
+        enabled_apps=["crypto"],
     )
 
     # === Django-RQ Background Tasks Configuration ===

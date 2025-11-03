@@ -113,7 +113,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_support_zone = 'cfg_support'
             if support_enabled and default_support_zone not in zones:
                 zones[default_support_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.support"],
+                    apps=["django_cfg.apps.business.support"],
                     title="Support API",
                     description="Support tickets and messages API",
                     public=False,
@@ -126,7 +126,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_accounts_zone = 'cfg_accounts'
             if accounts_enabled and default_accounts_zone not in zones:
                 zones[default_accounts_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.accounts"],
+                    apps=["django_cfg.apps.business.accounts"],
                     title="Accounts API",
                     description="User management, OTP, profiles, and activity tracking API",
                     public=False,
@@ -139,7 +139,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_newsletter_zone = 'cfg_newsletter'
             if newsletter_enabled and default_newsletter_zone not in zones:
                 zones[default_newsletter_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.newsletter"],
+                    apps=["django_cfg.apps.business.newsletter"],
                     title="Newsletter API",
                     description="Email campaigns, subscriptions, and newsletter management API",
                     public=False,
@@ -152,7 +152,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_leads_zone = 'cfg_leads'
             if leads_enabled and default_leads_zone not in zones:
                 zones[default_leads_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.leads"],
+                    apps=["django_cfg.apps.business.leads"],
                     title="Leads API",
                     description="Lead collection, contact forms, and CRM integration API",
                     public=True,  # Leads can be public for contact forms
@@ -165,7 +165,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_knowbase_zone = 'cfg_knowbase'
             if knowbase_enabled and default_knowbase_zone not in zones:
                 zones[default_knowbase_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.knowbase"],
+                    apps=["django_cfg.apps.business.knowbase"],
                     title="Knowbase API",
                     description="Knowledge base, AI chat, embeddings, and search API",
                     public=False,
@@ -178,7 +178,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_agents_zone = 'cfg_agents'
             if agents_enabled and default_agents_zone not in zones:
                 zones[default_agents_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.agents"],
+                    apps=["django_cfg.apps.business.agents"],
                     title="Agents API",
                     description="Agent definitions, executions, workflows, and tools API",
                     public=False,
@@ -204,7 +204,7 @@ class ExtendedRevolutionConfig(BaseDjangoRevolutionConfig):
             default_payments_zone = 'cfg_payments'
             if payments_enabled and default_payments_zone not in zones:
                 zones[default_payments_zone] = ZoneConfig(
-                    apps=["django_cfg.apps.payments"],
+                    apps=["django_cfg.apps.business.payments"],
                     title="Payments API",
                     description="Payments, subscriptions, and billing API",
                     public=False,

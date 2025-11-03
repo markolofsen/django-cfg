@@ -251,13 +251,22 @@ class OperationsGenerator:
         # Handle response
         if operation.is_list_operation and primary_response:
             # Check if response is paginated
-            is_paginated = primary_response.schema_name.startswith('Paginated')
+            is_paginated = primary_response.schema_name and primary_response.schema_name.startswith('Paginated')
+
+            # List of custom list response schemas that return objects with array fields (not DRF pagination)
+            # These return {items: [], total: N} instead of {results: [], count: N, ...}
+            custom_list_schemas = ['ServiceList', 'MethodList', 'TimelineData']
+            is_custom_list = primary_response.schema_name in custom_list_schemas if primary_response.schema_name else False
+
             if is_paginated:
-                # Return full paginated response object
+                # Return full DRF paginated response object {count, results, next, previous, ...}
+                body_lines.append("return response;")
+            elif is_custom_list:
+                # Return full custom list response object {services: [], total_services: N}
                 body_lines.append("return response;")
             else:
-                # Extract results from array response
-                body_lines.append("return (response as any).results || [];")
+                # Fallback: try to extract results field (for unknown list responses)
+                body_lines.append("return (response as any).results || response;")
         elif return_type == "void":
             # No content response (204 No Content or truly void)
             body_lines.append("return;")

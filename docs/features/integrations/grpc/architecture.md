@@ -464,7 +464,7 @@ graph TB
     subgraph "Monitoring Interfaces"
         Admin["Django Admin<br/>━━━━━━━━━━━<br/>• Beautiful UI<br/>• Color-coded badges<br/>• Filtering & search<br/>• Export to CSV"]
 
-        RestAPI["REST Monitoring API<br/>━━━━━━━━━━━<br/>/cfg/grpc/monitor/overview<br/>/cfg/grpc/monitor/requests<br/>/cfg/grpc/monitor/services<br/>/cfg/grpc/monitor/timeline"]
+        RestAPI["REST Monitoring API<br/>━━━━━━━━━━━<br/>/cfg/integrations/grpc/monitor/overview<br/>/cfg/integrations/grpc/monitor/requests<br/>/cfg/integrations/grpc/monitor/services<br/>/cfg/integrations/grpc/monitor/timeline"]
 
         Metrics["Metrics & Stats<br/>━━━━━━━━━━━<br/>• Total requests<br/>• Success rate<br/>• Avg duration<br/>• P95 latency"]
     end
@@ -527,6 +527,47 @@ graph LR
     style Timeline fill:#e3f2fd
     style Services fill:#fff3e0
 ```
+
+## 🔄 Phase 4: Dynamic Invocation
+
+### Dynamic gRPC Client Architecture
+
+```mermaid
+graph TB
+    subgraph "Phase 4 Components"
+        DynamicClient["DynamicGRPCClient"]
+        ReflectionClient["Reflection Client"]
+        MessageFactory["Message Factory"]
+        DescriptorPool["Descriptor Pool"]
+    end
+
+    subgraph "gRPC Server"
+        ReflectionService["Server Reflection Service"]
+        Services["Your gRPC Services"]
+    end
+
+    DynamicClient --> ReflectionClient
+    ReflectionClient --> ReflectionService
+    ReflectionService --> DescriptorPool
+
+    DynamicClient --> MessageFactory
+    MessageFactory --> DescriptorPool
+    MessageFactory --> Services
+
+    style DynamicClient fill:#e3f2fd
+    style MessageFactory fill:#e8f5e9
+    style ReflectionService fill:#fff3e0
+```
+
+**Key Features:**
+1. **Service Discovery** - Automatically discover all available services
+2. **Method Introspection** - Get method signatures and schemas
+3. **Dynamic Message Creation** - Create protobuf messages from JSON/dict
+4. **No Proto Files Required** - Use reflection to understand service contracts
+
+Learn more: [Dynamic Invocation Guide](./dynamic-invocation.md)
+
+---
 
 ## 🎯 Design Patterns
 

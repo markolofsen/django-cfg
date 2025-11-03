@@ -7,6 +7,7 @@ Auto-configuring logging utilities.
 from .django_logger import (
     RESERVED_LOG_ATTRS,
     DjangoLogger,
+    clean_old_logs,
     get_logger,
     sanitize_extra,
 )
@@ -17,5 +18,6 @@ __all__ = [
     "DjangoLogger",
     "get_logger",
     "sanitize_extra",
+    "clean_old_logs",
     "RESERVED_LOG_ATTRS",
 ]

@@ -81,9 +81,9 @@ class GRPCSettingsGenerator:
         if not self.config.grpc.enabled:
             return False
 
-        # Check if gRPC feature is available
-        from django_cfg.config import is_feature_available
-        if not is_feature_available("grpc"):
+        # Check if gRPC dependencies are available
+        from django_cfg.apps.integrations.grpc._cfg import check_grpc_available
+        if not check_grpc_available():
             logger.warning("gRPC enabled but dependencies not installed")
             logger.info("💡 Install with: pip install django-cfg[grpc]")
             return False
@@ -257,25 +257,25 @@ class GRPCSettingsGenerator:
 
         # Add request logger interceptor (always enabled for DB logging)
         interceptors.append(
-            "django_cfg.apps.grpc.interceptors.RequestLoggerInterceptor"
+            "django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor"
         )
 
         # Add logging interceptor in dev mode
         if is_dev:
             interceptors.append(
-                "django_cfg.apps.grpc.interceptors.LoggingInterceptor"
+                "django_cfg.apps.integrations.grpc.interceptors.LoggingInterceptor"
             )
 
         # Add auth interceptor if enabled
         if self.config.grpc.auth.enabled:
             interceptors.append(
-                "django_cfg.apps.grpc.auth.JWTAuthInterceptor"
+                "django_cfg.apps.integrations.grpc.auth.JWTAuthInterceptor"
             )
 
         # Add metrics interceptor in dev mode
         if is_dev:
             interceptors.append(
-                "django_cfg.apps.grpc.interceptors.MetricsInterceptor"
+                "django_cfg.apps.integrations.grpc.interceptors.MetricsInterceptor"
             )
 
         # Add custom interceptors from server config

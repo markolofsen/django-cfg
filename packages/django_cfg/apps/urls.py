@@ -4,57 +4,52 @@ Django CFG API URLs
 Built-in API endpoints for django_cfg functionality.
 """
 
-import traceback
 from typing import List
 
 from django.urls import include, path
 
-from django_cfg.modules.django_logging import get_logger, sanitize_extra
-
-logger = get_logger(__name__)
+from django_cfg.modules.base import BaseCfgModule
 
 
 def get_enabled_cfg_apps() -> List[str]:
     """
     Get list of enabled django-cfg apps based on configuration.
-    
-    Returns:
-        List of enabled app paths (e.g., ['django_cfg.apps.accounts', ...])
-    """
-    from django_cfg.modules.base import BaseCfgModule
 
+    Returns:
+        List of enabled app paths (e.g., ['django_cfg.apps.business.accounts', ...])
+    """
     base_module = BaseCfgModule()
     enabled_apps = []
 
     if base_module.is_accounts_enabled():
-        enabled_apps.append("django_cfg.apps.accounts")
+        enabled_apps.append("django_cfg.apps.business.accounts")
 
     if base_module.is_knowbase_enabled():
-        enabled_apps.append("django_cfg.apps.knowbase")
+        enabled_apps.append("django_cfg.apps.business.knowbase")
 
     if base_module.is_support_enabled():
-        enabled_apps.append("django_cfg.apps.support")
+        enabled_apps.append("django_cfg.apps.business.support")
 
     if base_module.is_newsletter_enabled():
-        enabled_apps.append("django_cfg.apps.newsletter")
+        enabled_apps.append("django_cfg.apps.business.newsletter")
 
     if base_module.is_leads_enabled():
-        enabled_apps.append("django_cfg.apps.leads")
+        enabled_apps.append("django_cfg.apps.business.leads")
 
     if base_module.is_agents_enabled():
-        enabled_apps.append("django_cfg.apps.agents")
+        enabled_apps.append("django_cfg.apps.business.agents")
 
     if base_module.is_payments_enabled():
-        enabled_apps.append("django_cfg.apps.payments")
+        enabled_apps.append("django_cfg.apps.business.payments")
 
     if base_module.is_centrifugo_enabled():
-        enabled_apps.append("django_cfg.apps.centrifugo")
+        enabled_apps.append("django_cfg.apps.integrations.centrifugo")
 
     if base_module.should_enable_rq():
-        enabled_apps.append("django_cfg.apps.rq")
+        enabled_apps.append("django_cfg.apps.integrations.rq")
 
     if base_module.is_grpc_enabled():
-        enabled_apps.append("django_cfg.apps.grpc")
+        enabled_apps.append("django_cfg.apps.integrations.grpc")
 
     return enabled_apps
 
@@ -92,118 +87,57 @@ def get_default_cfg_group():
     )
 
 
-def _safe_include(pattern_path: str, module_path: str):
-    """
-    Helper to safely include URL module if it exists.
-
-    Args:
-        pattern_path: URL pattern (e.g., 'cfg/knowbase/')
-        module_path: Module path (e.g., 'django_cfg.apps.knowbase.urls')
-
-    Returns:
-        URLPattern if successful, None if import fails
-    """
-    try:
-        return path(pattern_path, include(module_path))
-    except ImportError as e:
-        logger.warning(
-            f"Failed to import URL module '{module_path}' for pattern '{pattern_path}': {e}",
-            extra=sanitize_extra({
-                'pattern': pattern_path,
-                'module': module_path,
-                'error': str(e),
-            })
-        )
-        logger.debug(f"Traceback for '{module_path}':\n{traceback.format_exc()}")
-        return None
-    except Exception as e:
-        logger.error(
-            f"Unexpected error including URL module '{module_path}' for pattern '{pattern_path}': {e}",
-            extra=sanitize_extra({
-                'pattern': pattern_path,
-                'module': module_path,
-                'error': str(e),
-                'traceback': traceback.format_exc(),
-            })
-        )
-        return None
-
-
 # Core API endpoints (always enabled)
-# Note: All prefixes are explicit here (cfg/, health/, etc.)
 urlpatterns = [
     path('cfg/health/', include('django_cfg.apps.api.health.urls')),
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_client.urls')),
-    path('cfg/dashboard/', include('django_cfg.apps.dashboard.urls')),  # Dashboard API
+    path('cfg/dashboard/', include('django_cfg.apps.system.dashboard.urls')),
+    path('cfg/admin/', include('django_cfg.apps.system.frontend.urls')),
 ]
 
-# Built-in Frontend Admin (always available at /cfg/admin/)
-urlpatterns.append(path('cfg/admin/', include('django_cfg.apps.frontend.urls')))
-
-# External Next.js Admin Integration (conditional - available when configured)
+# External Next.js Admin Integration (conditional)
 try:
     from django_cfg.core.config import get_current_config
     _config = get_current_config()
     if _config and _config.nextjs_admin:
-        # Add external Next.js admin at /cfg/nextjs-admin/
         urlpatterns.append(path('cfg/nextjs-admin/', include('django_cfg.modules.nextjs_admin.urls')))
 except Exception:
-    # Next.js admin not configured - skip
     pass
 
-# Django-CFG apps - conditionally registered based on config
-# Map app paths to URL patterns (with cfg/ prefix from add_django_cfg_urls)
-APP_URL_MAP = {
-    "django_cfg.apps.accounts": [
-        ("cfg/accounts/", "django_cfg.apps.accounts.urls"),
-    ],
-    "django_cfg.apps.support": [
-        ("cfg/support/", "django_cfg.apps.support.urls"),
-    ],
-    "django_cfg.apps.newsletter": [
-        ("cfg/newsletter/", "django_cfg.apps.newsletter.urls"),
-    ],
-    "django_cfg.apps.leads": [
-        ("cfg/leads/", "django_cfg.apps.leads.urls"),
-    ],
-    "django_cfg.apps.knowbase": [
-        ("cfg/knowbase/", "django_cfg.apps.knowbase.urls"),
-        ("cfg/knowbase/admin/", "django_cfg.apps.knowbase.urls_admin"),
-        ("cfg/knowbase/system/", "django_cfg.apps.knowbase.urls_system"),
-    ],
-    "django_cfg.apps.agents": [
-        ("cfg/agents/", "django_cfg.apps.agents.urls"),
-    ],
-    "django_cfg.apps.payments": [
-        ("cfg/payments/", "django_cfg.apps.payments.urls"),
-    ],
-    "django_cfg.apps.centrifugo": [
-        ("cfg/centrifugo/", "django_cfg.apps.centrifugo.urls"),
-    ],
-    "django_cfg.apps.rq": [
-        ("cfg/rq/", "django_cfg.apps.rq.urls"),
-    ],
-    "django_cfg.apps.grpc": [
-        ("cfg/grpc/", "django_cfg.apps.grpc.urls"),
-    ],
-}
+# Business apps (conditional based on config)
+base_module = BaseCfgModule()
 
-# Register URLs for enabled apps only
-enabled_apps = get_enabled_cfg_apps()
-cfg_app_urls = []
+if base_module.is_accounts_enabled():
+    urlpatterns.append(path('cfg/accounts/', include('django_cfg.apps.business.accounts.urls')))
 
-for app_path in enabled_apps:
-    if app_path in APP_URL_MAP:
-        for url_pattern, url_module in APP_URL_MAP[app_path]:
-            cfg_app_urls.append(_safe_include(url_pattern, url_module))
+if base_module.is_knowbase_enabled():
+    urlpatterns.append(path('cfg/knowbase/', include('django_cfg.apps.business.knowbase.urls')))
+    urlpatterns.append(path('cfg/knowbase/system/', include('django_cfg.apps.business.knowbase.urls_system')))
+    urlpatterns.append(path('cfg/knowbase/admin/', include('django_cfg.apps.business.knowbase.urls_admin')))
 
-# Maintenance (special case - admin only)
-from django_cfg.modules.base import BaseCfgModule
+if base_module.is_support_enabled():
+    urlpatterns.append(path('cfg/support/', include('django_cfg.apps.business.support.urls')))
 
-if BaseCfgModule().is_maintenance_enabled():
-    cfg_app_urls.append(_safe_include('admin/django_cfg_maintenance/', 'django_cfg.apps.maintenance.urls_admin'))
+if base_module.is_newsletter_enabled():
+    urlpatterns.append(path('cfg/newsletter/', include('django_cfg.apps.business.newsletter.urls')))
 
-# Add only successfully imported URLs
-urlpatterns.extend([url for url in cfg_app_urls if url is not None])
+if base_module.is_leads_enabled():
+    urlpatterns.append(path('cfg/leads/', include('django_cfg.apps.business.leads.urls')))
+
+if base_module.is_agents_enabled():
+    urlpatterns.append(path('cfg/agents/', include('django_cfg.apps.business.agents.urls')))
+
+if base_module.is_payments_enabled():
+    urlpatterns.append(path('cfg/payments/', include('django_cfg.apps.business.payments.urls')))
+
+# Integration apps (conditional based on config)
+if base_module.is_centrifugo_enabled():
+    urlpatterns.append(path('cfg/centrifugo/', include('django_cfg.apps.integrations.centrifugo.urls')))
+
+if base_module.should_enable_rq():
+    urlpatterns.append(path('cfg/rq/', include('django_cfg.apps.integrations.rq.urls')))
+
+if base_module.is_grpc_enabled():
+    urlpatterns.append(path('cfg/grpc/', include('django_cfg.apps.integrations.grpc.urls')))

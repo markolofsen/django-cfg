@@ -310,8 +310,8 @@ class GRPCConfig(BaseConfig):
     )
 
     handlers_hook: str = Field(
-        default="{ROOT_URLCONF}.grpc_handlers",
-        description="Import path to grpc_handlers function",
+        default="",
+        description="Import path to grpc_handlers function (optional, e.g., '{ROOT_URLCONF}.grpc_handlers')",
     )
 
     auto_register_apps: bool = Field(
@@ -341,9 +341,9 @@ class GRPCConfig(BaseConfig):
         """Cross-field validation."""
         # Check dependencies if enabled
         if self.enabled:
-            from django_cfg.config import require_feature
+            from django_cfg.apps.integrations.grpc._cfg import require_grpc_feature
 
-            require_feature("grpc")
+            require_grpc_feature()
 
             # Validate server enabled
             if not self.server.enabled:

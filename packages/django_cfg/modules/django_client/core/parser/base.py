@@ -244,6 +244,47 @@ class BaseParser(ABC):
         if not self.spec.components or not self.spec.components.schemas:
             return {}
 
+        # Check for duplicate schema names with different casing
+        schema_names = list(self.spec.components.schemas.keys())
+        lowercase_map = {}
+        exact_duplicate_map = {}
+
+        for name in schema_names:
+            lowercase = name.lower()
+
+            # Check case-insensitive duplicates
+            if lowercase in lowercase_map:
+                raise ValueError(
+                    f"Duplicate schema names with different casing detected:\n"
+                    f"  - {lowercase_map[lowercase]}\n"
+                    f"  - {name}\n"
+                    f"This causes conflicts in case-insensitive file systems.\n"
+                    f"Please rename one of the serializers in your Django code."
+                )
+            lowercase_map[lowercase] = name
+
+            # Check exact duplicates
+            if name in exact_duplicate_map:
+                # Get schema titles to show source serializer names
+                schema1 = self.spec.components.schemas.get(name)
+                title1 = getattr(schema1, 'title', 'Unknown')
+                title2 = exact_duplicate_map[name]
+
+                raise ValueError(
+                    f"Duplicate schema name detected: '{name}'\n"
+                    f"Multiple serializers are generating the same schema name:\n"
+                    f"  - {title1}\n"
+                    f"  - {title2}\n"
+                    f"This causes schema conflicts in the generated API client.\n"
+                    f"Please rename one of the serializers to make them unique.\n"
+                    f"Example: HealthCheckSerializer → GRPCHealthCheckSerializer"
+                )
+
+            # Store with title for later comparison
+            schema = self.spec.components.schemas.get(name)
+            title = getattr(schema, 'title', name)
+            exact_duplicate_map[name] = title
+
         schemas = {}
         for name, schema_or_ref in self.spec.components.schemas.items():
             # Skip references for now
@@ -467,6 +508,14 @@ class BaseParser(ABC):
         """
         if schema.base_type:
             return schema.base_type
+
+        # Check anyOf: [{"type": "X"}, {"type": "null"}] pattern (Pydantic style)
+        # Extract the actual type from anyOf if it's a simple nullable pattern
+        if schema.anyOf and len(schema.anyOf) == 2:
+            for item in schema.anyOf:
+                if isinstance(item, SchemaObject) and item.base_type and item.base_type != 'null':
+                    # Found the actual type (not null)
+                    return item.base_type
 
         # Fallback: infer from other properties
         if schema.properties is not None:
