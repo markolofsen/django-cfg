@@ -345,6 +345,17 @@ class DjangoRQConfig(BaseModel):
 
         return queues
 
+    @model_validator(mode="after")
+    def validate_rq_dependencies(self) -> "DjangoRQConfig":
+        """Cross-field validation and dependency checking."""
+        # Check dependencies if enabled
+        if self.enabled:
+            from django_cfg.apps.integrations.rq._cfg import require_rq_feature
+
+            require_rq_feature()
+
+        return self
+
     def to_django_settings(self, parent_config: Optional[Any] = None) -> Dict[str, Any]:
         """
         Convert to Django settings dictionary.

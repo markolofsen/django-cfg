@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
-from ...apps.centrifugo.services.client.config import DjangoCfgCentrifugoConfig
+from django_cfg.apps.integrations.centrifugo.services.client.config import DjangoCfgCentrifugoConfig
 from ...models import (
     ApiKeys,
     AxesConfig,
@@ -186,6 +186,11 @@ class DjangoConfig(BaseModel):
         description="Django DEBUG setting",
     )
 
+    debug_warnings: bool = Field(
+        default=False,
+        description="Enable detailed warnings traceback for debugging (shows full stack trace for RuntimeWarnings)",
+    )
+
     # === URL Configuration ===
     root_urlconf: Optional[str] = Field(
         default=None,
@@ -200,7 +205,7 @@ class DjangoConfig(BaseModel):
     # === Custom User Model ===
     auth_user_model: Optional[str] = Field(
         default=None,
-        description="Custom user model (AUTH_USER_MODEL). If None and enable_accounts=True, uses 'django_cfg.apps.accounts.CustomUser'",
+        description="Custom user model (AUTH_USER_MODEL). If None and enable_accounts=True, uses 'django_cfg.apps.business.accounts.CustomUser'",
         pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$",
     )
 
@@ -581,6 +586,10 @@ class DjangoConfig(BaseModel):
         # Set as current config
         from ..state.registry import set_current_config
         set_current_config(self)
+
+        # Setup warnings debug if enabled in config
+        from ..debug import setup_warnings_debug
+        setup_warnings_debug()
 
         if self._django_settings is None:
             from ..generation import SettingsGenerator

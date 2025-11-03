@@ -1,4 +1,4 @@
-.PHONY: help install install-local env docker test commit kill-ports dev dev-ngrok manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
+.PHONY: help install install-local env docker test commit kill-ports dev dev-ngrok dev-grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
 
 # Python from virtual environment (poetry)
 PYTHON := .venv/bin/python
@@ -14,6 +14,7 @@ help:
 	@echo "Development:"
 	@echo "  make dev           - Run development server (kills port 8000 first)"
 	@echo "  make dev-ngrok     - Run development server with ngrok tunnel"
+	@echo "  make dev-grpc      - Run gRPC server (port 50051)"
 	@echo "  make kill-ports    - Kill processes on port 8000"
 	@echo "  make shell         - Open Django shell"
 	@echo "  make api           - Generate and deploy API clients"
@@ -58,9 +59,9 @@ install:
 	$(POETRY) install
 
 install-local:
-	@echo "📦 Installing with local django-cfg..."
+	@echo "📦 Installing with local django-cfg (full dependencies)..."
 	@rm -f poetry.lock
-	$(POETRY) add --group local --editable ~/djangocfg --lock
+	$(POETRY) add --group local --editable ~/djangocfg[full] --lock
 	$(POETRY) install --with local --no-root
 
 env:
@@ -83,6 +84,10 @@ dev: kill-ports
 
 dev-ngrok: kill-ports
 	$(PYTHON) manage.py runserver_ngrok
+
+dev-grpc:
+	@echo "🚀 Starting gRPC server on port 50051..."
+	$(PYTHON) manage.py rungrpc
 
 manage:
 	$(PYTHON) manage.py $(CMD)

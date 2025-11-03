@@ -41,31 +41,8 @@ class StartupDisplayManager(BaseDisplayManager):
     def display_minimal_info(self):
         """Display minimal startup info (NONE mode)."""
         try:
-            version = self.get_version()
-            panel_style, env_emoji, env_color = self.get_environment_style()
-
-            # Simple one-liner
-            info_text = Text()
-            info_text.append(f"{env_emoji} Django CFG ", style="bold")
-            info_text.append(f"v{version}", style="cyan")
-            info_text.append(" • ", style="dim")
-            info_text.append(f"{self.config.env_mode}", style=env_color)
-            info_text.append(" • ", style="dim")
-            info_text.append(f"{self.config.project_name}", style="white")
-
-            # Check for critical updates
-            try:
-                from ..version_checker import get_version_info
-                version_info = get_version_info()
-                if version_info.get('update_available'):
-                    info_text.append(" • ", style="dim")
-                    info_text.append("🚨 UPDATE AVAILABLE", style="bold yellow")
-                    info_text.append(" (", style="dim")
-                    info_text.append("poetry add django-cfg@latest", style="bright_blue")
-                    info_text.append(")", style="dim")
-            except Exception:
-                pass
-
+            # Use reusable header utility
+            info_text = self.create_header_text(show_update_check=True)
             self.console.print(info_text)
         except Exception as e:
             print(f"❌ ERROR in display_minimal_info: {e}")
@@ -76,17 +53,10 @@ class StartupDisplayManager(BaseDisplayManager):
     def display_essential_info(self):
         """Display essential startup info (SHORT mode)."""
         try:
-            version = self.get_version()
             panel_style, env_emoji, env_color = self.get_environment_style()
 
-            # Create compact header
-            header_text = Text()
-            header_text.append(f"{env_emoji} Django CFG ", style="bold")
-            header_text.append(f"v{version}", style="cyan")
-            header_text.append(" • ", style="dim")
-            header_text.append(f"{self.config.env_mode}", style=env_color)
-            header_text.append(" • ", style="dim")
-            header_text.append(f"{self.config.project_name}", style="white")
+            # Create compact header using reusable utility
+            header_text = self.create_header_text(show_update_check=False)
 
             header_panel = self.create_panel(
                 header_text,
@@ -122,6 +92,11 @@ class StartupDisplayManager(BaseDisplayManager):
                 LIB_SUPPORT_URL,
             )
 
+            # Display header using reusable utility
+            header_text = self.create_header_text(show_update_check=False)
+            self.console.print(header_text)
+            self.print_spacing()
+
             # Create main info table
             info_table = self.create_table()
             info_table.add_column("Setting", style="cyan", width=30)
@@ -131,6 +106,11 @@ class StartupDisplayManager(BaseDisplayManager):
             info_table.add_row("🔗 Prefix", "/cfg/")
             info_table.add_row("🌍 Environment", self.config.env_mode)
             info_table.add_row("🔧 Debug", str(self.config.debug))
+
+            # Show debug_warnings status
+            if self.config.debug_warnings:
+                info_table.add_row("🔍 Warnings Debug", "[yellow]Enabled (full traceback)[/yellow]")
+
             info_table.add_row("🏗️ Project", self.config.project_name)
 
             # Add environment source
@@ -468,7 +448,7 @@ class StartupDisplayManager(BaseDisplayManager):
 
             if config and config.enable_knowbase:
                 try:
-                    from django_cfg.apps.knowbase.config import (
+                    from django_cfg.apps.business.knowbase.config import (
                         get_django_cfg_knowbase_constance_fields,
                     )
                     knowbase_fields = get_django_cfg_knowbase_constance_fields()
@@ -478,7 +458,7 @@ class StartupDisplayManager(BaseDisplayManager):
 
             if config and config.payments and config.payments.enabled:
                 try:
-                    from django_cfg.apps.payments.config import (
+                    from django_cfg.apps.business.payments.config import (
                         get_django_cfg_payments_constance_fields,
                     )
                     payments_fields = get_django_cfg_payments_constance_fields()
@@ -619,7 +599,7 @@ class StartupDisplayManager(BaseDisplayManager):
 
             if config and config.enable_knowbase:
                 try:
-                    from django_cfg.apps.knowbase.config import (
+                    from django_cfg.apps.business.knowbase.config import (
                         get_django_cfg_knowbase_constance_fields,
                     )
                     knowbase_fields = get_django_cfg_knowbase_constance_fields()
@@ -629,7 +609,7 @@ class StartupDisplayManager(BaseDisplayManager):
 
             if config and config.payments and config.payments.enabled:
                 try:
-                    from django_cfg.apps.payments.config import (
+                    from django_cfg.apps.business.payments.config import (
                         get_django_cfg_payments_constance_fields,
                     )
                     payments_fields = get_django_cfg_payments_constance_fields()

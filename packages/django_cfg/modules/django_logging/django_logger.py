@@ -2,9 +2,16 @@
 Simple auto-configuring Django Logger for django_cfg.
 
 KISS principle: simple, unified logging configuration.
+
+Features:
+- Modular logging with separate files per module
+- Automatic log rotation (daily, keeps 30 days)
+- INFO+ to files, WARNING+ to console
+- Auto-cleanup of old logs
 """
 
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -95,12 +102,18 @@ class DjangoLogger(BaseCfgModule):
 
         # Create handlers
         try:
-            # Handler for general Django logs
+            # Handler for general Django logs with rotation
             django_log_path = logs_dir / 'django.log'
-            django_handler = logging.FileHandler(django_log_path, encoding='utf-8')
-            django_handler.setLevel(logging.DEBUG if debug else logging.WARNING)
+            django_handler = TimedRotatingFileHandler(
+                django_log_path,
+                when='midnight',  # Rotate at midnight
+                interval=1,  # Every 1 day
+                backupCount=30,  # Keep 30 days of logs
+                encoding='utf-8',
+            )
+            django_handler.setLevel(logging.DEBUG if debug else logging.INFO)  # INFO+ in production, DEBUG in dev
 
-            # Console handler
+            # Console handler - WARNING+ always (less noise)
             console_handler = logging.StreamHandler()
             console_handler.setLevel(logging.DEBUG if debug else logging.WARNING)
 
@@ -111,7 +124,7 @@ class DjangoLogger(BaseCfgModule):
 
             # Configure root logger
             root_logger = logging.getLogger()
-            root_logger.setLevel(logging.DEBUG if debug else logging.WARNING)
+            root_logger.setLevel(logging.DEBUG if debug else logging.INFO)  # INFO+ in production, DEBUG in dev
 
             # Clear existing handlers
             root_logger.handlers.clear()
@@ -159,8 +172,14 @@ class DjangoLogger(BaseCfgModule):
 
                 log_file_path = djangocfg_logs_dir / f'{module_name}.log'
 
-                # Create file handler for this specific module
-                file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+                # Create rotating file handler for this specific module
+                file_handler = TimedRotatingFileHandler(
+                    log_file_path,
+                    when='midnight',  # Rotate at midnight
+                    interval=1,  # Every 1 day
+                    backupCount=30,  # Keep 30 days of logs
+                    encoding='utf-8',
+                )
 
                 # Get debug mode
                 try:
@@ -170,7 +189,7 @@ class DjangoLogger(BaseCfgModule):
                 except Exception:
                     debug = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
 
-                file_handler.setLevel(logging.DEBUG if debug else logging.WARNING)
+                file_handler.setLevel(logging.DEBUG if debug else logging.INFO)  # INFO+ in production, DEBUG in dev
 
                 # Set format
                 formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s')
@@ -186,6 +205,57 @@ class DjangoLogger(BaseCfgModule):
                 print(f"[django-cfg] ERROR creating modular logger for {name}: {e}")
 
         return logger
+
+
+def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str, int]:
+    """
+    Clean up log files older than specified days.
+
+    Args:
+        days: Number of days to keep (default: 30)
+        logs_dir: Optional custom logs directory (default: ./logs)
+
+    Returns:
+        Dictionary with cleanup statistics
+
+    Example:
+        >>> from django_cfg.modules.django_logging import clean_old_logs
+        >>> stats = clean_old_logs(days=7)  # Keep only last 7 days
+        >>> print(f"Deleted {stats['deleted']} files, freed {stats['bytes']} bytes")
+    """
+    import os
+    from datetime import datetime, timedelta
+
+    if logs_dir is None:
+        current_dir = Path(os.getcwd())
+        logs_dir = current_dir / 'logs'
+
+    if not logs_dir.exists():
+        return {'deleted': 0, 'bytes': 0, 'error': 'Logs directory not found'}
+
+    cutoff_date = datetime.now() - timedelta(days=days)
+    deleted_count = 0
+    deleted_bytes = 0
+
+    # Recursively find all .log files (including rotated ones like .log.2024-11-01)
+    for log_file in logs_dir.rglob('*.log*'):
+        if log_file.is_file():
+            try:
+                # Check file modification time
+                mtime = datetime.fromtimestamp(log_file.stat().st_mtime)
+                if mtime < cutoff_date:
+                    file_size = log_file.stat().st_size
+                    log_file.unlink()
+                    deleted_count += 1
+                    deleted_bytes += file_size
+            except Exception as e:
+                print(f"[django-cfg] Error deleting {log_file}: {e}")
+
+    return {
+        'deleted': deleted_count,
+        'bytes': deleted_bytes,
+        'human_readable': f"{deleted_bytes / 1024 / 1024:.2f} MB" if deleted_bytes > 0 else "0 MB",
+    }
 
 
 # Convenience function for quick access

@@ -11,7 +11,7 @@ MODULES_REGISTRY = {
     "set_current_config": ("django_cfg.core.config", "set_current_config"),
 
     # Centrifugo module
-    "DjangoCfgCentrifugoConfig": ("django_cfg.apps.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
+    "DjangoCfgCentrifugoConfig": ("django_cfg.apps.integrations.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
     # gRPC module
     "GRPCConfig": ("django_cfg.models.api.grpc", "GRPCConfig"),

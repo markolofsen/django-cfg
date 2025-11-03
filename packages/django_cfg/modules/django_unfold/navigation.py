@@ -140,7 +140,7 @@ class NavigationManager(BaseCfgModule):
                     separator=True,
                     collapsible=True,
                     items=[
-                        NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/dashboard/centrifugo"),
+                        NavigationItem(title="Dashboard", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/dashboard/centrifugo/"),
                         NavigationItem(title="Logs", icon=Icons.LIST_ALT, link=str(reverse_lazy("admin:django_cfg_centrifugo_centrifugolog_changelist"))),
                     ]
                 )
@@ -152,7 +152,7 @@ class NavigationManager(BaseCfgModule):
 
             # Monitoring API endpoint
             grpc_items.append(
-                NavigationItem(title="Monitor", icon=Icons.MONITOR_HEART, link="/cfg/grpc/monitor/overview/")
+                NavigationItem(title="Monitor", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/dashboard/grpc/")
             )
 
             # Request Logs with safe URL resolution

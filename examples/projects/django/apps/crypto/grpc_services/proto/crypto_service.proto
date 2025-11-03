@@ -1,0 +1,433 @@
+// crypto_service.proto
+// Django-CFG Demo: Cryptocurrency gRPC Service
+// Version: 1.0.0
+// Last Updated: 2025-01-03
+//
+// This proto file demonstrates complete gRPC integration with django-cfg:
+// - CRUD operations for crypto entities
+// - Real-time price streaming (server-side streaming)
+// - Wallet operations with proper decimal handling
+// - Best practices for Django ORM integration
+
+syntax = "proto3";
+
+package crypto;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ============================================================================
+// Cryptocurrency Service
+// ============================================================================
+
+service CryptoService {
+  // === Coin Operations ===
+
+  // Get single coin by symbol
+  rpc GetCoin(GetCoinRequest) returns (CoinResponse);
+
+  // List all coins with pagination
+  rpc ListCoins(ListCoinsRequest) returns (ListCoinsResponse);
+
+  // Search coins by name or symbol
+  rpc SearchCoins(SearchCoinsRequest) returns (ListCoinsResponse);
+
+  // Get top coins by market cap
+  rpc GetTopCoins(GetTopCoinsRequest) returns (ListCoinsResponse);
+
+  // Stream real-time price updates (server-side streaming)
+  rpc StreamPrices(StreamPricesRequest) returns (stream PriceUpdate);
+
+  // === Wallet Operations ===
+
+  // Get user's wallet for specific coin
+  rpc GetWallet(GetWalletRequest) returns (WalletResponse);
+
+  // List all user wallets
+  rpc ListWallets(ListWalletsRequest) returns (ListWalletsResponse);
+
+  // Get portfolio summary
+  rpc GetPortfolio(GetPortfolioRequest) returns (PortfolioResponse);
+
+  // Deposit funds to wallet
+  rpc Deposit(DepositRequest) returns (WalletResponse);
+
+  // Withdraw funds from wallet
+  rpc Withdraw(WithdrawRequest) returns (WalletResponse);
+
+  // Transfer between wallets
+  rpc Transfer(TransferRequest) returns (TransferResponse);
+
+  // === Market Statistics ===
+
+  // Get market statistics
+  rpc GetMarketStats(google.protobuf.Empty) returns (MarketStatsResponse);
+
+  // Get trending coins (biggest gainers/losers)
+  rpc GetTrendingCoins(GetTrendingCoinsRequest) returns (TrendingCoinsResponse);
+}
+
+// ============================================================================
+// Coin Messages
+// ============================================================================
+
+message Coin {
+  // Identity (1-9)
+  int32 id = 1;
+  string symbol = 2;                    // e.g., "BTC"
+  string name = 3;                      // e.g., "Bitcoin"
+  string slug = 4;                      // e.g., "bitcoin"
+
+  reserved 5 to 9;
+
+  // Market Data (10-19) - Use string for precise decimal handling
+  string current_price_usd = 10;        // Decimal as string
+  string market_cap_usd = 11;           // Decimal as string
+  string volume_24h_usd = 12;           // Decimal as string
+
+  reserved 13 to 19;
+
+  // Price Changes (20-29)
+  string price_change_24h_percent = 20; // Decimal as string
+  string price_change_7d_percent = 21;  // Decimal as string
+  string price_change_30d_percent = 22; // Decimal as string
+
+  reserved 23 to 29;
+
+  // Metadata (30-39)
+  string logo_url = 30;
+  string description = 31;
+  string website = 32;
+  string whitepaper_url = 33;
+
+  reserved 34 to 39;
+
+  // Rankings & Flags (40-49)
+  int32 rank = 40;
+  bool is_active = 41;
+  bool is_tradeable = 42;
+  bool is_price_up_24h = 43;            // Computed property
+
+  reserved 44 to 49;
+
+  // Timestamps (50-59)
+  google.protobuf.Timestamp created_at = 50;
+  google.protobuf.Timestamp updated_at = 51;
+
+  reserved 52 to 59;
+}
+
+message GetCoinRequest {
+  oneof identifier {
+    int32 id = 1;
+    string symbol = 2;                  // Preferred lookup method
+    string slug = 3;
+  }
+
+  reserved 4 to 9;
+}
+
+message CoinResponse {
+  bool success = 1;
+  string message = 2;
+  Coin coin = 3;
+
+  reserved 4 to 9;
+}
+
+message ListCoinsRequest {
+  // Pagination (1-9)
+  int32 page = 1;
+  int32 page_size = 2;                  // Max 100
+
+  reserved 3 to 9;
+
+  // Filters (10-19)
+  bool active_only = 10;
+  bool tradeable_only = 11;
+
+  reserved 12 to 19;
+
+  // Sorting (20-29)
+  SortBy sort_by = 20;
+  SortOrder sort_order = 21;
+
+  reserved 22 to 29;
+}
+
+message SearchCoinsRequest {
+  string query = 1;                     // Search term
+  int32 limit = 2;                      // Max results (default: 10)
+
+  reserved 3 to 9;
+}
+
+message GetTopCoinsRequest {
+  int32 limit = 1;                      // How many top coins (default: 10)
+
+  reserved 2 to 9;
+}
+
+message ListCoinsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Coin coins = 3;
+
+  // Pagination info (10-19)
+  int32 total_count = 10;
+  int32 page = 11;
+  int32 page_size = 12;
+  int32 total_pages = 13;
+
+  reserved 4 to 9, 14 to 19;
+}
+
+// ============================================================================
+// Price Streaming
+// ============================================================================
+
+message StreamPricesRequest {
+  repeated string symbols = 1;          // Subscribe to specific symbols
+  int32 interval_seconds = 2;           // Update interval (default: 5)
+
+  reserved 3 to 9;
+}
+
+message PriceUpdate {
+  string symbol = 1;
+  string price_usd = 2;                 // Current price
+  string change_24h_percent = 3;
+  google.protobuf.Timestamp timestamp = 4;
+
+  reserved 5 to 9;
+}
+
+// ============================================================================
+// Wallet Messages
+// ============================================================================
+
+message Wallet {
+  // Identity (1-9)
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 coin_id = 3;
+
+  reserved 4 to 9;
+
+  // Coin info (10-19)
+  string symbol = 10;                   // Denormalized for convenience
+  string coin_name = 11;
+
+  reserved 12 to 19;
+
+  // Balances (20-29) - Use string for precise decimal handling
+  string balance = 20;                  // Available balance
+  string locked_balance = 21;           // In orders
+  string total_balance = 22;            // Available + locked (computed)
+  string value_usd = 23;                // Value in USD (computed)
+
+  reserved 24 to 29;
+
+  // Wallet Address (30-39)
+  string address = 30;                  // Deposit address
+
+  reserved 31 to 39;
+
+  // Timestamps (40-49)
+  google.protobuf.Timestamp created_at = 40;
+  google.protobuf.Timestamp updated_at = 41;
+
+  reserved 42 to 49;
+}
+
+message GetWalletRequest {
+  int32 user_id = 1;
+  oneof coin_identifier {
+    int32 coin_id = 2;
+    string symbol = 3;                  // Preferred method
+  }
+
+  reserved 4 to 9;
+}
+
+message WalletResponse {
+  bool success = 1;
+  string message = 2;
+  Wallet wallet = 3;
+
+  reserved 4 to 9;
+}
+
+message ListWalletsRequest {
+  int32 user_id = 1;
+  bool exclude_zero_balance = 2;        // Hide empty wallets
+
+  reserved 3 to 9;
+}
+
+message ListWalletsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Wallet wallets = 3;
+  string total_value_usd = 4;           // Portfolio total
+
+  reserved 5 to 9;
+}
+
+// ============================================================================
+// Portfolio Operations
+// ============================================================================
+
+message GetPortfolioRequest {
+  int32 user_id = 1;
+
+  reserved 2 to 9;
+}
+
+message PortfolioResponse {
+  bool success = 1;
+  string message = 2;
+
+  // Portfolio summary (10-19)
+  string total_value_usd = 10;
+  string total_change_24h_usd = 11;
+  string total_change_24h_percent = 12;
+  int32 coins_count = 13;
+
+  reserved 3 to 9, 14 to 19;
+
+  // Holdings (20-29)
+  repeated PortfolioHolding holdings = 20;
+
+  reserved 21 to 29;
+
+  // Timestamp (30-39)
+  google.protobuf.Timestamp calculated_at = 30;
+
+  reserved 31 to 39;
+}
+
+message PortfolioHolding {
+  string symbol = 1;
+  string coin_name = 2;
+  string balance = 3;
+  string value_usd = 4;
+  string percentage = 5;                // % of portfolio
+  string change_24h_percent = 6;
+
+  reserved 7 to 9;
+}
+
+// ============================================================================
+// Wallet Transaction Messages
+// ============================================================================
+
+message DepositRequest {
+  int32 user_id = 1;
+  string symbol = 2;
+  string amount = 3;                    // Decimal as string
+  string transaction_id = 4;            // External transaction ID
+
+  reserved 5 to 9;
+}
+
+message WithdrawRequest {
+  int32 user_id = 1;
+  string symbol = 2;
+  string amount = 3;                    // Decimal as string
+  string destination_address = 4;
+
+  reserved 5 to 9;
+}
+
+message TransferRequest {
+  int32 from_user_id = 1;
+  int32 to_user_id = 2;
+  string symbol = 3;
+  string amount = 4;                    // Decimal as string
+  string note = 5;                      // Optional transfer note
+
+  reserved 6 to 9;
+}
+
+message TransferResponse {
+  bool success = 1;
+  string message = 2;
+  Wallet from_wallet = 3;
+  Wallet to_wallet = 4;
+  string transaction_id = 5;            // Generated transaction ID
+
+  reserved 6 to 9;
+}
+
+// ============================================================================
+// Market Statistics
+// ============================================================================
+
+message MarketStatsResponse {
+  bool success = 1;
+  string message = 2;
+
+  // Market totals (10-19)
+  string total_market_cap_usd = 10;
+  string total_volume_24h_usd = 11;
+  int32 active_coins_count = 12;
+
+  reserved 3 to 9, 13 to 19;
+
+  // Market sentiment (20-29)
+  int32 coins_up_24h = 20;
+  int32 coins_down_24h = 21;
+  string average_change_24h = 22;
+
+  reserved 23 to 29;
+
+  // Timestamp (30-39)
+  google.protobuf.Timestamp calculated_at = 30;
+
+  reserved 31 to 39;
+}
+
+message GetTrendingCoinsRequest {
+  TrendingType type = 1;
+  int32 limit = 2;                      // Max coins to return (default: 10)
+
+  reserved 3 to 9;
+}
+
+message TrendingCoinsResponse {
+  bool success = 1;
+  string message = 2;
+  TrendingType type = 3;
+  repeated Coin coins = 4;
+
+  reserved 5 to 9;
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+enum SortBy {
+  SORT_BY_UNSPECIFIED = 0;
+  RANK = 1;
+  PRICE = 2;
+  MARKET_CAP = 3;
+  VOLUME_24H = 4;
+  CHANGE_24H = 5;
+  NAME = 6;
+  SYMBOL = 7;
+}
+
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  ASC = 1;
+  DESC = 2;
+}
+
+enum TrendingType {
+  TRENDING_TYPE_UNSPECIFIED = 0;
+  TOP_GAINERS = 1;                      // Biggest price increase
+  TOP_LOSERS = 2;                       // Biggest price decrease
+  MOST_TRADED = 3;                      // Highest 24h volume
+}

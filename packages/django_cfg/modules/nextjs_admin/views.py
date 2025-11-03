@@ -28,7 +28,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
-from django_cfg.apps.frontend.views import ZipExtractionMixin
+from django_cfg.apps.system.frontend.views import ZipExtractionMixin
 
 logger = logging.getLogger(__name__)
 

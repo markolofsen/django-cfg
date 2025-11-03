@@ -26,7 +26,7 @@ from django_cfg.modules.django_twilio.exceptions import (
 from django_cfg.modules.django_twilio.models import SendGridConfig, TwilioConfig
 
 try:
-    from django_cfg.apps.accounts.models import CustomUser
+    from django_cfg.apps.business.accounts.models import CustomUser
 except ImportError:
     CustomUser = None
 

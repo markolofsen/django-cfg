@@ -63,7 +63,7 @@ def example_django_integration():
     print("""
     # In your Django management command or view:
     from django_cfg.modules.django_currency.database_loader import load_currencies_to_database_format
-    from django_cfg.apps.payments.models import Currency
+    from django_cfg.apps.business.payments.models import Currency
     
     # Load currency data
     currency_data = load_currencies_to_database_format()
