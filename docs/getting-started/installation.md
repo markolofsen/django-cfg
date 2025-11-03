@@ -371,41 +371,74 @@ python manage.py runserver
 
 ## Optional Features
 
+Django-CFG supports optional feature groups (extras) for specific use cases. Install only what you need:
+
 <Tabs>
-  <TabItem value="agents" label="AI Agents" default>
-
-```bash
-pip install django-cfg[agents]
-```
-
-**Includes:** openai, anthropic, pydantic-ai
-
-**Use case:** Build AI-powered workflows with Django integration
-
-  </TabItem>
-  <TabItem value="knowbase" label="Knowledge Base">
-
-```bash
-pip install django-cfg[knowbase]
-```
-
-**Includes:** chromadb, sentence-transformers, tiktoken
-
-**Use case:** Semantic search, document processing, embeddings
-
-  </TabItem>
-  <TabItem value="full" label="All Features">
+  <TabItem value="full" label="Full (Recommended)" default>
 
 ```bash
 pip install django-cfg[full]
 ```
 
-**Includes:** All optional dependencies
+**Includes:** All optional dependencies (grpc, centrifugo, rq, ai, and more)
 
-**Use case:** Full-featured production setup
+**Use case:** Full-featured production setup with all integrations
+
+  </TabItem>
+  <TabItem value="ai" label="AI Agents">
+
+```bash
+pip install django-cfg[ai]
+```
+
+**Includes:** pydantic-ai
+
+**Use case:** Build AI-powered workflows with Django integration
+
+  </TabItem>
+  <TabItem value="grpc" label="gRPC">
+
+```bash
+pip install django-cfg[grpc]
+```
+
+**Includes:** grpcio, grpcio-tools, grpcio-reflection, grpcio-health-checking, protobuf
+
+**Use case:** Build microservices with gRPC communication
+
+  </TabItem>
+  <TabItem value="centrifugo" label="Centrifugo (WebSocket)">
+
+```bash
+pip install django-cfg[centrifugo]
+```
+
+**Includes:** cent, websockets
+
+**Use case:** Real-time WebSocket communication and live updates
+
+  </TabItem>
+  <TabItem value="rq" label="Redis Queue (RQ)">
+
+```bash
+pip install django-cfg[rq]
+```
+
+**Includes:** django-rq, rq, rq-scheduler, redis, hiredis
+
+**Use case:** Background tasks and job queue processing with Redis
 
   </TabItem>
 </Tabs>
+
+:::tip[Combine Multiple Extras]
+You can install multiple extras at once:
+```bash
+pip install django-cfg[grpc,centrifugo,rq]
+# or with Poetry
+poetry add django-cfg[grpc,centrifugo,rq]
+```
+:::
 
 ## Troubleshooting
 

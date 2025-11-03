@@ -70,6 +70,31 @@ cd my-app && python manage.py runserver
 
 **[📚 Installation Guide →](https://djangocfg.com/docs/getting-started/installation)**
 
+### Optional Features (Extras)
+
+Install additional features based on your needs:
+
+```bash
+# Full installation (recommended for production)
+pip install django-cfg[full]
+
+# Individual extras
+pip install django-cfg[grpc]        # gRPC microservices
+pip install django-cfg[centrifugo]  # Real-time WebSockets
+pip install django-cfg[rq]          # Background tasks with Redis Queue
+pip install django-cfg[ai]          # AI agents with Pydantic AI
+
+# Combine multiple extras
+pip install django-cfg[grpc,centrifugo,rq]
+```
+
+**Available extras:**
+- 🔄 **`[full]`** - All features (grpc + centrifugo + rq + ai)
+- 🌐 **`[grpc]`** - gRPC server support (grpcio, grpcio-tools, protobuf)
+- 📡 **`[centrifugo]`** - Real-time WebSocket integration (cent, websockets)
+- 📋 **`[rq]`** - Redis Queue for background tasks (django-rq, rq-scheduler)
+- 🤖 **`[ai]`** - AI agents framework (pydantic-ai)
+
 ---
 
 ### Try Live Demo
@@ -79,8 +104,7 @@ cd my-app && python manage.py runserver
 **[→ http://demo.djangocfg.com](http://demo.djangocfg.com)**
 
 **Demo credentials:**
-- **Admin:** `demo@djangocfg.com` / `demo2024`
-- **User:** `user@djangocfg.com` / `user2024`
+- **Admin:** `admin@example.com` / `admin123`
 
 **Explore:** Modern admin • Next.js dashboard • AI agents • Real-time updates • Support system
 
