@@ -10,8 +10,8 @@ packages = [{include = "apps"}, {include = "api"}]
 python = ">=3.12,<3.14"
 # Django framework (required by django-cfg)
 django = "^5.2.0"
-# django-cfg from PyPI
-django-cfg = "*"
+# django-cfg from PyPI with full extras (grpc, dramatiq, centrifugo)
+django-cfg = {version = "*", extras = ["full"]}
 # pydantic-ai is pulled by django-cfg automatically
 
 # Image handling for user avatars and product images
