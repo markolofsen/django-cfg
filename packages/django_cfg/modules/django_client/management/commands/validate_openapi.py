@@ -12,12 +12,15 @@ Usage:
 from pathlib import Path
 from typing import List
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
+
+from django_cfg.management.utils import AdminCommand
 
 
-class Command(BaseCommand):
+class Command(AdminCommand):
     """Validate and fix OpenAPI schema quality issues in DRF serializers."""
 
+    command_name = 'validate_openapi'
     help = "Validate and auto-fix OpenAPI schema quality issues"
 
     def add_arguments(self, parser):

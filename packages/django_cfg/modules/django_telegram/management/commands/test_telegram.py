@@ -4,20 +4,13 @@ Test Telegram Command
 Tests Telegram notification functionality using django_cfg configuration.
 """
 
-from django.core.management.base import BaseCommand
+from django_cfg.management.utils import SafeCommand
 
-from django_cfg.modules.django_logging import get_logger
 
-logger = get_logger('test_telegram')
-
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Command to test Telegram functionality."""
 
-    # Web execution metadata
-    web_executable = True
-    requires_input = False
-    is_destructive = False
-
+    command_name = 'test_telegram'
     help = "Test Telegram notification functionality"
 
     def add_arguments(self, parser):
@@ -29,7 +22,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logger.info("Starting test_telegram command")
+        self.logger.info("Starting test_telegram command")
         message = options["message"]
 
         self.stdout.write("🚀 Testing Telegram notification service")

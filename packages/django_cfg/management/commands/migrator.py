@@ -9,22 +9,15 @@ import questionary
 from django.apps import apps
 from django.conf import settings
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
 from django.db import connections
 from django.db.migrations.recorder import MigrationRecorder
 
 from django_cfg.core.config import DEFAULT_APPS
-from django_cfg.modules.django_logging import get_logger
-
-logger = get_logger('migrator')
+from django_cfg.management.utils import DestructiveCommand
 
 
-class Command(BaseCommand):
-    # Web execution metadata
-    web_executable = False
-    requires_input = True
-    is_destructive = True
-
+class Command(DestructiveCommand):
+    command_name = 'migrator'
     help = "Smart migration command with interactive menu for multiple databases"
 
     def add_arguments(self, parser):
@@ -132,7 +125,7 @@ class Command(BaseCommand):
 
     def _raise_system_exit(self, message):
         self.stdout.write(self.style.ERROR(f"❌ {message}"))
-        logger.error(message)
+        self.logger.error(message)
         # raise SystemExit(1)
 
     def migrate_database(self, db_name):

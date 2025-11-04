@@ -8,22 +8,17 @@ import subprocess
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 
 from django_cfg.core.state import get_current_config
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import SafeCommand
 from django_cfg.utils.path_resolution import PathResolver
 
-logger = get_logger('tree')
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Display Django project structure in tree format."""
 
-    # Web execution metadata
-    web_executable = True
-    requires_input = False
-    is_destructive = False
-
+    command_name = 'tree'
     help = "Display Django project structure based on django-cfg configuration"
 
     def add_arguments(self, parser):
@@ -83,7 +78,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command."""
-        logger.info("Starting tree command")
+        self.logger.info("Starting tree command")
         try:
             # Get django-cfg configuration
             config = get_current_config()

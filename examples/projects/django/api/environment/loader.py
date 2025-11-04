@@ -213,6 +213,12 @@ class EnvironmentConfig(BaseSettings):
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
 
+    # gRPC Configuration
+    grpc_url: Optional[str] = Field(
+        default=None,
+        description="Public gRPC URL for clients (e.g., grpc.djangocfg.com:443). If None, auto-generated from api_url",
+    )
+
     # Cache Configuration
     # IMPORTANT: Redis URL for django-cfg CacheConfig
     # If not set, django-cfg will fallback to FileBasedCache in production

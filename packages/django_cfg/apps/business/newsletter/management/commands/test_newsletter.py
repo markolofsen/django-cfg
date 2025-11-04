@@ -3,7 +3,9 @@ Management command to test newsletter sending functionality.
 """
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
+
+from django_cfg.management.utils import SafeCommand
 
 from django_cfg.apps.business.newsletter.models import Newsletter, NewsletterCampaign, NewsletterSubscription
 from django_cfg.apps.business.newsletter.services.email_service import NewsletterEmailService
@@ -11,7 +13,8 @@ from django_cfg.apps.business.newsletter.services.email_service import Newslette
 User = get_user_model()
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
+    command_name = 'test_newsletter'
     help = 'Test newsletter sending functionality'
 
     def add_arguments(self, parser):

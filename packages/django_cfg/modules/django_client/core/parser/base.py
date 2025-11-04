@@ -62,8 +62,12 @@ class BaseParser(ABC):
             IRContext with all schemas and operations
 
         Raises:
-            ValueError: If COMPONENT_SPLIT_REQUEST is not detected
+            ValueError: If COMPONENT_SPLIT_REQUEST is not detected or schema name conflicts found
         """
+        # CRITICAL: Validate schema names BEFORE parsing
+        # This prevents generation from starting with invalid schemas
+        self._validate_schema_names()
+
         # Parse metadata
         openapi_info = self._parse_openapi_info()
         django_metadata = self._parse_django_metadata()
@@ -237,54 +241,134 @@ class BaseParser(ABC):
 
         return False
 
-    # ===== Schema Parsing =====
+    # ===== Schema Validation =====
 
-    def _parse_all_schemas(self) -> dict[str, IRSchemaObject]:
-        """Parse all schemas from components."""
+    def _validate_schema_names(self) -> None:
+        """
+        Validate schema names for conflicts BEFORE parsing.
+
+        This method checks for:
+        1. Case-insensitive duplicates (e.g., "User" and "user")
+        2. Exact duplicates (e.g., "GRPCServerInfo" from two different serializers)
+
+        Raises:
+            ValueError: If schema name conflicts are detected (hard exit with traceback)
+
+        Example conflicts:
+            - Case-insensitive: "Profile" and "profile" → filesystem conflict
+            - Exact duplicate: "HealthCheck" from multiple serializers → schema conflict
+        """
+        import traceback
+        import sys
+
         if not self.spec.components or not self.spec.components.schemas:
-            return {}
+            return  # No schemas to validate
 
-        # Check for duplicate schema names with different casing
         schema_names = list(self.spec.components.schemas.keys())
         lowercase_map = {}
-        exact_duplicate_map = {}
+        exact_duplicate_sources = {}
 
         for name in schema_names:
             lowercase = name.lower()
 
             # Check case-insensitive duplicates
             if lowercase in lowercase_map:
-                raise ValueError(
-                    f"Duplicate schema names with different casing detected:\n"
-                    f"  - {lowercase_map[lowercase]}\n"
-                    f"  - {name}\n"
-                    f"This causes conflicts in case-insensitive file systems.\n"
-                    f"Please rename one of the serializers in your Django code."
+                existing_name = lowercase_map[lowercase]
+                error_msg = (
+                    f"\n{'=' * 80}\n"
+                    f"❌ SCHEMA NAME CONFLICT DETECTED\n"
+                    f"{'=' * 80}\n\n"
+                    f"Conflict Type: Case-insensitive duplicate\n"
+                    f"Schema Names:\n"
+                    f"  1. '{existing_name}'\n"
+                    f"  2. '{name}'\n\n"
+                    f"Problem:\n"
+                    f"  These names differ only in casing and will cause conflicts on\n"
+                    f"  case-insensitive filesystems (macOS, Windows).\n\n"
+                    f"Solution:\n"
+                    f"  Rename one of the Django serializers to make them distinct.\n"
+                    f"  Example: {name}Serializer → {name}DetailSerializer\n\n"
+                    f"{'=' * 80}\n"
                 )
+
+                # Print full error with traceback
+                print(error_msg, file=sys.stderr)
+                print("\n🔍 Traceback (schema validation):", file=sys.stderr)
+                traceback.print_stack(file=sys.stderr)
+
+                # Hard exit - stop generation immediately
+                raise ValueError(
+                    f"Case-insensitive schema name conflict: '{existing_name}' vs '{name}'. "
+                    f"Cannot generate client with conflicting schema names."
+                )
+
             lowercase_map[lowercase] = name
 
-            # Check exact duplicates
-            if name in exact_duplicate_map:
-                # Get schema titles to show source serializer names
-                schema1 = self.spec.components.schemas.get(name)
-                title1 = getattr(schema1, 'title', 'Unknown')
-                title2 = exact_duplicate_map[name]
-
-                raise ValueError(
-                    f"Duplicate schema name detected: '{name}'\n"
-                    f"Multiple serializers are generating the same schema name:\n"
-                    f"  - {title1}\n"
-                    f"  - {title2}\n"
-                    f"This causes schema conflicts in the generated API client.\n"
-                    f"Please rename one of the serializers to make them unique.\n"
-                    f"Example: HealthCheckSerializer → GRPCHealthCheckSerializer"
-                )
-
-            # Store with title for later comparison
+            # Track schema sources for exact duplicate detection
             schema = self.spec.components.schemas.get(name)
-            title = getattr(schema, 'title', name)
-            exact_duplicate_map[name] = title
+            if schema and not isinstance(schema, ReferenceObject):
+                # Get source information from schema
+                title = getattr(schema, 'title', name)
+                description = getattr(schema, 'description', '')
 
+                # Create signature for duplicate detection
+                if name in exact_duplicate_sources:
+                    # Found exact duplicate!
+                    existing = exact_duplicate_sources[name]
+                    error_msg = (
+                        f"\n{'=' * 80}\n"
+                        f"❌ SCHEMA NAME CONFLICT DETECTED\n"
+                        f"{'=' * 80}\n\n"
+                        f"Conflict Type: Exact duplicate schema name\n"
+                        f"Schema Name: '{name}'\n\n"
+                        f"Sources:\n"
+                        f"  1. {existing['title']}\n"
+                        f"     Description: {existing['description'][:100]}\n"
+                        f"  2. {title}\n"
+                        f"     Description: {description[:100]}\n\n"
+                        f"Problem:\n"
+                        f"  Multiple serializers are generating the same schema name '{name}'.\n"
+                        f"  This causes schema conflicts in the generated API client and\n"
+                        f"  OpenAPI documentation.\n\n"
+                        f"Solution:\n"
+                        f"  Rename one of the serializers to make them unique.\n"
+                        f"  Examples:\n"
+                        f"    - HealthCheckSerializer → GRPCHealthCheckSerializer\n"
+                        f"    - ServerInfoSerializer → GRPCServerStatusSerializer\n\n"
+                        f"{'=' * 80}\n"
+                    )
+
+                    # Print full error with traceback
+                    print(error_msg, file=sys.stderr)
+                    print("\n🔍 Traceback (schema validation):", file=sys.stderr)
+                    traceback.print_stack(file=sys.stderr)
+
+                    # Hard exit - stop generation immediately
+                    raise ValueError(
+                        f"Duplicate schema name detected: '{name}'. "
+                        f"Multiple serializers are generating this schema. "
+                        f"Cannot generate client with conflicting schemas."
+                    )
+
+                # Store for duplicate detection
+                exact_duplicate_sources[name] = {
+                    'title': title,
+                    'description': description,
+                }
+
+    # ===== Schema Parsing =====
+
+    def _parse_all_schemas(self) -> dict[str, IRSchemaObject]:
+        """
+        Parse all schemas from components.
+
+        Note: Schema name validation is done in _validate_schema_names()
+        which is called BEFORE this method in parse().
+        """
+        if not self.spec.components or not self.spec.components.schemas:
+            return {}
+
+        # Parse schemas (validation already done in _validate_schema_names)
         schemas = {}
         for name, schema_or_ref in self.spec.components.schemas.items():
             # Skip references for now

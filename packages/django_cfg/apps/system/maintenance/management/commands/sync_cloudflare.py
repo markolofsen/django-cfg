@@ -5,16 +5,19 @@ Automatically discovers and syncs Cloudflare zones with Django models.
 """
 
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.utils import timezone
+
+from django_cfg.management.utils import AdminCommand
 
 from ...models import CloudflareApiKey
 from ...services.site_sync_service import SiteSyncService
 
 
-class Command(BaseCommand):
+class Command(AdminCommand):
     """Sync sites with Cloudflare zones."""
 
+    command_name = 'sync_cloudflare'
     help = 'Sync CloudflareSite models with actual Cloudflare zones'
 
     def add_arguments(self, parser):

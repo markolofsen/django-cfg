@@ -8,10 +8,11 @@ from decimal import Decimal, InvalidOperation
 
 import questionary
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from django_cfg.management.utils import InteractiveCommand
 
 from django_cfg.apps.business.payments.models import Currency, Payment
 from django_cfg.apps.business.payments.services import PaymentService, CreatePaymentRequest
@@ -21,7 +22,8 @@ User = get_user_model()
 console = Console()
 
 
-class Command(BaseCommand):
+class Command(InteractiveCommand):
+    command_name = 'create_payment'
     help = 'Create a payment interactively using questionary wizard'
 
     def add_arguments(self, parser):

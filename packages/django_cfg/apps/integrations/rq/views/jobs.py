@@ -19,7 +19,7 @@ from ..services import job_to_model
 logger = get_logger("rq.jobs")
 
 
-class JobViewSet(AdminAPIMixin, viewsets.ViewSet):
+class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     ViewSet for RQ job management.
 
@@ -32,6 +32,8 @@ class JobViewSet(AdminAPIMixin, viewsets.ViewSet):
 
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    serializer_class = JobListSerializer
 
     @extend_schema(
         tags=["RQ Jobs"],
@@ -455,9 +457,11 @@ class JobViewSet(AdminAPIMixin, viewsets.ViewSet):
                 except Exception as e:
                     logger.debug(f"Failed to get failed jobs for queue {queue_name}: {e}")
 
-            serializer = JobListSerializer(data=all_jobs, many=True)
+            # Use DRF pagination
+            page = self.paginate_queryset(all_jobs)
+            serializer = JobListSerializer(data=page, many=True)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
 
         except Exception as e:
             logger.error(f"Failed jobs list error: {e}", exc_info=True)
@@ -530,9 +534,11 @@ class JobViewSet(AdminAPIMixin, viewsets.ViewSet):
                 except Exception as e:
                     logger.debug(f"Failed to get finished jobs for queue {queue_name}: {e}")
 
-            serializer = JobListSerializer(data=all_jobs, many=True)
+            # Use DRF pagination
+            page = self.paginate_queryset(all_jobs)
+            serializer = JobListSerializer(data=page, many=True)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
 
         except Exception as e:
             logger.error(f"Finished jobs list error: {e}", exc_info=True)
@@ -795,9 +801,11 @@ class JobViewSet(AdminAPIMixin, viewsets.ViewSet):
                 except Exception as e:
                     logger.debug(f"Failed to get deferred jobs for queue {queue_name}: {e}")
 
-            serializer = JobListSerializer(data=all_jobs, many=True)
+            # Use DRF pagination
+            page = self.paginate_queryset(all_jobs)
+            serializer = JobListSerializer(data=page, many=True)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
 
         except Exception as e:
             logger.error(f"Deferred jobs list error: {e}", exc_info=True)
@@ -870,9 +878,11 @@ class JobViewSet(AdminAPIMixin, viewsets.ViewSet):
                 except Exception as e:
                     logger.debug(f"Failed to get started jobs for queue {queue_name}: {e}")
 
-            serializer = JobListSerializer(data=all_jobs, many=True)
+            # Use DRF pagination
+            page = self.paginate_queryset(all_jobs)
+            serializer = JobListSerializer(data=page, many=True)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
 
         except Exception as e:
             logger.error(f"Started jobs list error: {e}", exc_info=True)

@@ -5,11 +5,12 @@ Fetches available currencies from NowPayments and updates local database.
 """
 
 import questionary
-from django.core.management.base import BaseCommand
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
+
+from django_cfg.management.utils import AdminCommand
 
 from django_cfg.apps.business.payments.models import Currency
 from django_cfg.apps.business.payments.api.views import get_nowpayments_provider
@@ -17,7 +18,8 @@ from django_cfg.apps.business.payments.api.views import get_nowpayments_provider
 console = Console()
 
 
-class Command(BaseCommand):
+class Command(AdminCommand):
+    command_name = 'sync_currencies'
     help = 'Sync currencies from NowPayments provider'
 
     def add_arguments(self, parser):

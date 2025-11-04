@@ -7,10 +7,11 @@ Uses questionary for interactive selection or accepts payment ID as argument.
 from uuid import UUID
 
 import questionary
-from django.core.management.base import BaseCommand
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from django_cfg.management.utils import InteractiveCommand
 
 from django_cfg.apps.business.payments.models import Payment
 from django_cfg.apps.business.payments.services import PaymentService, CheckStatusRequest
@@ -19,7 +20,8 @@ from django_cfg.apps.business.payments.api.views import get_nowpayments_provider
 console = Console()
 
 
-class Command(BaseCommand):
+class Command(InteractiveCommand):
+    command_name = 'check_payment_status'
     help = 'Check payment status interactively or by payment ID'
 
     def add_arguments(self, parser):

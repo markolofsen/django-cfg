@@ -36,9 +36,10 @@ WORKDIR /app
 # Copy pyproject.toml only (poetry.lock excluded in .dockerignore)
 COPY projects/django/pyproject.toml ./
 
-# Remove local dependencies group from pyproject.toml and install
-RUN sed -i '/^\[tool\.poetry\.group\.local\]/,/^\[tool\.poetry\.group\.dev\]/{ /^\[tool\.poetry\.group\.dev\]/!d; }' pyproject.toml && \
-    poetry install --only main --no-root --no-cache && \
+# Install dependencies (production only)
+# 1. Poetry installs all dependencies from pyproject.toml
+# 2. Pip upgrades django-cfg to latest version (ensures fresh security patches)
+RUN poetry install --only main --no-root --no-cache && \
     pip install --upgrade django-cfg[full] && \
     rm -rf $POETRY_CACHE_DIR
 

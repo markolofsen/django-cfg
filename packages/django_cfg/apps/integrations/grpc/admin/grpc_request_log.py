@@ -58,6 +58,18 @@ class GRPCRequestLogAdmin(PydanticAdmin):
 
         return self.html.badge(obj.grpc_status_code, variant=variant, icon=icon)
 
+    @computed_field("API Key", ordering="api_key__name")
+    def api_key_display(self, obj):
+        """Display API key name if used for authentication."""
+        if not obj.api_key:
+            return self.html.empty()
+
+        return self.html.badge(
+            obj.api_key.name,
+            variant="info" if obj.api_key.is_valid else "danger",
+            icon=Icons.KEY
+        )
+
     @computed_field("Duration", ordering="duration_ms")
     def duration_display(self, obj):
         """Display duration with color coding based on speed."""
@@ -86,7 +98,7 @@ class GRPCRequestLogAdmin(PydanticAdmin):
             formatted = json.dumps(obj.request_data, indent=2)
             return self.html.code_block(formatted, language="json", max_height="400px")
         except Exception:
-            return str(obj.request_data)
+            return self.html.code(str(obj.request_data))
 
     request_data_display.short_description = "Request Data"
 
@@ -99,7 +111,7 @@ class GRPCRequestLogAdmin(PydanticAdmin):
             formatted = json.dumps(obj.response_data, indent=2)
             return self.html.code_block(formatted, language="json", max_height="400px")
         except Exception:
-            return str(obj.response_data)
+            return self.html.code(str(obj.response_data))
 
     response_data_display.short_description = "Response Data"
 
@@ -112,86 +124,83 @@ class GRPCRequestLogAdmin(PydanticAdmin):
                 separator=" "
             )
 
-        # gRPC status code
-        code_line = self.html.key_value(
-            "gRPC Status",
-            self.html.badge(obj.grpc_status_code, variant="danger", icon=Icons.ERROR)
-        ) if obj.grpc_status_code else None
-
-        # Error message
-        msg_line = self.html.key_value(
-            "Message",
-            self.html.text(obj.error_message, variant="danger")
-        ) if obj.error_message else None
-
-        # Error details
-        details_line = None
+        # Error details JSON
+        error_details_json = None
         if obj.error_details:
             try:
                 formatted = json.dumps(obj.error_details, indent=2)
-                details_line = self.html.key_value(
+                error_details_json = self.html.key_value(
                     "Details",
                     self.html.code_block(formatted, language="json", max_height="200px")
                 )
             except Exception:
                 pass
 
-        return self.html.breakdown(code_line, msg_line, details_line) if (code_line or msg_line) else self.html.empty()
+        return self.html.breakdown(
+            self.html.key_value(
+                "gRPC Status",
+                self.html.badge(obj.grpc_status_code, variant="danger", icon=Icons.ERROR)
+            ) if obj.grpc_status_code else None,
+            self.html.key_value(
+                "Message",
+                self.html.text(obj.error_message, variant="danger")
+            ) if obj.error_message else None,
+            error_details_json,
+        )
 
     error_details_display.short_description = "Error Details"
 
     def performance_stats_display(self, obj):
-        """Display performance statistics."""
-        # Duration
-        duration_line = self.html.key_value(
-            "Duration",
-            self.html.number(obj.duration_ms, suffix="ms") if obj.duration_ms else "N/A"
+        """Display performance statistics and authentication info."""
+        return self.html.breakdown(
+            self.html.key_value(
+                "Duration",
+                self.html.badge(f"{obj.duration_ms}ms", variant="info", icon=Icons.TIMER)
+            ) if obj.duration_ms is not None else None,
+            self.html.key_value(
+                "Request Size",
+                self.html.text(f"{obj.request_size:,} bytes", variant="secondary")
+            ) if obj.request_size else None,
+            self.html.key_value(
+                "Response Size",
+                self.html.text(f"{obj.response_size:,} bytes", variant="secondary")
+            ) if obj.response_size else None,
+            self.html.key_value(
+                "Authenticated",
+                self.html.badge(
+                    "Yes" if obj.is_authenticated else "No",
+                    variant="success" if obj.is_authenticated else "secondary",
+                    icon=Icons.VERIFIED_USER if obj.is_authenticated else Icons.PERSON
+                )
+            ),
+            self.html.key_value(
+                "API Key",
+                self.html.inline(
+                    self.html.badge(obj.api_key.name, variant="info", icon=Icons.KEY),
+                    self.html.text(f"({obj.api_key.masked_key})", variant="secondary"),
+                    separator=" "
+                )
+            ) if obj.api_key else None,
         )
-
-        # Request size
-        request_size_line = self.html.key_value(
-            "Request Size",
-            self.html.number(obj.request_size, suffix=" bytes") if obj.request_size else "N/A"
-        )
-
-        # Response size
-        response_size_line = self.html.key_value(
-            "Response Size",
-            self.html.number(obj.response_size, suffix=" bytes") if obj.response_size else "N/A"
-        )
-
-        # Authentication
-        auth_line = self.html.key_value(
-            "Authenticated",
-            self.html.badge("Yes" if obj.is_authenticated else "No",
-                          variant="success" if obj.is_authenticated else "secondary")
-        )
-
-        return self.html.breakdown(duration_line, request_size_line, response_size_line, auth_line)
 
     performance_stats_display.short_description = "Performance Statistics"
 
     def client_info_display(self, obj):
         """Display client information."""
-        # Client IP
-        ip_line = self.html.key_value(
-            "Client IP",
-            obj.client_ip if obj.client_ip else "N/A"
+        return self.html.breakdown(
+            self.html.key_value(
+                "Client IP",
+                self.html.text(obj.client_ip, variant="info") if obj.client_ip else self.html.empty("N/A")
+            ),
+            self.html.key_value(
+                "User Agent",
+                self.html.code(obj.user_agent)
+            ) if obj.user_agent else None,
+            self.html.key_value(
+                "Peer",
+                self.html.text(obj.peer, variant="secondary")
+            ) if obj.peer else None,
         )
-
-        # User Agent
-        ua_line = self.html.key_value(
-            "User Agent",
-            obj.user_agent if obj.user_agent else "N/A"
-        )
-
-        # Peer
-        peer_line = self.html.key_value(
-            "Peer",
-            self.html.text(obj.peer, variant="secondary") if obj.peer else "N/A"
-        )
-
-        return self.html.breakdown(ip_line, ua_line, peer_line)
 
     client_info_display.short_description = "Client Information"
 
@@ -205,7 +214,7 @@ class GRPCRequestLogAdmin(PydanticAdmin):
             ),
             (
                 "User Context",
-                {"fields": ("user", "is_authenticated")},
+                {"fields": ("user", "api_key", "is_authenticated")},
             ),
             (
                 "Performance",

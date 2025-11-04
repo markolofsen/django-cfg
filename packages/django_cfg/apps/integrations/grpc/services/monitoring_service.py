@@ -60,26 +60,142 @@ class MonitoringService:
 
     def get_overview_statistics(self, hours: int = 24) -> Dict:
         """
-        Get overview statistics for gRPC requests.
+        Get overview statistics for gRPC requests with server information.
 
         Args:
             hours: Statistics period in hours (1-168)
 
         Returns:
-            Dictionary with overview statistics
+            Dictionary with overview statistics and server info
 
         Example:
             >>> service = MonitoringService()
             >>> stats = service.get_overview_statistics(hours=24)
-            >>> stats['total_requests']
+            >>> stats['total']
             1000
+            >>> stats['server']['is_running']
+            True
         """
         hours = min(max(hours, 1), 168)  # 1 hour to 1 week
 
+        # Get request statistics
         stats = GRPCRequestLog.objects.get_statistics(hours=hours)
         stats["period_hours"] = hours
 
+        # Get server information
+        server_info = self._get_server_info_for_overview(hours=hours)
+        stats["server"] = server_info
+
         return stats
+
+    def _get_server_info_for_overview(self, hours: int) -> Dict:
+        """
+        Get server information for overview endpoint.
+
+        Args:
+            hours: Statistics period for service stats
+
+        Returns:
+            Dictionary with server information including services
+        """
+        from ..services import ServiceDiscovery
+
+        # Get current server status
+        current_server = GRPCServerStatus.objects.get_current_server()
+
+        if not current_server:
+            # No server running
+            grpc_server_config = get_grpc_server_config()
+            return {
+                "status": "stopped",
+                "is_running": False,
+                "host": grpc_server_config.host if grpc_server_config else "[::]",
+                "port": grpc_server_config.port if grpc_server_config else 50051,
+                "address": f"{grpc_server_config.host}:{grpc_server_config.port}" if grpc_server_config else "[::]:50051",
+                "pid": None,
+                "started_at": None,
+                "uptime_seconds": 0,
+                "uptime_display": "Not running",
+                "registered_services_count": 0,
+                "enable_reflection": False,
+                "enable_health_check": False,
+                "last_heartbeat": None,
+                "services": [],
+                "services_healthy": True,
+            }
+
+        # Get service statistics for the period
+        service_stats_qs = (
+            GRPCRequestLog.objects.recent(hours)
+            .values("service_name")
+            .annotate(
+                total=Count("id"),
+                errors=Count("id", filter=models.Q(status="error")),
+            )
+        )
+
+        # Create service stats lookup
+        service_stats_lookup = {
+            stat["service_name"]: stat for stat in service_stats_qs
+        }
+
+        # Get registered services from service discovery
+        discovery = ServiceDiscovery()
+        registered_services = discovery.get_registered_services()
+
+        # Build services list with stats
+        services_list = []
+        total_errors = 0
+
+        for service in registered_services:
+            service_name = service.get("name", "")
+            full_name = service.get("full_name", service_name)
+            methods = service.get("methods", [])
+
+            # Get stats for this service
+            stats = service_stats_lookup.get(full_name, {"total": 0, "errors": 0})
+            request_count = stats.get("total", 0)
+            error_count = stats.get("errors", 0)
+            success_rate = (
+                ((request_count - error_count) / request_count * 100)
+                if request_count > 0
+                else 100.0
+            )
+
+            total_errors += error_count
+
+            services_list.append({
+                "name": service_name,
+                "full_name": full_name,
+                "methods_count": len(methods),
+                "request_count": request_count,
+                "error_count": error_count,
+                "success_rate": round(success_rate, 2),
+            })
+
+        # Sort by request count
+        services_list.sort(key=lambda x: x["request_count"], reverse=True)
+
+        # Determine if all services are healthy (no errors in period)
+        services_healthy = total_errors == 0
+
+        return {
+            "status": current_server.status,
+            "is_running": current_server.is_running,
+            "host": current_server.host,
+            "port": current_server.port,
+            "address": current_server.address,
+            "pid": current_server.pid,
+            "started_at": current_server.started_at,
+            "uptime_seconds": current_server.uptime_seconds,
+            "uptime_display": current_server.uptime_display,
+            "registered_services_count": len(services_list),
+            "enable_reflection": current_server.enable_reflection,
+            "enable_health_check": current_server.enable_health_check,
+            "last_heartbeat": current_server.last_heartbeat,
+            "services": services_list,
+            "services_healthy": services_healthy,
+        }
 
     def get_recent_requests(
         self,
@@ -104,7 +220,7 @@ class MonitoringService:
             >>> queryset.count()
             25
         """
-        queryset = GRPCRequestLog.objects.all()
+        queryset = GRPCRequestLog.objects.select_related("user", "api_key").all()
 
         # Apply filters
         if service_name:

@@ -7,22 +7,15 @@ import questionary
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
 from django.core.validators import validate_email
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import InteractiveCommand
 
 User = get_user_model()
 
 
-logger = get_logger('superuser')
-
-class Command(BaseCommand):
-    # Web execution metadata
-    web_executable = False
-    requires_input = True
-    is_destructive = False
-
+class Command(InteractiveCommand):
+    command_name = 'superuser'
     help = 'Create a superuser with enhanced validation and configuration'
 
     def add_arguments(self, parser):
@@ -58,7 +51,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logger.info("Starting superuser command")
+        self.logger.info("Starting superuser command")
         if options['interactive'] or not any([options['username'], options['email'], options['password']]):
             self.create_superuser_interactive()
         else:

@@ -16,13 +16,14 @@ from .admin_api import (
 )
 from .channels import ChannelListSerializer, ChannelStatsSerializer
 from .health import HealthCheckSerializer
-from .publishes import RecentPublishesSerializer
+from .publishes import PublishSerializer, RecentPublishesSerializer
 from .stats import CentrifugoOverviewStatsSerializer
 
 __all__ = [
     # Monitoring API (Django logs)
     "HealthCheckSerializer",
     "CentrifugoOverviewStatsSerializer",
+    "PublishSerializer",
     "RecentPublishesSerializer",
     "ChannelStatsSerializer",
     "ChannelListSerializer",

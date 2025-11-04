@@ -5,19 +5,12 @@ Clear Constance configuration cache and database records.
 
 from django.conf import settings
 from django.core.cache import cache
-from django.core.management.base import BaseCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import DestructiveCommand
 
 
-class Command(BaseCommand):
-    logger = get_logger('clear_constance')
-
-    # Web execution metadata
-    web_executable = False
-    requires_input = True
-    is_destructive = True
-
+class Command(DestructiveCommand):
+    command_name = 'clear_constance'
     help = 'Clear Constance configuration cache and database records'
 
     def add_arguments(self, parser):

@@ -23,6 +23,7 @@ from ..serializers import (
     ChannelListSerializer,
     ChannelStatsSerializer,
     HealthCheckSerializer,
+    PublishSerializer,
     RecentPublishesSerializer,
 )
 from ..services import get_centrifugo_config
@@ -30,17 +31,19 @@ from ..services import get_centrifugo_config
 logger = get_logger("centrifugo.monitoring")
 
 
-class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.ViewSet):
+class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     ViewSet for Centrifugo monitoring and statistics.
 
     Provides comprehensive monitoring data for Centrifugo publishes including:
     - Health checks
     - Overview statistics
-    - Recent publishes
+    - Recent publishes (with DRF pagination)
     - Channel-level statistics
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    serializer_class = PublishSerializer
 
     @extend_schema(
         tags=["Centrifugo Monitoring"],
@@ -126,13 +129,20 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.ViewSet):
     @extend_schema(
         tags=["Centrifugo Monitoring"],
         summary="Get recent publishes",
-        description="Returns a list of recent Centrifugo publishes with their details.",
+        description="Returns a paginated list of recent Centrifugo publishes with their details. Uses standard DRF pagination.",
         parameters=[
             OpenApiParameter(
-                name="count",
+                name="page",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description="Number of publishes to return (default: 50, max: 200)",
+                description="Page number",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Items per page (default: 10, max: 100)",
                 required=False,
             ),
             OpenApiParameter(
@@ -149,16 +159,9 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.ViewSet):
                 description="Filter by status (success, failed, timeout, pending, partial)",
                 required=False,
             ),
-            OpenApiParameter(
-                name="offset",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                description="Offset for pagination (default: 0)",
-                required=False,
-            ),
         ],
         responses={
-            200: RecentPublishesSerializer,
+            200: PublishSerializer(many=True),
             400: {"description": "Invalid parameters"},
         },
     )
@@ -166,28 +169,23 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.ViewSet):
     def publishes(self, request):
         """Get recent Centrifugo publishes."""
         try:
-            count = int(request.GET.get("count", 50))
-            count = min(count, 200)  # Max 200
-
             channel = request.GET.get("channel")
-            status_filter = request.GET.get("status")  # NEW: status filter
-            offset = int(request.GET.get("offset", 0))  # NEW: offset for pagination
+            status_filter = request.GET.get("status")
 
             queryset = CentrifugoLog.objects.all()
 
             if channel:
                 queryset = queryset.filter(channel=channel)
 
-            # NEW: Filter by status
+            # Filter by status
             if status_filter and status_filter in ["success", "failed", "timeout", "pending", "partial"]:
                 queryset = queryset.filter(status=status_filter)
 
-            # Get total count before slicing
-            total = queryset.count()
+            queryset = queryset.order_by("-created_at")
 
-            # NEW: Apply offset and limit
+            # Convert queryset to list of dicts for serialization
             publishes_list = list(
-                queryset.order_by("-created_at")[offset:offset + count].values(
+                queryset.values(
                     "message_id",
                     "channel",
                     "status",
@@ -202,23 +200,10 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.ViewSet):
                 )
             )
 
-            # Convert datetime to ISO format
-            for pub in publishes_list:
-                if pub["created_at"]:
-                    pub["created_at"] = pub["created_at"].isoformat()
-                if pub["completed_at"]:
-                    pub["completed_at"] = pub["completed_at"].isoformat()
-
-            response_data = {
-                "publishes": publishes_list,
-                "count": len(publishes_list),
-                "total_available": total,
-                "offset": offset,  # NEW: for pagination
-                "has_more": (offset + count) < total,  # NEW: pagination helper
-            }
-
-            serializer = RecentPublishesSerializer(**response_data)
-            return Response(serializer.model_dump())
+            # Use DRF pagination
+            page = self.paginate_queryset(publishes_list)
+            serializer = PublishSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Recent publishes validation error: {e}")

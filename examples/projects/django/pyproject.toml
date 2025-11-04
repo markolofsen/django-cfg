@@ -11,6 +11,7 @@ python = ">=3.12,<3.14"
 # Django framework (required by django-cfg)
 django = "^5.2.0"
 # django-cfg from PyPI with full extras (grpc, dramatiq, centrifugo)
+# For local development, use: make install-local
 django-cfg = {version = "*", extras = ["full"]}
 # pydantic-ai is pulled by django-cfg automatically
 
@@ -26,13 +27,6 @@ markdown = "^3.9"
 grpcio = "^1.76.0"
 grpcio-tools = "^1.76.0"
 protobuf = "^6.33.0"
-
-[tool.poetry.group.local]
-optional = true
-
-[tool.poetry.group.local.dependencies]
-# Local development dependencies (path configured via Makefile)
-django-cfg = {path = "/Users/markinmatrix/djangocfg", extras = ["full"], develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.0"

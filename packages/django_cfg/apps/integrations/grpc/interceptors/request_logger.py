@@ -359,9 +359,12 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         try:
             from ..models import GRPCRequestLog
 
-            # Get user from context (set by JWTAuthInterceptor)
+            # Get user and api_key from context (set by ApiKeyAuthInterceptor)
             user = getattr(context, "user", None)
+            api_key = getattr(context, "api_key", None)
             is_authenticated = user is not None
+
+            logger.info(f"[RequestLogger] Got context.api_key = {api_key} (user={user}, authenticated={is_authenticated})")
 
             # Extract client IP from peer
             client_ip = self._extract_ip_from_peer(peer)
@@ -373,6 +376,7 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 method_name=method_name,
                 full_method=full_method,
                 user=user if is_authenticated else None,
+                api_key=api_key,
                 is_authenticated=is_authenticated,
                 client_ip=client_ip,
                 user_agent=user_agent,

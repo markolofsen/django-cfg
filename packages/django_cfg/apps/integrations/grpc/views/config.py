@@ -77,7 +77,7 @@ class GRPCConfigViewSet(AdminAPIMixin, viewsets.ViewSet):
                     "interceptors": grpc_config.server.interceptors,
                 },
                 "features": {
-                    "jwt_auth": grpc_config.auth.enabled,
+                    "api_key_auth": grpc_config.auth.enabled,
                     "request_logging": True,  # Always on
                     "metrics": True,  # Always on
                     "reflection": grpc_config.server.enable_reflection,

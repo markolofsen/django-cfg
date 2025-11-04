@@ -5,18 +5,24 @@ Migrate all databases based on django-cfg configuration.
 
 from django.apps import apps
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
 
 from django_cfg.core.state import get_current_config
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import AdminCommand
 
-logger = get_logger('migrate_all')
 
-class Command(BaseCommand):
-    # Web execution metadata
-    web_executable = False
-    requires_input = False
-    is_destructive = True
+class Command(AdminCommand):
+    """
+    Migrate all databases - destructive but non-interactive admin command.
+
+    This command is marked as destructive because it modifies the database schema,
+    but it doesn't require user input during execution.
+    """
+
+    command_name = 'migrate_all'
+
+    # Override AdminCommand defaults
+    web_executable = False  # Too risky for web execution
+    is_destructive = True   # Modifies database schema
 
     help = "Migrate all databases based on django-cfg configuration"
 
@@ -34,7 +40,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Run migrations for all configured databases."""
-        logger.info("Starting migrate_all command")
+        self.logger.info("Starting migrate_all command")
         dry_run = options.get("dry_run", False)
         skip_makemigrations = options.get("skip_makemigrations", False)
 
@@ -76,7 +82,7 @@ class Command(BaseCommand):
                                 call_command("migrate", app_label, database=db_name, verbosity=1)
                             except Exception as e:
                                 self.stdout.write(self.style.ERROR(f"  ❌ Migration failed for {app_label} on {db_name}: {e}"))
-                                logger.error(f"Migration failed for {app_label} on {db_name}: {e}")
+                                self.logger.error(f"Migration failed for {app_label} on {db_name}: {e}")
                                 raise SystemExit(1)
                         else:
                             self.stdout.write(f"  Would run: migrate {app_label} --database={db_name}")
@@ -88,7 +94,7 @@ class Command(BaseCommand):
                         call_command("migrate", database=db_name, verbosity=1)
                     except Exception as e:
                         self.stdout.write(self.style.ERROR(f"  ❌ Migration failed for all apps on {db_name}: {e}"))
-                        logger.error(f"Migration failed for all apps on {db_name}: {e}")
+                        self.logger.error(f"Migration failed for all apps on {db_name}: {e}")
                         raise SystemExit(1)
                 else:
                     self.stdout.write(f"  Would run: migrate --database={db_name}")
@@ -100,7 +106,7 @@ class Command(BaseCommand):
                 call_command("migrate", "constance", database="default", verbosity=1)
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"❌ Constance migration failed: {e}"))
-                logger.error(f"Constance migration failed: {e}")
+                self.logger.error(f"Constance migration failed: {e}")
                 raise SystemExit(1)
         else:
             self.stdout.write("  Would run: migrate constance --database=default")

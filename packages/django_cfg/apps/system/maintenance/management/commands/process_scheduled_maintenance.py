@@ -5,16 +5,18 @@ Handles automatic start/stop of scheduled maintenance windows.
 """
 
 
-from django.core.management.base import BaseCommand
 from django.utils import timezone
+
+from django_cfg.management.utils import AdminCommand
 
 from ...models import ScheduledMaintenance
 from ...services.scheduled_maintenance_service import scheduled_maintenance_service
 
 
-class Command(BaseCommand):
+class Command(AdminCommand):
     """Process scheduled maintenance events."""
 
+    command_name = 'process_scheduled_maintenance'
     help = 'Process scheduled maintenance events (start due, complete overdue)'
 
     def add_arguments(self, parser):

@@ -49,6 +49,7 @@ def list_commands_view(request):
                 "name": command_name,
                 "app": app_name,
                 "description": _get_command_description(command_name),
+                **_get_command_metadata(command_name, app_name),
             }
 
             if app_name == "django_cfg":
@@ -268,6 +269,37 @@ def _get_command_description(command_name: str) -> str:
         return getattr(command_class, 'help', f'Django management command: {command_name}')
     except Exception:
         return f'Django management command: {command_name}'
+
+
+def _get_command_metadata(command_name: str, app_name: str) -> dict:
+    """
+    Get security metadata for a command.
+
+    Returns:
+        Dict with web_executable, requires_input, is_destructive, is_allowed
+    """
+    try:
+        from django.core.management import load_command_class
+        from django_cfg.apps.system.dashboard.services.commands_security import is_command_allowed, get_command_risk_level
+
+        command_instance = load_command_class(app_name, command_name)
+
+        return {
+            'web_executable': getattr(command_instance, 'web_executable', None),
+            'requires_input': getattr(command_instance, 'requires_input', None),
+            'is_destructive': getattr(command_instance, 'is_destructive', None),
+            'is_allowed': is_command_allowed(command_name, app_name),
+            'risk_level': get_command_risk_level(command_name, app_name),
+        }
+    except Exception as e:
+        logger.debug(f"Could not load metadata for {command_name}: {e}")
+        return {
+            'web_executable': None,
+            'requires_input': None,
+            'is_destructive': None,
+            'is_allowed': False,
+            'risk_level': 'unknown',
+        }
 
 
 def _get_command_help(command_name: str) -> str:

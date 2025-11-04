@@ -36,7 +36,7 @@ class GRPCFrameworkConfigSerializer(serializers.Serializer):
 class GRPCFeaturesSerializer(serializers.Serializer):
     """gRPC features configuration."""
 
-    jwt_auth = serializers.BooleanField(help_text="JWT authentication enabled")
+    api_key_auth = serializers.BooleanField(help_text="API key authentication enabled")
     request_logging = serializers.BooleanField(help_text="Request logging enabled")
     metrics = serializers.BooleanField(help_text="Metrics collection enabled")
     reflection = serializers.BooleanField(help_text="gRPC reflection enabled")

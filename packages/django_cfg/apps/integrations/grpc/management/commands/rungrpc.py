@@ -9,13 +9,14 @@ Usage:
 
 from __future__ import annotations
 
-import logging
 import signal
 import sys
 from concurrent import futures
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+
+from django_cfg.modules.django_logging import get_logger
 
 # Check dependencies before importing grpc
 from django_cfg.apps.integrations.grpc._cfg import check_grpc_dependencies
@@ -28,8 +29,6 @@ except Exception as e:
 
 # Now safe to import grpc
 import grpc
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -45,7 +44,17 @@ class Command(BaseCommand):
     - Signal handling
     """
 
+    # Web execution metadata
+    web_executable = False
+    requires_input = False
+    is_destructive = False
+
     help = "Run gRPC server"
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with self.logger."""
+        super().__init__(*args, **kwargs)
+        self.logger = get_logger('rungrpc')
 
     def add_arguments(self, parser):
         """Add command arguments."""
@@ -82,22 +91,49 @@ class Command(BaseCommand):
         """Run gRPC server."""
         # Import models here to avoid AppRegistryNotReady
         from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
+        from django_cfg.apps.integrations.grpc.services.config_helper import (
+            get_grpc_server_config,
+        )
 
         # Get configuration
-        grpc_server_config = getattr(settings, "GRPC_SERVER", {})
+        grpc_server_config_obj = get_grpc_server_config()
 
-        # Get server parameters
-        host = options["host"] or grpc_server_config.get("host", "[::]")
-        port = options["port"] or grpc_server_config.get("port", 50051)
-        max_workers = options["workers"] or grpc_server_config.get("max_workers", 10)
-
-        # Server options
-        enable_reflection = not options["no_reflection"] and grpc_server_config.get(
-            "enable_reflection", False
-        )
-        enable_health_check = not options["no_health_check"] and grpc_server_config.get(
-            "enable_health_check", True
-        )
+        # Fallback to settings if not configured via django-cfg
+        if not grpc_server_config_obj:
+            grpc_server_config = getattr(settings, "GRPC_SERVER", {})
+            host = options["host"] or grpc_server_config.get("host", "[::]")
+            port = options["port"] or grpc_server_config.get("port", 50051)
+            max_workers = options["workers"] or grpc_server_config.get("max_workers", 10)
+            enable_reflection = not options["no_reflection"] and grpc_server_config.get(
+                "enable_reflection", False
+            )
+            enable_health_check = not options["no_health_check"] and grpc_server_config.get(
+                "enable_health_check", True
+            )
+        else:
+            # Use django-cfg config
+            host = options["host"] or grpc_server_config_obj.host
+            port = options["port"] or grpc_server_config_obj.port
+            max_workers = options["workers"] or grpc_server_config_obj.max_workers
+            enable_reflection = (
+                not options["no_reflection"] and grpc_server_config_obj.enable_reflection
+            )
+            enable_health_check = (
+                not options["no_health_check"]
+                and grpc_server_config_obj.enable_health_check
+            )
+            grpc_server_config = {
+                "host": grpc_server_config_obj.host,
+                "port": grpc_server_config_obj.port,
+                "max_workers": grpc_server_config_obj.max_workers,
+                "enable_reflection": grpc_server_config_obj.enable_reflection,
+                "enable_health_check": grpc_server_config_obj.enable_health_check,
+                "compression": grpc_server_config_obj.compression,
+                "max_send_message_length": grpc_server_config_obj.max_send_message_length,
+                "max_receive_message_length": grpc_server_config_obj.max_receive_message_length,
+                "keepalive_time_ms": grpc_server_config_obj.keepalive_time_ms,
+                "keepalive_timeout_ms": grpc_server_config_obj.keepalive_timeout_ms,
+            }
 
         # gRPC options
         grpc_options = self._build_grpc_options(grpc_server_config)
@@ -149,7 +185,7 @@ class Command(BaseCommand):
             server_status.save(update_fields=["registered_services"])
 
         except Exception as e:
-            logger.warning(f"Could not start server status tracking: {e}")
+            self.logger.warning(f"Could not start server status tracking: {e}")
 
         # Start server
         server.start()
@@ -159,7 +195,7 @@ class Command(BaseCommand):
             try:
                 server_status.mark_running()
             except Exception as e:
-                logger.warning(f"Could not mark server as running: {e}")
+                self.logger.warning(f"Could not mark server as running: {e}")
 
         # Display gRPC-specific startup info
         try:
@@ -183,7 +219,7 @@ class Command(BaseCommand):
                 service_names=service_names,
             )
         except Exception as e:
-            logger.warning(f"Could not display gRPC startup info: {e}")
+            self.logger.warning(f"Could not display gRPC startup info: {e}")
 
         # Setup signal handlers for graceful shutdown
         self._setup_signal_handlers(server, server_status)
@@ -269,10 +305,10 @@ class Command(BaseCommand):
                 interceptor = interceptor_class()
                 interceptors.append(interceptor)
 
-                logger.debug(f"Loaded interceptor: {class_name}")
+                self.logger.debug(f"Loaded interceptor: {class_name}")
 
             except Exception as e:
-                logger.error(f"Failed to load interceptor {interceptor_path}: {e}")
+                self.logger.error(f"Failed to load interceptor {interceptor_path}: {e}")
 
         return interceptors
 
@@ -294,7 +330,7 @@ class Command(BaseCommand):
 
             # Set overall server status
             health_servicer.set("", health_pb2.HealthCheckResponse.SERVING)
-            logger.info("Overall server health: SERVING")
+            self.logger.info("Overall server health: SERVING")
 
             # Get registered service names
             service_names = []
@@ -316,12 +352,12 @@ class Command(BaseCommand):
                     service_name,
                     health_pb2.HealthCheckResponse.SERVING
                 )
-                logger.info(f"Service '{service_name}' health: SERVING")
+                self.logger.info(f"Service '{service_name}' health: SERVING")
 
             # Register health service
             health_pb2_grpc.add_HealthServicer_to_server(health_servicer, server)
 
-            logger.info(
+            self.logger.info(
                 f"✅ Health check enabled for {len(service_names)} service(s)"
             )
 
@@ -329,13 +365,13 @@ class Command(BaseCommand):
             return health_servicer
 
         except ImportError:
-            logger.warning(
+            self.logger.warning(
                 "grpcio-health-checking not installed. "
                 "Install with: pip install 'django-cfg[grpc]'"
             )
             return None
         except Exception as e:
-            logger.error(f"Failed to add health check service: {e}")
+            self.logger.error(f"Failed to add health check service: {e}")
             return None
 
     def _add_reflection(self, server):
@@ -368,15 +404,15 @@ class Command(BaseCommand):
             # Add reflection
             reflection.enable_server_reflection(service_names, server)
 
-            logger.info(f"Server reflection enabled for {len(service_names)} service(s)")
+            self.logger.info(f"Server reflection enabled for {len(service_names)} service(s)")
 
         except ImportError:
-            logger.warning(
+            self.logger.warning(
                 "grpcio-reflection not installed. "
                 "Install with: pip install grpcio-reflection"
             )
         except Exception as e:
-            logger.error(f"Failed to enable server reflection: {e}")
+            self.logger.error(f"Failed to enable server reflection: {e}")
 
     def _register_services(self, server) -> int:
         """
@@ -395,7 +431,7 @@ class Command(BaseCommand):
             return count
 
         except Exception as e:
-            logger.error(f"Failed to register services: {e}", exc_info=True)
+            self.logger.error(f"Failed to register services: {e}", exc_info=True)
             self.stdout.write(
                 self.style.ERROR(f"Error registering services: {e}")
             )
@@ -425,7 +461,7 @@ class Command(BaseCommand):
                 try:
                     server_status.mark_stopping()
                 except Exception as e:
-                    logger.warning(f"Could not mark server as stopping: {e}")
+                    self.logger.warning(f"Could not mark server as stopping: {e}")
 
             # Stop server with grace period
             server.stop(grace=5)
@@ -435,7 +471,7 @@ class Command(BaseCommand):
                 try:
                     server_status.mark_stopped()
                 except Exception as e:
-                    logger.warning(f"Could not mark server as stopped: {e}")
+                    self.logger.warning(f"Could not mark server as stopped: {e}")
 
             self.stdout.write(self.style.SUCCESS("✅ Server stopped"))
 

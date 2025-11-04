@@ -1,9 +1,9 @@
 """
 gRPC authentication components.
 
-Provides JWT authentication for gRPC services.
+Provides API key authentication for gRPC services.
 """
 
-from .jwt_auth import JWTAuthInterceptor
+from .api_key_auth import ApiKeyAuthInterceptor
 
-__all__ = ["JWTAuthInterceptor"]
+__all__ = ["ApiKeyAuthInterceptor"]

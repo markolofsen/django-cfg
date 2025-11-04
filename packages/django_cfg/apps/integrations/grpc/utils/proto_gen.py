@@ -184,7 +184,21 @@ class ProtoGenerator:
 
         field_number = 1
 
-        # Add id field
+        # Track fields to skip to avoid duplicates
+        fields_to_skip = set()
+
+        # If we'll add id separately, skip it in the field iteration
+        if include_id:
+            fields_to_skip.add('id')
+
+        # If we'll add timestamps separately, skip them in the field iteration
+        if include_timestamps:
+            if hasattr(model, "created_at"):
+                fields_to_skip.add('created_at')
+            if hasattr(model, "updated_at"):
+                fields_to_skip.add('updated_at')
+
+        # Add id field first if requested
         if include_id:
             lines.append(f"  int64 id = {field_number};")
             field_number += 1
@@ -197,6 +211,10 @@ class ProtoGenerator:
 
             # Skip many-to-many for now (handle separately)
             if isinstance(field, models.ManyToManyField):
+                continue
+
+            # Skip fields that will be added separately to avoid duplicates
+            if field.name in fields_to_skip:
                 continue
 
             # Get field info
@@ -213,13 +231,13 @@ class ProtoGenerator:
             lines.append(field_def)
             field_number += 1
 
-        # Add timestamp fields if requested
+        # Add timestamp fields last if requested
         if include_timestamps:
             if hasattr(model, "created_at"):
-                lines.append(f"  string created_at = {field_number};")
+                lines.append(f"  optional string created_at = {field_number};")
                 field_number += 1
             if hasattr(model, "updated_at"):
-                lines.append(f"  string updated_at = {field_number};")
+                lines.append(f"  optional string updated_at = {field_number};")
                 field_number += 1
 
         lines.append("}")
@@ -375,11 +393,24 @@ def generate_proto_for_app(app_label: str, output_dir: Optional[Path] = None) ->
         print(f"Generated {count} proto file(s)")
         ```
     """
+    # Get gRPC config from django-cfg (Pydantic)
+    from ..services.config_helper import get_grpc_config
+
+    grpc_config = get_grpc_config()
+    proto_config = grpc_config.proto if grpc_config else None
+
     # Get output directory
     if output_dir is None:
-        grpc_proto_config = getattr(settings, "GRPC_PROTO", {})
-        output_dir_str = grpc_proto_config.get("output_dir", "protos")
+        if proto_config:
+            output_dir_str = proto_config.output_dir
+        else:
+            output_dir_str = "protos"  # Fallback
+
         output_dir = Path(output_dir_str)
+
+        # Make absolute if relative
+        if not output_dir.is_absolute():
+            output_dir = settings.BASE_DIR / output_dir
 
     # Get app config
     try:
@@ -398,10 +429,19 @@ def generate_proto_for_app(app_label: str, output_dir: Optional[Path] = None) ->
         logger.warning(f"No models found in app '{app_label}'")
         return 0
 
+    # Build package name: combine prefix + app_label
+    if proto_config and proto_config.package_prefix:
+        full_package = f"{proto_config.package_prefix}.{app_label}"
+    else:
+        full_package = app_label
+
+    # Get field naming
+    field_naming = proto_config.field_naming if proto_config else "snake_case"
+
     # Generate proto file
     generator = ProtoGenerator(
-        package_prefix=app_label,
-        field_naming="snake_case",
+        package_prefix=full_package,
+        field_naming=field_naming,
     )
 
     output_path = output_dir / f"{app_label}.proto"

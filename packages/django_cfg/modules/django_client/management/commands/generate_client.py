@@ -8,12 +8,15 @@ Usage:
 """
 
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
+
+from django_cfg.management.utils import AdminCommand
 
 
-class Command(BaseCommand):
+class Command(AdminCommand):
     """Generate OpenAPI clients for configured application groups."""
 
+    command_name = 'generate_client'
     help = "Generate Python, TypeScript, and Go API clients from OpenAPI schemas"
 
     def add_arguments(self, parser):

@@ -10,21 +10,14 @@ from pathlib import Path
 
 import questionary
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import InteractiveCommand
 
 User = get_user_model()
 
 
-logger = get_logger('create_token')
-
-class Command(BaseCommand):
-    # Web execution metadata
-    web_executable = False
-    requires_input = True
-    is_destructive = False
-
+class Command(InteractiveCommand):
+    command_name = 'create_token'
     help = 'Create API tokens and authentication tokens'
 
     def add_arguments(self, parser):
@@ -52,7 +45,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logger.info("Starting create_token command")
+        self.logger.info("Starting create_token command")
         if options['user'] and options['type']:
             self.create_token_for_user(
                 username=options['user'],

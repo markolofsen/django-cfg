@@ -5,22 +5,16 @@ Tests email sending functionality using django_cfg configuration.
 """
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import SafeCommand
 
 User = get_user_model()
-logger = get_logger('test_email')
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Command to test email functionality."""
 
-    # Web execution metadata
-    web_executable = True
-    requires_input = False
-    is_destructive = False
-
+    command_name = 'test_email'
     help = "Test email sending functionality"
 
     def add_arguments(self, parser):
@@ -48,7 +42,7 @@ class Command(BaseCommand):
         subject = options["subject"]
         message = options["message"]
 
-        logger.info(f"Starting email test for {email}")
+        self.logger.info(f"Starting email test for {email}")
         self.stdout.write(f"🚀 Testing email service for {email}")
 
         # Create test user if not exists

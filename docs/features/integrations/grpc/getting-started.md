@@ -64,6 +64,10 @@ class MyConfig(DjangoConfig):
         ),
         auth=GRPCAuthConfig(
             enabled=False,  # Disable auth for now (development)
+            # Or enable API key auth:
+            # enabled=True,
+            # require_auth=False,
+            # accept_django_secret_key=True,  # Allow SECRET_KEY for dev
         ),
         # Auto-discover services from these apps
         auto_register_apps=True,
@@ -256,7 +260,146 @@ http://localhost:8000/admin/integrations/grpc/grpcrequestlog/
 
 ## 🎯 Add Authentication
 
-### Step 1: Enable JWT Auth
+### Option 1: API Key Authentication (Recommended)
+
+API keys are perfect for service-to-service communication and CLI tools.
+
+#### Step 1: Enable API Key Auth
+
+```python
+# api/config.py
+grpc: GRPCConfig = GRPCConfig(
+    auth=GRPCAuthConfig(
+        enabled=True,
+        require_auth=False,  # Optional auth (some methods public)
+        api_key_header="x-api-key",
+        accept_django_secret_key=True,  # Allow SECRET_KEY for dev/internal
+        public_methods=[
+            "/grpc.health.v1.Health/Check",
+        ],
+    ),
+)
+```
+
+#### Step 2: Create API Key
+
+Via Django Admin:
+```
+1. Open /admin/integrations/grpc/grpcapikey/
+2. Click "Add gRPC API Key"
+3. Fill in:
+   - Name: "Analytics Service"
+   - Description: "Internal analytics microservice"
+   - User: Select user to authenticate as
+   - Type: Service
+   - Expires at: Optional (e.g., 1 year from now)
+4. Click "Save"
+5. Copy the generated API key from the detail page
+```
+
+Or programmatically:
+```python
+from django_cfg.apps.integrations.grpc.models import GrpcApiKey
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+admin_user = User.objects.filter(is_superuser=True).first()
+
+# Create API key
+api_key = GrpcApiKey.objects.create_for_user(
+    user=admin_user,
+    name="Analytics Service",
+    description="Internal analytics microservice",
+    key_type="service",
+    expires_in_days=365,  # Expires in 1 year
+)
+
+print(f"API Key: {api_key.key}")
+# Save this key securely!
+```
+
+#### Step 3: Use API Key
+
+With grpcurl:
+```bash
+grpcurl -plaintext \
+  -H "x-api-key: <your_api_key_here>" \
+  -d '{"user_id": 1}' \
+  localhost:50051 api.users.UserService/GetUser
+```
+
+With Python client:
+```python
+import grpc
+
+channel = grpc.insecure_channel('localhost:50051')
+metadata = [('x-api-key', 'your_api_key_here')]
+
+stub = UserServiceStub(channel)
+response = stub.GetUser(request, metadata=metadata)
+```
+
+For development/internal use with SECRET_KEY:
+```bash
+# Use Django SECRET_KEY as API key (convenient for dev)
+grpcurl -plaintext \
+  -H "x-api-key: $(python manage.py shell -c 'from django.conf import settings; print(settings.SECRET_KEY)')" \
+  localhost:50051 api.users.UserService/GetUser
+```
+
+#### Step 4: Access User in Service
+
+```python
+class UserService(BaseService):
+    def UpdateProfile(self, request, context):
+        # Get authenticated user (from API key)
+        user = self.require_user(context)
+
+        # Get API key used for authentication
+        api_key = getattr(context, 'api_key', None)
+        if api_key:
+            print(f"Request from API key: {api_key.name}")
+
+        # Update profile
+        user.bio = request.bio
+        user.save()
+
+        return UserResponse(...)
+```
+
+#### Step 5: Monitor Usage
+
+View API key usage in Django Admin:
+```
+/admin/integrations/grpc/grpcapikey/
+```
+
+Each API key shows:
+- Total request count
+- Last used timestamp
+- Status (active/expired/revoked)
+- Associated request logs
+
+Or programmatically:
+```python
+from django_cfg.apps.integrations.grpc.models import GrpcApiKey
+
+# Get API key
+api_key = GrpcApiKey.objects.get(name="Analytics Service")
+
+print(f"Request count: {api_key.request_count}")
+print(f"Last used: {api_key.last_used_at}")
+print(f"Is valid: {api_key.is_valid}")
+
+# View requests made with this key
+logs = api_key.request_logs.all()[:10]
+```
+
+### Option 2: JWT Authentication
+
+JWT is perfect for user-facing applications.
+
+#### Step 1: Enable JWT Auth
 
 ```python
 # api/config.py
@@ -269,7 +412,7 @@ grpc: GRPCConfig = GRPCConfig(
 )
 ```
 
-### Step 2: Protect Methods
+#### Step 2: Protect Methods
 
 ```python
 # apps/users/grpc_services.py
@@ -295,7 +438,7 @@ class UserService(BaseService):
         return empty_pb2.Empty()
 ```
 
-### Step 3: Get JWT Token
+#### Step 3: Get JWT Token
 
 ```bash
 # Login to get token
@@ -310,7 +453,7 @@ curl -X POST http://localhost:8000/api/auth/login/ \
 # }
 ```
 
-### Step 4: Call with Authentication
+#### Step 4: Call with Authentication
 
 ```bash
 # grpcurl with token
@@ -319,6 +462,31 @@ grpcurl -plaintext \
   -d '{"bio": "New bio"}' \
   localhost:50051 api.users.UserService/UpdateProfile
 ```
+
+### Combining API Key and JWT
+
+You can use both authentication methods simultaneously:
+
+```python
+grpc: GRPCConfig = GRPCConfig(
+    auth=GRPCAuthConfig(
+        enabled=True,
+        require_auth=False,
+        # API key auth settings
+        api_key_header="x-api-key",
+        accept_django_secret_key=True,
+        # JWT auth settings
+        jwt_algorithm="HS256",
+    ),
+)
+```
+
+The auth flow:
+1. First checks for API key in `x-api-key` header
+2. If found and valid, authenticates as API key's user
+3. If not found, checks for JWT in `Authorization` header
+4. If found and valid, authenticates as JWT's user
+5. If neither, allows anonymous access (if `require_auth=False`)
 
 ## 📊 Monitor Requests
 
@@ -506,17 +674,20 @@ from django_cfg.apps.integrations.grpc.services import BaseService  # ✅
 Now that you have a working service:
 
 1. **[Concepts](./concepts.md)** - Understand architecture and patterns
-2. **[Configuration](./configuration.md)** - Explore all config options
-3. **[Dynamic Invocation](./dynamic-invocation.md)** - Test without proto files
-4. **[FAQ](./faq.md)** - Common questions and solutions
+2. **[Authentication](./authentication.md)** - Deep dive into API keys and JWT
+3. **[Configuration](./configuration.md)** - Explore all config options
+4. **[Dynamic Invocation](./dynamic-invocation.md)** - Test without proto files
+5. **[FAQ](./faq.md)** - Common questions and solutions
 
 ## 💡 Key Takeaways
 
 - ✅ Services are **auto-discovered** from `grpc_services.py`
 - ✅ Use **base classes** for common patterns
 - ✅ **Django ORM** works out of the box
+- ✅ **API key auth** is simple and secure with admin interface
 - ✅ **JWT auth** integrates with Django users
-- ✅ All requests are **automatically logged**
+- ✅ All requests are **automatically logged** with API key tracking
+- ✅ **Server monitoring** tracks uptime and registered services
 - ✅ Use **grpcurl** for testing during development
 
 **Congratulations!** You've built your first production-ready gRPC service with Django-CFG. 🎉

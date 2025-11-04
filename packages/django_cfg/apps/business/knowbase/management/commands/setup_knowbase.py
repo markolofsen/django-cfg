@@ -2,13 +2,15 @@
 Setup command for Knowledge Base application.
 """
 
-from django.core.management.base import BaseCommand
 from django.db import connection
 
+from django_cfg.management.utils import AdminCommand
 
-class Command(BaseCommand):
+
+class Command(AdminCommand):
     """Setup Knowledge Base with pgvector extension and initial data."""
 
+    command_name = 'setup_knowbase'
     help = 'Setup Knowledge Base with pgvector extension and run migrations'
 
     def add_arguments(self, parser):

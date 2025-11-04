@@ -22,8 +22,10 @@ Django-CFG provides a **complete gRPC server** that integrates seamlessly with D
 
 - ✅ **Auto-Discovery** - Services automatically registered from Django apps
 - ✅ **Django Integration** - Full ORM, auth, admin, signals access
-- ✅ **JWT Authentication** - Built-in token-based authentication
-- ✅ **Request Logging** - All requests logged to database
+- ✅ **API Key Authentication** - Simple, secure API key management with admin interface
+- ✅ **Request Logging** - All requests logged to database with API key tracking
+- ✅ **Server Monitoring** - Real-time server status and uptime tracking
+- ✅ **REST API** - Monitor services and manage API keys via REST endpoints
 - ✅ **Production-Ready** - Interceptors, error handling, monitoring
 - ✅ **Developer-Friendly** - Base classes, helpers, zero configuration
 
@@ -106,10 +108,10 @@ graph TB
     subgraph "Django-CFG gRPC Server"
         Server["gRPC Server<br/>(Port 50051)"]
 
-        subgraph "Interceptors"
-            Logger["Request Logger"]
-            Auth["JWT Auth"]
-            Error["Error Handler"]
+        subgraph "Interceptors (Order Matters!)"
+            ApiKeyAuth["1. API Key Auth"]
+            Logger["2. Request Logger"]
+            Error["3. Error Handler"]
         end
 
         subgraph "Services"
@@ -122,19 +124,21 @@ graph TB
     subgraph "Django"
         ORM["Django ORM"]
         Admin["Admin Interface"]
+        Monitoring["Server Monitoring"]
     end
 
     Python --> Server
     Go --> Server
     JS --> Server
 
-    Server --> Logger --> Auth --> Error
+    Server --> ApiKeyAuth --> Logger --> Error
     Error --> Auto --> User
     Auto --> Product
 
     User --> ORM
     Product --> ORM
-    Logger -.->|Logs| Admin
+    Logger -.->|Logs with API key| Admin
+    ApiKeyAuth -.->|Tracks usage| Monitoring
 
     style Server fill:#e3f2fd
     style User fill:#e8f5e9
@@ -182,10 +186,31 @@ class OrderService(BaseService):
         return OrderResponse(...)
 ```
 
-### JWT Authentication
+### API Key Authentication
 
-Built-in JWT authentication with Django users:
+Manage API keys through Django Admin for secure service authentication:
 
+**Create key:**
+1. Go to Django Admin → gRPC API Keys
+2. Click "Add gRPC API Key"
+3. Fill in name, user, type, expiration
+4. Save and copy the generated key
+
+**Use key:**
+```bash
+grpcurl -H "x-api-key: <your-key>" \
+  localhost:50051 api.users.UserService/GetUser
+```
+
+**Features:**
+- Auto-generated secure keys (64-character hex)
+- Managed through Django Admin
+- Optional expiration dates
+- Usage tracked automatically (request count, last used)
+- Easy revocation
+- Django SECRET_KEY support for dev/internal use
+
+**Example service with auth:**
 ```python
 class UserService(BaseService):
     def UpdateProfile(self, request, context):
@@ -196,21 +221,20 @@ class UserService(BaseService):
         if not user.has_perm('users.change_profile'):
             self.abort_permission_denied(context, "No access")
 
+        # Access API key info
+        api_key = getattr(context, 'api_key', None)
+        if api_key:
+            print(f"Request from: {api_key.name}")
+
         # Update profile
         user.bio = request.bio
         user.save()
         return UserResponse(...)
 ```
 
-Call with token:
-```bash
-grpcurl -H "Authorization: Bearer <token>" \
-  localhost:50051 api.users.UserService/UpdateProfile
-```
-
 ### Request Logging
 
-All requests automatically logged to database:
+All requests automatically logged to database **with API key tracking**:
 
 ```python
 # View in Django Admin
@@ -226,6 +250,131 @@ stats = GRPCRequestLog.objects.get_statistics(hours=24)
 #     "success_rate": 96.5,
 #     "avg_duration_ms": 125.3
 # }
+
+# Filter by API key
+api_key_logs = GRPCRequestLog.objects.filter(
+    api_key__name="Analytics Service"
+)
+
+# Filter by user
+user_logs = GRPCRequestLog.objects.filter(
+    user__username="service_user",
+    is_authenticated=True
+)
+
+# Get recent requests with API key info (via REST API)
+# GET /api/grpc/monitor/requests/
+# Returns: user_id, username, api_key_id, api_key_name for each request
+```
+
+### Server Monitoring
+
+Real-time server status tracking:
+
+**View in Django Admin:** `/admin/` → gRPC Server Status
+
+See server monitoring:
+- Server address and port
+- Status (running/stopped)
+- Uptime
+- Registered services
+
+### Integration Testing
+
+Test your complete gRPC setup with a single command:
+
+```bash
+python manage.py test_grpc_integration [--app APP_NAME] [--quiet]
+```
+
+**What it tests:**
+1. ✅ Proto file generation
+2. ✅ Server startup
+3. ✅ API key authentication
+4. ✅ Request logging with API key tracking
+5. ✅ Service discovery
+6. ✅ Automatic cleanup
+
+**Example output:**
+```
+🧪 gRPC Integration Test
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Step 1/6: Generated proto files
+✅ Step 2/6: Started gRPC server (PID: 12345)
+✅ Step 3/6: Created test API key
+✅ Step 4/6: Client tests passed (3/3)
+   ✓ With API key
+   ✓ With SECRET_KEY
+   ✗ Invalid key (expected failure)
+✅ Step 5/6: Request logs verified
+   • Total logs: 95
+   • With API key: 33
+   • With SECRET_KEY: 62
+✅ Step 6/6: Cleanup completed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 All tests passed! (6/6)
+```
+
+:::tip Production Testing
+Use this command in CI/CD pipelines to verify your gRPC setup before deployment.
+:::
+
+## 📊 Process Flows
+
+### Simple Request Flow
+
+```mermaid
+graph LR
+    A[Client] -->|gRPC Request| B[Server]
+    B -->|1. Authenticate| C[API Key Auth]
+    C -->|2. Log| D[Request Logger]
+    D -->|3. Execute| E[Service Handler]
+    E -->|4. Response| A
+
+    style A fill:#e3f2fd
+    style E fill:#e8f5e9
+```
+
+### API Key Authentication Flow
+
+```mermaid
+graph TB
+    A[Request with x-api-key] --> B{Check API Key}
+    B -->|Found in DB| C[Load User]
+    B -->|Django SECRET_KEY| D[Load Admin User]
+    B -->|Not Found| E[Unauthenticated]
+
+    C --> F[Set context.user]
+    D --> F
+    F --> G[Set context.api_key]
+    G --> H[Continue to Service]
+
+    E --> I{require_auth?}
+    I -->|True| J[Abort: UNAUTHENTICATED]
+    I -->|False| K[Continue Anonymous]
+
+    style C fill:#c8e6c9
+    style D fill:#fff9c4
+    style J fill:#ffcdd2
+```
+
+### Interceptor Chain
+
+```mermaid
+graph LR
+    A[Request] --> B[1. ApiKeyAuth<br/>Sets context]
+    B --> C[2. RequestLogger<br/>Uses context]
+    C --> D[3. Service<br/>Handles request]
+    D --> E[Response]
+
+    style B fill:#ffebee
+    style C fill:#e1f5fe
+    style D fill:#e8f5e9
+
+    note1[⚠️ ORDER MATTERS!<br/>Auth must be first]
+    note1 -.-> B
 ```
 
 ### Base Service Classes
@@ -302,8 +451,10 @@ sequenceDiagram
 - **[Getting Started](./getting-started.md)** - Build your first service (10 min)
 - **[Concepts](./concepts.md)** - Architecture and design patterns
 - **[Configuration](./configuration.md)** - Complete configuration reference
+- **[Authentication](./authentication.md)** - API key authentication
 
 ### Advanced Topics
+- **[REST API](./rest-api.md)** - REST endpoints for monitoring and management
 - **[Dynamic Invocation](./dynamic-invocation.md)** - Test without proto files
 - **[FAQ](./faq.md)** - Common questions and troubleshooting
 
@@ -315,9 +466,11 @@ sequenceDiagram
 |---------|------------|-----------------|
 | Service Registration | Manual | ✅ Automatic |
 | Django ORM | Manual setup | ✅ Built-in |
-| Authentication | DIY | ✅ JWT included |
-| Request Logging | DIY | ✅ Automatic |
-| Admin Interface | None | ✅ Built-in |
+| API Key Auth | DIY | ✅ Built-in with admin |
+| Request Logging | DIY | ✅ Automatic with API key tracking |
+| Server Monitoring | DIY | ✅ Real-time status tracking |
+| REST API | None | ✅ Full monitoring and management API |
+| Admin Interface | None | ✅ Django Admin integration |
 | Error Handling | Manual | ✅ Automatic |
 
 ### vs. REST

@@ -12,8 +12,6 @@ from django.core.management.commands.runserver import Command as RunServerComman
 from django_cfg.modules.django_logging import get_logger
 from django_cfg.modules.django_ngrok import get_ngrok_service
 
-logger = get_logger('runserver_ngrok')
-
 
 class Command(RunServerCommand):
     """Enhanced runserver command with ngrok tunnel support."""
@@ -24,6 +22,11 @@ class Command(RunServerCommand):
     is_destructive = False
 
     help = f'{RunServerCommand.help.rstrip(".")} with ngrok tunnel.'
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with logger."""
+        super().__init__(*args, **kwargs)
+        self.logger = get_logger('runserver_ngrok')
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
@@ -76,14 +79,14 @@ class Command(RunServerCommand):
         ngrok_service = get_ngrok_service()
 
         self.stdout.write("🚇 Starting ngrok tunnel...")
-        logger.info(f"Starting ngrok tunnel for port {server_port}")
+        self.logger.info(f"Starting ngrok tunnel for port {server_port}")
 
         tunnel_url = ngrok_service.start_tunnel(server_port)
 
         if tunnel_url:
             # Wait for tunnel to be fully established
             self.stdout.write("⏳ Waiting for tunnel to be established...")
-            logger.info("Waiting for ngrok tunnel to be fully established")
+            self.logger.info("Waiting for ngrok tunnel to be fully established")
 
             max_retries = 10
             retry_count = 0
@@ -98,10 +101,10 @@ class Command(RunServerCommand):
                     current_url = ngrok_service.get_tunnel_url()
                     if current_url and current_url == tunnel_url:
                         tunnel_ready = True
-                        logger.info(f"Ngrok tunnel established successfully: {tunnel_url}")
+                        self.logger.info(f"Ngrok tunnel established successfully: {tunnel_url}")
                         break
                 except Exception as e:
-                    logger.warning(f"Tunnel check attempt {retry_count} failed: {e}")
+                    self.logger.warning(f"Tunnel check attempt {retry_count} failed: {e}")
 
                 self.stdout.write(f"⏳ Tunnel check {retry_count}/{max_retries}...")
 
@@ -116,16 +119,16 @@ class Command(RunServerCommand):
                 self.stdout.write(
                     self.style.SUCCESS(f"✅ Ngrok tunnel ready: {tunnel_url}")
                 )
-                logger.info(f"Ngrok tunnel fully ready: {tunnel_url}")
+                self.logger.info(f"Ngrok tunnel fully ready: {tunnel_url}")
             else:
                 self.stdout.write(
                     self.style.WARNING("⚠️ Ngrok tunnel started but may not be fully ready")
                 )
-                logger.warning("Ngrok tunnel started but readiness check failed")
+                self.logger.warning("Ngrok tunnel started but readiness check failed")
         else:
             error_msg = "Failed to start ngrok tunnel"
             self.stdout.write(self.style.ERROR(f"❌ {error_msg}"))
-            logger.error(error_msg)
+            self.logger.error(error_msg)
 
     def _set_ngrok_env_vars(self, tunnel_url: str):
         """Set environment variables with ngrok URL for easy access."""
@@ -145,10 +148,10 @@ class Command(RunServerCommand):
             os.environ['NGROK_API_URL'] = tunnel_url
 
             # Environment variables set - no need for verbose output
-            logger.info(f"Set ngrok environment variables: {tunnel_url}")
+            self.logger.info(f"Set ngrok environment variables: {tunnel_url}")
 
         except Exception as e:
-            logger.warning(f"Could not set ngrok environment variables: {e}")
+            self.logger.warning(f"Could not set ngrok environment variables: {e}")
 
     def _update_allowed_hosts(self, tunnel_url: str):
         """Update ALLOWED_HOSTS with ngrok domain."""
@@ -164,7 +167,7 @@ class Command(RunServerCommand):
             if hasattr(settings, 'ALLOWED_HOSTS'):
                 if ngrok_host not in settings.ALLOWED_HOSTS:
                     settings.ALLOWED_HOSTS.append(ngrok_host)
-                    logger.info(f"Added {ngrok_host} to ALLOWED_HOSTS")
+                    self.logger.info(f"Added {ngrok_host} to ALLOWED_HOSTS")
 
         except Exception as e:
-            logger.warning(f"Could not update ALLOWED_HOSTS: {e}")
+            self.logger.warning(f"Could not update ALLOWED_HOSTS: {e}")
