@@ -2,17 +2,20 @@
 Management command to test OTP functionality.
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.utils import timezone
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from django_cfg.management.utils import SafeCommand
+
 from ...models import OTPSecret
 from ...services.otp_service import OTPService
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
+    command_name = 'otp_test'
     help = "Test OTP functionality with email and telegram delivery"
 
     def __init__(self, *args, **kwargs):

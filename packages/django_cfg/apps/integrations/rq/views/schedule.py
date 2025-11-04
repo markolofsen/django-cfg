@@ -23,7 +23,7 @@ from ..serializers import (
 logger = get_logger("rq.schedule")
 
 
-class ScheduleViewSet(AdminAPIMixin, viewsets.ViewSet):
+class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     ViewSet for RQ schedule management.
 
@@ -36,6 +36,8 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.ViewSet):
     Requires admin authentication (JWT, Session, or Basic Auth).
     Requires rq-scheduler to be installed: pip install rq-scheduler
     """
+
+    serializer_class = ScheduledJobSerializer
 
     @extend_schema(
         tags=["RQ Schedules"],
@@ -131,9 +133,11 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.ViewSet):
                         }
                         all_jobs.append(job_data)
 
-            serializer = ScheduledJobSerializer(data=all_jobs, many=True)
+            # Use DRF pagination
+            page = self.paginate_queryset(all_jobs)
+            serializer = ScheduledJobSerializer(data=page, many=True)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
 
         except Exception as e:
             logger.error(f"Failed to list scheduled jobs: {e}", exc_info=True)

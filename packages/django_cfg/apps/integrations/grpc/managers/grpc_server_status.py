@@ -53,6 +53,10 @@ class GRPCServerStatusManager(models.Manager):
             ... )
             >>> status.is_running
             True
+
+        Note:
+            External/internal server detection is automatic based on env_mode.
+            Production mode assumes external server (Docker), dev/test assumes local.
         """
         if pid is None:
             pid = os.getpid()

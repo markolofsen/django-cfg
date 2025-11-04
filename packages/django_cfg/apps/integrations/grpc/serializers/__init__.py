@@ -2,6 +2,17 @@
 Pydantic serializers for gRPC monitoring API.
 """
 
+from .api_keys import (
+    ApiKeyListSerializer,
+    ApiKeySerializer,
+    ApiKeyStatsSerializer,
+)
+from .proto_files import (
+    ProtoFileDetailSerializer,
+    ProtoFileListSerializer,
+    ProtoGenerateRequestSerializer,
+    ProtoGenerateResponseSerializer,
+)
 from .charts import (
     DashboardChartsSerializer,
     ErrorDistributionChartSerializer,
@@ -64,4 +75,13 @@ __all__ = [
     "ServerLifecycleChartSerializer",
     "ErrorDistributionChartSerializer",
     "DashboardChartsSerializer",
+    # API Keys
+    "ApiKeySerializer",
+    "ApiKeyListSerializer",
+    "ApiKeyStatsSerializer",
+    # Proto Files
+    "ProtoFileDetailSerializer",
+    "ProtoFileListSerializer",
+    "ProtoGenerateRequestSerializer",
+    "ProtoGenerateResponseSerializer",
 ]

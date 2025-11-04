@@ -6,12 +6,13 @@ Usage:
     python manage.py generate_centrifugo_clients -o ./clients --python --verbose
 """
 
-import logging
 from pathlib import Path
 from typing import List
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.utils.termcolors import colorize
+
+from django_cfg.management.utils import AdminCommand
 
 from django_cfg.apps.integrations.centrifugo.codegen.discovery import discover_rpc_methods_from_router
 from django_cfg.apps.integrations.centrifugo.codegen.generators.python_thin import PythonThinGenerator
@@ -19,12 +20,11 @@ from django_cfg.apps.integrations.centrifugo.codegen.generators.typescript_thin 
 from django_cfg.apps.integrations.centrifugo.codegen.generators.go_thin import GoThinGenerator
 from django_cfg.apps.integrations.centrifugo.router import get_global_router
 
-logger = logging.getLogger(__name__)
 
-
-class Command(BaseCommand):
+class Command(AdminCommand):
     """Generate type-safe client SDKs for Centrifugo WebSocket RPC."""
 
+    command_name = 'generate_centrifugo_clients'
     help = "Generate type-safe client SDKs for Centrifugo WebSocket RPC from @websocket_rpc handlers"
 
     def add_arguments(self, parser):

@@ -189,6 +189,13 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                         "error_message": req.error_message or "",
                         "created_at": req.created_at.isoformat(),
                         "client_ip": req.client_ip or "",
+                        # User information
+                        "user_id": req.user.id if req.user else None,
+                        "username": req.user.username if req.user else "",
+                        "is_authenticated": req.is_authenticated,
+                        # API Key information
+                        "api_key_id": req.api_key.id if req.api_key else None,
+                        "api_key_name": req.api_key.name if req.api_key else "",
                     })
                 return self.get_paginated_response(requests_list)
 
@@ -206,6 +213,13 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     "error_message": req.error_message or "",
                     "created_at": req.created_at.isoformat(),
                     "client_ip": req.client_ip or "",
+                    # User information
+                    "user_id": req.user.id if req.user else None,
+                    "username": req.user.username if req.user else "",
+                    "is_authenticated": req.is_authenticated,
+                    # API Key information
+                    "api_key_id": req.api_key.id if req.api_key else None,
+                    "api_key_name": req.api_key.name if req.api_key else "",
                 })
             return Response({"requests": requests_list, "count": len(requests_list)})
 

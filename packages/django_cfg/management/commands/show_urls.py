@@ -6,16 +6,14 @@ import re
 from typing import List, Optional, Tuple
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandParser
+from django.core.management.base import CommandParser
 from django.urls import get_resolver
 from django.utils.termcolors import make_style
 
-from django_cfg.modules.django_logging import get_logger
-
-logger = get_logger('show_urls')
+from django_cfg.management.utils import SafeCommand
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """
     Display all URL patterns in the Django project.
 
@@ -23,11 +21,7 @@ class Command(BaseCommand):
     in a hierarchical format with colors and filtering options.
     """
 
-    # Web execution metadata
-    web_executable = True
-    requires_input = False
-    is_destructive = False
-
+    command_name = 'show_urls'
     help = 'Display all URL patterns in the project'
 
     def __init__(self, *args, **kwargs):
@@ -88,7 +82,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         """Main command handler."""
-        logger.info("Starting show_urls command")
+        self.logger.info("Starting show_urls command")
         self.options = options
 
         # Disable colors if requested

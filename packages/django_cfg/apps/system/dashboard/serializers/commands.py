@@ -8,7 +8,14 @@ from rest_framework import serializers
 
 
 class CommandSerializer(serializers.Serializer):
-    """Django management command serializer."""
+    """
+    Django management command serializer.
+
+    Includes security metadata from base classes (SafeCommand, InteractiveCommand, etc.):
+    - web_executable: Can be executed via web interface
+    - requires_input: Requires interactive user input
+    - is_destructive: Modifies or deletes data
+    """
     name = serializers.CharField()
     app = serializers.CharField()
     help = serializers.CharField()
@@ -16,6 +23,23 @@ class CommandSerializer(serializers.Serializer):
     is_custom = serializers.BooleanField()
     is_allowed = serializers.BooleanField(required=False)
     risk_level = serializers.CharField(required=False)
+
+    # Security metadata from command base classes
+    web_executable = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text="Can be executed via web interface"
+    )
+    requires_input = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text="Requires interactive user input"
+    )
+    is_destructive = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text="Modifies or deletes data"
+    )
 
 
 class CommandsSummarySerializer(serializers.Serializer):

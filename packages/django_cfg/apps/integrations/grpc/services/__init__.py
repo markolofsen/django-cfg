@@ -17,6 +17,7 @@ from .config_helper import (
 from .discovery import ServiceDiscovery, discover_and_register_services
 from .grpc_client import DynamicGRPCClient
 from .monitoring_service import MonitoringService
+from .proto_files_manager import ProtoFilesManager
 from .service_registry import ServiceRegistryManager
 from .testing_service import TestingService
 
@@ -30,6 +31,7 @@ __all__ = [
     "MonitoringService",
     "TestingService",
     "DynamicGRPCClient",
+    "ProtoFilesManager",
     "get_grpc_config",
     "get_grpc_config_or_default",
     "is_grpc_enabled",

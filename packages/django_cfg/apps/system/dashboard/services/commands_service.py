@@ -55,7 +55,7 @@ class CommandsService:
                     continue
 
                 try:
-                    # Try to load command to get help text
+                    # Try to load command to get help text and metadata
                     command = load_command_class(app_name, command_name)
                     help_text = getattr(command, 'help', 'No description available')
 
@@ -66,6 +66,11 @@ class CommandsService:
                     # Get risk level
                     risk_level = get_command_risk_level(command_name, app_name)
 
+                    # Extract security metadata from command instance
+                    web_executable = getattr(command, 'web_executable', None)
+                    requires_input = getattr(command, 'requires_input', None)
+                    is_destructive = getattr(command, 'is_destructive', None)
+
                     commands_list.append({
                         'name': command_name,
                         'app': app_name,
@@ -74,6 +79,9 @@ class CommandsService:
                         'is_custom': is_custom,
                         'is_allowed': is_allowed,
                         'risk_level': risk_level,
+                        'web_executable': web_executable,
+                        'requires_input': requires_input,
+                        'is_destructive': is_destructive,
                     })
                 except Exception as e:
                     # If we can't load the command, still include basic info
@@ -86,6 +94,9 @@ class CommandsService:
                         'is_custom': app_name == 'django_cfg',
                         'is_allowed': is_allowed,
                         'risk_level': get_command_risk_level(command_name, app_name),
+                        'web_executable': None,
+                        'requires_input': None,
+                        'is_destructive': None,
                     })
 
             # Sort by name

@@ -200,20 +200,10 @@ class GRPCSettingsGenerator:
         auth_settings = {
             "enabled": auth_config.enabled,
             "require_auth": auth_config.require_auth,
-            "token_header": auth_config.token_header,
-            "token_prefix": auth_config.token_prefix,
-            "jwt_algorithm": auth_config.jwt_algorithm,
-            "jwt_verify_exp": auth_config.jwt_verify_exp,
-            "jwt_leeway": auth_config.jwt_leeway,
+            "api_key_header": auth_config.api_key_header,
+            "accept_django_secret_key": auth_config.accept_django_secret_key,
             "public_methods": auth_config.public_methods,
         }
-
-        # Use JWT secret from auth config or fall back to Django SECRET_KEY
-        if auth_config.jwt_secret_key:
-            auth_settings["jwt_secret_key"] = auth_config.jwt_secret_key
-        else:
-            # Will be resolved from Django settings at runtime
-            auth_settings["jwt_secret_key"] = None  # Signal to use Django SECRET_KEY
 
         return auth_settings
 
@@ -240,10 +230,13 @@ class GRPCSettingsGenerator:
         """
         Build list of server interceptors.
 
-        Interceptors are added in order:
-        1. Request logger interceptor (always enabled for monitoring)
-        2. Logging interceptor (if dev mode)
-        3. Auth interceptor (if auth enabled)
+        IMPORTANT: Interceptors are executed in reverse order for requests!
+        The first interceptor in the list wraps all others.
+
+        Correct order for our use case:
+        1. Auth interceptor (MUST be first to set context.api_key before logging)
+        2. Request logger interceptor (uses context.api_key from auth)
+        3. Logging interceptor (if dev mode)
         4. Metrics interceptor (if dev mode)
         5. Custom interceptors (from config)
 
@@ -255,30 +248,30 @@ class GRPCSettingsGenerator:
         # Check if we're in dev mode
         is_dev = self.config.env_mode in ("local", "development", "dev")
 
-        # Add request logger interceptor (always enabled for DB logging)
+        # 1. Add auth interceptor FIRST (must set context.api_key before logging)
+        if self.config.grpc.auth.enabled:
+            interceptors.append(
+                "django_cfg.apps.integrations.grpc.auth.ApiKeyAuthInterceptor"
+            )
+
+        # 2. Add request logger interceptor (uses context.api_key from auth)
         interceptors.append(
             "django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor"
         )
 
-        # Add logging interceptor in dev mode
+        # 3. Add logging interceptor in dev mode
         if is_dev:
             interceptors.append(
                 "django_cfg.apps.integrations.grpc.interceptors.LoggingInterceptor"
             )
 
-        # Add auth interceptor if enabled
-        if self.config.grpc.auth.enabled:
-            interceptors.append(
-                "django_cfg.apps.integrations.grpc.auth.JWTAuthInterceptor"
-            )
-
-        # Add metrics interceptor in dev mode
+        # 4. Add metrics interceptor in dev mode
         if is_dev:
             interceptors.append(
                 "django_cfg.apps.integrations.grpc.interceptors.MetricsInterceptor"
             )
 
-        # Add custom interceptors from server config
+        # 5. Add custom interceptors from server config
         if self.config.grpc.server.interceptors:
             interceptors.extend(self.config.grpc.server.interceptors)
 

@@ -192,6 +192,23 @@ class RecentRequestSerializer(serializers.Serializer):
     client_ip = serializers.CharField(
         default="", allow_blank=True, help_text="Client IP address"
     )
+    # User information
+    user_id = serializers.IntegerField(
+        allow_null=True, required=False, help_text="User ID (if authenticated)"
+    )
+    username = serializers.CharField(
+        default="", allow_blank=True, allow_null=True, help_text="Username (if authenticated)"
+    )
+    is_authenticated = serializers.BooleanField(
+        default=False, help_text="Whether request was authenticated"
+    )
+    # API Key information
+    api_key_id = serializers.IntegerField(
+        allow_null=True, required=False, help_text="API Key ID (if used)"
+    )
+    api_key_name = serializers.CharField(
+        default="", allow_blank=True, allow_null=True, help_text="API Key name (if used)"
+    )
 
 
 class MethodDetailSerializer(serializers.Serializer):

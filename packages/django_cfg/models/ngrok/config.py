@@ -55,14 +55,15 @@ class NgrokConfig(BaseModel):
     def validate_enabled_in_debug_only(cls, v: bool) -> bool:
         """Ensure ngrok is only enabled in debug mode."""
         if v:
-            # Only check if Django is available and fully configured
+            # Use get_current_config() approach (same as GRPCServerConfig)
             try:
-                from django.conf import settings
-                # Only validate if settings are configured and DEBUG attribute exists
-                if settings.configured and hasattr(settings, 'DEBUG') and not settings.DEBUG:
+                from django_cfg.core import get_current_config
+
+                config = get_current_config()
+                if config and not config.debug:
                     raise ValueError("Ngrok can only be enabled in DEBUG mode")
-            except (ImportError, AttributeError, RuntimeError):
-                # Django not available, not configured, or settings not ready - skip validation
+            except Exception:
+                # Config not available yet - skip validation
                 pass
         return v
 

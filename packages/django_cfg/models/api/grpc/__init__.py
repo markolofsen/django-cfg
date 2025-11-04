@@ -1,33 +1,35 @@
 """
 gRPC configuration models.
 
-Type-safe Pydantic v2 models for gRPC server, authentication, and proto generation.
+Type-safe Pydantic v2 models for gRPC integration.
 
 Requires: pip install django-cfg[grpc]
 
 Example:
-    >>> from django_cfg.models.api.grpc import GRPCConfig, GRPCServerConfig
+    Flat API (recommended - no nested config imports needed):
+    >>> from django_cfg import GRPCConfig
     >>> config = GRPCConfig(
     ...     enabled=True,
-    ...     server=GRPCServerConfig(port=50051)
+    ...     enabled_apps=["crypto"],
+    ...     port=50051,
+    ...     package_prefix="api",
+    ... )
+
+    Advanced with nested configs (optional):
+    >>> from django_cfg.models.api.grpc.config import GRPCServerConfig
+    >>> config = GRPCConfig(
+    ...     enabled=True,
+    ...     server=GRPCServerConfig(max_workers=50, compression="gzip")
     ... )
 """
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .config import (
-        GRPCAuthConfig,
-        GRPCConfig,
-        GRPCProtoConfig,
-        GRPCServerConfig,
-    )
+    from .config import GRPCConfig
 
 __all__ = [
     "GRPCConfig",
-    "GRPCServerConfig",
-    "GRPCAuthConfig",
-    "GRPCProtoConfig",
 ]
 
 
@@ -35,18 +37,10 @@ def __getattr__(name: str):
     """Lazy import with helpful error message."""
     if name in __all__:
         try:
-            from .config import (
-                GRPCAuthConfig,
-                GRPCConfig,
-                GRPCProtoConfig,
-                GRPCServerConfig,
-            )
+            from .config import GRPCConfig
 
             return {
                 "GRPCConfig": GRPCConfig,
-                "GRPCServerConfig": GRPCServerConfig,
-                "GRPCAuthConfig": GRPCAuthConfig,
-                "GRPCProtoConfig": GRPCProtoConfig,
             }[name]
 
         except ImportError as e:

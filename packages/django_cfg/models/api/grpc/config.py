@@ -61,13 +61,18 @@ class GRPCServerConfig(BaseConfig):
     )
 
     enable_reflection: bool = Field(
-        default=False,
-        description="Enable server reflection for dynamic clients (grpcurl, etc.)",
+        default=True,
+        description="Enable server reflection for grpcurl and other tools (enabled by default)",
     )
 
     enable_health_check: bool = Field(
         default=True,
         description="Enable gRPC health check service",
+    )
+
+    public_url: Optional[str] = Field(
+        default=None,
+        description="Public URL for clients (auto-generated from api_url if None)",
     )
 
     compression: Optional[str] = Field(
@@ -124,18 +129,43 @@ class GRPCServerConfig(BaseConfig):
             raise ValueError("Host cannot be empty")
         return v.strip()
 
+    @model_validator(mode="after")
+    def auto_set_smart_defaults(self) -> "GRPCServerConfig":
+        """Auto-set smart defaults based on Django settings."""
+        # Auto-set public_url from api_url
+        if self.public_url is None:
+            try:
+                from django_cfg.core import get_current_config
+                config = get_current_config()
+
+                if config and hasattr(config, 'api_url') and config.api_url:
+                    # https://api.djangocfg.com → grpc.djangocfg.com:50051
+                    url = config.api_url
+                    url = url.replace("https://", "").replace("http://", "")
+                    url = url.replace("api.", "grpc.")
+                    # Remove trailing slash
+                    url = url.rstrip("/")
+
+                    self.public_url = f"{url}:{self.port}"
+
+            except Exception:
+                # Config not available yet
+                pass
+
+        return self
+
 
 class GRPCAuthConfig(BaseConfig):
     """
     gRPC authentication configuration.
 
-    Supports JWT authentication with configurable token handling.
+    Uses API key authentication with Django ORM for secure, manageable access control.
 
     Example:
         >>> config = GRPCAuthConfig(
         ...     enabled=True,
-        ...     require_auth=True,
-        ...     jwt_algorithm="HS256"
+        ...     require_auth=False,
+        ...     accept_django_secret_key=True,
         ... )
     """
 
@@ -145,70 +175,30 @@ class GRPCAuthConfig(BaseConfig):
     )
 
     require_auth: bool = Field(
-        default=True,
+        default=False,  # Smart default: easy development
         description="Require authentication for all services (except public_methods)",
     )
 
-    token_header: str = Field(
-        default="authorization",
-        description="Metadata key for auth token",
+    # === API Key Authentication ===
+    api_key_header: str = Field(
+        default="x-api-key",
+        description="Metadata header name for API key (default: x-api-key)",
     )
 
-    token_prefix: str = Field(
-        default="Bearer",
-        description="Token prefix (e.g., 'Bearer' for JWT)",
+    accept_django_secret_key: bool = Field(
+        default=True,  # Smart default: SECRET_KEY works for development
+        description="Accept Django SECRET_KEY as valid API key (for development/internal use)",
     )
 
-    jwt_secret_key: Optional[str] = Field(
-        default=None,
-        description="JWT secret key (defaults to Django SECRET_KEY if None)",
-    )
-
-    jwt_algorithm: str = Field(
-        default="HS256",
-        description="JWT signing algorithm",
-    )
-
-    jwt_verify_exp: bool = Field(
-        default=True,
-        description="Verify JWT expiration",
-    )
-
-    jwt_leeway: int = Field(
-        default=0,
-        description="JWT expiration leeway in seconds",
-        ge=0,
-    )
-
+    # === Public Methods ===
     public_methods: List[str] = Field(
         default_factory=lambda: [
             "/grpc.health.v1.Health/Check",
             "/grpc.health.v1.Health/Watch",
+            "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo",
         ],
         description="RPC methods that don't require authentication",
     )
-
-    @field_validator("jwt_algorithm")
-    @classmethod
-    def validate_jwt_algorithm(cls, v: str) -> str:
-        """Validate JWT algorithm."""
-        valid_algorithms = {
-            "HS256",
-            "HS384",
-            "HS512",
-            "RS256",
-            "RS384",
-            "RS512",
-            "ES256",
-            "ES384",
-            "ES512",
-        }
-        if v not in valid_algorithms:
-            raise ValueError(
-                f"Invalid JWT algorithm: {v}. "
-                f"Must be one of: {', '.join(sorted(valid_algorithms))}"
-            )
-        return v
 
 
 class GRPCProtoConfig(BaseConfig):
@@ -230,9 +220,9 @@ class GRPCProtoConfig(BaseConfig):
         description="Auto-generate proto files from Django models",
     )
 
-    output_dir: str = Field(
-        default="protos",
-        description="Proto files output directory (relative to BASE_DIR)",
+    output_dir: Optional[str] = Field(
+        default=None,
+        description="Proto files output directory (auto: media/protos if None)",
     )
 
     package_prefix: str = Field(
@@ -262,12 +252,22 @@ class GRPCProtoConfig(BaseConfig):
 
     @field_validator("output_dir")
     @classmethod
-    def validate_output_dir(cls, v: str) -> str:
+    def validate_output_dir(cls, v: Optional[str]) -> Optional[str]:
         """Validate output directory."""
-        if not v or not v.strip():
-            raise ValueError("output_dir cannot be empty")
+        if v is None:
+            return None
+        if not v.strip():
+            raise ValueError("output_dir cannot be empty string")
         # Remove leading/trailing slashes
         return v.strip().strip("/")
+
+    @model_validator(mode="after")
+    def auto_set_output_dir(self) -> "GRPCProtoConfig":
+        """Auto-set output_dir to media/protos if not specified."""
+        if self.output_dir is None:
+            # Better default: generated files go to media
+            self.output_dir = "media/protos"
+        return self
 
 
 class GRPCConfig(BaseConfig):
@@ -277,15 +277,19 @@ class GRPCConfig(BaseConfig):
     Combines server, authentication, and proto generation settings.
 
     Example:
-        Basic setup:
-        >>> config = GRPCConfig(enabled=True)
+        Simple flat API (recommended):
+        >>> config = GRPCConfig(
+        ...     enabled=True,
+        ...     enabled_apps=["crypto"],
+        ...     package_prefix="api",
+        ... )
 
-        Advanced setup:
+        Advanced with nested configs (optional):
         >>> config = GRPCConfig(
         ...     enabled=True,
         ...     server=GRPCServerConfig(port=8080, max_workers=50),
         ...     auth=GRPCAuthConfig(require_auth=True),
-        ...     auto_register_apps=["accounts", "support"]
+        ...     enabled_apps=["accounts", "support"]
         ... )
     """
 
@@ -294,19 +298,55 @@ class GRPCConfig(BaseConfig):
         description="Enable gRPC integration",
     )
 
+    # === Flatten Server Config (most common settings) ===
+    # These are shortcuts that configure the nested server config
+    host: Optional[str] = Field(
+        default=None,
+        description="Server bind address (e.g., '[::]' for IPv6, '0.0.0.0' for IPv4). If None, uses server.host default",
+    )
+
+    port: Optional[int] = Field(
+        default=None,
+        description="Server port (e.g., 50051). If None, uses server.port default",
+        ge=1024,
+        le=65535,
+    )
+
+    public_url: Optional[str] = Field(
+        default=None,
+        description="Public URL for clients (e.g., 'grpc.djangocfg.com:443'). If None, auto-generated from api_url",
+    )
+
+    enable_reflection: Optional[bool] = Field(
+        default=None,
+        description="Enable server reflection for grpcurl/tools. If None, uses server.enable_reflection (True by default)",
+    )
+
+    # === Flatten Proto Config (most common settings) ===
+    package_prefix: Optional[str] = Field(
+        default=None,
+        description="Package prefix for proto files (e.g., 'api'). If None, uses proto.package_prefix default",
+    )
+
+    output_dir: Optional[str] = Field(
+        default=None,
+        description="Proto files output directory. If None, uses proto.output_dir default (media/protos)",
+    )
+
+    # === Nested Configs (for advanced use) ===
     server: GRPCServerConfig = Field(
         default_factory=GRPCServerConfig,
-        description="Server configuration",
+        description="Advanced server configuration (optional, use flatten fields above for common settings)",
     )
 
     auth: GRPCAuthConfig = Field(
         default_factory=GRPCAuthConfig,
-        description="Authentication configuration",
+        description="Authentication configuration (optional)",
     )
 
     proto: GRPCProtoConfig = Field(
         default_factory=GRPCProtoConfig,
-        description="Proto generation configuration",
+        description="Proto generation configuration (optional, use flatten fields above for common settings)",
     )
 
     handlers_hook: str = Field(
@@ -338,7 +378,28 @@ class GRPCConfig(BaseConfig):
 
     @model_validator(mode="after")
     def validate_grpc_config(self) -> "GRPCConfig":
-        """Cross-field validation."""
+        """
+        Cross-field validation and apply flatten fields to nested configs.
+
+        This allows users to configure common settings at the top level without
+        importing nested config classes.
+        """
+        # Apply flatten server fields to nested server config
+        if self.host is not None:
+            self.server.host = self.host
+        if self.port is not None:
+            self.server.port = self.port
+        if self.public_url is not None:
+            self.server.public_url = self.public_url
+        if self.enable_reflection is not None:
+            self.server.enable_reflection = self.enable_reflection
+
+        # Apply flatten proto fields to nested proto config
+        if self.package_prefix is not None:
+            self.proto.package_prefix = self.package_prefix
+        if self.output_dir is not None:
+            self.proto.output_dir = self.output_dir
+
         # Check dependencies if enabled
         if self.enabled:
             from django_cfg.apps.integrations.grpc._cfg import require_grpc_feature

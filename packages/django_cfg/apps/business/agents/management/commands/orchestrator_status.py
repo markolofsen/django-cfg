@@ -5,17 +5,19 @@ Management command to show orchestrator status.
 import asyncio
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand
 from django.utils import timezone
+
+from django_cfg.management.utils import SafeCommand
 
 from django_cfg.apps.business.agents.integration.registry import get_registry
 from django_cfg.apps.business.agents.models.execution import AgentExecution, WorkflowExecution
 from django_cfg.apps.business.agents.models.registry import AgentDefinition
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Show Django Orchestrator status and statistics."""
 
+    command_name = 'orchestrator_status'
     help = 'Display Django Orchestrator status and statistics'
 
     def add_arguments(self, parser):

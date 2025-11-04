@@ -26,8 +26,9 @@ graph TB
 
         subgraph "Interceptors Pipeline"
             I1["Request Logger"]
-            I2["JWT Auth"]
-            I3["Error Handler"]
+            I2["API Key Auth"]
+            I3["JWT Auth"]
+            I4["Error Handler"]
         end
 
         subgraph "Service Layer"
@@ -41,14 +42,18 @@ graph TB
         ORM["Django ORM"]
         Auth["Django Auth"]
         Admin["Admin Interface"]
+        ApiKeys["API Key Manager"]
+        ServerStatus["Server Monitor"]
     end
 
     Client -->|gRPC Call| Server
-    Server --> I1 --> I2 --> I3
-    I3 --> Discovery --> Base --> Services
+    Server --> I1 --> I2 --> I3 --> I4
+    I4 --> Discovery --> Base --> Services
     Services --> ORM
     Services --> Auth
     I1 -.->|Logs| Admin
+    I2 -.->|Validates| ApiKeys
+    Server -.->|Tracks| ServerStatus
 
     style Server fill:#e3f2fd
     style Services fill:#e8f5e9
@@ -58,9 +63,11 @@ graph TB
 ### Key Components
 
 1. **gRPC Server** - Runs on separate port (default: 50051)
-2. **Interceptors** - Middleware for cross-cutting concerns
+2. **Interceptors** - Middleware for cross-cutting concerns (logging, auth, errors)
 3. **Services** - Your business logic (auto-discovered)
 4. **Django Integration** - Full ORM and auth access
+5. **API Key Manager** - Secure API key generation and validation
+6. **Server Monitor** - Real-time server status and uptime tracking
 
 ## 🔄 Request Flow
 
@@ -150,6 +157,37 @@ graph LR
 - ✅ No manual service lists
 
 ## 🔐 Authentication & Authorization
+
+### API Key Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant I as API Key Interceptor
+    participant DB as Database
+    participant S as Service
+
+    C->>I: Request + API Key
+    I->>I: Extract "x-api-key: <key>"
+
+    alt Django SECRET_KEY (Dev/Internal)
+        I->>DB: Load first active superuser
+        DB-->>I: User object
+        I->>S: Set context.user = User
+        S-->>C: Success response
+    else GrpcApiKey Model
+        I->>DB: Query GrpcApiKey.objects.get(key=<key>)
+        DB-->>I: ApiKey object
+        I->>I: Check is_active & not expired
+        alt Valid Key
+            I->>DB: Update usage (last_used_at, request_count++)
+            I->>S: Set context.user = ApiKey.user<br/>Set context.api_key = ApiKey
+            S-->>C: Success response
+        else Invalid Key
+            I-->>C: UNAUTHENTICATED error
+        end
+    end
+```
 
 ### JWT Authentication Flow
 
@@ -267,15 +305,24 @@ graph LR
 **1. RequestLoggerInterceptor**
 - Logs every request to database
 - Tracks duration, status, errors
-- Available in Django Admin
+- Links to API key used for authentication
+- Available in Django Admin with beautiful UI
 
-**2. JWTAuthInterceptor**
+**2. ApiKeyAuthInterceptor** (New!)
+- Extracts API key from `x-api-key` metadata
+- Validates against GrpcApiKey model
+- Accepts Django SECRET_KEY for dev/internal use
+- Updates usage tracking (last_used_at, request_count)
+- Sets user and api_key on context
+- Supports public methods whitelist
+
+**3. JWTAuthInterceptor**
 - Extracts JWT from metadata
 - Verifies token signature
 - Loads Django user
 - Sets user on context
 
-**3. ErrorHandlingInterceptor**
+**4. ErrorHandlingInterceptor**
 - Catches Python exceptions
 - Converts to gRPC status codes
 - Maps Django exceptions properly
@@ -292,9 +339,10 @@ Exception              → StatusCode.INTERNAL
 
 Interceptors execute in specific order:
 1. **Request Logger** - First to log everything
-2. **JWT Auth** - Load user before service
-3. **Error Handler** - Catch all exceptions
-4. **Service** - Your business logic
+2. **API Key Auth** - Validate API key and load user
+3. **JWT Auth** - Validate JWT token if no API key
+4. **Error Handler** - Catch all exceptions
+5. **Service** - Your business logic
 
 Response flows back in reverse order.
 
@@ -312,6 +360,8 @@ GRPCRequestLog:
     - status: success/error/cancelled/timeout
     - duration_ms: 125
     - user: User object or None
+    - api_key: GrpcApiKey object or None  # NEW!
+    - is_authenticated: True/False
     - client_ip: "192.168.1.100"
     - error_message: if failed
     - created_at: timestamp
@@ -340,6 +390,11 @@ errors = GRPCRequestLog.objects.filter(
     status='error'
 ).order_by('-created_at')[:10]
 
+# Filter by API key
+api_key_logs = GRPCRequestLog.objects.filter(
+    api_key__name="Analytics Service"
+)
+
 # Statistics
 stats = GRPCRequestLog.objects.get_statistics(hours=24)
 # {
@@ -348,6 +403,57 @@ stats = GRPCRequestLog.objects.get_statistics(hours=24)
 #     "success_rate": 96.5,
 #     "avg_duration_ms": 125.3
 # }
+```
+
+## 📊 Server Status Tracking
+
+### What Gets Tracked
+
+Every gRPC server instance is tracked in real-time:
+
+```python
+GRPCServerStatus:
+    - instance_id: "hostname:port:pid"
+    - address: "[::]:50051"
+    - host: "[::]"
+    - port: 50051
+    - pid: 12345
+    - hostname: "server-01"
+    - status: starting/running/stopping/stopped/error
+    - started_at: timestamp
+    - last_heartbeat: timestamp
+    - stopped_at: timestamp or None
+    - uptime_seconds: calculated
+    - max_workers: 10
+    - enable_reflection: True/False
+    - enable_health_check: True/False
+    - registered_services: JSON array of service metadata
+    - error_message: if status is error
+```
+
+### Environment-Aware Process Detection
+
+The server status tracking uses environment-aware detection:
+
+- **Production Mode**: Assumes external server in Docker, relies on heartbeat only
+- **Development/Test**: Checks local process PID + heartbeat
+- **Auto-detects** based on `config.env_mode`
+
+This allows proper monitoring in both containerized and local environments.
+
+### Usage
+
+```python
+from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
+
+# Get all running servers
+running = GRPCServerStatus.objects.filter(status="running")
+
+# Check if server is alive
+for server in running:
+    if server.is_running:
+        print(f"Server {server.address}: {server.uptime_display}")
+        print(f"  Registered services: {len(server.registered_services)}")
 ```
 
 ## 🔄 Dynamic Invocation (Phase 4)
@@ -482,10 +588,11 @@ gRPC is integrated into Django, not the other way around:
 ## 📚 Next Steps
 
 - **[Getting Started](./getting-started.md)** - Build your first service
+- **[Authentication](./authentication.md)** - API keys and JWT authentication
 - **[Configuration](./configuration.md)** - Configure gRPC settings
 - **[Dynamic Invocation](./dynamic-invocation.md)** - Test without client code
 - **[FAQ](./faq.md)** - Common questions
 
 ---
 
-**Key Takeaway:** Django-CFG gRPC provides production-ready gRPC server with full Django integration through convention over configuration, automatic service discovery, and powerful interceptors pipeline.
+**Key Takeaway:** Django-CFG gRPC provides production-ready gRPC server with full Django integration through convention over configuration, automatic service discovery, powerful interceptors pipeline, and beautiful PydanticAdmin-powered admin interface for API keys and server monitoring.

@@ -9,19 +9,12 @@ import os
 
 from django.conf import settings
 from django.core.mail import get_connection
-from django.core.management.base import BaseCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import SafeCommand
 
-logger = get_logger('check_settings')
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Command to check and debug django-cfg settings."""
-
-    # Web execution metadata
-    web_executable = True
-    requires_input = False
-    is_destructive = False
 
     help = "Check and debug django-cfg configuration settings"
 
@@ -39,7 +32,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Main command handler."""
-        logger.info("Starting check_settings command")
+        self.logger.info("Starting check_settings command")
         self.stdout.write(self.style.SUCCESS("\n🔍 Django CFG Settings Checker\n"))
 
         # Show basic info

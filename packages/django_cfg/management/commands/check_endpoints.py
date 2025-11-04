@@ -10,13 +10,13 @@ Usage:
 
 import json
 
-from django.core.management.base import BaseCommand
 from django.urls import reverse
 
 from django_cfg.apps.api.endpoints.endpoints_status.checker import check_all_endpoints
+from django_cfg.management.utils import SafeCommand
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     help = 'Check status of all Django CFG API endpoints'
 
     def add_arguments(self, parser):

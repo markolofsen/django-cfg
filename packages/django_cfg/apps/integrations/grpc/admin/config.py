@@ -7,31 +7,33 @@ Declarative AdminConfig using PydanticAdmin patterns.
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
+    BooleanField,
     DateTimeField,
+    FieldsetConfig,
     Icons,
+    TextField,
     UserField,
 )
 
-from ..models import GRPCRequestLog, GRPCServerStatus
+from ..models import GRPCRequestLog, GRPCServerStatus, GrpcApiKey
 
 
 # Declarative configuration for GRPCRequestLog
 grpcrequestlog_config = AdminConfig(
     model=GRPCRequestLog,
     # Performance optimization
-    select_related=["user"],
+    select_related=["user", "api_key"],
 
     # List display
     list_display=[
-        "full_method",
         "service_badge",
         "method_badge",
         "status",
         "grpc_status_code_display",
         "user",
+        "api_key_display",
         "duration_display",
         "created_at",
-        "completed_at"
     ],
 
     # Auto-generated display methods
@@ -54,7 +56,7 @@ grpcrequestlog_config = AdminConfig(
         DateTimeField(name="completed_at", title="Completed", ordering="completed_at"),
     ],
     # Filters
-    list_filter=["status", "grpc_status_code", "service_name", "method_name", "is_authenticated", "created_at"],
+    list_filter=["status", "grpc_status_code", "service_name", "method_name", "is_authenticated", "api_key", "created_at"],
     search_fields=[
         "request_id",
         "service_name",
@@ -62,11 +64,13 @@ grpcrequestlog_config = AdminConfig(
         "full_method",
         "user__username",
         "user__email",
+        "api_key__name",
+        "api_key__key",
         "error_message",
         "client_ip",
     ],
-    # Autocomplete for user field
-    autocomplete_fields=["user"],
+    # Autocomplete for user and api_key fields
+    autocomplete_fields=["user", "api_key"],
     # Readonly fields
     readonly_fields=[
         "id",
@@ -94,7 +98,7 @@ grpcserverstatus_config = AdminConfig(
     list_display=[
         "instance_id",
         "address",
-        "status_badge",
+        "status",
         "pid",
         "hostname",
         "uptime_display",
@@ -141,6 +145,11 @@ grpcserverstatus_config = AdminConfig(
         "updated_at",
         "uptime_display",
         "is_running",
+        "server_config_display",
+        "process_info_display",
+        "registered_services_display",
+        "error_display",
+        "lifecycle_display",
     ],
 
     # Date hierarchy
@@ -154,4 +163,99 @@ grpcserverstatus_config = AdminConfig(
 )
 
 
-__all__ = ["grpcrequestlog_config", "grpcserverstatus_config"]
+# Declarative configuration for GrpcApiKey
+grpcapikey_config = AdminConfig(
+    model=GrpcApiKey,
+
+    # Performance optimization
+    select_related=["user", "created_by"],
+
+    # List display
+    list_display=[
+        "status_indicator",
+        "name",
+        "key_type",
+        "user",
+        "masked_key_display",
+        "request_count_display",
+        "last_used_at",
+        "expires_display",
+        "created_at",
+    ],
+
+    # Auto-generated display methods
+    display_fields=[
+        TextField(name="name", title="Name", ordering="name"),
+        BadgeField(
+            name="key_type",
+            title="Type",
+            label_map={
+                "service": "info",
+                "cli": "primary",
+                "webhook": "warning",
+                "internal": "secondary",
+                "development": "danger",
+            },
+        ),
+        UserField(name="user", title="User", header=True, ordering="user__username"),
+        DateTimeField(name="last_used_at", title="Last Used", ordering="last_used_at"),
+        DateTimeField(name="created_at", title="Created", ordering="created_at"),
+    ],
+
+    # Filters
+    list_filter=["is_active", "key_type", "created_at", "expires_at", "user"],
+    search_fields=["name", "description", "user__username", "user__email", "key"],
+
+    # Readonly fields
+    readonly_fields=[
+        "key_display",
+        "masked_key",
+        "request_count",
+        "last_used_at",
+        "created_at",
+        "updated_at",
+        "created_by",
+    ],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="Basic Information",
+            fields=["name", "description", "key_type", "is_active"],
+        ),
+        FieldsetConfig(
+            title="API Key",
+            fields=["key_display", "masked_key"],
+        ),
+        FieldsetConfig(
+            title="User Association",
+            fields=["user", "created_by"],
+        ),
+        FieldsetConfig(
+            title="Expiration",
+            fields=["expires_at"],
+        ),
+        FieldsetConfig(
+            title="Usage Statistics",
+            fields=["request_count", "last_used_at"],
+            collapsed=True,
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=["created_at", "updated_at"],
+            collapsed=True,
+        ),
+    ],
+
+    # Autocomplete for user field
+    autocomplete_fields=["user"],
+
+    # Ordering
+    ordering=["-created_at"],
+
+    # Per page
+    list_per_page=50,
+)
+
+
+__all__ = ["grpcrequestlog_config", "grpcserverstatus_config", "grpcapikey_config"]

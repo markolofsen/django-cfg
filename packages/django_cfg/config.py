@@ -9,6 +9,39 @@ from typing import List
 from .modules.django_admin.icons import Icons
 from .modules.django_unfold.models.dropdown import SiteDropdownItem
 
+
+def is_feature_available(feature: str) -> bool:
+    """
+    Check if a feature is available (dependencies installed).
+
+    Args:
+        feature: Feature name (e.g., 'grpc', 'centrifugo', 'dramatiq')
+
+    Returns:
+        True if feature dependencies are available
+    """
+    if feature == "grpc":
+        try:
+            import grpc  # noqa
+            import grpc_reflection  # noqa
+            return True
+        except ImportError:
+            return False
+    elif feature == "centrifugo":
+        try:
+            import cent  # noqa
+            return True
+        except ImportError:
+            return False
+    elif feature == "dramatiq":
+        try:
+            import dramatiq  # noqa
+            return True
+        except ImportError:
+            return False
+
+    return False
+
 # Library configuration
 LIB_NAME = "django-cfg"
 LIB_SITE_URL = "https://djangocfg.com"

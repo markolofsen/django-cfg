@@ -148,29 +148,17 @@ class NavigationManager(BaseCfgModule):
 
         # gRPC Dashboard (if enabled)
         if self.is_grpc_enabled():
-            grpc_items = []
-
-            # Monitoring API endpoint
-            grpc_items.append(
-                NavigationItem(title="Monitor", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/dashboard/grpc/")
-            )
-
-            # Request Logs with safe URL resolution
-            logs_item = self._create_nav_item(
-                title="Request Logs",
-                icon=Icons.LIST_ALT,
-                url_name="admin:grpc_grpcrequestlog_changelist",
-                fallback_link="/admin/grpc/grpcrequestlog/"
-            )
-            if logs_item:
-                grpc_items.append(logs_item)
-
             navigation_sections.append(
                 NavigationSection(
                     title="gRPC",
                     separator=True,
                     collapsible=True,
-                    items=grpc_items
+                    items=[
+                        NavigationItem(title="Monitor", icon=Icons.MONITOR_HEART, link="/cfg/admin/admin/dashboard/grpc/"),
+                        NavigationItem(title="Request Logs", icon=Icons.LIST_ALT, link=str(reverse_lazy("admin:grpc_grpcrequestlog_changelist"))),
+                        NavigationItem(title="API Keys", icon=Icons.KEY, link=str(reverse_lazy("admin:grpc_grpcapikey_changelist"))),
+                        NavigationItem(title="Server Status", icon=Icons.HEALTH_AND_SAFETY, link=str(reverse_lazy("admin:grpc_grpcserverstatus_changelist"))),
+                    ]
                 )
             )
 

@@ -8,7 +8,6 @@ Useful for development and webhook configuration.
 import re
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
 from django.urls import get_resolver
 from rich.align import Align
 
@@ -19,18 +18,13 @@ from rich.table import Table
 from rich.text import Text
 
 from django_cfg.core.state import get_current_config
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import SafeCommand
 
-logger = get_logger('list_urls')
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Command to display all available URLs in the project."""
 
-    # Web execution metadata
-    web_executable = True
-    requires_input = False
-    is_destructive = False
-
+    command_name = 'list_urls'
     help = "Display all available URLs with Rich formatting"
 
     def __init__(self, *args, **kwargs):
@@ -62,7 +56,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logger.info("Starting list_urls command")
+        self.logger.info("Starting list_urls command")
         filter_str = options["filter"]
         webhook_only = options["webhook"]
         api_only = options["api"]

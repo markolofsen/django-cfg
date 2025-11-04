@@ -7,16 +7,19 @@ Usage: python manage.py maintenance enable/disable/status/sync domain.com
 
 from typing import Any
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.db import transaction
+
+from django_cfg.management.utils import InteractiveCommand
 
 from ...models import CloudflareSite, MaintenanceLog
 from ...services import MaintenanceService
 
 
-class Command(BaseCommand):
+class Command(InteractiveCommand):
     """Simple maintenance management command."""
 
+    command_name = 'maintenance'
     help = 'Manage maintenance mode for Cloudflare sites'
 
     def add_arguments(self, parser) -> None:

@@ -41,9 +41,6 @@ from django_cfg import (
     AxesConfig,
     DjangoCfgCentrifugoConfig,
     GRPCConfig,
-    GRPCServerConfig,
-    GRPCAuthConfig,
-    GRPCProtoConfig,
     NextJsAdminConfig,
     DjangoRQConfig,
     RQQueueConfig,
@@ -140,26 +137,9 @@ class DjangoCfgConfig(DjangoConfig):
     # === gRPC Configuration ===
     grpc: Optional[GRPCConfig] = GRPCConfig(
         enabled=True,
-        server=GRPCServerConfig(
-            host="[::]",
-            port=50051,
-            max_workers=10,
-            enable_reflection=True,  # Enable reflection for grpcurl
-            enable_health_check=True,
-        ),
-        auth=GRPCAuthConfig(
-            enabled=True,
-            require_auth=False,  # Allow public methods
-            jwt_algorithm="HS256",
-        ),
-        proto=GRPCProtoConfig(
-            auto_generate=True,
-            output_dir="protos",
-            package_prefix="api",
-        ),
-        # Auto-register apps (scan these apps for gRPC services)
-        auto_register_apps=True,
         enabled_apps=["crypto"],
+        package_prefix="api",  # Flatten field - no GRPCProtoConfig import needed!
+        public_url=env.grpc_url,  # Flatten field from environment - simpler!
     )
 
     # === Django-RQ Background Tasks Configuration ===
@@ -339,10 +319,10 @@ class DjangoCfgConfig(DjangoConfig):
     )
 
     # === Ngrok Development Configuration ===
-    ngrok: Optional[NgrokConfig] = NgrokConfig(
+    ngrok: Optional[NgrokConfig] = None if not env.debug else NgrokConfig(
         enabled=True,
         compression=True,
-    ) if env.debug else None
+    )
 
     # === Constance Dynamic Settings ===
     constance: ConstanceConfig = ConstanceConfig(

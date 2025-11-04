@@ -174,11 +174,17 @@ class GRPCServerStatus(models.Model):
 
     @property
     def is_running(self) -> bool:
-        """Check if server is currently running."""
+        """
+        Check if server is currently running.
+
+        Uses environment-aware detection:
+        - Production: Assumes external server (Docker), relies on heartbeat only
+        - Development/Test: Checks local process + heartbeat
+        """
         if self.status not in [self.StatusChoices.RUNNING, self.StatusChoices.STARTING]:
             return False
 
-        # Check if process is still alive
+        # Check if process is still alive (auto-detects external servers)
         if not self._is_process_alive():
             return False
 
@@ -227,12 +233,41 @@ class GRPCServerStatus(models.Model):
         return " ".join(parts)
 
     def _is_process_alive(self) -> bool:
-        """Check if the process is still running."""
+        """
+        Check if the process is still running.
+
+        Uses environment-aware detection:
+        - Production mode: Skip PID check (assumes external server in Docker)
+        - Development/Test: Check PID with graceful fallback for containers
+        """
+        try:
+            from django_cfg.core import get_current_config
+
+            # Auto-detect based on env_mode
+            config = get_current_config()
+            if config and str(config.env_mode) == "production":
+                # Production = external server in separate container
+                # Don't check PID, rely on heartbeat only
+                return True
+
+        except Exception:
+            # Config not available, use fallback logic
+            pass
+
+        # Development/Test or fallback: check PID with graceful handling
         try:
             # Send signal 0 to check if process exists
             os.kill(self.pid, 0)
             return True
-        except (OSError, ProcessLookupError):
+        except ProcessLookupError:
+            # PID not found - could be different namespace (Docker)
+            # Don't mark as dead immediately, rely on heartbeat
+            return True
+        except PermissionError:
+            # Process exists but no permission to signal
+            return True
+        except OSError:
+            # Other OS error (e.g., process died)
             return False
 
     def mark_running(self):

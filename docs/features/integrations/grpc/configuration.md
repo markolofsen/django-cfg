@@ -60,6 +60,50 @@ grpc: GRPCConfig = GRPCConfig(
 )
 ```
 
+## 🎯 Simplified Configuration (Flatten Fields)
+
+For simpler configs, you can use **flatten fields** instead of nested config objects:
+
+### Traditional (Nested):
+```python
+grpc = GRPCConfig(
+    enabled=True,
+    server=GRPCServerConfig(
+        host="[::]",
+        port=50051,
+    ),
+    proto=GRPCProtoConfig(
+        package_prefix="api",
+        output_dir="protos",
+    ),
+    enabled_apps=["apps.crypto"],
+)
+```
+
+### Simplified (Flatten):
+```python
+grpc = GRPCConfig(
+    enabled=True,
+    enabled_apps=["apps.crypto"],
+    # Server fields (flatten)
+    host="[::]",          # Instead of server=GRPCServerConfig(host=...)
+    port=50051,
+    # Proto fields (flatten)
+    package_prefix="api", # Instead of proto=GRPCProtoConfig(package_prefix=...)
+    # Environment integration
+    public_url=env.grpc_url,
+)
+```
+
+**Benefits:**
+- Less boilerplate code
+- No need to import nested config classes
+- Cleaner configuration
+- Same functionality
+
+**When to use nested:** When you need to organize complex configs or reuse config objects.
+**When to use flatten:** For simple configs (recommended for most cases).
+
 ## 🖥️ GRPCServerConfig
 
 gRPC server settings.
@@ -140,26 +184,17 @@ server=GRPCServerConfig(
 
 ## 🔐 GRPCAuthConfig
 
-JWT authentication configuration.
+Authentication configuration (supports both API keys and JWT).
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | `bool` | `False` | Enable JWT authentication |
+| `enabled` | `bool` | `False` | Enable authentication |
 | `require_auth` | `bool` | `False` | Require auth for all methods |
-| `jwt_algorithm` | `str` | `"HS256"` | JWT signing algorithm |
-| `jwt_secret_key` | `str` | `settings.SECRET_KEY` | JWT signing key |
-| `public_methods` | `list[str]` | `[]` | Public methods (no auth) |
-
-### JWT Algorithms
-
-```python
-# Symmetric (uses SECRET_KEY)
-jwt_algorithm="HS256"  # HMAC with SHA-256 (most common)
-
-# Asymmetric (requires public/private keys)
-jwt_algorithm="RS256"  # RSA with SHA-256
-jwt_algorithm="ES256"  # ECDSA with SHA-256
-```
+| **API Key Settings** | | | |
+| `api_key_header` | `str` | `"x-api-key"` | Header name for API key |
+| `accept_django_secret_key` | `bool` | `True` | Accept Django SECRET_KEY as valid API key (for dev/internal use) |
+| **General** | | | |
+| `public_methods` | `list[str]` | `[]` | Public methods (no auth required) |
 
 ### Authentication Modes
 
@@ -170,26 +205,30 @@ auth=GRPCAuthConfig(
 )
 ```
 
-**Mode 2: Optional (Flexible)**
+**Mode 2: Optional Auth (Recommended)**
 ```python
 auth=GRPCAuthConfig(
     enabled=True,
-    require_auth=False,  # Some methods public, some protected
+    require_auth=False,  # Some methods can be public
+    api_key_header="x-api-key",
+    accept_django_secret_key=True,  # Allow SECRET_KEY for dev
 )
 
 # In service:
 # - Use self.get_user(context) for optional auth
 # - Use self.require_user(context) for protected methods
+# - Access context.api_key to check which API key was used
 ```
 
-**Mode 3: Required (Strict)**
+**Mode 3: Required Auth (Strict - Production)**
 ```python
 auth=GRPCAuthConfig(
     enabled=True,
-    require_auth=True,  # All methods require auth
+    require_auth=True,  # All methods require API key
+    api_key_header="x-api-key",
+    accept_django_secret_key=False,  # Production: only DB keys
     public_methods=[    # Except these
         "/grpc.health.v1.Health/Check",
-        "/api.users.UserService/GetUser",
     ],
 )
 ```
@@ -215,15 +254,45 @@ auth=GRPCAuthConfig(
 ### Complete Example
 
 ```python
+# Production configuration with API keys
 auth=GRPCAuthConfig(
     enabled=True,
-    require_auth=False,
-    jwt_algorithm="HS256",
-    jwt_secret_key=settings.SECRET_KEY,  # Or env variable
+    require_auth=True,  # Strict auth in production
+    # API key configuration
+    api_key_header="x-api-key",
+    accept_django_secret_key=False,  # Disable SECRET_KEY in production
+    # Public methods
     public_methods=[
         "/grpc.health.v1.Health/Check",
+        "/grpc.health.v1.Health/Watch",
     ],
 )
+```
+
+### API Key Settings
+
+**Custom Header Name**
+```python
+auth=GRPCAuthConfig(
+    api_key_header="x-custom-api-key",  # Change header name
+)
+```
+
+**Disable SECRET_KEY (Production)**
+```python
+auth=GRPCAuthConfig(
+    accept_django_secret_key=False,  # Only accept keys from database
+)
+```
+
+**Enable SECRET_KEY (Development)**
+```python
+auth=GRPCAuthConfig(
+    accept_django_secret_key=True,  # Allow using settings.SECRET_KEY
+)
+
+# Usage:
+# grpcurl -H "x-api-key: $(python manage.py shell -c 'from django.conf import settings; print(settings.SECRET_KEY)')" ...
 ```
 
 ## 📄 GRPCProtoConfig
@@ -268,7 +337,11 @@ class DevelopmentConfig(DjangoConfig):
             enable_health_check=True,
         ),
         auth=GRPCAuthConfig(
-            enabled=False,  # Disable auth for easy testing
+            enabled=True,  # Enable auth even in dev
+            require_auth=False,
+            api_key_header="x-api-key",
+            accept_django_secret_key=True,  # Allow SECRET_KEY for convenience
+            # JWT disabled for simpler dev workflow
         ),
         enabled_apps=["apps.users"],  # Limited apps
     )
@@ -292,7 +365,9 @@ class ProductionConfig(DjangoConfig):
         auth=GRPCAuthConfig(
             enabled=True,             # Enable auth
             require_auth=True,        # Require by default
-            jwt_algorithm="RS256",    # Asymmetric for production
+            # API key configuration
+            api_key_header="x-api-key",
+            accept_django_secret_key=False,  # Disable SECRET_KEY in production
             public_methods=[
                 "/grpc.health.v1.Health/Check",
             ],
@@ -340,6 +415,8 @@ GRPC_MAX_WORKERS=20
 GRPC_ENABLE_REFLECTION=false
 GRPC_AUTH_ENABLED=true
 GRPC_REQUIRE_AUTH=true
+GRPC_API_KEY_HEADER=x-api-key
+GRPC_ACCEPT_SECRET_KEY=false
 ```
 
 In config:
@@ -358,6 +435,8 @@ grpc: GRPCConfig = GRPCConfig(
     auth=GRPCAuthConfig(
         enabled=os.getenv("GRPC_AUTH_ENABLED", "false").lower() == "true",
         require_auth=os.getenv("GRPC_REQUIRE_AUTH", "false").lower() == "true",
+        api_key_header=os.getenv("GRPC_API_KEY_HEADER", "x-api-key"),
+        accept_django_secret_key=os.getenv("GRPC_ACCEPT_SECRET_KEY", "true").lower() == "true",
     ),
 )
 ```
@@ -443,12 +522,28 @@ python manage.py rungrpc \
 
 ### Custom Interceptors
 
+:::danger Interceptor Order Matters!
+Interceptors execute in the order listed. **Authentication interceptors MUST come first** to set `context.user` and `context.api_key` before logging interceptors use them.
+
+**Correct order:**
+1. `ApiKeyAuthInterceptor` - Sets context.api_key and context.user
+2. `RequestLoggerInterceptor` - Logs request with api_key info
+3. `LoggingInterceptor` (dev mode)
+4. `MetricsInterceptor` (dev mode)
+5. Custom interceptors
+
+**Wrong order causes:** API keys not tracked in logs, user info missing.
+:::
+
 ```python
 # In your config or settings
 GRPC_INTERCEPTORS = [
+    # 1. Auth FIRST (sets context.api_key and context.user)
+    'django_cfg.apps.integrations.grpc.auth.ApiKeyAuthInterceptor',
+    # 2. Request logger (uses context.api_key from auth)
     'django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor',
-    'django_cfg.apps.integrations.grpc.auth.JWTAuthInterceptor',
-    'myapp.interceptors.CustomInterceptor',  # Your custom interceptor
+    # 3. Your custom interceptors
+    'myapp.interceptors.CustomInterceptor',
 ]
 ```
 
@@ -502,9 +597,10 @@ server = grpc.server(
 ## 📖 Related Documentation
 
 - **[Getting Started](./getting-started.md)** - Build your first service
+- **[Authentication](./authentication.md)** - API keys and JWT authentication
 - **[Concepts](./concepts.md)** - Understanding architecture
 - **[FAQ](./faq.md)** - Common questions
 
 ---
 
-**Configuration Tip:** Start with defaults, measure performance, then tune based on actual traffic patterns.
+**Configuration Tip:** Start with defaults, measure performance, then tune based on actual traffic patterns. For production, always use API keys or JWT authentication with `require_auth=True`.

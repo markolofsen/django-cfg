@@ -10,18 +10,12 @@ from pathlib import Path
 import questionary
 from django.conf import settings
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.management.utils import InteractiveCommand
 
-logger = get_logger('script')
 
-class Command(BaseCommand):
-    # Web execution metadata
-    web_executable = False
-    requires_input = True
-    is_destructive = False
-
+class Command(InteractiveCommand):
+    command_name = 'script'
     help = 'Run custom scripts and manage Django applications'
 
     def add_arguments(self, parser):
@@ -52,7 +46,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logger.info("Starting script command")
+        self.logger.info("Starting script command")
         if options['list']:
             self.list_scripts()
         elif options['create']:

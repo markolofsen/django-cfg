@@ -3,17 +3,19 @@ Knowledge Base statistics command.
 """
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
 from django.db import models
 from django.db.models import Avg, Count, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import Extract
 
+from django_cfg.management.utils import SafeCommand
+
 User = get_user_model()
 
 
-class Command(BaseCommand):
+class Command(SafeCommand):
     """Display Knowledge Base statistics."""
 
+    command_name = 'knowbase_stats'
     help = 'Display Knowledge Base usage statistics'
 
     def add_arguments(self, parser):
