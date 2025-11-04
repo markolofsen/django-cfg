@@ -58,6 +58,8 @@ class Command(BaseCommand):
         self.logger = get_logger('rungrpc')
         self.server = None
         self.shutdown_event = None
+        self.server_status = None
+        self.server_config = None  # Store config for re-registration
 
     def add_arguments(self, parser):
         """Add command arguments."""
@@ -182,6 +184,16 @@ class Command(BaseCommand):
             import os
             from django_cfg.apps.integrations.grpc.services import ServiceDiscovery
 
+            # Store config for re-registration
+            self.server_config = {
+                'host': host,
+                'port': port,
+                'pid': os.getpid(),
+                'max_workers': 0,
+                'enable_reflection': enable_reflection,
+                'enable_health_check': enable_health_check,
+            }
+
             # Get registered services metadata (run in thread to avoid blocking)
             discovery = ServiceDiscovery()
             services_metadata = await asyncio.to_thread(
@@ -205,6 +217,9 @@ class Command(BaseCommand):
                 update_fields=["registered_services"]
             )
 
+            # Store in instance for heartbeat
+            self.server_status = server_status
+
         except Exception as e:
             self.logger.warning(f"Could not start server status tracking: {e}")
 
@@ -222,7 +237,7 @@ class Command(BaseCommand):
         heartbeat_task = None
         if server_status:
             heartbeat_task = asyncio.create_task(
-                self._heartbeat_loop(server_status, interval=30)
+                self._heartbeat_loop(interval=30)
             )
             self.logger.info("Started heartbeat background task (30s interval)")
 
@@ -478,22 +493,79 @@ class Command(BaseCommand):
             )
             return 0
 
-    async def _heartbeat_loop(self, server_status, interval: int = 30):
+    async def _heartbeat_loop(self, interval: int = 30):
         """
-        Periodically update server heartbeat.
+        Periodically update server heartbeat with auto-recovery.
+
+        If server record is deleted from database, automatically re-registers
+        the server to maintain monitoring continuity.
 
         Args:
-            server_status: GRPCServerStatus instance
             interval: Heartbeat interval in seconds (default: 30)
         """
+        from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
+        from asgiref.sync import sync_to_async
+
         try:
             while True:
                 await asyncio.sleep(interval)
+
+                if not self.server_status or not self.server_config:
+                    self.logger.warning("No server status or config available")
+                    continue
+
                 try:
-                    await asyncio.to_thread(server_status.mark_running)
-                    self.logger.debug(f"Heartbeat updated (interval: {interval}s)")
+                    # Check if record still exists
+                    record_exists = await sync_to_async(
+                        GRPCServerStatus.objects.filter(
+                            id=self.server_status.id
+                        ).exists
+                    )()
+
+                    if not record_exists:
+                        # Record was deleted - re-register server
+                        self.logger.warning(
+                            "Server record was deleted from database, "
+                            "re-registering..."
+                        )
+
+                        # Get services metadata for re-registration
+                        from django_cfg.apps.integrations.grpc.services import ServiceDiscovery
+                        discovery = ServiceDiscovery()
+                        services_metadata = await asyncio.to_thread(
+                            discovery.get_registered_services
+                        )
+
+                        # Re-register server
+                        new_server_status = await asyncio.to_thread(
+                            GRPCServerStatus.objects.start_server,
+                            **self.server_config
+                        )
+
+                        # Store registered services
+                        new_server_status.registered_services = services_metadata
+                        await asyncio.to_thread(
+                            new_server_status.save,
+                            update_fields=["registered_services"]
+                        )
+
+                        # Mark as running
+                        await asyncio.to_thread(new_server_status.mark_running)
+
+                        # Update reference
+                        self.server_status = new_server_status
+
+                        self.logger.info(
+                            f"Successfully re-registered server (ID: {new_server_status.id})"
+                        )
+                    else:
+                        # Record exists - just update heartbeat
+                        await asyncio.to_thread(self.server_status.mark_running)
+                        self.logger.debug(f"Heartbeat updated (interval: {interval}s)")
+
                 except Exception as e:
                     self.logger.warning(f"Failed to update heartbeat: {e}")
+
         except asyncio.CancelledError:
             self.logger.info("Heartbeat task cancelled")
             raise

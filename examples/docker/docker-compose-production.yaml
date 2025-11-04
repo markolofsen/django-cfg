@@ -237,8 +237,8 @@ services:
     env_file:
       - .env.prod
     environment:
-      # Configuration
-      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-10}
+      # Configuration (1440 = 24 hours)
+      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-1440}
       DJANGO_CONTAINER_NAME: django-cfg-django
 
       # Admin user configuration
