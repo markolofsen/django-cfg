@@ -21,15 +21,15 @@ This document explains the architecture and design patterns behind Django-CFG's 
 ```mermaid
 graph TB
     subgraph "External Clients"
-        PythonClient["Python Client"]
-        GoClient["Go Client"]
-        JSClient["JavaScript Client"]
-        MobileClient["Mobile App"]
+        PythonClient([Python Client])
+        GoClient([Go Client])
+        JSClient([JavaScript Client])
+        MobileClient([Mobile App])
     end
 
     subgraph "Django-CFG Application"
         subgraph "gRPC Server Layer"
-            Server["gRPC Server<br/>(asyncio/threading)"]
+            Server["🚀 gRPC Server<br/>(asyncio/threading)"]
             Reflection["Server Reflection<br/>(grpcurl support)"]
             Health["Health Check Service"]
         end
@@ -58,15 +58,15 @@ graph TB
         end
 
         subgraph "Django Integration"
-            ORM["Django ORM"]
+            ORM[("💾 Django ORM")]
             Auth["Django Auth<br/>(User, Permissions)"]
             Signals["Django Signals"]
-            Cache["Django Cache"]
+            Cache{{Redis Cache}}
         end
 
         subgraph "Data Layer"
-            DB[(PostgreSQL/<br/>MySQL/<br/>SQLite)]
-            Redis[(Redis<br/>Cache)]
+            DB[("PostgreSQL / MySQL / SQLite")]
+            Redis[("Redis")]
         end
 
         subgraph "Monitoring Layer"
@@ -105,11 +105,10 @@ graph TB
     LogModel --> AdminUI
     LogModel --> RestAPI
 
-    style Server fill:#e3f2fd
-    style I3 fill:#fff3e0
-    style BaseClasses fill:#f3e5f5
-    style LogModel fill:#e8f5e9
-    style Discovery fill:#fce4ec
+    style Server fill:#1e40af
+    style BaseClasses fill:#15803d
+    style LogModel fill:#7e22ce
+    style Discovery fill:#be185d
 ```
 
 ## 🔄 Request Flow Architecture
@@ -215,7 +214,7 @@ sequenceDiagram
 The interceptors execute in a specific order to ensure proper request handling:
 
 ```mermaid
-graph LR
+graph TB
     Request["Incoming<br/>Request"] --> I1
 
     subgraph "Interceptors (Execution Order)"
@@ -232,10 +231,10 @@ graph LR
     I1 --> I2 --> I3 --> I4 --> I5 --> Service
     Service --> I5 --> I4 --> I3 --> I2 --> I1 --> Response
 
-    style I1 fill:#e1f5ff
-    style I3 fill:#fff3e0
-    style I4 fill:#ffebee
-    style Service fill:#f3e5f5
+    style I1 fill:#1e40af
+    style I3 fill:#ea580c
+    style I4 fill:#dc2626
+    style Service fill:#15803d
 ```
 
 **Key Design Decisions:**
@@ -294,8 +293,8 @@ graph TB
     Register --> Reflection
     Servicer --> Server
 
-    style Discovery fill:#fce4ec
-    style Server fill:#e3f2fd
+    style Discovery fill:#be185d
+    style Server fill:#1e40af
 ```
 
 ### 3. Base Service Classes Hierarchy
@@ -432,10 +431,10 @@ graph TB
 
     Deny -.->|Error| Request
 
-    style LoadUser fill:#e8f5e9
-    style AllowPublic fill:#fff3e0
-    style Deny fill:#ffebee
-    style Service fill:#e3f2fd
+    style LoadUser fill:#047857
+    style AllowPublic fill:#ea580c
+    style Deny fill:#dc2626
+    style Service fill:#1e40af
 ```
 
 ## 📊 Monitoring Architecture
@@ -484,16 +483,15 @@ graph TB
     LogTable --> RestAPI
     LogTable --> Metrics
 
-    style Create fill:#e8f5e9
-    style Update fill:#e3f2fd
-    style LogTable fill:#fff3e0
-    style Admin fill:#f3e5f5
+    style Create fill:#047857
+    style Update fill:#1e40af
+    style LogTable fill:#7e22ce
 ```
 
 ### Statistics & Metrics
 
 ```mermaid
-graph LR
+graph TB
     subgraph "Data Collection"
         Logs["GRPCRequestLog<br/>Records"]
     end
@@ -522,10 +520,9 @@ graph LR
     Filters --> Timeline
     Filters --> Services
 
-    style Manager fill:#fce4ec
-    style Overview fill:#e8f5e9
-    style Timeline fill:#e3f2fd
-    style Services fill:#fff3e0
+    style Manager fill:#be185d
+    style Overview fill:#047857
+    style Timeline fill:#1e40af
 ```
 
 ## 🔄 Phase 4: Dynamic Invocation
@@ -554,9 +551,9 @@ graph TB
     MessageFactory --> DescriptorPool
     MessageFactory --> Services
 
-    style DynamicClient fill:#e3f2fd
-    style MessageFactory fill:#e8f5e9
-    style ReflectionService fill:#fff3e0
+    style DynamicClient fill:#1e40af
+    style MessageFactory fill:#15803d
+    style ReflectionService fill:#ea580c
 ```
 
 **Key Features:**
@@ -659,8 +656,8 @@ graph TB
 
     Django --> DB
 
-    style Pool fill:#e3f2fd
-    style Django fill:#f3e5f5
+    style Pool fill:#1e40af
+    style Django fill:#7e22ce
 ```
 
 **Configuration:**

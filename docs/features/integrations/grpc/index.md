@@ -100,15 +100,15 @@ grpcurl -plaintext -d '{"user_id": 1}' \
 ```mermaid
 graph TB
     subgraph "Clients"
-        Python["Python Client"]
-        Go["Go Client"]
-        JS["JavaScript Client"]
+        Python([Python Client])
+        Go([Go Client])
+        JS([JavaScript Client])
     end
 
     subgraph "Django-CFG gRPC Server"
-        Server["gRPC Server<br/>(Port 50051)"]
+        Server["🚀 gRPC Server<br/>(Port 50051)"]
 
-        subgraph "Interceptors (Order Matters!)"
+        subgraph "Interceptors Pipeline"
             ApiKeyAuth["1. API Key Auth"]
             Logger["2. Request Logger"]
             Error["3. Error Handler"]
@@ -121,8 +121,8 @@ graph TB
         end
     end
 
-    subgraph "Django"
-        ORM["Django ORM"]
+    subgraph "Django Layer"
+        ORM[("💾 Django ORM")]
         Admin["Admin Interface"]
         Monitoring["Server Monitoring"]
     end
@@ -140,9 +140,9 @@ graph TB
     Logger -.->|Logs with API key| Admin
     ApiKeyAuth -.->|Tracks usage| Monitoring
 
-    style Server fill:#e3f2fd
-    style User fill:#e8f5e9
-    style ORM fill:#f3e5f5
+    style Server fill:#1e40af
+    style User fill:#15803d
+    style ORM fill:#7e22ce
 ```
 
 ## 🎯 Key Features
@@ -326,22 +326,22 @@ Use this command in CI/CD pipelines to verify your gRPC setup before deployment.
 ### Simple Request Flow
 
 ```mermaid
-graph LR
-    A[Client] -->|gRPC Request| B[Server]
+graph TB
+    A([Client]) -->|gRPC Request| B["🚀 Server"]
     B -->|1. Authenticate| C[API Key Auth]
     C -->|2. Log| D[Request Logger]
     D -->|3. Execute| E[Service Handler]
     E -->|4. Response| A
 
-    style A fill:#e3f2fd
-    style E fill:#e8f5e9
+    style B fill:#1e40af
+    style E fill:#15803d
 ```
 
 ### API Key Authentication Flow
 
 ```mermaid
 graph TB
-    A[Request with x-api-key] --> B{Check API Key}
+    A([Request with x-api-key]) --> B{Check API Key}
     B -->|Found in DB| C[Load User]
     B -->|Django SECRET_KEY| D[Load Admin User]
     B -->|Not Found| E[Unauthenticated]
@@ -349,29 +349,29 @@ graph TB
     C --> F[Set context.user]
     D --> F
     F --> G[Set context.api_key]
-    G --> H[Continue to Service]
+    G --> H([Continue to Service])
 
     E --> I{require_auth?}
-    I -->|True| J[Abort: UNAUTHENTICATED]
-    I -->|False| K[Continue Anonymous]
+    I -->|True| J[❌ Abort: UNAUTHENTICATED]
+    I -->|False| K([Continue Anonymous])
 
-    style C fill:#c8e6c9
-    style D fill:#fff9c4
-    style J fill:#ffcdd2
+    style C fill:#047857
+    style D fill:#ea580c
+    style J fill:#dc2626
 ```
 
 ### Interceptor Chain
 
 ```mermaid
-graph LR
+graph TB
     A[Request] --> B[1. ApiKeyAuth<br/>Sets context]
     B --> C[2. RequestLogger<br/>Uses context]
     C --> D[3. Service<br/>Handles request]
     D --> E[Response]
 
-    style B fill:#ffebee
-    style C fill:#e1f5fe
-    style D fill:#e8f5e9
+    style B fill:#ea580c
+    style C fill:#1e40af
+    style D fill:#15803d
 
     note1[⚠️ ORDER MATTERS!<br/>Auth must be first]
     note1 -.-> B
@@ -443,6 +443,67 @@ sequenceDiagram
     SV-->>L: 5. Response
     L->>DB: Update log (duration, status)
     L-->>C: Response
+```
+
+## 🔄 Server Lifecycle
+
+### Server States
+
+```mermaid
+stateDiagram-v2
+    [*] --> Starting: rungrpc
+    Starting --> Running: Server initialized
+    Starting --> Error: Failed to start
+
+    Running --> Processing: Handle requests
+    Processing --> Running: Request complete
+
+    Running --> Stopping: Shutdown signal
+    Stopping --> Stopped: Cleanup complete
+
+    Error --> [*]: Exit
+    Stopped --> [*]: Exit
+
+    note right of Running
+        Server active
+        Port 50051 listening
+    end note
+
+    note right of Processing
+        Interceptors pipeline
+        Service execution
+    end note
+```
+
+### Development Workflow
+
+```mermaid
+graph TB
+    Start([Developer starts]) --> Install[Install django-cfg]
+    Install --> Config[Configure GRPCConfig]
+    Config --> Create[Create grpc_services.py]
+    Create --> Define[Define service methods]
+    Define --> Run[Run: python manage.py rungrpc]
+
+    Run --> Auto{Auto-discovery}
+    Auto -->|Services found| Register[Register services]
+    Auto -->|No services| Warn[Warning: No services]
+
+    Register --> Listen[Server listening on :50051]
+    Listen --> Test[Test with grpcurl/client]
+
+    Test --> Working{Working?}
+    Working -->|Yes| Deploy([Deploy to production])
+    Working -->|No| Debug[Check logs]
+    Debug --> Define
+
+    Warn --> Check[Check enabled_apps config]
+    Check --> Create
+
+    style Install fill:#1e40af
+    style Register fill:#15803d
+    style Deploy fill:#047857
+    style Debug fill:#ea580c
 ```
 
 ## 📚 Documentation

@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Remove host's .venv if it exists (incompatible with container environment)
+if [ -d "/app/.venv" ]; then
+  echo "Removing incompatible host .venv directory..."
+  rm -rf /app/.venv
+fi
+
 echo "Waiting for postgres..."
 while ! nc -z postgres 5432; do
   sleep 0.1

@@ -170,6 +170,38 @@ services:
   # For separate RQ services, use: docker-compose-local-services.yml
   # docker compose -f docker-compose-local-services.yml up -d
 
+  # gRPC Server (Django gRPC Service)
+  grpc:
+    image: djangocfg-django:latest
+    container_name: djangocfg_grpc
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw  # Mount Django code for hot-reload
+      - ../../volumes/django/media:/app/media:rw
+    depends_on:
+      django:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: poetry run python manage.py rungrpc
+    ports:
+      - "7351:50051"  # Django-CFG: base 7300 (+51 gRPC)
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rungrpc > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - djangocfg-network
+      - djangocfg_django_network
+
   centrifugo:
     image: centrifugo/centrifugo:v6
     container_name: djangocfg_centrifugo

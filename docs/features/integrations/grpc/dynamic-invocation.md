@@ -67,9 +67,9 @@ graph TB
 
     Server --> Services
 
-    style TestingViewSet fill:#e3f2fd
-    style DynamicClient fill:#f3e5f5
-    style MessageFactory fill:#e8f5e9
+    style TestingViewSet fill:#1e40af
+    style DynamicClient fill:#7e22ce
+    style MessageFactory fill:#15803d
 ```
 
 ## 🎯 Core Capabilities

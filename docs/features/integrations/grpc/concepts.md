@@ -18,11 +18,11 @@ Understanding the key concepts behind Django-CFG's gRPC integration.
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        Client["gRPC Clients<br/>(Python, Go, JS, etc)"]
+        Client(["gRPC Clients<br/>(Python, Go, JS, etc)"])
     end
 
     subgraph "gRPC Server"
-        Server["gRPC Server<br/>(Port 50051)"]
+        Server["🚀 gRPC Server<br/>(Port 50051)"]
 
         subgraph "Interceptors Pipeline"
             I1["Request Logger"]
@@ -39,7 +39,7 @@ graph TB
     end
 
     subgraph "Django Layer"
-        ORM["Django ORM"]
+        ORM[("💾 Django ORM")]
         Auth["Django Auth"]
         Admin["Admin Interface"]
         ApiKeys["API Key Manager"]
@@ -55,9 +55,9 @@ graph TB
     I2 -.->|Validates| ApiKeys
     Server -.->|Tracks| ServerStatus
 
-    style Server fill:#e3f2fd
-    style Services fill:#e8f5e9
-    style ORM fill:#f3e5f5
+    style Server fill:#1e40af
+    style Services fill:#15803d
+    style ORM fill:#7e22ce
 ```
 
 ### Key Components
@@ -132,7 +132,7 @@ apps/users/
 ### Pattern
 
 ```mermaid
-graph LR
+graph TB
     Config["Config:<br/>enabled_apps"] --> Scanner["Service<br/>Scanner"]
     Scanner --> App1["apps.users"]
     Scanner --> App2["apps.products"]
@@ -146,8 +146,8 @@ graph LR
     Service1 --> Server["gRPC Server"]
     Service2 --> Server
 
-    style Scanner fill:#e3f2fd
-    style Server fill:#e8f5e9
+    style Scanner fill:#be185d
+    style Server fill:#1e40af
 ```
 
 **Benefits:**
@@ -285,19 +285,19 @@ classDiagram
 Interceptors are like middleware - they wrap service calls to add functionality without modifying service code.
 
 ```mermaid
-graph LR
-    Request[Request] --> I1[Request<br/>Logger]
+graph TB
+    Request([Request]) --> I1[Request<br/>Logger]
     I1 --> I2[JWT<br/>Auth]
     I2 --> I3[Error<br/>Handler]
     I3 --> Service[Service]
     Service --> I3b[Error<br/>Handler]
     I3b --> I2b[JWT<br/>Auth]
     I2b --> I1b[Request<br/>Logger]
-    I1b --> Response[Response]
+    I1b --> Response([Response])
 
-    style I1 fill:#e1f5ff
-    style I2 fill:#fff3e0
-    style Service fill:#e8f5e9
+    style I1 fill:#1e40af
+    style I2 fill:#ea580c
+    style Service fill:#15803d
 ```
 
 ### Built-in Interceptors
@@ -463,7 +463,7 @@ for server in running:
 Test and invoke gRPC methods without writing client code or having proto files.
 
 ```mermaid
-graph LR
+graph TB
     A[Developer] --> B[DynamicGRPCClient]
     B --> C[gRPC Reflection]
     C --> D[Service Metadata]
@@ -471,8 +471,8 @@ graph LR
     E --> F[Invoke Method]
     F --> G[Get Response]
 
-    style B fill:#e3f2fd
-    style C fill:#fff3e0
+    style B fill:#1e40af
+    style C fill:#ea580c
 ```
 
 ### How It Works

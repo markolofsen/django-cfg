@@ -49,7 +49,8 @@ services:
       - "../files/django-logs:/app/logs"
       - "../projects/django:/app:rw"
     depends_on:
-      - django
+      django:
+        condition: service_healthy  # Wait for Django to be healthy (migrations complete)
     command: poetry run python manage.py rqworker default high low knowledge
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
@@ -80,7 +81,8 @@ services:
       - "../files/django-logs:/app/logs"
       - "../projects/django:/app:rw"
     depends_on:
-      - django
+      django:
+        condition: service_healthy  # Wait for Django to be healthy (migrations complete)
     command: poetry run python manage.py rqscheduler
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
@@ -111,7 +113,8 @@ services:
       - "../files/django-logs:/app/logs"
       - "../projects/django:/app:rw"
     depends_on:
-      - django
+      django:
+        condition: service_healthy  # Wait for Django to be healthy (migrations complete)
     command: poetry run python manage.py rungrpc
     ports:
       - "50051:50051"
