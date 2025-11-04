@@ -6,6 +6,7 @@ Provides REST API endpoints for viewing registered gRPC services and their metho
 
 from django.db import models
 from django.db.models import Avg, Count, Max, Min
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.mixins import AdminAPIMixin
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.types import OpenApiTypes
@@ -20,13 +21,14 @@ from ..serializers.service_registry import (
     ServiceDetailSerializer,
     ServiceListSerializer,
     ServiceMethodsSerializer,
+    ServiceSummarySerializer,
 )
 from ..services import ServiceRegistryManager
 
 logger = get_logger("grpc.services")
 
 
-class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
+class GRPCServiceViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     ViewSet for gRPC service registry and management.
 
@@ -39,13 +41,20 @@ class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
 
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
+
+    # Required for GenericViewSet
+    queryset = GRPCRequestLog.objects.none()  # Placeholder
+    serializer_class = ServiceSummarySerializer
+
     # Allow dots in service names (e.g., apps.CryptoService)
     lookup_value_regex = r'[^/]+'
 
     @extend_schema(
         tags=["gRPC Services"],
         summary="List all services",
-        description="Returns list of all registered gRPC services with basic statistics.",
+        description="Returns paginated list of all registered gRPC services with basic statistics.",
         parameters=[
             OpenApiParameter(
                 name="hours",
@@ -54,13 +63,14 @@ class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
                 description="Statistics period in hours (default: 24)",
                 required=False,
             ),
+            # Note: page, page_size added automatically by pagination_class
         ],
         responses={
-            200: ServiceListSerializer,
+            200: ServiceSummarySerializer(many=True),
         },
     )
     def list(self, request):
-        """List all registered gRPC services."""
+        """List all registered gRPC services with pagination."""
         try:
             hours = int(request.GET.get("hours", 24))
             hours = min(max(hours, 1), 168)
@@ -68,23 +78,19 @@ class GRPCServiceViewSet(AdminAPIMixin, viewsets.ViewSet):
             # Use service registry manager
             registry = ServiceRegistryManager()
 
-            if not registry.is_server_running():
-                # No running server - return empty list
-                return Response({
-                    "services": [],
-                    "total_services": 0,
-                })
-
             # Get services with stats from service layer
+            # Note: This will return empty list if server is not running,
+            # but that's expected - services are only known when server is started
             services_list = registry.get_all_services_with_stats(hours=hours)
 
-            response_data = {
-                "services": services_list,
-                "total_services": len(services_list),
-            }
+            # Paginate the services list (works with empty list too)
+            page = self.paginate_queryset(services_list)
+            if page is not None:
+                serializer = ServiceSummarySerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
 
-            serializer = ServiceListSerializer(data=response_data)
-            serializer.is_valid(raise_exception=True)
+            # Fallback (no pagination)
+            serializer = ServiceSummarySerializer(services_list, many=True)
             return Response(serializer.data)
 
         except Exception as e:

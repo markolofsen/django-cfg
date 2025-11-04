@@ -5,26 +5,6 @@ Services serializers for gRPC monitoring API.
 from rest_framework import serializers
 
 
-class MonitoringServiceStatsSerializer(serializers.Serializer):
-    """Statistics for a single gRPC service (monitoring endpoint)."""
-
-    service_name = serializers.CharField(help_text="Service name")
-    total = serializers.IntegerField(help_text="Total requests")
-    successful = serializers.IntegerField(help_text="Successful requests")
-    errors = serializers.IntegerField(help_text="Error requests")
-    avg_duration_ms = serializers.FloatField(help_text="Average duration")
-    last_activity_at = serializers.CharField(
-        allow_null=True, help_text="Last activity timestamp"
-    )
-
-
-class ServiceListSerializer(serializers.Serializer):
-    """List of gRPC services with statistics."""
-
-    services = MonitoringServiceStatsSerializer(many=True, help_text="Service statistics")
-    total_services = serializers.IntegerField(help_text="Total number of services")
-
-
 class MethodStatsSerializer(serializers.Serializer):
     """Statistics for a single gRPC method."""
 
@@ -47,8 +27,6 @@ class MethodListSerializer(serializers.Serializer):
 
 
 __all__ = [
-    "MonitoringServiceStatsSerializer",
-    "ServiceListSerializer",
     "MethodStatsSerializer",
     "MethodListSerializer",
 ]

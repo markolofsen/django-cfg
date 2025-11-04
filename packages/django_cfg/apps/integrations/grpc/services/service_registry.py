@@ -47,7 +47,10 @@ class ServiceRegistryManager:
 
     def get_all_services(self) -> List[Dict]:
         """
-        Get all registered services from the running gRPC server.
+        Get all registered services.
+
+        Returns services from running server if available,
+        otherwise discovers services from filesystem.
 
         Returns:
             List of service metadata dictionaries
@@ -61,11 +64,16 @@ class ServiceRegistryManager:
             'apps.CryptoService'
         """
         current_server = self.get_current_server()
-        if not current_server:
-            logger.debug("No running gRPC server found")
-            return []
 
-        return current_server.registered_services or []
+        # If server is running, use its registered services
+        if current_server and current_server.registered_services:
+            return current_server.registered_services
+
+        # Otherwise, discover services from filesystem
+        logger.debug("Server not running - discovering services from filesystem")
+        from .discovery import ServiceDiscovery
+        discovery = ServiceDiscovery()
+        return discovery.get_registered_services()
 
     def get_service_by_name(self, service_name: str) -> Optional[Dict]:
         """

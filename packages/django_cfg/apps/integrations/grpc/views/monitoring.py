@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import Avg, Count, Max
 from django.db.models.functions import TruncDay, TruncHour
 from django_cfg.mixins import AdminAPIMixin
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -24,8 +25,6 @@ from ..serializers import (
     GRPCOverviewStatsSerializer,
     MethodListSerializer,
     MethodStatsSerializer,
-    MonitoringServiceStatsSerializer,
-    ServiceListSerializer,
 )
 from ..serializers.service_registry import RecentRequestSerializer
 from ..services import MonitoringService
@@ -47,6 +46,8 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    pagination_class = DefaultPagination
 
     # Required for GenericViewSet
     queryset = GRPCRequestLog.objects.none()  # Placeholder, actual queries in actions
@@ -153,7 +154,7 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses={
-            200: RecentRequestSerializer,
+            200: RecentRequestSerializer(many=True),  # Use many=True for paginated list
             400: {"description": "Invalid parameters"},
         },
     )
@@ -230,54 +231,6 @@ class GRPCMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             )
         except Exception as e:
             logger.error(f"Recent requests error: {e}", exc_info=True)
-            return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-    @extend_schema(
-        tags=["gRPC Monitoring"],
-        summary="Get service statistics",
-        description="Returns statistics grouped by service.",
-        parameters=[
-            OpenApiParameter(
-                name="hours",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                description="Statistics period in hours (default: 24)",
-                required=False,
-            ),
-        ],
-        responses={
-            200: ServiceListSerializer,
-            400: {"description": "Invalid parameters"},
-        },
-    )
-    @action(detail=False, methods=["get"], url_path="services", pagination_class=None)
-    def services(self, request):
-        """Get statistics per service."""
-        try:
-            hours = int(request.GET.get("hours", 24))
-
-            service = MonitoringService()
-            services_list = service.get_service_statistics(hours=hours)
-
-            response_data = {
-                "services": services_list,
-                "total_services": len(services_list),
-            }
-
-            serializer = ServiceListSerializer(data=response_data)
-            serializer.is_valid(raise_exception=True)
-            return Response(serializer.data)
-
-        except ValueError as e:
-            logger.warning(f"Service stats validation error: {e}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as e:
-            logger.error(f"Service stats error: {e}", exc_info=True)
             return Response(
                 {"error": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
