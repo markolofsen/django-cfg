@@ -218,6 +218,14 @@ class Command(BaseCommand):
             except Exception as e:
                 self.logger.warning(f"Could not mark server as running: {e}")
 
+        # Start heartbeat background task
+        heartbeat_task = None
+        if server_status:
+            heartbeat_task = asyncio.create_task(
+                self._heartbeat_loop(server_status, interval=30)
+            )
+            self.logger.info("Started heartbeat background task (30s interval)")
+
         # Display gRPC-specific startup info
         try:
             from django_cfg.core.integration.display import GRPCDisplayManager
@@ -257,6 +265,14 @@ class Command(BaseCommand):
         except KeyboardInterrupt:
             # Signal handler will take care of graceful shutdown
             pass
+        finally:
+            # Cancel heartbeat task
+            if heartbeat_task and not heartbeat_task.done():
+                heartbeat_task.cancel()
+                try:
+                    await heartbeat_task
+                except asyncio.CancelledError:
+                    pass
 
     def _build_grpc_options(self, config: dict) -> list:
         """
@@ -461,6 +477,26 @@ class Command(BaseCommand):
                 self.style.ERROR(f"Error registering services: {e}")
             )
             return 0
+
+    async def _heartbeat_loop(self, server_status, interval: int = 30):
+        """
+        Periodically update server heartbeat.
+
+        Args:
+            server_status: GRPCServerStatus instance
+            interval: Heartbeat interval in seconds (default: 30)
+        """
+        try:
+            while True:
+                await asyncio.sleep(interval)
+                try:
+                    await asyncio.to_thread(server_status.mark_running)
+                    self.logger.debug(f"Heartbeat updated (interval: {interval}s)")
+                except Exception as e:
+                    self.logger.warning(f"Failed to update heartbeat: {e}")
+        except asyncio.CancelledError:
+            self.logger.info("Heartbeat task cancelled")
+            raise
 
     def _setup_signal_handlers_async(self, server, server_status=None):
         """
