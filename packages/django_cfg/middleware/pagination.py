@@ -190,62 +190,62 @@ class NoPagination(PageNumberPagination):
         return Response(data)
 
 
-class CursorPaginationEnhanced(PageNumberPagination):
-    """
-    Enhanced cursor-based pagination for large datasets.
+# class CursorPaginationEnhanced(PageNumberPagination):
+#     """
+#     Enhanced cursor-based pagination for large datasets.
     
-    Better performance for large datasets but doesn't support jumping to arbitrary pages.
-    """
-    page_size = 100
-    page_size_query_param = 'page_size'
-    max_page_size = 1000
-    cursor_query_param = 'cursor'
-    ordering = '-created_at'  # Default ordering, should be overridden
+#     Better performance for large datasets but doesn't support jumping to arbitrary pages.
+#     """
+#     page_size = 100
+#     page_size_query_param = 'page_size'
+#     max_page_size = 1000
+#     cursor_query_param = 'cursor'
+#     ordering = '-created_at'  # Default ordering, should be overridden
 
-    def get_paginated_response(self, data):
-        """
-        Return cursor-paginated response with enhanced format.
-        """
-        return Response({
-            'next': self.get_next_link(),
-            'previous': self.get_previous_link(),
-            'page_size': self.page_size,
-            'results': data,
-        })
+#     def get_paginated_response(self, data):
+#         """
+#         Return cursor-paginated response with enhanced format.
+#         """
+#         return Response({
+#             'next': self.get_next_link(),
+#             'previous': self.get_previous_link(),
+#             'page_size': self.page_size,
+#             'results': data,
+#         })
 
-    def get_paginated_response_schema(self, schema):
-        """
-        Return the OpenAPI schema for cursor-paginated responses.
-        """
-        return {
-            'type': 'object',
-            'required': ['results'],
-            'properties': {
-                'next': {
-                    'type': 'string',
-                    'nullable': True,
-                    'format': 'uri',
-                    'description': 'URL to next page of results',
-                    'example': 'http://api.example.org/accounts/?cursor=cD0yMDIzLTEyLTE1KzAyJTNBMDA%3D'
-                },
-                'previous': {
-                    'type': 'string',
-                    'nullable': True,
-                    'format': 'uri',
-                    'description': 'URL to previous page of results',
-                    'example': 'http://api.example.org/accounts/?cursor=bD0yMDIzLTEyLTEzKzAyJTNBMDA%3D'
-                },
-                'page_size': {
-                    'type': 'integer',
-                    'description': 'Number of items per page',
-                    'example': 100
-                },
-                'results': {
-                    **schema,
-                    'description': 'Array of items for current page'
-                },
-            },
-        }
+#     def get_paginated_response_schema(self, schema):
+#         """
+#         Return the OpenAPI schema for cursor-paginated responses.
+#         """
+#         return {
+#             'type': 'object',
+#             'required': ['results'],
+#             'properties': {
+#                 'next': {
+#                     'type': 'string',
+#                     'nullable': True,
+#                     'format': 'uri',
+#                     'description': 'URL to next page of results',
+#                     'example': 'http://api.example.org/accounts/?cursor=cD0yMDIzLTEyLTE1KzAyJTNBMDA%3D'
+#                 },
+#                 'previous': {
+#                     'type': 'string',
+#                     'nullable': True,
+#                     'format': 'uri',
+#                     'description': 'URL to previous page of results',
+#                     'example': 'http://api.example.org/accounts/?cursor=bD0yMDIzLTEyLTEzKzAyJTNBMDA%3D'
+#                 },
+#                 'page_size': {
+#                     'type': 'integer',
+#                     'description': 'Number of items per page',
+#                     'example': 100
+#                 },
+#                 'results': {
+#                     **schema,
+#                     'description': 'Array of items for current page'
+#                 },
+#             },
+#         }
 
 
 # Export all pagination classes
@@ -254,5 +254,4 @@ __all__ = [
     'LargePagination',
     'SmallPagination',
     'NoPagination',
-    'CursorPaginationEnhanced',
 ]

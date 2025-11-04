@@ -14,7 +14,9 @@ class GRPCServerConfigSerializer(serializers.Serializer):
     host = serializers.CharField(help_text="Server host address")
     port = serializers.IntegerField(help_text="Server port")
     enabled = serializers.BooleanField(help_text="Whether gRPC server is enabled")
-    max_workers = serializers.IntegerField(help_text="Maximum worker threads")
+    max_concurrent_streams = serializers.IntegerField(
+        allow_null=True, required=False, help_text="Maximum concurrent streams (async server)"
+    )
     max_concurrent_rpcs = serializers.IntegerField(
         allow_null=True, required=False, help_text="Maximum concurrent RPCs"
     )

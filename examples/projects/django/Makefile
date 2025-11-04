@@ -12,7 +12,7 @@
 # - install-prod runs poetry install --sync to restore PyPI version
 # - No modifications to pyproject.toml or poetry.lock required!
 
-.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
+.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports kill-grpc dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
 
 # Python from virtual environment (poetry)
 PYTHON := .venv/bin/python
@@ -32,8 +32,9 @@ help:
 	@echo "Development:"
 	@echo "  make dev           - Run development server (kills port 8000 first)"
 	@echo "  make dev-ngrok     - Run development server with ngrok tunnel"
-	@echo "  make grpc      - Run gRPC server (port 50051)"
+	@echo "  make grpc          - Run gRPC server (kills port 50051 first)"
 	@echo "  make kill-ports    - Kill processes on port 8000"
+	@echo "  make kill-grpc     - Kill gRPC processes on port 50051"
 	@echo "  make shell         - Open Django shell"
 	@echo "  make api           - Generate and deploy API clients"
 	@echo "  make claude        - Start Claude Code"
@@ -128,13 +129,19 @@ commit:
 kill-ports:
 	lsof -i :8000 | awk 'NR>1 {print $$2}' | xargs kill -9 || true
 
+kill-grpc:
+	@echo "🔪 Killing gRPC processes..."
+	@pkill -9 -f "manage.py rungrpc" || true
+	@lsof -i :50051 | awk 'NR>1 {print $$2}' | xargs kill -9 || true
+	@echo "✅ gRPC processes killed"
+
 dev: kill-ports
 	$(PYTHON) manage.py runserver
 
 dev-ngrok: kill-ports
 	$(PYTHON) manage.py runserver_ngrok
 
-grpc:
+grpc: kill-grpc
 	@echo "🚀 Starting gRPC server on port 50051..."
 	$(PYTHON) manage.py rungrpc
 

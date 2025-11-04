@@ -28,14 +28,12 @@ from .requests import RecentRequestsSerializer
 from .service_registry import (
     MethodDetailSerializer,
     ServiceDetailSerializer,
-    ServiceListSerializer as ServiceRegistryListSerializer,
+    ServiceListSerializer,
     ServiceMethodsSerializer,
 )
 from .services import (
     MethodListSerializer,
     MethodStatsSerializer,
-    MonitoringServiceStatsSerializer,
-    ServiceListSerializer,
 )
 from .stats import GRPCOverviewStatsSerializer
 from .testing import (
@@ -50,15 +48,13 @@ __all__ = [
     "GRPCHealthCheckSerializer",
     "GRPCOverviewStatsSerializer",
     "RecentRequestsSerializer",
-    "MonitoringServiceStatsSerializer",
-    "ServiceListSerializer",
     "MethodStatsSerializer",
     "MethodListSerializer",
     # Config
     "GRPCConfigSerializer",
     "GRPCServerInfoSerializer",
     # Service Registry
-    "ServiceRegistryListSerializer",
+    "ServiceListSerializer",
     "ServiceDetailSerializer",
     "ServiceMethodsSerializer",
     "MethodDetailSerializer",

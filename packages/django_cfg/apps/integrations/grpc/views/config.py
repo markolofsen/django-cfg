@@ -67,7 +67,7 @@ class GRPCConfigViewSet(AdminAPIMixin, viewsets.ViewSet):
                     "host": grpc_config.server.host,
                     "port": grpc_config.server.port,
                     "enabled": grpc_config.server.enabled,
-                    "max_workers": grpc_config.server.max_workers,
+                    "max_concurrent_streams": grpc_config.server.max_concurrent_streams,
                     "max_concurrent_rpcs": None,  # Not in current config
                 },
                 "framework": {
