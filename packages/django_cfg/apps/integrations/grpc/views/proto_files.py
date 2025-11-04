@@ -54,13 +54,22 @@ class GRPCProtoFilesViewSet(AdminAPIMixin, viewsets.ViewSet):
         """List all available proto files."""
         try:
             from django.urls import reverse
+            from django_cfg.core.state import get_current_config
 
             proto_files = self.manager.scan_proto_files(request=request)
 
+            config = get_current_config()
+
             # Build download-all URL
-            download_all_url = request.build_absolute_uri(
-                reverse('django_cfg_grpc:proto-files-download-all')
-            )
+            # Use api_url from config (respects HTTPS behind reverse proxy)
+            # Falls back to request.build_absolute_uri if config not available
+            if config and hasattr(config, 'api_url'):
+                path = reverse('django_cfg_grpc:proto-files-download-all')
+                download_all_url = f"{config.api_url}{path}"
+            else:
+                download_all_url = request.build_absolute_uri(
+                    reverse('django_cfg_grpc:proto-files-download-all')
+                )
 
             response_data = {
                 "files": proto_files,

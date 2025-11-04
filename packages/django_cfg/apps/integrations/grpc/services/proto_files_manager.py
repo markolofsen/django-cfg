@@ -81,11 +81,21 @@ class ProtoFilesManager:
                     # Add download URL if request provided
                     if request:
                         from django.urls import reverse
+                        from django_cfg.core.state import get_current_config
+
                         app_label = metadata['app_label']
-                        # Build absolute URL
-                        download_url = request.build_absolute_uri(
-                            reverse('django_cfg_grpc:proto-files-detail', kwargs={'pk': app_label})
-                        )
+                        config = get_current_config()
+
+                        # Use api_url from config (respects HTTPS behind reverse proxy)
+                        # Falls back to request.build_absolute_uri if config not available
+                        if config and hasattr(config, 'api_url'):
+                            path = reverse('django_cfg_grpc:proto-files-detail', kwargs={'pk': app_label})
+                            download_url = f"{config.api_url}{path}"
+                        else:
+                            download_url = request.build_absolute_uri(
+                                reverse('django_cfg_grpc:proto-files-detail', kwargs={'pk': app_label})
+                            )
+
                         metadata['download_url'] = download_url
 
                     proto_files.append(metadata)
