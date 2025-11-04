@@ -127,14 +127,26 @@ class API:
         """Get current base URL."""
         return self.base_url
 
-    def get_schema(self) -> dict[str, Any]:
+    def get_schema_path(self) -> str:
         """
-        Get OpenAPI schema.
+        Get OpenAPI schema path.
 
         Returns:
-            Complete OpenAPI specification for this API
+            Path to the OpenAPI schema JSON file
+
+        Note:
+            The OpenAPI schema is available in the schema.json file.
+            You can load it dynamically using:
+            ```python
+            import json
+            from pathlib import Path
+
+            schema_path = Path(__file__).parent / 'schema.json'
+            with open(schema_path) as f:
+                schema = json.load(f)
+            ```
         """
-        return OPENAPI_SCHEMA
+        return './schema.json'
 
     async def __aenter__(self) -> 'API':
         """Async context manager entry."""

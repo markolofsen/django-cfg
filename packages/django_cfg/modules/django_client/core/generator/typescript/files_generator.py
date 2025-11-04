@@ -196,13 +196,14 @@ class FilesGenerator:
         )
 
     def generate_schema_file(self):
-        """Generate schema.ts with OpenAPI schema as const."""
+        """Generate schema.json with OpenAPI schema."""
+        import json
 
-        template = self.jinja_env.get_template('utils/schema.ts.jinja')
-        content = template.render(schema=self.openapi_schema)
+        # Generate JSON file with proper formatting
+        content = json.dumps(self.openapi_schema, indent=2, ensure_ascii=False)
 
         return GeneratedFile(
-            path="schema.ts",
+            path="schema.json",
             content=content,
-            description="OpenAPI Schema",
+            description="OpenAPI Schema (JSON format)",
         )

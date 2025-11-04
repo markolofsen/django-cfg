@@ -1,0 +1,52 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ⚠️  DJANGO-CFG LIBRARY - TESTING & DEVELOPMENT INSTRUCTIONS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ❌ DO NOT test django-cfg library directly from this directory!
+# ❌ DO NOT use pip install -r requirements.txt
+# ❌ DO NOT use poetry install here
+#
+# ✅ This library is AUTOMATICALLY LINKED to the Django test project
+# ✅ All changes in this library are IMMEDIATELY available in the test project
+# ✅ NO installation or build steps needed - just edit and test!
+#
+# 📋 HOW TO TEST YOUR CHANGES:
+#
+# This library (django-cfg-dev) is automatically symlinked to:
+# ../../../../solution/projects/django/
+#
+# All testing MUST be done through the Django project:
+#
+#   cd ../../../../solution/projects/django
+#   poetry run python manage.py migrate
+#   poetry run python manage.py runserver
+#   poetry run python manage.py test
+#   poetry run pytest
+#
+# 🔄 WORKFLOW:
+#
+# 1. Edit django-cfg library code here (src/django_cfg/...)
+# 2. Changes are INSTANTLY available in the Django project (via symlink)
+# 3. Test your changes by running Django commands from ../../../../solution/projects/django
+# 4. No rebuild or reinstall needed - it's live!
+#
+# 📁 PROJECT STRUCTURE:
+#
+#   @projects/django-cfg/
+#   ├── projects/django-cfg-dev/           ← Django-CFG library (YOU ARE HERE)
+#   │   └── src/django_cfg/               ← Library source code
+#   └── solution/projects/django/         ← Django test project (GO HERE)
+#       ├── manage.py                     ← Run commands here
+#       ├── pyproject.toml                ← Django project dependencies
+#       └── .venv/                        ← Contains symlink to django-cfg-dev
+#
+# 🔗 SYMLINK DETAILS:
+#
+# The symlink is created automatically via: make install-local
+# Located at: ../../../../solution/projects/django/.venv/lib/python3.12/site-packages/django_cfg
+# Points to: projects/django-cfg-dev/src/django_cfg (this directory)
+#
+# 💡 TIP: If symlink is broken, run from django-cfg root:
+#   make install-local
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

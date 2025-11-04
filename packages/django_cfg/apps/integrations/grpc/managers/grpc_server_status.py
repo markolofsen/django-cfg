@@ -68,18 +68,22 @@ class GRPCServerStatusManager(models.Manager):
         # Mark any existing server at this address as stopped
         self.stop_servers_at_address(address)
 
-        # Create new server status
-        status = self.create(
+        # Create or update server status (handles restart with same instance_id)
+        status, created = self.update_or_create(
             instance_id=instance_id,
-            host=host,
-            port=port,
-            address=address,
-            pid=pid,
-            hostname=hostname,
-            status=self.model.StatusChoices.STARTING,
-            max_workers=max_workers,
-            enable_reflection=enable_reflection,
-            enable_health_check=enable_health_check,
+            defaults={
+                "host": host,
+                "port": port,
+                "address": address,
+                "pid": pid,
+                "hostname": hostname,
+                "status": self.model.StatusChoices.STARTING,
+                "max_workers": max_workers,
+                "enable_reflection": enable_reflection,
+                "enable_health_check": enable_health_check,
+                "started_at": timezone.now(),
+                "last_heartbeat": timezone.now(),
+            },
         )
 
         return status

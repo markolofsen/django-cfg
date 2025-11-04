@@ -317,26 +317,7 @@ GET /api/grpc/monitor/methods/?hours=24&service=api.users.UserService
 
 All REST endpoints require admin authentication. You can use:
 
-### JWT Token (Recommended)
-
-```bash
-# Get token
-curl -X POST http://localhost:8000/api/auth/token/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "password"}'
-
-# Response
-{
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
-}
-
-# Use token
-curl http://localhost:8000/api/grpc/api-keys/ \
-  -H "Authorization: Bearer eyJ0eXAi..."
-```
-
-### Session Auth
+### Session Auth (Recommended)
 
 ```python
 import requests

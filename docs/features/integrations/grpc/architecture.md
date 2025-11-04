@@ -38,7 +38,7 @@ graph TB
             direction LR
             I1["Request Logger"]
             I2["Console Logger"]
-            I3["JWT Auth"]
+            I3["API Key Auth"]
             I4["Error Handler"]
             I5["Metrics"]
 
@@ -121,7 +121,7 @@ sequenceDiagram
     participant Server as gRPC Server
     participant Pipeline as Interceptors Pipeline
     participant Logger as Request Logger
-    participant Auth as JWT Auth
+    participant Auth as API Key Auth
     participant Error as Error Handler
     participant Service as Business Service
     participant ORM as Django ORM
@@ -138,11 +138,11 @@ sequenceDiagram
     Logger->>DB: INSERT GRPCRequestLog<br/>(request_id, service, method, status=PENDING)
     Note over Logger: Generate UUID<br/>Parse metadata<br/>Extract client info
 
-    Pipeline->>Auth: Interceptor #2: JWT Auth
-    Auth->>Auth: Extract token from metadata
-    Auth->>DB: SELECT User WHERE id=<token.user_id>
-    DB-->>Auth: User object
-    Auth->>Pipeline: Set user in context
+    Pipeline->>Auth: Interceptor #2: API Key Auth
+    Auth->>Auth: Extract API key from metadata
+    Auth->>DB: SELECT GrpcApiKey WHERE key=<api_key>
+    DB-->>Auth: API key and User object
+    Auth->>Pipeline: Set user and api_key in context
 
     Pipeline->>Error: Interceptor #3: Error Handler
     Note over Error: Wrap service call<br/>in try-catch
@@ -220,7 +220,7 @@ graph TB
     subgraph "Interceptors (Execution Order)"
         I1["1️⃣ Request Logger<br/>━━━━━━━━━━━<br/>• Generate request ID<br/>• Create log entry<br/>• Extract metadata"]
         I2["2️⃣ Console Logger<br/>━━━━━━━━━━━<br/>• Structured logging<br/>• Request/response size<br/>• Duration tracking"]
-        I3["3️⃣ JWT Auth<br/>━━━━━━━━━━━<br/>• Extract token<br/>• Verify signature<br/>• Load Django user<br/>• Set user context"]
+        I3["3️⃣ API Key Auth<br/>━━━━━━━━━━━<br/>• Extract API key<br/>• Validate key<br/>• Load Django user<br/>• Set user & api_key context"]
         I4["4️⃣ Error Handler<br/>━━━━━━━━━━━<br/>• Wrap service call<br/>• Catch exceptions<br/>• Map to gRPC status<br/>• Format error details"]
         I5["5️⃣ Metrics<br/>━━━━━━━━━━━<br/>• Collect metrics<br/>• Performance data<br/>• Success/error rates"]
     end
@@ -360,38 +360,34 @@ classDiagram
 
 ## 🔐 Authentication Architecture
 
-### JWT Token Flow
+### API Key Flow
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Django as Django API
-    participant JWT as JWT Service
+    participant Django as Django Admin
     participant gRPC as gRPC Server
-    participant Auth as JWT Auth Interceptor
+    participant Auth as API Key Auth Interceptor
     participant DB
 
-    Note over Client,DB: 1. Obtain JWT Token
-    Client->>Django: POST /api/auth/login<br/>{username, password}
-    Django->>DB: Verify credentials
-    DB-->>Django: User valid
-    Django->>JWT: Generate JWT token<br/>{user_id, exp, ...}
-    JWT-->>Django: Signed token
-    Django-->>Client: {access_token, refresh_token}
+    Note over Client,DB: 1. Create API Key
+    Client->>Django: Admin: Create gRPC API Key
+    Django->>DB: INSERT GrpcApiKey<br/>{user, key, name, expires_at}
+    DB-->>Django: API Key created
+    Django-->>Client: Display API key (one-time)
 
-    Note over Client,DB: 2. gRPC Call with JWT
-    Client->>gRPC: gRPC Call<br/>metadata: Authorization=Bearer <token>
+    Note over Client,DB: 2. gRPC Call with API Key
+    Client->>gRPC: gRPC Call<br/>metadata: x-api-key=<key>
 
-    gRPC->>Auth: Extract token from metadata
-    Auth->>Auth: Parse JWT token
-    Auth->>Auth: Verify signature<br/>(using SECRET_KEY)
-    Auth->>Auth: Check expiration
+    gRPC->>Auth: Extract API key from metadata
+    Auth->>DB: SELECT GrpcApiKey WHERE key=<key><br/>AND is_active=True
+    DB-->>Auth: API key and User object
 
-    Auth->>DB: SELECT User WHERE id=<token.user_id>
-    DB-->>Auth: User object
+    Auth->>Auth: Validate expiration
+    Auth->>DB: UPDATE GrpcApiKey<br/>SET last_used_at=now(), request_count++
 
-    Auth->>gRPC: Set user in context
-    Note over gRPC: context.user = User instance
+    Auth->>gRPC: Set user and api_key in context
+    Note over gRPC: context.user = User instance<br/>context.api_key = GrpcApiKey instance
 
     gRPC->>gRPC: Execute service method<br/>(user available via self.get_user())
 
@@ -403,13 +399,13 @@ sequenceDiagram
 ```mermaid
 graph TB
     Request["gRPC Request"]
-    AuthInterceptor["JWT Auth Interceptor"]
+    AuthInterceptor["API Key Auth Interceptor"]
 
-    Decision{Has JWT<br/>Token?}
+    Decision{Has API<br/>Key?}
 
     Public{Method<br/>Requires<br/>Auth?}
 
-    LoadUser["Load User from Token"]
+    LoadUser["Load User from API Key"]
     SetContext["Set user in context"]
     AllowPublic["Allow request<br/>(user=None)"]
     Deny["❌ Deny<br/>UNAUTHENTICATED"]
@@ -603,7 +599,7 @@ class MyInterceptor(grpc.ServerInterceptor):
 
 **Integration Points:**
 - ORM via models
-- User authentication via JWT
+- User authentication via API keys
 - Permissions via Django auth
 - Admin interface for monitoring
 - Signals for events

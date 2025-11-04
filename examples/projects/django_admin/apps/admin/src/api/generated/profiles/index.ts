@@ -33,7 +33,6 @@
  */
 
 import { APIClient } from "./client";
-import { OPENAPI_SCHEMA } from "./schema";
 import {
   StorageAdapter,
   LocalStorageAdapter,
@@ -68,9 +67,6 @@ export * as Hooks from "./_utils/hooks";
 
 // Re-export core client
 export { APIClient };
-
-// Re-export OpenAPI schema
-export { OPENAPI_SCHEMA };
 
 // Re-export storage adapters for convenience
 export type { StorageAdapter };
@@ -248,11 +244,19 @@ export class API {
   }
 
   /**
-   * Get OpenAPI schema
-   * @returns Complete OpenAPI specification for this API
+   * Get OpenAPI schema path
+   * @returns Path to the OpenAPI schema JSON file
+   *
+   * Note: The OpenAPI schema is available in the schema.json file.
+   * You can load it dynamically using:
+   * ```typescript
+   * const schema = await fetch('./schema.json').then(r => r.json());
+   * // or using fs in Node.js:
+   * // const schema = JSON.parse(fs.readFileSync('./schema.json', 'utf-8'));
+   * ```
    */
-  getSchema(): any {
-    return OPENAPI_SCHEMA;
+  getSchemaPath(): string {
+    return './schema.json';
   }
 }
 

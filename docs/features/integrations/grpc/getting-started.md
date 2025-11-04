@@ -260,7 +260,7 @@ http://localhost:8000/admin/integrations/grpc/grpcrequestlog/
 
 ## 🎯 Add Authentication
 
-### Option 1: API Key Authentication (Recommended)
+### API Key Authentication
 
 API keys are perfect for service-to-service communication and CLI tools.
 
@@ -394,99 +394,6 @@ print(f"Is valid: {api_key.is_valid}")
 # View requests made with this key
 logs = api_key.request_logs.all()[:10]
 ```
-
-### Option 2: JWT Authentication
-
-JWT is perfect for user-facing applications.
-
-#### Step 1: Enable JWT Auth
-
-```python
-# api/config.py
-grpc: GRPCConfig = GRPCConfig(
-    auth=GRPCAuthConfig(
-        enabled=True,           # Enable JWT auth
-        require_auth=False,     # Don't require for all methods
-        jwt_algorithm="HS256",
-    ),
-)
-```
-
-#### Step 2: Protect Methods
-
-```python
-# apps/users/grpc_services.py
-class UserService(BaseService):
-    def GetUser(self, request, context):
-        # Public method - no auth required
-        pass
-
-    def UpdateProfile(self, request, context):
-        # Protected method - auth required
-        user = self.require_user(context)  # Requires JWT token
-
-        user.bio = request.bio
-        user.save()
-
-        return UserResponse(...)
-
-    def DeleteUser(self, request, context):
-        # Admin only
-        self.require_staff(context)  # Requires staff permission
-
-        User.objects.get(id=request.user_id).delete()
-        return empty_pb2.Empty()
-```
-
-#### Step 3: Get JWT Token
-
-```bash
-# Login to get token
-curl -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}'
-
-# Response:
-# {
-#   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-#   "refresh_token": "..."
-# }
-```
-
-#### Step 4: Call with Authentication
-
-```bash
-# grpcurl with token
-grpcurl -plaintext \
-  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc..." \
-  -d '{"bio": "New bio"}' \
-  localhost:50051 api.users.UserService/UpdateProfile
-```
-
-### Combining API Key and JWT
-
-You can use both authentication methods simultaneously:
-
-```python
-grpc: GRPCConfig = GRPCConfig(
-    auth=GRPCAuthConfig(
-        enabled=True,
-        require_auth=False,
-        # API key auth settings
-        api_key_header="x-api-key",
-        accept_django_secret_key=True,
-        # JWT auth settings
-        jwt_algorithm="HS256",
-    ),
-)
-```
-
-The auth flow:
-1. First checks for API key in `x-api-key` header
-2. If found and valid, authenticates as API key's user
-3. If not found, checks for JWT in `Authorization` header
-4. If found and valid, authenticates as JWT's user
-5. If neither, allows anonymous access (if `require_auth=False`)
 
 ## 📊 Monitor Requests
 
@@ -674,7 +581,7 @@ from django_cfg.apps.integrations.grpc.services import BaseService  # ✅
 Now that you have a working service:
 
 1. **[Concepts](./concepts.md)** - Understand architecture and patterns
-2. **[Authentication](./authentication.md)** - Deep dive into API keys and JWT
+2. **[Authentication](./authentication.md)** - Deep dive into API keys
 3. **[Configuration](./configuration.md)** - Explore all config options
 4. **[Dynamic Invocation](./dynamic-invocation.md)** - Test without proto files
 5. **[FAQ](./faq.md)** - Common questions and solutions
@@ -685,7 +592,6 @@ Now that you have a working service:
 - ✅ Use **base classes** for common patterns
 - ✅ **Django ORM** works out of the box
 - ✅ **API key auth** is simple and secure with admin interface
-- ✅ **JWT auth** integrates with Django users
 - ✅ All requests are **automatically logged** with API key tracking
 - ✅ **Server monitoring** tracks uptime and registered services
 - ✅ Use **grpcurl** for testing during development

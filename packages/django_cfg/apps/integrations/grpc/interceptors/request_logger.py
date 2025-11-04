@@ -6,19 +6,21 @@ Automatically logs all gRPC requests to the database for monitoring.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
 from typing import Callable
 
 import grpc
+import grpc.aio
 
 logger = logging.getLogger(__name__)
 
 
-class RequestLoggerInterceptor(grpc.ServerInterceptor):
+class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
     """
-    gRPC interceptor for request logging to database.
+    gRPC interceptor for request logging to database (async).
 
     Features:
     - Logs all requests to GRPCRequestLog model
@@ -53,13 +55,13 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         self.log_request_data = log_request_data
         self.log_response_data = log_response_data
 
-    def intercept_service(
+    async def intercept_service(
         self,
         continuation: Callable,
         handler_call_details: grpc.HandlerCallDetails,
     ) -> grpc.RpcMethodHandler:
         """
-        Intercept gRPC service call for logging.
+        Intercept gRPC service call for logging (async).
 
         Args:
             continuation: Function to invoke the next interceptor or handler
@@ -80,8 +82,8 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         peer = metadata_dict.get("peer", "unknown")
         user_agent = metadata_dict.get("user-agent", None)
 
-        # Get handler and wrap it
-        handler = continuation(handler_call_details)
+        # Get handler and wrap it (await for async)
+        handler = await continuation(handler_call_details)
 
         if handler is None:
             logger.warning(f"[gRPC Logger] No handler found for {full_method}")
@@ -124,11 +126,11 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             Wrapped RPC method handler
         """
         def wrap_unary_unary(behavior):
-            def wrapper(request, context):
+            async def wrapper(request, context):
                 start_time = time.time()
 
-                # Create log entry
-                log_entry = self._create_log_entry(
+                # Create log entry (async)
+                log_entry = await self._create_log_entry_async(
                     request_id=request_id,
                     service_name=service_name,
                     method_name=method_name,
@@ -140,11 +142,11 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 )
 
                 try:
-                    response = behavior(request, context)
+                    response = await behavior(request, context)
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as successful
-                    self._mark_success(
+                    # Mark as successful (async)
+                    await self._mark_success_async(
                         log_entry,
                         duration_ms=duration_ms,
                         response=response if self.log_response_data else None,
@@ -154,8 +156,8 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 except Exception as e:
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as error
-                    self._mark_error(
+                    # Mark as error (async)
+                    await self._mark_error_async(
                         log_entry,
                         error=e,
                         context=context,
@@ -167,11 +169,11 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_unary_stream(behavior):
-            def wrapper(request, context):
+            async def wrapper(request, context):
                 start_time = time.time()
 
-                # Create log entry
-                log_entry = self._create_log_entry(
+                # Create log entry (async)
+                log_entry = await self._create_log_entry_async(
                     request_id=request_id,
                     service_name=service_name,
                     method_name=method_name,
@@ -184,14 +186,14 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
 
                 try:
                     response_count = 0
-                    for response in behavior(request, context):
+                    async for response in behavior(request, context):
                         response_count += 1
                         yield response
 
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as successful
-                    self._mark_success(
+                    # Mark as successful (async)
+                    await self._mark_success_async(
                         log_entry,
                         duration_ms=duration_ms,
                         response_data={"message_count": response_count} if not self.log_response_data else None,
@@ -200,8 +202,8 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 except Exception as e:
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as error
-                    self._mark_error(
+                    # Mark as error (async)
+                    await self._mark_error_async(
                         log_entry,
                         error=e,
                         context=context,
@@ -213,11 +215,11 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_stream_unary(behavior):
-            def wrapper(request_iterator, context):
+            async def wrapper(request_iterator, context):
                 start_time = time.time()
 
-                # Create log entry
-                log_entry = self._create_log_entry(
+                # Create log entry (async)
+                log_entry = await self._create_log_entry_async(
                     request_id=request_id,
                     service_name=service_name,
                     method_name=method_name,
@@ -228,19 +230,23 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 )
 
                 try:
-                    # Count requests
+                    # Count requests (async for)
                     requests = []
                     request_count = 0
-                    for req in request_iterator:
+                    async for req in request_iterator:
                         request_count += 1
                         requests.append(req)
 
-                    # Process
-                    response = behavior(iter(requests), context)
+                    # Process (create async generator)
+                    async def async_iter():
+                        for r in requests:
+                            yield r
+
+                    response = await behavior(async_iter(), context)
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as successful
-                    self._mark_success(
+                    # Mark as successful (async)
+                    await self._mark_success_async(
                         log_entry,
                         duration_ms=duration_ms,
                         request_data={"message_count": request_count} if not self.log_request_data else None,
@@ -251,8 +257,8 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 except Exception as e:
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as error
-                    self._mark_error(
+                    # Mark as error (async)
+                    await self._mark_error_async(
                         log_entry,
                         error=e,
                         context=context,
@@ -264,11 +270,11 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_stream_stream(behavior):
-            def wrapper(request_iterator, context):
+            async def wrapper(request_iterator, context):
                 start_time = time.time()
 
-                # Create log entry
-                log_entry = self._create_log_entry(
+                # Create log entry (async)
+                log_entry = await self._create_log_entry_async(
                     request_id=request_id,
                     service_name=service_name,
                     method_name=method_name,
@@ -279,23 +285,27 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 )
 
                 try:
-                    # Count requests
+                    # Count requests (async for)
                     requests = []
                     request_count = 0
-                    for req in request_iterator:
+                    async for req in request_iterator:
                         request_count += 1
                         requests.append(req)
 
-                    # Process and count responses
+                    # Process and count responses (async for)
+                    async def async_iter():
+                        for r in requests:
+                            yield r
+
                     response_count = 0
-                    for response in behavior(iter(requests), context):
+                    async for response in behavior(async_iter(), context):
                         response_count += 1
                         yield response
 
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as successful
-                    self._mark_success(
+                    # Mark as successful (async)
+                    await self._mark_success_async(
                         log_entry,
                         duration_ms=duration_ms,
                         response_data={"request_count": request_count, "response_count": response_count} if not self.log_response_data else None,
@@ -304,8 +314,8 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
                 except Exception as e:
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Mark as error
-                    self._mark_error(
+                    # Mark as error (async)
+                    await self._mark_error_async(
                         log_entry,
                         error=e,
                         context=context,
@@ -344,7 +354,7 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         else:
             return handler
 
-    def _create_log_entry(
+    async def _create_log_entry_async(
         self,
         request_id: str,
         service_name: str,
@@ -352,25 +362,27 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         full_method: str,
         peer: str,
         user_agent: str,
-        context: grpc.ServicerContext,
+        context: grpc.aio.ServicerContext,
         request=None,
     ):
-        """Create initial log entry in database."""
+        """Create initial log entry in database (async)."""
         try:
             from ..models import GRPCRequestLog
+            from ..auth import get_current_grpc_user, get_current_grpc_api_key
 
-            # Get user and api_key from context (set by ApiKeyAuthInterceptor)
-            user = getattr(context, "user", None)
-            api_key = getattr(context, "api_key", None)
+            # Get user and api_key from contextvars (set by ApiKeyAuthInterceptor)
+            user = get_current_grpc_user()
+            api_key = get_current_grpc_api_key()
             is_authenticated = user is not None
 
-            logger.info(f"[RequestLogger] Got context.api_key = {api_key} (user={user}, authenticated={is_authenticated})")
+            logger.info(f"[RequestLogger] Got contextvar api_key = {api_key} (user={user}, authenticated={is_authenticated})")
 
             # Extract client IP from peer
             client_ip = self._extract_ip_from_peer(peer)
 
-            # Create log entry
-            log_entry = GRPCRequestLog.objects.create(
+            # Create log entry (wrap Django ORM in asyncio.to_thread)
+            log_entry = await asyncio.to_thread(
+                GRPCRequestLog.objects.create,
                 request_id=request_id,
                 service_name=service_name,
                 method_name=method_name,
@@ -391,7 +403,7 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             logger.error(f"Failed to create log entry: {e}", exc_info=True)
             return None
 
-    def _mark_success(
+    async def _mark_success_async(
         self,
         log_entry,
         duration_ms: int,
@@ -399,7 +411,7 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         request_data: dict = None,
         response_data: dict = None,
     ):
-        """Mark log entry as successful."""
+        """Mark log entry as successful (async)."""
         if log_entry is None:
             return
 
@@ -410,7 +422,9 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             if response:
                 response_data = self._serialize_message(response)
 
-            GRPCRequestLog.objects.mark_success(
+            # Wrap Django ORM in asyncio.to_thread
+            await asyncio.to_thread(
+                GRPCRequestLog.objects.mark_success,
                 log_entry,
                 duration_ms=duration_ms,
                 response_data=response_data,
@@ -419,14 +433,14 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
         except Exception as e:
             logger.error(f"Failed to mark success: {e}", exc_info=True)
 
-    def _mark_error(
+    async def _mark_error_async(
         self,
         log_entry,
         error: Exception,
-        context: grpc.ServicerContext,
+        context: grpc.aio.ServicerContext,
         duration_ms: int,
     ):
-        """Mark log entry as error."""
+        """Mark log entry as error (async)."""
         if log_entry is None:
             return
 
@@ -436,7 +450,9 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             # Get gRPC status code
             grpc_code = self._get_grpc_code(error, context)
 
-            GRPCRequestLog.objects.mark_error(
+            # Wrap Django ORM in asyncio.to_thread
+            await asyncio.to_thread(
+                GRPCRequestLog.objects.mark_error,
                 log_entry,
                 grpc_status_code=grpc_code,
                 error_message=str(error),
@@ -489,7 +505,7 @@ class RequestLoggerInterceptor(grpc.ServerInterceptor):
             pass
         return None
 
-    def _get_grpc_code(self, error: Exception, context: grpc.ServicerContext) -> str:
+    def _get_grpc_code(self, error: Exception, context: grpc.aio.ServicerContext) -> str:
         """Get gRPC status code from error."""
         try:
             # Check if error is a gRPC error

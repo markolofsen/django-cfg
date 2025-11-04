@@ -119,9 +119,10 @@ class GRPCSettingsGenerator:
         if grpc_proto:
             settings["GRPC_PROTO"] = grpc_proto
 
-        logger.info("✅ gRPC framework enabled")
+        logger.info("✅ gRPC framework enabled (async)")
         logger.info(f"   - Server: {self.config.grpc.server.host}:{self.config.grpc.server.port}")
-        logger.info(f"   - Workers: {self.config.grpc.server.max_workers}")
+        max_streams = self.config.grpc.server.max_concurrent_streams or "unlimited"
+        logger.info(f"   - Max concurrent streams: {max_streams}")
         logger.info(f"   - Auth: {'enabled' if self.config.grpc.auth.enabled else 'disabled'}")
         logger.info(f"   - Reflection: {'enabled' if self.config.grpc.server.enable_reflection else 'disabled'}")
 
@@ -169,7 +170,8 @@ class GRPCSettingsGenerator:
         server_settings = {
             "host": server_config.host,
             "port": server_config.port,
-            "max_workers": server_config.max_workers,
+            "max_concurrent_streams": server_config.max_concurrent_streams,
+            "asyncio_debug": server_config.asyncio_debug,
             "enable_reflection": server_config.enable_reflection,
             "enable_health_check": server_config.enable_health_check,
             "max_send_message_length": server_config.max_send_message_length,
@@ -248,27 +250,30 @@ class GRPCSettingsGenerator:
         # Check if we're in dev mode
         is_dev = self.config.env_mode in ("local", "development", "dev")
 
-        # 1. Add auth interceptor FIRST (must set context.api_key before logging)
-        if self.config.grpc.auth.enabled:
+        # NOTE: Interceptors are applied in REVERSE order (last added = first executed)!
+        # So add them in reverse order of execution:
+
+        # 4. Add metrics interceptor in dev mode (executed LAST)
+        if is_dev:
             interceptors.append(
-                "django_cfg.apps.integrations.grpc.auth.ApiKeyAuthInterceptor"
+                "django_cfg.apps.integrations.grpc.interceptors.MetricsInterceptor"
             )
 
-        # 2. Add request logger interceptor (uses context.api_key from auth)
-        interceptors.append(
-            "django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor"
-        )
-
-        # 3. Add logging interceptor in dev mode
+        # 3. Add logging interceptor in dev mode (executed 3rd)
         if is_dev:
             interceptors.append(
                 "django_cfg.apps.integrations.grpc.interceptors.LoggingInterceptor"
             )
 
-        # 4. Add metrics interceptor in dev mode
-        if is_dev:
+        # 2. Add request logger interceptor (executed 2nd - needs context vars from auth)
+        interceptors.append(
+            "django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor"
+        )
+
+        # 1. Add auth interceptor LAST in list (executed FIRST - sets contextvars!)
+        if self.config.grpc.auth.enabled:
             interceptors.append(
-                "django_cfg.apps.integrations.grpc.interceptors.MetricsInterceptor"
+                "django_cfg.apps.integrations.grpc.auth.ApiKeyAuthInterceptor"
             )
 
         # 5. Add custom interceptors from server config

@@ -12,6 +12,7 @@ from collections import defaultdict
 from typing import Callable
 
 import grpc
+import grpc.aio
 
 logger = logging.getLogger(__name__)
 
@@ -135,9 +136,9 @@ def reset_metrics():
     _metrics.reset()
 
 
-class MetricsInterceptor(grpc.ServerInterceptor):
+class MetricsInterceptor(grpc.aio.ServerInterceptor):
     """
-    gRPC interceptor for metrics collection.
+    gRPC interceptor for metrics collection (async).
 
     Features:
     - Tracks request counts
@@ -170,13 +171,13 @@ class MetricsInterceptor(grpc.ServerInterceptor):
         """Initialize metrics interceptor."""
         self.collector = _metrics
 
-    def intercept_service(
+    async def intercept_service(
         self,
         continuation: Callable,
         handler_call_details: grpc.HandlerCallDetails,
     ) -> grpc.RpcMethodHandler:
         """
-        Intercept gRPC service call for metrics collection.
+        Intercept gRPC service call for metrics collection (async).
 
         Args:
             continuation: Function to invoke the next interceptor or handler
@@ -190,8 +191,8 @@ class MetricsInterceptor(grpc.ServerInterceptor):
         # Record request
         self.collector.record_request(method_name)
 
-        # Get handler and wrap it
-        handler = continuation(handler_call_details)
+        # Get handler and wrap it (await for async)
+        handler = await continuation(handler_call_details)
 
         if handler is None:
             return None
@@ -215,10 +216,10 @@ class MetricsInterceptor(grpc.ServerInterceptor):
             Wrapped RPC method handler
         """
         def wrap_unary_unary(behavior):
-            def wrapper(request, context):
+            async def wrapper(request, context):
                 start_time = time.time()
                 try:
-                    response = behavior(request, context)
+                    response = await behavior(request, context)
                     duration_ms = (time.time() - start_time) * 1000
                     self.collector.record_response_time(method_name, duration_ms)
                     return response
@@ -230,10 +231,10 @@ class MetricsInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_unary_stream(behavior):
-            def wrapper(request, context):
+            async def wrapper(request, context):
                 start_time = time.time()
                 try:
-                    for response in behavior(request, context):
+                    async for response in behavior(request, context):
                         yield response
                     duration_ms = (time.time() - start_time) * 1000
                     self.collector.record_response_time(method_name, duration_ms)
@@ -245,10 +246,10 @@ class MetricsInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_stream_unary(behavior):
-            def wrapper(request_iterator, context):
+            async def wrapper(request_iterator, context):
                 start_time = time.time()
                 try:
-                    response = behavior(request_iterator, context)
+                    response = await behavior(request_iterator, context)
                     duration_ms = (time.time() - start_time) * 1000
                     self.collector.record_response_time(method_name, duration_ms)
                     return response
@@ -260,10 +261,10 @@ class MetricsInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_stream_stream(behavior):
-            def wrapper(request_iterator, context):
+            async def wrapper(request_iterator, context):
                 start_time = time.time()
                 try:
-                    for response in behavior(request_iterator, context):
+                    async for response in behavior(request_iterator, context):
                         yield response
                     duration_ms = (time.time() - start_time) * 1000
                     self.collector.record_response_time(method_name, duration_ms)
