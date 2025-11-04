@@ -27,8 +27,7 @@ graph TB
         subgraph "Interceptors Pipeline"
             I1["Request Logger"]
             I2["API Key Auth"]
-            I3["JWT Auth"]
-            I4["Error Handler"]
+            I3["Error Handler"]
         end
 
         subgraph "Service Layer"
@@ -81,7 +80,7 @@ sequenceDiagram
 
     C->>S: gRPC Request
     S->>I: 1. Log request
-    I->>I: 2. Verify JWT
+    I->>I: 2. Verify API key
     I->>I: 3. Load user
     I->>SV: 4. Call service
     SV->>DB: 5. Query data
@@ -95,7 +94,7 @@ sequenceDiagram
 **Flow steps:**
 1. Request enters server
 2. Interceptors process metadata (logging, auth)
-3. User loaded from JWT token
+3. User loaded from API key
 4. Service method executes
 5. Django ORM queries database
 6. Response flows back through interceptors
@@ -189,29 +188,6 @@ sequenceDiagram
     end
 ```
 
-### JWT Authentication Flow
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant I as JWT Interceptor
-    participant DB as Database
-    participant S as Service
-
-    C->>I: Request + JWT Token
-    I->>I: Extract "Authorization: Bearer <token>"
-    I->>I: Verify signature & expiration
-
-    alt Valid Token
-        I->>DB: Load User(id=token.user_id)
-        DB-->>I: User object
-        I->>S: Set context.user = User
-        S-->>C: Success response
-    else Invalid Token
-        I-->>C: UNAUTHENTICATED error
-    end
-```
-
 ### Access Levels
 
 **Public methods** (no authentication):
@@ -287,11 +263,11 @@ Interceptors are like middleware - they wrap service calls to add functionality 
 ```mermaid
 graph TB
     Request([Request]) --> I1[Request<br/>Logger]
-    I1 --> I2[JWT<br/>Auth]
+    I1 --> I2[API Key<br/>Auth]
     I2 --> I3[Error<br/>Handler]
     I3 --> Service[Service]
     Service --> I3b[Error<br/>Handler]
-    I3b --> I2b[JWT<br/>Auth]
+    I3b --> I2b[API Key<br/>Auth]
     I2b --> I1b[Request<br/>Logger]
     I1b --> Response([Response])
 
@@ -316,13 +292,7 @@ graph TB
 - Sets user and api_key on context
 - Supports public methods whitelist
 
-**3. JWTAuthInterceptor**
-- Extracts JWT from metadata
-- Verifies token signature
-- Loads Django user
-- Sets user on context
-
-**4. ErrorHandlingInterceptor**
+**3. ErrorHandlingInterceptor**
 - Catches Python exceptions
 - Converts to gRPC status codes
 - Maps Django exceptions properly
@@ -340,9 +310,8 @@ Exception              → StatusCode.INTERNAL
 Interceptors execute in specific order:
 1. **Request Logger** - First to log everything
 2. **API Key Auth** - Validate API key and load user
-3. **JWT Auth** - Validate JWT token if no API key
-4. **Error Handler** - Catch all exceptions
-5. **Service** - Your business logic
+3. **Error Handler** - Catch all exceptions
+4. **Service** - Your business logic
 
 Response flows back in reverse order.
 
@@ -583,12 +552,12 @@ gRPC is integrated into Django, not the other way around:
 - Request logging
 - Performance monitoring
 - Error handling
-- Security (JWT auth)
+- Security (API key auth)
 
 ## 📚 Next Steps
 
 - **[Getting Started](./getting-started.md)** - Build your first service
-- **[Authentication](./authentication.md)** - API keys and JWT authentication
+- **[Authentication](./authentication.md)** - API keys authentication
 - **[Configuration](./configuration.md)** - Configure gRPC settings
 - **[Dynamic Invocation](./dynamic-invocation.md)** - Test without client code
 - **[FAQ](./faq.md)** - Common questions

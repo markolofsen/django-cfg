@@ -184,7 +184,7 @@ server=GRPCServerConfig(
 
 ## 🔐 GRPCAuthConfig
 
-Authentication configuration (supports both API keys and JWT).
+Authentication configuration (supports API keys).
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -341,7 +341,6 @@ class DevelopmentConfig(DjangoConfig):
             require_auth=False,
             api_key_header="x-api-key",
             accept_django_secret_key=True,  # Allow SECRET_KEY for convenience
-            # JWT disabled for simpler dev workflow
         ),
         enabled_apps=["apps.users"],  # Limited apps
     )
@@ -597,10 +596,10 @@ server = grpc.server(
 ## 📖 Related Documentation
 
 - **[Getting Started](./getting-started.md)** - Build your first service
-- **[Authentication](./authentication.md)** - API keys and JWT authentication
+- **[Authentication](./authentication.md)** - API keys authentication
 - **[Concepts](./concepts.md)** - Understanding architecture
 - **[FAQ](./faq.md)** - Common questions
 
 ---
 
-**Configuration Tip:** Start with defaults, measure performance, then tune based on actual traffic patterns. For production, always use API keys or JWT authentication with `require_auth=True`.
+**Configuration Tip:** Start with defaults, measure performance, then tune based on actual traffic patterns. For production, always use API keys with `require_auth=True`.

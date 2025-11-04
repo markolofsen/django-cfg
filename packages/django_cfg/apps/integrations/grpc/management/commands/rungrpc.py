@@ -1,17 +1,16 @@
 """
-Django management command to run gRPC server.
+Django management command to run async gRPC server.
 
 Usage:
     python manage.py rungrpc
     python manage.py rungrpc --host 0.0.0.0 --port 50051
-    python manage.py rungrpc --workers 20
 """
 
 from __future__ import annotations
 
+import asyncio
 import signal
 import sys
-from concurrent import futures
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -29,15 +28,17 @@ except Exception as e:
 
 # Now safe to import grpc
 import grpc
+import grpc.aio
 
 
 class Command(BaseCommand):
     """
-    Run gRPC server with auto-discovered services.
+    Run async gRPC server with auto-discovered services.
 
     Features:
+    - Async server with grpc.aio
     - Auto-discovers and registers services
-    - Configurable host, port, and workers
+    - Configurable host, port
     - Health check support
     - Reflection support
     - Graceful shutdown
@@ -49,12 +50,14 @@ class Command(BaseCommand):
     requires_input = False
     is_destructive = False
 
-    help = "Run gRPC server"
+    help = "Run async gRPC server"
 
     def __init__(self, *args, **kwargs):
-        """Initialize with self.logger."""
+        """Initialize with self.logger and async server reference."""
         super().__init__(*args, **kwargs)
         self.logger = get_logger('rungrpc')
+        self.server = None
+        self.shutdown_event = None
 
     def add_arguments(self, parser):
         """Add command arguments."""
@@ -71,12 +74,6 @@ class Command(BaseCommand):
             help="Server port (default: from settings or 50051)",
         )
         parser.add_argument(
-            "--workers",
-            type=int,
-            default=None,
-            help="Max worker threads (default: from settings or 10)",
-        )
-        parser.add_argument(
             "--no-reflection",
             action="store_true",
             help="Disable server reflection",
@@ -86,9 +83,24 @@ class Command(BaseCommand):
             action="store_true",
             help="Disable health check service",
         )
+        parser.add_argument(
+            "--asyncio-debug",
+            action="store_true",
+            help="Enable asyncio debug mode",
+        )
 
     def handle(self, *args, **options):
-        """Run gRPC server."""
+        """Run async gRPC server."""
+        # Enable asyncio debug if requested
+        if options.get("asyncio_debug"):
+            asyncio.get_event_loop().set_debug(True)
+            self.logger.info("Asyncio debug mode enabled")
+
+        # Run async main
+        asyncio.run(self._async_main(*args, **options))
+
+    async def _async_main(self, *args, **options):
+        """Main async server loop."""
         # Import models here to avoid AppRegistryNotReady
         from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
         from django_cfg.apps.integrations.grpc.services.config_helper import (
@@ -103,7 +115,7 @@ class Command(BaseCommand):
             grpc_server_config = getattr(settings, "GRPC_SERVER", {})
             host = options["host"] or grpc_server_config.get("host", "[::]")
             port = options["port"] or grpc_server_config.get("port", 50051)
-            max_workers = options["workers"] or grpc_server_config.get("max_workers", 10)
+            max_concurrent_streams = grpc_server_config.get("max_concurrent_streams", None)
             enable_reflection = not options["no_reflection"] and grpc_server_config.get(
                 "enable_reflection", False
             )
@@ -114,7 +126,7 @@ class Command(BaseCommand):
             # Use django-cfg config
             host = options["host"] or grpc_server_config_obj.host
             port = options["port"] or grpc_server_config_obj.port
-            max_workers = options["workers"] or grpc_server_config_obj.max_workers
+            max_concurrent_streams = grpc_server_config_obj.max_concurrent_streams
             enable_reflection = (
                 not options["no_reflection"] and grpc_server_config_obj.enable_reflection
             )
@@ -125,7 +137,7 @@ class Command(BaseCommand):
             grpc_server_config = {
                 "host": grpc_server_config_obj.host,
                 "port": grpc_server_config_obj.port,
-                "max_workers": grpc_server_config_obj.max_workers,
+                "max_concurrent_streams": grpc_server_config_obj.max_concurrent_streams,
                 "enable_reflection": grpc_server_config_obj.enable_reflection,
                 "enable_health_check": grpc_server_config_obj.enable_health_check,
                 "compression": grpc_server_config_obj.compression,
@@ -138,28 +150,31 @@ class Command(BaseCommand):
         # gRPC options
         grpc_options = self._build_grpc_options(grpc_server_config)
 
-        # Create server
-        server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=max_workers),
+        # Add max_concurrent_streams if specified
+        if max_concurrent_streams:
+            grpc_options.append(("grpc.max_concurrent_streams", max_concurrent_streams))
+
+        # Create async server
+        self.server = grpc.aio.server(
             options=grpc_options,
-            interceptors=self._build_interceptors(),
+            interceptors=await self._build_interceptors_async(),
         )
 
         # Discover and register services FIRST
-        service_count = self._register_services(server)
+        service_count = await self._register_services_async(self.server)
 
         # Add health check with registered services
         health_servicer = None
         if enable_health_check:
-            health_servicer = self._add_health_check(server)
+            health_servicer = await self._add_health_check_async(self.server)
 
         # Add reflection
         if enable_reflection:
-            self._add_reflection(server)
+            await self._add_reflection_async(self.server)
 
         # Bind server
         address = f"{host}:{port}"
-        server.add_insecure_port(address)
+        self.server.add_insecure_port(address)
 
         # Track server status in database
         server_status = None
@@ -167,33 +182,39 @@ class Command(BaseCommand):
             import os
             from django_cfg.apps.integrations.grpc.services import ServiceDiscovery
 
-            # Get registered services metadata
+            # Get registered services metadata (run in thread to avoid blocking)
             discovery = ServiceDiscovery()
-            services_metadata = discovery.get_registered_services()
+            services_metadata = await asyncio.to_thread(
+                discovery.get_registered_services
+            )
 
-            server_status = GRPCServerStatus.objects.start_server(
+            server_status = await asyncio.to_thread(
+                GRPCServerStatus.objects.start_server,
                 host=host,
                 port=port,
                 pid=os.getpid(),
-                max_workers=max_workers,
+                max_workers=0,  # Async server - no workers
                 enable_reflection=enable_reflection,
                 enable_health_check=enable_health_check,
             )
 
             # Store registered services in database
             server_status.registered_services = services_metadata
-            server_status.save(update_fields=["registered_services"])
+            await asyncio.to_thread(
+                server_status.save,
+                update_fields=["registered_services"]
+            )
 
         except Exception as e:
             self.logger.warning(f"Could not start server status tracking: {e}")
 
         # Start server
-        server.start()
+        await self.server.start()
 
         # Mark server as running
         if server_status:
             try:
-                server_status.mark_running()
+                await asyncio.to_thread(server_status.mark_running)
             except Exception as e:
                 self.logger.warning(f"Could not mark server as running: {e}")
 
@@ -204,15 +225,18 @@ class Command(BaseCommand):
 
             # Get registered service names
             discovery = ServiceDiscovery()
-            services_metadata = discovery.get_registered_services()
+            services_metadata = await asyncio.to_thread(
+                discovery.get_registered_services
+            )
             service_names = [s.get('name', 'Unknown') for s in services_metadata]
 
             # Display startup info
             grpc_display = GRPCDisplayManager()
-            grpc_display.display_grpc_startup(
+            await asyncio.to_thread(
+                grpc_display.display_grpc_startup,
                 host=host,
                 port=port,
-                max_workers=max_workers,
+                max_workers=0,  # Async server
                 enable_reflection=enable_reflection,
                 enable_health_check=enable_health_check,
                 registered_services=service_count,
@@ -222,14 +246,14 @@ class Command(BaseCommand):
             self.logger.warning(f"Could not display gRPC startup info: {e}")
 
         # Setup signal handlers for graceful shutdown
-        self._setup_signal_handlers(server, server_status)
+        self._setup_signal_handlers_async(self.server, server_status)
 
         # Keep server running
-        self.stdout.write(self.style.SUCCESS("\n✅ gRPC server is running..."))
+        self.stdout.write(self.style.SUCCESS("\n✅ Async gRPC server is running..."))
         self.stdout.write("Press CTRL+C to stop\n")
 
         try:
-            server.wait_for_termination()
+            await self.server.wait_for_termination()
         except KeyboardInterrupt:
             # Signal handler will take care of graceful shutdown
             pass
@@ -280,12 +304,12 @@ class Command(BaseCommand):
 
         return options
 
-    def _build_interceptors(self) -> list:
+    async def _build_interceptors_async(self) -> list:
         """
-        Build server interceptors from configuration.
+        Build async server interceptors from configuration.
 
         Returns:
-            List of interceptor instances
+            List of async interceptor instances
         """
         grpc_framework_config = getattr(settings, "GRPC_FRAMEWORK", {})
         interceptor_paths = grpc_framework_config.get("SERVER_INTERCEPTORS", [])
@@ -305,22 +329,22 @@ class Command(BaseCommand):
                 interceptor = interceptor_class()
                 interceptors.append(interceptor)
 
-                self.logger.debug(f"Loaded interceptor: {class_name}")
+                self.logger.debug(f"Loaded async interceptor: {class_name}")
 
             except Exception as e:
-                self.logger.error(f"Failed to load interceptor {interceptor_path}: {e}")
+                self.logger.error(f"Failed to load async interceptor {interceptor_path}: {e}")
 
         return interceptors
 
-    def _add_health_check(self, server):
+    async def _add_health_check_async(self, server):
         """
-        Add health check service with per-service status tracking.
+        Add health check service to async server.
 
         Args:
-            server: gRPC server instance
+            server: Async gRPC server instance
 
         Returns:
-            health_servicer: Health servicer instance (for dynamic updates) or None
+            health_servicer: Health servicer instance or None
         """
         try:
             from grpc_health.v1 import health, health_pb2, health_pb2_grpc
@@ -332,12 +356,11 @@ class Command(BaseCommand):
             health_servicer.set("", health_pb2.HealthCheckResponse.SERVING)
             self.logger.info("Overall server health: SERVING")
 
-            # Get registered service names
+            # Get registered service names from async server
             service_names = []
             if hasattr(server, '_state') and hasattr(server._state, 'generic_handlers'):
                 for handler in server._state.generic_handlers:
                     if hasattr(handler, 'service_name'):
-                        # service_name() returns a callable or list
                         names = handler.service_name()
                         if callable(names):
                             names = names()
@@ -354,14 +377,13 @@ class Command(BaseCommand):
                 )
                 self.logger.info(f"Service '{service_name}' health: SERVING")
 
-            # Register health service
+            # Register health service to async server
             health_pb2_grpc.add_HealthServicer_to_server(health_servicer, server)
 
             self.logger.info(
                 f"✅ Health check enabled for {len(service_names)} service(s)"
             )
 
-            # Return servicer for dynamic health updates
             return health_servicer
 
         except ImportError:
@@ -374,22 +396,21 @@ class Command(BaseCommand):
             self.logger.error(f"Failed to add health check service: {e}")
             return None
 
-    def _add_reflection(self, server):
+    async def _add_reflection_async(self, server):
         """
-        Add reflection service to server.
+        Add reflection service to async server.
 
         Args:
-            server: gRPC server instance
+            server: Async gRPC server instance
         """
         try:
             from grpc_reflection.v1alpha import reflection
 
-            # Get service names from registered services
+            # Get service names from async server
             service_names = []
             if hasattr(server, '_state') and hasattr(server._state, 'generic_handlers'):
                 for handler in server._state.generic_handlers:
                     if hasattr(handler, 'service_name'):
-                        # service_name() returns a callable or list
                         names = handler.service_name()
                         if callable(names):
                             names = names()
@@ -401,7 +422,7 @@ class Command(BaseCommand):
             # Add grpc.reflection.v1alpha.ServerReflection service itself
             service_names.append('grpc.reflection.v1alpha.ServerReflection')
 
-            # Add reflection
+            # Add reflection to async server
             reflection.enable_server_reflection(service_names, server)
 
             self.logger.info(f"Server reflection enabled for {len(service_names)} service(s)")
@@ -414,12 +435,12 @@ class Command(BaseCommand):
         except Exception as e:
             self.logger.error(f"Failed to enable server reflection: {e}")
 
-    def _register_services(self, server) -> int:
+    async def _register_services_async(self, server) -> int:
         """
-        Discover and register services to server.
+        Discover and register services to async server.
 
         Args:
-            server: gRPC server instance
+            server: Async gRPC server instance
 
         Returns:
             Number of services registered
@@ -427,7 +448,11 @@ class Command(BaseCommand):
         try:
             from django_cfg.apps.integrations.grpc.services.discovery import discover_and_register_services
 
-            count = discover_and_register_services(server)
+            # Service registration is sync, run in thread
+            count = await asyncio.to_thread(
+                discover_and_register_services,
+                server
+            )
             return count
 
         except Exception as e:
@@ -437,12 +462,12 @@ class Command(BaseCommand):
             )
             return 0
 
-    def _setup_signal_handlers(self, server, server_status=None):
+    def _setup_signal_handlers_async(self, server, server_status=None):
         """
-        Setup signal handlers for graceful shutdown.
+        Setup signal handlers for graceful async server shutdown.
 
         Args:
-            server: gRPC server instance
+            server: Async gRPC server instance
             server_status: GRPCServerStatus instance (optional)
         """
         # Flag to prevent multiple shutdown attempts
@@ -459,17 +484,31 @@ class Command(BaseCommand):
             # Mark server as stopping
             if server_status:
                 try:
-                    server_status.mark_stopping()
+                    import django
+                    if django.VERSION >= (3, 0):
+                        from asgiref.sync import sync_to_async
+                        # Run in sync context
+                        try:
+                            server_status.mark_stopping()
+                        except:
+                            pass
                 except Exception as e:
                     self.logger.warning(f"Could not mark server as stopping: {e}")
 
-            # Stop server with grace period
-            server.stop(grace=5)
+            # Stop async server
+            try:
+                # Create task to stop server
+                loop = asyncio.get_event_loop()
+                loop.create_task(server.stop(grace=5))
+            except Exception as e:
+                self.logger.error(f"Error stopping server: {e}")
 
-            # Mark server as stopped
+            # Mark server as stopped (async-safe)
             if server_status:
                 try:
-                    server_status.mark_stopped()
+                    from asgiref.sync import sync_to_async
+                    # Wrap sync DB operation in sync_to_async
+                    asyncio.create_task(sync_to_async(server_status.mark_stopped)())
                 except Exception as e:
                     self.logger.warning(f"Could not mark server as stopped: {e}")
 

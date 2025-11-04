@@ -53,11 +53,16 @@ class GRPCServerConfig(BaseConfig):
         le=65535,
     )
 
-    max_workers: int = Field(
-        default=10,
-        description="ThreadPoolExecutor max workers",
+    max_concurrent_streams: Optional[int] = Field(
+        default=None,
+        description="Max concurrent streams per connection (None = unlimited, async server)",
         ge=1,
-        le=1000,
+        le=10000,
+    )
+
+    asyncio_debug: bool = Field(
+        default=False,
+        description="Enable asyncio debug mode (shows async warnings and coroutine leaks)",
     )
 
     enable_reflection: bool = Field(
@@ -132,25 +137,41 @@ class GRPCServerConfig(BaseConfig):
     @model_validator(mode="after")
     def auto_set_smart_defaults(self) -> "GRPCServerConfig":
         """Auto-set smart defaults based on Django settings."""
-        # Auto-set public_url from api_url
-        if self.public_url is None:
-            try:
-                from django_cfg.core import get_current_config
-                config = get_current_config()
+        try:
+            from django_cfg.core import get_current_config
+            config = get_current_config()
 
-                if config and hasattr(config, 'api_url') and config.api_url:
+            if config:
+                # Auto-set public_url from api_url
+                if self.public_url is None and hasattr(config, 'api_url') and config.api_url:
                     # https://api.djangocfg.com → grpc.djangocfg.com:50051
                     url = config.api_url
                     url = url.replace("https://", "").replace("http://", "")
                     url = url.replace("api.", "grpc.")
                     # Remove trailing slash
                     url = url.rstrip("/")
-
                     self.public_url = f"{url}:{self.port}"
 
-            except Exception:
-                # Config not available yet
-                pass
+                # Auto-enable asyncio_debug in development mode
+                # Check if already explicitly set (if user set it, don't override)
+                # Only auto-enable if env_mode is development/local/dev
+                if hasattr(config, 'env_mode'):
+                    is_dev = config.env_mode in ("local", "development", "dev")
+                    # Only auto-enable if not explicitly set to False
+                    # We check if it's still the default value (False) and enable it in dev
+                    if is_dev and not self.asyncio_debug:
+                        # Check Django DEBUG setting as fallback
+                        try:
+                            from django.conf import settings
+                            if hasattr(settings, 'DEBUG') and settings.DEBUG:
+                                self.asyncio_debug = True
+                        except:
+                            # If Django not configured yet, just use env_mode
+                            self.asyncio_debug = True
+
+        except Exception:
+            # Config not available yet
+            pass
 
         return self
 

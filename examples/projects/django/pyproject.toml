@@ -10,8 +10,36 @@ packages = [{include = "apps"}, {include = "api"}]
 python = ">=3.12,<3.14"
 # Django framework (required by django-cfg)
 django = "^5.2.0"
-# django-cfg from PyPI with full extras (grpc, dramatiq, centrifugo)
-# For local development, use: make install-local
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ⚠️  IMPORTANT FOR AI/LLM: DO NOT TOUCH THIS LINE!
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Django-CFG is installed from PyPI with full extras (grpc, dramatiq, centrifugo)
+#
+# 📋 HOW IT WORKS:
+# - By default, the local django-cfg library is automatically linked via poetry
+#   to the current Django project's environment (via symlink in .venv)
+# - If linking doesn't work, run ONE TIME command: make install-local
+#
+# ⚠️  CRITICAL RULES:
+# 1. DO NOT CHANGE version = "*" to a specific version!
+# 2. NEVER ADD path = "..." parameter here - it will BREAK Docker production builds!
+#    The path is only for poetry's internal symlink, NOT for pyproject.toml!
+#
+# 🔍 BEFORE ADDING NEW DEPENDENCIES:
+# ALWAYS check django-cfg[full] includes first to avoid duplicates!
+# Check: @projects/django-cfg/projects/django-cfg-dev/pyproject.toml
+# Line 35: full = [...] contains all included packages
+#
+# Already included (DO NOT ADD):
+# - grpcio, grpcio-tools, grpcio-reflection, grpcio-health-checking, protobuf
+# - pytest, pytest-django, pytest-cov, pytest-mock, pytest-xdist
+# - black, isort, flake8, mypy
+# - redis, django-rq, rq, rq-scheduler, hiredis
+# - cent, websockets
+# - click, rich, questionary
+# - django-admin-rangefilter
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 django-cfg = {version = "*", extras = ["full"]}
 # pydantic-ai is pulled by django-cfg automatically
 
@@ -19,21 +47,13 @@ django-cfg = {version = "*", extras = ["full"]}
 Pillow = "^10.0.0"
 # System monitoring for health checks
 psutil = "^5.9.0"
-# Enhanced CLI with Click
-click = "^8.1.0"
+# Fake data generation
 faker = "^37.5.3"
-django-admin-rangefilter = "^0.13.3"
+# Markdown support
 markdown = "^3.9"
-grpcio = "^1.76.0"
-grpcio-tools = "^1.76.0"
-protobuf = "^6.33.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.0"
-pytest-django = "^4.11.0"
-black = "^25.9.0"
-isort = "^6.0.0"
-flake8 = "^6.0.0"
+# All testing and linting tools come from django-cfg[full]
 
 [build-system]
 requires = ["poetry-core"]

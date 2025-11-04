@@ -1,7 +1,7 @@
 """
-Logging Interceptor for gRPC.
+Async Logging Interceptor for gRPC.
 
-Provides comprehensive logging for gRPC requests and responses.
+Provides comprehensive logging for async gRPC requests and responses.
 """
 
 from __future__ import annotations
@@ -11,13 +11,14 @@ import time
 from typing import Callable
 
 import grpc
+import grpc.aio
 
 logger = logging.getLogger(__name__)
 
 
-class LoggingInterceptor(grpc.ServerInterceptor):
+class LoggingInterceptor(grpc.aio.ServerInterceptor):
     """
-    gRPC interceptor for request/response logging.
+    Async gRPC interceptor for request/response logging.
 
     Features:
     - Logs all incoming requests
@@ -25,6 +26,7 @@ class LoggingInterceptor(grpc.ServerInterceptor):
     - Logs errors and exceptions
     - Structured logging with metadata
     - Performance tracking
+    - Async/await support
 
     Example:
         ```python
@@ -40,13 +42,13 @@ class LoggingInterceptor(grpc.ServerInterceptor):
         [gRPC] METHOD | STATUS | TIME | DETAILS
     """
 
-    def intercept_service(
+    async def intercept_service(
         self,
         continuation: Callable,
         handler_call_details: grpc.HandlerCallDetails,
     ) -> grpc.RpcMethodHandler:
         """
-        Intercept gRPC service call for logging.
+        Intercept async gRPC service call for logging.
 
         Args:
             continuation: Function to invoke the next interceptor or handler
@@ -62,7 +64,7 @@ class LoggingInterceptor(grpc.ServerInterceptor):
         logger.info(f"[gRPC] ➡️  {method_name} | peer={peer}")
 
         # Get handler and wrap it
-        handler = continuation(handler_call_details)
+        handler = await continuation(handler_call_details)
 
         if handler is None:
             logger.warning(f"[gRPC] ⚠️  {method_name} | No handler found")
@@ -181,19 +183,14 @@ class LoggingInterceptor(grpc.ServerInterceptor):
             return wrapper
 
         def wrap_stream_stream(behavior):
-            def wrapper(request_iterator, context):
+            # All behaviors are async now
+            async def async_wrapper(request_iterator, context):
                 start_time = time.time()
-                in_count = 0
                 out_count = 0
                 try:
-                    # Count input messages
-                    requests = []
-                    for req in request_iterator:
-                        in_count += 1
-                        requests.append(req)
+                    logger.info(f"[gRPC] 🔄 {method_name} (bidi stream) | peer={peer}")
 
-                    # Process and count output
-                    for response in behavior(iter(requests), context):
+                    async for response in behavior(request_iterator, context):
                         out_count += 1
                         yield response
 
@@ -201,7 +198,7 @@ class LoggingInterceptor(grpc.ServerInterceptor):
                     logger.info(
                         f"[gRPC] ✅ {method_name} (bidi stream) | "
                         f"status=OK | "
-                        f"in={in_count} out={out_count} | "
+                        f"out={out_count} | "
                         f"time={duration:.2f}ms | "
                         f"peer={peer}"
                     )
@@ -210,14 +207,14 @@ class LoggingInterceptor(grpc.ServerInterceptor):
                     logger.error(
                         f"[gRPC] ❌ {method_name} (bidi stream) | "
                         f"status=ERROR | "
-                        f"in={in_count} out={out_count} | "
+                        f"out={out_count} | "
                         f"time={duration:.2f}ms | "
                         f"error={type(e).__name__}: {str(e)} | "
                         f"peer={peer}",
                         exc_info=True
                     )
                     raise
-            return wrapper
+            return async_wrapper
 
         # Return wrapped handler based on type
         if handler.unary_unary:
@@ -233,7 +230,7 @@ class LoggingInterceptor(grpc.ServerInterceptor):
                 response_serializer=handler.response_serializer,
             )
         elif handler.stream_unary:
-            return grpc.stream_unary_rpc_method_handler(
+            return grpc.stream_stream_rpc_method_handler(
                 wrap_stream_unary(handler.stream_unary),
                 request_deserializer=handler.request_deserializer,
                 response_serializer=handler.response_serializer,

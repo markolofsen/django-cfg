@@ -152,9 +152,9 @@ print(f"Response: {response}")
 ### With Authentication
 
 ```python
-# Create metadata with JWT token
+# Create metadata with API key
 metadata = {
-    "authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGc..."
+    "x-api-key": "your_api_key_here"
 }
 
 # Invoke authenticated method

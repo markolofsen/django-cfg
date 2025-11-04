@@ -1,6 +1,6 @@
 ---
 title: gRPC Integration
-description: Production-ready gRPC server with Django ORM, JWT auth, and automatic service discovery
+description: Production-ready gRPC server with Django ORM, API key auth, and automatic service discovery
 sidebar_label: Overview
 sidebar_position: 1
 keywords:
@@ -20,6 +20,7 @@ Build high-performance gRPC APIs with full Django integration - ORM, authenticat
 
 Django-CFG provides a **complete gRPC server** that integrates seamlessly with Django:
 
+- ✅ **Async Support** - High-concurrency async server with streaming (1000+ concurrent requests)
 - ✅ **Auto-Discovery** - Services automatically registered from Django apps
 - ✅ **Django Integration** - Full ORM, auth, admin, signals access
 - ✅ **API Key Authentication** - Simple, secure API key management with admin interface
@@ -174,7 +175,7 @@ Full access to Django features:
 class OrderService(BaseService):
     def CreateOrder(self, request, context):
         # Django ORM
-        user = self.require_user(context)  # From JWT token
+        user = self.require_user(context)  # From API key
         order = Order.objects.create(user=user)
 
         # Django signals
@@ -435,7 +436,7 @@ sequenceDiagram
     C->>S: gRPC Request
     S->>L: 1. Log request start
     L->>DB: Create log entry
-    S->>A: 2. Verify JWT
+    S->>A: 2. Verify API key
     A->>DB: Load user
     A->>SV: 3. Call service
     SV->>DB: 4. Query data
@@ -515,6 +516,7 @@ graph TB
 - **[Authentication](./authentication.md)** - API key authentication
 
 ### Advanced Topics
+- **[Async Support](./async-support.md)** - High-concurrency async server and streaming
 - **[REST API](./rest-api.md)** - REST endpoints for monitoring and management
 - **[Dynamic Invocation](./dynamic-invocation.md)** - Test without proto files
 - **[FAQ](./faq.md)** - Common questions and troubleshooting

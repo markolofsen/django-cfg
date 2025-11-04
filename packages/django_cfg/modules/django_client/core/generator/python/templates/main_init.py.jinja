@@ -18,8 +18,8 @@ Usage:
     >>> if api.is_authenticated():
     ...     # ...
     >>>
-    >>> # Get OpenAPI schema
-    >>> schema = api.get_schema()
+    >>> # Get OpenAPI schema path
+    >>> schema_path = api.get_schema_path()
 """
 
 from __future__ import annotations
@@ -30,7 +30,6 @@ from typing import Any
 import httpx
 
 from .client import APIClient
-from .schema import OPENAPI_SCHEMA
 from .logger import LoggerConfig
 from .retry import RetryConfig
 {% for tag in tags %}

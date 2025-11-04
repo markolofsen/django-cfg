@@ -124,21 +124,29 @@ from django_cfg.apps.integrations.grpc.services import BaseService
 
 ## 🔐 Authentication
 
-### How to get JWT token?
+### How to create API key?
 
 **Option 1: Django admin**
 ```python
-from rest_framework_simplejwt.tokens import RefreshToken
+from django_cfg.apps.integrations.grpc.models import GrpcApiKey
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 user = User.objects.get(username='admin')
-token = str(RefreshToken.for_user(user).access_token)
-print(token)
+api_key = GrpcApiKey.objects.create_for_user(
+    user=user,
+    name="My Service",
+    key_type="service",
+    expires_in_days=365
+)
+print(f"API Key: {api_key.key}")
 ```
 
-**Option 2: API endpoint**
-```bash
-curl -X POST http://localhost:8000/api/token/ \
-  -d '{"username": "admin", "password": "password"}'
-```
+**Option 2: Django Admin UI**
+1. Go to `/admin/integrations/grpc/grpcapikey/`
+2. Click "Add gRPC API Key"
+3. Fill in name, user, type, expiration
+4. Save and copy the generated key
 
 ### Authentication not working
 
@@ -147,15 +155,16 @@ curl -X POST http://localhost:8000/api/token/ \
 auth=GRPCAuthConfig(enabled=True)
 ```
 
-**Check 2: Token in metadata**
+**Check 2: API key in metadata**
 ```bash
-grpcurl -H "Authorization: Bearer <token>" ...
+grpcurl -H "x-api-key: <your_key>" ...
 ```
 
-**Check 3: User exists**
+**Check 3: API key is valid**
 ```python
-# Token contains user_id, check user exists
-User.objects.filter(id=<user_id>).exists()
+from django_cfg.apps.integrations.grpc.models import GrpcApiKey
+# Check if API key exists and is active
+GrpcApiKey.objects.filter(key='<your_key>', is_active=True).exists()
 ```
 
 ### Make method public
@@ -184,12 +193,12 @@ def GetUser(self, request, context):
 
 ### "UNAUTHENTICATED: Authentication required"
 
-**Cause:** Method requires JWT token but none provided.
+**Cause:** Method requires API key but none provided.
 
 **Solution:**
 ```bash
-# Add Authorization header
-grpcurl -H "Authorization: Bearer <token>" \
+# Add x-api-key header
+grpcurl -H "x-api-key: <your_api_key>" \
   localhost:50051 api.users.UserService/Method
 ```
 

@@ -161,20 +161,12 @@ class FilesGenerator:
         )
 
     def generate_schema_file(self, openapi_schema: dict) -> GeneratedFile:
-        """Generate schema.py with OpenAPI schema as dict."""
-        # First, convert to pretty JSON
-        schema_json = json.dumps(openapi_schema, indent=4, ensure_ascii=False)
-
-        # Convert JSON literals to Python literals
-        schema_json = re.sub(r'\btrue\b', 'True', schema_json)
-        schema_json = re.sub(r'\bfalse\b', 'False', schema_json)
-        schema_json = re.sub(r'\bnull\b', 'None', schema_json)
-
-        template = self.jinja_env.get_template('utils/schema.py.jinja')
-        content = template.render(schema_dict=schema_json)
+        """Generate schema.json with OpenAPI schema."""
+        # Generate JSON file with proper formatting
+        content = json.dumps(openapi_schema, indent=4, ensure_ascii=False)
 
         return GeneratedFile(
-            path="schema.py",
+            path="schema.json",
             content=content,
-            description="OpenAPI Schema",
+            description="OpenAPI Schema (JSON format)",
         )
