@@ -10,6 +10,8 @@ from rest_framework import routers
 from .views.admin_api import CentrifugoAdminAPIViewSet
 from .views.monitoring import CentrifugoMonitorViewSet
 from .views.testing_api import CentrifugoTestingAPIViewSet
+from .views.token_api import CentrifugoTokenViewSet
+from .views.wrapper import PublishWrapperView
 
 app_name = 'django_cfg_centrifugo'
 
@@ -25,7 +27,13 @@ router.register(r'server', CentrifugoAdminAPIViewSet, basename='server')
 # Testing API endpoints (live testing from dashboard)
 router.register(r'testing', CentrifugoTestingAPIViewSet, basename='testing')
 
+# Token API endpoints (JWT token generation for client connections)
+router.register(r'auth', CentrifugoTokenViewSet, basename='auth')
+
 urlpatterns = [
+    # Wrapper API endpoint (for CentrifugoClient)
+    path('api/publish', PublishWrapperView.as_view(), name='wrapper_publish'),
+
     # Include router URLs
     path('', include(router.urls)),
 ]

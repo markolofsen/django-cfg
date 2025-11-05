@@ -32,23 +32,6 @@ logger = get_logger("centrifugo.testing_api")
 # ========================================================================
 
 
-class ConnectionTokenRequest(BaseModel):
-    """Request model for connection token generation."""
-
-    user_id: str = Field(..., description="User ID for the connection")
-    channels: list[str] = Field(
-        default_factory=list, description="List of channels to authorize"
-    )
-
-
-class ConnectionTokenResponse(BaseModel):
-    """Response model for connection token."""
-
-    token: str = Field(..., description="JWT token for WebSocket connection")
-    centrifugo_url: str = Field(..., description="Centrifugo WebSocket URL")
-    expires_at: str = Field(..., description="Token expiration time (ISO 8601)")
-
-
 class PublishTestRequest(BaseModel):
     """Request model for test message publishing."""
 
@@ -131,68 +114,6 @@ class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
             )
 
         return self._http_client
-
-    @extend_schema(
-        tags=["Centrifugo Testing"],
-        summary="Generate connection token",
-        description="Generate JWT token for WebSocket connection to Centrifugo.",
-        request=ConnectionTokenRequest,
-        responses={
-            200: ConnectionTokenResponse,
-            400: {"description": "Invalid request"},
-            500: {"description": "Server error"},
-        },
-    )
-    @action(detail=False, methods=["post"], url_path="connection-token")
-    def connection_token(self, request):
-        """
-        Generate JWT token for WebSocket connection.
-
-        Returns token that can be used to connect to Centrifugo from browser.
-        """
-        try:
-            config = get_centrifugo_config()
-            if not config:
-                return Response(
-                    {"error": "Centrifugo not configured"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-
-            # Parse request
-            req_data = ConnectionTokenRequest(**request.data)
-
-            # Generate JWT token
-            now = int(time.time())
-            exp = now + 3600  # 1 hour
-
-            payload = {
-                "sub": req_data.user_id,
-                "exp": exp,
-                "iat": now,
-            }
-
-            # Add channels if provided
-            if req_data.channels:
-                payload["channels"] = req_data.channels
-
-            # Use HMAC secret from config or Django SECRET_KEY
-            secret = config.centrifugo_token_hmac_secret or settings.SECRET_KEY
-
-            token = jwt.encode(payload, secret, algorithm="HS256")
-
-            response = ConnectionTokenResponse(
-                token=token,
-                centrifugo_url=config.centrifugo_url,
-                expires_at=datetime.utcfromtimestamp(exp).isoformat() + "Z",
-            )
-
-            return Response(response.model_dump())
-
-        except Exception as e:
-            logger.error(f"Failed to generate connection token: {e}", exc_info=True)
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
 
     @extend_schema(
         tags=["Centrifugo Testing"],

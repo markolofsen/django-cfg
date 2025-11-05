@@ -53,6 +53,10 @@ class ServiceDiscovery:
         # Get config from django-cfg using Pydantic2 pattern
         self.config = get_grpc_config()
 
+        logger.warning(f"🔍 ServiceDiscovery.__init__: config = {self.config}")
+        if self.config:
+            logger.warning(f"🔍 handlers_hook = {self.config.handlers_hook}")
+
         if self.config:
             self.auto_register = self.config.auto_register_apps
             self.enabled_apps = self.config.enabled_apps if self.config.auto_register_apps else []
@@ -452,11 +456,13 @@ class ServiceDiscovery:
             >>> if handlers_hook:
             ...     services = handlers_hook(server)
         """
+        logger.warning(f"🔍 get_handlers_hook called")
         if not self.config:
-            logger.debug("No gRPC config available")
+            logger.warning("❌ No gRPC config available")
             return None
 
         handlers_hook_path = self.config.handlers_hook
+        logger.warning(f"🔍 handlers_hook_path = '{handlers_hook_path}'")
 
         if not handlers_hook_path:
             logger.debug("No handlers_hook configured")

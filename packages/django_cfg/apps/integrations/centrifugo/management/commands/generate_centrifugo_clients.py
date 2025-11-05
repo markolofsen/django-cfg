@@ -6,6 +6,7 @@ Usage:
     python manage.py generate_centrifugo_clients -o ./clients --python --verbose
 """
 
+import logging
 from pathlib import Path
 from typing import List
 
@@ -131,11 +132,10 @@ class Command(AdminCommand):
         if not methods:
             self.stdout.write(
                 colorize(
-                    "No RPC methods found. Did you register handlers with @websocket_rpc?",
+                    "⚠️  No RPC methods found. Will generate base RPC client without API methods.",
                     fg="yellow",
                 )
             )
-            return
 
         # Create output directory
         output_dir.mkdir(parents=True, exist_ok=True)

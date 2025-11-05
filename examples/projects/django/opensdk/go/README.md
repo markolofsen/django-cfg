@@ -92,23 +92,6 @@ func main() {
 
     fmt.Println("✅ Connected to Centrifugo")
 
-    // Example RPC calls
-
-    // Call system.health
-    result1, err := client.SystemHealth(ctx, params)
-    if err != nil {
-        log.Printf("Error calling system.health: %v", err)
-    } else {
-        fmt.Printf("Result: %+v\n", result1)
-    }
-
-    // Call users.update_presence
-    result2, err := client.UsersUpdatePresence(ctx, params)
-    if err != nil {
-        log.Printf("Error calling users.update_presence: %v", err)
-    } else {
-        fmt.Printf("Result: %+v\n", result2)
-    }
 }
 ```
 

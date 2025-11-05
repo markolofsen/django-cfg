@@ -125,6 +125,8 @@ class APIFrameworksGenerator:
                 ],
                 # Add authentication classes from smart defaults
                 "DEFAULT_AUTHENTICATION_CLASSES": drf_defaults["DEFAULT_AUTHENTICATION_CLASSES"],
+                # Force ISO 8601 datetime format with Z suffix for all datetime fields
+                "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%SZ",
             }
 
             # Note: We don't set DEFAULT_PERMISSION_CLASSES here to allow public endpoints

@@ -1,21 +1,53 @@
 """
-Django management command to run async gRPC server.
+Django management command to run async gRPC server with auto-reload support.
 
 Usage:
+    # Development mode (with auto-reload)
     python manage.py rungrpc
+
+    # Production mode (no auto-reload)
+    python manage.py rungrpc --noreload
+
+    # Custom host and port
     python manage.py rungrpc --host 0.0.0.0 --port 50051
+
+    # With Centrifugo test event on startup
+    python manage.py rungrpc --test
+
+    # Disable specific features
+    python manage.py rungrpc --no-reflection --no-health-check
+
+Auto-reload behavior:
+    - Enabled by default in development mode (ENV_MODE != "production")
+    - Disabled by default in production mode (ENV_MODE == "production")
+    - Use --noreload to explicitly disable auto-reload
+    - Server will restart automatically when Python files change
+
+Test mode:
+    - Use --test to send a test Centrifugo event on server startup
+    - Useful for verifying Centrifugo integration is working
+    - Event published to: grpc#rungrpc#startup#test
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import signal
 import sys
+import threading
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils import autoreload
 
+from django_cfg.core.config import get_current_config
 from django_cfg.modules.django_logging import get_logger
+from django_cfg.apps.integrations.grpc.utils.streaming_logger import (
+    setup_streaming_logger,
+    log_server_start,
+    log_server_shutdown,
+)
 
 # Check dependencies before importing grpc
 from django_cfg.apps.integrations.grpc._cfg import check_grpc_dependencies
@@ -33,16 +65,23 @@ import grpc.aio
 
 class Command(BaseCommand):
     """
-    Run async gRPC server with auto-discovered services.
+    Run async gRPC server with auto-discovered services and hot-reload.
 
     Features:
     - Async server with grpc.aio
     - Auto-discovers and registers services
+    - Hot-reload in development mode (watches for file changes)
     - Configurable host, port
     - Health check support
     - Reflection support
     - Graceful shutdown
     - Signal handling
+
+    Hot-reload:
+    - Automatically enabled in development mode (ENV_MODE != "production")
+    - Automatically disabled in production mode (ENV_MODE == "production")
+    - Use --noreload to explicitly disable in development
+    - Works like Django's runserver - restarts on code changes
     """
 
     # Web execution metadata
@@ -50,12 +89,13 @@ class Command(BaseCommand):
     requires_input = False
     is_destructive = False
 
-    help = "Run async gRPC server"
+    help = "Run async gRPC server with optional hot-reload support"
 
     def __init__(self, *args, **kwargs):
         """Initialize with self.logger and async server reference."""
         super().__init__(*args, **kwargs)
         self.logger = get_logger('rungrpc')
+        self.streaming_logger = None  # Will be initialized when server starts
         self.server = None
         self.shutdown_event = None
         self.server_status = None
@@ -90,19 +130,111 @@ class Command(BaseCommand):
             action="store_true",
             help="Enable asyncio debug mode",
         )
+        parser.add_argument(
+            "--noreload",
+            action="store_false",
+            dest="use_reloader",
+            help="Disable auto-reloader (default: enabled in dev mode)",
+        )
+        parser.add_argument(
+            "--test",
+            action="store_true",
+            help="Send test Centrifugo event on startup (for testing integration)",
+        )
 
     def handle(self, *args, **options):
-        """Run async gRPC server."""
+        """Run async gRPC server with optional auto-reload."""
+        config = get_current_config()
+
+        # Determine if we should use auto-reload
+        # Changed default to False for stability with bidirectional streaming
+        use_reloader = options.get("use_reloader", False)
+
+        # Check if we're in production mode (disable reloader in production)
+        if config and hasattr(config, 'is_production'):
+            is_production = config.is_production  # property, not method
+        else:
+            # Fallback to settings
+            env_mode = getattr(settings, "ENV_MODE", "development").lower()
+            is_production = env_mode == "production"
+
+        # Disable reloader in production by default
+        if is_production and options.get("use_reloader") is None:
+            use_reloader = False
+            self.stdout.write(
+                self.style.WARNING(
+                    "Production mode - auto-reloader disabled"
+                )
+            )
+
         # Enable asyncio debug if requested
         if options.get("asyncio_debug"):
             asyncio.get_event_loop().set_debug(True)
             self.logger.info("Asyncio debug mode enabled")
 
-        # Run async main
-        asyncio.run(self._async_main(*args, **options))
+        # Run with or without reloader
+        if use_reloader:
+            from datetime import datetime
+            current_time = datetime.now().strftime('%H:%M:%S')
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"🔄 Auto-reloader enabled - watching for file changes [{current_time}]"
+                )
+            )
+            self.stdout.write(
+                self.style.WARNING(
+                    "⚠️  Note: Active streaming connections will be dropped on reload. Use --noreload for stable bots."
+                )
+            )
+
+            # Setup autoreload to watch project directory
+            from django.utils.autoreload import autoreload_started
+
+            def watch_project_files(sender, **kwargs):
+                """Automatically watch Django project directory for changes."""
+                base_dir = getattr(settings, 'BASE_DIR', None)
+                if base_dir:
+                    sender.watch_dir(str(base_dir), '*.py')
+                    self.logger.debug(f"Watching project directory: {base_dir}")
+
+            autoreload_started.connect(watch_project_files)
+
+            # Use autoreload to restart on code changes
+            autoreload.run_with_reloader(
+                lambda: asyncio.run(self._async_main(*args, **options))
+            )
+        else:
+            # Run directly without reloader
+            asyncio.run(self._async_main(*args, **options))
 
     async def _async_main(self, *args, **options):
         """Main async server loop."""
+        # Setup streaming logger for detailed gRPC logging
+        self.streaming_logger = setup_streaming_logger(
+            name='grpc_rungrpc',
+            level=logging.DEBUG,
+            console_level=logging.INFO
+        )
+
+        config = get_current_config()
+        use_reloader = options.get("use_reloader", True)
+
+        # Determine production mode
+        if config and hasattr(config, 'is_production'):
+            is_production = config.is_production  # property, not method
+        else:
+            env_mode = getattr(settings, "ENV_MODE", "development").lower()
+            is_production = env_mode == "production"
+
+        # Log startup using reusable function
+        start_time = log_server_start(
+            self.streaming_logger,
+            server_type="gRPC Server",
+            mode="Production" if is_production else "Development",
+            hotreload_enabled=use_reloader
+        )
+
         # Import models here to avoid AppRegistryNotReady
         from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
         from django_cfg.apps.integrations.grpc.services.config_helper import (
@@ -273,14 +405,68 @@ class Command(BaseCommand):
 
         # Keep server running
         self.stdout.write(self.style.SUCCESS("\n✅ Async gRPC server is running..."))
+
+        # Show reloader status
+        if use_reloader and not is_production:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "🔄 Auto-reloader active - server will restart on code changes"
+                )
+            )
+
         self.stdout.write("Press CTRL+C to stop\n")
 
+        # Log server ready
+        self.streaming_logger.info("✅ Server ready and accepting connections")
+        if use_reloader:
+            self.streaming_logger.info("🔄 Watching for file changes...")
+
+        # Send test Centrifugo event if --test flag is set
+        if options.get("test"):
+            self.streaming_logger.info("🧪 Sending test Centrifugo event...")
+            try:
+                from django_cfg.apps.integrations.grpc.centrifugo.demo import send_demo_event
+
+                test_result = await send_demo_event(
+                    channel="grpc#rungrpc#startup#test",
+                    metadata={
+                        "source": "rungrpc",
+                        "action": "startup_test",
+                        "mode": "Development" if not is_production else "Production",
+                        "host": host,
+                        "port": port,
+                    }
+                )
+
+                if test_result:
+                    self.streaming_logger.info("✅ Test Centrifugo event sent successfully")
+                    self.stdout.write(self.style.SUCCESS("🧪 Test event published to Centrifugo"))
+                else:
+                    self.streaming_logger.warning("⚠️ Test Centrifugo event failed")
+                    self.stdout.write(self.style.WARNING("⚠️ Test event failed (check Centrifugo config)"))
+
+            except Exception as e:
+                self.streaming_logger.error(f"❌ Failed to send test event: {e}")
+                self.stdout.write(
+                    self.style.ERROR(f"❌ Test event error: {e}")
+                )
+
+        shutdown_reason = "Unknown"
         try:
             await self.server.wait_for_termination()
+            shutdown_reason = "Normal termination"
         except KeyboardInterrupt:
-            # Signal handler will take care of graceful shutdown
+            shutdown_reason = "Keyboard interrupt"
             pass
         finally:
+            # Log shutdown using reusable function
+            log_server_shutdown(
+                self.streaming_logger,
+                start_time,
+                server_type="gRPC Server",
+                reason=shutdown_reason
+            )
+
             # Cancel heartbeat task
             if heartbeat_task and not heartbeat_task.done():
                 heartbeat_task.cancel()
@@ -555,8 +741,8 @@ class Command(BaseCommand):
                         # Update reference
                         self.server_status = new_server_status
 
-                        self.logger.info(
-                            f"Successfully re-registered server (ID: {new_server_status.id})"
+                        self.logger.warning(
+                            f"✅ Successfully re-registered server (ID: {new_server_status.id})"
                         )
                     else:
                         # Record exists - just update heartbeat
@@ -577,7 +763,17 @@ class Command(BaseCommand):
         Args:
             server: Async gRPC server instance
             server_status: GRPCServerStatus instance (optional)
+
+        Note:
+            Signal handlers can only be set in the main thread.
+            When running with autoreload, we're in a separate thread,
+            so we skip signal handler setup.
         """
+        # Check if we're in the main thread
+        if threading.current_thread() is not threading.main_thread():
+            # In autoreload mode, Django handles signals - we don't need to set them up
+            return
+
         # Flag to prevent multiple shutdown attempts
         shutdown_initiated = {'value': False}
 

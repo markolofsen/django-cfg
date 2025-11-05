@@ -323,6 +323,7 @@ class SecurityBuilder:
         """
         popular_ports = [
             3000,  # React/Next.js default
+            3777,  # Next.js Admin default
             5173,  # Vite default
             5174,  # Vite preview
             8080,  # Vue/Spring Boot

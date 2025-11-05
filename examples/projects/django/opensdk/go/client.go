@@ -42,26 +42,3 @@ func (api *APIClient) Disconnect() error {
 	return api.rpc.Disconnect()
 }
 
-// SystemHealth Check system health status.
-// Returns current status of all system components including
-// database, cache, and overall health.
-func (api *APIClient) SystemHealth(ctx context.Context, params HealthCheckParams) (*HealthCheckResult, error) {
-	var result HealthCheckResult
-	err := api.rpc.Call(ctx, "system.health", params, &result)
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-// UsersUpdatePresence Update user presence status.
-// Updates the user's online status and broadcasts to subscribers.
-func (api *APIClient) UsersUpdatePresence(ctx context.Context, params UserPresenceParams) (*UserPresenceResult, error) {
-	var result UserPresenceResult
-	err := api.rpc.Call(ctx, "users.update_presence", params, &result)
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-

@@ -2,39 +2,3 @@
 
 package centrifugo_client
 
-// User presence update parameters.
-type UserPresenceParams struct {
-	// User ID
-	UserId string `json:"user_id"`
-	// Status: online, away, busy, offline
-	Status string `json:"status"`
-}
-
-// Health check response.
-type HealthCheckResult struct {
-	// System status: healthy, degraded, unhealthy
-	Status string `json:"status"`
-	// System uptime in seconds
-	UptimeSeconds int64 `json:"uptime_seconds"`
-	// Database status
-	Database string `json:"database"`
-	// Cache status
-	Cache string `json:"cache"`
-}
-
-// Health check request parameters.
-type HealthCheckParams struct {
-	// Include detailed system info
-	IncludeDetails *bool `json:"include_details"`
-}
-
-// User presence response.
-type UserPresenceResult struct {
-	// User ID
-	UserId string `json:"user_id"`
-	// Current status
-	Status string `json:"status"`
-	// Last seen timestamp (ISO 8601)
-	LastSeen string `json:"last_seen"`
-}
-

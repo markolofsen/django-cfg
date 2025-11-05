@@ -12,6 +12,12 @@ from pathlib import Path
 from typing import Optional
 from django.utils import timezone
 
+# Rich for beautiful console output
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
 
 class AutoTracebackHandler(logging.Handler):
     """
@@ -128,11 +134,14 @@ def setup_streaming_logger(
     file_handler = AutoTracebackHandler(base_file_handler)
     streaming_logger.addHandler(file_handler)
 
-    # Console handler - important messages only
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(console_level)
+    # Console handler - important messages only (also with auto-traceback)
+    base_console_handler = logging.StreamHandler()
+    base_console_handler.setLevel(console_level)
     console_formatter = logging.Formatter('%(levelname)s: %(message)s')
-    console_handler.setFormatter(console_formatter)
+    base_console_handler.setFormatter(console_formatter)
+
+    # Wrap console handler with auto-traceback too
+    console_handler = AutoTracebackHandler(base_console_handler)
     streaming_logger.addHandler(console_handler)
 
     # Prevent propagation to avoid duplicate logs
@@ -174,4 +183,196 @@ def get_streaming_logger(name: str = "grpc_streaming") -> logging.Logger:
     return logger
 
 
-__all__ = ["setup_streaming_logger", "get_streaming_logger"]
+def log_server_start(
+    logger: logging.Logger,
+    server_type: str = "Server",
+    mode: str = "Development",
+    hotreload_enabled: bool = False,
+    use_rich: bool = True,
+    **extra_info
+):
+    """
+    Log server startup with timestamp and configuration using Rich panels.
+
+    Args:
+        logger: Logger instance to use
+        server_type: Type of server (e.g., "gRPC Server", "WebSocket Server")
+        mode: Running mode (Development/Production)
+        hotreload_enabled: Whether hot-reload is enabled
+        use_rich: Use Rich for beautiful output (default: True)
+        **extra_info: Additional key-value pairs to log
+
+    Example:
+        ```python
+        from django_cfg.apps.integrations.grpc.utils import log_server_start
+        from datetime import datetime
+
+        start_time = log_server_start(
+            logger,
+            server_type="gRPC Server",
+            mode="Development",
+            hotreload_enabled=True,
+            host="0.0.0.0",
+            port=50051
+        )
+        ```
+
+    Returns:
+        datetime object of start time for later use in log_server_shutdown
+    """
+    from datetime import datetime
+
+    start_time = datetime.now()
+
+    if use_rich:
+        # Create Rich table for server info
+        console = Console()
+
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column("Key", style="cyan")
+        table.add_column("Value", style="white")
+
+        table.add_row("⏰ Started at", start_time.strftime('%Y-%m-%d %H:%M:%S'))
+        table.add_row("Mode", f"[{'red' if mode == 'Production' else 'green'}]{mode}[/]")
+        table.add_row("Hotreload", f"[{'yellow' if hotreload_enabled else 'dim'}]{'Enabled ⚡' if hotreload_enabled else 'Disabled'}[/]")
+
+        # Add extra info
+        for key, value in extra_info.items():
+            key_display = key.replace('_', ' ').title()
+            table.add_row(key_display, str(value))
+
+        # Create panel
+        panel = Panel(
+            table,
+            title=f"[bold green]🚀 {server_type} Starting[/bold green]",
+            border_style="green",
+            padding=(1, 2)
+        )
+
+        console.print(panel)
+
+        if hotreload_enabled:
+            console.print(
+                "[yellow]⚠️  Hotreload active - connections may be dropped on code changes[/yellow]",
+                style="bold"
+            )
+    else:
+        # Fallback to simple logging
+        logger.info("=" * 80)
+        logger.info(f"🚀 {server_type} Starting")
+        logger.info(f"   ⏰ Started at: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"   Mode: {mode}")
+        logger.info(f"   Hotreload: {'Enabled' if hotreload_enabled else 'Disabled'}")
+
+        for key, value in extra_info.items():
+            key_display = key.replace('_', ' ').title()
+            logger.info(f"   {key_display}: {value}")
+
+        if hotreload_enabled:
+            logger.warning(
+                "⚠️  Hotreload active - connections may be dropped on code changes"
+            )
+
+        logger.info("=" * 80)
+
+    return start_time
+
+
+def log_server_shutdown(
+    logger: logging.Logger,
+    start_time,
+    server_type: str = "Server",
+    reason: str = None,
+    use_rich: bool = True,
+    **extra_info
+):
+    """
+    Log server shutdown with uptime calculation using Rich panels.
+
+    Args:
+        logger: Logger instance to use
+        start_time: datetime object from log_server_start()
+        server_type: Type of server (e.g., "gRPC Server", "WebSocket Server")
+        reason: Shutdown reason (e.g., "Keyboard interrupt", "Hotreload")
+        use_rich: Use Rich for beautiful output (default: True)
+        **extra_info: Additional key-value pairs to log
+
+    Example:
+        ```python
+        from django_cfg.apps.integrations.grpc.utils import log_server_shutdown
+
+        log_server_shutdown(
+            logger,
+            start_time,
+            server_type="gRPC Server",
+            reason="Hotreload triggered",
+            active_connections=5
+        )
+        ```
+    """
+    from datetime import datetime
+
+    end_time = datetime.now()
+    uptime = end_time - start_time
+    uptime_seconds = int(uptime.total_seconds())
+
+    # Format uptime
+    hours = uptime_seconds // 3600
+    minutes = (uptime_seconds % 3600) // 60
+    seconds = uptime_seconds % 60
+    uptime_str = f"{hours}h {minutes}m {seconds}s"
+
+    if use_rich:
+        # Create Rich table for shutdown info
+        console = Console()
+
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column("Key", style="cyan")
+        table.add_column("Value", style="white")
+
+        if reason:
+            table.add_row("📋 Reason", reason)
+
+        table.add_row("⏱️  Uptime", f"[bold]{uptime_str}[/bold]")
+        table.add_row("🕐 Stopped at", end_time.strftime('%Y-%m-%d %H:%M:%S'))
+
+        # Add extra info
+        for key, value in extra_info.items():
+            key_display = key.replace('_', ' ').title()
+            table.add_row(key_display, str(value))
+
+        # Create panel
+        panel = Panel(
+            table,
+            title=f"[bold red]🧹 Shutting down {server_type}[/bold red]",
+            border_style="red",
+            padding=(1, 2)
+        )
+
+        console.print(panel)
+        console.print("[green]✅ Server shutdown complete[/green]", style="bold")
+    else:
+        # Fallback to simple logging
+        logger.info("=" * 80)
+        logger.info(f"🧹 Shutting down {server_type}...")
+
+        if reason:
+            logger.info(f"   📋 Reason: {reason}")
+
+        logger.info(f"   ⏱️  Uptime: {uptime_str}")
+        logger.info(f"   🕐 Stopped at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        for key, value in extra_info.items():
+            key_display = key.replace('_', ' ').title()
+            logger.info(f"   {key_display}: {value}")
+
+        logger.info("✅ Server shutdown complete")
+        logger.info("=" * 80)
+
+
+__all__ = [
+    "setup_streaming_logger",
+    "get_streaming_logger",
+    "log_server_start",
+    "log_server_shutdown",
+]
