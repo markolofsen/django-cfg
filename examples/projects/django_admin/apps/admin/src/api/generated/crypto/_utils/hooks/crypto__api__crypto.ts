@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/crypto__api__crypto'
 import type { API } from '../../index'
 import type { Coin } from '../schemas/Coin.schema'

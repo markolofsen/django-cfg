@@ -363,6 +363,8 @@ class HooksGenerator:
         # Separate queries and mutations & collect schema names
         hooks = []
         schema_names = set()
+        has_queries = False
+        has_mutations = False
 
         for operation in operations:
             # Collect schemas used in this operation (only if they exist as components)
@@ -378,11 +380,13 @@ class HooksGenerator:
             if response and response.schema_name:
                 schema_names.add(response.schema_name)
 
-            # Generate hook
+            # Generate hook and track operation types
             if operation.http_method == "GET":
                 hooks.append(self.generate_query_hook(operation))
+                has_queries = True
             else:
                 hooks.append(self.generate_mutation_hook(operation))
+                has_mutations = True
 
         # Get display name for documentation
         tag_display_name = self.base.tag_to_display_name(tag)
@@ -398,6 +402,8 @@ class HooksGenerator:
             tag_file=tag_file,
             has_schemas=bool(schema_names),
             schema_names=sorted(schema_names),
+            has_queries=has_queries,
+            has_mutations=has_mutations,
             hooks=hooks
         )
 
