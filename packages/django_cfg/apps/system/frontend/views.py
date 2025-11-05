@@ -130,16 +130,22 @@ class ZipExtractionMixin:
 @method_decorator(xframe_options_exempt, name='dispatch')
 class NextJSStaticView(ZipExtractionMixin, View):
     """
-    Serve Next.js static build files with automatic JWT token injection.
+    Serve Next.js static build files with automatic JWT token injection and precompression support.
 
     Features:
     - Serves Next.js static export files like a static file server
     - Smart ZIP extraction: compares ZIP metadata (size + mtime) with marker file
-    - Automatically injects JWT tokens for authenticated users
-    - Tokens injected into HTML responses only
+    - Automatically injects JWT tokens for authenticated users (HTML only)
+    - **Precompression support**: Automatically serves .br or .gz files if available
     - Handles Next.js client-side routing (.html fallback)
     - Automatically serves index.html for directory paths
     - X-Frame-Options exempt to allow embedding in iframes
+
+    Compression Strategy:
+    - Brotli (.br) preferred over Gzip (.gz) - ~5-15% better compression
+    - Automatically detects browser support via Accept-Encoding header
+    - Skips compression for HTML files (JWT injection requires uncompressed content)
+    - Only serves precompressed files, no runtime compression
 
     ZIP Extraction Logic:
     - If directory doesn't exist: extract from ZIP
@@ -154,12 +160,18 @@ class NextJSStaticView(ZipExtractionMixin, View):
     - /cfg/admin/private/      → /cfg/admin/private.html (fallback)
     - /cfg/admin/tasks         → /cfg/admin/tasks.html
     - /cfg/admin/tasks         → /cfg/admin/tasks/index.html (fallback)
+
+    Compression examples:
+    - _app.js (br supported)   → _app.js.br + Content-Encoding: br
+    - _app.js (gzip supported) → _app.js.gz + Content-Encoding: gzip
+    - _app.js (no support)     → _app.js (uncompressed)
+    - index.html               → index.html (never compressed, needs JWT injection)
     """
 
     app_name = 'admin'
 
     def get(self, request, path=''):
-        """Serve static files from Next.js build with JWT injection."""
+        """Serve static files from Next.js build with JWT injection and compression support."""
         import django_cfg
 
         base_dir = Path(django_cfg.__file__).parent / 'static' / 'frontend' / self.app_name
@@ -191,8 +203,18 @@ class NextJSStaticView(ZipExtractionMixin, View):
             request.META.pop('HTTP_IF_MODIFIED_SINCE', None)
             request.META.pop('HTTP_IF_NONE_MATCH', None)
 
-        # Serve the static file
-        response = serve(request, path, document_root=str(base_dir))
+        # Try to serve precompressed file if browser supports it
+        compressed_path, encoding = self._find_precompressed_file(base_dir, path, request)
+        if compressed_path:
+            logger.debug(f"[Compression] Serving {encoding} for {path}")
+            response = serve(request, compressed_path, document_root=str(base_dir))
+            response['Content-Encoding'] = encoding
+            # Remove Content-Length as it's incorrect for compressed content
+            if 'Content-Length' in response:
+                del response['Content-Length']
+        else:
+            # Serve the static file normally
+            response = serve(request, path, document_root=str(base_dir))
 
         # Convert FileResponse to HttpResponse for HTML files to enable JWT injection
         if isinstance(response, FileResponse):
@@ -221,6 +243,65 @@ class NextJSStaticView(ZipExtractionMixin, View):
             response['Expires'] = '0'
 
         return response
+
+    def _find_precompressed_file(self, base_dir, path, request):
+        """
+        Find and return precompressed file (.br or .gz) if available and supported by browser.
+
+        Brotli (.br) is preferred over Gzip (.gz) as it provides better compression.
+
+        Args:
+            base_dir: Base directory for static files
+            path: Requested file path
+            request: Django request object
+
+        Returns:
+            tuple: (compressed_path, encoding) if precompressed file found and supported,
+                   (None, None) otherwise
+
+        Examples:
+            _app.js → _app.js.br (if Accept-Encoding: br)
+            _app.js → _app.js.gz (if Accept-Encoding: gzip, no .br)
+            _app.js → (None, None) (if no precompressed files or not supported)
+        """
+        # Get Accept-Encoding header
+        accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '').lower()
+
+        # Check if browser supports brotli (preferred) or gzip
+        supports_br = 'br' in accept_encoding
+        supports_gzip = 'gzip' in accept_encoding
+
+        if not (supports_br or supports_gzip):
+            return None, None
+
+        # Don't compress HTML files - we need to inject JWT tokens
+        # JWT injection requires modifying content, which is incompatible with compression
+        if path.endswith('.html'):
+            return None, None
+
+        # Build full file path
+        file_path = base_dir / path
+
+        # Check if original file exists (safety check)
+        if not file_path.exists() or not file_path.is_file():
+            return None, None
+
+        # Try Brotli first (better compression, ~5-15% smaller than gzip)
+        if supports_br:
+            br_path = f"{path}.br"
+            br_file = base_dir / br_path
+            if br_file.exists() and br_file.is_file():
+                return br_path, 'br'
+
+        # Fallback to Gzip
+        if supports_gzip:
+            gz_path = f"{path}.gz"
+            gz_file = base_dir / gz_path
+            if gz_file.exists() and gz_file.is_file():
+                return gz_path, 'gzip'
+
+        # No precompressed file found or not supported
+        return None, None
 
     def _resolve_spa_path(self, base_dir, path):
         """
