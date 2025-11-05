@@ -24,8 +24,6 @@ async function main() {
 
   const api = new APIClient(rpc);
   
-  const result = await api.systemHealth(params);
-  const result = await api.usersUpdatePresence(params);
 
   await rpc.disconnect();
 }

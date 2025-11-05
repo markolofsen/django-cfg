@@ -5,9 +5,3 @@
 
 export { CentrifugoRPCClient } from './rpc-client';
 export { APIClient } from './client';
-export type {
-  HealthCheckParams,
-  HealthCheckResult,
-  UserPresenceParams,
-  UserPresenceResult,
-} from './types';

@@ -32,6 +32,7 @@ class CentrifugoConfig(AppConfig):
         Initialize app when Django starts.
 
         Validates that all required Centrifugo dependencies are installed.
+        Registers signal handlers for JWT token customization.
         """
         from django_cfg.modules.django_logging import get_logger
 
@@ -40,7 +41,7 @@ class CentrifugoConfig(AppConfig):
         # Check dependencies if needed (only when using Centrifugo features)
         self._check_dependencies_if_needed()
 
-        logger.info("Centrifugo app initialized")
+        logger.info("Centrifugo app initialized (middleware will inject JWT tokens)")
 
     def _check_dependencies_if_needed(self):
         """

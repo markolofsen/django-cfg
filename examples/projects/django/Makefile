@@ -12,7 +12,7 @@
 # - install-prod runs poetry install --sync to restore PyPI version
 # - No modifications to pyproject.toml or poetry.lock required!
 
-.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports kill-grpc dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
+.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports kill-grpc dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api rpc claude populate list-urls check-endpoints
 
 # Python from virtual environment (poetry)
 PYTHON := .venv/bin/python
@@ -36,7 +36,8 @@ help:
 	@echo "  make kill-ports    - Kill processes on port 8000"
 	@echo "  make kill-grpc     - Kill gRPC processes on port 50051"
 	@echo "  make shell         - Open Django shell"
-	@echo "  make api           - Generate and deploy API clients"
+	@echo "  make api           - Generate and deploy API clients (OpenAPI + RPC)"
+	@echo "  make rpc           - Generate Centrifugo WebSocket RPC clients (opensdk)"
 	@echo "  make claude        - Start Claude Code"
 	@echo ""
 	@echo "Database:"
@@ -131,8 +132,14 @@ kill-ports:
 
 kill-grpc:
 	@echo "🔪 Killing gRPC processes..."
-	@pkill -9 -f "manage.py rungrpc" || true
-	@lsof -i :50051 | awk 'NR>1 {print $$2}' | xargs kill -9 || true
+	@# Kill by process name (rungrpc)
+	@pkill -9 -f "manage.py rungrpc" 2>/dev/null || true
+	@# Kill by port (50051)
+	@lsof -ti :50051 | xargs kill -9 2>/dev/null || true
+	@# Kill any Python processes still holding port 50051
+	@lsof -ti :50051 -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
+	@# Small delay to ensure ports are released
+	@sleep 0.5
 	@echo "✅ gRPC processes killed"
 
 dev: kill-ports
@@ -190,6 +197,10 @@ tasks-clear:
 # API Generation
 api:
 	$(PYTHON) manage.py generate_api
+
+# Centrifugo WebSocket RPC Generation
+rpc:
+	$(PYTHON) manage.py generate_rpc
 
 # Populate database with sample data
 populate:

@@ -5,12 +5,6 @@ Auto-generated thin wrapper over CentrifugoRPCClient - DO NOT EDIT
 """
 
 from typing import Optional
-from .models import (
-    HealthCheckParams,
-    HealthCheckResult,
-    UserPresenceParams,
-    UserPresenceResult,
-)
 from .rpc_client import CentrifugoRPCClient
 
 
@@ -42,45 +36,6 @@ class APIClient:
         self._rpc = rpc_client
 
     # ========== Generated RPC Methods ==========
-
-    async def system_health(self, params: HealthCheckParams) -> HealthCheckResult:
-        """
-        Check system health status.
-        
-        Returns current status of all system components including
-        database, cache, and overall health.
-
-        Args:
-            params: HealthCheckParams parameters
-
-        Returns:
-            HealthCheckResult
-
-        Raises:
-            asyncio.TimeoutError: If RPC call times out
-            Exception: If RPC call fails
-        """
-        result = await self._rpc.call('system.health', params.model_dump())
-        return HealthCheckResult(**result)
-
-    async def users_update_presence(self, params: UserPresenceParams) -> UserPresenceResult:
-        """
-        Update user presence status.
-        
-        Updates the user's online status and broadcasts to subscribers.
-
-        Args:
-            params: UserPresenceParams parameters
-
-        Returns:
-            UserPresenceResult
-
-        Raises:
-            asyncio.TimeoutError: If RPC call times out
-            Exception: If RPC call fails
-        """
-        result = await self._rpc.call('users.update_presence', params.model_dump())
-        return UserPresenceResult(**result)
 
 
 __all__ = ["APIClient"]

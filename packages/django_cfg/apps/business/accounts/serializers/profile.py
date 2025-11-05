@@ -4,6 +4,24 @@ from rest_framework import serializers
 from ..models import CustomUser, RegistrationSource, UserRegistrationSource
 
 
+class CentrifugoTokenSerializer(serializers.Serializer):
+    """Nested serializer for Centrifugo WebSocket connection token."""
+
+    token = serializers.CharField(
+        help_text="JWT token for Centrifugo WebSocket connection"
+    )
+    centrifugo_url = serializers.URLField(
+        help_text="Centrifugo WebSocket URL"
+    )
+    expires_at = serializers.DateTimeField(
+        help_text="Token expiration time (ISO 8601)"
+    )
+    channels = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of allowed channels for this user"
+    )
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for user details."""
 
@@ -11,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
     initials = serializers.ReadOnlyField()
     display_username = serializers.ReadOnlyField()
     avatar = serializers.SerializerMethodField()
+    centrifugo = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -31,6 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "unanswered_messages_count",
+            "centrifugo",
         ]
         read_only_fields = [
             "id",
@@ -51,6 +71,28 @@ class UserSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.avatar.url)
             return obj.avatar.url
         return None
+
+    @extend_schema_field(CentrifugoTokenSerializer(allow_null=True))
+    def get_centrifugo(self, obj):
+        """
+        Generate Centrifugo WebSocket connection token if enabled.
+
+        Returns None if Centrifugo is disabled in config.
+        """
+        try:
+            # Import here to avoid circular imports
+            from django_cfg.apps.integrations.centrifugo.services import generate_centrifugo_token
+
+            # Generate token with user's channels
+            token_data = generate_centrifugo_token(obj)
+            return token_data
+
+        except ValueError:
+            # Centrifugo not configured or disabled
+            return None
+        except Exception:
+            # If token generation fails, return None (don't break profile response)
+            return None
 
 
 

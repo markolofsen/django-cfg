@@ -111,7 +111,7 @@ class CentrifugoConfig(BaseSettings):
     enabled: bool = Field(default=True, description="Enable Centrifugo client")
 
     # Wrapper configuration (for Django backend publishing)
-    wrapper_url: str = Field(default="http://localhost:7320", description="Centrifugo wrapper URL")
+    wrapper_url: str = Field(default="http://localhost:8000/cfg/centrifugo", description="Centrifugo wrapper URL")
     wrapper_api_key: Optional[str] = Field(default=None, description="Centrifugo wrapper API key")
 
     # Centrifugo server configuration (for browser WebSocket connections)

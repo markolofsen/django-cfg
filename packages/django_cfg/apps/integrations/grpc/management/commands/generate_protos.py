@@ -36,6 +36,17 @@ class Command(AdminCommand):
             default=None,
             help="Custom output directory (overrides config)",
         )
+        parser.add_argument(
+            "--compile",
+            action="store_true",
+            help="Automatically compile generated .proto files to Python",
+        )
+        parser.add_argument(
+            "--no-fix-imports",
+            action="store_false",
+            dest="fix_imports",
+            help="Disable import fixing when compiling (only with --compile)",
+        )
 
     def handle(self, *args, **options):
         from django_cfg.apps.integrations.grpc.utils.proto_gen import generate_proto_for_app
@@ -123,8 +134,52 @@ class Command(AdminCommand):
                     f"📂 Output directory: {output_location}"
                 )
             )
+
+            # Compile proto files if requested
+            if options["compile"]:
+                self.stdout.write("\n" + "=" * 70)
+                self.stdout.write(self.style.SUCCESS("🔧 Compiling generated proto files..."))
+                self._compile_protos(output_location, options.get("fix_imports", True))
         else:
             self.stdout.write(
                 self.style.WARNING("⚠️  No proto files generated")
             )
         self.stdout.write("=" * 70)
+
+    def _compile_protos(self, output_dir, fix_imports: bool):
+        """Compile all .proto files in output directory."""
+        from pathlib import Path
+        from django_cfg.apps.integrations.grpc.management.proto.compiler import ProtoCompiler
+
+        output_path = Path(output_dir)
+        if not output_path.exists():
+            self.stdout.write(self.style.ERROR(f"   ❌ Output directory not found: {output_dir}"))
+            return
+
+        # Create compiler
+        compiler = ProtoCompiler(
+            output_dir=output_path / "generated",  # Compile to generated/ subdirectory
+            proto_import_path=output_path,
+            fix_imports=fix_imports,
+            verbose=True,
+        )
+
+        # Compile all proto files
+        success_count, failure_count = compiler.compile_directory(
+            output_path,
+            recursive=False,
+        )
+
+        if failure_count > 0:
+            self.stdout.write(
+                self.style.ERROR(
+                    f"   ❌ Failed to compile {failure_count} proto file(s) "
+                    f"({success_count} succeeded)"
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"   ✅ Compiled {success_count} proto file(s) successfully"
+                )
+            )

@@ -137,9 +137,12 @@ class DjangoCfgConfig(DjangoConfig):
     # === gRPC Configuration ===
     grpc: Optional[GRPCConfig] = GRPCConfig(
         enabled=True,
+        host="0.0.0.0",
+        port=50051,
         enabled_apps=["crypto"],
         package_prefix="api",  # Flatten field - no GRPCProtoConfig import needed!
         public_url=env.grpc_url,  # Flatten field from environment - simpler!
+        handlers_hook="apps.crypto.grpc_services.crypto_service.grpc_handlers",  # Auto-register CryptoService
     )
 
     # === Django-RQ Background Tasks Configuration ===
