@@ -453,6 +453,17 @@ class BaseParser(ABC):
             else:
                 items = self._parse_schema(f"{name}.items", schema.items)
 
+        # Parse additionalProperties (for Record<string, T> types)
+        additional_properties = None
+        if schema.additionalProperties and not isinstance(schema.additionalProperties, bool):
+            if isinstance(schema.additionalProperties, ReferenceObject):
+                # Resolve reference (e.g., Record<string, DatabaseConfig>)
+                additional_properties = self._resolve_ref(schema.additionalProperties)
+            else:
+                additional_properties = self._parse_schema(
+                    f"{name}.additionalProperties", schema.additionalProperties
+                )
+
         # Create IR schema
         ir_schema = IRSchemaObject(
             name=name,
@@ -462,6 +473,7 @@ class BaseParser(ABC):
             nullable=self._detect_nullable(schema),
             properties=properties,
             required=schema.required or [],
+            additional_properties=additional_properties,
             items=items,
             enum=schema.enum,
             enum_var_names=schema.x_enum_varnames,

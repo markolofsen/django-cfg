@@ -5,6 +5,8 @@ Serializers for displaying user's DjangoConfig settings.
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 
 
 # Nested serializers for complex structures
@@ -89,6 +91,18 @@ class RedisQueueConfigSerializer(serializers.Serializer):
     socket_timeout = serializers.IntegerField(required=False, allow_null=True)
 
 
+class RQScheduleSerializer(serializers.Serializer):
+    """Redis Queue schedule configuration."""
+    func = serializers.CharField(required=False, allow_null=True)
+    cron_string = serializers.CharField(required=False, allow_null=True)
+    queue = serializers.CharField(required=False, allow_null=True)
+    kwargs = serializers.DictField(required=False, allow_null=True)
+    args = serializers.ListField(required=False, allow_null=True)
+    meta = serializers.DictField(required=False, allow_null=True)
+    repeat = serializers.IntegerField(required=False, allow_null=True)
+    result_ttl = serializers.IntegerField(required=False, allow_null=True)
+
+
 class DjangoRQConfigSerializer(serializers.Serializer):
     """Django-RQ configuration."""
     enabled = serializers.BooleanField(required=False, allow_null=True)
@@ -97,7 +111,7 @@ class DjangoRQConfigSerializer(serializers.Serializer):
     exception_handlers = serializers.ListField(required=False, allow_null=True)
     api_token = serializers.CharField(required=False, allow_null=True)
     prometheus_enabled = serializers.BooleanField(required=False, allow_null=True)
-    schedules = serializers.ListField(child=serializers.DictField(), required=False, allow_null=True)
+    schedules = serializers.ListField(child=RQScheduleSerializer(), required=False, allow_null=True)
 
 
 class DRFConfigSerializer(serializers.Serializer):
@@ -124,6 +138,78 @@ class ConfigMetaSerializer(serializers.Serializer):
     """Config metadata."""
     config_class = serializers.CharField()
     secret_key_configured = serializers.BooleanField()
+
+
+class TelegramConfigSerializer(serializers.Serializer):
+    """Telegram service configuration."""
+    bot_token = serializers.CharField(required=False, allow_null=True)
+    chat_id = serializers.IntegerField(required=False, allow_null=True)
+    parse_mode = serializers.CharField(required=False, allow_null=True)
+    disable_notification = serializers.BooleanField(required=False, allow_null=True)
+    disable_web_page_preview = serializers.BooleanField(required=False, allow_null=True)
+    timeout = serializers.IntegerField(required=False, allow_null=True)
+    webhook_url = serializers.CharField(required=False, allow_null=True)
+    webhook_secret = serializers.CharField(required=False, allow_null=True)
+    max_retries = serializers.IntegerField(required=False, allow_null=True)
+    retry_delay = serializers.FloatField(required=False, allow_null=True)
+
+
+class NgrokConfigSerializer(serializers.Serializer):
+    """Ngrok tunneling configuration."""
+    enabled = serializers.BooleanField(required=False, allow_null=True)
+    authtoken = serializers.CharField(required=False, allow_null=True)
+    basic_auth = serializers.ListField(required=False, allow_null=True)
+    compression = serializers.BooleanField(required=False, allow_null=True)
+
+
+class AxesConfigSerializer(serializers.Serializer):
+    """Django-Axes brute-force protection configuration."""
+    enabled = serializers.BooleanField(required=False, allow_null=True)
+    failure_limit = serializers.IntegerField(required=False, allow_null=True)
+    cooloff_time = serializers.IntegerField(required=False, allow_null=True)
+    lock_out_at_failure = serializers.BooleanField(required=False, allow_null=True)
+    reset_on_success = serializers.BooleanField(required=False, allow_null=True)
+    only_user_failures = serializers.BooleanField(required=False, allow_null=True)
+    lockout_template = serializers.CharField(required=False, allow_null=True)
+    lockout_url = serializers.CharField(required=False, allow_null=True)
+    verbose = serializers.BooleanField(required=False, allow_null=True)
+    enable_access_failure_log = serializers.BooleanField(required=False, allow_null=True)
+    ipware_proxy_count = serializers.IntegerField(required=False, allow_null=True)
+    ipware_meta_precedence_order = serializers.ListField(required=False, allow_null=True)
+    allowed_ips = serializers.ListField(required=False, allow_null=True)
+    denied_ips = serializers.ListField(required=False, allow_null=True)
+    cache_name = serializers.CharField(required=False, allow_null=True)
+    use_user_agent = serializers.BooleanField(required=False, allow_null=True)
+    username_form_field = serializers.CharField(required=False, allow_null=True)
+
+
+class NextJSAdminConfigSerializer(serializers.Serializer):
+    """Next.js Admin application configuration."""
+    enabled = serializers.BooleanField(required=False, allow_null=True)
+    url = serializers.CharField(required=False, allow_null=True)
+    api_base_url = serializers.CharField(required=False, allow_null=True)
+
+
+class ConstanceConfigSerializer(serializers.Serializer):
+    """Django-Constance dynamic settings configuration."""
+    config = serializers.DictField(required=False, allow_null=True)
+    config_fieldsets = serializers.DictField(required=False, allow_null=True)
+    backend = serializers.CharField(required=False, allow_null=True)
+    database_prefix = serializers.CharField(required=False, allow_null=True)
+    database_cache_backend = serializers.CharField(required=False, allow_null=True)
+    additional_config = serializers.DictField(required=False, allow_null=True)
+
+
+class OpenAPIClientConfigSerializer(serializers.Serializer):
+    """OpenAPI Client generation configuration."""
+    enabled = serializers.BooleanField(required=False, allow_null=True)
+    output_dir = serializers.CharField(required=False, allow_null=True)
+    client_name = serializers.CharField(required=False, allow_null=True)
+    schema_url = serializers.CharField(required=False, allow_null=True)
+    generator = serializers.CharField(required=False, allow_null=True)
+    additional_properties = serializers.DictField(required=False, allow_null=True)
+    templates = serializers.ListField(required=False, allow_null=True)
+    global_properties = serializers.DictField(required=False, allow_null=True)
 
 
 class DjangoConfigSerializer(serializers.Serializer):
@@ -188,10 +274,10 @@ class DjangoConfigSerializer(serializers.Serializer):
     spectacular = SpectacularConfigSerializer(required=False, allow_null=True)
     jwt = JWTConfigSerializer(required=False, allow_null=True)
 
-    # Other configs (pass-through for flexibility)
-    telegram = serializers.DictField(required=False, allow_null=True)
-    ngrok = serializers.DictField(required=False, allow_null=True)
-    axes = serializers.DictField(required=False, allow_null=True)
+    # Services & Security (now typed!)
+    telegram = TelegramConfigSerializer(required=False, allow_null=True)
+    ngrok = NgrokConfigSerializer(required=False, allow_null=True)
+    axes = AxesConfigSerializer(required=False, allow_null=True)
     crypto_fields = serializers.DictField(required=False, allow_null=True)
     unfold = serializers.CharField(required=False, allow_null=True)  # String representation of Unfold config
     tailwind_app_name = serializers.CharField(required=False, allow_null=True)
@@ -199,10 +285,10 @@ class DjangoConfigSerializer(serializers.Serializer):
     limits = serializers.DictField(required=False, allow_null=True)
     api_keys = serializers.DictField(required=False, allow_null=True)
     custom_middleware = serializers.ListField(required=False, allow_null=True)
-    nextjs_admin = serializers.DictField(required=False, allow_null=True)
+    nextjs_admin = NextJSAdminConfigSerializer(required=False, allow_null=True)
     admin_emails = serializers.ListField(required=False, allow_null=True)
-    constance = serializers.DictField(required=False, allow_null=True)
-    openapi_client = serializers.DictField(required=False, allow_null=True)
+    constance = ConstanceConfigSerializer(required=False, allow_null=True)
+    openapi_client = OpenAPIClientConfigSerializer(required=False, allow_null=True)
 
     # Metadata
     _meta = ConfigMetaSerializer(required=False, allow_null=True)
@@ -238,7 +324,7 @@ class ConfigDataSerializer(serializers.Serializer):
         help_text="User's DjangoConfig settings"
     )
     django_settings = serializers.DictField(
-        help_text="Complete Django settings (sanitized)"
+        help_text="Complete Django settings (sanitized, contains mixed types)"
     )
     _validation = ConfigValidationSerializer(
         help_text="Validation result comparing serializer with actual config"

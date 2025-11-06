@@ -19,7 +19,7 @@ export interface HealthCheck {
  * 
  * Response model (includes read-only fields).
  */
-export interface OverviewStats {
+export interface CentrifugoOverviewStats {
   /** Total publishes in period */
   total: number;
   /** Successful publishes */
@@ -39,21 +39,28 @@ export interface OverviewStats {
 }
 
 /**
- * Recent publishes list.
  * 
  * Response model (includes read-only fields).
  */
-export interface RecentPublishes {
-  /** List of recent publishes */
-  publishes: Array<Record<string, any>>;
-  /** Number of publishes returned */
+export interface PaginatedPublishList {
+  /** Total number of items across all pages */
   count: number;
-  /** Total publishes available */
-  total_available: number;
-  /** Current offset for pagination */
-  offset?: number;
-  /** Whether more results are available */
-  has_more?: boolean;
+  /** Current page number (1-based) */
+  page: number;
+  /** Total number of pages */
+  pages: number;
+  /** Number of items per page */
+  page_size: number;
+  /** Whether there is a next page */
+  has_next: boolean;
+  /** Whether there is a previous page */
+  has_previous: boolean;
+  /** Next page number (null if no next page) */
+  next_page?: number | null;
+  /** Previous page number (null if no previous page) */
+  previous_page?: number | null;
+  /** Array of items for current page */
+  results: Array<Publish>;
 }
 
 /**
@@ -66,6 +73,25 @@ export interface ChannelList {
   channels: Array<ChannelStatsSerializer>;
   /** Total number of channels */
   total_channels: number;
+}
+
+/**
+ * Single publish item for DRF pagination.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface Publish {
+  message_id: string;
+  channel: string;
+  status: string;
+  wait_for_ack: boolean;
+  acks_received: number;
+  acks_expected: number;
+  duration_ms: number | null;
+  created_at: string;
+  completed_at: string | null;
+  error_code: string | null;
+  error_message: string | null;
 }
 
 /**

@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { CoinSchema, type Coin } from '../schemas/Coin.schema'
 import { CoinStatsSchema, type CoinStats } from '../schemas/CoinStats.schema'
 import { ExchangeSchema, type Exchange } from '../schemas/Exchange.schema'
@@ -48,7 +49,35 @@ export async function getCryptoCoinsList(  params?: { page?: number; page_size?:
 ): Promise<PaginatedCoinListList> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.coinsList(params?.page, params?.page_size)
-  return PaginatedCoinListListSchema.parse(response)
+  try {
+    return PaginatedCoinListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoCoinsList',
+      message: `Path: /api/crypto/coins/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -62,7 +91,35 @@ export async function getCryptoCoinsRetrieve(  id: number,  client?: any
 ): Promise<Coin> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.coinsRetrieve(id)
-  return CoinSchema.parse(response)
+  try {
+    return CoinSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoCoinsRetrieve',
+      message: `Path: /api/crypto/coins/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -76,7 +133,35 @@ export async function getCryptoCoinsStatsRetrieve(  client?: any
 ): Promise<CoinStats> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.coinsStatsRetrieve()
-  return CoinStatsSchema.parse(response)
+  try {
+    return CoinStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoCoinsStatsRetrieve',
+      message: `Path: /api/crypto/coins/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -90,7 +175,35 @@ export async function getCryptoExchangesList(  params?: { page?: number; page_si
 ): Promise<PaginatedExchangeList> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.exchangesList(params?.page, params?.page_size)
-  return PaginatedExchangeListSchema.parse(response)
+  try {
+    return PaginatedExchangeListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoExchangesList',
+      message: `Path: /api/crypto/exchanges/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -104,7 +217,35 @@ export async function getCryptoExchangesRetrieve(  slug: string,  client?: any
 ): Promise<Exchange> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.exchangesRetrieve(slug)
-  return ExchangeSchema.parse(response)
+  try {
+    return ExchangeSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoExchangesRetrieve',
+      message: `Path: /api/crypto/exchanges/{slug}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -118,7 +259,35 @@ export async function getCryptoWalletsList(  params?: { page?: number; page_size
 ): Promise<PaginatedWalletList> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.walletsList(params?.page, params?.page_size)
-  return PaginatedWalletListSchema.parse(response)
+  try {
+    return PaginatedWalletListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoWalletsList',
+      message: `Path: /api/crypto/wallets/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -132,7 +301,35 @@ export async function getCryptoWalletsRetrieve(  id: string,  client?: any
 ): Promise<Wallet> {
   const api = client || getAPIInstance()
   const response = await api.crypto_crypto.walletsRetrieve(id)
-  return WalletSchema.parse(response)
+  try {
+    return WalletSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoWalletsRetrieve',
+      message: `Path: /api/crypto/wallets/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

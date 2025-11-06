@@ -14,7 +14,7 @@ export const CentrifugoPublicationSchema = z.object({
   data: z.record(z.string(), z.any()),
   info: CentrifugoClientInfoSchema.optional(),
   offset: z.int(),
-  tags: z.string().nullable().optional(),
+  tags: z.record(z.string(), z.any()).nullable().optional(),
 })
 
 /**

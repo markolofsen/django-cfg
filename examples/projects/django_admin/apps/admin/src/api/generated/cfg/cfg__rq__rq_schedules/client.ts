@@ -11,22 +11,22 @@ export class CfgRqSchedules {
     this.client = client;
   }
 
-  async list(queue?: string): Promise<any>;
-  async list(params?: { queue?: string }): Promise<any>;
+  async list(page?: number, page_size?: number, queue?: string): Promise<Models.PaginatedScheduledJobList>;
+  async list(params?: { page?: number; page_size?: number; queue?: string }): Promise<Models.PaginatedScheduledJobList>;
 
   /**
    * List scheduled jobs
    * 
    * Returns list of all scheduled jobs across all queues.
    */
-  async list(...args: any[]): Promise<any> {
+  async list(...args: any[]): Promise<Models.PaginatedScheduledJobList> {
     const isParamsObject = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]);
     
     let params;
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { queue: args[0] };
+      params = { page: args[0], page_size: args[1], queue: args[2] };
     }
     const response = await this.client.request('GET', "/cfg/rq/schedules/", { params });
     return response;

@@ -1,30 +1,4 @@
 /**
- * Request model for connection token generation.
- * 
- * Request model (no read-only fields).
- */
-export interface ConnectionTokenRequestRequest {
-  /** User ID for the connection */
-  user_id: string;
-  /** List of channels to authorize */
-  channels?: Array<string>;
-}
-
-/**
- * Response model for connection token.
- * 
- * Response model (includes read-only fields).
- */
-export interface ConnectionTokenResponse {
-  /** JWT token for WebSocket connection */
-  token: string;
-  /** Centrifugo WebSocket URL */
-  centrifugo_url: string;
-  /** Token expiration time (ISO 8601) */
-  expires_at: string;
-}
-
-/**
  * Request model for test message publishing.
  * 
  * Request model (no read-only fields).

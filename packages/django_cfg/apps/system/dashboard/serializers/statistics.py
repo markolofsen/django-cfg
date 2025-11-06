@@ -36,11 +36,16 @@ class UserStatisticsSerializer(serializers.Serializer):
     superusers = serializers.IntegerField(help_text="Number of superusers")
 
 
+class AppStatisticsDataSerializer(serializers.Serializer):
+    """Serializer for application statistics data."""
+
+    name = serializers.CharField(help_text="Human-readable app name")
+    total_records = serializers.IntegerField(help_text="Total records count")
+    model_count = serializers.IntegerField(help_text="Number of models")
+
+
 class AppStatisticsSerializer(serializers.Serializer):
     """Serializer for application-specific statistics."""
 
     app_name = serializers.CharField(help_text="Application name")
-    statistics = serializers.DictField(
-        child=serializers.IntegerField(),
-        help_text="Application statistics"
-    )
+    statistics = AppStatisticsDataSerializer(help_text="Application statistics")

@@ -39,10 +39,6 @@ export const settings = {
     // For static builds, NEXT_PUBLIC_API_URL is '' (empty string) to use relative paths
     // Use nullish coalescing (??) instead of || to allow empty string
     baseUrl: apiUrl,
-    // WebSocket RPC URL (Django Channels)
-    wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8765',
-    // Centrifugo WebSocket URL (NOTE: now received from API via connection-token endpoint)
-    // centrifugoWsUrl: DEPRECATED - use tokenResponse.centrifugo_url from API
   },
 
   // Base path for static builds (used when serving from Django)

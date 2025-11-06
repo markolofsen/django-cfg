@@ -12,9 +12,9 @@ import { CentrifugoStreamPositionSchema } from './CentrifugoStreamPosition.schem
  */
 export const CentrifugoHistoryRequestRequestSchema = z.object({
   channel: z.string(),
-  limit: z.string().nullable().optional(),
+  limit: z.int().nullable().optional(),
   since: CentrifugoStreamPositionSchema.optional(),
-  reverse: z.string().nullable().optional(),
+  reverse: z.boolean().nullable().optional(),
 })
 
 /**

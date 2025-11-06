@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui';
-import { useAccountsContext } from '@djangocfg/api/cfg/contexts';
+import { useAuth } from '@djangocfg/layouts';
 import {
   Users,
   Wallet,
@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 
 export default function DashboardView() {
-  const { profile, isLoadingProfile: profileLoading } = useAccountsContext();
+  const { user, isLoading: userLoading } = useAuth();
 
-  if (profileLoading) {
+  if (userLoading) {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -67,7 +67,7 @@ export default function DashboardView() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-2">
-          Welcome back, {profile?.display_username || 'User'}! Here's what's happening.
+          Welcome back, {user?.display_username || 'User'}! Here's what's happening.
         </p>
       </div>
 
@@ -111,14 +111,14 @@ export default function DashboardView() {
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Username</span>
             </div>
-            <span className="text-sm font-medium">{profile?.display_username || 'N/A'}</span>
+            <span className="text-sm font-medium">{user?.display_username || 'N/A'}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Email</span>
-            </div>
-            <span className="text-sm font-medium">{profile?.email || 'N/A'}</span>
+            </div>  
+            <span className="text-sm font-medium">{user?.email || 'N/A'}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ export default function DashboardView() {
               <span className="text-sm">Member Since</span>
             </div>
             <span className="text-sm font-medium">
-              {profile?.date_joined ? new Date(profile.date_joined).toLocaleDateString() : 'N/A'}
+              {user?.date_joined ? new Date(user.date_joined).toLocaleDateString() : 'N/A'}
             </span>
           </div>
         </CardContent>

@@ -1,4 +1,29 @@
 /**
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface PaginatedScheduledJobList {
+  /** Total number of items across all pages */
+  count: number;
+  /** Current page number (1-based) */
+  page: number;
+  /** Total number of pages */
+  pages: number;
+  /** Number of items per page */
+  page_size: number;
+  /** Whether there is a next page */
+  has_next: boolean;
+  /** Whether there is a previous page */
+  has_previous: boolean;
+  /** Next page number (null if no next page) */
+  next_page?: number | null;
+  /** Previous page number (null if no previous page) */
+  previous_page?: number | null;
+  /** Array of items for current page */
+  results: Array<ScheduledJob>;
+}
+
+/**
  * Serializer for creating a scheduled job. Supports three scheduling methods:
  * 1. scheduled_time: Schedule job at specific time 2. interval: Schedule job
  * to repeat at intervals 3. cron: Schedule job with cron expression

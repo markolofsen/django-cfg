@@ -237,6 +237,17 @@ class SchemasGenerator:
             if schema.ref:
                 # Explicit reference
                 return f"{schema.ref}Schema"
+            elif schema.additional_properties:
+                # Object with additionalProperties (e.g., Record<string, DatabaseConfig>)
+                if schema.additional_properties.ref:
+                    value_type = f"{schema.additional_properties.ref}Schema"
+                else:
+                    value_type = self._map_type_to_zod(schema.additional_properties)
+                    # If DictField() produces additionalProperties with just string type,
+                    # use z.any() to allow mixed types (common in Django configs/settings)
+                    if value_type == "z.string()":
+                        value_type = "z.any()"
+                return f"z.record(z.string(), {value_type})"
             elif schema.properties:
                 # Inline object with properties - shouldn't reach here, but use z.object
                 return "z.object({})"

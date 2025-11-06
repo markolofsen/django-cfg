@@ -14,7 +14,7 @@ export class CfgCentrifugo {
   /**
    * Get statistics per channel.
    */
-  async monitorChannelsRetrieve(): Promise<any> {
+  async monitorChannelsRetrieve(): Promise<Models.Publish> {
     const response = await this.client.request('GET', "/cfg/centrifugo/monitor/channels/");
     return response;
   }

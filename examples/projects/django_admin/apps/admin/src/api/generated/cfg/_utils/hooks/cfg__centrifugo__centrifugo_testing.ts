@@ -14,34 +14,13 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__centrifugo__centrifugo_testing'
 import type { API } from '../../index'
-import type { ConnectionTokenRequestRequest } from '../schemas/ConnectionTokenRequestRequest.schema'
-import type { ConnectionTokenResponse } from '../schemas/ConnectionTokenResponse.schema'
 import type { ManualAckRequestRequest } from '../schemas/ManualAckRequestRequest.schema'
 import type { ManualAckResponse } from '../schemas/ManualAckResponse.schema'
 import type { PublishTestRequestRequest } from '../schemas/PublishTestRequestRequest.schema'
 import type { PublishTestResponse } from '../schemas/PublishTestResponse.schema'
-
-/**
- * Generate connection token
- *
- * @method POST
- * @path /cfg/centrifugo/testing/connection-token/
- */
-export function useCreateCentrifugoTestingConnectionTokenCreate() {
-  const { mutate } = useSWRConfig()
-
-  return async (data: ConnectionTokenRequestRequest, client?: API): Promise<ConnectionTokenResponse> => {
-    const result = await Fetchers.createCentrifugoTestingConnectionTokenCreate(data, client)
-    // Revalidate related queries
-    mutate('cfg-centrifugo-testing-connection-token')
-    return result
-  }
-}
-
 
 /**
  * Publish test message

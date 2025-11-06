@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__rq__rq_workers'
 import type { API } from '../../index'
 import type { WorkerStats } from '../schemas/WorkerStats.schema'

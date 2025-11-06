@@ -5,13 +5,13 @@
  *  * List of gRPC methods with statistics.
  *  */
 import { z } from 'zod'
-import { MethodStatsSerializerSchema } from './MethodStatsSerializer.schema'
+import { MethodStatsSchema } from './MethodStats.schema'
 
 /**
  * List of gRPC methods with statistics.
  */
 export const MethodListSchema = z.object({
-  methods: z.array(MethodStatsSerializerSchema),
+  methods: z.array(MethodStatsSchema),
   total_methods: z.int(),
 })
 

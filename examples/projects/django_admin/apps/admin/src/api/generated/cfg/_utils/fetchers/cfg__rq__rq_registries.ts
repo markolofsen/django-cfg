@@ -30,6 +30,8 @@
  * ```
  */
 import { JobActionResponseSchema, type JobActionResponse } from '../schemas/JobActionResponse.schema'
+import { JobListRequestSchema, type JobListRequest } from '../schemas/JobListRequest.schema'
+import { PaginatedJobListListSchema, type PaginatedJobListList } from '../schemas/PaginatedJobListList.schema'
 import { getAPIInstance } from '../../api-instance'
 
 /**
@@ -38,11 +40,11 @@ import { getAPIInstance } from '../../api-instance'
  * @method GET
  * @path /cfg/rq/jobs/registries/deferred/
  */
-export async function getRqJobsRegistriesDeferredList(  params?: { queue?: string },  client?: any
-): Promise<any> {
+export async function getRqJobsRegistriesDeferredList(  params?: { page?: number; page_size?: number; queue?: string },  client?: any
+): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesDeferredList(params?.queue)
-  return response
+  const response = await api.cfg_rq_registries.rqJobsRegistriesDeferredList(params?.page, params?.page_size, params?.queue)
+  return PaginatedJobListListSchema.parse(response)
 }
 
 
@@ -52,11 +54,11 @@ export async function getRqJobsRegistriesDeferredList(  params?: { queue?: strin
  * @method GET
  * @path /cfg/rq/jobs/registries/failed/
  */
-export async function getRqJobsRegistriesFailedList(  params?: { queue?: string },  client?: any
-): Promise<any> {
+export async function getRqJobsRegistriesFailedList(  params?: { page?: number; page_size?: number; queue?: string },  client?: any
+): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesFailedList(params?.queue)
-  return response
+  const response = await api.cfg_rq_registries.rqJobsRegistriesFailedList(params?.page, params?.page_size, params?.queue)
+  return PaginatedJobListListSchema.parse(response)
 }
 
 
@@ -66,10 +68,10 @@ export async function getRqJobsRegistriesFailedList(  params?: { queue?: string 
  * @method POST
  * @path /cfg/rq/jobs/registries/failed/clear/
  */
-export async function createRqJobsRegistriesFailedClearCreate(  params: { queue: string },  client?: any
+export async function createRqJobsRegistriesFailedClearCreate(  data: JobListRequest, params: { queue: string },  client?: any
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesFailedClearCreate(params.queue)
+  const response = await api.cfg_rq_registries.rqJobsRegistriesFailedClearCreate(data, params.queue)
   return JobActionResponseSchema.parse(response)
 }
 
@@ -80,10 +82,10 @@ export async function createRqJobsRegistriesFailedClearCreate(  params: { queue:
  * @method POST
  * @path /cfg/rq/jobs/registries/failed/requeue-all/
  */
-export async function createRqJobsRegistriesFailedRequeueAllCreate(  params: { queue: string },  client?: any
+export async function createRqJobsRegistriesFailedRequeueAllCreate(  data: JobListRequest, params: { queue: string },  client?: any
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesFailedRequeueAllCreate(params.queue)
+  const response = await api.cfg_rq_registries.rqJobsRegistriesFailedRequeueAllCreate(data, params.queue)
   return JobActionResponseSchema.parse(response)
 }
 
@@ -94,11 +96,11 @@ export async function createRqJobsRegistriesFailedRequeueAllCreate(  params: { q
  * @method GET
  * @path /cfg/rq/jobs/registries/finished/
  */
-export async function getRqJobsRegistriesFinishedList(  params?: { queue?: string },  client?: any
-): Promise<any> {
+export async function getRqJobsRegistriesFinishedList(  params?: { page?: number; page_size?: number; queue?: string },  client?: any
+): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesFinishedList(params?.queue)
-  return response
+  const response = await api.cfg_rq_registries.rqJobsRegistriesFinishedList(params?.page, params?.page_size, params?.queue)
+  return PaginatedJobListListSchema.parse(response)
 }
 
 
@@ -108,10 +110,10 @@ export async function getRqJobsRegistriesFinishedList(  params?: { queue?: strin
  * @method POST
  * @path /cfg/rq/jobs/registries/finished/clear/
  */
-export async function createRqJobsRegistriesFinishedClearCreate(  params: { queue: string },  client?: any
+export async function createRqJobsRegistriesFinishedClearCreate(  data: JobListRequest, params: { queue: string },  client?: any
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesFinishedClearCreate(params.queue)
+  const response = await api.cfg_rq_registries.rqJobsRegistriesFinishedClearCreate(data, params.queue)
   return JobActionResponseSchema.parse(response)
 }
 
@@ -122,11 +124,11 @@ export async function createRqJobsRegistriesFinishedClearCreate(  params: { queu
  * @method GET
  * @path /cfg/rq/jobs/registries/started/
  */
-export async function getRqJobsRegistriesStartedList(  params?: { queue?: string },  client?: any
-): Promise<any> {
+export async function getRqJobsRegistriesStartedList(  params?: { page?: number; page_size?: number; queue?: string },  client?: any
+): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_registries.rqJobsRegistriesStartedList(params?.queue)
-  return response
+  const response = await api.cfg_rq_registries.rqJobsRegistriesStartedList(params?.page, params?.page_size, params?.queue)
+  return PaginatedJobListListSchema.parse(response)
 }
 
 

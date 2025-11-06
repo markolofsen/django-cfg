@@ -1,12 +1,16 @@
-import type { ReactElement } from 'react';
+/**
+ * Dashboard Overview Page
+ * Path: /admin
+ */
+
 import type { PageWithConfig } from "@/types";
-import { AdminLayout } from '@/layouts/AdminLayout';
+import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from '@djangocfg/ui';
 import { admin } from '@/core/routes';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
 
-const Page: PageWithConfig = () => {
+const View: PageWithConfig = () => {
   const router = useRouter();
 
   // Get all admin routes except the overview page
@@ -92,15 +96,14 @@ const Page: PageWithConfig = () => {
         </Card>
       </div>
     </div>
-  )
+  );
 };
 
-Page.pageConfig = {
-  title: 'Dashboard',
+View.pageConfig = {
+  title: 'Dashboard Overview',
+  description: 'Admin dashboard overview',
 };
 
-Page.getLayout = (page: ReactElement) => {
-  return <AdminLayout>{page}</AdminLayout>;
-};
+View.getLayout = DashboardLayout;
 
-export default Page;
+export default View;

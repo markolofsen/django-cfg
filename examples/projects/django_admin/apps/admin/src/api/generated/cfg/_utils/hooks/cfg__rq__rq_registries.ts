@@ -19,6 +19,8 @@ import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__rq__rq_registries'
 import type { API } from '../../index'
 import type { JobActionResponse } from '../schemas/JobActionResponse.schema'
+import type { JobListRequest } from '../schemas/JobListRequest.schema'
+import type { PaginatedJobListList } from '../schemas/PaginatedJobListList.schema'
 
 /**
  * List deferred jobs
@@ -26,8 +28,8 @@ import type { JobActionResponse } from '../schemas/JobActionResponse.schema'
  * @method GET
  * @path /cfg/rq/jobs/registries/deferred/
  */
-export function useRqJobsRegistriesDeferredList(params?: { queue?: string }, client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useRqJobsRegistriesDeferredList(params?: { page?: number; page_size?: number; queue?: string }, client?: API): ReturnType<typeof useSWR<PaginatedJobListList>> {
+  return useSWR<PaginatedJobListList>(
     params ? ['cfg-rq-jobs-registries-deferred', params] : 'cfg-rq-jobs-registries-deferred',
     () => Fetchers.getRqJobsRegistriesDeferredList(params, client)
   )
@@ -40,8 +42,8 @@ export function useRqJobsRegistriesDeferredList(params?: { queue?: string }, cli
  * @method GET
  * @path /cfg/rq/jobs/registries/failed/
  */
-export function useRqJobsRegistriesFailedList(params?: { queue?: string }, client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useRqJobsRegistriesFailedList(params?: { page?: number; page_size?: number; queue?: string }, client?: API): ReturnType<typeof useSWR<PaginatedJobListList>> {
+  return useSWR<PaginatedJobListList>(
     params ? ['cfg-rq-jobs-registries-failed', params] : 'cfg-rq-jobs-registries-failed',
     () => Fetchers.getRqJobsRegistriesFailedList(params, client)
   )
@@ -57,8 +59,8 @@ export function useRqJobsRegistriesFailedList(params?: { queue?: string }, clien
 export function useCreateRqJobsRegistriesFailedClearCreate() {
   const { mutate } = useSWRConfig()
 
-  return async (params: { queue: string }, client?: API): Promise<JobActionResponse> => {
-    const result = await Fetchers.createRqJobsRegistriesFailedClearCreate(params, client)
+  return async (data: JobListRequest, params: { queue: string }, client?: API): Promise<JobActionResponse> => {
+    const result = await Fetchers.createRqJobsRegistriesFailedClearCreate(data, params, client)
     // Revalidate related queries
     mutate('cfg-rq-jobs-registries-failed-clear')
     return result
@@ -75,8 +77,8 @@ export function useCreateRqJobsRegistriesFailedClearCreate() {
 export function useCreateRqJobsRegistriesFailedRequeueAllCreate() {
   const { mutate } = useSWRConfig()
 
-  return async (params: { queue: string }, client?: API): Promise<JobActionResponse> => {
-    const result = await Fetchers.createRqJobsRegistriesFailedRequeueAllCreate(params, client)
+  return async (data: JobListRequest, params: { queue: string }, client?: API): Promise<JobActionResponse> => {
+    const result = await Fetchers.createRqJobsRegistriesFailedRequeueAllCreate(data, params, client)
     // Revalidate related queries
     mutate('cfg-rq-jobs-registries-failed-requeue-all')
     return result
@@ -90,8 +92,8 @@ export function useCreateRqJobsRegistriesFailedRequeueAllCreate() {
  * @method GET
  * @path /cfg/rq/jobs/registries/finished/
  */
-export function useRqJobsRegistriesFinishedList(params?: { queue?: string }, client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useRqJobsRegistriesFinishedList(params?: { page?: number; page_size?: number; queue?: string }, client?: API): ReturnType<typeof useSWR<PaginatedJobListList>> {
+  return useSWR<PaginatedJobListList>(
     params ? ['cfg-rq-jobs-registries-finished', params] : 'cfg-rq-jobs-registries-finished',
     () => Fetchers.getRqJobsRegistriesFinishedList(params, client)
   )
@@ -107,8 +109,8 @@ export function useRqJobsRegistriesFinishedList(params?: { queue?: string }, cli
 export function useCreateRqJobsRegistriesFinishedClearCreate() {
   const { mutate } = useSWRConfig()
 
-  return async (params: { queue: string }, client?: API): Promise<JobActionResponse> => {
-    const result = await Fetchers.createRqJobsRegistriesFinishedClearCreate(params, client)
+  return async (data: JobListRequest, params: { queue: string }, client?: API): Promise<JobActionResponse> => {
+    const result = await Fetchers.createRqJobsRegistriesFinishedClearCreate(data, params, client)
     // Revalidate related queries
     mutate('cfg-rq-jobs-registries-finished-clear')
     return result
@@ -122,8 +124,8 @@ export function useCreateRqJobsRegistriesFinishedClearCreate() {
  * @method GET
  * @path /cfg/rq/jobs/registries/started/
  */
-export function useRqJobsRegistriesStartedList(params?: { queue?: string }, client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useRqJobsRegistriesStartedList(params?: { page?: number; page_size?: number; queue?: string }, client?: API): ReturnType<typeof useSWR<PaginatedJobListList>> {
+  return useSWR<PaginatedJobListList>(
     params ? ['cfg-rq-jobs-registries-started', params] : 'cfg-rq-jobs-registries-started',
     () => Fetchers.getRqJobsRegistriesStartedList(params, client)
   )

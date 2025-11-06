@@ -116,11 +116,11 @@ class CentrifugoConfig(BaseSettings):
 
     # Centrifugo server configuration (for browser WebSocket connections)
     centrifugo_url: str = Field(
-        default="ws://localhost:7320/connection/websocket",
+        default="ws://localhost:8120/connection/websocket",
         description="Centrifugo WebSocket URL for browser clients"
     )
     centrifugo_api_url: str = Field(
-        default="http://localhost:7320/api",
+        default="http://localhost:8120/api",
         description="Centrifugo HTTP API URL"
     )
     centrifugo_api_key: str = Field(

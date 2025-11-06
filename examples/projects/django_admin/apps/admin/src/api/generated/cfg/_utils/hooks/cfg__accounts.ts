@@ -14,7 +14,6 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__accounts'
 import type { API } from '../../index'

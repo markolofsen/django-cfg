@@ -165,7 +165,7 @@ export interface PaginatedPortfolioList {
 export interface Portfolio {
   id: number;
   user: number;
-  user_info: Record<string, any>;
+  user_info: Record<string, string>;
   /** Total portfolio value in USD */
   total_balance_usd: string;
   /** Available balance for trading */

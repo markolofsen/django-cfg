@@ -42,7 +42,10 @@ export interface CommandsSummary {
 }
 
 /**
- * Django management command serializer.
+ * Django management command serializer. Includes security metadata from base
+ * classes (SafeCommand, InteractiveCommand, etc.): - web_executable: Can be
+ * executed via web interface - requires_input: Requires interactive user input
+ * - is_destructive: Modifies or deletes data
  * 
  * Response model (includes read-only fields).
  */
@@ -54,5 +57,11 @@ export interface Command {
   is_custom: boolean;
   is_allowed?: boolean;
   risk_level?: string;
+  /** Can be executed via web interface */
+  web_executable?: boolean | null;
+  /** Requires interactive user input */
+  requires_input?: boolean | null;
+  /** Modifies or deletes data */
+  is_destructive?: boolean | null;
 }
 

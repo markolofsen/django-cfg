@@ -103,6 +103,10 @@ class IRSchemaObject(BaseModel):
         default_factory=list,
         description="Required property names",
     )
+    additional_properties: IRSchemaObject | None = Field(
+        None,
+        description="Schema for additional properties (for dynamic keys in object, e.g., Record<string, T>)",
+    )
 
     # ===== Array Items =====
     items: IRSchemaObject | None = Field(
@@ -322,8 +326,11 @@ class IRSchemaObject(BaseModel):
             >>> IRSchemaObject(name="file", type="string", format="binary").typescript_type
             'File | Blob'
         """
+        # Handle $ref (e.g., CentrifugoConfig, User, etc.)
+        if self.ref:
+            base_type = self.ref
         # Handle binary type (file uploads)
-        if self.is_binary:
+        elif self.is_binary:
             base_type = "File | Blob"
         # Handle array type with proper item type resolution
         elif self.type == "array":
@@ -336,6 +343,13 @@ class IRSchemaObject(BaseModel):
                 base_type = f"Array<{item_type}>"
             else:
                 base_type = "Array<any>"
+        # Handle object with additionalProperties (e.g., Record<string, DatabaseConfig>)
+        elif self.type == "object" and self.additional_properties:
+            if self.additional_properties.ref:
+                value_type = self.additional_properties.ref
+            else:
+                value_type = self.additional_properties.typescript_type
+            base_type = f"Record<string, {value_type}>"
         else:
             type_map = {
                 "string": "string",

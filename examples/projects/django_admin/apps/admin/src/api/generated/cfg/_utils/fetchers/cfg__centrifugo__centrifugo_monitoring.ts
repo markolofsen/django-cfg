@@ -29,10 +29,10 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { CentrifugoOverviewStatsSchema, type CentrifugoOverviewStats } from '../schemas/CentrifugoOverviewStats.schema'
 import { ChannelListSchema, type ChannelList } from '../schemas/ChannelList.schema'
 import { HealthCheckSchema, type HealthCheck } from '../schemas/HealthCheck.schema'
-import { OverviewStatsSchema, type OverviewStats } from '../schemas/OverviewStats.schema'
-import { RecentPublishesSchema, type RecentPublishes } from '../schemas/RecentPublishes.schema'
+import { PaginatedPublishListSchema, type PaginatedPublishList } from '../schemas/PaginatedPublishList.schema'
 import { getAPIInstance } from '../../api-instance'
 
 /**
@@ -56,10 +56,10 @@ export async function getCentrifugoMonitorHealthRetrieve(  client?: any
  * @path /cfg/centrifugo/monitor/overview/
  */
 export async function getCentrifugoMonitorOverviewRetrieve(  params?: { hours?: number },  client?: any
-): Promise<OverviewStats> {
+): Promise<CentrifugoOverviewStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorOverviewRetrieve(params?.hours)
-  return OverviewStatsSchema.parse(response)
+  return CentrifugoOverviewStatsSchema.parse(response)
 }
 
 
@@ -69,11 +69,11 @@ export async function getCentrifugoMonitorOverviewRetrieve(  params?: { hours?: 
  * @method GET
  * @path /cfg/centrifugo/monitor/publishes/
  */
-export async function getCentrifugoMonitorPublishesRetrieve(  params?: { channel?: string; count?: number; offset?: number; status?: string },  client?: any
-): Promise<RecentPublishes> {
+export async function getCentrifugoMonitorPublishesList(  params?: { channel?: string; page?: number; page_size?: number; status?: string },  client?: any
+): Promise<PaginatedPublishList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorPublishesRetrieve(params?.channel, params?.count, params?.offset, params?.status)
-  return RecentPublishesSchema.parse(response)
+  const response = await api.cfg_centrifugo_monitoring.centrifugoMonitorPublishesList(params?.channel, params?.page, params?.page_size, params?.status)
+  return PaginatedPublishListSchema.parse(response)
 }
 
 

@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__dashboard__dashboard_charts'
 import type { API } from '../../index'
 import type { ChartData } from '../schemas/ChartData.schema'

@@ -1,10 +1,14 @@
-import type { ReactElement } from 'react';
-import { TradingView } from "@/views";
-import { PageWithConfig } from "@/types";
-import { TradingProvider } from "@/contexts";
-import { AdminLayout } from '@/layouts/AdminLayout';
+/**
+ * Trading Page
+ * Path: /admin/trading
+ */
 
-const Page: PageWithConfig = () => {
+import { PageWithConfig } from '@/types';
+import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { TradingView } from '@/views';
+import { TradingProvider } from "@/contexts";
+
+const View: PageWithConfig = () => {
   return (
     <TradingProvider>
       <TradingView />
@@ -12,12 +16,11 @@ const Page: PageWithConfig = () => {
   );
 };
 
-Page.pageConfig = {
-  title: 'Trading Portfolio',
+View.pageConfig = {
+  title: 'Trading',
+  description: 'Manage trading portfolio and orders',
 };
 
-Page.getLayout = (page: ReactElement) => {
-  return <AdminLayout>{page}</AdminLayout>;
-};
+View.getLayout = DashboardLayout;
 
-export default Page;
+export default View;

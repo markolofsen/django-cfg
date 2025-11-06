@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { PublishSchema, type Publish } from '../schemas/Publish.schema'
 import { getAPIInstance } from '../../api-instance'
 
 /**
@@ -38,10 +39,10 @@ import { getAPIInstance } from '../../api-instance'
  * @path /cfg/centrifugo/monitor/channels/
  */
 export async function getCentrifugoMonitorChannelsRetrieve(  client?: any
-): Promise<any> {
+): Promise<Publish> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo.monitorChannelsRetrieve()
-  return response
+  return PublishSchema.parse(response)
 }
 
 

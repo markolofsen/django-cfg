@@ -81,7 +81,7 @@ export class CfgPayments {
    */
   async paymentsStatusRetrieve(id: string): Promise<Models.PaymentList[]> {
     const response = await this.client.request('GET', `/cfg/payments/payments/${id}/status/`);
-    return (response as any).results || [];
+    return (response as any).results || response;
   }
 
   /**

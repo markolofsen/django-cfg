@@ -53,7 +53,13 @@ export class CentrifugoRPCClient {
       });
 
       this.subscription.on('error', (ctx: any) => {
-        reject(new Error(ctx.error?.message || 'Subscription error'));
+        // Error code 105 = "already subscribed" (server-side subscription from JWT)
+        // This is not an error - the channel is already active via server-side subscription
+        if (ctx.error?.code === 105) {
+          resolve();
+        } else {
+          reject(new Error(ctx.error?.message || 'Subscription error'));
+        }
       });
 
       this.subscription.subscribe();

@@ -29,27 +29,11 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { ConnectionTokenRequestRequestSchema, type ConnectionTokenRequestRequest } from '../schemas/ConnectionTokenRequestRequest.schema'
-import { ConnectionTokenResponseSchema, type ConnectionTokenResponse } from '../schemas/ConnectionTokenResponse.schema'
 import { ManualAckRequestRequestSchema, type ManualAckRequestRequest } from '../schemas/ManualAckRequestRequest.schema'
 import { ManualAckResponseSchema, type ManualAckResponse } from '../schemas/ManualAckResponse.schema'
 import { PublishTestRequestRequestSchema, type PublishTestRequestRequest } from '../schemas/PublishTestRequestRequest.schema'
 import { PublishTestResponseSchema, type PublishTestResponse } from '../schemas/PublishTestResponse.schema'
 import { getAPIInstance } from '../../api-instance'
-
-/**
- * Generate connection token
- *
- * @method POST
- * @path /cfg/centrifugo/testing/connection-token/
- */
-export async function createCentrifugoTestingConnectionTokenCreate(  data: ConnectionTokenRequestRequest,  client?: any
-): Promise<ConnectionTokenResponse> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_centrifugo_testing.connectionTokenCreate(data)
-  return ConnectionTokenResponseSchema.parse(response)
-}
-
 
 /**
  * Publish test message

@@ -12,16 +12,6 @@ export class CfgCentrifugoTesting {
   }
 
   /**
-   * Generate connection token
-   * 
-   * Generate JWT token for WebSocket connection to Centrifugo.
-   */
-  async connectionTokenCreate(data: Models.ConnectionTokenRequestRequest): Promise<Models.ConnectionTokenResponse> {
-    const response = await this.client.request('POST', "/cfg/centrifugo/testing/connection-token/", { body: data });
-    return response;
-  }
-
-  /**
    * Publish test message
    * 
    * Publish test message to Centrifugo via wrapper with optional ACK

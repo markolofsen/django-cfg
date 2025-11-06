@@ -5,7 +5,7 @@
  * Path prefix: /admin
  */
 
-import { LayoutDashboard, Bitcoin, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Bitcoin, TrendingUp, Terminal, Zap, Radio, ListChecks } from 'lucide-react';
 import { defineRoute } from '../shared';
 
 export const overview = defineRoute('/admin', {
@@ -35,5 +35,42 @@ export const trading = defineRoute('/admin/trading', {
   order: 3,
 });
 
+// Placeholder routes for compatibility (not implemented in solution project)
+export const commands = defineRoute('/admin/commands', {
+  label: 'Commands',
+  description: 'Management commands',
+  icon: Terminal,
+  protected: true,
+  group: 'admin',
+  order: 4,
+});
+
+export const grpc = defineRoute('/admin/grpc', {
+  label: 'gRPC',
+  description: 'gRPC status',
+  icon: Zap,
+  protected: true,
+  group: 'admin',
+  order: 5,
+});
+
+export const centrifugo = defineRoute('/admin/centrifugo', {
+  label: 'Centrifugo',
+  description: 'WebSocket status',
+  icon: Radio,
+  protected: true,
+  group: 'admin',
+  order: 6,
+});
+
+export const rq = defineRoute('/admin/rq', {
+  label: 'RQ',
+  description: 'Task queue status',
+  icon: ListChecks,
+  protected: true,
+  group: 'admin',
+  order: 7,
+});
+
 // All routes as array
-export const allRoutes = [overview, crypto, trading];
+export const allRoutes = [overview, crypto, trading, commands, grpc, centrifugo, rq];

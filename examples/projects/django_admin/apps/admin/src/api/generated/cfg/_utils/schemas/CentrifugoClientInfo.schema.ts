@@ -12,8 +12,8 @@ import { z } from 'zod'
 export const CentrifugoClientInfoSchema = z.object({
   user: z.string(),
   client: z.string(),
-  conn_info: z.string().nullable().optional(),
-  chan_info: z.string().nullable().optional(),
+  conn_info: z.record(z.string(), z.any()).nullable().optional(),
+  chan_info: z.record(z.string(), z.any()).nullable().optional(),
 })
 
 /**

@@ -33,7 +33,6 @@
  */
 
 import { APIClient } from "./client";
-import { OPENAPI_SCHEMA } from "./schema";
 import {
   StorageAdapter,
   LocalStorageAdapter,
@@ -47,12 +46,14 @@ import { CfgAuth } from "./cfg__accounts__auth/client";
 import { CfgBulkEmail } from "./cfg__newsletter__bulk_email/client";
 import { CfgCampaigns } from "./cfg__newsletter__campaigns/client";
 import { CfgCentrifugoAdminApi } from "./cfg__centrifugo__centrifugo_admin_api/client";
+import { CfgCentrifugoAuth } from "./cfg__centrifugo__centrifugo_auth/client";
 import { CfgCentrifugoMonitoring } from "./cfg__centrifugo__centrifugo_monitoring/client";
 import { CfgCentrifugoTesting } from "./cfg__centrifugo__centrifugo_testing/client";
 import { CfgDashboardApiZones } from "./cfg__dashboard__dashboard_api_zones/client";
 import { CfgDashboardActivity } from "./cfg__dashboard__dashboard_activity/client";
 import { CfgDashboardCharts } from "./cfg__dashboard__dashboard_charts/client";
 import { CfgDashboardCommands } from "./cfg__dashboard__dashboard_commands/client";
+import { CfgDashboardConfig } from "./cfg__dashboard__dashboard_config/client";
 import { CfgDashboardOverview } from "./cfg__dashboard__dashboard_overview/client";
 import { CfgDashboardStatistics } from "./cfg__dashboard__dashboard_statistics/client";
 import { CfgDashboardSystem } from "./cfg__dashboard__dashboard_system/client";
@@ -72,7 +73,13 @@ import { CfgUserProfile } from "./cfg__accounts__user_profile/client";
 import { CfgAccounts } from "./cfg__accounts/client";
 import { CfgCentrifugo } from "./cfg__centrifugo/client";
 import { CfgEndpoints } from "./cfg__endpoints/client";
+import { CfgGrpcApiKeys } from "./cfg__grpc__grpc_api_keys/client";
+import { CfgGrpcCharts } from "./cfg__grpc__grpc_charts/client";
+import { CfgGrpcConfiguration } from "./cfg__grpc__grpc_configuration/client";
 import { CfgGrpcMonitoring } from "./cfg__grpc__grpc_monitoring/client";
+import { CfgGrpcProtoFiles } from "./cfg__grpc__grpc_proto_files/client";
+import { CfgGrpcServices } from "./cfg__grpc__grpc_services/client";
+import { CfgGrpcTesting } from "./cfg__grpc__grpc_testing/client";
 import { CfgHealth } from "./cfg__health/client";
 import { CfgKnowbase } from "./cfg__knowbase/client";
 import { CfgLeads } from "./cfg__leads/client";
@@ -83,12 +90,14 @@ export * as CfgAuthTypes from "./cfg__accounts__auth/models";
 export * as CfgBulkEmailTypes from "./cfg__newsletter__bulk_email/models";
 export * as CfgCampaignsTypes from "./cfg__newsletter__campaigns/models";
 export * as CfgCentrifugoAdminApiTypes from "./cfg__centrifugo__centrifugo_admin_api/models";
+export * as CfgCentrifugoAuthTypes from "./cfg__centrifugo__centrifugo_auth/models";
 export * as CfgCentrifugoMonitoringTypes from "./cfg__centrifugo__centrifugo_monitoring/models";
 export * as CfgCentrifugoTestingTypes from "./cfg__centrifugo__centrifugo_testing/models";
 export * as CfgDashboardApiZonesTypes from "./cfg__dashboard__dashboard_api_zones/models";
 export * as CfgDashboardActivityTypes from "./cfg__dashboard__dashboard_activity/models";
 export * as CfgDashboardChartsTypes from "./cfg__dashboard__dashboard_charts/models";
 export * as CfgDashboardCommandsTypes from "./cfg__dashboard__dashboard_commands/models";
+export * as CfgDashboardConfigTypes from "./cfg__dashboard__dashboard_config/models";
 export * as CfgDashboardOverviewTypes from "./cfg__dashboard__dashboard_overview/models";
 export * as CfgDashboardStatisticsTypes from "./cfg__dashboard__dashboard_statistics/models";
 export * as CfgDashboardSystemTypes from "./cfg__dashboard__dashboard_system/models";
@@ -108,7 +117,13 @@ export * as CfgUserProfileTypes from "./cfg__accounts__user_profile/models";
 export * as CfgAccountsTypes from "./cfg__accounts/models";
 export * as CfgCentrifugoTypes from "./cfg__centrifugo/models";
 export * as CfgEndpointsTypes from "./cfg__endpoints/models";
+export * as CfgGrpcApiKeysTypes from "./cfg__grpc__grpc_api_keys/models";
+export * as CfgGrpcChartsTypes from "./cfg__grpc__grpc_charts/models";
+export * as CfgGrpcConfigurationTypes from "./cfg__grpc__grpc_configuration/models";
 export * as CfgGrpcMonitoringTypes from "./cfg__grpc__grpc_monitoring/models";
+export * as CfgGrpcProtoFilesTypes from "./cfg__grpc__grpc_proto_files/models";
+export * as CfgGrpcServicesTypes from "./cfg__grpc__grpc_services/models";
+export * as CfgGrpcTestingTypes from "./cfg__grpc__grpc_testing/models";
 export * as CfgHealthTypes from "./cfg__health/models";
 export * as CfgKnowbaseTypes from "./cfg__knowbase/models";
 export * as CfgLeadsTypes from "./cfg__leads/models";
@@ -139,9 +154,6 @@ export * as Hooks from "./_utils/hooks";
 
 // Re-export core client
 export { APIClient };
-
-// Re-export OpenAPI schema
-export { OPENAPI_SCHEMA };
 
 // Re-export storage adapters for convenience
 export type { StorageAdapter };
@@ -187,12 +199,14 @@ export class API {
   public cfg_bulk_email!: CfgBulkEmail;
   public cfg_campaigns!: CfgCampaigns;
   public cfg_centrifugo_admin_api!: CfgCentrifugoAdminApi;
+  public cfg_centrifugo_auth!: CfgCentrifugoAuth;
   public cfg_centrifugo_monitoring!: CfgCentrifugoMonitoring;
   public cfg_centrifugo_testing!: CfgCentrifugoTesting;
   public cfg_dashboard_api_zones!: CfgDashboardApiZones;
   public cfg_dashboard_activity!: CfgDashboardActivity;
   public cfg_dashboard_charts!: CfgDashboardCharts;
   public cfg_dashboard_commands!: CfgDashboardCommands;
+  public cfg_dashboard_config!: CfgDashboardConfig;
   public cfg_dashboard_overview!: CfgDashboardOverview;
   public cfg_dashboard_statistics!: CfgDashboardStatistics;
   public cfg_dashboard_system!: CfgDashboardSystem;
@@ -212,7 +226,13 @@ export class API {
   public cfg_accounts!: CfgAccounts;
   public cfg_centrifugo!: CfgCentrifugo;
   public cfg_endpoints!: CfgEndpoints;
+  public cfg_grpc_api_keys!: CfgGrpcApiKeys;
+  public cfg_grpc_charts!: CfgGrpcCharts;
+  public cfg_grpc_configuration!: CfgGrpcConfiguration;
   public cfg_grpc_monitoring!: CfgGrpcMonitoring;
+  public cfg_grpc_proto_files!: CfgGrpcProtoFiles;
+  public cfg_grpc_services!: CfgGrpcServices;
+  public cfg_grpc_testing!: CfgGrpcTesting;
   public cfg_health!: CfgHealth;
   public cfg_knowbase!: CfgKnowbase;
   public cfg_leads!: CfgLeads;
@@ -246,12 +266,14 @@ export class API {
     this.cfg_bulk_email = this._client.cfg_bulk_email;
     this.cfg_campaigns = this._client.cfg_campaigns;
     this.cfg_centrifugo_admin_api = this._client.cfg_centrifugo_admin_api;
+    this.cfg_centrifugo_auth = this._client.cfg_centrifugo_auth;
     this.cfg_centrifugo_monitoring = this._client.cfg_centrifugo_monitoring;
     this.cfg_centrifugo_testing = this._client.cfg_centrifugo_testing;
     this.cfg_dashboard_api_zones = this._client.cfg_dashboard_api_zones;
     this.cfg_dashboard_activity = this._client.cfg_dashboard_activity;
     this.cfg_dashboard_charts = this._client.cfg_dashboard_charts;
     this.cfg_dashboard_commands = this._client.cfg_dashboard_commands;
+    this.cfg_dashboard_config = this._client.cfg_dashboard_config;
     this.cfg_dashboard_overview = this._client.cfg_dashboard_overview;
     this.cfg_dashboard_statistics = this._client.cfg_dashboard_statistics;
     this.cfg_dashboard_system = this._client.cfg_dashboard_system;
@@ -271,7 +293,13 @@ export class API {
     this.cfg_accounts = this._client.cfg_accounts;
     this.cfg_centrifugo = this._client.cfg_centrifugo;
     this.cfg_endpoints = this._client.cfg_endpoints;
+    this.cfg_grpc_api_keys = this._client.cfg_grpc_api_keys;
+    this.cfg_grpc_charts = this._client.cfg_grpc_charts;
+    this.cfg_grpc_configuration = this._client.cfg_grpc_configuration;
     this.cfg_grpc_monitoring = this._client.cfg_grpc_monitoring;
+    this.cfg_grpc_proto_files = this._client.cfg_grpc_proto_files;
+    this.cfg_grpc_services = this._client.cfg_grpc_services;
+    this.cfg_grpc_testing = this._client.cfg_grpc_testing;
     this.cfg_health = this._client.cfg_health;
     this.cfg_knowbase = this._client.cfg_knowbase;
     this.cfg_leads = this._client.cfg_leads;
@@ -299,12 +327,14 @@ export class API {
     this.cfg_bulk_email = this._client.cfg_bulk_email;
     this.cfg_campaigns = this._client.cfg_campaigns;
     this.cfg_centrifugo_admin_api = this._client.cfg_centrifugo_admin_api;
+    this.cfg_centrifugo_auth = this._client.cfg_centrifugo_auth;
     this.cfg_centrifugo_monitoring = this._client.cfg_centrifugo_monitoring;
     this.cfg_centrifugo_testing = this._client.cfg_centrifugo_testing;
     this.cfg_dashboard_api_zones = this._client.cfg_dashboard_api_zones;
     this.cfg_dashboard_activity = this._client.cfg_dashboard_activity;
     this.cfg_dashboard_charts = this._client.cfg_dashboard_charts;
     this.cfg_dashboard_commands = this._client.cfg_dashboard_commands;
+    this.cfg_dashboard_config = this._client.cfg_dashboard_config;
     this.cfg_dashboard_overview = this._client.cfg_dashboard_overview;
     this.cfg_dashboard_statistics = this._client.cfg_dashboard_statistics;
     this.cfg_dashboard_system = this._client.cfg_dashboard_system;
@@ -324,7 +354,13 @@ export class API {
     this.cfg_accounts = this._client.cfg_accounts;
     this.cfg_centrifugo = this._client.cfg_centrifugo;
     this.cfg_endpoints = this._client.cfg_endpoints;
+    this.cfg_grpc_api_keys = this._client.cfg_grpc_api_keys;
+    this.cfg_grpc_charts = this._client.cfg_grpc_charts;
+    this.cfg_grpc_configuration = this._client.cfg_grpc_configuration;
     this.cfg_grpc_monitoring = this._client.cfg_grpc_monitoring;
+    this.cfg_grpc_proto_files = this._client.cfg_grpc_proto_files;
+    this.cfg_grpc_services = this._client.cfg_grpc_services;
+    this.cfg_grpc_testing = this._client.cfg_grpc_testing;
     this.cfg_health = this._client.cfg_health;
     this.cfg_knowbase = this._client.cfg_knowbase;
     this.cfg_leads = this._client.cfg_leads;
@@ -424,11 +460,19 @@ export class API {
   }
 
   /**
-   * Get OpenAPI schema
-   * @returns Complete OpenAPI specification for this API
+   * Get OpenAPI schema path
+   * @returns Path to the OpenAPI schema JSON file
+   *
+   * Note: The OpenAPI schema is available in the schema.json file.
+   * You can load it dynamically using:
+   * ```typescript
+   * const schema = await fetch('./schema.json').then(r => r.json());
+   * // or using fs in Node.js:
+   * // const schema = JSON.parse(fs.readFileSync('./schema.json', 'utf-8'));
+   * ```
    */
-  getSchema(): any {
-    return OPENAPI_SCHEMA;
+  getSchemaPath(): string {
+    return './schema.json';
   }
 }
 

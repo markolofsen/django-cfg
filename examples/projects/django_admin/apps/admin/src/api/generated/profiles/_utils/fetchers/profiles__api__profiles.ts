@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { PaginatedUserProfileListSchema, type PaginatedUserProfileList } from '../schemas/PaginatedUserProfileList.schema'
 import { PatchedUserProfileRequestSchema, type PatchedUserProfileRequest } from '../schemas/PatchedUserProfileRequest.schema'
 import { PatchedUserProfileUpdateRequestSchema, type PatchedUserProfileUpdateRequest } from '../schemas/PatchedUserProfileUpdateRequest.schema'
@@ -49,7 +50,35 @@ export async function getProfilesProfilesList(  params?: { page?: number; page_s
 ): Promise<PaginatedUserProfileList> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesList(params?.page, params?.page_size)
-  return PaginatedUserProfileListSchema.parse(response)
+  try {
+    return PaginatedUserProfileListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getProfilesProfilesList',
+      message: `Path: /api/profiles/profiles/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -63,7 +92,35 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesCreate(data)
-  return UserProfileSchema.parse(response)
+  try {
+    return UserProfileSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createProfilesProfilesCreate',
+      message: `Path: /api/profiles/profiles/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -77,7 +134,35 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesRetrieve(id)
-  return UserProfileSchema.parse(response)
+  try {
+    return UserProfileSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getProfilesProfilesRetrieve',
+      message: `Path: /api/profiles/profiles/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -91,7 +176,35 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
 ): Promise<UserProfileUpdate> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesUpdate(id, data)
-  return UserProfileUpdateSchema.parse(response)
+  try {
+    return UserProfileUpdateSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateProfilesProfilesUpdate',
+      message: `Path: /api/profiles/profiles/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -105,7 +218,35 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
 ): Promise<UserProfileUpdate> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesPartialUpdate(id, data)
-  return UserProfileUpdateSchema.parse(response)
+  try {
+    return UserProfileUpdateSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateProfilesProfilesPartialUpdate',
+      message: `Path: /api/profiles/profiles/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -133,7 +274,35 @@ export async function getProfilesProfilesMeRetrieve(  client?: any
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesMeRetrieve()
-  return UserProfileSchema.parse(response)
+  try {
+    return UserProfileSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getProfilesProfilesMeRetrieve',
+      message: `Path: /api/profiles/profiles/me/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -147,7 +316,35 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesMeUpdate(data)
-  return UserProfileSchema.parse(response)
+  try {
+    return UserProfileSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateProfilesProfilesMeUpdate',
+      message: `Path: /api/profiles/profiles/me/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -161,7 +358,35 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
 ): Promise<UserProfile> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesMePartialUpdate(data)
-  return UserProfileSchema.parse(response)
+  try {
+    return UserProfileSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateProfilesProfilesMePartialUpdate',
+      message: `Path: /api/profiles/profiles/me/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -175,7 +400,35 @@ export async function getProfilesProfilesStatsRetrieve(  client?: any
 ): Promise<UserProfileStats> {
   const api = client || getAPIInstance()
   const response = await api.profiles_profiles.profilesStatsRetrieve()
-  return UserProfileStatsSchema.parse(response)
+  try {
+    return UserProfileStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getProfilesProfilesStatsRetrieve',
+      message: `Path: /api/profiles/profiles/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

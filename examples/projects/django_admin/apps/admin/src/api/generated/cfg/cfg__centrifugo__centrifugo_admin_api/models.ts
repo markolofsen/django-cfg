@@ -27,10 +27,10 @@ export interface CentrifugoHistoryRequestRequest {
   /** Channel name */
   channel: string;
   /** Maximum number of messages to return */
-  limit?: string | null;
+  limit?: number | null;
   since?: Record<string, any>;
   /** Reverse message order (newest first) */
-  reverse?: string | null;
+  reverse?: boolean | null;
 }
 
 /**
@@ -185,7 +185,7 @@ export interface CentrifugoPublication {
   /** Message offset in channel stream */
   offset: number;
   /** Optional message tags */
-  tags?: string | null;
+  tags?: Record<string, any> | null;
 }
 
 /**
@@ -225,9 +225,9 @@ export interface CentrifugoClientInfo {
   /** Client UUID */
   client: string;
   /** Connection metadata */
-  conn_info?: string | null;
+  conn_info?: Record<string, any> | null;
   /** Channel-specific metadata */
-  chan_info?: string | null;
+  chan_info?: Record<string, any> | null;
 }
 
 /**

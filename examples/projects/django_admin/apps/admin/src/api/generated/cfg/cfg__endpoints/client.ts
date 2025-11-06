@@ -24,7 +24,7 @@ export class CfgEndpoints {
    */
   async urlsRetrieve(): Promise<Models.URLsList[]> {
     const response = await this.client.request('GET', "/cfg/endpoints/urls/");
-    return (response as any).results || [];
+    return (response as any).results || response;
   }
 
   /**

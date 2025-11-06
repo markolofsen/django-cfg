@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__newsletter__logs'
 import type { API } from '../../index'
 import type { PaginatedEmailLogList } from '../schemas/PaginatedEmailLogList.schema'

@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__dashboard__dashboard_api_zones'
 import type { API } from '../../index'
 import type { APIZonesSummary } from '../schemas/APIZonesSummary.schema'

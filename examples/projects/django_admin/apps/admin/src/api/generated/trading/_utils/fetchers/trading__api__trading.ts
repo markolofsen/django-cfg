@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { OrderSchema, type Order } from '../schemas/Order.schema'
 import { OrderCreateSchema, type OrderCreate } from '../schemas/OrderCreate.schema'
 import { OrderCreateRequestSchema, type OrderCreateRequest } from '../schemas/OrderCreateRequest.schema'
@@ -50,7 +51,35 @@ export async function getTradingOrdersList(  params?: { page?: number; page_size
 ): Promise<PaginatedOrderList> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersList(params?.page, params?.page_size)
-  return PaginatedOrderListSchema.parse(response)
+  try {
+    return PaginatedOrderListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingOrdersList',
+      message: `Path: /api/trading/orders/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -64,7 +93,35 @@ export async function createTradingOrdersCreate(  data: OrderCreateRequest,  cli
 ): Promise<OrderCreate> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersCreate(data)
-  return OrderCreateSchema.parse(response)
+  try {
+    return OrderCreateSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createTradingOrdersCreate',
+      message: `Path: /api/trading/orders/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -78,7 +135,35 @@ export async function getTradingOrdersRetrieve(  id: number,  client?: any
 ): Promise<Order> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersRetrieve(id)
-  return OrderSchema.parse(response)
+  try {
+    return OrderSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingOrdersRetrieve',
+      message: `Path: /api/trading/orders/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -92,7 +177,35 @@ export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest
 ): Promise<Order> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersUpdate(id, data)
-  return OrderSchema.parse(response)
+  try {
+    return OrderSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateTradingOrdersUpdate',
+      message: `Path: /api/trading/orders/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -106,7 +219,35 @@ export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data
 ): Promise<Order> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.ordersPartialUpdate(id, data)
-  return OrderSchema.parse(response)
+  try {
+    return OrderSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateTradingOrdersPartialUpdate',
+      message: `Path: /api/trading/orders/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -134,7 +275,35 @@ export async function getTradingPortfoliosList(  params?: { page?: number; page_
 ): Promise<PaginatedPortfolioList> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosList(params?.page, params?.page_size)
-  return PaginatedPortfolioListSchema.parse(response)
+  try {
+    return PaginatedPortfolioListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosList',
+      message: `Path: /api/trading/portfolios/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -148,7 +317,35 @@ export async function getTradingPortfoliosRetrieve(  id: number,  client?: any
 ): Promise<Portfolio> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosRetrieve(id)
-  return PortfolioSchema.parse(response)
+  try {
+    return PortfolioSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosRetrieve',
+      message: `Path: /api/trading/portfolios/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -162,7 +359,35 @@ export async function getTradingPortfoliosMeRetrieve(  client?: any
 ): Promise<Portfolio> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosMeRetrieve()
-  return PortfolioSchema.parse(response)
+  try {
+    return PortfolioSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosMeRetrieve',
+      message: `Path: /api/trading/portfolios/me/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -176,7 +401,35 @@ export async function getTradingPortfoliosStatsRetrieve(  client?: any
 ): Promise<PortfolioStats> {
   const api = client || getAPIInstance()
   const response = await api.trading_trading.portfoliosStatsRetrieve()
-  return PortfolioStatsSchema.parse(response)
+  try {
+    return PortfolioStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosStatsRetrieve',
+      message: `Path: /api/trading/portfolios/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

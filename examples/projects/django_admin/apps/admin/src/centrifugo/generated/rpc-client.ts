@@ -1,0 +1,276 @@
+/**
+ * Base Centrifugo RPC Client
+ *
+ * Handles WebSocket connection and RPC call correlation.
+ * Auto-generated - DO NOT EDIT
+ */
+
+import { Centrifuge } from 'centrifuge';
+
+export class CentrifugoRPCClient {
+  private centrifuge: Centrifuge;
+  private subscription: any;
+  private channelSubscriptions: Map<string, any> = new Map();
+  private pendingRequests: Map<string, { resolve: Function; reject: Function }> = new Map();
+  private readonly replyChannel: string;
+  private readonly timeout: number;
+
+  constructor(
+    url: string,
+    token: string,
+    userId: string,
+    timeout: number = 30000
+  ) {
+    this.replyChannel = `user#${userId}`;
+    this.timeout = timeout;
+
+    this.centrifuge = new Centrifuge(url, {
+      token,
+    });
+
+    this.centrifuge.on('disconnected', (ctx) => {
+      // Reject all pending requests
+      this.pendingRequests.forEach(({ reject }) => {
+        reject(new Error('Disconnected from Centrifugo'));
+      });
+      this.pendingRequests.clear();
+    });
+  }
+
+  async connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let resolved = false;
+
+      // Listen to Centrifuge connection events
+      const onConnected = () => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      };
+
+      const onError = (ctx: any) => {
+        if (!resolved) {
+          resolved = true;
+          reject(new Error(ctx.message || 'Connection error'));
+        }
+      };
+
+      this.centrifuge.on('connected', onConnected);
+      this.centrifuge.on('error', onError);
+
+      // Start connection
+      this.centrifuge.connect();
+
+      // Subscribe to reply channel
+      this.subscription = this.centrifuge.newSubscription(this.replyChannel);
+
+      this.subscription.on('publication', (ctx: any) => {
+        this.handleResponse(ctx.data);
+      });
+
+      this.subscription.on('subscribed', () => {
+        // Subscription successful (optional, we already resolved on 'connected')
+      });
+
+      this.subscription.on('error', (ctx: any) => {
+        // Error code 105 = "already subscribed" (server-side subscription from JWT)
+        // This is not an error - the channel is already active via server-side subscription
+        if (ctx.error?.code === 105) {
+          // This is fine, server-side subscription exists
+        } else {
+          console.error(`Subscription error for ${this.replyChannel}:`, ctx.error);
+        }
+      });
+
+      this.subscription.subscribe();
+    });
+  }
+
+  async disconnect(): Promise<void> {
+    // Unsubscribe from all event channels
+    this.unsubscribeAll();
+
+    // Unsubscribe from RPC reply channel
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
+
+    this.centrifuge.disconnect();
+  }
+
+  async call<T = any>(method: string, params: any): Promise<T> {
+    const correlationId = this.generateCorrelationId();
+
+    const message = {
+      method,
+      params,
+      correlation_id: correlationId,
+      reply_to: this.replyChannel,
+    };
+
+    // Create promise for response
+    const promise = new Promise<T>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(correlationId);
+        reject(new Error(`RPC timeout: ${method}`));
+      }, this.timeout);
+
+      this.pendingRequests.set(correlationId, {
+        resolve: (result: T) => {
+          clearTimeout(timeoutId);
+          resolve(result);
+        },
+        reject: (error: Error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+      });
+    });
+
+    // Publish request
+    await this.centrifuge.publish('rpc.requests', message);
+
+    return promise;
+  }
+
+  private handleResponse(data: any): void {
+    const correlationId = data.correlation_id;
+    if (!correlationId) {
+      return;
+    }
+
+    const pending = this.pendingRequests.get(correlationId);
+    if (!pending) {
+      return;
+    }
+
+    this.pendingRequests.delete(correlationId);
+
+    if (data.error) {
+      pending.reject(new Error(data.error.message || 'RPC error'));
+    } else {
+      pending.resolve(data.result);
+    }
+  }
+
+  private generateCorrelationId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Channel Subscription API (for gRPC events)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /**
+   * Subscribe to a Centrifugo channel for real-time events.
+   *
+   * @param channel - Channel name (e.g., 'bot#bot-123#heartbeat')
+   * @param callback - Callback for received messages
+   * @returns Unsubscribe function
+   *
+   * @example
+   * const unsubscribe = client.subscribe('bot#bot-123#heartbeat', (data) => {
+   *   console.log('Heartbeat:', data);
+   * });
+   *
+   * // Later: unsubscribe when done
+   * unsubscribe();
+   */
+  subscribe(channel: string, callback: (data: any) => void): () => void {
+    // Check if already subscribed
+    if (this.channelSubscriptions.has(channel)) {
+      return () => {}; // Return no-op unsubscribe
+    }
+
+    // Create new subscription
+    const sub = this.centrifuge.newSubscription(channel);
+
+    // Handle publications
+    sub.on('publication', (ctx: any) => {
+      callback(ctx.data);
+    });
+
+    // Handle subscription lifecycle
+    sub.on('subscribed', () => {
+      // Subscription successful
+    });
+
+    sub.on('error', (ctx: any) => {
+      console.error(`Subscription error for ${channel}:`, ctx.error);
+    });
+
+    // Start subscription
+    sub.subscribe();
+
+    // Store subscription
+    this.channelSubscriptions.set(channel, sub);
+
+    // Return unsubscribe function
+    return () => this.unsubscribe(channel);
+  }
+
+  /**
+   * Unsubscribe from a channel.
+   *
+   * @param channel - Channel name
+   */
+  unsubscribe(channel: string): void {
+    const sub = this.channelSubscriptions.get(channel);
+    if (!sub) {
+      return;
+    }
+
+    sub.unsubscribe();
+    this.channelSubscriptions.delete(channel);
+  }
+
+  /**
+   * Unsubscribe from all channels.
+   */
+  unsubscribeAll(): void {
+    if (this.channelSubscriptions.size === 0) {
+      return;
+    }
+
+    this.channelSubscriptions.forEach((sub, channel) => {
+      sub.unsubscribe();
+    });
+    this.channelSubscriptions.clear();
+  }
+
+  /**
+   * Get list of active client-side subscriptions.
+   */
+  getActiveSubscriptions(): string[] {
+    return Array.from(this.channelSubscriptions.keys());
+  }
+
+  /**
+   * Get list of server-side subscriptions (from JWT token).
+   *
+   * These are channels automatically subscribed by Centrifugo server
+   * based on the 'channels' claim in the JWT token.
+   */
+  getServerSideSubscriptions(): string[] {
+    try {
+      // Access Centrifuge.js internal state for server-side subs
+      // @ts-ignore - accessing internal property
+      const serverSubs = this.centrifuge._serverSubs || {};
+      return Object.keys(serverSubs);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Get all active subscriptions (both client-side and server-side).
+   */
+  getAllSubscriptions(): string[] {
+    const clientSubs = this.getActiveSubscriptions();
+    const serverSubs = this.getServerSideSubscriptions();
+
+    // Combine and deduplicate
+    return Array.from(new Set([...clientSubs, ...serverSubs]));
+  }
+}
