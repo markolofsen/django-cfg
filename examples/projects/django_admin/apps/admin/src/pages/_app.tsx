@@ -8,7 +8,7 @@ import '@/styles/globals.css';
 
 import { AppLayout } from '@djangocfg/layouts';
 import { appLayoutConfig } from '@/core';
-import { AppProviders } from '@/contexts';
+import { CentrifugoProvider } from '@djangocfg/centrifugo';
 
 // Load Manrope font from Google Fonts
 const inter = Inter({
@@ -38,17 +38,17 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   const hasCustomLayout = !!Component.getLayout;
 
   return (
-    <AppProviders>
-      <AppLayout
-        config={appLayoutConfig}
-        fontFamily={inter.style.fontFamily}
-      >
+    <AppLayout
+      config={appLayoutConfig}
+      fontFamily={inter.style.fontFamily}
+    >
+      <CentrifugoProvider enabled={true} autoConnect={true}>
         {hasCustomLayout ? (
           Component.getLayout!(<Component {...pageProps} />)
         ) : (
           <Component {...pageProps} />
         )}
-      </AppLayout>
-    </AppProviders>
+      </CentrifugoProvider>
+    </AppLayout>
   );
 }

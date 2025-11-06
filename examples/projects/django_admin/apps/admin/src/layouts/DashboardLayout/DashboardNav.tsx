@@ -17,38 +17,18 @@ import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from '@djangocfg/ui';
 import { useAuth } from '@djangocfg/layouts';
 import { admin } from '@/core/routes';
-import { useDashboardOverviewContext } from '@/contexts/dashboard';
 
 export function DashboardNav() {
   const router = useRouter();
   const pathname = router.pathname;
   const { user } = useAuth();
   const isSuperuser = user?.is_superuser ?? false;
-  const { djangoConfig } = useDashboardOverviewContext();
 
   // Get all dashboard routes and filter by permissions and config
   const navItems = admin.routes.allRoutes.filter((route) => {
     // Filter out commands if not superuser
     if (route.path === admin.routes.commands.path && !isSuperuser) {
       return false;
-    }
-
-    // Filter tabs based on Django config
-    if (djangoConfig) {
-      // Hide gRPC tab if gRPC is not enabled
-      if (route.path === admin.routes.grpc.path && !djangoConfig.grpc?.enabled) {
-        return false;
-      }
-
-      // Hide Centrifugo tab if Centrifugo is not enabled
-      if (route.path === admin.routes.centrifugo.path && !djangoConfig.centrifugo?.enabled) {
-        return false;
-      }
-
-      // Hide RQ tab if Django-RQ is not enabled
-      if (route.path === admin.routes.rq.path && !djangoConfig.django_rq?.enabled) {
-        return false;
-      }
     }
 
     return true;
