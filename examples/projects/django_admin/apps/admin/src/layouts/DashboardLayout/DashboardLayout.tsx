@@ -25,8 +25,6 @@
 
 import type { ReactElement, ReactNode } from 'react';
 import { DashboardNav } from './DashboardNav';
-import { DashboardOverviewProvider } from '@/contexts/dashboard';
-import { WSRPCProvider } from '@/rpc';
 
 interface DashboardLayoutProps {
   children?: ReactNode;
@@ -44,18 +42,14 @@ export function DashboardLayout(
     : (pageOrProps as DashboardLayoutProps).children;
 
   return (
-    <DashboardOverviewProvider>
-      <WSRPCProvider>
-        <div className="relative flex flex-col min-h-screen">
-          {/* Navigation */}
-          <DashboardNav />
+    <div className="relative flex flex-col min-h-screen">
+      {/* Navigation */}
+      <DashboardNav />
 
-          {/* Main Content */}
-          <main className="flex-1" id="main-content" role="main">
-            {children}
-          </main>
-        </div>
-      </WSRPCProvider>
-    </DashboardOverviewProvider>
+      {/* Main Content */}
+      <main className="flex-1" id="main-content" role="main">
+        {children}
+      </main>
+    </div>
   );
 }

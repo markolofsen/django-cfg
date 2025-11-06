@@ -15,12 +15,12 @@
   },
   "dependencies": {
     "@djangocfg/api": "latest",
+    "@djangocfg/centrifugo": "latest",
     "@djangocfg/layouts": "latest",
     "@djangocfg/markdown": "latest",
     "@djangocfg/og-image": "latest",
     "@djangocfg/ui": "latest",
     "@hookform/resolvers": "^5.2.2",
-    "centrifuge": "^5.5.2",
     "clsx": "^2.1.1",
     "consola": "^3.4.2",
     "date-fns": "^4.1.0",

@@ -12,7 +12,7 @@
 # - install-prod runs poetry install --sync to restore PyPI version
 # - No modifications to pyproject.toml or poetry.lock required!
 
-.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports kill-grpc dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api centrifugo claude populate list-urls check-endpoints
+.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports kill-grpc dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
 
 # Python from virtual environment (poetry)
 PYTHON := .venv/bin/python
@@ -36,8 +36,7 @@ help:
 	@echo "  make kill-ports    - Kill processes on port 8000"
 	@echo "  make kill-grpc     - Kill gRPC processes on port 50051"
 	@echo "  make shell         - Open Django shell"
-	@echo "  make api           - Generate and deploy API clients (OpenAPI + Centrifugo)"
-	@echo "  make centrifugo    - Generate Centrifugo WebSocket clients (opensdk)"
+	@echo "  make api           - Generate and deploy API clients (OpenAPI)"
 	@echo "  make claude        - Start Claude Code"
 	@echo ""
 	@echo "Database:"
@@ -197,10 +196,6 @@ tasks-clear:
 # API Generation
 api:
 	$(PYTHON) manage.py generate_api
-
-# Centrifugo WebSocket Client Generation
-centrifugo:
-	$(PYTHON) manage.py generate_centrifugo
 
 # Populate database with sample data
 populate:
