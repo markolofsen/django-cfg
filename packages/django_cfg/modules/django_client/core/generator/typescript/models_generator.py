@@ -175,8 +175,13 @@ class ModelsGenerator:
         # Handle nullable and optional separately
         # - nullable: add | null to type
         # - not required: add ? optional marker
+        # Special case: readOnly + nullable fields should be optional
+        # (they're always in response but can be null, so from client perspective they're optional)
         if schema.nullable:
             ts_type = f"{ts_type} | null"
+            # Make readOnly nullable fields optional
+            if schema.read_only:
+                is_required = False
 
         optional_marker = "" if is_required else "?"
 

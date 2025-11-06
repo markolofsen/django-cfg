@@ -31,6 +31,8 @@
  */
 import { JobActionResponseSchema, type JobActionResponse } from '../schemas/JobActionResponse.schema'
 import { JobDetailSchema, type JobDetail } from '../schemas/JobDetail.schema'
+import { JobListRequestSchema, type JobListRequest } from '../schemas/JobListRequest.schema'
+import { PaginatedJobListListSchema, type PaginatedJobListList } from '../schemas/PaginatedJobListList.schema'
 import { getAPIInstance } from '../../api-instance'
 
 /**
@@ -39,11 +41,11 @@ import { getAPIInstance } from '../../api-instance'
  * @method GET
  * @path /cfg/rq/jobs/
  */
-export async function getRqJobsList(  params?: { queue?: string; status?: string },  client?: any
-): Promise<any> {
+export async function getRqJobsList(  params?: { page?: number; page_size?: number; queue?: string; status?: string },  client?: any
+): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_jobs.list(params?.queue, params?.status)
-  return response
+  const response = await api.cfg_rq_jobs.list(params?.page, params?.page_size, params?.queue, params?.status)
+  return PaginatedJobListListSchema.parse(response)
 }
 
 
@@ -81,10 +83,10 @@ export async function deleteRqJobsDestroy(  id: string,  client?: any
  * @method POST
  * @path /cfg/rq/jobs/{id}/cancel/
  */
-export async function createRqJobsCancelCreate(  id: string,  client?: any
+export async function createRqJobsCancelCreate(  id: string, data: JobListRequest,  client?: any
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_jobs.cancelCreate(id)
+  const response = await api.cfg_rq_jobs.cancelCreate(id, data)
   return JobActionResponseSchema.parse(response)
 }
 
@@ -95,10 +97,10 @@ export async function createRqJobsCancelCreate(  id: string,  client?: any
  * @method POST
  * @path /cfg/rq/jobs/{id}/requeue/
  */
-export async function createRqJobsRequeueCreate(  id: string,  client?: any
+export async function createRqJobsRequeueCreate(  id: string, data: JobListRequest,  client?: any
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_jobs.requeueCreate(id)
+  const response = await api.cfg_rq_jobs.requeueCreate(id, data)
   return JobActionResponseSchema.parse(response)
 }
 

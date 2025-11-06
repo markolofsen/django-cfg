@@ -16,7 +16,7 @@ export class CfgGrpcMonitoring {
    * 
    * Returns the current health status of the gRPC server.
    */
-  async grpcMonitorHealthRetrieve(): Promise<Models.HealthCheck> {
+  async grpcMonitorHealthRetrieve(): Promise<Models.GRPCHealthCheck> {
     const response = await this.client.request('GET', "/cfg/grpc/monitor/health/");
     return response;
   }
@@ -39,18 +39,18 @@ export class CfgGrpcMonitoring {
       params = { hours: args[0], service: args[1] };
     }
     const response = await this.client.request('GET', "/cfg/grpc/monitor/methods/", { params });
-    return (response as any).results || [];
+    return response;
   }
 
-  async grpcMonitorOverviewRetrieve(hours?: number): Promise<Models.OverviewStats>;
-  async grpcMonitorOverviewRetrieve(params?: { hours?: number }): Promise<Models.OverviewStats>;
+  async grpcMonitorOverviewRetrieve(hours?: number): Promise<Models.GRPCOverviewStats>;
+  async grpcMonitorOverviewRetrieve(params?: { hours?: number }): Promise<Models.GRPCOverviewStats>;
 
   /**
    * Get overview statistics
    * 
    * Returns overview statistics for gRPC requests.
    */
-  async grpcMonitorOverviewRetrieve(...args: any[]): Promise<Models.OverviewStats> {
+  async grpcMonitorOverviewRetrieve(...args: any[]): Promise<Models.GRPCOverviewStats> {
     const isParamsObject = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]);
     
     let params;
@@ -63,46 +63,26 @@ export class CfgGrpcMonitoring {
     return response;
   }
 
-  async grpcMonitorRequestsRetrieve(count?: number, method?: string, offset?: number, service?: string, status?: string): Promise<Models.RecentRequests>;
-  async grpcMonitorRequestsRetrieve(params?: { count?: number; method?: string; offset?: number; service?: string; status?: string }): Promise<Models.RecentRequests>;
+  async grpcMonitorRequestsList(method?: string, page?: number, page_size?: number, service?: string, status?: string): Promise<Models.PaginatedRecentRequestList>;
+  async grpcMonitorRequestsList(params?: { method?: string; page?: number; page_size?: number; service?: string; status?: string }): Promise<Models.PaginatedRecentRequestList>;
 
   /**
    * Get recent requests
    * 
-   * Returns a list of recent gRPC requests with their details.
+   * Returns a list of recent gRPC requests with their details. Uses standard
+   * DRF pagination.
    */
-  async grpcMonitorRequestsRetrieve(...args: any[]): Promise<Models.RecentRequests> {
+  async grpcMonitorRequestsList(...args: any[]): Promise<Models.PaginatedRecentRequestList> {
     const isParamsObject = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]);
     
     let params;
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { count: args[0], method: args[1], offset: args[2], service: args[3], status: args[4] };
+      params = { method: args[0], page: args[1], page_size: args[2], service: args[3], status: args[4] };
     }
     const response = await this.client.request('GET', "/cfg/grpc/monitor/requests/", { params });
     return response;
-  }
-
-  async grpcMonitorServicesRetrieve(hours?: number): Promise<Models.ServiceList[]>;
-  async grpcMonitorServicesRetrieve(params?: { hours?: number }): Promise<Models.ServiceList[]>;
-
-  /**
-   * Get service statistics
-   * 
-   * Returns statistics grouped by service.
-   */
-  async grpcMonitorServicesRetrieve(...args: any[]): Promise<Models.ServiceList[]> {
-    const isParamsObject = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]);
-    
-    let params;
-    if (isParamsObject) {
-      params = args[0];
-    } else {
-      params = { hours: args[0] };
-    }
-    const response = await this.client.request('GET', "/cfg/grpc/monitor/services/", { params });
-    return (response as any).results || [];
   }
 
   async grpcMonitorTimelineRetrieve(hours?: number, interval?: string): Promise<any>;

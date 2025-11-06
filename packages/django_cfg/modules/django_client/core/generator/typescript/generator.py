@@ -298,6 +298,14 @@ class TypeScriptGenerator(BaseGenerator):
                                 queue.append(self.context.schemas[prop.items.ref])
                                 seen.add(prop.items.ref)
 
+                    # $ref inside additionalProperties (CRITICAL for Record<string, T> patterns!)
+                    if prop.additional_properties and prop.additional_properties.ref:
+                        if prop.additional_properties.ref not in seen:
+                            if prop.additional_properties.ref in self.context.schemas:
+                                resolved[prop.additional_properties.ref] = self.context.schemas[prop.additional_properties.ref]
+                                queue.append(self.context.schemas[prop.additional_properties.ref])
+                                seen.add(prop.additional_properties.ref)
+
             # Check array items for $ref at schema level
             if schema.items and schema.items.ref:
                 if schema.items.ref not in seen:
@@ -305,6 +313,14 @@ class TypeScriptGenerator(BaseGenerator):
                         resolved[schema.items.ref] = self.context.schemas[schema.items.ref]
                         queue.append(self.context.schemas[schema.items.ref])
                         seen.add(schema.items.ref)
+
+            # Check additionalProperties for $ref at schema level
+            if schema.additional_properties and schema.additional_properties.ref:
+                if schema.additional_properties.ref not in seen:
+                    if schema.additional_properties.ref in self.context.schemas:
+                        resolved[schema.additional_properties.ref] = self.context.schemas[schema.additional_properties.ref]
+                        queue.append(self.context.schemas[schema.additional_properties.ref])
+                        seen.add(schema.additional_properties.ref)
 
         return resolved
 
@@ -369,10 +385,20 @@ class TypeScriptGenerator(BaseGenerator):
                         if not self.context.schemas[prop.items.ref].enum:
                             refs.add(prop.items.ref)
 
+                if prop.additional_properties and prop.additional_properties.ref:
+                    if prop.additional_properties.ref in self.context.schemas:
+                        if not self.context.schemas[prop.additional_properties.ref].enum:
+                            refs.add(prop.additional_properties.ref)
+
         if schema.items and schema.items.ref:
             if schema.items.ref in self.context.schemas:
                 if not self.context.schemas[schema.items.ref].enum:
                     refs.add(schema.items.ref)
+
+        if schema.additional_properties and schema.additional_properties.ref:
+            if schema.additional_properties.ref in self.context.schemas:
+                if not self.context.schemas[schema.additional_properties.ref].enum:
+                    refs.add(schema.additional_properties.ref)
 
         return refs
 

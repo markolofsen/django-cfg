@@ -18,6 +18,7 @@ import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__rq__rq_schedules'
 import type { API } from '../../index'
+import type { PaginatedScheduledJobList } from '../schemas/PaginatedScheduledJobList.schema'
 import type { ScheduleActionResponse } from '../schemas/ScheduleActionResponse.schema'
 import type { ScheduleCreateRequest } from '../schemas/ScheduleCreateRequest.schema'
 import type { ScheduledJob } from '../schemas/ScheduledJob.schema'
@@ -28,8 +29,8 @@ import type { ScheduledJob } from '../schemas/ScheduledJob.schema'
  * @method GET
  * @path /cfg/rq/schedules/
  */
-export function useRqSchedulesList(params?: { queue?: string }, client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useRqSchedulesList(params?: { page?: number; page_size?: number; queue?: string }, client?: API): ReturnType<typeof useSWR<PaginatedScheduledJobList>> {
+  return useSWR<PaginatedScheduledJobList>(
     params ? ['cfg-rq-schedules', params] : 'cfg-rq-schedules',
     () => Fetchers.getRqSchedulesList(params, client)
   )

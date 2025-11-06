@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__health'
 import type { API } from '../../index'
 import type { HealthCheck } from '../schemas/HealthCheck.schema'

@@ -61,6 +61,3 @@ logs
 db/*
 media/*
 openapi/
-
-# Generated SDK clients
-# opensdk/

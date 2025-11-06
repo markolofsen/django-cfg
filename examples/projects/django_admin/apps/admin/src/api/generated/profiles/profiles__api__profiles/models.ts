@@ -46,7 +46,7 @@ export interface UserProfile {
   id: number;
   user: number;
   /** Get basic user information. */
-  user_info: Record<string, any>;
+  user_info: Record<string, string>;
   website?: string;
   github?: string;
   twitter?: string;

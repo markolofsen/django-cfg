@@ -29,11 +29,10 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { HealthCheckSchema, type HealthCheck } from '../schemas/HealthCheck.schema'
+import { GRPCHealthCheckSchema, type GRPCHealthCheck } from '../schemas/GRPCHealthCheck.schema'
+import { GRPCOverviewStatsSchema, type GRPCOverviewStats } from '../schemas/GRPCOverviewStats.schema'
 import { MethodListSchema, type MethodList } from '../schemas/MethodList.schema'
-import { OverviewStatsSchema, type OverviewStats } from '../schemas/OverviewStats.schema'
-import { RecentRequestsSchema, type RecentRequests } from '../schemas/RecentRequests.schema'
-import { ServiceListSchema, type ServiceList } from '../schemas/ServiceList.schema'
+import { PaginatedRecentRequestListSchema, type PaginatedRecentRequestList } from '../schemas/PaginatedRecentRequestList.schema'
 import { getAPIInstance } from '../../api-instance'
 
 /**
@@ -43,10 +42,10 @@ import { getAPIInstance } from '../../api-instance'
  * @path /cfg/grpc/monitor/health/
  */
 export async function getGrpcMonitorHealthRetrieve(  client?: any
-): Promise<HealthCheck> {
+): Promise<GRPCHealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_monitoring.grpcMonitorHealthRetrieve()
-  return HealthCheckSchema.parse(response)
+  return GRPCHealthCheckSchema.parse(response)
 }
 
 
@@ -71,10 +70,10 @@ export async function getGrpcMonitorMethodsRetrieve(  params?: { hours?: number;
  * @path /cfg/grpc/monitor/overview/
  */
 export async function getGrpcMonitorOverviewRetrieve(  params?: { hours?: number },  client?: any
-): Promise<OverviewStats> {
+): Promise<GRPCOverviewStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_monitoring.grpcMonitorOverviewRetrieve(params?.hours)
-  return OverviewStatsSchema.parse(response)
+  return GRPCOverviewStatsSchema.parse(response)
 }
 
 
@@ -84,25 +83,11 @@ export async function getGrpcMonitorOverviewRetrieve(  params?: { hours?: number
  * @method GET
  * @path /cfg/grpc/monitor/requests/
  */
-export async function getGrpcMonitorRequestsRetrieve(  params?: { count?: number; method?: string; offset?: number; service?: string; status?: string },  client?: any
-): Promise<RecentRequests> {
+export async function getGrpcMonitorRequestsList(  params?: { method?: string; page?: number; page_size?: number; service?: string; status?: string },  client?: any
+): Promise<PaginatedRecentRequestList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_grpc_monitoring.grpcMonitorRequestsRetrieve(params?.count, params?.method, params?.offset, params?.service, params?.status)
-  return RecentRequestsSchema.parse(response)
-}
-
-
-/**
- * Get service statistics
- *
- * @method GET
- * @path /cfg/grpc/monitor/services/
- */
-export async function getGrpcMonitorServicesRetrieve(  params?: { hours?: number },  client?: any
-): Promise<ServiceList> {
-  const api = client || getAPIInstance()
-  const response = await api.cfg_grpc_monitoring.grpcMonitorServicesRetrieve(params?.hours)
-  return ServiceListSchema.parse(response)
+  const response = await api.cfg_grpc_monitoring.grpcMonitorRequestsList(params?.method, params?.page, params?.page_size, params?.service, params?.status)
+  return PaginatedRecentRequestListSchema.parse(response)
 }
 
 

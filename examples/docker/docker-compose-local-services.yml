@@ -41,7 +41,7 @@ services:
       - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
       - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
     ports:
-      - "7320:8000"  # Centrifugo (Django-CFG: base 7300 +20)
+      - "8120:8000"  # Centrifugo (Universal dev port across all projects)
     networks:
       - services-network
     depends_on:

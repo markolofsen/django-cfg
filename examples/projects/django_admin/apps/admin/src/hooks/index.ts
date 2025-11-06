@@ -5,4 +5,3 @@
  */
 
 export { useLocalStorage } from './useLocalStorage';
-export { useSessionChat } from './useSessionChat';

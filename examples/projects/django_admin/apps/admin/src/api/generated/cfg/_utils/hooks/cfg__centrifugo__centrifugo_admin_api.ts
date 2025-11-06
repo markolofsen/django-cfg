@@ -14,7 +14,6 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__centrifugo__centrifugo_admin_api'
 import type { API } from '../../index'

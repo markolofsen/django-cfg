@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__newsletter__newsletters'
 import type { API } from '../../index'
 import type { Newsletter } from '../schemas/Newsletter.schema'

@@ -15,13 +15,12 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__centrifugo__centrifugo_monitoring'
 import type { API } from '../../index'
+import type { CentrifugoOverviewStats } from '../schemas/CentrifugoOverviewStats.schema'
 import type { ChannelList } from '../schemas/ChannelList.schema'
 import type { HealthCheck } from '../schemas/HealthCheck.schema'
-import type { OverviewStats } from '../schemas/OverviewStats.schema'
-import type { RecentPublishes } from '../schemas/RecentPublishes.schema'
+import type { PaginatedPublishList } from '../schemas/PaginatedPublishList.schema'
 
 /**
  * Get Centrifugo health status
@@ -43,8 +42,8 @@ export function useCentrifugoMonitorHealthRetrieve(client?: API): ReturnType<typ
  * @method GET
  * @path /cfg/centrifugo/monitor/overview/
  */
-export function useCentrifugoMonitorOverviewRetrieve(params?: { hours?: number }, client?: API): ReturnType<typeof useSWR<OverviewStats>> {
-  return useSWR<OverviewStats>(
+export function useCentrifugoMonitorOverviewRetrieve(params?: { hours?: number }, client?: API): ReturnType<typeof useSWR<CentrifugoOverviewStats>> {
+  return useSWR<CentrifugoOverviewStats>(
     params ? ['cfg-centrifugo-monitor-overview', params] : 'cfg-centrifugo-monitor-overview',
     () => Fetchers.getCentrifugoMonitorOverviewRetrieve(params, client)
   )
@@ -57,10 +56,10 @@ export function useCentrifugoMonitorOverviewRetrieve(params?: { hours?: number }
  * @method GET
  * @path /cfg/centrifugo/monitor/publishes/
  */
-export function useCentrifugoMonitorPublishesRetrieve(params?: { channel?: string; count?: number; offset?: number; status?: string }, client?: API): ReturnType<typeof useSWR<RecentPublishes>> {
-  return useSWR<RecentPublishes>(
-    params ? ['cfg-centrifugo-monitor-publishe', params] : 'cfg-centrifugo-monitor-publishe',
-    () => Fetchers.getCentrifugoMonitorPublishesRetrieve(params, client)
+export function useCentrifugoMonitorPublishesList(params?: { channel?: string; page?: number; page_size?: number; status?: string }, client?: API): ReturnType<typeof useSWR<PaginatedPublishList>> {
+  return useSWR<PaginatedPublishList>(
+    params ? ['cfg-centrifugo-monitor-publishes', params] : 'cfg-centrifugo-monitor-publishes',
+    () => Fetchers.getCentrifugoMonitorPublishesList(params, client)
   )
 }
 

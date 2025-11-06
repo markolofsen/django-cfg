@@ -1,13 +1,6 @@
 /**
- * RPC Utilities
+ * React Hooks for Centrifugo Channel Subscriptions
  */
 
-export { createRPCLogger, getSharedRPCLogger, resetSharedRPCLogger } from './createRPCLogger';
-export {
-  decodeJWT,
-  isTokenExpired,
-  getTokenExpiry,
-  getTimeUntilExpiry,
-  maskToken,
-  getTokenInfo,
-} from './tokenHelpers';
+export { useSubscription } from './useSubscription';
+export type { useSubscriptionOptions } from './useSubscription';

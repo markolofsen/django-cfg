@@ -21,15 +21,15 @@ export class CfgCentrifugoMonitoring {
     return response;
   }
 
-  async centrifugoMonitorOverviewRetrieve(hours?: number): Promise<Models.OverviewStats>;
-  async centrifugoMonitorOverviewRetrieve(params?: { hours?: number }): Promise<Models.OverviewStats>;
+  async centrifugoMonitorOverviewRetrieve(hours?: number): Promise<Models.CentrifugoOverviewStats>;
+  async centrifugoMonitorOverviewRetrieve(params?: { hours?: number }): Promise<Models.CentrifugoOverviewStats>;
 
   /**
    * Get overview statistics
    * 
    * Returns overview statistics for Centrifugo publishes.
    */
-  async centrifugoMonitorOverviewRetrieve(...args: any[]): Promise<Models.OverviewStats> {
+  async centrifugoMonitorOverviewRetrieve(...args: any[]): Promise<Models.CentrifugoOverviewStats> {
     const isParamsObject = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]);
     
     let params;
@@ -42,22 +42,23 @@ export class CfgCentrifugoMonitoring {
     return response;
   }
 
-  async centrifugoMonitorPublishesRetrieve(channel?: string, count?: number, offset?: number, status?: string): Promise<Models.RecentPublishes>;
-  async centrifugoMonitorPublishesRetrieve(params?: { channel?: string; count?: number; offset?: number; status?: string }): Promise<Models.RecentPublishes>;
+  async centrifugoMonitorPublishesList(channel?: string, page?: number, page_size?: number, status?: string): Promise<Models.PaginatedPublishList>;
+  async centrifugoMonitorPublishesList(params?: { channel?: string; page?: number; page_size?: number; status?: string }): Promise<Models.PaginatedPublishList>;
 
   /**
    * Get recent publishes
    * 
-   * Returns a list of recent Centrifugo publishes with their details.
+   * Returns a paginated list of recent Centrifugo publishes with their
+   * details. Uses standard DRF pagination.
    */
-  async centrifugoMonitorPublishesRetrieve(...args: any[]): Promise<Models.RecentPublishes> {
+  async centrifugoMonitorPublishesList(...args: any[]): Promise<Models.PaginatedPublishList> {
     const isParamsObject = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]);
     
     let params;
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { channel: args[0], count: args[1], offset: args[2], status: args[3] };
+      params = { channel: args[0], page: args[1], page_size: args[2], status: args[3] };
     }
     const response = await this.client.request('GET', "/cfg/centrifugo/monitor/publishes/", { params });
     return response;
@@ -81,7 +82,7 @@ export class CfgCentrifugoMonitoring {
       params = { hours: args[0], interval: args[1] };
     }
     const response = await this.client.request('GET', "/cfg/centrifugo/monitor/timeline/", { params });
-    return (response as any).results || [];
+    return (response as any).results || response;
   }
 
 }

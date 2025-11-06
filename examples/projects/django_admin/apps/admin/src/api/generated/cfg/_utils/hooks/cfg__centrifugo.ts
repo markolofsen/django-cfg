@@ -15,9 +15,9 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__centrifugo'
 import type { API } from '../../index'
+import type { Publish } from '../schemas/Publish.schema'
 
 /**
  * API operation
@@ -25,8 +25,8 @@ import type { API } from '../../index'
  * @method GET
  * @path /cfg/centrifugo/monitor/channels/
  */
-export function useCentrifugoMonitorChannelsRetrieve(client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useCentrifugoMonitorChannelsRetrieve(client?: API): ReturnType<typeof useSWR<Publish>> {
+  return useSWR<Publish>(
     'cfg-centrifugo-monitor-channel',
     () => Fetchers.getCentrifugoMonitorChannelsRetrieve(client)
   )

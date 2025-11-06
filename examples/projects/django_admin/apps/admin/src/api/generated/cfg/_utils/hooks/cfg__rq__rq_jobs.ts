@@ -20,6 +20,8 @@ import * as Fetchers from '../fetchers/cfg__rq__rq_jobs'
 import type { API } from '../../index'
 import type { JobActionResponse } from '../schemas/JobActionResponse.schema'
 import type { JobDetail } from '../schemas/JobDetail.schema'
+import type { JobListRequest } from '../schemas/JobListRequest.schema'
+import type { PaginatedJobListList } from '../schemas/PaginatedJobListList.schema'
 
 /**
  * List all jobs
@@ -27,8 +29,8 @@ import type { JobDetail } from '../schemas/JobDetail.schema'
  * @method GET
  * @path /cfg/rq/jobs/
  */
-export function useRqJobsList(params?: { queue?: string; status?: string }, client?: API): ReturnType<typeof useSWR<any>> {
-  return useSWR<any>(
+export function useRqJobsList(params?: { page?: number; page_size?: number; queue?: string; status?: string }, client?: API): ReturnType<typeof useSWR<PaginatedJobListList>> {
+  return useSWR<PaginatedJobListList>(
     params ? ['cfg-rq-jobs', params] : 'cfg-rq-jobs',
     () => Fetchers.getRqJobsList(params, client)
   )
@@ -77,8 +79,8 @@ export function useDeleteRqJobsDestroy() {
 export function useCreateRqJobsCancelCreate() {
   const { mutate } = useSWRConfig()
 
-  return async (id: string, client?: API): Promise<JobActionResponse> => {
-    const result = await Fetchers.createRqJobsCancelCreate(id, client)
+  return async (id: string, data: JobListRequest, client?: API): Promise<JobActionResponse> => {
+    const result = await Fetchers.createRqJobsCancelCreate(id, data, client)
     // Revalidate related queries
     mutate('cfg-rq-jobs-cancel')
     return result
@@ -95,8 +97,8 @@ export function useCreateRqJobsCancelCreate() {
 export function useCreateRqJobsRequeueCreate() {
   const { mutate } = useSWRConfig()
 
-  return async (id: string, client?: API): Promise<JobActionResponse> => {
-    const result = await Fetchers.createRqJobsRequeueCreate(id, client)
+  return async (id: string, data: JobListRequest, client?: API): Promise<JobActionResponse> => {
+    const result = await Fetchers.createRqJobsRequeueCreate(id, data, client)
     // Revalidate related queries
     mutate('cfg-rq-jobs-requeue')
     return result

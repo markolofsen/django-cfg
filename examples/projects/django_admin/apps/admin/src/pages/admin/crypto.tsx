@@ -1,10 +1,14 @@
-import type { ReactElement } from 'react';
-import { CryptoView } from "@/views";
-import { PageWithConfig } from "@/types";
-import { CryptoProvider } from "@/contexts";
-import { AdminLayout } from '@/layouts/AdminLayout';
+/**
+ * Cryptocurrency Page
+ * Path: /admin/crypto
+ */
 
-const Page: PageWithConfig = () => {
+import { PageWithConfig } from '@/types';
+import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { CryptoView } from '@/views';
+import { CryptoProvider } from "@/contexts";
+
+const View: PageWithConfig = () => {
   return (
     <CryptoProvider>
       <CryptoView />
@@ -12,12 +16,11 @@ const Page: PageWithConfig = () => {
   );
 };
 
-Page.pageConfig = {
+View.pageConfig = {
   title: 'Cryptocurrency',
+  description: 'Manage cryptocurrency data and wallets',
 };
 
-Page.getLayout = (page: ReactElement) => {
-  return <AdminLayout>{page}</AdminLayout>;
-};
+View.getLayout = DashboardLayout;
 
-export default Page;
+export default View;

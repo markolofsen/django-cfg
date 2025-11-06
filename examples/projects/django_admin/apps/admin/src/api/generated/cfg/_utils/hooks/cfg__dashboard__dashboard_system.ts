@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__dashboard__dashboard_system'
 import type { API } from '../../index'
 import type { SystemHealth } from '../schemas/SystemHealth.schema'

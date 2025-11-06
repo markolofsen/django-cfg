@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { PaginatedScheduledJobListSchema, type PaginatedScheduledJobList } from '../schemas/PaginatedScheduledJobList.schema'
 import { ScheduleActionResponseSchema, type ScheduleActionResponse } from '../schemas/ScheduleActionResponse.schema'
 import { ScheduleCreateRequestSchema, type ScheduleCreateRequest } from '../schemas/ScheduleCreateRequest.schema'
 import { ScheduledJobSchema, type ScheduledJob } from '../schemas/ScheduledJob.schema'
@@ -40,11 +41,11 @@ import { getAPIInstance } from '../../api-instance'
  * @method GET
  * @path /cfg/rq/schedules/
  */
-export async function getRqSchedulesList(  params?: { queue?: string },  client?: any
-): Promise<any> {
+export async function getRqSchedulesList(  params?: { page?: number; page_size?: number; queue?: string },  client?: any
+): Promise<PaginatedScheduledJobList> {
   const api = client || getAPIInstance()
-  const response = await api.cfg_rq_schedules.list(params?.queue)
-  return response
+  const response = await api.cfg_rq_schedules.list(params?.page, params?.page_size, params?.queue)
+  return PaginatedScheduledJobListSchema.parse(response)
 }
 
 

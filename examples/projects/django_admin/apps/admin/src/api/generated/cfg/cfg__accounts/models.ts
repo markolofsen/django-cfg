@@ -96,5 +96,22 @@ export interface User {
   last_login: string | null;
   /** Get count of unanswered messages for the user. */
   unanswered_messages_count: number;
+  centrifugo: Record<string, any> | null;
+}
+
+/**
+ * Nested serializer for Centrifugo WebSocket connection token.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface CentrifugoToken {
+  /** JWT token for Centrifugo WebSocket connection */
+  token: string;
+  /** Centrifugo WebSocket URL */
+  centrifugo_url: string;
+  /** Token expiration time (ISO 8601) */
+  expires_at: string;
+  /** List of allowed channels for this user */
+  channels: Array<string>;
 }
 

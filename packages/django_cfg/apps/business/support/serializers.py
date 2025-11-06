@@ -8,13 +8,14 @@ from .models import Message, Ticket
 User = get_user_model()
 
 class SenderSerializer(serializers.ModelSerializer):
-    avatar = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField(allow_null=True)
     initials = serializers.ReadOnlyField()
 
     class Meta:
         model = User
         fields = ['id', 'display_username', 'email', 'avatar', 'initials', 'is_staff', 'is_superuser']
-        read_only_fields = fields
+        # Don't include avatar in read_only_fields to make it optional in OpenAPI schema
+        read_only_fields = ['id', 'display_username', 'email', 'initials', 'is_staff', 'is_superuser']
 
     def get_avatar(self, obj) -> Optional[str]:
         if obj.avatar:

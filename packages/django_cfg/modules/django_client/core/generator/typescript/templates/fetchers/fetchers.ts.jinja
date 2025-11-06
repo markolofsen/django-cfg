@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 {% if has_schemas %}
 {% for schema_name in schema_names %}
 import { {{ schema_name }}Schema, type {{ schema_name }} } from '../schemas/{{ schema_name }}.schema'

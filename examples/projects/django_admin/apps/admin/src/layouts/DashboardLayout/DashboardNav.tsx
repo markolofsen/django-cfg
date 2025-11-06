@@ -1,0 +1,98 @@
+/**
+ * DashboardNav Component
+ *
+ * Navigation tabs for dashboard pages
+ * - Desktop: Full-width flex tabs with equal spacing
+ * - Mobile: Auto-converts to Sheet menu with burger button
+ *
+ * Features:
+ * - Dynamic tab visibility based on user permissions (superuser)
+ * - Dynamic tab visibility based on Django config (gRPC, Centrifugo, RQ)
+ * - Auto-detection of active tab from URL
+ * - Responsive mobile/desktop switching via Tabs component
+ */
+
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { Tabs, TabsList, TabsTrigger } from '@djangocfg/ui';
+import { useAuth } from '@djangocfg/layouts';
+import { admin } from '@/core/routes';
+import { useDashboardOverviewContext } from '@/contexts/dashboard';
+
+export function DashboardNav() {
+  const router = useRouter();
+  const pathname = router.pathname;
+  const { user } = useAuth();
+  const isSuperuser = user?.is_superuser ?? false;
+  const { djangoConfig } = useDashboardOverviewContext();
+
+  // Get all dashboard routes and filter by permissions and config
+  const navItems = admin.routes.allRoutes.filter((route) => {
+    // Filter out commands if not superuser
+    if (route.path === admin.routes.commands.path && !isSuperuser) {
+      return false;
+    }
+
+    // Filter tabs based on Django config
+    if (djangoConfig) {
+      // Hide gRPC tab if gRPC is not enabled
+      if (route.path === admin.routes.grpc.path && !djangoConfig.grpc?.enabled) {
+        return false;
+      }
+
+      // Hide Centrifugo tab if Centrifugo is not enabled
+      if (route.path === admin.routes.centrifugo.path && !djangoConfig.centrifugo?.enabled) {
+        return false;
+      }
+
+      // Hide RQ tab if Django-RQ is not enabled
+      if (route.path === admin.routes.rq.path && !djangoConfig.django_rq?.enabled) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Helper to check if route is active
+  const isRouteActive = (routePath: string) => {
+    return pathname === routePath ||
+      (routePath !== '/admin' && pathname.startsWith(routePath));
+  };
+
+  // Find active tab
+  const activeTab = navItems.find((route) => isRouteActive(route.path))?.path ||
+    navItems[0]?.path ||
+    '/admin';
+
+  return (
+    <Tabs
+      value={activeTab}
+      mobileSheet
+      mobileTitleText="Dashboard"
+      mobileSheetTitle="Dashboard Navigation"
+      sticky
+    >
+      <TabsList fullWidth scrollable>
+        {navItems.map((route) => {
+          const Icon = route.metadata.icon;
+
+          return (
+            <TabsTrigger
+              key={route.path}
+              value={route.path}
+              flexEqual
+              className="gap-2"
+              asChild
+            >
+              <Link href={route.path}>
+                {Icon && <Icon className="h-4 w-4" />}
+                <span>{route.metadata.label}</span>
+              </Link>
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+    </Tabs>
+  );
+}

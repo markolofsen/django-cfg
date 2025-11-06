@@ -160,7 +160,7 @@ export interface Wallet {
   id: number;
   user: number;
   coin: number;
-  coin_info: Record<string, any>;
+  coin_info: CoinList;
   /** Available balance */
   balance?: string;
   /** Locked balance (in orders) */

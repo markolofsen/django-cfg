@@ -5,6 +5,7 @@
  *  * Serializer for user details.
  *  */
 import { z } from 'zod'
+import { CentrifugoTokenSchema } from './CentrifugoToken.schema'
 
 /**
  * Serializer for user details.
@@ -26,6 +27,7 @@ export const UserSchema = z.object({
   date_joined: z.iso.datetime(),
   last_login: z.iso.datetime().nullable(),
   unanswered_messages_count: z.int(),
+  centrifugo: CentrifugoTokenSchema.nullable(),
 })
 
 /**

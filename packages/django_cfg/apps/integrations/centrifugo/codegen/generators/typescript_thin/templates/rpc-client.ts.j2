@@ -39,6 +39,27 @@ export class CentrifugoRPCClient {
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      let resolved = false;
+
+      // Listen to Centrifuge connection events
+      const onConnected = () => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      };
+
+      const onError = (ctx: any) => {
+        if (!resolved) {
+          resolved = true;
+          reject(new Error(ctx.message || 'Connection error'));
+        }
+      };
+
+      this.centrifuge.on('connected', onConnected);
+      this.centrifuge.on('error', onError);
+
+      // Start connection
       this.centrifuge.connect();
 
       // Subscribe to reply channel
@@ -49,11 +70,17 @@ export class CentrifugoRPCClient {
       });
 
       this.subscription.on('subscribed', () => {
-        resolve();
+        // Subscription successful (optional, we already resolved on 'connected')
       });
 
       this.subscription.on('error', (ctx: any) => {
-        reject(new Error(ctx.error?.message || 'Subscription error'));
+        // Error code 105 = "already subscribed" (server-side subscription from JWT)
+        // This is not an error - the channel is already active via server-side subscription
+        if (ctx.error?.code === 105) {
+          // This is fine, server-side subscription exists
+        } else {
+          console.error(`Subscription error for ${this.replyChannel}:`, ctx.error);
+        }
       });
 
       this.subscription.subscribe();

@@ -15,14 +15,12 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__grpc__grpc_monitoring'
 import type { API } from '../../index'
-import type { HealthCheck } from '../schemas/HealthCheck.schema'
+import type { GRPCHealthCheck } from '../schemas/GRPCHealthCheck.schema'
+import type { GRPCOverviewStats } from '../schemas/GRPCOverviewStats.schema'
 import type { MethodList } from '../schemas/MethodList.schema'
-import type { OverviewStats } from '../schemas/OverviewStats.schema'
-import type { RecentRequests } from '../schemas/RecentRequests.schema'
-import type { ServiceList } from '../schemas/ServiceList.schema'
+import type { PaginatedRecentRequestList } from '../schemas/PaginatedRecentRequestList.schema'
 
 /**
  * Get gRPC health status
@@ -30,8 +28,8 @@ import type { ServiceList } from '../schemas/ServiceList.schema'
  * @method GET
  * @path /cfg/grpc/monitor/health/
  */
-export function useGrpcMonitorHealthRetrieve(client?: API): ReturnType<typeof useSWR<HealthCheck>> {
-  return useSWR<HealthCheck>(
+export function useGrpcMonitorHealthRetrieve(client?: API): ReturnType<typeof useSWR<GRPCHealthCheck>> {
+  return useSWR<GRPCHealthCheck>(
     'cfg-grpc-monitor-health',
     () => Fetchers.getGrpcMonitorHealthRetrieve(client)
   )
@@ -58,8 +56,8 @@ export function useGrpcMonitorMethodsRetrieve(params?: { hours?: number; service
  * @method GET
  * @path /cfg/grpc/monitor/overview/
  */
-export function useGrpcMonitorOverviewRetrieve(params?: { hours?: number }, client?: API): ReturnType<typeof useSWR<OverviewStats>> {
-  return useSWR<OverviewStats>(
+export function useGrpcMonitorOverviewRetrieve(params?: { hours?: number }, client?: API): ReturnType<typeof useSWR<GRPCOverviewStats>> {
+  return useSWR<GRPCOverviewStats>(
     params ? ['cfg-grpc-monitor-overview', params] : 'cfg-grpc-monitor-overview',
     () => Fetchers.getGrpcMonitorOverviewRetrieve(params, client)
   )
@@ -72,24 +70,10 @@ export function useGrpcMonitorOverviewRetrieve(params?: { hours?: number }, clie
  * @method GET
  * @path /cfg/grpc/monitor/requests/
  */
-export function useGrpcMonitorRequestsRetrieve(params?: { count?: number; method?: string; offset?: number; service?: string; status?: string }, client?: API): ReturnType<typeof useSWR<RecentRequests>> {
-  return useSWR<RecentRequests>(
-    params ? ['cfg-grpc-monitor-request', params] : 'cfg-grpc-monitor-request',
-    () => Fetchers.getGrpcMonitorRequestsRetrieve(params, client)
-  )
-}
-
-
-/**
- * Get service statistics
- *
- * @method GET
- * @path /cfg/grpc/monitor/services/
- */
-export function useGrpcMonitorServicesRetrieve(params?: { hours?: number }, client?: API): ReturnType<typeof useSWR<ServiceList>> {
-  return useSWR<ServiceList>(
-    params ? ['cfg-grpc-monitor-service', params] : 'cfg-grpc-monitor-service',
-    () => Fetchers.getGrpcMonitorServicesRetrieve(params, client)
+export function useGrpcMonitorRequestsList(params?: { method?: string; page?: number; page_size?: number; service?: string; status?: string }, client?: API): ReturnType<typeof useSWR<PaginatedRecentRequestList>> {
+  return useSWR<PaginatedRecentRequestList>(
+    params ? ['cfg-grpc-monitor-requests', params] : 'cfg-grpc-monitor-requests',
+    () => Fetchers.getGrpcMonitorRequestsList(params, client)
   )
 }
 

@@ -15,7 +15,6 @@
  * ```
  */
 import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
 import * as Fetchers from '../fetchers/cfg__endpoints'
 import type { API } from '../../index'
 import type { EndpointsStatus } from '../schemas/EndpointsStatus.schema'
