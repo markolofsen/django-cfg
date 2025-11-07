@@ -586,6 +586,14 @@ class Command(AdminCommand):
 
             self.stdout.write(f"\n📦 Copying TypeScript clients to Next.js admin...")
 
+            # Clean api_output_path before copying (remove old generated files)
+            if api_output_path.exists():
+                self.stdout.write(f"  🧹 Cleaning API output directory: {api_output_path.relative_to(project_path)}")
+                shutil.rmtree(api_output_path)
+
+            # Recreate directory
+            api_output_path.mkdir(parents=True, exist_ok=True)
+
             # Copy each group (exclude 'cfg' for Next.js admin)
             copied_count = 0
             for group_dir in ts_source.iterdir():
@@ -601,11 +609,7 @@ class Command(AdminCommand):
 
                 target_dir = api_output_path / group_name
 
-                # Remove old
-                if target_dir.exists():
-                    shutil.rmtree(target_dir)
-
-                # Copy new
+                # Copy group directory
                 shutil.copytree(group_dir, target_dir)
                 copied_count += 1
 
