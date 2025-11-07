@@ -10,9 +10,9 @@ from django.db import models
 from django.db.models import Count
 from django_cfg.modules.django_logging import get_logger
 
-from ..models import GRPCRequestLog
-from ..testing import get_example
-from .service_registry import ServiceRegistryManager
+from ...models import GRPCRequestLog
+from ...testing import get_example
+from ..discovery.registry import ServiceRegistryManager
 
 logger = get_logger("grpc.testing_service")
 
@@ -197,8 +197,8 @@ class TestingService:
         import grpc
         from time import time
 
-        from .grpc_client import DynamicGRPCClient
-        from .config_helper import get_grpc_server_config
+        from ..client.client import DynamicGRPCClient
+        from ..management.config_helper import get_grpc_server_config
 
         # Get gRPC server config
         grpc_config = get_grpc_server_config()

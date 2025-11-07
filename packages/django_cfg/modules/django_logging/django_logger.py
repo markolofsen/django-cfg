@@ -65,6 +65,32 @@ class DjangoLogger(BaseCfgModule):
 
     _loggers: Dict[str, logging.Logger] = {}
     _configured = False
+    _debug_mode: Optional[bool] = None  # Cached debug mode to avoid repeated config loads
+
+    @classmethod
+    def _get_debug_mode(cls) -> bool:
+        """
+        Get debug mode from config (cached).
+
+        Loads config only once and caches the result to avoid repeated config loads.
+        This is a performance optimization - config loading can be expensive.
+
+        Returns:
+            True if debug mode is enabled, False otherwise
+        """
+        if cls._debug_mode is not None:
+            return cls._debug_mode
+
+        # Load config once and cache
+        try:
+            from django_cfg.core.state import get_current_config
+            config = get_current_config()
+            cls._debug_mode = config.debug if config and hasattr(config, 'debug') else False
+        except Exception:
+            import os
+            cls._debug_mode = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
+
+        return cls._debug_mode
 
     @classmethod
     def get_logger(cls, name: str = "django_cfg") -> logging.Logger:
@@ -92,13 +118,8 @@ class DjangoLogger(BaseCfgModule):
         # print(f"  Django logs: {logs_dir / 'django.log'}")
         # print(f"  Django-CFG logs: {djangocfg_logs_dir}/")
 
-        # Get debug mode
-        try:
-            from django_cfg.core.state import get_current_config
-            config = get_current_config()
-            debug = config.debug if config else False
-        except Exception:
-            debug = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
+        # Get debug mode (cached - loaded once)
+        debug = cls._get_debug_mode()
 
         # Create handlers
         try:
@@ -111,9 +132,13 @@ class DjangoLogger(BaseCfgModule):
                 backupCount=30,  # Keep 30 days of logs
                 encoding='utf-8',
             )
-            django_handler.setLevel(logging.DEBUG if debug else logging.INFO)  # INFO+ in production, DEBUG in dev
+            # File handlers ALWAYS capture DEBUG in dev mode (for complete debugging history)
+            # In production, still use INFO+ to save disk space
+            django_handler.setLevel(logging.DEBUG if debug else logging.INFO)
 
-            # Console handler - WARNING+ always (less noise)
+            # Console handler - configurable noise level
+            # In dev: show DEBUG+ (full visibility)
+            # In production: show WARNING+ only (reduce noise)
             console_handler = logging.StreamHandler()
             console_handler.setLevel(logging.DEBUG if debug else logging.WARNING)
 
@@ -123,8 +148,10 @@ class DjangoLogger(BaseCfgModule):
             console_handler.setFormatter(formatter)
 
             # Configure root logger
+            # CRITICAL: Root logger must be DEBUG in dev mode to allow all messages through
+            # Handlers will filter based on their own levels, but logger must not block
             root_logger = logging.getLogger()
-            root_logger.setLevel(logging.DEBUG if debug else logging.INFO)  # INFO+ in production, DEBUG in dev
+            root_logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
             # Clear existing handlers
             root_logger.handlers.clear()
@@ -149,8 +176,23 @@ class DjangoLogger(BaseCfgModule):
 
     @classmethod
     def _create_logger(cls, name: str) -> logging.Logger:
-        """Create logger with modular file handling for django-cfg loggers."""
+        """
+        Create logger with modular file handling for django-cfg loggers.
+
+        In dev/debug mode, loggers inherit DEBUG level from root logger,
+        ensuring all log messages reach file handlers regardless of explicit level settings.
+        """
         logger = logging.getLogger(name)
+
+        # In dev mode, ensure logger doesn't block DEBUG messages
+        # Logger inherits from root by default (propagate=True), which is set to DEBUG in dev
+        # This is crucial: logger level must be <= handler level, or messages get blocked
+        debug = cls._get_debug_mode()  # Use cached debug mode
+
+        # In dev mode, force DEBUG level on logger to ensure complete file logging
+        # Handlers will still filter console output (WARNING+), but files get everything (DEBUG+)
+        if debug and not logger.level:
+            logger.setLevel(logging.DEBUG)
 
         # If this is a django-cfg logger, add a specific file handler
         if name.startswith('django_cfg'):
@@ -181,15 +223,12 @@ class DjangoLogger(BaseCfgModule):
                     encoding='utf-8',
                 )
 
-                # Get debug mode
-                try:
-                    from django_cfg.core.state import get_current_config
-                    config = get_current_config()
-                    debug = config.debug if config else False
-                except Exception:
-                    debug = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
+                # Get debug mode (cached - loaded once)
+                debug = cls._get_debug_mode()
 
-                file_handler.setLevel(logging.DEBUG if debug else logging.INFO)  # INFO+ in production, DEBUG in dev
+                # Module file handlers ALWAYS capture DEBUG in dev mode
+                # This ensures complete log history for debugging, independent of logger level
+                file_handler.setLevel(logging.DEBUG if debug else logging.INFO)
 
                 # Set format
                 formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s')

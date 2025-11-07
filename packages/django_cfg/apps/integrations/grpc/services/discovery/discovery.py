@@ -11,7 +11,7 @@ from django.apps import apps
 
 from django_cfg.modules.django_logging import get_logger
 
-from .config_helper import get_enabled_apps, get_grpc_config
+from ..management.config_helper import get_enabled_apps, get_grpc_config
 
 logger = get_logger("grpc.discovery")
 

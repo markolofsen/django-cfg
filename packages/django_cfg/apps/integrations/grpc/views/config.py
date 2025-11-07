@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from ..models import GRPCRequestLog, GRPCServerStatus
 from ..serializers.config import GRPCConfigSerializer, GRPCServerInfoSerializer
 from ..services import ServiceDiscovery
-from ..services.config_helper import get_grpc_config, get_grpc_server_config
+from ..services.management.config_helper import get_grpc_config, get_grpc_server_config
 
 logger = get_logger("grpc.config")
 

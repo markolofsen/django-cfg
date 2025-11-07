@@ -221,6 +221,17 @@ class DjangoConfig(BaseModel):
         description="Database connections",
     )
 
+    enable_pool_cleanup: bool = Field(
+        default=False,
+        description=(
+            "Enable explicit connection pool cleanup middleware. "
+            "Django already closes connections automatically, but this middleware "
+            "adds explicit guarantees and rollback on errors. "
+            "Enable only if you experience connection leaks. "
+            "Note: Not needed with ATOMIC_REQUESTS=True (default)."
+        ),
+    )
+
     # === Cache Configuration ===
     # Redis URL - used for automatic cache configuration if cache_default is not set
     redis_url: Optional[str] = Field(

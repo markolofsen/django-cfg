@@ -50,7 +50,7 @@ class Command(AdminCommand):
 
     def handle(self, *args, **options):
         from django_cfg.apps.integrations.grpc.utils.proto_gen import generate_proto_for_app
-        from django_cfg.apps.integrations.grpc.services.config_helper import get_grpc_config
+        from django_cfg.apps.integrations.grpc.services.management.config_helper import get_grpc_config
 
         # Get gRPC config
         grpc_config = get_grpc_config()

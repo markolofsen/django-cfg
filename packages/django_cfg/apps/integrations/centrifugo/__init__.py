@@ -23,6 +23,7 @@ Example:
 """
 
 from .services.client.client import CentrifugoClient, get_centrifugo_client, PublishResponse
+from .services.client.direct_client import DirectCentrifugoClient
 from .services.client.config import DjangoCfgCentrifugoConfig
 from .services.client.exceptions import (
     CentrifugoBaseException,
@@ -42,6 +43,7 @@ __all__ = [
     "DjangoCfgCentrifugoConfig",
     # Client
     "CentrifugoClient",
+    "DirectCentrifugoClient",
     "get_centrifugo_client",
     "PublishResponse",
     # Logging

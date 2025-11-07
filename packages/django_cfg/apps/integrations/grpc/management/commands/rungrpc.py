@@ -237,7 +237,7 @@ class Command(BaseCommand):
 
         # Import models here to avoid AppRegistryNotReady
         from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
-        from django_cfg.apps.integrations.grpc.services.config_helper import (
+        from django_cfg.apps.integrations.grpc.services.management.config_helper import (
             get_grpc_server_config,
         )
 
@@ -332,8 +332,7 @@ class Command(BaseCommand):
                 discovery.get_registered_services
             )
 
-            server_status = await asyncio.to_thread(
-                GRPCServerStatus.objects.start_server,
+            server_status = await GRPCServerStatus.objects.astart_server(
                 host=host,
                 port=port,
                 pid=os.getpid(),
@@ -344,8 +343,7 @@ class Command(BaseCommand):
 
             # Store registered services in database
             server_status.registered_services = services_metadata
-            await asyncio.to_thread(
-                server_status.save,
+            await server_status.asave(
                 update_fields=["registered_services"]
             )
 
@@ -361,7 +359,7 @@ class Command(BaseCommand):
         # Mark server as running
         if server_status:
             try:
-                await asyncio.to_thread(server_status.mark_running)
+                await server_status.amark_running()
             except Exception as e:
                 self.logger.warning(f"Could not mark server as running: {e}")
 
@@ -425,7 +423,7 @@ class Command(BaseCommand):
         if options.get("test"):
             self.streaming_logger.info("🧪 Sending test Centrifugo event...")
             try:
-                from django_cfg.apps.integrations.grpc.centrifugo.demo import send_demo_event
+                from django_cfg.apps.integrations.grpc.services.centrifugo.demo import send_demo_event
 
                 test_result = await send_demo_event(
                     channel="grpc#rungrpc#startup#test",
@@ -690,7 +688,6 @@ class Command(BaseCommand):
             interval: Heartbeat interval in seconds (default: 30)
         """
         from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
-        from asgiref.sync import sync_to_async
 
         try:
             while True:
@@ -701,12 +698,10 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    # Check if record still exists
-                    record_exists = await sync_to_async(
-                        GRPCServerStatus.objects.filter(
-                            id=self.server_status.id
-                        ).exists
-                    )()
+                    # Check if record still exists (Django 5.2: Native async ORM)
+                    record_exists = await GRPCServerStatus.objects.filter(
+                        id=self.server_status.id
+                    ).aexists()
 
                     if not record_exists:
                         # Record was deleted - re-register server
@@ -722,21 +717,19 @@ class Command(BaseCommand):
                             discovery.get_registered_services
                         )
 
-                        # Re-register server
-                        new_server_status = await asyncio.to_thread(
-                            GRPCServerStatus.objects.start_server,
+                        # Re-register server (Django 5.2: Native async ORM)
+                        new_server_status = await GRPCServerStatus.objects.astart_server(
                             **self.server_config
                         )
 
                         # Store registered services
                         new_server_status.registered_services = services_metadata
-                        await asyncio.to_thread(
-                            new_server_status.save,
+                        await new_server_status.asave(
                             update_fields=["registered_services"]
                         )
 
-                        # Mark as running
-                        await asyncio.to_thread(new_server_status.mark_running)
+                        # Mark as running (Django 5.2: Native async ORM)
+                        await new_server_status.amark_running()
 
                         # Update reference
                         self.server_status = new_server_status
@@ -745,8 +738,8 @@ class Command(BaseCommand):
                             f"✅ Successfully re-registered server (ID: {new_server_status.id})"
                         )
                     else:
-                        # Record exists - just update heartbeat
-                        await asyncio.to_thread(self.server_status.mark_running)
+                        # Record exists - just update heartbeat (Django 5.2: Native async ORM)
+                        await self.server_status.amark_running()
                         self.logger.debug(f"Heartbeat updated (interval: {interval}s)")
 
                 except Exception as e:
@@ -785,17 +778,10 @@ class Command(BaseCommand):
 
             self.stdout.write("\n🛑 Shutting down gracefully...")
 
-            # Mark server as stopping
+            # Mark server as stopping (sync context - signal handlers are sync)
             if server_status:
                 try:
-                    import django
-                    if django.VERSION >= (3, 0):
-                        from asgiref.sync import sync_to_async
-                        # Run in sync context
-                        try:
-                            server_status.mark_stopping()
-                        except:
-                            pass
+                    server_status.mark_stopping()
                 except Exception as e:
                     self.logger.warning(f"Could not mark server as stopping: {e}")
 
@@ -807,12 +793,11 @@ class Command(BaseCommand):
             except Exception as e:
                 self.logger.error(f"Error stopping server: {e}")
 
-            # Mark server as stopped (async-safe)
+            # Mark server as stopped (async-safe, Django 5.2: Native async ORM)
             if server_status:
                 try:
-                    from asgiref.sync import sync_to_async
-                    # Wrap sync DB operation in sync_to_async
-                    asyncio.create_task(sync_to_async(server_status.mark_stopped)())
+                    # Use native async method
+                    asyncio.create_task(server_status.amark_stopped())
                 except Exception as e:
                     self.logger.warning(f"Could not mark server as stopped: {e}")
 

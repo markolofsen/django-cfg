@@ -401,6 +401,53 @@ class CentrifugoLogger:
             )
 
     @staticmethod
+    async def mark_failed_async(
+        log_entry: Any,
+        error_code: str,
+        error_message: str,
+        duration_ms: int | None = None,
+    ) -> None:
+        """
+        Mark publish operation as failed (async version).
+
+        Args:
+            log_entry: CentrifugoLog instance
+            error_code: Error code
+            error_message: Error message
+            duration_ms: Duration in milliseconds
+        """
+        if log_entry is None:
+            return
+
+        try:
+            from asgiref.sync import sync_to_async
+            from ..models import CentrifugoLog
+
+            await sync_to_async(CentrifugoLog.objects.mark_failed)(
+                log_instance=log_entry,
+                error_code=error_code,
+                error_message=error_message,
+                duration_ms=duration_ms,
+            )
+
+            logger.error(
+                f"Centrifugo publish failed: {log_entry.message_id}",
+                extra={
+                    "message_id": log_entry.message_id,
+                    "channel": log_entry.channel,
+                    "error_code": error_code,
+                    "error_message": error_message,
+                    "duration_ms": duration_ms,
+                },
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to mark Centrifugo log as failed: {e}",
+                extra={"message_id": getattr(log_entry, "message_id", "unknown")},
+            )
+
+    @staticmethod
     async def mark_timeout_async(
         log_entry: Any,
         acks_received: int = 0,

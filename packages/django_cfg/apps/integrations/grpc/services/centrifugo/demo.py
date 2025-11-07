@@ -31,7 +31,7 @@ from rich.table import Table
 
 from .bridge import CentrifugoBridgeMixin
 from .config import ChannelConfig, CentrifugoChannels
-from ..utils.streaming_logger import setup_streaming_logger
+from ...utils.streaming_logger import setup_streaming_logger
 
 # Setup logger with Rich support
 logger = setup_streaming_logger(

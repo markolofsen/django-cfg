@@ -184,10 +184,16 @@ class GrpcApiKey(models.Model):
         return f"{self.key[:4]}...{self.key[-4:]}"
 
     def mark_used(self) -> None:
-        """Mark this key as used (update last_used_at and increment counter)."""
+        """Mark this key as used (update last_used_at and increment counter) (SYNC)."""
         self.last_used_at = timezone.now()
         self.request_count += 1
         self.save(update_fields=["last_used_at", "request_count"])
+
+    async def amark_used(self) -> None:
+        """Mark this key as used (update last_used_at and increment counter) (ASYNC - Django 5.2)."""
+        self.last_used_at = timezone.now()
+        self.request_count += 1
+        await self.asave(update_fields=["last_used_at", "request_count"])
 
     def revoke(self) -> None:
         """Revoke this key (set is_active=False)."""

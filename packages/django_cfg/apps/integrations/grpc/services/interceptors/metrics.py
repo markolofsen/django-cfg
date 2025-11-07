@@ -109,7 +109,7 @@ def get_metrics(method: str = None) -> dict:
 
     Example:
         ```python
-        from django_cfg.apps.integrations.grpc.interceptors.metrics import get_metrics
+        from django_cfg.apps.integrations.grpc.services.interceptors.metrics import get_metrics
 
         # Get all metrics
         all_stats = get_metrics()
@@ -129,7 +129,7 @@ def reset_metrics():
 
     Example:
         ```python
-        from django_cfg.apps.integrations.grpc.interceptors.metrics import reset_metrics
+        from django_cfg.apps.integrations.grpc.services.interceptors.metrics import reset_metrics
         reset_metrics()
         ```
     """
@@ -159,7 +159,7 @@ class MetricsInterceptor(grpc.aio.ServerInterceptor):
 
     Access Metrics:
         ```python
-        from django_cfg.apps.integrations.grpc.interceptors.metrics import get_metrics
+        from django_cfg.apps.integrations.grpc.services.interceptors.metrics import get_metrics
 
         stats = get_metrics()
         print(f"Total requests: {stats['total_requests']}")

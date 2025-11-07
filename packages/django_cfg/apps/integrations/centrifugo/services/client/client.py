@@ -396,7 +396,7 @@ class CentrifugoClient:
 
                 error_code = type(last_error).__name__ if last_error else "unknown"
                 error_message = str(last_error) if last_error else "Unknown error"
-                CentrifugoLogger.mark_failed(
+                await CentrifugoLogger.mark_failed_async(
                     log_entry,
                     error_code=error_code,
                     error_message=error_message,

@@ -66,6 +66,11 @@ class MiddlewareBuilder:
         # Add custom user middleware
         middleware.extend(self.config.custom_middleware)
 
+        # Add connection pool cleanup middleware LAST (if enabled)
+        # This ensures connections are returned to pool after ALL other middleware
+        if self.config.enable_pool_cleanup:
+            middleware.append('django_cfg.middleware.pool_cleanup.ConnectionPoolCleanupMiddleware')
+
         return middleware
 
     def _get_feature_middleware(self) -> List[str]:

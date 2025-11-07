@@ -35,8 +35,13 @@ services:
     container_name: djangocfg_centrifugo
     restart: unless-stopped
     entrypoint: ["/docker-entrypoint.sh"]
-    env_file:
-      - .env.local
+    environment:
+      # Only Centrifugo-specific variables (no CENTRIFUGO__ prefixed vars)
+      CENTRIFUGO_API_KEY: centrifugo-api-key-change-in-production-min-32-chars
+      CENTRIFUGO_TOKEN_HMAC_SECRET: django-secret-key-change-in-production-at-least-32-chars
+      CENTRIFUGO_ADMIN_PASSWORD: admin
+      CENTRIFUGO_ADMIN_SECRET: admin-secret-change-in-production
+      CENTRIFUGO_LOG_LEVEL: info
     volumes:
       - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
       - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro

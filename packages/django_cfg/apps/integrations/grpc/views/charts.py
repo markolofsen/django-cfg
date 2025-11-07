@@ -22,7 +22,7 @@ from ..serializers.charts import (
     ServerUptimeChartSerializer,
     ServiceActivityChartSerializer,
 )
-from ..services.chart_generator import ChartGeneratorService
+from ..services.rendering.charts import ChartGeneratorService
 
 logger = get_logger("grpc.charts")
 

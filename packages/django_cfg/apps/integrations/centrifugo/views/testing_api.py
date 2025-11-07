@@ -5,7 +5,6 @@ Provides endpoints for live testing of Centrifugo integration from dashboard.
 Includes connection tokens, publish proxying, and ACK management.
 """
 
-import asyncio
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict
@@ -127,23 +126,21 @@ class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="publish-test")
-    def publish_test(self, request):
+    async def publish_test(self, request):
         """
-        Publish test message via wrapper.
+        Publish test message via wrapper (ASYNC).
 
         Proxies request to Centrifugo wrapper with ACK tracking support.
         """
         try:
             req_data = PublishTestRequest(**request.data)
 
-            # Call wrapper API
-            result = asyncio.run(
-                self._publish_to_wrapper(
-                    channel=req_data.channel,
-                    data=req_data.data,
-                    wait_for_ack=req_data.wait_for_ack,
-                    ack_timeout=req_data.ack_timeout,
-                )
+            # Call wrapper API (ASYNC - no asyncio.run()!)
+            result = await self._publish_to_wrapper(
+                channel=req_data.channel,
+                data=req_data.data,
+                wait_for_ack=req_data.wait_for_ack,
+                ack_timeout=req_data.ack_timeout,
             )
 
             response = PublishTestResponse(
@@ -180,20 +177,18 @@ class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="send-ack")
-    def send_ack(self, request):
+    async def send_ack(self, request):
         """
-        Send manual ACK for message.
+        Send manual ACK for message (ASYNC).
 
         Proxies ACK to wrapper for testing ACK flow.
         """
         try:
             req_data = ManualAckRequest(**request.data)
 
-            # Send ACK to wrapper
-            result = asyncio.run(
-                self._send_ack_to_wrapper(
-                    message_id=req_data.message_id, client_id=req_data.client_id
-                )
+            # Send ACK to wrapper (ASYNC - no asyncio.run()!)
+            result = await self._send_ack_to_wrapper(
+                message_id=req_data.message_id, client_id=req_data.client_id
             )
 
             response = ManualAckResponse(
@@ -334,9 +329,9 @@ class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="publish-with-logging")
-    def publish_with_logging(self, request):
+    async def publish_with_logging(self, request):
         """
-        Publish message using CentrifugoClient with database logging.
+        Publish message using CentrifugoClient with database logging (ASYNC).
 
         This endpoint uses the production CentrifugoClient which logs all
         publishes to the database (CentrifugoLog model).
@@ -347,25 +342,24 @@ class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
             # Use CentrifugoClient for publishing
             client = CentrifugoClient()
 
-            # Publish message
-            result = asyncio.run(
-                client.publish_with_ack(
+            # Publish message (ASYNC - no asyncio.run()!)
+            if req_data.wait_for_ack:
+                result = await client.publish_with_ack(
                     channel=req_data.channel,
                     data=req_data.data,
-                    ack_timeout=req_data.ack_timeout if req_data.wait_for_ack else None,
+                    ack_timeout=req_data.ack_timeout,
                     user=request.user if request.user.is_authenticated else None,
                     caller_ip=request.META.get("REMOTE_ADDR"),
                     user_agent=request.META.get("HTTP_USER_AGENT"),
                 )
-                if req_data.wait_for_ack
-                else client.publish(
+            else:
+                result = await client.publish(
                     channel=req_data.channel,
                     data=req_data.data,
                     user=request.user if request.user.is_authenticated else None,
                     caller_ip=request.META.get("REMOTE_ADDR"),
                     user_agent=request.META.get("HTTP_USER_AGENT"),
                 )
-            )
 
             # Convert PublishResponse to dict
             response_data = {
@@ -386,17 +380,17 @@ class CentrifugoTestingAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    def __del__(self):
-        """Cleanup HTTP client on deletion."""
+    async def cleanup(self):
+        """
+        Explicit async cleanup method for HTTP client.
+
+        Note: Django handles ViewSet lifecycle automatically.
+        This method is provided for explicit cleanup if needed,
+        but httpx.AsyncClient will be garbage collected normally.
+        """
         if self._http_client:
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self._http_client.aclose())
-                else:
-                    loop.run_until_complete(self._http_client.aclose())
-            except Exception:
-                pass
+            await self._http_client.aclose()
+            self._http_client = None
 
 
 __all__ = ["CentrifugoTestingAPIViewSet"]

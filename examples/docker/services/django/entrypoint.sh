@@ -7,11 +7,14 @@ if [ -d "/app/.venv" ]; then
   rm -rf /app/.venv
 fi
 
-echo "Waiting for postgres..."
-while ! nc -z postgres 5432; do
+# Extract DB host from DATABASE__URL or use default
+DB_HOST="${DB_HOST:-$(echo $DATABASE__URL | sed -E 's/.*@([^:]+):.*/\1/' || echo 'postgres')}"
+
+echo "Waiting for postgres at ${DB_HOST}:5432..."
+while ! nc -z ${DB_HOST} 5432; do
   sleep 0.1
 done
-echo "PostgreSQL started"
+echo "PostgreSQL started at ${DB_HOST}:5432"
 
 echo "Waiting for redis..."
 while ! nc -z redis 6379; do
