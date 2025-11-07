@@ -5,12 +5,12 @@ Run this to test that events are being published to Centrifugo channels.
 
 Usage:
     # From Django shell:
-    >>> from django_cfg.apps.integrations.grpc.centrifugo.test_publish import run_test
+    >>> from django_cfg.apps.integrations.grpc.services.centrifugo.test_publish import run_test
     >>> await run_test()
 
     # Or from async context:
     >>> import asyncio
-    >>> from django_cfg.apps.integrations.grpc.centrifugo.test_publish import run_test
+    >>> from django_cfg.apps.integrations.grpc.services.centrifugo.test_publish import run_test
     >>> asyncio.run(run_test())
 """
 
@@ -72,7 +72,7 @@ async def run_test(verbose: bool = True):
     logger.info("\n📍 Step 2: Testing Interceptor-style publishing (RPC metadata)")
     logger.info("-" * 70)
     try:
-        from django_cfg.apps.integrations.grpc.centrifugo.demo import send_demo_event
+        from django_cfg.apps.integrations.grpc.services.centrifugo.demo import send_demo_event
 
         # Send 3 test events
         for i in range(1, 4):
@@ -100,7 +100,7 @@ async def run_test(verbose: bool = True):
     logger.info("\n📍 Step 3: Testing Mixin-style publishing (message data)")
     logger.info("-" * 70)
     try:
-        from django_cfg.apps.integrations.grpc.centrifugo.demo import test_demo_service
+        from django_cfg.apps.integrations.grpc.services.centrifugo.demo import test_demo_service
 
         stats = await test_demo_service(service_id='test-integration', count=3)
         results['mixin_test'] = stats

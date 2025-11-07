@@ -170,10 +170,11 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
             logger.debug("API key matches Django SECRET_KEY")
             # For SECRET_KEY, return first superuser or None (no api_key instance)
             try:
-                # Wrap Django ORM in asyncio.to_thread()
-                superuser = await asyncio.to_thread(
-                    lambda: User.objects.filter(is_superuser=True, is_active=True).first()
-                )
+                # Django 5.2: Native async ORM
+                superuser = await User.objects.filter(
+                    is_superuser=True, is_active=True
+                ).afirst()
+
                 if superuser:
                     return superuser, None
                 else:
@@ -187,14 +188,14 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
         try:
             from django_cfg.apps.integrations.grpc.models import GrpcApiKey
 
-            # Wrap Django ORM in asyncio.to_thread()
-            api_key_obj = await asyncio.to_thread(
-                lambda: GrpcApiKey.objects.filter(key=api_key, is_active=True).first()
-            )
+            # Django 5.2: Native async ORM
+            api_key_obj = await GrpcApiKey.objects.filter(
+                key=api_key, is_active=True
+            ).afirst()
 
             if api_key_obj and api_key_obj.is_valid:
-                # Update usage tracking (also wrapped in to_thread)
-                await asyncio.to_thread(api_key_obj.mark_used)
+                # Update usage tracking (async method call)
+                await api_key_obj.amark_used()
                 logger.debug(f"Valid API key for user {api_key_obj.user.id} ({api_key_obj.user.username})")
                 return api_key_obj.user, api_key_obj
             else:

@@ -207,6 +207,48 @@ class GRPCRequestLogManager(models.Manager):
             ]
         )
 
+    async def amark_success(
+        self,
+        log_instance,
+        duration_ms: int | None = None,
+        response_size: int | None = None,
+        response_data: dict | None = None,
+    ):
+        """
+        Mark request as successful (ASYNC - Django 5.2).
+
+        Args:
+            log_instance: GRPCRequestLog instance
+            duration_ms: Duration in milliseconds
+            response_size: Response size in bytes
+            response_data: Response data
+        """
+        from ..models import GRPCRequestLog
+
+        log_instance.status = GRPCRequestLog.StatusChoices.SUCCESS
+        log_instance.grpc_status_code = "OK"
+        log_instance.completed_at = timezone.now()
+
+        if duration_ms is not None:
+            log_instance.duration_ms = duration_ms
+
+        if response_size is not None:
+            log_instance.response_size = response_size
+
+        if response_data is not None:
+            log_instance.response_data = response_data
+
+        await log_instance.asave(
+            update_fields=[
+                "status",
+                "grpc_status_code",
+                "completed_at",
+                "duration_ms",
+                "response_size",
+                "response_data",
+            ]
+        )
+
     def mark_error(
         self,
         log_instance,
@@ -239,6 +281,48 @@ class GRPCRequestLogManager(models.Manager):
             log_instance.duration_ms = duration_ms
 
         log_instance.save(
+            update_fields=[
+                "status",
+                "grpc_status_code",
+                "error_message",
+                "error_details",
+                "completed_at",
+                "duration_ms",
+            ]
+        )
+
+    async def amark_error(
+        self,
+        log_instance,
+        grpc_status_code: str,
+        error_message: str,
+        error_details: dict | None = None,
+        duration_ms: int | None = None,
+    ):
+        """
+        Mark request as failed (ASYNC - Django 5.2).
+
+        Args:
+            log_instance: GRPCRequestLog instance
+            grpc_status_code: gRPC status code
+            error_message: Error message
+            error_details: Additional error details
+            duration_ms: Duration in milliseconds
+        """
+        from ..models import GRPCRequestLog
+
+        log_instance.status = GRPCRequestLog.StatusChoices.ERROR
+        log_instance.grpc_status_code = grpc_status_code
+        log_instance.error_message = error_message
+        log_instance.completed_at = timezone.now()
+
+        if error_details is not None:
+            log_instance.error_details = error_details
+
+        if duration_ms is not None:
+            log_instance.duration_ms = duration_ms
+
+        await log_instance.asave(
             update_fields=[
                 "status",
                 "grpc_status_code",

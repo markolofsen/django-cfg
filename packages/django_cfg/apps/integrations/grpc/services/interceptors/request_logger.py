@@ -367,8 +367,8 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
     ):
         """Create initial log entry in database (async)."""
         try:
-            from ..models import GRPCRequestLog
-            from ..auth import get_current_grpc_user, get_current_grpc_api_key
+            from ...models import GRPCRequestLog
+            from ...auth import get_current_grpc_user, get_current_grpc_api_key
 
             # Get user and api_key from contextvars (set by ApiKeyAuthInterceptor)
             user = get_current_grpc_user()
@@ -380,9 +380,8 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
             # Extract client IP from peer
             client_ip = self._extract_ip_from_peer(peer)
 
-            # Create log entry (wrap Django ORM in asyncio.to_thread)
-            log_entry = await asyncio.to_thread(
-                GRPCRequestLog.objects.create,
+            # Create log entry (Django 5.2: Native async ORM)
+            log_entry = await GRPCRequestLog.objects.acreate(
                 request_id=request_id,
                 service_name=service_name,
                 method_name=method_name,
@@ -416,15 +415,14 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
             return
 
         try:
-            from ..models import GRPCRequestLog
+            from ...models import GRPCRequestLog
 
             # Prepare response data
             if response:
                 response_data = self._serialize_message(response)
 
-            # Wrap Django ORM in asyncio.to_thread
-            await asyncio.to_thread(
-                GRPCRequestLog.objects.mark_success,
+            # Django 5.2: Use async manager method
+            await GRPCRequestLog.objects.amark_success(
                 log_entry,
                 duration_ms=duration_ms,
                 response_data=response_data,
@@ -445,14 +443,13 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
             return
 
         try:
-            from ..models import GRPCRequestLog
+            from ...models import GRPCRequestLog
 
             # Get gRPC status code
             grpc_code = self._get_grpc_code(error, context)
 
-            # Wrap Django ORM in asyncio.to_thread
-            await asyncio.to_thread(
-                GRPCRequestLog.objects.mark_error,
+            # Django 5.2: Use async manager method
+            await GRPCRequestLog.objects.amark_error(
                 log_entry,
                 grpc_status_code=grpc_code,
                 error_message=str(error),

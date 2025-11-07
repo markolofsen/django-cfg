@@ -19,6 +19,39 @@ from rich.table import Table
 from rich.text import Text
 
 
+# ========================================================================
+# Module-level debug mode caching (performance optimization)
+# ========================================================================
+
+_debug_mode: Optional[bool] = None  # Cached debug mode to avoid repeated config loads
+
+
+def _get_debug_mode() -> bool:
+    """
+    Get debug mode from config (cached at module level).
+
+    Loads config only once and caches the result to avoid repeated config loads.
+    This is a performance optimization - config loading can be expensive.
+
+    Returns:
+        True if debug mode is enabled, False otherwise
+    """
+    global _debug_mode
+
+    if _debug_mode is not None:
+        return _debug_mode
+
+    # Load config once and cache
+    try:
+        from django_cfg.core.state import get_current_config
+        config = get_current_config()
+        _debug_mode = config.debug if config and hasattr(config, 'debug') else False
+    except Exception:
+        _debug_mode = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
+
+    return _debug_mode
+
+
 class AutoTracebackHandler(logging.Handler):
     """
     Custom handler that automatically adds exception info to ERROR and CRITICAL logs.
@@ -49,8 +82,8 @@ class AutoTracebackHandler(logging.Handler):
 def setup_streaming_logger(
     name: str = "grpc_streaming",
     logs_dir: Optional[Path] = None,
-    level: int = logging.DEBUG,
-    console_level: int = logging.INFO
+    level: Optional[int] = None,
+    console_level: Optional[int] = None
 ) -> logging.Logger:
     """
     Setup dedicated logger for gRPC streaming with file and console handlers.
@@ -58,14 +91,15 @@ def setup_streaming_logger(
     Follows django-cfg logging pattern:
     - Uses os.getcwd() / 'logs' / 'grpc_streaming' for log directory
     - Time-based log file names (streaming_YYYYMMDD_HHMMSS.log)
-    - Detailed file logging (DEBUG level by default)
-    - Concise console logging (INFO level by default)
+    - Auto-detects debug mode for appropriate logging levels
+    - In dev/debug: files=DEBUG+, console=DEBUG+
+    - In production: files=INFO+, console=WARNING+
 
     Args:
         name: Logger name (default: "grpc_streaming")
         logs_dir: Directory for log files (default: <cwd>/logs/grpc_streaming)
-        level: File logging level (default: DEBUG)
-        console_level: Console logging level (default: INFO)
+        level: File logging level (default: auto-detect from debug mode)
+        console_level: Console logging level (default: auto-detect from debug mode)
 
     Returns:
         Configured logger instance
@@ -74,14 +108,14 @@ def setup_streaming_logger(
         ```python
         from django_cfg.apps.integrations.grpc.utils import setup_streaming_logger
 
-        # Basic usage
+        # Basic usage (auto-detects debug mode)
         logger = setup_streaming_logger()
 
         # Custom configuration
         logger = setup_streaming_logger(
             name="my_streaming_service",
             logs_dir=Path("/var/log/grpc"),
-            level=logging.INFO
+            level=logging.INFO  # Override auto-detection
         )
 
         logger.info("Service started")
@@ -93,8 +127,21 @@ def setup_streaming_logger(
         - Time-based log file names
         - No duplicate logs (propagate=False)
         - UTF-8 encoding
+        - Debug mode auto-detection (cached for performance)
         - Reusable across all django-cfg gRPC projects
     """
+    # Auto-detect debug mode (cached - loaded once)
+    debug = _get_debug_mode()
+
+    # Auto-determine logging levels based on debug mode if not explicitly provided
+    if level is None:
+        # File handlers: DEBUG in dev, INFO in production
+        level = logging.DEBUG if debug else logging.INFO
+
+    if console_level is None:
+        # Console: DEBUG in dev (full visibility), WARNING in production (reduce noise)
+        console_level = logging.DEBUG if debug else logging.WARNING
+
     # Create logger
     streaming_logger = logging.getLogger(name)
     streaming_logger.setLevel(level)

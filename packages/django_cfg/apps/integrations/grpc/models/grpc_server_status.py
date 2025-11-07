@@ -271,23 +271,42 @@ class GRPCServerStatus(models.Model):
             return False
 
     def mark_running(self):
-        """Mark server as running."""
+        """Mark server as running (SYNC)."""
         self.status = self.StatusChoices.RUNNING
         self.error_message = None
         self.save(update_fields=["status", "error_message", "updated_at", "last_heartbeat"])
 
+    async def amark_running(self):
+        """Mark server as running (ASYNC - Django 5.2)."""
+        self.status = self.StatusChoices.RUNNING
+        self.error_message = None
+        await self.asave(update_fields=["status", "error_message", "updated_at", "last_heartbeat"])
+
     def mark_stopping(self):
-        """Mark server as stopping."""
+        """Mark server as stopping (SYNC)."""
         self.status = self.StatusChoices.STOPPING
         self.save(update_fields=["status", "updated_at", "last_heartbeat"])
 
+    async def amark_stopping(self):
+        """Mark server as stopping (ASYNC - Django 5.2)."""
+        self.status = self.StatusChoices.STOPPING
+        await self.asave(update_fields=["status", "updated_at", "last_heartbeat"])
+
     def mark_stopped(self, error_message: str = None):
-        """Mark server as stopped."""
+        """Mark server as stopped (SYNC)."""
         self.status = self.StatusChoices.STOPPED
         self.stopped_at = timezone.now()
         if error_message:
             self.error_message = error_message
         self.save(update_fields=["status", "stopped_at", "error_message", "updated_at"])
+
+    async def amark_stopped(self, error_message: str = None):
+        """Mark server as stopped (ASYNC - Django 5.2)."""
+        self.status = self.StatusChoices.STOPPED
+        self.stopped_at = timezone.now()
+        if error_message:
+            self.error_message = error_message
+        await self.asave(update_fields=["status", "stopped_at", "error_message", "updated_at"])
 
     def mark_error(self, error_message: str):
         """Mark server as error."""

@@ -394,7 +394,7 @@ def generate_proto_for_app(app_label: str, output_dir: Optional[Path] = None) ->
         ```
     """
     # Get gRPC config from django-cfg (Pydantic)
-    from ..services.config_helper import get_grpc_config
+    from ..services.management.config_helper import get_grpc_config
 
     grpc_config = get_grpc_config()
     proto_config = grpc_config.proto if grpc_config else None

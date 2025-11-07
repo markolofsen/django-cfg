@@ -13,7 +13,7 @@ from django.db.models import Avg, Count, Max, Min, Q
 from django.db.models.functions import TruncDay, TruncHour
 from django.utils import timezone
 
-from ..models import GRPCRequestLog, GRPCServerStatus
+from ...models import GRPCRequestLog, GRPCServerStatus
 
 
 class ChartGeneratorService:

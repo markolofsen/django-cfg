@@ -7,6 +7,8 @@ Following KISS principle:
 - Logging handled by django_logger module
 """
 
+import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -14,9 +16,9 @@ from typing import Any, Dict, List, Optional
 def get_log_filename() -> str:
     """
     Determine the correct log filename based on project type.
-    
+
     Returns:
-        - 'django-cfg.log' for django-cfg projects  
+        - 'django-cfg.log' for django-cfg projects
         - 'django.log' for regular Django projects
     """
     try:
@@ -35,6 +37,188 @@ def get_log_filename() -> str:
         return 'django-cfg.log'
 
 
+def _detect_asgi_mode() -> bool:
+    """
+    Detect if Django is running in ASGI or WSGI mode.
+
+    Detection priority:
+    1. DJANGO_ASGI environment variable (explicit override)
+    2. ASGI_APPLICATION setting (if Django is configured)
+    3. Command-line arguments (uvicorn, daphne, hypercorn)
+    4. Default: False (WSGI mode)
+
+    Returns:
+        True if ASGI mode, False if WSGI mode
+
+    Examples:
+        >>> os.environ['DJANGO_ASGI'] = 'true'
+        >>> _detect_asgi_mode()
+        True
+
+        >>> 'uvicorn' in sys.argv[0]
+        >>> _detect_asgi_mode()
+        True
+    """
+    # 1. Check explicit env var override
+    asgi_env = os.environ.get('DJANGO_ASGI', '').lower()
+    if asgi_env in ('true', '1', 'yes'):
+        return True
+    elif asgi_env in ('false', '0', 'no'):
+        return False
+
+    # 2. Check Django settings for ASGI_APPLICATION
+    try:
+        from django.conf import settings
+        if hasattr(settings, 'ASGI_APPLICATION') and settings.ASGI_APPLICATION:
+            return True
+    except (ImportError, Exception):
+        pass
+
+    # 3. Check command-line arguments for ASGI servers
+    command_line = ' '.join(sys.argv).lower()
+    asgi_servers = ['uvicorn', 'daphne', 'hypercorn']
+    for server in asgi_servers:
+        if server in command_line:
+            return True
+
+    # Default: WSGI mode
+    return False
+
+
+def get_pool_config(environment: str = "development", is_asgi: Optional[bool] = None) -> Dict[str, Any]:
+    """
+    Get connection pool configuration.
+
+    By default, uses simple environment-based configuration. Set AUTO_POOL_SIZE=true
+    to enable automatic ASGI/WSGI detection and optimization.
+
+    Args:
+        environment: Environment name ('development', 'testing', 'staging', 'production')
+        is_asgi: Deployment mode. If None and AUTO_POOL_SIZE=true, auto-detects mode
+
+    Returns:
+        Dict with pool configuration:
+        {
+            'min_size': int,      # Minimum pool size
+            'max_size': int,      # Maximum pool size
+            'timeout': int,       # Connection timeout (seconds)
+            'max_lifetime': int,  # Max connection lifetime (seconds)
+            'max_idle': int,      # Max idle time before closing (seconds)
+        }
+
+    Environment Variables:
+        DB_POOL_MIN_SIZE: Minimum pool size (default: 10)
+        DB_POOL_MAX_SIZE: Maximum pool size (default: 50)
+        DB_POOL_TIMEOUT: Connection timeout in seconds (default: 30)
+        AUTO_POOL_SIZE: Enable automatic ASGI/WSGI detection (default: false)
+
+    Examples:
+        # Simple static config (default):
+        >>> get_pool_config('production')
+        {'min_size': 10, 'max_size': 50, ...}
+
+        # With auto-detection:
+        >>> os.environ['AUTO_POOL_SIZE'] = 'true'
+        >>> get_pool_config('production', is_asgi=True)
+        {'min_size': 5, 'max_size': 20, ...}  # Optimized for ASGI
+    """
+    # Check if auto-detection is enabled
+    auto_detect = os.environ.get('AUTO_POOL_SIZE', 'false').lower() in ('true', '1', 'yes')
+
+    # Simple static configuration (default)
+    if not auto_detect and is_asgi is None:
+        # Use simple env var based config
+        try:
+            min_size = int(os.environ.get('DB_POOL_MIN_SIZE', 10))
+        except ValueError:
+            min_size = 10
+
+        try:
+            max_size = int(os.environ.get('DB_POOL_MAX_SIZE', 50))
+        except ValueError:
+            max_size = 50
+
+        try:
+            timeout = int(os.environ.get('DB_POOL_TIMEOUT', 30))
+        except ValueError:
+            timeout = 30
+
+        # Validate
+        if min_size >= max_size:
+            min_size = max(1, max_size - 1)
+
+        return {
+            'min_size': min_size,
+            'max_size': max_size,
+            'timeout': timeout,
+            'max_lifetime': 3600,  # 1 hour
+            'max_idle': 600,       # 10 minutes
+        }
+
+    # Auto-detect ASGI mode if enabled and not specified
+    if is_asgi is None:
+        is_asgi = _detect_asgi_mode()
+
+    # Pool configuration matrix
+    # Format: (min_size, max_size, timeout)
+    pool_configs = {
+        'development': {
+            'asgi': (2, 10, 10),
+            'wsgi': (3, 15, 20),
+        },
+        'testing': {
+            'asgi': (1, 5, 5),
+            'wsgi': (2, 10, 10),
+        },
+        'staging': {
+            'asgi': (3, 15, 10),
+            'wsgi': (5, 30, 20),
+        },
+        'production': {
+            'asgi': (5, 20, 10),
+            'wsgi': (10, 50, 30),
+        },
+    }
+
+    # Get base configuration
+    env_key = environment.lower()
+    if env_key not in pool_configs:
+        # Fallback to development for unknown environments
+        env_key = 'development'
+
+    mode_key = 'asgi' if is_asgi else 'wsgi'
+    min_size, max_size, timeout = pool_configs[env_key][mode_key]
+
+    # Allow environment variable overrides
+    try:
+        min_size = int(os.environ.get('DB_POOL_MIN_SIZE', min_size))
+    except ValueError:
+        pass  # Keep default if invalid
+
+    try:
+        max_size = int(os.environ.get('DB_POOL_MAX_SIZE', max_size))
+    except ValueError:
+        pass
+
+    try:
+        timeout = int(os.environ.get('DB_POOL_TIMEOUT', timeout))
+    except ValueError:
+        pass
+
+    # Validate: min_size must be < max_size
+    if min_size >= max_size:
+        min_size = max(1, max_size - 1)
+
+    # Build and return pool configuration
+    return {
+        'min_size': min_size,
+        'max_size': max_size,
+        'timeout': timeout,
+        'max_lifetime': 3600,  # 1 hour
+        'max_idle': 600,       # 10 minutes
+    }
+
+
 class SmartDefaults:
     """
     Environment-aware smart defaults for Django configuration.
@@ -45,18 +229,50 @@ class SmartDefaults:
 
     @staticmethod
     def get_database_defaults(environment: str = "development", debug: bool = False, engine: str = "sqlite3") -> Dict[str, Any]:
-        """Get database configuration defaults."""
+        """
+        Get database configuration defaults.
+
+        For PostgreSQL with Django 5.1+:
+        - Uses native connection pooling (recommended for ASGI/async apps)
+        - CONN_MAX_AGE = 0 (required with native pooling)
+        - ATOMIC_REQUESTS = True (default - safe and works with pooling)
+        - Pool sizes: Auto-configured based on environment and ASGI/WSGI mode
+        - Health checks: Handled automatically by psycopg3 pool
+
+        Note on Transaction Safety:
+        ATOMIC_REQUESTS=True is enabled by default, which wraps each request
+        in a database transaction. This adds ~5-10ms overhead but ensures data
+        integrity without manual transaction management.
+
+        This works perfectly fine with connection pooling. If you need to optimize
+        for read-heavy workloads, you can disable ATOMIC_REQUESTS and use selective
+        transactions via Django's @transaction.atomic decorator on write views.
+
+        References:
+        - Django 5.1+ native pooling: https://docs.djangoproject.com/en/5.2/ref/databases/#connection-pooling
+        - ASGI best practices: persistent connections should be disabled with ASGI
+        """
         defaults = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': Path('db') / 'db.sqlite3',
-            'ATOMIC_REQUESTS': True,
-            'CONN_MAX_AGE': 60,
+            'ATOMIC_REQUESTS': True,  # Safe default - ~5-10ms overhead acceptable for data integrity
+            'CONN_MAX_AGE': 0,  # Set to 0 for native pooling (Django 5.1+)
+            'CONN_HEALTH_CHECKS': True,  # Enable health checks to prevent stale connections
             'OPTIONS': {}
         }
 
         # Add engine-specific options
         if engine == "django.db.backends.postgresql":
-            defaults['OPTIONS']['connect_timeout'] = 20
+            # Native connection pooling for Django 5.1+ with psycopg >= 3.1
+            # See: https://docs.djangoproject.com/en/5.2/ref/databases/#postgresql-connection-pooling
+
+            # Get dynamic pool configuration based on environment and deployment mode
+            pool_config = get_pool_config(environment=environment, is_asgi=None)
+
+            defaults['OPTIONS'] = {
+                'connect_timeout': 20,
+                'pool': pool_config,  # Dynamic pool config (ASGI/WSGI aware)
+            }
         elif engine == "django.db.backends.sqlite3":
             defaults['OPTIONS']['timeout'] = 20  # SQLite uses 'timeout'
 
@@ -139,7 +355,16 @@ class SmartDefaults:
 
     @staticmethod
     def get_middleware_defaults() -> List[str]:
-        """Get middleware configuration defaults."""
+        """
+        Get middleware configuration defaults.
+
+        Note:
+            ConnectionPoolCleanupMiddleware is automatically added LAST if
+            enable_pool_cleanup=True in DjangoConfig (default).
+
+            This middleware prevents connection leaks when using native
+            connection pooling with ATOMIC_REQUESTS=False.
+        """
         return [
             'corsheaders.middleware.CorsMiddleware',
             'django.middleware.security.SecurityMiddleware',
@@ -149,6 +374,7 @@ class SmartDefaults:
             'django.contrib.auth.middleware.AuthenticationMiddleware',
             'django.contrib.messages.middleware.MessageMiddleware',
             'django.middleware.clickjacking.XFrameOptionsMiddleware',
+            # ConnectionPoolCleanupMiddleware added in DjangoConfig.get_middleware()
         ]
 
     @staticmethod

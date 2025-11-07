@@ -5,7 +5,6 @@ Proxies requests to Centrifugo server API with authentication and type safety.
 Provides Django endpoints that map to Centrifugo HTTP API methods.
 """
 
-import asyncio
 import httpx
 from django.http import JsonResponse
 from django_cfg.modules.django_logging import get_logger
@@ -113,10 +112,10 @@ class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="info")
-    def info(self, request):
-        """Get Centrifugo server information."""
+    async def info(self, request):
+        """Get Centrifugo server information (ASYNC)."""
         try:
-            result = asyncio.run(self._call_centrifugo_api("info", params={}))
+            result = await self._call_centrifugo_api("info", params={})
 
             # Check for Centrifugo API error
             if "error" in result and result["error"]:
@@ -147,13 +146,13 @@ class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="channels")
-    def channels(self, request):
-        """List active channels."""
+    async def channels(self, request):
+        """List active channels (ASYNC)."""
         try:
             req_data = CentrifugoChannelsRequest(**request.data)
-            result = asyncio.run(self._call_centrifugo_api(
+            result = await self._call_centrifugo_api(
                 "channels", params=req_data.model_dump(exclude_none=True)
-            ))
+            )
 
             # Check for Centrifugo API error
             if "error" in result and result["error"]:
@@ -183,13 +182,13 @@ class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="presence")
-    def presence(self, request):
-        """Get channel presence (active subscribers)."""
+    async def presence(self, request):
+        """Get channel presence (active subscribers) (ASYNC)."""
         try:
             req_data = CentrifugoPresenceRequest(**request.data)
-            result = asyncio.run(self._call_centrifugo_api(
+            result = await self._call_centrifugo_api(
                 "presence", params=req_data.model_dump()
-            ))
+            )
 
             # Check for Centrifugo API error (e.g., code 108 "not available")
             if "error" in result and result["error"]:
@@ -219,13 +218,13 @@ class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="presence-stats")
-    def presence_stats(self, request):
-        """Get channel presence statistics."""
+    async def presence_stats(self, request):
+        """Get channel presence statistics (ASYNC)."""
         try:
             req_data = CentrifugoPresenceStatsRequest(**request.data)
-            result = asyncio.run(self._call_centrifugo_api(
+            result = await self._call_centrifugo_api(
                 "presence_stats", params=req_data.model_dump()
-            ))
+            )
 
             # Check for Centrifugo API error (e.g., code 108 "not available")
             if "error" in result and result["error"]:
@@ -255,13 +254,13 @@ class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="history")
-    def history(self, request):
-        """Get channel message history."""
+    async def history(self, request):
+        """Get channel message history (ASYNC)."""
         try:
             req_data = CentrifugoHistoryRequest(**request.data)
-            result = asyncio.run(self._call_centrifugo_api(
+            result = await self._call_centrifugo_api(
                 "history", params=req_data.model_dump(exclude_none=True)
-            ))
+            )
 
             # Check for Centrifugo API error (e.g., code 108 "not available")
             if "error" in result and result["error"]:
@@ -359,19 +358,17 @@ class CentrifugoAdminAPIViewSet(AdminAPIMixin, viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def __del__(self):
-        """Cleanup HTTP client on deletion."""
-        if self._http_client:
-            import asyncio
+    async def cleanup(self):
+        """
+        Explicit async cleanup method for HTTP client.
 
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self._http_client.aclose())
-                else:
-                    loop.run_until_complete(self._http_client.aclose())
-            except Exception:
-                pass  # Ignore cleanup errors
+        Note: Django handles ViewSet lifecycle automatically.
+        This method is provided for explicit cleanup if needed,
+        but httpx.AsyncClient will be garbage collected normally.
+        """
+        if self._http_client:
+            await self._http_client.aclose()
+            self._http_client = None
 
 
 __all__ = ["CentrifugoAdminAPIViewSet"]

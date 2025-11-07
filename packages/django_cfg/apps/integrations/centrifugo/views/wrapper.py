@@ -5,12 +5,12 @@ Provides /api/publish endpoint that acts as a proxy to Centrifugo
 with ACK tracking and database logging.
 """
 
-import asyncio
 import time
 import uuid
 from typing import Any, Dict
 
 import httpx
+from django.db import transaction
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -55,15 +55,19 @@ class PublishResponse(BaseModel):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
 class PublishWrapperView(View):
     """
-    Centrifugo publish wrapper endpoint.
+    Centrifugo publish wrapper endpoint (ASYNC).
 
     Provides /api/publish endpoint that:
     - Accepts publish requests from CentrifugoClient
     - Logs to database (CentrifugoLog)
     - Proxies to Centrifugo HTTP API
     - Returns publish result with ACK tracking
+
+    NOTE: This is an async view for proper async/await handling.
+    Using asyncio.run() in sync views causes event loop conflicts.
     """
 
     def __init__(self, *args, **kwargs):
@@ -181,9 +185,9 @@ class PublishWrapperView(View):
 
             raise
 
-    def post(self, request):
+    async def post(self, request):
         """
-        Handle POST /api/publish request.
+        Handle POST /api/publish request (ASYNC).
 
         Request body:
             {
@@ -213,15 +217,13 @@ class PublishWrapperView(View):
             # Generate message ID if not provided
             message_id = req_data.message_id or str(uuid.uuid4())
 
-            # Publish to Centrifugo
-            result = asyncio.run(
-                self._publish_to_centrifugo(
-                    channel=req_data.channel,
-                    data=req_data.data,
-                    wait_for_ack=req_data.wait_for_ack,
-                    ack_timeout=req_data.ack_timeout,
-                    message_id=message_id,
-                )
+            # Publish to Centrifugo (ASYNC - no asyncio.run()!)
+            result = await self._publish_to_centrifugo(
+                channel=req_data.channel,
+                data=req_data.data,
+                wait_for_ack=req_data.wait_for_ack,
+                ack_timeout=req_data.ack_timeout,
+                message_id=message_id,
             )
 
             response = PublishResponse(**result)
@@ -241,17 +243,17 @@ class PublishWrapperView(View):
                 status=500,
             )
 
-    def __del__(self):
-        """Cleanup HTTP client on deletion."""
+    async def cleanup(self):
+        """
+        Explicit async cleanup method for HTTP client.
+
+        Note: Django handles View lifecycle automatically.
+        This method is provided for explicit cleanup if needed,
+        but httpx.AsyncClient will be garbage collected normally.
+        """
         if self._http_client:
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self._http_client.aclose())
-                else:
-                    loop.run_until_complete(self._http_client.aclose())
-            except Exception:
-                pass
+            await self._http_client.aclose()
+            self._http_client = None
 
 
 __all__ = ["PublishWrapperView"]

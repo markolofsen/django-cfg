@@ -9,5 +9,9 @@ sed -e "s/\${CENTRIFUGO_API_KEY}/${CENTRIFUGO_API_KEY}/g" \
     -e "s/\${CENTRIFUGO_LOG_LEVEL}/${CENTRIFUGO_LOG_LEVEL}/g" \
     /centrifugo/config.template.json > /tmp/config.json
 
+# Clean up variables to avoid "unknown var" warnings
+unset CENTRIFUGO_API_KEY
+unset CENTRIFUGO_TOKEN_HMAC_SECRET
+
 # Start Centrifugo with generated config
 exec centrifugo -c /tmp/config.json
