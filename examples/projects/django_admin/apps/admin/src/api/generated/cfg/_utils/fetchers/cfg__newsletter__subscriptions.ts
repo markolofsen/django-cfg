@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { PaginatedNewsletterSubscriptionListSchema, type PaginatedNewsletterSubscriptionList } from '../schemas/PaginatedNewsletterSubscriptionList.schema'
 import { SubscribeRequestSchema, type SubscribeRequest } from '../schemas/SubscribeRequest.schema'
 import { SubscribeResponseSchema, type SubscribeResponse } from '../schemas/SubscribeResponse.schema'
@@ -46,7 +47,35 @@ export async function createNewsletterSubscribeCreate(  data: SubscribeRequest, 
 ): Promise<SubscribeResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_subscriptions.newsletterSubscribeCreate(data)
-  return SubscribeResponseSchema.parse(response)
+  try {
+    return SubscribeResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createNewsletterSubscribeCreate',
+      message: `Path: /cfg/newsletter/subscribe/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -60,7 +89,35 @@ export async function getNewsletterSubscriptionsList(  params?: { page?: number;
 ): Promise<PaginatedNewsletterSubscriptionList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_subscriptions.newsletterSubscriptionsList(params?.page, params?.page_size)
-  return PaginatedNewsletterSubscriptionListSchema.parse(response)
+  try {
+    return PaginatedNewsletterSubscriptionListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getNewsletterSubscriptionsList',
+      message: `Path: /cfg/newsletter/subscriptions/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -74,7 +131,35 @@ export async function createNewsletterUnsubscribeCreate(  data: UnsubscribeReque
 ): Promise<SuccessResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_subscriptions.newsletterUnsubscribeCreate(data)
-  return SuccessResponseSchema.parse(response)
+  try {
+    return SuccessResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createNewsletterUnsubscribeCreate',
+      message: `Path: /cfg/newsletter/unsubscribe/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

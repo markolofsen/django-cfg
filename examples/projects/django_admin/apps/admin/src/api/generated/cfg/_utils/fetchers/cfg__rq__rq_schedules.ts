@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { PaginatedScheduledJobListSchema, type PaginatedScheduledJobList } from '../schemas/PaginatedScheduledJobList.schema'
 import { ScheduleActionResponseSchema, type ScheduleActionResponse } from '../schemas/ScheduleActionResponse.schema'
 import { ScheduleCreateRequestSchema, type ScheduleCreateRequest } from '../schemas/ScheduleCreateRequest.schema'
@@ -45,7 +46,35 @@ export async function getRqSchedulesList(  params?: { page?: number; page_size?:
 ): Promise<PaginatedScheduledJobList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_schedules.list(params?.page, params?.page_size, params?.queue)
-  return PaginatedScheduledJobListSchema.parse(response)
+  try {
+    return PaginatedScheduledJobListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqSchedulesList',
+      message: `Path: /cfg/rq/schedules/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -59,7 +88,35 @@ export async function createRqSchedulesCreate(  data: ScheduleCreateRequest,  cl
 ): Promise<ScheduleActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_schedules.create(data)
-  return ScheduleActionResponseSchema.parse(response)
+  try {
+    return ScheduleActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqSchedulesCreate',
+      message: `Path: /cfg/rq/schedules/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -73,7 +130,35 @@ export async function getRqSchedulesRetrieve(  id: string, pk: string, params?: 
 ): Promise<ScheduledJob> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_schedules.retrieve(id, pk, params?.queue)
-  return ScheduledJobSchema.parse(response)
+  try {
+    return ScheduledJobSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqSchedulesRetrieve',
+      message: `Path: /cfg/rq/schedules/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -87,7 +172,35 @@ export async function deleteRqSchedulesDestroy(  id: string, pk: string, params?
 ): Promise<ScheduleActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_schedules.destroy(id, pk, params?.queue)
-  return ScheduleActionResponseSchema.parse(response)
+  try {
+    return ScheduleActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'deleteRqSchedulesDestroy',
+      message: `Path: /cfg/rq/schedules/{id}/\nMethod: DELETE`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

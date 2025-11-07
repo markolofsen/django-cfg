@@ -107,7 +107,7 @@ export interface MessageCreate {
 export interface Message {
   uuid: string;
   ticket: string;
-  sender: Record<string, any>;
+  sender: Sender;
   /** Check if this message is from the ticket author. */
   is_from_author: boolean;
   text: string;
@@ -154,7 +154,7 @@ export interface Sender {
   /** Get formatted username for display. */
   display_username: string;
   email: string;
-  avatar: string | null;
+  avatar?: string | null;
   /** Get user's initials for avatar fallback. */
   initials: string;
   /** Designates whether the user can log into this admin site. */

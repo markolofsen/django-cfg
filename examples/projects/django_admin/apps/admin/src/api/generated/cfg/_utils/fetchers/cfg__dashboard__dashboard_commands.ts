@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { CommandExecuteRequestRequestSchema, type CommandExecuteRequestRequest } from '../schemas/CommandExecuteRequestRequest.schema'
 import { CommandHelpResponseSchema, type CommandHelpResponse } from '../schemas/CommandHelpResponse.schema'
 import { CommandsSummarySchema, type CommandsSummary } from '../schemas/CommandsSummary.schema'
@@ -58,7 +59,35 @@ export async function getDashboardApiCommandsHelpRetrieve(  id: string,  client?
 ): Promise<CommandHelpResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_commands.dashboardApiCommandsHelpRetrieve(id)
-  return CommandHelpResponseSchema.parse(response)
+  try {
+    return CommandHelpResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getDashboardApiCommandsHelpRetrieve',
+      message: `Path: /cfg/dashboard/api/commands/{id}/help/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -86,7 +115,35 @@ export async function getDashboardApiCommandsSummaryRetrieve(  client?: any
 ): Promise<CommandsSummary> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_commands.dashboardApiCommandsSummaryRetrieve()
-  return CommandsSummarySchema.parse(response)
+  try {
+    return CommandsSummarySchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getDashboardApiCommandsSummaryRetrieve',
+      message: `Path: /cfg/dashboard/api/commands/summary/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

@@ -4,9 +4,9 @@
  * Response model (includes read-only fields).
  */
 export interface GRPCConfig {
-  server: Record<string, any>;
-  framework: Record<string, any>;
-  features: Record<string, any>;
+  server: GRPCServerConfig;
+  framework: GRPCFrameworkConfig;
+  features: GRPCFeatures;
   /** Number of registered services */
   registered_services: number;
   /** Total number of methods */
@@ -31,7 +31,7 @@ export interface GRPCServerInfo {
   services?: Array<GRPCServiceInfo>;
   /** Active interceptors */
   interceptors?: Array<GRPCInterceptorInfo>;
-  stats: Record<string, any>;
+  stats: GRPCStats;
 }
 
 /**

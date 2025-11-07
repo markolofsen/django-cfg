@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { EndpointsStatusSchema, type EndpointsStatus } from '../schemas/EndpointsStatus.schema'
 import { URLsListSchema, type URLsList } from '../schemas/URLsList.schema'
 import { getAPIInstance } from '../../api-instance'
@@ -43,7 +44,35 @@ export async function getEndpointsDrfRetrieve(  client?: any
 ): Promise<EndpointsStatus> {
   const api = client || getAPIInstance()
   const response = await api.cfg_endpoints.drfRetrieve()
-  return EndpointsStatusSchema.parse(response)
+  try {
+    return EndpointsStatusSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getEndpointsDrfRetrieve',
+      message: `Path: /cfg/endpoints/drf/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -57,7 +86,35 @@ export async function getEndpointsUrlsRetrieve(  client?: any
 ): Promise<URLsList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_endpoints.urlsRetrieve()
-  return URLsListSchema.parse(response)
+  try {
+    return URLsListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getEndpointsUrlsRetrieve',
+      message: `Path: /cfg/endpoints/urls/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

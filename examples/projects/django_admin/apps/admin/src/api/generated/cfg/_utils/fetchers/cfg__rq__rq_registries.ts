@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { JobActionResponseSchema, type JobActionResponse } from '../schemas/JobActionResponse.schema'
 import { JobListRequestSchema, type JobListRequest } from '../schemas/JobListRequest.schema'
 import { PaginatedJobListListSchema, type PaginatedJobListList } from '../schemas/PaginatedJobListList.schema'
@@ -44,7 +45,35 @@ export async function getRqJobsRegistriesDeferredList(  params?: { page?: number
 ): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesDeferredList(params?.page, params?.page_size, params?.queue)
-  return PaginatedJobListListSchema.parse(response)
+  try {
+    return PaginatedJobListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqJobsRegistriesDeferredList',
+      message: `Path: /cfg/rq/jobs/registries/deferred/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -58,7 +87,35 @@ export async function getRqJobsRegistriesFailedList(  params?: { page?: number; 
 ): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesFailedList(params?.page, params?.page_size, params?.queue)
-  return PaginatedJobListListSchema.parse(response)
+  try {
+    return PaginatedJobListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqJobsRegistriesFailedList',
+      message: `Path: /cfg/rq/jobs/registries/failed/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -72,7 +129,35 @@ export async function createRqJobsRegistriesFailedClearCreate(  data: JobListReq
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesFailedClearCreate(data, params.queue)
-  return JobActionResponseSchema.parse(response)
+  try {
+    return JobActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqJobsRegistriesFailedClearCreate',
+      message: `Path: /cfg/rq/jobs/registries/failed/clear/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -86,7 +171,35 @@ export async function createRqJobsRegistriesFailedRequeueAllCreate(  data: JobLi
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesFailedRequeueAllCreate(data, params.queue)
-  return JobActionResponseSchema.parse(response)
+  try {
+    return JobActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqJobsRegistriesFailedRequeueAllCreate',
+      message: `Path: /cfg/rq/jobs/registries/failed/requeue-all/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -100,7 +213,35 @@ export async function getRqJobsRegistriesFinishedList(  params?: { page?: number
 ): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesFinishedList(params?.page, params?.page_size, params?.queue)
-  return PaginatedJobListListSchema.parse(response)
+  try {
+    return PaginatedJobListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqJobsRegistriesFinishedList',
+      message: `Path: /cfg/rq/jobs/registries/finished/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -114,7 +255,35 @@ export async function createRqJobsRegistriesFinishedClearCreate(  data: JobListR
 ): Promise<JobActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesFinishedClearCreate(data, params.queue)
-  return JobActionResponseSchema.parse(response)
+  try {
+    return JobActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqJobsRegistriesFinishedClearCreate',
+      message: `Path: /cfg/rq/jobs/registries/finished/clear/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -128,7 +297,35 @@ export async function getRqJobsRegistriesStartedList(  params?: { page?: number;
 ): Promise<PaginatedJobListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_registries.rqJobsRegistriesStartedList(params?.page, params?.page_size, params?.queue)
-  return PaginatedJobListListSchema.parse(response)
+  try {
+    return PaginatedJobListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqJobsRegistriesStartedList',
+      message: `Path: /cfg/rq/jobs/registries/started/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

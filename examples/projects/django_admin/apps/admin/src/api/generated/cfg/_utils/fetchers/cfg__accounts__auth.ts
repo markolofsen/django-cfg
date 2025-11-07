@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { TokenRefreshSchema, type TokenRefresh } from '../schemas/TokenRefresh.schema'
 import { TokenRefreshRequestSchema, type TokenRefreshRequest } from '../schemas/TokenRefreshRequest.schema'
 import { getAPIInstance } from '../../api-instance'
@@ -43,7 +44,35 @@ export async function createAccountsTokenRefreshCreate(  data: TokenRefreshReque
 ): Promise<TokenRefresh> {
   const api = client || getAPIInstance()
   const response = await api.cfg_auth.accountsTokenRefreshCreate(data)
-  return TokenRefreshSchema.parse(response)
+  try {
+    return TokenRefreshSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createAccountsTokenRefreshCreate',
+      message: `Path: /cfg/accounts/token/refresh/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

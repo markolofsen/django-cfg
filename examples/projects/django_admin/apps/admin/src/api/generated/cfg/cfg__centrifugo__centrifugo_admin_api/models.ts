@@ -14,8 +14,8 @@ export interface CentrifugoChannelsRequestRequest {
  * Response model (includes read-only fields).
  */
 export interface CentrifugoChannelsResponse {
-  error?: Record<string, any>;
-  result?: Record<string, any>;
+  error?: CentrifugoError;
+  result?: CentrifugoChannelsResult;
 }
 
 /**
@@ -28,7 +28,7 @@ export interface CentrifugoHistoryRequestRequest {
   channel: string;
   /** Maximum number of messages to return */
   limit?: number | null;
-  since?: Record<string, any>;
+  since?: CentrifugoStreamPosition;
   /** Reverse message order (newest first) */
   reverse?: boolean | null;
 }
@@ -39,8 +39,8 @@ export interface CentrifugoHistoryRequestRequest {
  * Response model (includes read-only fields).
  */
 export interface CentrifugoHistoryResponse {
-  error?: Record<string, any>;
-  result?: Record<string, any>;
+  error?: CentrifugoError;
+  result?: CentrifugoHistoryResult;
 }
 
 /**
@@ -49,8 +49,8 @@ export interface CentrifugoHistoryResponse {
  * Response model (includes read-only fields).
  */
 export interface CentrifugoInfoResponse {
-  error?: Record<string, any>;
-  result?: Record<string, any>;
+  error?: CentrifugoError;
+  result?: CentrifugoInfoResult;
 }
 
 /**
@@ -69,8 +69,8 @@ export interface CentrifugoPresenceRequestRequest {
  * Response model (includes read-only fields).
  */
 export interface CentrifugoPresenceResponse {
-  error?: Record<string, any>;
-  result?: Record<string, any>;
+  error?: CentrifugoError;
+  result?: CentrifugoPresenceResult;
 }
 
 /**
@@ -89,8 +89,8 @@ export interface CentrifugoPresenceStatsRequestRequest {
  * Response model (includes read-only fields).
  */
 export interface CentrifugoPresenceStatsResponse {
-  error?: Record<string, any>;
-  result?: Record<string, any>;
+  error?: CentrifugoError;
+  result?: CentrifugoPresenceStatsResult;
 }
 
 /**
@@ -112,7 +112,7 @@ export interface CentrifugoError {
  */
 export interface CentrifugoChannelsResult {
   /** Map of channel names to channel info */
-  channels: Record<string, any>;
+  channels: Record<string, CentrifugoChannelInfo>;
 }
 
 /**
@@ -158,7 +158,7 @@ export interface CentrifugoInfoResult {
  */
 export interface CentrifugoPresenceResult {
   /** Map of client IDs to client info */
-  presence: Record<string, any>;
+  presence: Record<string, CentrifugoClientInfo>;
 }
 
 /**
@@ -174,6 +174,16 @@ export interface CentrifugoPresenceStatsResult {
 }
 
 /**
+ * Information about a single channel.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface CentrifugoChannelInfo {
+  /** Number of connected clients in channel */
+  num_clients: number;
+}
+
+/**
  * Single publication (message) in channel history.
  * 
  * Response model (includes read-only fields).
@@ -181,7 +191,7 @@ export interface CentrifugoPresenceStatsResult {
 export interface CentrifugoPublication {
   /** Message payload */
   data: Record<string, any>;
-  info?: Record<string, any>;
+  info?: CentrifugoClientInfo;
   /** Message offset in channel stream */
   offset: number;
   /** Optional message tags */
@@ -210,8 +220,8 @@ export interface CentrifugoNodeInfo {
   uptime: number;
   /** Total number of subscriptions */
   num_subs: number;
-  metrics?: Record<string, any>;
-  process?: Record<string, any>;
+  metrics?: CentrifugoMetrics;
+  process?: CentrifugoProcess;
 }
 
 /**
@@ -239,7 +249,7 @@ export interface CentrifugoMetrics {
   /** Metrics collection interval */
   interval: number;
   /** Metric name to value mapping */
-  items: Record<string, any>;
+  items: Record<string, number>;
 }
 
 /**

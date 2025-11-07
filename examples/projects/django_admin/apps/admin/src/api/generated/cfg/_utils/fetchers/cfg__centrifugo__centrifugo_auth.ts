@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { ConnectionTokenResponseSchema, type ConnectionTokenResponse } from '../schemas/ConnectionTokenResponse.schema'
 import { getAPIInstance } from '../../api-instance'
 
@@ -42,7 +43,35 @@ export async function getCentrifugoAuthTokenRetrieve(  client?: any
 ): Promise<ConnectionTokenResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_auth.tokenRetrieve()
-  return ConnectionTokenResponseSchema.parse(response)
+  try {
+    return ConnectionTokenResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCentrifugoAuthTokenRetrieve',
+      message: `Path: /cfg/centrifugo/auth/token/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

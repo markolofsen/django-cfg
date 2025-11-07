@@ -26,7 +26,7 @@ export interface QueueDetail {
   /** Timestamp of oldest job in queue */
   oldest_job_timestamp?: string | null;
   /** Redis connection parameters */
-  connection_kwargs?: Record<string, any>;
+  connection_kwargs?: Record<string, string>;
   /** Queue is in async mode */
   is_async?: boolean;
 }

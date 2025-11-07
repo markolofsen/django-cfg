@@ -32,9 +32,9 @@ export interface PaginatedEmailLogList {
  */
 export interface EmailLog {
   id: string;
-  user: number | null;
+  user?: number | null;
   user_email: string;
-  newsletter: number | null;
+  newsletter?: number | null;
   newsletter_title: string;
   /** Comma-separated email addresses */
   recipient: string;
@@ -45,7 +45,7 @@ export interface EmailLog {
   * `failed` - Failed */
   status: Enums.EmailLogStatus;
   created_at: string;
-  sent_at: string | null;
-  error_message: string | null;
+  sent_at?: string | null;
+  error_message?: string | null;
 }
 

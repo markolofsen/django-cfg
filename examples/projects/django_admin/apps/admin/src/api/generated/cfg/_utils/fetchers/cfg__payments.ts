@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { BalanceSchema, type Balance } from '../schemas/Balance.schema'
 import { PaginatedPaymentListListSchema, type PaginatedPaymentListList } from '../schemas/PaginatedPaymentListList.schema'
 import { PaymentDetailSchema, type PaymentDetail } from '../schemas/PaymentDetail.schema'
@@ -45,7 +46,35 @@ export async function getPaymentsBalanceRetrieve(  client?: any
 ): Promise<Balance> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.balanceRetrieve()
-  return BalanceSchema.parse(response)
+  try {
+    return BalanceSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getPaymentsBalanceRetrieve',
+      message: `Path: /cfg/payments/balance/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -73,7 +102,35 @@ export async function getPaymentsPaymentsList(  params?: { page?: number; page_s
 ): Promise<PaginatedPaymentListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsList(params?.page, params?.page_size)
-  return PaginatedPaymentListListSchema.parse(response)
+  try {
+    return PaginatedPaymentListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getPaymentsPaymentsList',
+      message: `Path: /cfg/payments/payments/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -87,7 +144,35 @@ export async function getPaymentsPaymentsRetrieve(  id: string,  client?: any
 ): Promise<PaymentDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsRetrieve(id)
-  return PaymentDetailSchema.parse(response)
+  try {
+    return PaymentDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getPaymentsPaymentsRetrieve',
+      message: `Path: /cfg/payments/payments/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -101,7 +186,35 @@ export async function createPaymentsPaymentsConfirmCreate(  id: string,  client?
 ): Promise<PaymentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsConfirmCreate(id)
-  return PaymentListSchema.parse(response)
+  try {
+    return PaymentListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createPaymentsPaymentsConfirmCreate',
+      message: `Path: /cfg/payments/payments/{id}/confirm/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -115,7 +228,35 @@ export async function getPaymentsPaymentsStatusRetrieve(  id: string,  client?: 
 ): Promise<PaymentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsStatusRetrieve(id)
-  return PaymentListSchema.parse(response)
+  try {
+    return PaymentListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getPaymentsPaymentsStatusRetrieve',
+      message: `Path: /cfg/payments/payments/{id}/status/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -129,7 +270,35 @@ export async function createPaymentsPaymentsCreateCreate(  client?: any
 ): Promise<PaymentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_payments.paymentsCreateCreate()
-  return PaymentListSchema.parse(response)
+  try {
+    return PaymentListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createPaymentsPaymentsCreateCreate',
+      message: `Path: /cfg/payments/payments/create/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

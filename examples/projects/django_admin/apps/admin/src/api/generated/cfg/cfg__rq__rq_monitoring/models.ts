@@ -8,7 +8,7 @@ export interface RQConfig {
   /** RQ enabled status */
   enabled: boolean;
   /** Configured queues */
-  queues: Record<string, any>;
+  queues: Record<string, string>;
   /** Async mode enabled */
   async_mode?: boolean;
   /** Show admin link */

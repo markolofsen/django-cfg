@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { ArchiveItemSchema, type ArchiveItem } from '../schemas/ArchiveItem.schema'
 import { ArchiveItemChunkSchema, type ArchiveItemChunk } from '../schemas/ArchiveItemChunk.schema'
 import { ArchiveItemChunkDetailSchema, type ArchiveItemChunkDetail } from '../schemas/ArchiveItemChunkDetail.schema'
@@ -85,7 +86,35 @@ export async function getKnowbaseAdminChatList(  params?: { page?: number; page_
 ): Promise<PaginatedChatResponseList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatList(params?.page, params?.page_size)
-  return PaginatedChatResponseListSchema.parse(response)
+  try {
+    return PaginatedChatResponseListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminChatList',
+      message: `Path: /cfg/knowbase/admin/chat/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -99,7 +128,35 @@ export async function createKnowbaseAdminChatCreate(  data: ChatResponseRequest,
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatCreate(data)
-  return ChatResponseSchema.parse(response)
+  try {
+    return ChatResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminChatCreate',
+      message: `Path: /cfg/knowbase/admin/chat/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -113,7 +170,35 @@ export async function getKnowbaseAdminChatRetrieve(  id: string,  client?: any
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatRetrieve(id)
-  return ChatResponseSchema.parse(response)
+  try {
+    return ChatResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminChatRetrieve',
+      message: `Path: /cfg/knowbase/admin/chat/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -127,7 +212,35 @@ export async function updateKnowbaseAdminChatUpdate(  id: string, data: ChatResp
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatUpdate(id, data)
-  return ChatResponseSchema.parse(response)
+  try {
+    return ChatResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateKnowbaseAdminChatUpdate',
+      message: `Path: /cfg/knowbase/admin/chat/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -141,7 +254,35 @@ export async function partialUpdateKnowbaseAdminChatPartialUpdate(  id: string, 
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatPartialUpdate(id, data)
-  return ChatResponseSchema.parse(response)
+  try {
+    return ChatResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateKnowbaseAdminChatPartialUpdate',
+      message: `Path: /cfg/knowbase/admin/chat/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -169,7 +310,35 @@ export async function getKnowbaseAdminChatHistoryRetrieve(  id: string,  client?
 ): Promise<ChatHistory> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatHistoryRetrieve(id)
-  return ChatHistorySchema.parse(response)
+  try {
+    return ChatHistorySchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminChatHistoryRetrieve',
+      message: `Path: /cfg/knowbase/admin/chat/{id}/history/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -183,7 +352,35 @@ export async function createKnowbaseAdminChatQueryCreate(  data: ChatQueryReques
 ): Promise<ChatResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminChatQueryCreate(data)
-  return ChatResponseSchema.parse(response)
+  try {
+    return ChatResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminChatQueryCreate',
+      message: `Path: /cfg/knowbase/admin/chat/query/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -197,7 +394,35 @@ export async function getKnowbaseAdminDocumentsList(  params?: { page?: number; 
 ): Promise<PaginatedDocumentList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsList(params?.page, params?.page_size, params?.status)
-  return PaginatedDocumentListSchema.parse(response)
+  try {
+    return PaginatedDocumentListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminDocumentsList',
+      message: `Path: /cfg/knowbase/admin/documents/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -211,7 +436,35 @@ export async function createKnowbaseAdminDocumentsCreate(  data: DocumentCreateR
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsCreate(data)
-  return DocumentSchema.parse(response)
+  try {
+    return DocumentSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminDocumentsCreate',
+      message: `Path: /cfg/knowbase/admin/documents/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -225,7 +478,35 @@ export async function getKnowbaseAdminDocumentsRetrieve(  id: string,  client?: 
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsRetrieve(id)
-  return DocumentSchema.parse(response)
+  try {
+    return DocumentSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminDocumentsRetrieve',
+      message: `Path: /cfg/knowbase/admin/documents/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -239,7 +520,35 @@ export async function updateKnowbaseAdminDocumentsUpdate(  id: string, data: Doc
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsUpdate(id, data)
-  return DocumentSchema.parse(response)
+  try {
+    return DocumentSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateKnowbaseAdminDocumentsUpdate',
+      message: `Path: /cfg/knowbase/admin/documents/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -253,7 +562,35 @@ export async function partialUpdateKnowbaseAdminDocumentsPartialUpdate(  id: str
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsPartialUpdate(id, data)
-  return DocumentSchema.parse(response)
+  try {
+    return DocumentSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateKnowbaseAdminDocumentsPartialUpdate',
+      message: `Path: /cfg/knowbase/admin/documents/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -281,7 +618,35 @@ export async function createKnowbaseAdminDocumentsReprocessCreate(  id: string, 
 ): Promise<Document> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsReprocessCreate(id, data)
-  return DocumentSchema.parse(response)
+  try {
+    return DocumentSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminDocumentsReprocessCreate',
+      message: `Path: /cfg/knowbase/admin/documents/{id}/reprocess/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -295,7 +660,35 @@ export async function getKnowbaseAdminDocumentsStatusRetrieve(  id: string,  cli
 ): Promise<DocumentProcessingStatus> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsStatusRetrieve(id)
-  return DocumentProcessingStatusSchema.parse(response)
+  try {
+    return DocumentProcessingStatusSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminDocumentsStatusRetrieve',
+      message: `Path: /cfg/knowbase/admin/documents/{id}/status/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -309,7 +702,35 @@ export async function getKnowbaseAdminDocumentsStatsRetrieve(  client?: any
 ): Promise<DocumentStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminDocumentsStatsRetrieve()
-  return DocumentStatsSchema.parse(response)
+  try {
+    return DocumentStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminDocumentsStatsRetrieve',
+      message: `Path: /cfg/knowbase/admin/documents/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -323,7 +744,35 @@ export async function getKnowbaseAdminSessionsList(  params?: { page?: number; p
 ): Promise<PaginatedChatSessionList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsList(params?.page, params?.page_size)
-  return PaginatedChatSessionListSchema.parse(response)
+  try {
+    return PaginatedChatSessionListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminSessionsList',
+      message: `Path: /cfg/knowbase/admin/sessions/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -337,7 +786,35 @@ export async function createKnowbaseAdminSessionsCreate(  data: ChatSessionCreat
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsCreate(data)
-  return ChatSessionSchema.parse(response)
+  try {
+    return ChatSessionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminSessionsCreate',
+      message: `Path: /cfg/knowbase/admin/sessions/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -351,7 +828,35 @@ export async function getKnowbaseAdminSessionsRetrieve(  id: string,  client?: a
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsRetrieve(id)
-  return ChatSessionSchema.parse(response)
+  try {
+    return ChatSessionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseAdminSessionsRetrieve',
+      message: `Path: /cfg/knowbase/admin/sessions/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -365,7 +870,35 @@ export async function updateKnowbaseAdminSessionsUpdate(  id: string, data: Chat
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsUpdate(id, data)
-  return ChatSessionSchema.parse(response)
+  try {
+    return ChatSessionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateKnowbaseAdminSessionsUpdate',
+      message: `Path: /cfg/knowbase/admin/sessions/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -379,7 +912,35 @@ export async function partialUpdateKnowbaseAdminSessionsPartialUpdate(  id: stri
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsPartialUpdate(id, data)
-  return ChatSessionSchema.parse(response)
+  try {
+    return ChatSessionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateKnowbaseAdminSessionsPartialUpdate',
+      message: `Path: /cfg/knowbase/admin/sessions/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -407,7 +968,35 @@ export async function createKnowbaseAdminSessionsActivateCreate(  id: string, da
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsActivateCreate(id, data)
-  return ChatSessionSchema.parse(response)
+  try {
+    return ChatSessionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminSessionsActivateCreate',
+      message: `Path: /cfg/knowbase/admin/sessions/{id}/activate/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -421,7 +1010,35 @@ export async function createKnowbaseAdminSessionsArchiveCreate(  id: string, dat
 ): Promise<ChatSession> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.adminSessionsArchiveCreate(id, data)
-  return ChatSessionSchema.parse(response)
+  try {
+    return ChatSessionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseAdminSessionsArchiveCreate',
+      message: `Path: /cfg/knowbase/admin/sessions/{id}/archive/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -435,7 +1052,35 @@ export async function getKnowbaseCategoriesList(  params?: { page?: number; page
 ): Promise<PaginatedPublicCategoryList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.categoriesList(params?.page, params?.page_size)
-  return PaginatedPublicCategoryListSchema.parse(response)
+  try {
+    return PaginatedPublicCategoryListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseCategoriesList',
+      message: `Path: /cfg/knowbase/categories/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -449,7 +1094,35 @@ export async function getKnowbaseCategoriesRetrieve(  id: string,  client?: any
 ): Promise<PublicCategory> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.categoriesRetrieve(id)
-  return PublicCategorySchema.parse(response)
+  try {
+    return PublicCategorySchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseCategoriesRetrieve',
+      message: `Path: /cfg/knowbase/categories/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -463,7 +1136,35 @@ export async function getKnowbaseDocumentsList(  params?: { category?: string; p
 ): Promise<PaginatedPublicDocumentListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.documentsList(params?.category, params?.page, params?.page_size, params?.search)
-  return PaginatedPublicDocumentListListSchema.parse(response)
+  try {
+    return PaginatedPublicDocumentListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseDocumentsList',
+      message: `Path: /cfg/knowbase/documents/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -477,7 +1178,35 @@ export async function getKnowbaseDocumentsRetrieve(  id: string,  client?: any
 ): Promise<PublicDocument> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.documentsRetrieve(id)
-  return PublicDocumentSchema.parse(response)
+  try {
+    return PublicDocumentSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseDocumentsRetrieve',
+      message: `Path: /cfg/knowbase/documents/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -491,7 +1220,35 @@ export async function getKnowbaseSystemArchivesList(  params?: { page?: number; 
 ): Promise<PaginatedDocumentArchiveListList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesList(params?.page, params?.page_size)
-  return PaginatedDocumentArchiveListListSchema.parse(response)
+  try {
+    return PaginatedDocumentArchiveListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemArchivesList',
+      message: `Path: /cfg/knowbase/system/archives/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -505,7 +1262,35 @@ export async function createKnowbaseSystemArchivesCreate(  data: any,  client?: 
 ): Promise<ArchiveProcessingResult> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesCreate(data)
-  return ArchiveProcessingResultSchema.parse(response)
+  try {
+    return ArchiveProcessingResultSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseSystemArchivesCreate',
+      message: `Path: /cfg/knowbase/system/archives/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -519,7 +1304,35 @@ export async function getKnowbaseSystemArchivesRetrieve(  id: string,  client?: 
 ): Promise<DocumentArchiveDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesRetrieve(id)
-  return DocumentArchiveDetailSchema.parse(response)
+  try {
+    return DocumentArchiveDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemArchivesRetrieve',
+      message: `Path: /cfg/knowbase/system/archives/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -533,7 +1346,35 @@ export async function updateKnowbaseSystemArchivesUpdate(  id: string, data: Doc
 ): Promise<DocumentArchive> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesUpdate(id, data)
-  return DocumentArchiveSchema.parse(response)
+  try {
+    return DocumentArchiveSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateKnowbaseSystemArchivesUpdate',
+      message: `Path: /cfg/knowbase/system/archives/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -547,7 +1388,35 @@ export async function partialUpdateKnowbaseSystemArchivesPartialUpdate(  id: str
 ): Promise<DocumentArchive> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesPartialUpdate(id, data)
-  return DocumentArchiveSchema.parse(response)
+  try {
+    return DocumentArchiveSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateKnowbaseSystemArchivesPartialUpdate',
+      message: `Path: /cfg/knowbase/system/archives/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -589,7 +1458,35 @@ export async function getKnowbaseSystemArchivesItemsList(  id: string, params?: 
 ): Promise<PaginatedArchiveItemList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesItemsList(id, params?.page, params?.page_size)
-  return PaginatedArchiveItemListSchema.parse(response)
+  try {
+    return PaginatedArchiveItemListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemArchivesItemsList',
+      message: `Path: /cfg/knowbase/system/archives/{id}/items/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -603,7 +1500,35 @@ export async function createKnowbaseSystemArchivesSearchCreate(  id: string, dat
 ): Promise<PaginatedArchiveSearchResultList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesSearchCreate(id, data, params?.page, params?.page_size)
-  return PaginatedArchiveSearchResultListSchema.parse(response)
+  try {
+    return PaginatedArchiveSearchResultListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseSystemArchivesSearchCreate',
+      message: `Path: /cfg/knowbase/system/archives/{id}/search/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -617,7 +1542,35 @@ export async function createKnowbaseSystemArchivesRevectorizeCreate(  data: Chun
 ): Promise<VectorizationResult> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesRevectorizeCreate(data)
-  return VectorizationResultSchema.parse(response)
+  try {
+    return VectorizationResultSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseSystemArchivesRevectorizeCreate',
+      message: `Path: /cfg/knowbase/system/archives/revectorize/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -631,7 +1584,35 @@ export async function getKnowbaseSystemArchivesStatisticsRetrieve(  client?: any
 ): Promise<ArchiveStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesStatisticsRetrieve()
-  return ArchiveStatisticsSchema.parse(response)
+  try {
+    return ArchiveStatisticsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemArchivesStatisticsRetrieve',
+      message: `Path: /cfg/knowbase/system/archives/statistics/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -645,7 +1626,35 @@ export async function getKnowbaseSystemArchivesVectorizationStatsRetrieve(  clie
 ): Promise<VectorizationStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemArchivesVectorizationStatsRetrieve()
-  return VectorizationStatisticsSchema.parse(response)
+  try {
+    return VectorizationStatisticsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemArchivesVectorizationStatsRetrieve',
+      message: `Path: /cfg/knowbase/system/archives/vectorization_stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -659,7 +1668,35 @@ export async function getKnowbaseSystemChunksList(  params?: { page?: number; pa
 ): Promise<PaginatedArchiveItemChunkList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksList(params?.page, params?.page_size)
-  return PaginatedArchiveItemChunkListSchema.parse(response)
+  try {
+    return PaginatedArchiveItemChunkListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemChunksList',
+      message: `Path: /cfg/knowbase/system/chunks/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -673,7 +1710,35 @@ export async function createKnowbaseSystemChunksCreate(  data: ArchiveItemChunkR
 ): Promise<ArchiveItemChunk> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksCreate(data)
-  return ArchiveItemChunkSchema.parse(response)
+  try {
+    return ArchiveItemChunkSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseSystemChunksCreate',
+      message: `Path: /cfg/knowbase/system/chunks/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -687,7 +1752,35 @@ export async function getKnowbaseSystemChunksRetrieve(  id: string,  client?: an
 ): Promise<ArchiveItemChunkDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksRetrieve(id)
-  return ArchiveItemChunkDetailSchema.parse(response)
+  try {
+    return ArchiveItemChunkDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemChunksRetrieve',
+      message: `Path: /cfg/knowbase/system/chunks/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -701,7 +1794,35 @@ export async function updateKnowbaseSystemChunksUpdate(  id: string, data: Archi
 ): Promise<ArchiveItemChunk> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksUpdate(id, data)
-  return ArchiveItemChunkSchema.parse(response)
+  try {
+    return ArchiveItemChunkSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateKnowbaseSystemChunksUpdate',
+      message: `Path: /cfg/knowbase/system/chunks/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -715,7 +1836,35 @@ export async function partialUpdateKnowbaseSystemChunksPartialUpdate(  id: strin
 ): Promise<ArchiveItemChunk> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksPartialUpdate(id, data)
-  return ArchiveItemChunkSchema.parse(response)
+  try {
+    return ArchiveItemChunkSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateKnowbaseSystemChunksPartialUpdate',
+      message: `Path: /cfg/knowbase/system/chunks/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -743,7 +1892,35 @@ export async function getKnowbaseSystemChunksContextRetrieve(  id: string,  clie
 ): Promise<ArchiveItemChunkDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemChunksContextRetrieve(id)
-  return ArchiveItemChunkDetailSchema.parse(response)
+  try {
+    return ArchiveItemChunkDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemChunksContextRetrieve',
+      message: `Path: /cfg/knowbase/system/chunks/{id}/context/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -771,7 +1948,35 @@ export async function getKnowbaseSystemItemsList(  params?: { page?: number; pag
 ): Promise<PaginatedArchiveItemList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsList(params?.page, params?.page_size)
-  return PaginatedArchiveItemListSchema.parse(response)
+  try {
+    return PaginatedArchiveItemListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemItemsList',
+      message: `Path: /cfg/knowbase/system/items/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -785,7 +1990,35 @@ export async function createKnowbaseSystemItemsCreate(  data: ArchiveItemRequest
 ): Promise<ArchiveItem> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsCreate(data)
-  return ArchiveItemSchema.parse(response)
+  try {
+    return ArchiveItemSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createKnowbaseSystemItemsCreate',
+      message: `Path: /cfg/knowbase/system/items/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -799,7 +2032,35 @@ export async function getKnowbaseSystemItemsRetrieve(  id: string,  client?: any
 ): Promise<ArchiveItemDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsRetrieve(id)
-  return ArchiveItemDetailSchema.parse(response)
+  try {
+    return ArchiveItemDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemItemsRetrieve',
+      message: `Path: /cfg/knowbase/system/items/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -813,7 +2074,35 @@ export async function updateKnowbaseSystemItemsUpdate(  id: string, data: Archiv
 ): Promise<ArchiveItem> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsUpdate(id, data)
-  return ArchiveItemSchema.parse(response)
+  try {
+    return ArchiveItemSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateKnowbaseSystemItemsUpdate',
+      message: `Path: /cfg/knowbase/system/items/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -827,7 +2116,35 @@ export async function partialUpdateKnowbaseSystemItemsPartialUpdate(  id: string
 ): Promise<ArchiveItem> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsPartialUpdate(id, data)
-  return ArchiveItemSchema.parse(response)
+  try {
+    return ArchiveItemSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateKnowbaseSystemItemsPartialUpdate',
+      message: `Path: /cfg/knowbase/system/items/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -855,7 +2172,35 @@ export async function getKnowbaseSystemItemsChunksList(  id: string, params?: { 
 ): Promise<PaginatedArchiveItemChunkList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsChunksList(id, params?.page, params?.page_size)
-  return PaginatedArchiveItemChunkListSchema.parse(response)
+  try {
+    return PaginatedArchiveItemChunkListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemItemsChunksList',
+      message: `Path: /cfg/knowbase/system/items/{id}/chunks/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -869,7 +2214,35 @@ export async function getKnowbaseSystemItemsContentRetrieve(  id: string,  clien
 ): Promise<ArchiveItemDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_knowbase.systemItemsContentRetrieve(id)
-  return ArchiveItemDetailSchema.parse(response)
+  try {
+    return ArchiveItemDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getKnowbaseSystemItemsContentRetrieve',
+      message: `Path: /cfg/knowbase/system/items/{id}/content/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

@@ -5,12 +5,13 @@
  *  * Presence result wrapper.
  *  */
 import { z } from 'zod'
+import { CentrifugoClientInfoSchema } from './CentrifugoClientInfo.schema'
 
 /**
  * Presence result wrapper.
  */
 export const CentrifugoPresenceResultSchema = z.object({
-  presence: z.record(z.string(), z.any()),
+  presence: z.record(z.string(), CentrifugoClientInfoSchema),
 })
 
 /**

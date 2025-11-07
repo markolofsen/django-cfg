@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { MessageSchema, type Message } from '../schemas/Message.schema'
 import { MessageCreateSchema, type MessageCreate } from '../schemas/MessageCreate.schema'
 import { MessageCreateRequestSchema, type MessageCreateRequest } from '../schemas/MessageCreateRequest.schema'
@@ -51,7 +52,35 @@ export async function getSupportTicketsList(  params?: { page?: number; page_siz
 ): Promise<PaginatedTicketList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsList(params?.page, params?.page_size)
-  return PaginatedTicketListSchema.parse(response)
+  try {
+    return PaginatedTicketListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getSupportTicketsList',
+      message: `Path: /cfg/support/tickets/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -65,7 +94,35 @@ export async function createSupportTicketsCreate(  data: TicketRequest,  client?
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsCreate(data)
-  return TicketSchema.parse(response)
+  try {
+    return TicketSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createSupportTicketsCreate',
+      message: `Path: /cfg/support/tickets/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -79,7 +136,35 @@ export async function getSupportTicketsMessagesList(  ticket_uuid: string, param
 ): Promise<PaginatedMessageList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesList(ticket_uuid, params?.page, params?.page_size)
-  return PaginatedMessageListSchema.parse(response)
+  try {
+    return PaginatedMessageListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getSupportTicketsMessagesList',
+      message: `Path: /cfg/support/tickets/{ticket_uuid}/messages/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -93,7 +178,35 @@ export async function createSupportTicketsMessagesCreate(  ticket_uuid: string, 
 ): Promise<MessageCreate> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesCreate(ticket_uuid, data)
-  return MessageCreateSchema.parse(response)
+  try {
+    return MessageCreateSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createSupportTicketsMessagesCreate',
+      message: `Path: /cfg/support/tickets/{ticket_uuid}/messages/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -107,7 +220,35 @@ export async function getSupportTicketsMessagesRetrieve(  ticket_uuid: string, u
 ): Promise<Message> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesRetrieve(ticket_uuid, uuid)
-  return MessageSchema.parse(response)
+  try {
+    return MessageSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getSupportTicketsMessagesRetrieve',
+      message: `Path: /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -121,7 +262,35 @@ export async function updateSupportTicketsMessagesUpdate(  ticket_uuid: string, 
 ): Promise<Message> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesUpdate(ticket_uuid, uuid, data)
-  return MessageSchema.parse(response)
+  try {
+    return MessageSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateSupportTicketsMessagesUpdate',
+      message: `Path: /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -135,7 +304,35 @@ export async function partialUpdateSupportTicketsMessagesPartialUpdate(  ticket_
 ): Promise<Message> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsMessagesPartialUpdate(ticket_uuid, uuid, data)
-  return MessageSchema.parse(response)
+  try {
+    return MessageSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateSupportTicketsMessagesPartialUpdate',
+      message: `Path: /cfg/support/tickets/{ticket_uuid}/messages/{uuid}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -163,7 +360,35 @@ export async function getSupportTicketsRetrieve(  uuid: string,  client?: any
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsRetrieve(uuid)
-  return TicketSchema.parse(response)
+  try {
+    return TicketSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getSupportTicketsRetrieve',
+      message: `Path: /cfg/support/tickets/{uuid}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -177,7 +402,35 @@ export async function updateSupportTicketsUpdate(  uuid: string, data: TicketReq
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsUpdate(uuid, data)
-  return TicketSchema.parse(response)
+  try {
+    return TicketSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateSupportTicketsUpdate',
+      message: `Path: /cfg/support/tickets/{uuid}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -191,7 +444,35 @@ export async function partialUpdateSupportTicketsPartialUpdate(  uuid: string, d
 ): Promise<Ticket> {
   const api = client || getAPIInstance()
   const response = await api.cfg_support.ticketsPartialUpdate(uuid, data)
-  return TicketSchema.parse(response)
+  try {
+    return TicketSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateSupportTicketsPartialUpdate',
+      message: `Path: /cfg/support/tickets/{uuid}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

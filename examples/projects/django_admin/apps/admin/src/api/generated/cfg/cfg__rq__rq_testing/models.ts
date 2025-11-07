@@ -15,7 +15,7 @@ export interface TestingActionResponse {
   /** Number of items affected */
   count?: number | null;
   /** Additional metadata */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string>;
 }
 
 /**
@@ -40,7 +40,7 @@ export interface RunDemoRequestRequest {
   /** Task arguments */
   args?: Array<string>;
   /** Task keyword arguments */
-  kwargs?: Record<string, any>;
+  kwargs?: Record<string, string>;
   /** Job timeout in seconds */
   timeout?: number | null;
 }

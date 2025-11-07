@@ -11,7 +11,7 @@ import { z } from 'zod'
  */
 export const CentrifugoMetricsSchema = z.object({
   interval: z.number(),
-  items: z.record(z.string(), z.any()),
+  items: z.record(z.string(), z.number()),
 })
 
 /**

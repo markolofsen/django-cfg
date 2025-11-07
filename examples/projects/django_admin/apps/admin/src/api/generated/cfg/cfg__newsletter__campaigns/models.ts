@@ -63,7 +63,7 @@ export interface NewsletterCampaign {
   * `failed` - Failed */
   status: Enums.NewsletterCampaignStatus;
   created_at: string;
-  sent_at: string | null;
+  sent_at?: string | null;
   recipient_count: number;
 }
 

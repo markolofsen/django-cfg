@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { CentrifugoChannelsRequestRequestSchema, type CentrifugoChannelsRequestRequest } from '../schemas/CentrifugoChannelsRequestRequest.schema'
 import { CentrifugoChannelsResponseSchema, type CentrifugoChannelsResponse } from '../schemas/CentrifugoChannelsResponse.schema'
 import { CentrifugoHistoryRequestRequestSchema, type CentrifugoHistoryRequestRequest } from '../schemas/CentrifugoHistoryRequestRequest.schema'
@@ -64,7 +65,35 @@ export async function createCentrifugoServerChannelsCreate(  data: CentrifugoCha
 ): Promise<CentrifugoChannelsResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerChannelsCreate(data)
-  return CentrifugoChannelsResponseSchema.parse(response)
+  try {
+    return CentrifugoChannelsResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createCentrifugoServerChannelsCreate',
+      message: `Path: /cfg/centrifugo/server/channels/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -78,7 +107,35 @@ export async function createCentrifugoServerHistoryCreate(  data: CentrifugoHist
 ): Promise<CentrifugoHistoryResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerHistoryCreate(data)
-  return CentrifugoHistoryResponseSchema.parse(response)
+  try {
+    return CentrifugoHistoryResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createCentrifugoServerHistoryCreate',
+      message: `Path: /cfg/centrifugo/server/history/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -92,7 +149,35 @@ export async function createCentrifugoServerInfoCreate(  client?: any
 ): Promise<CentrifugoInfoResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerInfoCreate()
-  return CentrifugoInfoResponseSchema.parse(response)
+  try {
+    return CentrifugoInfoResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createCentrifugoServerInfoCreate',
+      message: `Path: /cfg/centrifugo/server/info/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -106,7 +191,35 @@ export async function createCentrifugoServerPresenceCreate(  data: CentrifugoPre
 ): Promise<CentrifugoPresenceResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerPresenceCreate(data)
-  return CentrifugoPresenceResponseSchema.parse(response)
+  try {
+    return CentrifugoPresenceResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createCentrifugoServerPresenceCreate',
+      message: `Path: /cfg/centrifugo/server/presence/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -120,7 +233,35 @@ export async function createCentrifugoServerPresenceStatsCreate(  data: Centrifu
 ): Promise<CentrifugoPresenceStatsResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo_admin_api.centrifugoServerPresenceStatsCreate(data)
-  return CentrifugoPresenceStatsResponseSchema.parse(response)
+  try {
+    return CentrifugoPresenceStatsResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createCentrifugoServerPresenceStatsCreate',
+      message: `Path: /cfg/centrifugo/server/presence-stats/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

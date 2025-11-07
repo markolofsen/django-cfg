@@ -9,13 +9,13 @@ import * as Enums from "../enums";
 export interface DashboardOverview {
   /** Dashboard statistics cards */
   stat_cards: Array<StatCard>;
-  system_health: Record<string, any>;
+  system_health: SystemHealth;
   /** Quick action buttons */
   quick_actions: Array<QuickAction>;
   /** Recent activity entries */
   recent_activity: Array<ActivityEntry>;
-  system_metrics: Record<string, any>;
-  user_statistics: Record<string, any>;
+  system_metrics: SystemMetrics;
+  user_statistics: UserStatistics;
   /** Application statistics */
   app_statistics?: Array<AppStatistics>;
   /** Data timestamp (ISO format) */
@@ -165,8 +165,7 @@ export interface UserStatistics {
 export interface AppStatistics {
   /** Application name */
   app_name: string;
-  /** Application statistics */
-  statistics: Record<string, any>;
+  statistics: AppStatisticsData;
 }
 
 /**
@@ -191,5 +190,19 @@ export interface SystemHealthItem {
   last_check: string;
   /** Health percentage (0-100) */
   health_percentage?: number | null;
+}
+
+/**
+ * Serializer for application statistics data.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface AppStatisticsData {
+  /** Human-readable app name */
+  name: string;
+  /** Total records count */
+  total_records: number;
+  /** Number of models */
+  model_count: number;
 }
 

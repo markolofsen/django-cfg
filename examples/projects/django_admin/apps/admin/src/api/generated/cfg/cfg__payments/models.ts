@@ -14,7 +14,7 @@ export interface Balance {
   /** Total amount withdrawn (lifetime) */
   total_withdrawn: string;
   /** When the last transaction occurred */
-  last_transaction_at: string | null;
+  last_transaction_at?: string | null;
 }
 
 /**
@@ -59,11 +59,11 @@ export interface PaymentDetail {
   currency_token: string;
   currency_network: string;
   /** Amount to pay in cryptocurrency */
-  pay_amount: string | null;
+  pay_amount?: string | null;
   /** Actual amount received in cryptocurrency */
-  actual_amount: string | null;
+  actual_amount?: string | null;
   /** Actual amount received in USD */
-  actual_amount_usd: string | null;
+  actual_amount_usd?: string | null;
   /** Current payment status
 
   * `pending` - Pending
@@ -77,21 +77,21 @@ export interface PaymentDetail {
   status: Enums.PaymentDetailStatus;
   status_display: string;
   /** Cryptocurrency payment address */
-  pay_address: string | null;
+  pay_address?: string | null;
   /** Get QR code URL. */
-  qr_code_url: string | null;
+  qr_code_url?: string | null;
   /** Payment page URL (if provided by provider) */
-  payment_url: string | null;
+  payment_url?: string | null;
   /** Blockchain transaction hash */
-  transaction_hash: string | null;
+  transaction_hash?: string | null;
   /** Get blockchain explorer link. */
-  explorer_link: string | null;
+  explorer_link?: string | null;
   /** Number of blockchain confirmations */
   confirmations_count: number;
   /** When this payment expires (typically 30 minutes) */
-  expires_at: string | null;
+  expires_at?: string | null;
   /** When this payment was completed */
-  completed_at: string | null;
+  completed_at?: string | null;
   /** When this record was created */
   created_at: string;
   is_completed: boolean;
@@ -130,6 +130,6 @@ export interface PaymentList {
   /** When this record was created */
   created_at: string;
   /** When this payment was completed */
-  completed_at: string | null;
+  completed_at?: string | null;
 }
 

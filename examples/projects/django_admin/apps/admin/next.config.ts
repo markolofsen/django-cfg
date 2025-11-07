@@ -55,7 +55,8 @@ const nextConfig: NextConfig = {
     "@djangocfg/ui",
     "@djangocfg/layouts",
     "@djangocfg/markdown",
-    "@djangocfg/api"
+    "@djangocfg/api",
+    "@djangocfg/centrifugo"
   ],
 
   webpack: (config, { isServer }) => {

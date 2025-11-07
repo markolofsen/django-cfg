@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { LeadSubmissionSchema, type LeadSubmission } from '../schemas/LeadSubmission.schema'
 import { LeadSubmissionRequestSchema, type LeadSubmissionRequest } from '../schemas/LeadSubmissionRequest.schema'
 import { PaginatedLeadSubmissionListSchema, type PaginatedLeadSubmissionList } from '../schemas/PaginatedLeadSubmissionList.schema'
@@ -45,7 +46,35 @@ export async function getLeadsList(  params?: { page?: number; page_size?: numbe
 ): Promise<PaginatedLeadSubmissionList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.list(params?.page, params?.page_size)
-  return PaginatedLeadSubmissionListSchema.parse(response)
+  try {
+    return PaginatedLeadSubmissionListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getLeadsList',
+      message: `Path: /cfg/leads/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -59,7 +88,35 @@ export async function createLeadsCreate(  data: LeadSubmissionRequest,  client?:
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.create(data)
-  return LeadSubmissionSchema.parse(response)
+  try {
+    return LeadSubmissionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createLeadsCreate',
+      message: `Path: /cfg/leads/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -73,7 +130,35 @@ export async function getLeadsRetrieve(  id: number,  client?: any
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.retrieve(id)
-  return LeadSubmissionSchema.parse(response)
+  try {
+    return LeadSubmissionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getLeadsRetrieve',
+      message: `Path: /cfg/leads/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -87,7 +172,35 @@ export async function updateLeadsUpdate(  id: number, data: LeadSubmissionReques
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.update(id, data)
-  return LeadSubmissionSchema.parse(response)
+  try {
+    return LeadSubmissionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateLeadsUpdate',
+      message: `Path: /cfg/leads/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -101,7 +214,35 @@ export async function partialUpdateLeadsPartialUpdate(  id: number, data?: Patch
 ): Promise<LeadSubmission> {
   const api = client || getAPIInstance()
   const response = await api.cfg_leads.partialUpdate(id, data)
-  return LeadSubmissionSchema.parse(response)
+  try {
+    return LeadSubmissionSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateLeadsPartialUpdate',
+      message: `Path: /cfg/leads/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

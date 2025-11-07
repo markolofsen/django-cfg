@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { HealthCheckSchema, type HealthCheck } from '../schemas/HealthCheck.schema'
 import { RQConfigSchema, type RQConfig } from '../schemas/RQConfig.schema'
 import { getAPIInstance } from '../../api-instance'
@@ -43,7 +44,35 @@ export async function getRqMonitorConfigRetrieve(  client?: any
 ): Promise<RQConfig> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_monitoring.rqMonitorConfigRetrieve()
-  return RQConfigSchema.parse(response)
+  try {
+    return RQConfigSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqMonitorConfigRetrieve',
+      message: `Path: /cfg/rq/monitor/config/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -57,7 +86,35 @@ export async function getRqMonitorHealthRetrieve(  client?: any
 ): Promise<HealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_monitoring.rqMonitorHealthRetrieve()
-  return HealthCheckSchema.parse(response)
+  try {
+    return HealthCheckSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getRqMonitorHealthRetrieve',
+      message: `Path: /cfg/rq/monitor/health/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

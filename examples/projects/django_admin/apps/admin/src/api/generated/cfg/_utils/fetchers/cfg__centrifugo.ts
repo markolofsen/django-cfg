@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { PublishSchema, type Publish } from '../schemas/Publish.schema'
 import { getAPIInstance } from '../../api-instance'
 
@@ -42,7 +43,35 @@ export async function getCentrifugoMonitorChannelsRetrieve(  client?: any
 ): Promise<Publish> {
   const api = client || getAPIInstance()
   const response = await api.cfg_centrifugo.monitorChannelsRetrieve()
-  return PublishSchema.parse(response)
+  try {
+    return PublishSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCentrifugoMonitorChannelsRetrieve',
+      message: `Path: /cfg/centrifugo/monitor/channels/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

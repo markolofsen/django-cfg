@@ -24,7 +24,7 @@ export interface CommandExecuteRequestRequest {
   /** Positional arguments for the command */
   args?: Array<string>;
   /** Named options for the command (e.g., {'verbosity': '2'}) */
-  options?: Record<string, any>;
+  options?: Record<string, string>;
 }
 
 /**
@@ -38,7 +38,7 @@ export interface CommandsSummary {
   custom_commands: number;
   categories: Array<string>;
   commands: Array<Command>;
-  categorized: Record<string, any>;
+  categorized: Record<string, string>;
 }
 
 /**

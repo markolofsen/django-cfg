@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { NewsletterCampaignSchema, type NewsletterCampaign } from '../schemas/NewsletterCampaign.schema'
 import { NewsletterCampaignRequestSchema, type NewsletterCampaignRequest } from '../schemas/NewsletterCampaignRequest.schema'
 import { PaginatedNewsletterCampaignListSchema, type PaginatedNewsletterCampaignList } from '../schemas/PaginatedNewsletterCampaignList.schema'
@@ -46,7 +47,35 @@ export async function getNewsletterCampaignsList(  params?: { page?: number; pag
 ): Promise<PaginatedNewsletterCampaignList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsList(params?.page, params?.page_size)
-  return PaginatedNewsletterCampaignListSchema.parse(response)
+  try {
+    return PaginatedNewsletterCampaignListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getNewsletterCampaignsList',
+      message: `Path: /cfg/newsletter/campaigns/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -60,7 +89,35 @@ export async function createNewsletterCampaignsCreate(  data: NewsletterCampaign
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsCreate(data)
-  return NewsletterCampaignSchema.parse(response)
+  try {
+    return NewsletterCampaignSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createNewsletterCampaignsCreate',
+      message: `Path: /cfg/newsletter/campaigns/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -74,7 +131,35 @@ export async function getNewsletterCampaignsRetrieve(  id: number,  client?: any
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsRetrieve(id)
-  return NewsletterCampaignSchema.parse(response)
+  try {
+    return NewsletterCampaignSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getNewsletterCampaignsRetrieve',
+      message: `Path: /cfg/newsletter/campaigns/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -88,7 +173,35 @@ export async function updateNewsletterCampaignsUpdate(  id: number, data: Newsle
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsUpdate(id, data)
-  return NewsletterCampaignSchema.parse(response)
+  try {
+    return NewsletterCampaignSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateNewsletterCampaignsUpdate',
+      message: `Path: /cfg/newsletter/campaigns/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -116,7 +229,35 @@ export async function createNewsletterCampaignsSendCreate(  data: SendCampaignRe
 ): Promise<SendCampaignResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_campaigns.newsletterCampaignsSendCreate(data)
-  return SendCampaignResponseSchema.parse(response)
+  try {
+    return SendCampaignResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createNewsletterCampaignsSendCreate',
+      message: `Path: /cfg/newsletter/campaigns/send/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

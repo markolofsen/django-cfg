@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { NewsletterCampaignSchema, type NewsletterCampaign } from '../schemas/NewsletterCampaign.schema'
 import { PatchedNewsletterCampaignRequestSchema, type PatchedNewsletterCampaignRequest } from '../schemas/PatchedNewsletterCampaignRequest.schema'
 import { PatchedUnsubscribeRequestSchema, type PatchedUnsubscribeRequest } from '../schemas/PatchedUnsubscribeRequest.schema'
@@ -46,7 +47,35 @@ export async function partialUpdateNewsletterCampaignsPartialUpdate(  id: number
 ): Promise<NewsletterCampaign> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.campaignsPartialUpdate(id, data)
-  return NewsletterCampaignSchema.parse(response)
+  try {
+    return NewsletterCampaignSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateNewsletterCampaignsPartialUpdate',
+      message: `Path: /cfg/newsletter/campaigns/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -60,7 +89,35 @@ export async function updateNewsletterUnsubscribeUpdate(  data: UnsubscribeReque
 ): Promise<Unsubscribe> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.unsubscribeUpdate(data)
-  return UnsubscribeSchema.parse(response)
+  try {
+    return UnsubscribeSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateNewsletterUnsubscribeUpdate',
+      message: `Path: /cfg/newsletter/unsubscribe/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -74,7 +131,35 @@ export async function partialUpdateNewsletterUnsubscribePartialUpdate(  data?: P
 ): Promise<Unsubscribe> {
   const api = client || getAPIInstance()
   const response = await api.cfg_newsletter.unsubscribePartialUpdate(data)
-  return UnsubscribeSchema.parse(response)
+  try {
+    return UnsubscribeSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateNewsletterUnsubscribePartialUpdate',
+      message: `Path: /cfg/newsletter/unsubscribe/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

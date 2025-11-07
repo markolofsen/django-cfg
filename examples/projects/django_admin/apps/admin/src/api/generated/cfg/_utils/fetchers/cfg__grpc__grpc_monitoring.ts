@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { GRPCHealthCheckSchema, type GRPCHealthCheck } from '../schemas/GRPCHealthCheck.schema'
 import { GRPCOverviewStatsSchema, type GRPCOverviewStats } from '../schemas/GRPCOverviewStats.schema'
 import { MethodListSchema, type MethodList } from '../schemas/MethodList.schema'
@@ -45,7 +46,35 @@ export async function getGrpcMonitorHealthRetrieve(  client?: any
 ): Promise<GRPCHealthCheck> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_monitoring.grpcMonitorHealthRetrieve()
-  return GRPCHealthCheckSchema.parse(response)
+  try {
+    return GRPCHealthCheckSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcMonitorHealthRetrieve',
+      message: `Path: /cfg/grpc/monitor/health/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -59,7 +88,35 @@ export async function getGrpcMonitorMethodsRetrieve(  params?: { hours?: number;
 ): Promise<MethodList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_monitoring.grpcMonitorMethodsRetrieve(params?.hours, params?.service)
-  return MethodListSchema.parse(response)
+  try {
+    return MethodListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcMonitorMethodsRetrieve',
+      message: `Path: /cfg/grpc/monitor/methods/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -73,7 +130,35 @@ export async function getGrpcMonitorOverviewRetrieve(  params?: { hours?: number
 ): Promise<GRPCOverviewStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_monitoring.grpcMonitorOverviewRetrieve(params?.hours)
-  return GRPCOverviewStatsSchema.parse(response)
+  try {
+    return GRPCOverviewStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcMonitorOverviewRetrieve',
+      message: `Path: /cfg/grpc/monitor/overview/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -87,7 +172,35 @@ export async function getGrpcMonitorRequestsList(  params?: { method?: string; p
 ): Promise<PaginatedRecentRequestList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_monitoring.grpcMonitorRequestsList(params?.method, params?.page, params?.page_size, params?.service, params?.status)
-  return PaginatedRecentRequestListSchema.parse(response)
+  try {
+    return PaginatedRecentRequestListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcMonitorRequestsList',
+      message: `Path: /cfg/grpc/monitor/requests/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

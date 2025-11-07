@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { RunDemoRequestRequestSchema, type RunDemoRequestRequest } from '../schemas/RunDemoRequestRequest.schema'
 import { StressTestRequestRequestSchema, type StressTestRequestRequest } from '../schemas/StressTestRequestRequest.schema'
 import { TestingActionResponseSchema, type TestingActionResponse } from '../schemas/TestingActionResponse.schema'
@@ -58,7 +59,35 @@ export async function deleteRqTestingCleanupDestroy(  params?: { delete_demo_job
 ): Promise<TestingActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_testing.cleanupDestroy(params?.delete_demo_jobs_only, params?.queue, params?.registries)
-  return TestingActionResponseSchema.parse(response)
+  try {
+    return TestingActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'deleteRqTestingCleanupDestroy',
+      message: `Path: /cfg/rq/testing/cleanup/\nMethod: DELETE`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -86,7 +115,35 @@ export async function createRqTestingRunDemoCreate(  data: RunDemoRequestRequest
 ): Promise<TestingActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_testing.runDemoCreate(data)
-  return TestingActionResponseSchema.parse(response)
+  try {
+    return TestingActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqTestingRunDemoCreate',
+      message: `Path: /cfg/rq/testing/run-demo/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -100,7 +157,35 @@ export async function createRqTestingScheduleDemoCreate(  data: any,  client?: a
 ): Promise<TestingActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_testing.scheduleDemoCreate(data)
-  return TestingActionResponseSchema.parse(response)
+  try {
+    return TestingActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqTestingScheduleDemoCreate',
+      message: `Path: /cfg/rq/testing/schedule-demo/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -114,7 +199,35 @@ export async function createRqTestingStressTestCreate(  data: StressTestRequestR
 ): Promise<TestingActionResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_rq_testing.stressTestCreate(data)
-  return TestingActionResponseSchema.parse(response)
+  try {
+    return TestingActionResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createRqTestingStressTestCreate',
+      message: `Path: /cfg/rq/testing/stress-test/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

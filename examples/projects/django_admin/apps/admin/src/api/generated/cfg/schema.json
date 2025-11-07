@@ -10989,16 +10989,40 @@
             "description": "Application name"
           },
           "statistics": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "integer"
-            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppStatisticsData"
+              }
+            ],
             "description": "Application statistics"
           }
         },
         "required": [
           "app_name",
           "statistics"
+        ]
+      },
+      "AppStatisticsData": {
+        "type": "object",
+        "description": "Serializer for application statistics data.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable app name"
+          },
+          "total_records": {
+            "type": "integer",
+            "description": "Total records count"
+          },
+          "model_count": {
+            "type": "integer",
+            "description": "Number of models"
+          }
+        },
+        "required": [
+          "model_count",
+          "name",
+          "total_records"
         ]
       },
       "ArchiveItem": {
@@ -11674,6 +11698,83 @@
           "total_items",
           "total_tokens"
         ]
+      },
+      "AxesConfig": {
+        "type": "object",
+        "description": "Django-Axes brute-force protection configuration.",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "failure_limit": {
+            "type": "integer",
+            "nullable": true
+          },
+          "cooloff_time": {
+            "type": "integer",
+            "nullable": true
+          },
+          "lock_out_at_failure": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "reset_on_success": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "only_user_failures": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "lockout_template": {
+            "type": "string",
+            "nullable": true
+          },
+          "lockout_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "verbose": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enable_access_failure_log": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "ipware_proxy_count": {
+            "type": "integer",
+            "nullable": true
+          },
+          "ipware_meta_precedence_order": {
+            "type": "array",
+            "items": {},
+            "nullable": true
+          },
+          "allowed_ips": {
+            "type": "array",
+            "items": {},
+            "nullable": true
+          },
+          "denied_ips": {
+            "type": "array",
+            "items": {},
+            "nullable": true
+          },
+          "cache_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "use_user_agent": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "username_form_field": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "Balance": {
         "type": "object",
@@ -13266,7 +13367,7 @@
           "django_settings": {
             "type": "object",
             "additionalProperties": {},
-            "description": "Complete Django settings (sanitized)"
+            "description": "Complete Django settings (sanitized, contains mixed types)"
           },
           "_validation": {
             "allOf": [
@@ -13383,6 +13484,39 @@
         ],
         "title": "ConnectionTokenResponse",
         "type": "object"
+      },
+      "ConstanceConfig": {
+        "type": "object",
+        "description": "Django-Constance dynamic settings configuration.",
+        "properties": {
+          "config": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "config_fieldsets": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "backend": {
+            "type": "string",
+            "nullable": true
+          },
+          "database_prefix": {
+            "type": "string",
+            "nullable": true
+          },
+          "database_cache_backend": {
+            "type": "string",
+            "nullable": true
+          },
+          "additional_config": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          }
+        }
       },
       "Currency": {
         "type": "object",
@@ -13860,18 +13994,27 @@
             "nullable": true
           },
           "telegram": {
-            "type": "object",
-            "additionalProperties": {},
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TelegramConfig"
+              }
+            ],
             "nullable": true
           },
           "ngrok": {
-            "type": "object",
-            "additionalProperties": {},
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NgrokConfig"
+              }
+            ],
             "nullable": true
           },
           "axes": {
-            "type": "object",
-            "additionalProperties": {},
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AxesConfig"
+              }
+            ],
             "nullable": true
           },
           "crypto_fields": {
@@ -13907,8 +14050,11 @@
             "nullable": true
           },
           "nextjs_admin": {
-            "type": "object",
-            "additionalProperties": {},
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NextJSAdminConfig"
+              }
+            ],
             "nullable": true
           },
           "admin_emails": {
@@ -13917,13 +14063,19 @@
             "nullable": true
           },
           "constance": {
-            "type": "object",
-            "additionalProperties": {},
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConstanceConfig"
+              }
+            ],
             "nullable": true
           },
           "openapi_client": {
-            "type": "object",
-            "additionalProperties": {},
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpenAPIClientConfig"
+              }
+            ],
             "nullable": true
           },
           "_meta": {
@@ -13972,8 +14124,7 @@
           "schedules": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": {}
+              "$ref": "#/components/schemas/RQSchedule"
             },
             "nullable": true
           }
@@ -16803,6 +16954,47 @@
           "user_email"
         ]
       },
+      "NextJSAdminConfig": {
+        "type": "object",
+        "description": "Next.js Admin application configuration.",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "api_base_url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "NgrokConfig": {
+        "type": "object",
+        "description": "Ngrok tunneling configuration.",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "authtoken": {
+            "type": "string",
+            "nullable": true
+          },
+          "basic_auth": {
+            "type": "array",
+            "items": {},
+            "nullable": true
+          },
+          "compression": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
       "OTPErrorResponse": {
         "type": "object",
         "description": "Error response for OTP operations.",
@@ -16917,6 +17109,47 @@
           "refresh",
           "user"
         ]
+      },
+      "OpenAPIClientConfig": {
+        "type": "object",
+        "description": "OpenAPI Client generation configuration.",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "output_dir": {
+            "type": "string",
+            "nullable": true
+          },
+          "client_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "schema_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "generator": {
+            "type": "string",
+            "nullable": true
+          },
+          "additional_properties": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "templates": {
+            "type": "array",
+            "items": {},
+            "nullable": true
+          },
+          "global_properties": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          }
+        }
       },
       "PaginatedApiKeyList": {
         "type": "object",
@@ -19662,6 +19895,47 @@
           "queues"
         ]
       },
+      "RQSchedule": {
+        "type": "object",
+        "description": "Redis Queue schedule configuration.",
+        "properties": {
+          "func": {
+            "type": "string",
+            "nullable": true
+          },
+          "cron_string": {
+            "type": "string",
+            "nullable": true
+          },
+          "queue": {
+            "type": "string",
+            "nullable": true
+          },
+          "kwargs": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "args": {
+            "type": "array",
+            "items": {},
+            "nullable": true
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "repeat": {
+            "type": "integer",
+            "nullable": true
+          },
+          "result_ttl": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
       "RecentError": {
         "type": "object",
         "description": "Recent error information.",
@@ -21012,6 +21286,53 @@
           "response_time",
           "uptime"
         ]
+      },
+      "TelegramConfig": {
+        "type": "object",
+        "description": "Telegram service configuration.",
+        "properties": {
+          "bot_token": {
+            "type": "string",
+            "nullable": true
+          },
+          "chat_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "parse_mode": {
+            "type": "string",
+            "nullable": true
+          },
+          "disable_notification": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "disable_web_page_preview": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "timeout": {
+            "type": "integer",
+            "nullable": true
+          },
+          "webhook_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "webhook_secret": {
+            "type": "string",
+            "nullable": true
+          },
+          "max_retries": {
+            "type": "integer",
+            "nullable": true
+          },
+          "retry_delay": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
       },
       "TestEmailRequest": {
         "type": "object",

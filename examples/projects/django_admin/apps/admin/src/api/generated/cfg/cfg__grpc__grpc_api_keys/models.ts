@@ -74,6 +74,6 @@ export interface ApiKeyStats {
   /** Total requests across all keys */
   total_requests: number;
   /** Count of keys by type */
-  keys_by_type: Record<string, any>;
+  keys_by_type: Record<string, number>;
 }
 

@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { UserStatisticsSchema, type UserStatistics } from '../schemas/UserStatistics.schema'
 import { getAPIInstance } from '../../api-instance'
 
@@ -70,7 +71,35 @@ export async function getDashboardApiStatisticsUsersRetrieve(  client?: any
 ): Promise<UserStatistics> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_statistics.dashboardApiStatisticsUsersRetrieve()
-  return UserStatisticsSchema.parse(response)
+  try {
+    return UserStatisticsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getDashboardApiStatisticsUsersRetrieve',
+      message: `Path: /cfg/dashboard/api/statistics/users/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
