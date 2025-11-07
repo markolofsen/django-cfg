@@ -370,9 +370,9 @@ class GRPCConfig(BaseConfig):
         description="Proto generation configuration (optional, use flatten fields above for common settings)",
     )
 
-    handlers_hook: str = Field(
+    handlers_hook: str | List[str] = Field(
         default="",
-        description="Import path to grpc_handlers function (optional, e.g., '{ROOT_URLCONF}.grpc_handlers')",
+        description="Import path(s) to grpc_handlers function (optional, e.g., '{ROOT_URLCONF}.grpc_handlers' or list of paths)",
     )
 
     auto_register_apps: bool = Field(

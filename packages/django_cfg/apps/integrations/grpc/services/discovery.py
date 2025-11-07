@@ -443,70 +443,77 @@ class ServiceDiscovery:
             logger.error(f"Error extracting metadata from {service_class}: {e}", exc_info=True)
             return None
 
-    def get_handlers_hook(self) -> Optional[Any]:
+    def get_handlers_hooks(self) -> List[Any]:
         """
-        Get the handlers hook function from config.
+        Get the handlers hook function(s) from config.
 
         Returns:
-            Handlers hook function or None
+            List of handlers hook functions (empty list if none)
 
         Example:
             >>> discovery = ServiceDiscovery()
-            >>> handlers_hook = discovery.get_handlers_hook()
-            >>> if handlers_hook:
-            ...     services = handlers_hook(server)
+            >>> handlers_hooks = discovery.get_handlers_hooks()
+            >>> for hook in handlers_hooks:
+            ...     hook(server)
         """
-        logger.warning(f"🔍 get_handlers_hook called")
+        logger.warning(f"🔍 get_handlers_hooks called")
         if not self.config:
             logger.warning("❌ No gRPC config available")
-            return None
+            return []
 
-        handlers_hook_path = self.config.handlers_hook
-        logger.warning(f"🔍 handlers_hook_path = '{handlers_hook_path}'")
+        handlers_hook_paths = self.config.handlers_hook
+        logger.warning(f"🔍 handlers_hook_paths = '{handlers_hook_paths}'")
 
-        if not handlers_hook_path:
-            logger.debug("No handlers_hook configured")
-            return None
+        # Convert single string to list
+        if isinstance(handlers_hook_paths, str):
+            if not handlers_hook_paths:
+                logger.debug("No handlers_hook configured")
+                return []
+            handlers_hook_paths = [handlers_hook_paths]
 
-        # Resolve {ROOT_URLCONF} placeholder
-        if "{ROOT_URLCONF}" in handlers_hook_path:
+        hooks = []
+        for handlers_hook_path in handlers_hook_paths:
+            # Resolve {ROOT_URLCONF} placeholder
+            if "{ROOT_URLCONF}" in handlers_hook_path:
+                try:
+                    from django.conf import settings
+                    root_urlconf = settings.ROOT_URLCONF
+                    handlers_hook_path = handlers_hook_path.replace("{ROOT_URLCONF}", root_urlconf)
+                    logger.debug(f"Resolved handlers_hook: {handlers_hook_path}")
+                except Exception as e:
+                    logger.warning(f"Could not resolve {{ROOT_URLCONF}}: {e}")
+                    continue
+
             try:
-                from django.conf import settings
-                root_urlconf = settings.ROOT_URLCONF
-                handlers_hook_path = handlers_hook_path.replace("{ROOT_URLCONF}", root_urlconf)
-                logger.debug(f"Resolved handlers_hook: {handlers_hook_path}")
+                # Import the module containing the hook
+                module_path, func_name = handlers_hook_path.rsplit(".", 1)
+                module = importlib.import_module(module_path)
+
+                # Get the hook function
+                handlers_hook = getattr(module, func_name)
+
+                if not callable(handlers_hook):
+                    logger.warning(f"handlers_hook {handlers_hook_path} is not callable")
+                    continue
+
+                logger.info(f"Loaded handlers hook: {handlers_hook_path}")
+                hooks.append(handlers_hook)
+
+            except ImportError as e:
+                logger.warning(f"Failed to import handlers hook module {handlers_hook_path}: {e}")
+                continue
+            except AttributeError as e:
+                logger.warning(f"Handlers hook function not found in {handlers_hook_path}: {e}")
+                logger.debug(f"This is optional - the hook function does not exist")
+                continue
             except Exception as e:
-                logger.warning(f"Could not resolve {{ROOT_URLCONF}}: {e}")
-                return None
+                logger.error(
+                    f"Error loading handlers hook {handlers_hook_path}: {e}",
+                    exc_info=True,
+                )
+                continue
 
-        try:
-            # Import the module containing the hook
-            module_path, func_name = handlers_hook_path.rsplit(".", 1)
-            module = importlib.import_module(module_path)
-
-            # Get the hook function
-            handlers_hook = getattr(module, func_name)
-
-            if not callable(handlers_hook):
-                logger.warning(f"ROOT_HANDLERS_HOOK {handlers_hook_path} is not callable")
-                return None
-
-            logger.info(f"Loaded handlers hook: {handlers_hook_path}")
-            return handlers_hook
-
-        except ImportError as e:
-            logger.warning(f"Failed to import handlers hook module {handlers_hook_path}: {e}")
-            return None
-        except AttributeError as e:
-            logger.warning(f"Handlers hook function not found in {handlers_hook_path}: {e}")
-            logger.debug(f"This is optional - the hook function '{func_name}' does not exist in module '{module_path}'")
-            return None
-        except Exception as e:
-            logger.error(
-                f"Error loading handlers hook {handlers_hook_path}: {e}",
-                exc_info=True,
-            )
-            return None
+        return hooks
 
 
 def discover_and_register_services(server: Any) -> int:
@@ -540,15 +547,15 @@ def discover_and_register_services(server: Any) -> int:
     discovery = ServiceDiscovery()
     count = 0
 
-    # Try handlers hook first
-    handlers_hook = discovery.get_handlers_hook()
-    if handlers_hook:
+    # Try handlers hooks first (can be multiple)
+    handlers_hooks = discovery.get_handlers_hooks()
+    for hook in handlers_hooks:
         try:
-            handlers_hook(server)
-            logger.info("Successfully called handlers hook")
+            hook(server)
+            logger.info(f"Successfully called handlers hook: {hook.__name__}")
             count += 1  # We don't know exact count, but at least 1
         except Exception as e:
-            logger.error(f"Error calling handlers hook: {e}", exc_info=True)
+            logger.error(f"Error calling handlers hook {hook.__name__}: {e}", exc_info=True)
 
     # Discover and register services
     services = discovery.discover_services()
