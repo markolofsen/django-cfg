@@ -37,7 +37,7 @@ export interface JobDetail {
   /** Function arguments */
   args?: Array<string>;
   /** Function keyword arguments */
-  kwargs?: Record<string, any>;
+  kwargs?: Record<string, string>;
   /** Job creation time */
   created_at: string;
   /** Job enqueue time */
@@ -63,7 +63,7 @@ export interface JobDetail {
   /** Exception info if failed */
   exc_info?: string | null;
   /** Job metadata */
-  meta?: Record<string, any>;
+  meta?: Record<string, string>;
   /** List of dependency job IDs */
   dependency_ids?: Array<string>;
 }

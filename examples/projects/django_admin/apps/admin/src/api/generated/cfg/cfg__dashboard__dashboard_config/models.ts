@@ -5,10 +5,10 @@
  * Response model (includes read-only fields).
  */
 export interface ConfigData {
-  django_config: Record<string, any>;
-  /** Complete Django settings (sanitized) */
-  django_settings: Record<string, any>;
-  _validation: Record<string, any>;
+  django_config: DjangoConfig;
+  /** Complete Django settings (sanitized, contains mixed types) */
+  django_settings: Record<string, string>;
+  _validation: ConfigValidation;
 }
 
 /**
@@ -42,36 +42,36 @@ export interface DjangoConfig {
   wsgi_application?: string | null;
   auth_user_model?: string | null;
   project_apps?: Array<string> | null;
-  databases?: Record<string, any> | null;
+  databases?: Record<string, DatabaseConfig> | null;
   redis_url?: string | null;
   cache_default?: string | null;
   cache_sessions?: string | null;
   security_domains?: Array<string> | null;
   ssl_redirect?: boolean | null;
   cors_allow_headers?: Array<string> | null;
-  email?: Record<string, any> | null;
-  payments?: Record<string, any> | null;
-  grpc?: Record<string, any> | null;
-  centrifugo?: Record<string, any> | null;
-  django_rq?: Record<string, any> | null;
-  drf?: Record<string, any> | null;
-  spectacular?: Record<string, any> | null;
-  jwt?: Record<string, any> | null;
-  telegram?: Record<string, any> | null;
-  ngrok?: Record<string, any> | null;
-  axes?: Record<string, any> | null;
-  crypto_fields?: Record<string, any> | null;
+  email?: EmailConfig | null;
+  payments?: PaymentsConfig | null;
+  grpc?: GRPCConfigDashboard | null;
+  centrifugo?: CentrifugoConfig | null;
+  django_rq?: DjangoRQConfig | null;
+  drf?: DRFConfig | null;
+  spectacular?: SpectacularConfig | null;
+  jwt?: JWTConfig | null;
+  telegram?: TelegramConfig | null;
+  ngrok?: NgrokConfig | null;
+  axes?: AxesConfig | null;
+  crypto_fields?: Record<string, string> | null;
   unfold?: string | null;
   tailwind_app_name?: string | null;
   tailwind_version?: number | null;
-  limits?: Record<string, any> | null;
-  api_keys?: Record<string, any> | null;
+  limits?: Record<string, string> | null;
+  api_keys?: Record<string, string> | null;
   custom_middleware?: Array<string> | null;
-  nextjs_admin?: Record<string, any> | null;
+  nextjs_admin?: NextJSAdminConfig | null;
   admin_emails?: Array<string> | null;
-  constance?: Record<string, any> | null;
-  openapi_client?: Record<string, any> | null;
-  _meta?: Record<string, any> | null;
+  constance?: ConstanceConfig | null;
+  openapi_client?: OpenAPIClientConfig | null;
+  _meta?: ConfigMeta | null;
 }
 
 /**
@@ -87,11 +87,32 @@ export interface ConfigValidation {
   /** Fields present in serializer but not in config */
   extra_in_serializer: Array<string>;
   /** Fields with type mismatches */
-  type_mismatches: Array<Record<string, any>>;
+  type_mismatches: Array<Record<string, string>>;
   /** Total fields in config */
   total_config_fields: number;
   /** Total fields in serializer */
   total_serializer_fields: number;
+}
+
+/**
+ * Database configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface DatabaseConfig {
+  engine: string;
+  name: string;
+  user?: string | null;
+  password?: string | null;
+  host?: string | null;
+  port?: number | null;
+  connect_timeout?: number | null;
+  sslmode?: string | null;
+  options?: Record<string, string> | null;
+  apps?: Array<string> | null;
+  operations?: Array<string> | null;
+  migrate_to?: string | null;
+  routing_description?: string | null;
 }
 
 /**
@@ -119,7 +140,7 @@ export interface EmailConfig {
  */
 export interface PaymentsConfig {
   enabled?: boolean | null;
-  nowpayments?: Record<string, any> | null;
+  nowpayments?: PaymentsNowPayments | null;
 }
 
 /**
@@ -162,7 +183,7 @@ export interface DjangoRQConfig {
   exception_handlers?: Array<string> | null;
   api_token?: string | null;
   prometheus_enabled?: boolean | null;
-  schedules?: Array<Record<string, any>> | null;
+  schedules?: Array<RQSchedule> | null;
 }
 
 /**
@@ -195,6 +216,102 @@ export interface JWTConfig {
   access_token_lifetime?: number | null;
   refresh_token_lifetime?: number | null;
   algorithm?: string | null;
+}
+
+/**
+ * Telegram service configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface TelegramConfig {
+  bot_token?: string | null;
+  chat_id?: number | null;
+  parse_mode?: string | null;
+  disable_notification?: boolean | null;
+  disable_web_page_preview?: boolean | null;
+  timeout?: number | null;
+  webhook_url?: string | null;
+  webhook_secret?: string | null;
+  max_retries?: number | null;
+  retry_delay?: number | null;
+}
+
+/**
+ * Ngrok tunneling configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface NgrokConfig {
+  enabled?: boolean | null;
+  authtoken?: string | null;
+  basic_auth?: Array<string> | null;
+  compression?: boolean | null;
+}
+
+/**
+ * Django-Axes brute-force protection configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface AxesConfig {
+  enabled?: boolean | null;
+  failure_limit?: number | null;
+  cooloff_time?: number | null;
+  lock_out_at_failure?: boolean | null;
+  reset_on_success?: boolean | null;
+  only_user_failures?: boolean | null;
+  lockout_template?: string | null;
+  lockout_url?: string | null;
+  verbose?: boolean | null;
+  enable_access_failure_log?: boolean | null;
+  ipware_proxy_count?: number | null;
+  ipware_meta_precedence_order?: Array<string> | null;
+  allowed_ips?: Array<string> | null;
+  denied_ips?: Array<string> | null;
+  cache_name?: string | null;
+  use_user_agent?: boolean | null;
+  username_form_field?: string | null;
+}
+
+/**
+ * Next.js Admin application configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface NextJSAdminConfig {
+  enabled?: boolean | null;
+  url?: string | null;
+  api_base_url?: string | null;
+}
+
+/**
+ * Django-Constance dynamic settings configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface ConstanceConfig {
+  config?: Record<string, string> | null;
+  config_fieldsets?: Record<string, string> | null;
+  backend?: string | null;
+  database_prefix?: string | null;
+  database_cache_backend?: string | null;
+  additional_config?: Record<string, string> | null;
+}
+
+/**
+ * OpenAPI Client generation configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface OpenAPIClientConfig {
+  enabled?: boolean | null;
+  output_dir?: string | null;
+  client_name?: string | null;
+  schema_url?: string | null;
+  generator?: string | null;
+  additional_properties?: Record<string, string> | null;
+  templates?: Array<string> | null;
+  global_properties?: Record<string, string> | null;
 }
 
 /**
@@ -236,5 +353,21 @@ export interface RedisQueueConfig {
   sentinels?: Array<string> | null;
   master_name?: string | null;
   socket_timeout?: number | null;
+}
+
+/**
+ * Redis Queue schedule configuration.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface RQSchedule {
+  func?: string | null;
+  cron_string?: string | null;
+  queue?: string | null;
+  kwargs?: Record<string, string> | null;
+  args?: Array<string> | null;
+  meta?: Record<string, string> | null;
+  repeat?: number | null;
+  result_ttl?: number | null;
 }
 

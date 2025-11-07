@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { DashboardChartsSchema, type DashboardCharts } from '../schemas/DashboardCharts.schema'
 import { ErrorDistributionChartSchema, type ErrorDistributionChart } from '../schemas/ErrorDistributionChart.schema'
 import { RequestVolumeChartSchema, type RequestVolumeChart } from '../schemas/RequestVolumeChart.schema'
@@ -48,7 +49,35 @@ export async function getGrpcChartsDashboardRetrieve(  params?: { hours?: number
 ): Promise<DashboardCharts> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.dashboardRetrieve(params?.hours)
-  return DashboardChartsSchema.parse(response)
+  try {
+    return DashboardChartsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsDashboardRetrieve',
+      message: `Path: /cfg/grpc/charts/dashboard/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -62,7 +91,35 @@ export async function getGrpcChartsErrorDistributionRetrieve(  params?: { hours?
 ): Promise<ErrorDistributionChart> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.errorDistributionRetrieve(params?.hours)
-  return ErrorDistributionChartSchema.parse(response)
+  try {
+    return ErrorDistributionChartSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsErrorDistributionRetrieve',
+      message: `Path: /cfg/grpc/charts/error-distribution/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -76,7 +133,35 @@ export async function getGrpcChartsRequestVolumeRetrieve(  params?: { hours?: nu
 ): Promise<RequestVolumeChart> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.requestVolumeRetrieve(params?.hours)
-  return RequestVolumeChartSchema.parse(response)
+  try {
+    return RequestVolumeChartSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsRequestVolumeRetrieve',
+      message: `Path: /cfg/grpc/charts/request-volume/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -90,7 +175,35 @@ export async function getGrpcChartsResponseTimeRetrieve(  params?: { hours?: num
 ): Promise<ResponseTimeChart> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.responseTimeRetrieve(params?.hours)
-  return ResponseTimeChartSchema.parse(response)
+  try {
+    return ResponseTimeChartSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsResponseTimeRetrieve',
+      message: `Path: /cfg/grpc/charts/response-time/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -104,7 +217,35 @@ export async function getGrpcChartsServerLifecycleRetrieve(  params?: { hours?: 
 ): Promise<ServerLifecycleChart> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.serverLifecycleRetrieve(params?.hours)
-  return ServerLifecycleChartSchema.parse(response)
+  try {
+    return ServerLifecycleChartSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsServerLifecycleRetrieve',
+      message: `Path: /cfg/grpc/charts/server-lifecycle/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -118,7 +259,35 @@ export async function getGrpcChartsServerUptimeRetrieve(  params?: { hours?: num
 ): Promise<ServerUptimeChart> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.serverUptimeRetrieve(params?.hours)
-  return ServerUptimeChartSchema.parse(response)
+  try {
+    return ServerUptimeChartSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsServerUptimeRetrieve',
+      message: `Path: /cfg/grpc/charts/server-uptime/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -132,7 +301,35 @@ export async function getGrpcChartsServiceActivityRetrieve(  params?: { hours?: 
 ): Promise<ServiceActivityChart> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_charts.serviceActivityRetrieve(params?.hours)
-  return ServiceActivityChartSchema.parse(response)
+  try {
+    return ServiceActivityChartSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcChartsServiceActivityRetrieve',
+      message: `Path: /cfg/grpc/charts/service-activity/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

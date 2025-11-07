@@ -14,7 +14,7 @@ export const ApiKeyStatsSchema = z.object({
   active_keys: z.int(),
   expired_keys: z.int(),
   total_requests: z.int(),
-  keys_by_type: z.record(z.string(), z.any()),
+  keys_by_type: z.record(z.string(), z.int()),
 })
 
 /**

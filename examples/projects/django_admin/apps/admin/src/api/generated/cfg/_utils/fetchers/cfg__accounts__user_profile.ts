@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { PatchedUserProfileUpdateRequestSchema, type PatchedUserProfileUpdateRequest } from '../schemas/PatchedUserProfileUpdateRequest.schema'
 import { UserSchema, type User } from '../schemas/User.schema'
 import { UserProfileUpdateRequestSchema, type UserProfileUpdateRequest } from '../schemas/UserProfileUpdateRequest.schema'
@@ -44,7 +45,35 @@ export async function getAccountsProfileRetrieve(  client?: any
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileRetrieve()
-  return UserSchema.parse(response)
+  try {
+    return UserSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getAccountsProfileRetrieve',
+      message: `Path: /cfg/accounts/profile/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -58,7 +87,35 @@ export async function createAccountsProfileAvatarCreate(  data: any,  client?: a
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileAvatarCreate(data)
-  return UserSchema.parse(response)
+  try {
+    return UserSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createAccountsProfileAvatarCreate',
+      message: `Path: /cfg/accounts/profile/avatar/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -72,7 +129,35 @@ export async function partialUpdateAccountsProfilePartialUpdate(  data: UserProf
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfilePartialUpdate(data)
-  return UserSchema.parse(response)
+  try {
+    return UserSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateAccountsProfilePartialUpdate',
+      message: `Path: /cfg/accounts/profile/partial/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -86,7 +171,35 @@ export async function partialUpdateAccountsProfilePartialPartialUpdate(  data?: 
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfilePartialPartialUpdate(data)
-  return UserSchema.parse(response)
+  try {
+    return UserSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateAccountsProfilePartialPartialUpdate',
+      message: `Path: /cfg/accounts/profile/partial/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -100,7 +213,35 @@ export async function updateAccountsProfileUpdateUpdate(  data: UserProfileUpdat
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileUpdateUpdate(data)
-  return UserSchema.parse(response)
+  try {
+    return UserSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateAccountsProfileUpdateUpdate',
+      message: `Path: /cfg/accounts/profile/update/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -114,7 +255,35 @@ export async function partialUpdateAccountsProfileUpdatePartialUpdate(  data?: P
 ): Promise<User> {
   const api = client || getAPIInstance()
   const response = await api.cfg_user_profile.accountsProfileUpdatePartialUpdate(data)
-  return UserSchema.parse(response)
+  try {
+    return UserSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateAccountsProfileUpdatePartialUpdate',
+      message: `Path: /cfg/accounts/profile/update/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

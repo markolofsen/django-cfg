@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { ApiKeySchema, type ApiKey } from '../schemas/ApiKey.schema'
 import { ApiKeyStatsSchema, type ApiKeyStats } from '../schemas/ApiKeyStats.schema'
 import { PaginatedApiKeyListSchema, type PaginatedApiKeyList } from '../schemas/PaginatedApiKeyList.schema'
@@ -44,7 +45,35 @@ export async function getGrpcApiKeysList(  params?: { is_active?: boolean; key_t
 ): Promise<PaginatedApiKeyList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_api_keys.list(params?.is_active, params?.key_type, params?.page, params?.page_size, params?.user_id)
-  return PaginatedApiKeyListSchema.parse(response)
+  try {
+    return PaginatedApiKeyListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcApiKeysList',
+      message: `Path: /cfg/grpc/api-keys/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -58,7 +87,35 @@ export async function getGrpcApiKeysRetrieve(  id: number,  client?: any
 ): Promise<ApiKey> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_api_keys.retrieve(id)
-  return ApiKeySchema.parse(response)
+  try {
+    return ApiKeySchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcApiKeysRetrieve',
+      message: `Path: /cfg/grpc/api-keys/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -72,7 +129,35 @@ export async function getGrpcApiKeysStatsRetrieve(  client?: any
 ): Promise<ApiKeyStats> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_api_keys.statsRetrieve()
-  return ApiKeyStatsSchema.parse(response)
+  try {
+    return ApiKeyStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcApiKeysStatsRetrieve',
+      message: `Path: /cfg/grpc/api-keys/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

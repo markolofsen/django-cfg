@@ -9,9 +9,9 @@ export interface GRPCCallRequestRequest {
   /** Method name to call */
   method: string;
   /** Request payload */
-  payload: Record<string, any>;
+  payload: Record<string, string>;
   /** Request metadata (headers) */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string>;
   /** Request timeout in milliseconds */
   timeout_ms?: number;
 }
@@ -41,7 +41,7 @@ export interface GRPCCallResponse {
   /** Error message if failed */
   error?: string | null;
   /** Response metadata */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string>;
   /** Response timestamp (ISO format) */
   timestamp: string;
 }
@@ -97,10 +97,10 @@ export interface GRPCExample {
   /** Method description */
   description: string;
   /** Example request payload */
-  payload_example: Record<string, any>;
+  payload_example: Record<string, string>;
   /** Example expected response */
-  expected_response: Record<string, any>;
+  expected_response: Record<string, string>;
   /** Example metadata (headers) */
-  metadata_example?: Record<string, any>;
+  metadata_example?: Record<string, string>;
 }
 

@@ -45,7 +45,7 @@ export interface ServiceDetail {
   base_class?: string;
   /** Service methods */
   methods?: Array<MethodInfo>;
-  stats: Record<string, any>;
+  stats: ServiceStats;
   /** Recent errors */
   recent_errors?: Array<RecentError>;
 }
@@ -160,7 +160,7 @@ export interface MethodSummary {
   request_type?: string;
   /** Response message type */
   response_type?: string;
-  stats: Record<string, any>;
+  stats: MethodStats;
 }
 
 /**

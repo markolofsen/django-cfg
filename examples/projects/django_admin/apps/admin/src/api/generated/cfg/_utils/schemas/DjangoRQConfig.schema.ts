@@ -5,6 +5,7 @@
  *  * Django-RQ configuration.
  *  */
 import { z } from 'zod'
+import { RQScheduleSchema } from './RQSchedule.schema'
 import { RedisQueueConfigSchema } from './RedisQueueConfig.schema'
 
 /**
@@ -17,7 +18,7 @@ export const DjangoRQConfigSchema = z.object({
   exception_handlers: z.array(z.string()).nullable().optional(),
   api_token: z.string().nullable().optional(),
   prometheus_enabled: z.boolean().nullable().optional(),
-  schedules: z.array(z.record(z.string(), z.any())).nullable().optional(),
+  schedules: z.array(RQScheduleSchema).nullable().optional(),
 })
 
 /**

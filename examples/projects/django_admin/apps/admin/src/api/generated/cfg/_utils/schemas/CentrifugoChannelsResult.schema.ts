@@ -5,12 +5,13 @@
  *  * Channels result wrapper.
  *  */
 import { z } from 'zod'
+import { CentrifugoChannelInfoSchema } from './CentrifugoChannelInfo.schema'
 
 /**
  * Channels result wrapper.
  */
 export const CentrifugoChannelsResultSchema = z.object({
-  channels: z.record(z.string(), z.any()),
+  channels: z.record(z.string(), CentrifugoChannelInfoSchema),
 })
 
 /**

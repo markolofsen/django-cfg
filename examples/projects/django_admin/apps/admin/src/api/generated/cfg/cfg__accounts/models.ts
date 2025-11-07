@@ -65,7 +65,7 @@ export interface OTPVerifyResponse {
   refresh: string;
   /** JWT access token */
   access: string;
-  user: Record<string, any>;
+  user: User;
 }
 
 /**
@@ -87,16 +87,16 @@ export interface User {
   company?: string;
   phone?: string;
   position?: string;
-  avatar: string | null;
+  avatar?: string | null;
   /** Designates whether the user can log into this admin site. */
   is_staff: boolean;
   /** Designates that this user has all permissions without explicitly assigning them. */
   is_superuser: boolean;
   date_joined: string;
-  last_login: string | null;
+  last_login?: string | null;
   /** Get count of unanswered messages for the user. */
   unanswered_messages_count: number;
-  centrifugo: Record<string, any> | null;
+  centrifugo: CentrifugoToken | null;
 }
 
 /**

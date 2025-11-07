@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { OTPRequestRequestSchema, type OTPRequestRequest } from '../schemas/OTPRequestRequest.schema'
 import { OTPRequestResponseSchema, type OTPRequestResponse } from '../schemas/OTPRequestResponse.schema'
 import { OTPVerifyRequestSchema, type OTPVerifyRequest } from '../schemas/OTPVerifyRequest.schema'
@@ -45,7 +46,35 @@ export async function createAccountsOtpRequestCreate(  data: OTPRequestRequest, 
 ): Promise<OTPRequestResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_accounts.otpRequestCreate(data)
-  return OTPRequestResponseSchema.parse(response)
+  try {
+    return OTPRequestResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createAccountsOtpRequestCreate',
+      message: `Path: /cfg/accounts/otp/request/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -59,7 +88,35 @@ export async function createAccountsOtpVerifyCreate(  data: OTPVerifyRequest,  c
 ): Promise<OTPVerifyResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_accounts.otpVerifyCreate(data)
-  return OTPVerifyResponseSchema.parse(response)
+  try {
+    return OTPVerifyResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createAccountsOtpVerifyCreate',
+      message: `Path: /cfg/accounts/otp/verify/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

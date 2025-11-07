@@ -5,7 +5,7 @@
  */
 export interface APIZonesSummary {
   zones: Array<APIZone>;
-  summary: Record<string, any>;
+  summary: Record<string, string>;
 }
 
 /**

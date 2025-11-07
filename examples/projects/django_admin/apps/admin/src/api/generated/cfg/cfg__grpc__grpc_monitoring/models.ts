@@ -52,7 +52,7 @@ export interface GRPCOverviewStats {
   p95_duration_ms: number | null;
   /** Statistics period in hours */
   period_hours: number;
-  server: Record<string, any>;
+  server: GRPCServerStatus;
 }
 
 /**

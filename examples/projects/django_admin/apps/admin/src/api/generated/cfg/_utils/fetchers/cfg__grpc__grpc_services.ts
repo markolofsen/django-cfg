@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { PaginatedServiceSummaryListSchema, type PaginatedServiceSummaryList } from '../schemas/PaginatedServiceSummaryList.schema'
 import { ServiceDetailSchema, type ServiceDetail } from '../schemas/ServiceDetail.schema'
 import { ServiceMethodsSchema, type ServiceMethods } from '../schemas/ServiceMethods.schema'
@@ -44,7 +45,35 @@ export async function getGrpcServicesList(  params?: { hours?: number; page?: nu
 ): Promise<PaginatedServiceSummaryList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_services.list(params?.hours, params?.page, params?.page_size)
-  return PaginatedServiceSummaryListSchema.parse(response)
+  try {
+    return PaginatedServiceSummaryListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcServicesList',
+      message: `Path: /cfg/grpc/services/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -58,7 +87,35 @@ export async function getGrpcServicesRetrieve(  id: string, pk: string,  client?
 ): Promise<ServiceDetail> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_services.retrieve(id, pk)
-  return ServiceDetailSchema.parse(response)
+  try {
+    return ServiceDetailSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcServicesRetrieve',
+      message: `Path: /cfg/grpc/services/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -72,7 +129,35 @@ export async function getGrpcServicesMethodsRetrieve(  id: string, pk: string,  
 ): Promise<ServiceMethods> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_services.methodsRetrieve(id, pk)
-  return ServiceMethodsSchema.parse(response)
+  try {
+    return ServiceMethodsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcServicesMethodsRetrieve',
+      message: `Path: /cfg/grpc/services/{id}/methods/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

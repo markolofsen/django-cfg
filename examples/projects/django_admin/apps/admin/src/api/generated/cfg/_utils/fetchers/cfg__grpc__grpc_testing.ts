@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { GRPCCallRequestRequestSchema, type GRPCCallRequestRequest } from '../schemas/GRPCCallRequestRequest.schema'
 import { GRPCCallResponseSchema, type GRPCCallResponse } from '../schemas/GRPCCallResponse.schema'
 import { GRPCExamplesListSchema, type GRPCExamplesList } from '../schemas/GRPCExamplesList.schema'
@@ -45,7 +46,35 @@ export async function createGrpcTestCallCreate(  data: GRPCCallRequestRequest,  
 ): Promise<GRPCCallResponse> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_testing.grpcTestCallCreate(data)
-  return GRPCCallResponseSchema.parse(response)
+  try {
+    return GRPCCallResponseSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createGrpcTestCallCreate',
+      message: `Path: /cfg/grpc/test/call/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -59,7 +88,35 @@ export async function getGrpcTestExamplesRetrieve(  params?: { method?: string; 
 ): Promise<GRPCExamplesList> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_testing.grpcTestExamplesRetrieve(params?.method, params?.service)
-  return GRPCExamplesListSchema.parse(response)
+  try {
+    return GRPCExamplesListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcTestExamplesRetrieve',
+      message: `Path: /cfg/grpc/test/examples/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -73,7 +130,35 @@ export async function getGrpcTestLogsRetrieve(  params?: { method?: string; serv
 ): Promise<GRPCTestLog> {
   const api = client || getAPIInstance()
   const response = await api.cfg_grpc_testing.grpcTestLogsRetrieve(params?.method, params?.service, params?.status)
-  return GRPCTestLogSchema.parse(response)
+  try {
+    return GRPCTestLogSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getGrpcTestLogsRetrieve',
+      message: `Path: /cfg/grpc/test/logs/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

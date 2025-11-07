@@ -8,15 +8,22 @@ Reflects the actual structure of DjangoConfig model.
 All passwords and sensitive data are sanitized before reaching this serializer.
  *  */
 import { z } from 'zod'
+import { AxesConfigSchema } from './AxesConfig.schema'
 import { CentrifugoConfigSchema } from './CentrifugoConfig.schema'
 import { ConfigMetaSchema } from './ConfigMeta.schema'
+import { ConstanceConfigSchema } from './ConstanceConfig.schema'
 import { DRFConfigSchema } from './DRFConfig.schema'
+import { DatabaseConfigSchema } from './DatabaseConfig.schema'
 import { DjangoRQConfigSchema } from './DjangoRQConfig.schema'
 import { EmailConfigSchema } from './EmailConfig.schema'
 import { GRPCConfigDashboardSchema } from './GRPCConfigDashboard.schema'
 import { JWTConfigSchema } from './JWTConfig.schema'
+import { NextJSAdminConfigSchema } from './NextJSAdminConfig.schema'
+import { NgrokConfigSchema } from './NgrokConfig.schema'
+import { OpenAPIClientConfigSchema } from './OpenAPIClientConfig.schema'
 import { PaymentsConfigSchema } from './PaymentsConfig.schema'
 import { SpectacularConfigSchema } from './SpectacularConfig.schema'
+import { TelegramConfigSchema } from './TelegramConfig.schema'
 
 /**
  * Typed serializer for user's DjangoConfig settings.
@@ -48,7 +55,7 @@ export const DjangoConfigSchema = z.object({
   wsgi_application: z.string().nullable().optional(),
   auth_user_model: z.string().nullable().optional(),
   project_apps: z.array(z.string()).nullable().optional(),
-  databases: z.record(z.string(), z.any()).nullable().optional(),
+  databases: z.record(z.string(), DatabaseConfigSchema).nullable().optional(),
   redis_url: z.string().nullable().optional(),
   cache_default: z.string().nullable().optional(),
   cache_sessions: z.string().nullable().optional(),
@@ -63,9 +70,9 @@ export const DjangoConfigSchema = z.object({
   drf: DRFConfigSchema.nullable().optional(),
   spectacular: SpectacularConfigSchema.nullable().optional(),
   jwt: JWTConfigSchema.nullable().optional(),
-  telegram: z.record(z.string(), z.any()).nullable().optional(),
-  ngrok: z.record(z.string(), z.any()).nullable().optional(),
-  axes: z.record(z.string(), z.any()).nullable().optional(),
+  telegram: TelegramConfigSchema.nullable().optional(),
+  ngrok: NgrokConfigSchema.nullable().optional(),
+  axes: AxesConfigSchema.nullable().optional(),
   crypto_fields: z.record(z.string(), z.any()).nullable().optional(),
   unfold: z.string().nullable().optional(),
   tailwind_app_name: z.string().nullable().optional(),
@@ -73,10 +80,10 @@ export const DjangoConfigSchema = z.object({
   limits: z.record(z.string(), z.any()).nullable().optional(),
   api_keys: z.record(z.string(), z.any()).nullable().optional(),
   custom_middleware: z.array(z.string()).nullable().optional(),
-  nextjs_admin: z.record(z.string(), z.any()).nullable().optional(),
+  nextjs_admin: NextJSAdminConfigSchema.nullable().optional(),
   admin_emails: z.array(z.string()).nullable().optional(),
-  constance: z.record(z.string(), z.any()).nullable().optional(),
-  openapi_client: z.record(z.string(), z.any()).nullable().optional(),
+  constance: ConstanceConfigSchema.nullable().optional(),
+  openapi_client: OpenAPIClientConfigSchema.nullable().optional(),
   _meta: ConfigMetaSchema.nullable().optional(),
 })
 

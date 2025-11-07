@@ -4,11 +4,11 @@
  * Response model (includes read-only fields).
  */
 export interface DashboardCharts {
-  server_uptime: Record<string, any>;
-  request_volume: Record<string, any>;
-  response_time: Record<string, any>;
-  service_activity: Record<string, any>;
-  error_distribution: Record<string, any>;
+  server_uptime: ServerUptimeChart;
+  request_volume: RequestVolumeChart;
+  response_time: ResponseTimeChart;
+  service_activity: ServiceActivityChart;
+  error_distribution: ErrorDistributionChart;
   /** Period in hours for all charts */
   period_hours: number;
   /** When data was generated */

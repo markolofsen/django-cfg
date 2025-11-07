@@ -403,7 +403,7 @@ export interface PublicDocument {
   title: string;
   /** Full document content */
   content: string;
-  category: Record<string, any>;
+  category: PublicCategory;
   created_at: string;
   updated_at: string;
 }
@@ -483,7 +483,7 @@ export interface DocumentArchiveDetail {
   * `cancelled` - Cancelled */
   processing_status: Enums.DocumentArchiveDetailProcessingStatus;
   /** When processing completed */
-  processed_at: string | null;
+  processed_at?: string | null;
   /** Processing time in milliseconds */
   processing_duration_ms: number;
   /** Error message if processing failed */
@@ -510,7 +510,7 @@ export interface DocumentArchiveDetail {
   updated_at: string;
   items: Array<ArchiveItem>;
   /** Get hierarchical file tree. */
-  file_tree: Record<string, any>;
+  file_tree: Record<string, string>;
   /** Additional archive metadata */
   metadata?: string | null;
 }
@@ -563,7 +563,7 @@ export interface DocumentArchive {
   * `cancelled` - Cancelled */
   processing_status: Enums.DocumentArchiveProcessingStatus;
   /** When processing completed */
-  processed_at: string | null;
+  processed_at?: string | null;
   /** Processing time in milliseconds */
   processing_duration_ms: number;
   /** Error message if processing failed */
@@ -811,7 +811,7 @@ export interface ArchiveItemChunk {
   /** Cost in USD for embedding generation */
   embedding_cost: number;
   /** Get context summary for display. */
-  context_summary: Record<string, any>;
+  context_summary: Record<string, string>;
   created_at: string;
 }
 
@@ -844,7 +844,7 @@ export interface ArchiveItemChunkDetail {
   /** Cost in USD for embedding generation */
   embedding_cost: number;
   /** Get context summary for display. */
-  context_summary: Record<string, any>;
+  context_summary: Record<string, string>;
   created_at: string;
   context_metadata: string;
 }
@@ -1040,7 +1040,7 @@ export interface PublicDocumentList {
   id: string;
   /** Document title */
   title: string;
-  category: Record<string, any>;
+  category: PublicCategory;
   created_at: string;
   updated_at: string;
 }
@@ -1077,7 +1077,7 @@ export interface DocumentArchiveList {
   * `cancelled` - Cancelled */
   processing_status: Enums.DocumentArchiveListProcessingStatus;
   /** When processing completed */
-  processed_at: string | null;
+  processed_at?: string | null;
   /** Total items in archive */
   total_items: number;
   /** Total chunks created */
@@ -1111,10 +1111,10 @@ export interface DocumentCategory {
  * Response model (includes read-only fields).
  */
 export interface ArchiveSearchResult {
-  chunk: Record<string, any>;
+  chunk: ArchiveItemChunk;
   similarity_score: number;
-  context_summary: Record<string, any>;
-  archive_info: Record<string, any>;
-  item_info: Record<string, any>;
+  context_summary: Record<string, string>;
+  archive_info: Record<string, string>;
+  item_info: Record<string, string>;
 }
 

@@ -36,7 +36,7 @@ export interface ScheduleCreateRequest {
   /** Function arguments */
   args?: Array<string>;
   /** Function keyword arguments */
-  kwargs?: Record<string, any>;
+  kwargs?: Record<string, string>;
   /** Queue name to schedule job in */
   queue_name?: string;
   /** Schedule job at specific time (ISO 8601) */
@@ -84,7 +84,7 @@ export interface ScheduledJob {
   /** Function arguments */
   args?: Array<string>;
   /** Function keyword arguments */
-  kwargs?: Record<string, any>;
+  kwargs?: Record<string, string>;
   /** Queue name */
   queue_name: string;
   /** Next scheduled time */
@@ -104,6 +104,6 @@ export interface ScheduledJob {
   /** Job creation time */
   created_at?: string | null;
   /** Job metadata */
-  meta?: Record<string, any>;
+  meta?: Record<string, string>;
 }
 

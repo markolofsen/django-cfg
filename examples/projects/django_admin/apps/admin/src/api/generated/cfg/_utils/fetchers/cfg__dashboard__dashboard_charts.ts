@@ -29,6 +29,7 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
+import { consola } from 'consola'
 import { ChartDataSchema, type ChartData } from '../schemas/ChartData.schema'
 import { getAPIInstance } from '../../api-instance'
 
@@ -42,7 +43,35 @@ export async function getDashboardApiChartsActivityRetrieve(  params?: { days?: 
 ): Promise<ChartData> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_charts.dashboardApiChartsActivityRetrieve(params?.days)
-  return ChartDataSchema.parse(response)
+  try {
+    return ChartDataSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getDashboardApiChartsActivityRetrieve',
+      message: `Path: /cfg/dashboard/api/charts/activity/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 
@@ -70,7 +99,35 @@ export async function getDashboardApiChartsRegistrationsRetrieve(  params?: { da
 ): Promise<ChartData> {
   const api = client || getAPIInstance()
   const response = await api.cfg_dashboard_charts.dashboardApiChartsRegistrationsRetrieve(params?.days)
-  return ChartDataSchema.parse(response)
+  try {
+    return ChartDataSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getDashboardApiChartsRegistrationsRetrieve',
+      message: `Path: /cfg/dashboard/api/charts/registrations/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Re-throw the error
+    throw error;
+  }
 }
 
 

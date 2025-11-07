@@ -5,13 +5,14 @@
  *  * Serializer for application-specific statistics.
  *  */
 import { z } from 'zod'
+import { AppStatisticsDataSchema } from './AppStatisticsData.schema'
 
 /**
  * Serializer for application-specific statistics.
  */
 export const AppStatisticsSchema = z.object({
   app_name: z.string(),
-  statistics: z.record(z.string(), z.any()),
+  statistics: AppStatisticsDataSchema,
 })
 
 /**

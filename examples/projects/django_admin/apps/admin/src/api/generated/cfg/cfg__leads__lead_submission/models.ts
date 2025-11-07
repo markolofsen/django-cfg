@@ -43,6 +43,6 @@ export interface LeadSubmissionResponse {
 export interface LeadSubmissionError {
   success: boolean;
   error: string;
-  details?: Record<string, any>;
+  details?: Record<string, string>;
 }
 

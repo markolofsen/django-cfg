@@ -87,6 +87,6 @@ export interface NewsletterSubscription {
   email: string;
   is_active?: boolean;
   subscribed_at: string;
-  unsubscribed_at: string | null;
+  unsubscribed_at?: string | null;
 }
 
