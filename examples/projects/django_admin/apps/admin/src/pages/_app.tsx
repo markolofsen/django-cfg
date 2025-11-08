@@ -2,13 +2,15 @@ import type { AppProps } from 'next/app';
 import type { ReactElement, ReactNode } from 'react';
 import type { NextPage } from 'next';
 import { Inter } from 'next/font/google';
+import { memo } from 'react';
 
 // Import global styles (includes Tailwind v4, UI package, and layouts)
 import '@/styles/globals.css';
 
 import { AppLayout } from '@djangocfg/layouts';
 import { appLayoutConfig } from '@/core';
-import { CentrifugoProvider } from '@djangocfg/centrifugo';
+import { CentrifugoProvider, CentrifugoMonitorFAB } from '@djangocfg/centrifugo';
+import { isDevelopment } from '@/core/settings';
 
 // Load Manrope font from Google Fonts
 const inter = Inter({
@@ -26,6 +28,19 @@ export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
 type AppPropsWithLayout = AppProps & {
   Component: NextPageWithLayout;
 };
+
+/**
+ * Centrifugo Monitor FAB Wrapper
+ * Shows FAB only in development mode
+ * (In production admin panel, all users are admins by default)
+ */
+const CentrifugoMonitor = memo(function CentrifugoMonitor() {
+  if (!isDevelopment) {
+    return null;
+  }
+  
+  return <CentrifugoMonitorFAB variant="full" />;
+});
 
 /**
  * Next.js App Component
@@ -48,6 +63,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
         ) : (
           <Component {...pageProps} />
         )}
+        <CentrifugoMonitor />
       </CentrifugoProvider>
     </AppLayout>
   );

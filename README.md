@@ -17,7 +17,7 @@
 
 ### 🚀 The Modern Django Framework for Enterprise Applications
 
-**Type-safe configuration** • **Next.js Admin** • **AI Agents** • **Real-time WebSockets** • **8 Enterprise Apps**
+**Type-safe configuration** • **Next.js Admin** • **gRPC Streaming** • **Real-time WebSockets** • **AI Agents** • **8 Enterprise Apps**
 
 **[🎯 Live Demo](http://demo.djangocfg.com)** • **[📚 Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[🐙 GitHub](https://github.com/markolofsen/django-cfg)**
 
@@ -217,6 +217,72 @@ class MyConfig(DjangoConfig):
 
 ---
 
+### 🌐 gRPC Microservices & Streaming
+
+**Production-ready gRPC integration** - bidirectional streaming, WebSocket bridge, and type-safe Protobuf.
+
+```python
+from django_cfg.apps.integrations.grpc.services.centrifugo import (
+    CentrifugoBridgeMixin,
+    CentrifugoChannels,
+    ChannelConfig,
+)
+
+# Define type-safe channel mappings
+class BotChannels(CentrifugoChannels):
+    heartbeat: ChannelConfig = ChannelConfig(
+        template='bot#{bot_id}#heartbeat',
+        rate_limit=5.0,  # Max once per 5 seconds
+    )
+    status: ChannelConfig = ChannelConfig(
+        template='bot#{bot_id}#status',
+        critical=True,  # Bypass rate limiting
+    )
+
+# gRPC service with automatic WebSocket publishing
+class BotStreamingService(
+    pb2_grpc.BotStreamingServiceServicer,
+    CentrifugoBridgeMixin  # ← One-line WebSocket integration
+):
+    centrifugo_channels = BotChannels()
+    
+    async def ConnectBot(self, request_iterator, context):
+        async for message in request_iterator:
+            # Your business logic
+            await process_message(message)
+            
+            # Auto-publish to WebSocket (1 line!)
+            await self._notify_centrifugo(message, bot_id=bot_id)
+```
+
+**Built-in features:**
+- 🔄 **Bidirectional Streaming** - Full-duplex gRPC communication
+- 🌉 **Centrifugo Bridge** - Auto-publish gRPC events to WebSocket
+- 🛡️ **Circuit Breaker** - Graceful degradation if Centrifugo unavailable
+- 🔁 **Auto Retry** - Exponential backoff for critical events
+- 📦 **Dead Letter Queue** - Never lose important messages
+- ⚡ **Rate Limiting** - Per-channel throttling with critical bypass
+- 🎯 **Type-Safe Config** - Pydantic v2 validation for channels
+
+**Architecture:**
+```
+Trading Bot ──gRPC──> Django gRPC Service ──WebSocket──> Browser
+                            ↓
+                      [Business Logic]
+                      [Database Save]
+                      [Centrifugo Publish]
+```
+
+**Why this approach?**
+- ✅ Django controls all business logic and validation
+- ✅ Single source of truth for data transformations
+- ✅ Graceful degradation - gRPC works even if WebSocket fails
+- ✅ Production-ready resilience patterns built-in
+
+**[📚 gRPC Integration Guide →](https://djangocfg.com/docs/features/integrations/grpc)**
+
+---
+
 ### 🤖 AI-Ready Infrastructure
 
 **Built-in AI agent framework** - LLM workflow automation with Django ORM integration.
@@ -408,9 +474,11 @@ class ProductionConfig(DjangoConfig):
 - **[Quick Start](https://djangocfg.com/docs/features/integrations/nextjs-admin/quick-start)** - 5-minute setup
 - **[Configuration](https://djangocfg.com/docs/features/integrations/nextjs-admin/configuration)** - All options
 
-### 📡 Real-Time Features
+### 📡 Real-Time & Microservices
 - **[Centrifugo Integration](https://djangocfg.com/docs/features/integrations/centrifugo)** - WebSocket setup
 - **[Live Updates](https://djangocfg.com/docs/features/integrations/centrifugo/live-updates)** - Real-time data
+- **[gRPC Streaming](https://djangocfg.com/docs/features/integrations/grpc)** - Bidirectional streaming
+- **[gRPC → WebSocket Bridge](https://djangocfg.com/docs/features/integrations/grpc/centrifugo-bridge)** - Auto-publish to clients
 
 ### 🏗️ Core Features
 - **[Built-in Apps](https://djangocfg.com/docs/features/built-in-apps/overview)** - 8 enterprise apps
@@ -455,9 +523,9 @@ class ProductionConfig(DjangoConfig):
 
 <div align="center">
 
-**Modern Django Framework** • **Type-Safe Configuration** • **Next.js Admin** • **Real-Time WebSockets** • **AI-Ready**
+**Modern Django Framework** • **Type-Safe Configuration** • **Next.js Admin** • **gRPC Streaming** • **Real-Time WebSockets** • **AI-Ready**
 
-Django-CFG is the modern Django framework for enterprise applications. Built with Pydantic v2 for type-safe configuration, includes Next.js admin integration, Centrifugo WebSocket support, AI agent framework, and 8 production-ready apps. Perfect for building scalable Django applications with reduced boilerplate and enterprise features out of the box.
+Django-CFG is the modern Django framework for enterprise applications. Built with Pydantic v2 for type-safe configuration, includes Next.js admin integration, gRPC bidirectional streaming with WebSocket bridge, Centrifugo real-time support, AI agent framework, and 8 production-ready apps. Perfect for building scalable microservices and real-time Django applications with reduced boilerplate and enterprise features out of the box.
 
 ---
 
