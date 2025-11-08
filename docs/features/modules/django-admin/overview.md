@@ -182,8 +182,11 @@ self.html.inline(items, separator=" | ")
 self.html.icon(icon_name, size="xs")
     # Material icon only
 
-self.html.icon_text(icon_or_text, text, icon_size="xs")
-    # Icon + text combination
+self.html.icon_text(icon_or_text, text, icon_size="xs", color=None)
+    # Icon + text combination with optional color
+
+self.html.colored_text(text, color=None)
+    # Colored text without icon
 
 self.html.link(url, text, css_class="", target="")
     # Clickable link
