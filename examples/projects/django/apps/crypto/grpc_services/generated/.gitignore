@@ -1,8 +1,0 @@
-# # Ignore all generated proto files
-# *_pb2.py
-# *_pb2_grpc.py
-
-# # But keep package init and docs
-# !__init__.py
-# !README.md
-# !.gitignore

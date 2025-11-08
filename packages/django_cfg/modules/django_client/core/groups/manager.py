@@ -230,25 +230,32 @@ from django_cfg.apps.urls import urlpatterns
             for app_name in apps:
                 # Try to include app URLs
                 try:
-                    # Find app config by full name
-                    app_config = None
-                    for config in django_apps.get_app_configs():
-                        if config.name == app_name:
-                            app_config = config
-                            break
-
-                    if app_config:
-                        # Use actual label from AppConfig
-                        app_label = app_config.label
-                        # Add API prefix from config (e.g., "api/workspaces/" instead of just "workspaces/")
-                        api_prefix = getattr(self.config, 'api_prefix', '').strip('/')
-                        if api_prefix:
-                            url_path = f"{api_prefix}/{app_label}/"
-                        else:
-                            url_path = f"{app_label}/"
-                        urlpatterns.append(f'    path("{url_path}", include("{app_name}.urls")),')
+                    # Check if app has urls.py module
+                    import importlib
+                    urls_module = f"{app_name}.urls"
+                    try:
+                        importlib.import_module(urls_module)
+                        has_urls = True
+                    except ImportError:
+                        has_urls = False
+                    
+                    if not has_urls:
+                        logger.debug(f"App '{app_name}' has no urls.py - skipping")
+                        continue
+                    
+                    # Determine URL path based on whether app has urls.py
+                    # If app has urls.py, use basename (matches url_integration.py logic)
+                    # e.g., "apps.web.controls" -> "controls"
+                    app_basename = app_name.split('.')[-1]
+                    
+                    # Add API prefix from config (e.g., "api/controls/" instead of just "controls/")
+                    api_prefix = getattr(self.config, 'api_prefix', '').strip('/')
+                    if api_prefix:
+                        url_path = f"{api_prefix}/{app_basename}/"
                     else:
-                        logger.debug(f"App '{app_name}' not found in installed apps")
+                        url_path = f"{app_basename}/"
+                    
+                    urlpatterns.append(f'    path("{url_path}", include("{app_name}.urls")),')
                 except Exception as e:
                     logger.debug(f"App '{app_name}' skipped: {e}")
                     continue

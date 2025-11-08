@@ -143,7 +143,7 @@ class DjangoCfgConfig(DjangoConfig):
         package_prefix="api",  # Flatten field - no GRPCProtoConfig import needed!
         public_url=env.grpc_url,  # Flatten field from environment - simpler!
         handlers_hook=[
-            "apps.crypto.grpc_services.crypto_service.grpc_handlers",  # Auto-register CryptoService
+            "apps.crypto.grpc.services.handlers.grpc_handlers",  # Auto-register CryptoService (NEW PATH!)
         ]
     )
 
