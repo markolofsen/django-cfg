@@ -860,6 +860,69 @@ def detailed_info_display(self, obj):
     return "<br>".join(sections)
 ```
 
+### Time-Based Colored Text
+
+```python
+@computed_field("Last Activity")
+def last_activity_display(self, obj):
+    """Show time ago with color based on freshness."""
+    if not obj.last_activity_at:
+        return self.html.empty("Never")
+    
+    from django.utils import timezone
+    from django.utils.timesince import timesince
+    
+    age_seconds = (timezone.now() - obj.last_activity_at).total_seconds()
+    time_ago = timesince(obj.last_activity_at, timezone.now())
+    
+    # Color based on freshness
+    if age_seconds < 120:  # < 2 minutes
+        color = "success"
+    elif age_seconds < 300:  # < 5 minutes
+        color = "warning"
+    else:  # > 5 minutes
+        color = "danger"
+    
+    return self.html.colored_text(f"{time_ago} ago", color)
+```
+
+### Status with Icon and Color
+
+```python
+@computed_field("Connection Status")
+def connection_status_display(self, obj):
+    """Show connection status with icon and color."""
+    if obj.is_connected:
+        return self.html.icon_text(
+            Icons.CHECK_CIRCLE, 
+            "Connected", 
+            color="success"
+        )
+    
+    # Show disconnection time with color
+    if obj.last_seen_at:
+        from django.utils import timezone
+        from django.utils.timesince import timesince
+        
+        age_seconds = (timezone.now() - obj.last_seen_at).total_seconds()
+        time_ago = timesince(obj.last_seen_at, timezone.now())
+        
+        # Gradually change color as time passes
+        if age_seconds < 60:  # < 1 minute
+            color = "warning"
+            icon = Icons.SCHEDULE
+        elif age_seconds < 300:  # < 5 minutes
+            color = "warning"
+            icon = Icons.CANCEL
+        else:  # > 5 minutes
+            color = "danger"
+            icon = Icons.ERROR
+        
+        return self.html.icon_text(icon, f"Offline {time_ago}", color=color)
+    
+    return self.html.icon_text(Icons.CANCEL, "Never connected", color="secondary")
+```
+
 ## Next Steps
 
 - **[Overview](./overview.md)** - Learn the philosophy

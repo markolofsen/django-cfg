@@ -286,7 +286,7 @@ All methods available on `self.html`:
 - **Basic**: `icon()`, `span()`, `text()`, `div()`, `link()`, `empty()`
 - **Code**: `code()`, `code_block()`
 - **Badges**: `badge()`
-- **Composition**: `inline()`, `icon_text()`, `header()`
+- **Composition**: `inline()`, `icon_text()`, `colored_text()`, `header()`
 - **Formatting**: `number()`, `uuid_short()`
 - **Key-Value**: `key_value()`, `breakdown()`, `divider()`, `key_value_list()`
 - **Progress**: `segment()`, `progress_bar()`
@@ -301,7 +301,7 @@ from django_cfg.modules.django_admin.utils import (
     BaseElements,           # Basic HTML: icon, span, text, div, link, empty
     CodeElements,          # Code blocks: code, code_block
     BadgeElements,         # Badges: badge
-    CompositionElements,   # Composition: inline, icon_text, header
+    CompositionElements,   # Composition: inline, icon_text, colored_text, header
     FormattingElements,    # Formatting: number, uuid_short
     KeyValueElements,      # Key-value: key_value, breakdown, divider
     ProgressElements,      # Progress: segment, progress_bar
@@ -446,16 +446,62 @@ def stats_display(self, obj):
 
 #### icon_text()
 
-Icon or emoji with text.
+Icon with text and optional color.
 
 ```python
 CompositionElements.icon_text(
     icon_or_text: str | Any,
     text: Any = None,
     icon_size: str = "xs",
-    separator: str = " "
+    separator: str = " ",
+    color: str = None  # success, warning, danger, info, secondary, primary
 ) -> SafeString
 ```
+
+**Examples:**
+
+```python
+# Icon with text
+self.html.icon_text(Icons.EDIT, 5)
+
+# Icon with text and color
+self.html.icon_text(Icons.CHECK_CIRCLE, "Yes", color="success")
+self.html.icon_text(Icons.CANCEL, "No", color="secondary")
+
+# Just text (no icon)
+self.html.icon_text("Active")
+```
+
+#### colored_text()
+
+Colored text without icon.
+
+```python
+CompositionElements.colored_text(
+    text: Any,
+    color: str = None  # success, warning, danger, info, secondary, primary
+) -> SafeString
+```
+
+**Examples:**
+
+```python
+# Time ago with color based on freshness
+if age < 120:
+    self.html.colored_text("2 minutes ago", "success")
+elif age < 300:
+    self.html.colored_text("5 minutes ago", "warning")
+else:
+    self.html.colored_text("10 minutes ago", "danger")
+```
+
+**Available colors:**
+- `success` - Green (positive states)
+- `warning` - Yellow (attention needed)
+- `danger` / `error` - Red (critical states)
+- `info` - Blue (informational)
+- `secondary` - Gray (neutral)
+- `primary` - Indigo (brand color)
 
 #### header()
 

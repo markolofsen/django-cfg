@@ -28,7 +28,8 @@ class CompositionElements:
 
     @staticmethod
     def icon_text(icon_or_text: Union[str, Any], text: Any = None,
-                  icon_size: str = "xs", separator: str = " ") -> SafeString:
+                  icon_size: str = "xs", separator: str = " ", 
+                  color: str = None) -> SafeString:
         """
         Render icon with text or emoji with text.
 
@@ -37,28 +38,35 @@ class CompositionElements:
             text: Optional text to display after icon
             icon_size: Icon size (xs, sm, base, lg, xl)
             separator: Separator between icon and text
+            color: Optional color (success, warning, danger, info, secondary, primary)
 
         Usage:
             html.icon_text(Icons.EDIT, 5)  # Icon with number
-            html.icon_text("📝", 5)  # Emoji with number
             html.icon_text("Active")  # Just text
+            html.icon_text(Icons.CHECK, "Yes", color="success")  # Icon with color
         """
+        # Color mapping to Tailwind/Unfold classes
+        color_classes = {
+            'success': 'text-green-600 dark:text-green-400',
+            'warning': 'text-yellow-600 dark:text-yellow-400',
+            'danger': 'text-red-600 dark:text-red-400',
+            'error': 'text-red-600 dark:text-red-400',
+            'info': 'text-blue-600 dark:text-blue-400',
+            'secondary': 'text-gray-600 dark:text-gray-400',
+            'primary': 'text-indigo-600 dark:text-indigo-400',
+        }
+        
+        color_class = color_classes.get(color, '') if color else ''
+        
         if text is None:
             # Just text
+            if color_class:
+                return format_html('<span class="{}">{}</span>', color_class, escape(str(icon_or_text)))
             return format_html('<span>{}</span>', escape(str(icon_or_text)))
 
-        # Check if it's a Material Icon (from Icons class) or emoji
+        # Render icon (Material Icon from Icons class)
         icon_str = str(icon_or_text)
-
-        # Detect if it's emoji by checking for non-ASCII characters
-        is_emoji = any(ord(c) > 127 for c in icon_str)
-
-        if is_emoji or icon_str in ['📝', '💬', '🛒', '👤', '📧', '🔔', '⚙️', '🔧', '📊', '🎯']:
-            # Emoji
-            icon_html = escape(icon_str)
-        else:
-            # Material Icon
-            icon_html = CompositionElements.icon(icon_str, size=icon_size)
+        icon_html = CompositionElements.icon(icon_str, size=icon_size)
 
         # DON'T escape SafeString - it's already safe HTML!
         from django.utils.safestring import SafeString
@@ -67,7 +75,43 @@ class CompositionElements:
         else:
             text_html = escape(str(text))
 
+        # Wrap in span with color class if provided
+        if color_class:
+            return format_html('<span class="{}">{}{}<span>{}</span></span>', 
+                             color_class, icon_html, separator, text_html)
+
         return format_html('{}{}<span>{}</span>', icon_html, separator, text_html)
+
+    @staticmethod
+    def colored_text(text: Any, color: str = None) -> SafeString:
+        """
+        Render colored text.
+
+        Args:
+            text: Text to display
+            color: Color (success, warning, danger, info, secondary, primary)
+
+        Usage:
+            html.colored_text("Active", "success")
+            html.colored_text("5 minutes ago", "warning")
+        """
+        # Color mapping to Tailwind/Unfold classes
+        color_classes = {
+            'success': 'text-green-600 dark:text-green-400',
+            'warning': 'text-yellow-600 dark:text-yellow-400',
+            'danger': 'text-red-600 dark:text-red-400',
+            'error': 'text-red-600 dark:text-red-400',
+            'info': 'text-blue-600 dark:text-blue-400',
+            'secondary': 'text-gray-600 dark:text-gray-400',
+            'primary': 'text-indigo-600 dark:text-indigo-400',
+        }
+        
+        color_class = color_classes.get(color, '') if color else ''
+        
+        if color_class:
+            return format_html('<span class="{}">{}</span>', color_class, escape(str(text)))
+        
+        return format_html('<span>{}</span>', escape(str(text)))
 
     @staticmethod
     def inline(*items, separator: str = " | ",

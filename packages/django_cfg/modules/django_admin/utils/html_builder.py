@@ -45,6 +45,7 @@ class HtmlBuilder:
     # === CompositionElements ===
     inline = staticmethod(CompositionElements.inline)
     icon_text = staticmethod(CompositionElements.icon_text)
+    colored_text = staticmethod(CompositionElements.colored_text)
     header = staticmethod(CompositionElements.header)
 
     # === FormattingElements ===
