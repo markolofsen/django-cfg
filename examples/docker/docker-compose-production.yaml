@@ -33,7 +33,7 @@ services:
       - "traefik.docker.network=dokploy-network"
       - "traefik.http.routers.djangocfg-api.rule=Host(`api.djangocfg.com`)"
       - "traefik.http.routers.djangocfg-api.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.djangocfg-api.tls=true"
       - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
 
   # RQ Worker (Background Tasks Processor)
@@ -139,7 +139,7 @@ services:
       # gRPC uses HTTP/2, so we need special configuration
       - "traefik.http.routers.djangocfg-grpc.rule=Host(`grpc.djangocfg.com`)"
       - "traefik.http.routers.djangocfg-grpc.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-grpc.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.djangocfg-grpc.tls=true"
       - "traefik.http.services.djangocfg-grpc.loadbalancer.server.port=50051"
       - "traefik.http.services.djangocfg-grpc.loadbalancer.server.scheme=h2c"
 
@@ -181,7 +181,6 @@ services:
       - "traefik.http.routers.djangocfg-centrifugo.entrypoints=websecure"
       - "traefik.http.routers.djangocfg-centrifugo.service=djangocfg-centrifugo"
       - "traefik.http.routers.djangocfg-centrifugo.tls=true"
-      - "traefik.http.routers.djangocfg-centrifugo.tls.certresolver=letsencrypt"
       - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
 
   # Frontend
@@ -204,7 +203,7 @@ services:
       - "traefik.docker.network=dokploy-network"
       - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
       - "traefik.http.routers.djangocfg-demo.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-demo.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.djangocfg-demo.tls=true"
       - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
 
   # Docusaurus Site
@@ -224,7 +223,7 @@ services:
       - "traefik.docker.network=dokploy-network"
       - "traefik.http.routers.djangocfg-web.rule=Host(`djangocfg.com`) || Host(`www.djangocfg.com`)"
       - "traefik.http.routers.djangocfg-web.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.djangocfg-web.tls=true"
       - "traefik.http.services.djangocfg-web.loadbalancer.server.port=3001"
 
   # RQ Dashboard is integrated into Django Admin Next.js UI
