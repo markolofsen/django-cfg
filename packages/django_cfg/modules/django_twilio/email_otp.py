@@ -111,7 +111,9 @@ class EmailOTPService(BaseTwilioService):
         template_data: Optional[Dict[str, Any]] = None
     ) -> Tuple[bool, str, str]:
         """Async version of send_otp."""
-        return await sync_to_async(self.send_otp)(email, subject, template_data)
+        # sync_to_async is appropriate here for external SendGrid API calls (not Django ORM)
+        # thread_sensitive=False for better performance since no database access occurs
+        return await sync_to_async(self.send_otp, thread_sensitive=False)(email, subject, template_data)
 
     def _send_template_email(
         self,

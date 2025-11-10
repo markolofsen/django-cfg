@@ -424,7 +424,7 @@
                     const authToken = localStorage.getItem('auth_token');
                     const refreshToken = localStorage.getItem('refresh_token');
 
-                    // console.log('[Django-CFG] sendAuth: authToken:', authToken ? authToken.substring(0, 20) + '...' : 'null', 'refreshToken:', refreshToken ? refreshToken.substring(0, 20) + '...' : 'null');
+                    console.log('[Django-CFG] sendAuth: authToken:', authToken ? authToken.substring(0, 20) + '...' : 'null', 'refreshToken:', refreshToken ? refreshToken.substring(0, 20) + '...' : 'null');
 
                     if (!authToken) {
                         console.warn('[Django-CFG] sendAuth: No auth token found in localStorage');
@@ -434,12 +434,12 @@
                     try {
                         // Use '*' in dev mode to handle localhost vs 127.0.0.1 mismatch
                         const targetOrigin = '*'; // In production, use specific origin for security
-                        // console.log('[Django-CFG] Sending parent-auth message to iframe:', this.iframe.id);
+                        console.log('[Django-CFG] Sending parent-auth message to iframe:', this.iframe.id);
                         this.iframe.contentWindow.postMessage({
                             type: 'parent-auth',
                             data: { authToken, refreshToken }
                         }, targetOrigin);
-                        // console.log('[Django-CFG] parent-auth message sent successfully');
+                        console.log('[Django-CFG] parent-auth message sent successfully');
                     } catch (e) {
                         console.error('[Django-CFG] Failed to send auth:', e);
                     }
@@ -449,10 +449,10 @@
                  * Send all data (theme + auth)
                  */
                 sendAllData() {
-                    // console.log('[Django-CFG] sendAllData called');
+                    console.log('[Django-CFG] sendAllData called');
                     this.sendTheme();
                     this.sendAuth();
-                    // console.log('[Django-CFG] sendAllData completed');
+                    console.log('[Django-CFG] sendAllData completed');
                 }
 
                 /**
@@ -526,15 +526,15 @@
                 }
 
                 handleMessage(type, data) {
-                    // console.log('[Django-CFG] Received message from iframe:', type, data);
+                    console.log('[Django-CFG] Received message from iframe:', type, data);
                     switch (type) {
                         case 'iframe-ready':
-                            // console.log('[Django-CFG] iframe-ready received, sending auth and theme data');
+                            console.log('[Django-CFG] iframe-ready received, sending auth and theme data');
                             this.messageBridge.sendAllData();
                             break;
 
                         case 'iframe-auth-status':
-                            // console.log('[Django-CFG] iframe-auth-status:', data);
+                            console.log('[Django-CFG] iframe-auth-status:', data);
                             break;
 
                         case 'iframe-navigation':
@@ -640,26 +640,25 @@
                  * Setup ONE global message listener for ALL iframes
                  */
                 _setupGlobalMessageListener() {
-                    // console.log('[Django-CFG] Setting up global message listener');
+                    console.log('[Django-CFG] Setting up global message listener');
                     window.addEventListener('message', (event) => {
-                        // console.log('[Django-CFG] Received message:', {
-                        //     type: event.data?.type,
-                        //     origin: event.origin,
-                        //     source: event.source,
-                        //     mapSize: this.iframeMap.size,
-                        //     mapKeys: Array.from(this.iframeMap.keys())
-                        // });
+                        console.log('[Django-CFG] Received message:', {
+                            type: event.data?.type,
+                            origin: event.origin,
+                            source: event.source === window ? 'self' : 'iframe',
+                            mapSize: this.iframeMap.size,
+                        });
 
                         // Find which handler should handle this message
                         const handler = this.iframeMap.get(event.source);
 
                         if (handler) {
-                            // console.log('[Django-CFG] Routing message to handler:', handler.iframe.id);
+                            console.log('[Django-CFG] Routing message to handler:', handler.iframe.id);
                             const { type, data } = event.data || {};
                             handler.handleMessage(type, data);
                         } else {
                             // Message from unknown source (browser extension, etc.)
-                            // console.log('[Django-CFG] Ignoring message from unknown source');
+                            console.log('[Django-CFG] Ignoring message from unknown source, origin:', event.origin);
                         }
                     });
                 }

@@ -101,7 +101,9 @@ class WhatsAppOTPService(BaseTwilioService):
 
     async def asend_otp(self, phone_number: str, fallback_to_sms: bool = True) -> Tuple[bool, str]:
         """Async version of send_otp."""
-        return await sync_to_async(self.send_otp)(phone_number, fallback_to_sms)
+        # sync_to_async is appropriate here for external Twilio API calls (not Django ORM)
+        # thread_sensitive=False for better performance since no database access occurs
+        return await sync_to_async(self.send_otp, thread_sensitive=False)(phone_number, fallback_to_sms)
 
     def _send_sms_otp(self, phone_number: str, client: Client, verify_config: TwilioVerifyConfig) -> Tuple[bool, str]:
         """Internal SMS fallback method."""

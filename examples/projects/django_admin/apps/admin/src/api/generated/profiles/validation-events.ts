@@ -1,0 +1,133 @@
+/**
+ * Zod Validation Events - Browser CustomEvent integration
+ *
+ * Dispatches browser CustomEvents when Zod validation fails, allowing
+ * React/frontend apps to listen and handle validation errors globally.
+ *
+ * @example
+ * ```typescript
+ * // In your React app
+ * window.addEventListener('zod-validation-error', (event) => {
+ *   const { operation, path, method, error, response } = event.detail;
+ *   console.error(`Validation failed for ${method} ${path}`, error);
+ *   // Show toast notification, log to Sentry, etc.
+ * });
+ * ```
+ */
+
+import type { ZodError } from 'zod'
+
+/**
+ * Validation error event detail
+ */
+export interface ValidationErrorDetail {
+  /** Operation/function name that failed validation */
+  operation: string
+  /** API endpoint path */
+  path: string
+  /** HTTP method */
+  method: string
+  /** Zod validation error */
+  error: ZodError
+  /** Raw response data that failed validation */
+  response: any
+  /** Timestamp of the error */
+  timestamp: Date
+}
+
+/**
+ * Custom event type for Zod validation errors
+ */
+export type ValidationErrorEvent = CustomEvent<ValidationErrorDetail>
+
+/**
+ * Dispatch a Zod validation error event.
+ *
+ * Only dispatches in browser environment (when window is defined).
+ * Safe to call in Node.js/SSR - will be a no-op.
+ *
+ * @param detail - Validation error details
+ */
+export function dispatchValidationError(detail: ValidationErrorDetail): void {
+  // Check if running in browser
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    const event = new CustomEvent<ValidationErrorDetail>('zod-validation-error', {
+      detail,
+      bubbles: true,
+      cancelable: false,
+    })
+
+    window.dispatchEvent(event)
+  } catch (error) {
+    // Silently fail - validation event dispatch should never crash the app
+    console.warn('Failed to dispatch validation error event:', error)
+  }
+}
+
+/**
+ * Add a global listener for Zod validation errors.
+ *
+ * @param callback - Function to call when validation error occurs
+ * @returns Cleanup function to remove the listener
+ *
+ * @example
+ * ```typescript
+ * const cleanup = onValidationError(({ operation, error }) => {
+ *   toast.error(`Validation failed in ${operation}`);
+ *   logToSentry(error);
+ * });
+ *
+ * // Later, remove listener
+ * cleanup();
+ * ```
+ */
+export function onValidationError(
+  callback: (detail: ValidationErrorDetail) => void
+): () => void {
+  if (typeof window === 'undefined') {
+    // Return no-op cleanup function for SSR
+    return () => {}
+  }
+
+  const handler = (event: Event) => {
+    if (event instanceof CustomEvent) {
+      callback(event.detail)
+    }
+  }
+
+  window.addEventListener('zod-validation-error', handler)
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('zod-validation-error', handler)
+  }
+}
+
+/**
+ * Format Zod error for logging/display.
+ *
+ * @param error - Zod validation error
+ * @returns Formatted error message
+ */
+export function formatZodError(error: ZodError): string {
+  const issues = error.issues.map((issue, index) => {
+    const path = issue.path.join('.') || 'root'
+    const parts = [`${index + 1}. ${path}: ${issue.message}`]
+
+    if ('expected' in issue && issue.expected) {
+      parts.push(`   Expected: ${issue.expected}`)
+    }
+
+    if ('received' in issue && issue.received) {
+      parts.push(`   Received: ${issue.received}`)
+    }
+
+    return parts.join('\n')
+  })
+
+  return issues.join('\n')
+}

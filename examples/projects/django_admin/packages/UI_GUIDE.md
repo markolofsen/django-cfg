@@ -82,7 +82,7 @@ Standard Tailwind classes for components
 </button>
 ```
 
-## Forms (14)
+## Forms (15)
 
 ### Label
 Accessible label component for form inputs
@@ -108,6 +108,38 @@ import { Button } from '@djangocfg/ui';
 <Button variant="ghost">Ghost</Button>
 <Button size="sm">Small</Button>
 <Button size="lg">Large</Button>
+```
+
+### DownloadButton
+Button with download functionality, status indicators, and authentication support
+
+```tsx
+import { DownloadButton } from '@djangocfg/ui';
+
+// Simple download
+<DownloadButton
+  url="/api/files/report.pdf"
+  filename="monthly-report.pdf"
+>
+  Download Report
+</DownloadButton>
+
+// With callbacks
+<DownloadButton
+  url="/api/export/users"
+  method="POST"
+  body={{ format: "csv" }}
+  onDownloadStart={() => console.log("Starting...")}
+  onDownloadComplete={(filename) => console.log("Done:", filename)}
+  onDownloadError={(error) => console.error("Error:", error)}
+>
+  Export Users
+</DownloadButton>
+
+// Different variants
+<DownloadButton url="/api/data" variant="outline" size="sm">
+  Download Data
+</DownloadButton>
 ```
 
 ### Input
@@ -507,15 +539,16 @@ import {
 ```
 
 ### Tabs
-Tab navigation for switching between different views
+Tab navigation for switching between different views. Supports mobile sheet mode, sticky positioning, and auto-responsive behavior.
 
 ```tsx
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui';
 
+// Basic tabs with equal-width tabs
 <Tabs defaultValue="account" className="w-[400px]">
-  <TabsList className="grid w-full grid-cols-2">
-    <TabsTrigger value="account">Account</TabsTrigger>
-    <TabsTrigger value="password">Password</TabsTrigger>
+  <TabsList fullWidth>
+    <TabsTrigger value="account" flexEqual>Account</TabsTrigger>
+    <TabsTrigger value="password" flexEqual>Password</TabsTrigger>
   </TabsList>
   <TabsContent value="account">
     <div className="p-4 border rounded-md">
@@ -526,6 +559,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui';
     <div className="p-4 border rounded-md">
       <p className="text-sm">Change your password here.</p>
     </div>
+  </TabsContent>
+</Tabs>
+
+// Mobile-responsive tabs with sticky positioning
+<Tabs
+  defaultValue="account"
+  mobileSheet
+  mobileTitleText="Settings"
+  mobileSheetTitle="Navigation"
+  sticky
+>
+  <TabsList fullWidth>
+    <TabsTrigger value="account" flexEqual>Account</TabsTrigger>
+    <TabsTrigger value="password" flexEqual>Password</TabsTrigger>
+  </TabsList>
+  <TabsContent value="account">
+    Account content
+  </TabsContent>
+  <TabsContent value="password">
+    Password content
   </TabsContent>
 </Tabs>
 ```
@@ -606,16 +659,14 @@ Client-side pagination component for static builds with callback support
 ```tsx
 import { StaticPagination } from '@djangocfg/ui';
 
-const [currentPage, setCurrentPage] = useState(1);
+import { useDRFPagination } from '@djangocfg/ui';
+
+const pagination = useDRFPagination(1, 10);
+const { data } = useMyAPI(pagination.params);
 
 <StaticPagination
-  currentPage={currentPage}
-  totalPages={10}
-  totalItems={100}
-  itemsPerPage={10}
-  hasNextPage={currentPage < 10}
-  hasPreviousPage={currentPage > 1}
-  onPageChange={(page) => setCurrentPage(page)}
+  data={data}
+  onPageChange={pagination.setPage}
 />
 ```
 
@@ -1555,6 +1606,102 @@ import { Item, ItemGroup } from '@djangocfg/ui';
     </ItemAction>
   </Item>
 </ItemGroup>
+```
+
+## Tools (3)
+
+### JsonTree
+Interactive JSON tree viewer with expand/collapse, search, and export functionality
+
+```tsx
+import { JsonTree } from '@djangocfg/ui';
+
+<JsonTree
+  title="User Data"
+  data={{
+    user: {
+      id: 1,
+      name: "John Doe",
+      email: "john@example.com",
+      profile: {
+        bio: "Software engineer",
+        interests: ["coding", "music"]
+      }
+    }
+  }}
+  config={{
+    maxAutoExpandDepth: 2,
+    showCollectionInfo: true,
+    showExpandControls: true,
+    showActionButtons: true,
+  }}
+/>
+```
+
+### PrettyCode
+Syntax-highlighted code display with automatic language detection and theme support
+
+```tsx
+import { PrettyCode } from '@djangocfg/ui';
+
+// Code as string
+<PrettyCode
+  data={pythonCode}
+  language="python"
+/>
+
+// JSON object (auto-formatted)
+<PrettyCode
+  data={{ user: "John", age: 30 }}
+  language="json"
+/>
+
+// Inline code
+<PrettyCode
+  data="const x = 42;"
+  language="javascript"
+  inline
+/>
+```
+
+### Mermaid
+Interactive Mermaid diagram renderer with fullscreen view and theme support
+
+```tsx
+import { Mermaid } from '@djangocfg/ui';
+
+<Mermaid
+  chart={`
+    graph TD
+      A[Start] --> B{Is it?}
+      B -->|Yes| C[OK]
+      C --> D[Rethink]
+      D --> B
+      B -->|No| E[End]
+  `}
+/>
+
+// Sequence diagram
+<Mermaid
+  chart={`
+    sequenceDiagram
+      participant A as Alice
+      participant B as Bob
+      A->>B: Hello Bob!
+      B->>A: Hello Alice!
+  `}
+/>
+
+// Flowchart
+<Mermaid
+  chart={`
+    flowchart LR
+      A[Hard edge] -->|Link text| B(Round edge)
+      B --> C{Decision}
+      C -->|One| D[Result one]
+      C -->|Two| E[Result two]
+  `}
+/>
 ```
 
 ## Blocks (7)

@@ -48,6 +48,10 @@ export * as CryptoCryptoTypes from "./crypto__api__crypto/models";
 // Re-export Zod schemas for runtime validation
 export * as Schemas from "./_utils/schemas";
 
+// Re-export Zod validation events for browser integration
+export type { ValidationErrorDetail, ValidationErrorEvent } from "./validation-events";
+export { dispatchValidationError, onValidationError, formatZodError } from "./validation-events";
+
 // Re-export typed fetchers for universal usage
 export * as Fetchers from "./_utils/fetchers";
 export * from "./_utils/fetchers";

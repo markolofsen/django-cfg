@@ -76,6 +76,28 @@ export async function getProfilesProfilesList(  params?: { page?: number; page_s
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getProfilesProfilesList',
+            path: '/api/profiles/profiles/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -117,6 +139,28 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'createProfilesProfilesCreate',
+            path: '/api/profiles/profiles/',
+            method: 'POST',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -160,6 +204,28 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: any
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getProfilesProfilesRetrieve',
+            path: '/api/profiles/profiles/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -202,6 +268,28 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'updateProfilesProfilesUpdate',
+            path: '/api/profiles/profiles/{id}/',
+            method: 'PUT',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -243,6 +331,28 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'partialUpdateProfilesProfilesPartialUpdate',
+            path: '/api/profiles/profiles/{id}/',
+            method: 'PATCH',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -300,6 +410,28 @@ export async function getProfilesProfilesMeRetrieve(  client?: any
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getProfilesProfilesMeRetrieve',
+            path: '/api/profiles/profiles/me/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -341,6 +473,28 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'updateProfilesProfilesMeUpdate',
+            path: '/api/profiles/profiles/me/',
+            method: 'PUT',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -384,6 +538,28 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'partialUpdateProfilesProfilesMePartialUpdate',
+            path: '/api/profiles/profiles/me/',
+            method: 'PATCH',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -425,6 +601,28 @@ export async function getProfilesProfilesStatsRetrieve(  client?: any
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getProfilesProfilesStatsRetrieve',
+            path: '/api/profiles/profiles/stats/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;

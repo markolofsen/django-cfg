@@ -781,7 +781,8 @@ class Command(BaseCommand):
             # Mark server as stopping (sync context - signal handlers are sync)
             if server_status:
                 try:
-                    server_status.mark_stopping()
+                    # ✅ Use Django 5.2+ async ORM instead of sync_to_async
+                    asyncio.create_task(server_status.amark_stopping())
                 except Exception as e:
                     self.logger.warning(f"Could not mark server as stopping: {e}")
 

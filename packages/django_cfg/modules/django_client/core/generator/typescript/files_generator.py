@@ -143,6 +143,18 @@ class FilesGenerator:
             description="Retry utilities with p-retry",
         )
 
+    def generate_validation_events_file(self):
+        """Generate validation-events.ts with browser CustomEvent integration."""
+
+        template = self.jinja_env.get_template('utils/validation-events.ts.jinja')
+        content = template.render()
+
+        return GeneratedFile(
+            path="validation-events.ts",
+            content=content,
+            description="Zod validation error events for browser integration",
+        )
+
     def generate_api_instance_file(self):
         """Generate api-instance.ts with global singleton."""
 

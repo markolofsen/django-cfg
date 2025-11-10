@@ -63,11 +63,44 @@ def get_openapi_urls() -> List[Any]:
 
 
 # Export urlpatterns for django.urls.include()
-# Only create urlpatterns if Django is configured
-if _is_django_configured():
-    urlpatterns = get_openapi_urls()
-else:
-    urlpatterns = []
+# CRITICAL: Use lazy evaluation to avoid importing DRF/drf-spectacular
+# before Django settings are fully loaded. This prevents api_settings
+# from being cached with wrong DEFAULT_SCHEMA_CLASS value.
+class LazyURLPatterns:
+    """Lazy URLpatterns that only initialize when accessed."""
+
+    def __init__(self):
+        self._patterns = None
+
+    def _get_patterns(self):
+        if self._patterns is None:
+            if _is_django_configured():
+                self._patterns = get_openapi_urls()
+            else:
+                self._patterns = []
+        return self._patterns
+
+    def __iter__(self):
+        return iter(self._get_patterns())
+
+    def __getitem__(self, index):
+        return self._get_patterns()[index]
+
+    def __len__(self):
+        return len(self._get_patterns())
+
+    def clear(self):
+        """Clear all patterns."""
+        patterns = self._get_patterns()
+        patterns.clear()
+
+    def extend(self, items):
+        """Extend patterns with new items."""
+        patterns = self._get_patterns()
+        patterns.extend(items)
+
+
+urlpatterns = LazyURLPatterns()
 
 
 __all__ = ["get_openapi_urls", "urlpatterns"]

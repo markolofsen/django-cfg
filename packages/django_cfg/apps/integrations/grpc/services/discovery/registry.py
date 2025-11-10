@@ -181,12 +181,29 @@ class ServiceRegistryManager:
             >>> stats['success_rate']
             96.67
         """
-        # Django 5.2: Native async aggregate is not available yet (Django 5.2 limitation)
-        # Use asgiref.sync.sync_to_async as recommended by Django docs
-        from asgiref.sync import sync_to_async
+        # Django 5.2+ async ORM: Use native async aggregate
+        stats = await (
+            GRPCRequestLog.objects.filter(service_name=service_name)
+            .recent(hours)
+            .aaggregate(
+                total=Count("id"),
+                successful=Count("id", filter=models.Q(status="success")),
+                errors=Count("id", filter=models.Q(status="error")),
+                avg_duration=Avg("duration_ms"),
+            )
+        )
 
-        # Wrap the sync version in sync_to_async
-        return await sync_to_async(self.get_service_statistics)(service_name, hours)
+        total = stats["total"] or 0
+        successful = stats["successful"] or 0
+        success_rate = (successful / total * 100) if total > 0 else 0.0
+
+        return {
+            "total": total,
+            "successful": successful,
+            "errors": stats["errors"] or 0,
+            "success_rate": round(success_rate, 2),
+            "avg_duration_ms": round(stats["avg_duration"] or 0, 2),
+        }
 
     def get_all_services_with_stats(self, hours: int = 24) -> List[Dict]:
         """
@@ -274,28 +291,21 @@ class ServiceRegistryManager:
         services = self.get_all_services()
         services_with_stats = []
 
-        # Django 5.2: Use sync_to_async for aggregate queries that aren't natively async yet
-        from asgiref.sync import sync_to_async
+        # Django 5.2+ async ORM: Use native async aggregate
+        for service in services:
+            service_name = service.get("name")
 
-        # Create async version of the aggregate operation
-        @sync_to_async
-        def get_service_stats_sync(service_name: str):
-            return (
+            # Get stats from GRPCRequestLog using native async aggregate
+            stats = await (
                 GRPCRequestLog.objects.filter(service_name=service_name)
                 .recent(hours)
-                .aggregate(
+                .aaggregate(
                     total=Count("id"),
                     successful=Count("id", filter=models.Q(status="success")),
                     avg_duration=Avg("duration_ms"),
                     last_activity=models.Max("created_at"),
                 )
             )
-
-        for service in services:
-            service_name = service.get("name")
-
-            # Get stats from GRPCRequestLog (async)
-            stats = await get_service_stats_sync(service_name)
 
             # Calculate success rate
             total = stats["total"] or 0
@@ -429,38 +439,29 @@ class ServiceRegistryManager:
         if not service:
             return []
 
-        # Django 5.2: Use sync_to_async for complex queries with aggregates and values_list
-        from asgiref.sync import sync_to_async
-
-        @sync_to_async
-        def get_method_durations(svc_name: str, method_name: str):
-            return list(
+        # Django 5.2+ async ORM: Use native async operations
+        methods_list = []
+        for method_name in service.get("methods", []):
+            # Get durations for percentile calculation using async list comprehension
+            durations = [
+                duration async for duration in
                 GRPCRequestLog.objects.filter(
-                    service_name=svc_name,
+                    service_name=service_name,
                     method_name=method_name,
                     duration_ms__isnull=False,
                 ).values_list("duration_ms", flat=True)
-            )
+            ]
 
-        @sync_to_async
-        def get_method_stats(svc_name: str, method_name: str):
-            return GRPCRequestLog.objects.filter(
-                service_name=svc_name,
+            # Get aggregate stats using native async aggregate
+            stats = await GRPCRequestLog.objects.filter(
+                service_name=service_name,
                 method_name=method_name,
-            ).aggregate(
+            ).aaggregate(
                 total=Count("id"),
                 successful=Count("id", filter=models.Q(status="success")),
                 errors=Count("id", filter=models.Q(status="error")),
                 avg_duration=Avg("duration_ms"),
             )
-
-        methods_list = []
-        for method_name in service.get("methods", []):
-            # Get durations for percentile calculation (async)
-            durations = await get_method_durations(service_name, method_name)
-
-            # Get aggregate stats (async)
-            stats = await get_method_stats(service_name, method_name)
 
             # Calculate percentiles
             p50, p95, p99 = self._calculate_percentiles(durations)

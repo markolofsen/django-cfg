@@ -8,6 +8,7 @@ Mirrors RPCLogger patterns from legacy WebSocket solution for easy migration.
 import time
 from typing import Any, Optional
 
+from django.utils import timezone
 from django_cfg.modules.django_logging import get_logger
 
 logger = get_logger("centrifugo")
@@ -87,11 +88,11 @@ class CentrifugoLogger:
 
         logger.info(f"✅ Creating CentrifugoLog entry for {message_id} (async)")
         try:
-            from asgiref.sync import sync_to_async
             from ..models import CentrifugoLog
 
-            # Wrap ORM call in sync_to_async
-            log_entry = await sync_to_async(CentrifugoLog.objects.create)(
+            # ✅ Use Django 5.2+ async ORM instead of sync_to_async
+            # This prevents connection leaks from sync_to_async threads
+            log_entry = await CentrifugoLog.objects.acreate(
                 message_id=message_id,
                 channel=channel,
                 data=data,
@@ -234,14 +235,17 @@ class CentrifugoLogger:
             return
 
         try:
-            from asgiref.sync import sync_to_async
             from ..models import CentrifugoLog
 
-            await sync_to_async(CentrifugoLog.objects.mark_success)(
-                log_instance=log_entry,
-                acks_received=acks_received,
-                duration_ms=duration_ms,
-            )
+            # ✅ Use Django 5.2+ async ORM instead of sync_to_async
+            log_entry.status = CentrifugoLog.StatusChoices.SUCCESS
+            log_entry.acks_received = acks_received
+            log_entry.completed_at = timezone.now()
+
+            if duration_ms is not None:
+                log_entry.duration_ms = duration_ms
+
+            await log_entry.asave(update_fields=["status", "acks_received", "completed_at", "duration_ms"])
 
             logger.info(
                 f"Centrifugo publish successful: {log_entry.message_id}",
@@ -420,14 +424,25 @@ class CentrifugoLogger:
             return
 
         try:
-            from asgiref.sync import sync_to_async
             from ..models import CentrifugoLog
 
-            await sync_to_async(CentrifugoLog.objects.mark_failed)(
-                log_instance=log_entry,
-                error_code=error_code,
-                error_message=error_message,
-                duration_ms=duration_ms,
+            # ✅ Use Django 5.2+ async ORM instead of sync_to_async
+            log_entry.status = CentrifugoLog.StatusChoices.FAILED
+            log_entry.error_code = error_code
+            log_entry.error_message = error_message
+            log_entry.completed_at = timezone.now()
+
+            if duration_ms is not None:
+                log_entry.duration_ms = duration_ms
+
+            await log_entry.asave(
+                update_fields=[
+                    "status",
+                    "error_code",
+                    "error_message",
+                    "completed_at",
+                    "duration_ms",
+                ]
             )
 
             logger.error(
@@ -465,13 +480,27 @@ class CentrifugoLogger:
             return
 
         try:
-            from asgiref.sync import sync_to_async
             from ..models import CentrifugoLog
 
-            await sync_to_async(CentrifugoLog.objects.mark_timeout)(
-                log_instance=log_entry,
-                acks_received=acks_received,
-                duration_ms=duration_ms,
+            # ✅ Use Django 5.2+ async ORM instead of sync_to_async
+            log_entry.status = CentrifugoLog.StatusChoices.TIMEOUT
+            log_entry.acks_received = acks_received
+            log_entry.error_code = "timeout"
+            log_entry.error_message = f"Timeout after {log_entry.ack_timeout}s"
+            log_entry.completed_at = timezone.now()
+
+            if duration_ms is not None:
+                log_entry.duration_ms = duration_ms
+
+            await log_entry.asave(
+                update_fields=[
+                    "status",
+                    "acks_received",
+                    "error_code",
+                    "error_message",
+                    "completed_at",
+                    "duration_ms",
+                ]
             )
 
             logger.warning(
