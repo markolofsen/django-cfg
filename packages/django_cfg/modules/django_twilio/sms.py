@@ -87,7 +87,9 @@ class SMSOTPService(BaseTwilioService):
 
     async def asend_otp(self, phone_number: str) -> Tuple[bool, str]:
         """Async version of send_otp."""
-        return await sync_to_async(self.send_otp)(phone_number)
+        # sync_to_async is appropriate here for external Twilio API calls (not Django ORM)
+        # thread_sensitive=False for better performance since no database access occurs
+        return await sync_to_async(self.send_otp, thread_sensitive=False)(phone_number)
 
 
 __all__ = [

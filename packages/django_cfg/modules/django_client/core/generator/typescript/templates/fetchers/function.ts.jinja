@@ -43,6 +43,28 @@ export async function {{ func_name }}(
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: '{{ func_name }}',
+            path: '{{ operation.path }}',
+            method: '{{ operation.http_method }}',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }

@@ -105,7 +105,9 @@ class UnifiedOTPService(BaseTwilioService):
         enable_fallback: bool = True
     ) -> Tuple[bool, str, TwilioChannelType]:
         """Async version of send_otp."""
-        return await sync_to_async(self.send_otp)(identifier, preferred_channel, enable_fallback)
+        # sync_to_async is appropriate here for external Twilio API calls (not Django ORM)
+        # thread_sensitive=False for better performance since no database access occurs
+        return await sync_to_async(self.send_otp, thread_sensitive=False)(identifier, preferred_channel, enable_fallback)
 
     def verify_otp(self, identifier: str, code: str) -> Tuple[bool, str]:
         """
@@ -129,7 +131,9 @@ class UnifiedOTPService(BaseTwilioService):
 
     async def averify_otp(self, identifier: str, code: str) -> Tuple[bool, str]:
         """Async version of verify_otp."""
-        return await sync_to_async(self.verify_otp)(identifier, code)
+        # sync_to_async is appropriate here for external Twilio API calls (not Django ORM)
+        # thread_sensitive=False for better performance since no database access occurs
+        return await sync_to_async(self.verify_otp, thread_sensitive=False)(identifier, code)
 
     def _get_available_channels(self, is_email: bool, config: TwilioConfig) -> List[TwilioChannelType]:
         """Get list of available channels based on configuration."""

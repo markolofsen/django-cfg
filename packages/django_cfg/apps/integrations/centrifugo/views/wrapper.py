@@ -12,6 +12,7 @@ from typing import Any, Dict
 import httpx
 from django.db import transaction
 from django.http import JsonResponse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -173,14 +174,23 @@ class PublishWrapperView(View):
 
             # Mark as failed
             if log_entry:
-                from asgiref.sync import sync_to_async
                 from ..models import CentrifugoLog
 
-                await sync_to_async(CentrifugoLog.objects.mark_failed)(
-                    log_instance=log_entry,
-                    error_code=type(e).__name__,
-                    error_message=str(e),
-                    duration_ms=duration_ms,
+                # ✅ Use Django 5.2+ async ORM instead of sync_to_async
+                log_entry.status = CentrifugoLog.StatusChoices.FAILED
+                log_entry.error_code = type(e).__name__
+                log_entry.error_message = str(e)
+                log_entry.completed_at = timezone.now()
+                log_entry.duration_ms = duration_ms
+
+                await log_entry.asave(
+                    update_fields=[
+                        "status",
+                        "error_code",
+                        "error_message",
+                        "completed_at",
+                        "duration_ms",
+                    ]
                 )
 
             raise

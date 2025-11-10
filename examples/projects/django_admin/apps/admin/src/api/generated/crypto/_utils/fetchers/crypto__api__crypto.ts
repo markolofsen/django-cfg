@@ -75,6 +75,28 @@ export async function getCryptoCoinsList(  params?: { page?: number; page_size?:
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoCoinsList',
+            path: '/api/crypto/coins/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -116,6 +138,28 @@ export async function getCryptoCoinsRetrieve(  id: number,  client?: any
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoCoinsRetrieve',
+            path: '/api/crypto/coins/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -159,6 +203,28 @@ export async function getCryptoCoinsStatsRetrieve(  client?: any
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoCoinsStatsRetrieve',
+            path: '/api/crypto/coins/stats/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -200,6 +266,28 @@ export async function getCryptoExchangesList(  params?: { page?: number; page_si
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoExchangesList',
+            path: '/api/crypto/exchanges/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -243,6 +331,28 @@ export async function getCryptoExchangesRetrieve(  slug: string,  client?: any
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoExchangesRetrieve',
+            path: '/api/crypto/exchanges/{slug}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -285,6 +395,28 @@ export async function getCryptoWalletsList(  params?: { page?: number; page_size
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoWalletsList',
+            path: '/api/crypto/wallets/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -326,6 +458,28 @@ export async function getCryptoWalletsRetrieve(  id: string,  client?: any
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoWalletsRetrieve',
+            path: '/api/crypto/wallets/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;

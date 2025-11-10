@@ -77,6 +77,28 @@ export async function getTradingOrdersList(  params?: { page?: number; page_size
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingOrdersList',
+            path: '/api/trading/orders/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -118,6 +140,28 @@ export async function createTradingOrdersCreate(  data: OrderCreateRequest,  cli
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'createTradingOrdersCreate',
+            path: '/api/trading/orders/',
+            method: 'POST',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -161,6 +205,28 @@ export async function getTradingOrdersRetrieve(  id: number,  client?: any
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingOrdersRetrieve',
+            path: '/api/trading/orders/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -203,6 +269,28 @@ export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'updateTradingOrdersUpdate',
+            path: '/api/trading/orders/{id}/',
+            method: 'PUT',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -244,6 +332,28 @@ export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'partialUpdateTradingOrdersPartialUpdate',
+            path: '/api/trading/orders/{id}/',
+            method: 'PATCH',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -301,6 +411,28 @@ export async function getTradingPortfoliosList(  params?: { page?: number; page_
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosList',
+            path: '/api/trading/portfolios/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -342,6 +474,28 @@ export async function getTradingPortfoliosRetrieve(  id: number,  client?: any
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosRetrieve',
+            path: '/api/trading/portfolios/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;
@@ -385,6 +539,28 @@ export async function getTradingPortfoliosMeRetrieve(  client?: any
 
     consola.error('Response data:', response);
 
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosMeRetrieve',
+            path: '/api/trading/portfolios/me/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
     // Re-throw the error
     throw error;
   }
@@ -426,6 +602,28 @@ export async function getTradingPortfoliosStatsRetrieve(  client?: any
     }
 
     consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosStatsRetrieve',
+            path: '/api/trading/portfolios/stats/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
 
     // Re-throw the error
     throw error;

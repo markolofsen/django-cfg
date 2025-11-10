@@ -98,6 +98,10 @@ class TypeScriptGenerator(BaseGenerator):
             # Generate retry.ts with p-retry
             files.append(self.files_gen.generate_retry_file())
 
+            # Generate validation-events.ts (browser CustomEvent for Zod errors)
+            if self.generate_zod_schemas:
+                files.append(self.files_gen.generate_validation_events_file())
+
             # Generate api-instance.ts singleton (needed for fetchers/hooks)
             if self.generate_fetchers:
                 files.append(self.files_gen.generate_api_instance_file())
@@ -145,6 +149,10 @@ class TypeScriptGenerator(BaseGenerator):
 
             # Generate retry.ts with p-retry
             files.append(self.files_gen.generate_retry_file())
+
+            # Generate validation-events.ts (browser CustomEvent for Zod errors)
+            if self.generate_zod_schemas:
+                files.append(self.files_gen.generate_validation_events_file())
 
             # Generate api-instance.ts singleton (needed for fetchers/hooks)
             if self.generate_fetchers:
