@@ -81,6 +81,18 @@ class DatabaseConfig(BaseModel):
         description="Additional database-specific options",
     )
 
+    # Connection pooling options (CRITICAL for preventing connection exhaustion)
+    conn_max_age: int = Field(
+        default=0,  # 0 disables persistent connections when using connection pooling
+        description="Maximum age of database connections in seconds. Must be 0 when using connection pooling.",
+        ge=0,
+    )
+
+    conn_health_checks: bool = Field(
+        default=True,
+        description="Enable database connection health checks",
+    )
+
     # Database routing configuration
     apps: List[str] = Field(
         default_factory=list,
@@ -223,6 +235,8 @@ class DatabaseConfig(BaseModel):
         apps: Optional[List[str]] = None,
         operations: Optional[List[Literal["read", "write", "migrate"]]] = None,
         routing_description: str = "",
+        conn_max_age: int = 0,  # 0 disables persistent connections when using connection pooling
+        conn_health_checks: bool = True,
         **kwargs
     ) -> "DatabaseConfig":
         """
@@ -254,6 +268,8 @@ class DatabaseConfig(BaseModel):
             apps=apps or [],
             operations=operations or ["read", "write", "migrate"],
             routing_description=routing_description,
+            conn_max_age=conn_max_age,
+            conn_health_checks=conn_health_checks,
             **kwargs
         )
 

@@ -115,6 +115,10 @@ def update_coin_prices(limit: int = 100, verbosity: int = 0, days: Optional[int]
             f"{skipped_count} skipped, {failed_count} failed"
         )
 
+    # CRITICAL: Close database connection after RQ task
+    from django.db import connection
+    connection.close()
+
     return result
 
 
@@ -198,6 +202,10 @@ def import_coins(source: str = "demo", batch_size: int = 10) -> dict:
         f"Import completed: {imported_count} imported, "
         f"{updated_count} updated, {skipped_count} skipped"
     )
+
+    # CRITICAL: Close database connection after RQ task
+    from django.db import connection
+    connection.close()
 
     return result
 
@@ -284,5 +292,9 @@ def generate_report(report_type: str = "daily") -> dict:
     # - Store in database
     # - Export to PDF
     # - Send to Telegram/Slack
+
+    # CRITICAL: Close database connection after RQ task
+    from django.db import connection
+    connection.close()
 
     return report

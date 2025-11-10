@@ -239,8 +239,17 @@ class DjangoCfgConfig(DjangoConfig):
     ]
 
     # === Database Configuration with Routing ===
+    # CRITICAL: Connection management to prevent connection exhaustion
+    # Note: NOT using CONN_MAX_AGE because:
+    # 1. RQ workers explicitly close connections with connection.close()
+    # 2. Django pooling + persistent connections = ImproperlyConfigured error
+    # 3. For production pooling, use external solution (PgBouncer)
     databases: Dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig.from_url(url=env.database.url),
+        "default": DatabaseConfig.from_url(
+            url=env.database.url,
+            conn_max_age=0,             # Close connections immediately (no persistence)
+            conn_health_checks=False,   # Not needed without pooling
+        ),
     }
 
     # === Cache Configuration ===
