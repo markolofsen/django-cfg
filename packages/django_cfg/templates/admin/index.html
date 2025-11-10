@@ -179,8 +179,6 @@
                     iframeId = 'nextjs-dashboard-iframe-builtin';
                 } else if (tab === 'nextjs') {
                     iframeId = 'nextjs-dashboard-iframe-nextjs';
-                } else if (tab === 'docs') {
-                    iframeId = 'nextjs-dashboard-iframe-docs';
                 }
 
                 const iframe = document.getElementById(iframeId);
@@ -200,8 +198,6 @@
                     iframeId = 'nextjs-dashboard-iframe-builtin';
                 } else if (this.activeTab === 'nextjs') {
                     iframeId = 'nextjs-dashboard-iframe-nextjs';
-                } else if (this.activeTab === 'docs') {
-                    iframeId = 'nextjs-dashboard-iframe-docs';
                 }
 
                 const iframe = document.getElementById(iframeId);
@@ -298,17 +294,6 @@
                             <span class="hidden sm:inline">{% nextjs_external_admin_title %}</span>
                             <span class="sm:hidden">Admin</span>
                         </button>
-
-                        {% if is_development %}
-                        <button @click="switchTab('docs')"
-                                class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
-                                :class="activeTab === 'docs'
-                                    ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-700'">
-                            <span class="material-icons text-base">description</span>
-                            <span>Docs</span>
-                        </button>
-                        {% endif %}
                             </nav>
 
                             <!-- Actions & Version -->
@@ -372,27 +357,6 @@
                     ></iframe>
                 </div>
             </div>
-
-            <!-- Docs Tab Content (Development Mode Only) -->
-            {% if is_development %}
-            <div x-show="activeTab === 'docs'" style="display: none;">
-                <div class="iframe-container">
-                    <div class="iframe-loading" id="iframe-loading-docs">
-                        <div class="spinner"></div>
-                        <p id="loading-text-docs">Loading documentation...</p>
-                    </div>
-
-                    <iframe
-                        id="nextjs-dashboard-iframe-docs"
-                        class="nextjs-dashboard-iframe"
-                        src="{% lib_docs_url %}"
-                        data-original-src="{% lib_docs_url %}"
-                        title="Documentation"
-                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
-                    ></iframe>
-                </div>
-            </div>
-            {% endif %}
         </div>
     {% endcomponent %}
 {% endblock %}
@@ -807,9 +771,6 @@
 
                 manager.register('nextjs-dashboard-iframe-builtin', 'iframe-loading-builtin');
                 manager.register('nextjs-dashboard-iframe-nextjs', 'iframe-loading-nextjs');
-                {% if is_development %}
-                manager.register('nextjs-dashboard-iframe-docs', 'iframe-loading-docs', { external: true });
-                {% endif %}
                 // console.log('[Django-CFG] Iframe registration completed');
             }
 

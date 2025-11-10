@@ -25,6 +25,8 @@ def to_django_config(config: "DatabaseConfig") -> Dict[str, Any]:  # type: ignor
         django_config = {
             "ENGINE": config.engine,
             "OPTIONS": {**config.options},
+            "CONN_MAX_AGE": config.conn_max_age,
+            "CONN_HEALTH_CHECKS": config.conn_health_checks,
         }
 
         # Add database-specific options

@@ -2,7 +2,6 @@ import type { AppProps } from 'next/app';
 import type { ReactElement, ReactNode } from 'react';
 import type { NextPage } from 'next';
 import { Inter } from 'next/font/google';
-import { memo } from 'react';
 
 // Import global styles (includes Tailwind v4, UI package, and layouts)
 import '@/styles/globals.css';
@@ -30,19 +29,6 @@ type AppPropsWithLayout = AppProps & {
 };
 
 /**
- * Centrifugo Monitor FAB Wrapper
- * Shows FAB only in development mode
- * (In production admin panel, all users are admins by default)
- */
-const CentrifugoMonitor = memo(function CentrifugoMonitor() {
-  if (!isDevelopment) {
-    return null;
-  }
-  
-  return <CentrifugoMonitorFAB variant="full" />;
-});
-
-/**
  * Next.js App Component
  *
  * Single AppLayout wrapper with Django CFG admin mode enabled
@@ -63,7 +49,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
         ) : (
           <Component {...pageProps} />
         )}
-        <CentrifugoMonitor />
+        {isDevelopment && <CentrifugoMonitorFAB variant="full" />}
       </CentrifugoProvider>
     </AppLayout>
   );
