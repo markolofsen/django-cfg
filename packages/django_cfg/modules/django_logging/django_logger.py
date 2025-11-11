@@ -70,27 +70,30 @@ class DjangoLogger(BaseCfgModule):
     @classmethod
     def _get_debug_mode(cls) -> bool:
         """
-        Get debug mode from config (cached).
+        Get debug mode from config dynamically (no caching).
 
-        Loads config only once and caches the result to avoid repeated config loads.
-        This is a performance optimization - config loading can be expensive.
+        Loads config each time to ensure we get the correct debug state.
+        This is necessary because config may not be ready when logger is first initialized.
 
         Returns:
-            True if debug mode is enabled, False otherwise
+            True if debug mode is enabled (config.debug or config.is_development), False otherwise
         """
-        if cls._debug_mode is not None:
-            return cls._debug_mode
-
-        # Load config once and cache
         try:
             from django_cfg.core.state import get_current_config
             config = get_current_config()
-            cls._debug_mode = config.debug if config and hasattr(config, 'debug') else False
-        except Exception:
-            import os
-            cls._debug_mode = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
 
-        return cls._debug_mode
+            # Return debug if available, fallback to is_development
+            if config:
+                return config.debug if hasattr(config, 'debug') else config.is_development
+            return False
+        except Exception:
+            # Fallback to environment variables if config not available
+            import os
+            debug_env = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
+            if debug_env:
+                return True
+            env_mode = os.getenv('ENV_MODE', '').lower()
+            return env_mode == 'development'
 
     @classmethod
     def get_logger(cls, name: str = "django_cfg") -> logging.Logger:
@@ -179,19 +182,19 @@ class DjangoLogger(BaseCfgModule):
         """
         Create logger with modular file handling for django-cfg loggers.
 
-        In dev/debug mode, loggers inherit DEBUG level from root logger,
-        ensuring all log messages reach file handlers regardless of explicit level settings.
+        In dev/debug mode, loggers are set to DEBUG level to ensure all log messages
+        reach file handlers. Handlers still filter console output (WARNING+), but files
+        get everything (DEBUG+).
         """
         logger = logging.getLogger(name)
 
-        # In dev mode, ensure logger doesn't block DEBUG messages
-        # Logger inherits from root by default (propagate=True), which is set to DEBUG in dev
-        # This is crucial: logger level must be <= handler level, or messages get blocked
-        debug = cls._get_debug_mode()  # Use cached debug mode
+        # Get debug mode (cached - loaded once)
+        debug = cls._get_debug_mode()
 
-        # In dev mode, force DEBUG level on logger to ensure complete file logging
-        # Handlers will still filter console output (WARNING+), but files get everything (DEBUG+)
-        if debug and not logger.level:
+        # CRITICAL: In dev mode, ALWAYS set DEBUG level on django_cfg loggers
+        # This ensures all messages (DEBUG/INFO/WARNING/ERROR) reach file handlers
+        # Handlers will still filter console output, but files need complete history
+        if debug:
             logger.setLevel(logging.DEBUG)
 
         # If this is a django-cfg logger, add a specific file handler
@@ -298,17 +301,33 @@ def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str,
 
 
 # Convenience function for quick access
-def get_logger(name: str = "django_cfg") -> logging.Logger:
+def get_logger(name: str = "") -> logging.Logger:
     """
     Get a configured logger instance with automatic django-cfg prefix detection.
-    
-    If called from django-cfg modules, automatically prefixes with 'django_cfg.'
+
+    Automatically detects module path from caller's filename and creates proper logger name.
+    If name doesn't start with 'django_cfg', it will be auto-prefixed.
+
+    Examples:
+        # Auto-detect from file path
+        logger = get_logger()  # -> django_cfg.integrations.rq (from file path)
+
+        # Explicit module name (auto-prefixed)
+        logger = get_logger("integrations")  # -> django_cfg.integrations
+        logger = get_logger("payments.stripe")  # -> django_cfg.payments.stripe
+
+        # Already prefixed (used as-is)
+        logger = get_logger("django_cfg.custom.name")  # -> django_cfg.custom.name
     """
     import inspect
+    import os
+
+    # If name is already prefixed with django_cfg, use as-is
+    if name and name.startswith('django_cfg'):
+        return DjangoLogger.get_logger(name)
 
     # Auto-detect if we're being called from django-cfg code
-    if not name.startswith('django_cfg'):
-        # Get the calling frame to determine if we're in django-cfg code
+    if not name or not name.startswith('django_cfg'):
         frame = inspect.currentframe()
         try:
             # Go up the call stack to find the actual caller
@@ -319,38 +338,63 @@ def get_logger(name: str = "django_cfg") -> logging.Logger:
                 # Check if caller is from django-cfg modules
                 if '/django_cfg/' in caller_filename:
                     # Extract module path from filename
-                    # e.g., /path/to/django_cfg/apps/payments/services/providers/registry.py
-                    # -> django_cfg.payments.providers
-
                     parts = caller_filename.split('/django_cfg/')
                     if len(parts) > 1:
-                        module_path = parts[1]  # apps/payments/services/providers/registry.py
+                        module_path = parts[1]  # e.g., apps/integrations/rq/tasks/demo_tasks.py
 
-                        # Convert path to module name
-                        if module_path.startswith('apps/'):
-                            # apps/payments/services/providers/registry.py -> payments.providers
-                            path_parts = module_path.split('/')[1:]  # Remove 'apps'
-                            if path_parts:
-                                # Remove file extension and 'services' if present
-                                clean_parts = []
-                                for part in path_parts[:-1]:  # Exclude filename
-                                    if part not in ['services', 'management', 'commands']:
-                                        clean_parts.append(part)
+                        # Remove file extension
+                        module_path = os.path.splitext(module_path)[0]  # apps/integrations/rq/tasks/demo_tasks
 
-                                if clean_parts:
-                                    auto_name = f"django_cfg.{'.'.join(clean_parts)}"
-                                    # print(f"[django-cfg] Auto-detected logger name: {name} -> {auto_name}")
-                                    name = auto_name
+                        # Convert path separators to dots
+                        path_parts = module_path.split('/')
 
-                        elif module_path.startswith('modules/'):
-                            # modules/django_logger.py -> django_cfg.core
-                            name = "django_cfg.core"
+                        # Build clean module name based on location
+                        clean_parts = []
 
-                        elif module_path.startswith('core/'):
-                            # core/config.py -> django_cfg.core
-                            name = "django_cfg.core"
+                        if path_parts[0] == 'apps':
+                            # apps/integrations/rq/tasks/demo_tasks -> integrations.rq.tasks
+                            # Skip 'apps' and filename, keep directories
+                            for part in path_parts[1:-1]:  # Skip 'apps' and filename
+                                if part not in ['services', 'management', 'commands', 'views', 'models']:
+                                    clean_parts.append(part)
+
+                            # If user provided a name, append it; otherwise use default hierarchy
+                            # If user provided a name, append it; otherwise use default hierarchy
+                            if name:
+                                clean_parts.append(name)
+
+                        elif path_parts[0] == 'modules':
+                            # modules/django_logging/logger.py -> core
+                            clean_parts = ['core']
+                            if name:
+                                clean_parts.append(name)
+
+                        elif path_parts[0] == 'core':
+                            # core/config.py -> core
+                            clean_parts = ['core']
+                            if name:
+                                clean_parts.append(name)
+
+                        else:
+                            # Fallback: use all parts except filename
+                            clean_parts = path_parts[:-1]
+                            if name:
+                                clean_parts.append(name)
+
+                        if clean_parts:
+                            auto_name = f"django_cfg.{'.'.join(clean_parts)}"
+                            name = auto_name
+
         finally:
             del frame
+
+    # If we still have a name without django_cfg prefix, add it
+    if name and not name.startswith('django_cfg'):
+        name = f"django_cfg.{name}"
+
+    # Fallback to default if still no name
+    if not name:
+        name = "django_cfg"
 
     return DjangoLogger.get_logger(name)
 
