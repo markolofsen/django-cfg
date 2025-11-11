@@ -130,6 +130,78 @@ def get_redis_url() -> Optional[str]:
         return None
 
 
+def _generate_deterministic_job_id(schedule_config) -> str:
+    """
+    Generate deterministic job ID from schedule configuration.
+
+    This ensures that the same schedule always gets the same ID,
+    preventing duplicate jobs on restart.
+
+    Args:
+        schedule_config: RQScheduleConfig instance
+
+    Returns:
+        Deterministic job ID string
+
+    Example:
+        >>> config = RQScheduleConfig(func="myapp.tasks.sync", interval=300)
+        >>> job_id = _generate_deterministic_job_id(config)
+        >>> # Always returns same ID for same config
+    """
+    import hashlib
+    import json
+
+    # Create a unique identifier from function path and key parameters
+    components = [
+        schedule_config.func,
+        schedule_config.queue or "default",
+    ]
+
+    # Add schedule-specific components
+    if schedule_config.cron:
+        components.append(f"cron:{schedule_config.cron}")
+    elif schedule_config.interval:
+        components.append(f"interval:{schedule_config.interval}")
+    elif schedule_config.scheduled_time:
+        components.append(f"time:{schedule_config.scheduled_time}")
+
+    # Add args/kwargs if present (to differentiate same function with different params)
+    if schedule_config.args:
+        components.append(f"args:{json.dumps(schedule_config.args, sort_keys=True)}")
+    if schedule_config.kwargs:
+        components.append(f"kwargs:{json.dumps(schedule_config.kwargs, sort_keys=True)}")
+
+    # Generate SHA256 hash
+    unique_string = "|".join(str(c) for c in components)
+    hash_digest = hashlib.sha256(unique_string.encode()).hexdigest()[:16]
+
+    # Create readable job ID
+    func_name = schedule_config.func.split(".")[-1]
+    return f"schedule_{func_name}_{hash_digest}"
+
+
+def _cleanup_old_schedules(scheduler, job_id: str):
+    """
+    Remove existing schedule with the given job_id before registering new one.
+
+    This prevents duplicate jobs from accumulating on restart.
+
+    Args:
+        scheduler: RQ Scheduler instance
+        job_id: Job ID to remove
+
+    Example:
+        >>> _cleanup_old_schedules(scheduler, "schedule_sync_accounts_abc123")
+    """
+    try:
+        # Cancel existing job if it exists
+        scheduler.cancel(job_id)
+        logger.debug(f"Removed old schedule: {job_id}")
+    except Exception:
+        # Job doesn't exist, ignore
+        pass
+
+
 def register_schedules_from_config():
     """
     Register scheduled jobs from django-cfg config in rq-scheduler.
@@ -137,6 +209,11 @@ def register_schedules_from_config():
     This function should be called on Django startup (from AppConfig.ready()).
     It reads schedules from config.django_rq.schedules and registers them
     in rq-scheduler.
+
+    Features:
+    - Generates deterministic job IDs to prevent duplicates
+    - Cleans up old versions of jobs before registering new ones
+    - Prevents accumulation of orphaned scheduled jobs
 
     Example:
         >>> from django_cfg.apps.integrations.rq.services import register_schedules_from_config
@@ -151,7 +228,8 @@ def register_schedules_from_config():
             logger.debug("RQ not enabled, skipping schedule registration")
             return
 
-        schedules = getattr(config, 'schedules', [])
+        # Get all schedules including auto-cleanup tasks
+        schedules = config.get_all_schedules()
         if not schedules:
             logger.debug("No schedules configured")
             return
@@ -176,6 +254,14 @@ def register_schedules_from_config():
                     logger.warning(f"Failed to import function {func_path}: {e}")
                     continue
 
+                # Generate deterministic job ID if not provided
+                job_id = schedule_config.job_id
+                if not job_id:
+                    job_id = _generate_deterministic_job_id(schedule_config)
+
+                # Clean up old version of this schedule
+                _cleanup_old_schedules(scheduler, job_id)
+
                 # Get schedule type and register
                 if schedule_config.cron:
                     scheduler.cron(
@@ -186,7 +272,7 @@ def register_schedules_from_config():
                         queue_name=schedule_config.queue,
                         timeout=schedule_config.timeout,
                         result_ttl=schedule_config.result_ttl,
-                        id=schedule_config.job_id,
+                        id=job_id,
                         repeat=schedule_config.repeat,
                     )
                     logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron})")
@@ -202,7 +288,7 @@ def register_schedules_from_config():
                         queue_name=schedule_config.queue,
                         timeout=schedule_config.timeout,
                         result_ttl=schedule_config.result_ttl,
-                        id=schedule_config.job_id,
+                        id=job_id,
                         repeat=schedule_config.repeat,
                     )
                     logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s)")
@@ -219,7 +305,7 @@ def register_schedules_from_config():
                         queue_name=schedule_config.queue,
                         timeout=schedule_config.timeout,
                         result_ttl=schedule_config.result_ttl,
-                        id=schedule_config.job_id,
+                        id=job_id,
                     )
                     logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time})")
 

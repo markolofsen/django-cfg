@@ -45,6 +45,8 @@ That's it! Django-RQ will automatically:
 - Configure default timeouts and TTL
 - Register the `default` queue
 - Enable admin interface
+- **✨ NEW:** Add automatic cleanup tasks (daily + weekly)
+- **✨ NEW:** Add demo heartbeat task (development only)
 
 ---
 
@@ -141,6 +143,8 @@ Main configuration model for Django-RQ:
 | `schedules` | `List[RQScheduleConfig]` | `[]` | Scheduled job configurations |
 | `show_admin_link` | `bool` | `True` | Show Django-RQ link in admin |
 | `prometheus_enabled` | `bool` | `True` | Enable Prometheus metrics |
+| `enable_auto_cleanup` | `bool` | `True` | Enable automatic cleanup of old jobs |
+| `cleanup_max_age_days` | `int` | `7` | Maximum age in days before cleanup |
 | `exception_handlers` | `List[str]` | `[]` | Exception handler function paths |
 | `api_token` | `Optional[str]` | `None` | API token for authentication |
 
@@ -151,7 +155,19 @@ config.get_queue_names()                  # Get list of queue names
 config.get_queue_config(name)             # Get specific queue config
 config.add_queue(queue_config)            # Add queue programmatically
 config.remove_queue(name)                 # Remove queue programmatically
+config.get_all_schedules()                # Get all schedules (including auto-generated)
 ```
+
+**Auto-Generated Schedules:**
+
+When `enable_auto_cleanup=True` (default), Django-RQ automatically adds:
+
+**Production & Development:**
+- `cleanup_old_jobs` - Runs daily (86400s), removes jobs older than `cleanup_max_age_days`
+- `cleanup_orphaned_job_keys` - Runs weekly (604800s), removes orphaned Redis keys
+
+**Development Only:**
+- `demo_scheduler_heartbeat` - Runs every minute (60s), verifies scheduler is working
 
 ### RQQueueConfig
 
@@ -885,6 +901,103 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
     prometheus_enabled=False,
 )
 ```
+
+---
+
+## Automatic Cleanup ✨ NEW
+
+### Overview
+
+Django-RQ v1.5.35+ includes **automatic cleanup enabled by default** to prevent Redis bloat and ensure healthy job queue operation.
+
+### What Gets Cleaned Up
+
+**1. Old Finished Jobs** (Daily)
+- Removes finished jobs older than `cleanup_max_age_days` (default: 7 days)
+- Keeps recent job history for debugging
+- Runs every 24 hours (86400s)
+
+**2. Old Failed Jobs** (Daily)
+- Removes failed jobs older than `cleanup_max_age_days`
+- Preserves recent failures for investigation
+- Runs every 24 hours (86400s)
+
+**3. Orphaned Job Keys** (Weekly)
+- Removes job keys that don't belong to any queue/registry
+- Cleans up keys left after crashes or improper cancellations
+- Runs every 7 days (604800s)
+
+### Default Configuration
+
+```python
+# Zero configuration - cleanup enabled by default
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    # enable_auto_cleanup=True,   # Default
+    # cleanup_max_age_days=7,     # Default
+)
+```
+
+### Customize Cleanup
+
+```python
+# Keep jobs for 14 days instead of 7
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    cleanup_max_age_days=14,  # Jobs kept for 2 weeks
+)
+
+# Disable automatic cleanup
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    enable_auto_cleanup=False,  # Manual cleanup only
+)
+```
+
+### Manual Cleanup
+
+You can still run cleanup manually:
+
+```python
+from django_cfg.apps.integrations.rq.tasks.maintenance import (
+    cleanup_old_jobs,
+    cleanup_orphaned_job_keys,
+    get_rq_stats,
+)
+
+# Clean up jobs older than 7 days
+stats = cleanup_old_jobs(max_age_days=7, dry_run=False)
+print(f"Deleted {stats['total_deleted']} jobs")
+
+# Clean up orphaned keys
+stats = cleanup_orphaned_job_keys(dry_run=False)
+print(f"Deleted {stats['orphaned_deleted']} keys")
+
+# Get RQ statistics
+stats = get_rq_stats()
+print(f"Queued: {stats['queue']['queued']}")
+print(f"Failed: {stats['queue']['failed']}")
+```
+
+### Safety Guarantees
+
+- **No data loss**: Only removes old finished/failed jobs, never queued or running jobs
+- **No interference**: Scheduled jobs live in separate storage, won't be cleaned up
+- **Isolated scope**: Only touches RQ-specific keys (`rq:job:*`, `rq:finished:*`, `rq:failed:*`)
+- **Application data safe**: Never touches custom keys (`stockapis:*`, `wallets:*`, etc.)
+
+### Benefits
+
+Before automatic cleanup:
+- 4564+ scheduled job duplicates after multiple restarts
+- 501 job keys with TTL=-1 (never expire)
+- Redis memory growing indefinitely
+
+After automatic cleanup:
+- Stable 6-10 scheduled jobs (no duplicates)
+- Jobs automatically expire (24h for finished, 7d for failed)
+- Automatic cleanup prevents accumulation
+- **Zero configuration required!**
 
 ---
 
