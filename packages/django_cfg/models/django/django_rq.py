@@ -146,9 +146,15 @@ class RQQueueConfig(BaseModel):
     )
 
     default_result_ttl: int = Field(
-        default=800,
+        default=86400,  # 24 hours - keep results for a day
         ge=0,
-        description="Default result TTL in seconds (0 = no expiry)",
+        description="Default result TTL in seconds (0 = no expiry, -1 = never expire)",
+    )
+
+    failure_ttl: int = Field(
+        default=604800,  # 7 days - keep failed jobs for a week for debugging
+        ge=0,
+        description="Failed job TTL in seconds (how long to keep failed jobs)",
     )
 
     # Redis Sentinel support
@@ -235,6 +241,7 @@ class RQQueueConfig(BaseModel):
 
         config["DEFAULT_TIMEOUT"] = self.default_timeout
         config["DEFAULT_RESULT_TTL"] = self.default_result_ttl
+        config["DEFAULT_FAILURE_TTL"] = self.failure_ttl
 
         return config
 
@@ -318,6 +325,22 @@ class DjangoRQConfig(BaseModel):
         description="Enable Prometheus metrics at /django-rq/metrics/",
     )
 
+    # Automatic cleanup configuration
+    enable_auto_cleanup: bool = Field(
+        default=True,
+        description=(
+            "Enable automatic cleanup of old finished/failed jobs. "
+            "Adds cleanup_old_jobs (daily) and cleanup_orphaned_job_keys (weekly) to schedules."
+        ),
+    )
+
+    cleanup_max_age_days: int = Field(
+        default=7,
+        ge=1,
+        le=365,
+        description="Maximum age in days for jobs to keep before cleanup (default: 7 days)",
+    )
+
     # RQ Scheduler - scheduled jobs configuration
     schedules: List["RQScheduleConfig"] = Field(
         default_factory=list,
@@ -355,6 +378,65 @@ class DjangoRQConfig(BaseModel):
             require_rq_feature()
 
         return self
+
+    def get_all_schedules(self) -> List["RQScheduleConfig"]:
+        """
+        Get all schedules including auto-cleanup tasks and demo tasks.
+
+        Automatically adds based on configuration:
+        - cleanup_old_jobs (daily) - if enable_auto_cleanup=True
+        - cleanup_orphaned_job_keys (weekly) - if enable_auto_cleanup=True
+        - demo_scheduler_heartbeat (every minute) - if is_development=True
+
+        Returns:
+            Combined list of user schedules + auto-generated schedules
+        """
+        all_schedules = list(self.schedules)
+
+        # Add auto-cleanup tasks (enabled by default)
+        if self.enable_auto_cleanup:
+            # Daily cleanup of old jobs
+            cleanup_jobs_schedule = RQScheduleConfig(
+                func="django_cfg.apps.integrations.rq.tasks.maintenance.cleanup_old_jobs",
+                interval=86400,  # Once per day
+                queue="default",
+                kwargs={
+                    "max_age_days": self.cleanup_max_age_days,
+                    "dry_run": False,
+                },
+                description=f"Clean up old RQ jobs older than {self.cleanup_max_age_days} days (daily)",
+            )
+
+            # Weekly cleanup of orphaned keys
+            cleanup_orphaned_schedule = RQScheduleConfig(
+                func="django_cfg.apps.integrations.rq.tasks.maintenance.cleanup_orphaned_job_keys",
+                interval=604800,  # Once per week
+                queue="default",
+                kwargs={"dry_run": False},
+                description="Clean up orphaned RQ job keys (weekly)",
+            )
+
+            all_schedules.extend([cleanup_jobs_schedule, cleanup_orphaned_schedule])
+
+        # Add demo heartbeat task (development only)
+        # Need to import here to avoid circular imports at module level
+        try:
+            from django_cfg.core.state import get_current_config
+            config = get_current_config()
+
+            if config and config.is_development:
+                demo_heartbeat_schedule = RQScheduleConfig(
+                    func="django_cfg.apps.integrations.rq.tasks.demo_tasks.demo_scheduler_heartbeat",
+                    interval=60,  # Every minute
+                    queue="default",
+                    description="RQ Scheduler Heartbeat (demo - development only)",
+                )
+                all_schedules.append(demo_heartbeat_schedule)
+        except Exception:
+            # Config not available yet or import error - skip demo task
+            pass
+
+        return all_schedules
 
     def to_django_settings(self, parent_config: Optional[Any] = None) -> Dict[str, Any]:
         """
