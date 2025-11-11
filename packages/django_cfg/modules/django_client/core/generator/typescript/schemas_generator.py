@@ -223,6 +223,10 @@ class SchemasGenerator:
         elif schema_type == "boolean":
             return "z.boolean()"
 
+        # Any type (for JSONField with no schema)
+        elif schema_type == "any":
+            return "z.any()"
+
         # Array type
         elif schema_type == "array":
             if schema.items:
