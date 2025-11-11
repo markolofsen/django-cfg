@@ -463,11 +463,31 @@ class BaseParser(ABC):
                 additional_properties = self._parse_schema(
                     f"{name}.additionalProperties", schema.additionalProperties
                 )
+        elif schema.additionalProperties is True:
+            # additionalProperties: true - allow any values
+            additional_properties = IRSchemaObject(
+                name=f"{name}.additionalProperties",
+                type="any",
+            )
+
+        # Detect empty object {} (JSONField with no schema)
+        # If type will be "object" but no properties and no additionalProperties,
+        # treat as Record<string, any>
+        normalized_type = self._normalize_type(schema)
+        if (normalized_type == "object" and
+            not properties and
+            not additional_properties and
+            schema.additionalProperties is not False):
+            # Empty object {} - treat as Record<string, any>
+            additional_properties = IRSchemaObject(
+                name=f"{name}.additionalProperties",
+                type="any",
+            )
 
         # Create IR schema
         ir_schema = IRSchemaObject(
             name=name,
-            type=self._normalize_type(schema),
+            type=normalized_type,
             format=schema.format,
             description=schema.description,
             nullable=self._detect_nullable(schema),
@@ -618,6 +638,18 @@ class BaseParser(ABC):
             return "object"
         if schema.items is not None:
             return "array"
+
+        # Special case: Empty object {} from Django JSONField(default=dict)
+        # When drf-spectacular sees JSONField with no explicit type, it generates {}
+        # This happens because Django models don't provide schema info for JSONField
+        if (not schema.base_type and
+            not schema.properties and
+            not schema.items and
+            not schema.anyOf and
+            not schema.oneOf and
+            not schema.allOf):
+            # Empty schema {} - treat as object (most likely JSONField)
+            return "object"
 
         # Special case: JSONField from Django has no type but description hints at dict/object
         # Check for keywords like: JSON, configuration, settings, config, dict

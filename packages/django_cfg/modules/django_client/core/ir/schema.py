@@ -357,6 +357,7 @@ class IRSchemaObject(BaseModel):
                 "number": "number",
                 "boolean": "boolean",
                 "object": "Record<string, any>",
+                "any": "any",
             }
             base_type = type_map.get(self.type, "any")
 
