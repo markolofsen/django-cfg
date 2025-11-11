@@ -1,23 +1,9 @@
 """
-Demo and test tasks for RQ testing and simulation.
+Demo tasks for RQ testing and simulation.
 
-These tasks are used for testing RQ functionality from the frontend.
+Simple heartbeat task for verifying RQ scheduler functionality.
 """
 
-from .demo_tasks import (
-    demo_success_task,
-    demo_failure_task,
-    demo_slow_task,
-    demo_progress_task,
-    demo_crash_task,
-    demo_retry_task,
-)
+from .demo_tasks import demo_scheduler_heartbeat
 
-__all__ = [
-    'demo_success_task',
-    'demo_failure_task',
-    'demo_slow_task',
-    'demo_progress_task',
-    'demo_crash_task',
-    'demo_retry_task',
-]
+__all__ = ['demo_scheduler_heartbeat']

@@ -51,6 +51,8 @@ psutil = "^5.9.0"
 faker = "^37.5.3"
 # Markdown support
 markdown = "^3.9"
+# ASGI server for async support
+uvicorn = {extras = ["standard"], version = "^0.34.0"}
 
 [tool.poetry.group.dev.dependencies]
 # All testing and linting tools come from django-cfg[full]

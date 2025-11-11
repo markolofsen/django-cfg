@@ -64,4 +64,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Default command (can be overridden in docker-compose)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Using uvicorn with ASGI for async support (4 workers for production)
+CMD ["uvicorn", "api.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-keep-alive", "120", "--log-level", "info"]

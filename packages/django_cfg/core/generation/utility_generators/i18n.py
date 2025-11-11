@@ -57,7 +57,7 @@ class I18nSettingsGenerator:
         }
 
         # Adjust for different environments
-        if self.config.env_mode == "development":
+        if self.config.is_development:
             settings["USE_L10N"] = True  # Deprecated but sometimes needed
 
         return settings
