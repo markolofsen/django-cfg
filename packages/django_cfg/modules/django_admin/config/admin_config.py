@@ -1,5 +1,31 @@
 """
-Main admin configuration for declarative admin.
+Declarative Django Admin configuration.
+
+Type-safe, Pydantic-based admin configuration for Django models.
+
+Quick example:
+    admin_config = AdminConfig(
+        model=Product,
+        list_display=['name', 'price', 'stock'],
+        search_fields=['name'],
+        list_filter=['category'],
+    )
+
+Configuration models:
+    - AdminConfig: Main admin configuration (this class)
+    - FieldConfig: Field widgets and display options
+    - FieldsetConfig: Form organization
+    - ActionConfig: Custom admin actions
+    - BackgroundTaskConfig: Background task integration
+    - ResourceConfig: Related resources (docs, links)
+
+Documentation:
+    See ./docs_public/ for full documentation:
+    - overview.md - Module overview and features
+    - quick-start.md - Getting started guide
+    - configuration.md - Complete configuration reference
+    - field-types.md - Available field widgets
+    - examples.md - Real-world examples
 """
 
 from typing import Any, Dict, List, Optional, Tuple, Type, Union

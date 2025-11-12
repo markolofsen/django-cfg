@@ -36,10 +36,24 @@ class UserStatisticsSerializer(serializers.Serializer):
     superusers = serializers.IntegerField(help_text="Number of superusers")
 
 
+class ModelStatisticsSerializer(serializers.Serializer):
+    """Serializer for individual model statistics."""
+
+    model_name = serializers.CharField(help_text="Model name (key)")
+    name = serializers.CharField(help_text="Model verbose name")
+    count = serializers.IntegerField(help_text="Number of records in this model")
+    fields_count = serializers.IntegerField(help_text="Number of fields in model")
+    admin_url = serializers.CharField(help_text="Django admin URL name")
+
+
 class AppStatisticsDataSerializer(serializers.Serializer):
     """Serializer for application statistics data."""
 
     name = serializers.CharField(help_text="Human-readable app name")
+    models = serializers.ListField(
+        child=ModelStatisticsSerializer(),
+        help_text="List of model statistics"
+    )
     total_records = serializers.IntegerField(help_text="Total records count")
     model_count = serializers.IntegerField(help_text="Number of models")
 

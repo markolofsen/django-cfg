@@ -8,6 +8,7 @@ from datetime import datetime
 
 from django.core.exceptions import ImproperlyConfigured
 from django_cfg.mixins import AdminAPIMixin
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets
@@ -36,6 +37,9 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     Requires admin authentication (JWT, Session, or Basic Auth).
     Requires rq-scheduler to be installed: pip install rq-scheduler
     """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     serializer_class = ScheduledJobSerializer
 

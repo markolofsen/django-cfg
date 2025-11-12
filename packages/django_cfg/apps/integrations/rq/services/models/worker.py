@@ -25,7 +25,8 @@ class RQWorkerModel(BaseModel):
     Internal model for RQ Worker.
 
     FLAT STRUCTURE - no nested objects!
-    Queues are comma-separated string, timestamps are ISO strings.
+    Queues are comma-separated string, timestamps are datetime objects.
+    Use model_dump(mode='json') to serialize timestamps to ISO 8601 strings.
     """
 
     # Basic info
@@ -38,9 +39,9 @@ class RQWorkerModel(BaseModel):
     # Current job
     current_job_id: Optional[str] = Field(None, description="Current job ID if busy")
 
-    # Timestamps (as ISO strings)
-    birth: str = Field(..., description="Worker start time (ISO 8601)")
-    last_heartbeat: str = Field(..., description="Last heartbeat timestamp (ISO 8601)")
+    # Timestamps (as datetime objects for proper type safety)
+    birth: datetime = Field(..., description="Worker start time")
+    last_heartbeat: datetime = Field(..., description="Last heartbeat timestamp")
 
     # Statistics
     successful_job_count: int = Field(default=0, ge=0, description="Total successful jobs")
@@ -55,11 +56,10 @@ class RQWorkerModel(BaseModel):
         Worker is considered alive if heartbeat was within last 60 seconds.
         """
         try:
-            last_hb = datetime.fromisoformat(self.last_heartbeat)
-            now = datetime.now(last_hb.tzinfo) if last_hb.tzinfo else datetime.now()
-            delta = (now - last_hb).total_seconds()
+            now = datetime.now(self.last_heartbeat.tzinfo) if self.last_heartbeat.tzinfo else datetime.now()
+            delta = (now - self.last_heartbeat).total_seconds()
             return delta < 60
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, AttributeError):
             return False
 
     @property
@@ -75,10 +75,9 @@ class RQWorkerModel(BaseModel):
     def get_uptime_seconds(self) -> Optional[float]:
         """Calculate worker uptime in seconds."""
         try:
-            birth_dt = datetime.fromisoformat(self.birth)
-            now = datetime.now(birth_dt.tzinfo) if birth_dt.tzinfo else datetime.now()
-            return (now - birth_dt).total_seconds()
-        except (ValueError, TypeError):
+            now = datetime.now(self.birth.tzinfo) if self.birth.tzinfo else datetime.now()
+            return (now - self.birth).total_seconds()
+        except (ValueError, TypeError, AttributeError):
             return None
 
     def get_queue_list(self) -> list[str]:
@@ -102,3 +101,6 @@ class RQWorkerModel(BaseModel):
         """Pydantic config."""
 
         use_enum_values = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }

@@ -33,8 +33,12 @@ class JobDetailSerializer(serializers.Serializer):
 
     id = serializers.CharField(help_text="Job ID")
     func_name = serializers.CharField(help_text="Function name")
-    args = serializers.ListField(default=list, help_text="Function arguments")
-    kwargs = serializers.DictField(default=dict, help_text="Function keyword arguments")
+    args = serializers.ListField(
+        child=serializers.JSONField(),
+        default=list,
+        help_text="Function arguments (array of any JSON values)"
+    )
+    kwargs = serializers.JSONField(default=dict, help_text="Function keyword arguments")
 
     # Status and timing
     created_at = serializers.DateTimeField(help_text="Job creation time")
@@ -77,7 +81,7 @@ class JobDetailSerializer(serializers.Serializer):
     )
 
     # Metadata
-    meta = serializers.DictField(default=dict, help_text="Job metadata")
+    meta = serializers.JSONField(default=dict, help_text="Job metadata")
     dependency_ids = serializers.ListField(
         child=serializers.CharField(),
         default=list,

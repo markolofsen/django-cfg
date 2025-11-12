@@ -4,9 +4,9 @@ Base views for knowledge base API.
 
 import logging
 
-from rest_framework import viewsets
-
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.mixins import ClientAPIMixin
+from rest_framework import viewsets
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,9 @@ class BaseKnowledgeViewSet(ClientAPIMixin, viewsets.ModelViewSet):
     Requires authenticated user (JWT or Session).
     Automatically filters queryset by user and sets user on creation.
     """
+
+    # Pagination for list endpoints
+    pagination_class = DefaultPagination
 
     lookup_field = 'pk'
 

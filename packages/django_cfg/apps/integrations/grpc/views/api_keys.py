@@ -7,6 +7,7 @@ Create/Update/Delete operations handled through Django Admin.
 
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.mixins import AdminAPIMixin
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.types import OpenApiTypes
@@ -34,6 +35,9 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     queryset = GrpcApiKey.objects.none()
     serializer_class = ApiKeySerializer

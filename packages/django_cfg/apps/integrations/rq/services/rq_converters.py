@@ -109,13 +109,18 @@ def worker_to_model(worker: Worker) -> RQWorkerModel:
     # Get current job ID
     current_job_id = worker.get_current_job_id()
 
+    # Use datetime.now() as fallback if timestamps are missing
+    from datetime import datetime as dt
+    birth = worker.birth_date if worker.birth_date else dt.now()
+    last_heartbeat = worker.last_heartbeat if worker.last_heartbeat else dt.now()
+
     return RQWorkerModel(
         name=worker.name,
         state=state,
         queues=queues_str,
         current_job_id=current_job_id,
-        birth=worker.birth_date.isoformat() if worker.birth_date else "",
-        last_heartbeat=worker.last_heartbeat.isoformat() if worker.last_heartbeat else "",
+        birth=birth,
+        last_heartbeat=last_heartbeat,
         successful_job_count=worker.successful_job_count,
         failed_job_count=worker.failed_job_count,
         total_working_time=worker.total_working_time,

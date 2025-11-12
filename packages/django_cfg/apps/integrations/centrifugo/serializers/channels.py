@@ -2,28 +2,26 @@
 Channel statistics serializers for Centrifugo monitoring API.
 """
 
-from typing import Optional
-
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class ChannelStatsSerializer(BaseModel):
+class ChannelStatsSerializer(serializers.Serializer):
     """Statistics per channel."""
 
-    channel: str = Field(description="Channel name")
-    total: int = Field(description="Total publishes to this channel")
-    successful: int = Field(description="Successful publishes")
-    failed: int = Field(description="Failed publishes")
-    avg_duration_ms: float = Field(description="Average duration")
-    avg_acks: float = Field(description="Average ACKs received")
-    last_activity_at: Optional[str] = Field(default=None, description="Last activity timestamp (ISO format)")
+    channel = serializers.CharField(help_text="Channel name")
+    total = serializers.IntegerField(help_text="Total publishes to this channel")
+    successful = serializers.IntegerField(help_text="Successful publishes")
+    failed = serializers.IntegerField(help_text="Failed publishes")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration")
+    avg_acks = serializers.FloatField(help_text="Average ACKs received")
+    last_activity_at = serializers.CharField(allow_null=True, help_text="Last activity timestamp (ISO format)")
 
 
-class ChannelListSerializer(BaseModel):
+class ChannelListSerializer(serializers.Serializer):
     """List of channel statistics."""
 
-    channels: list[ChannelStatsSerializer] = Field(description="Channel statistics")
-    total_channels: int = Field(description="Total number of channels")
+    channels = ChannelStatsSerializer(many=True, help_text="Channel statistics")
+    total_channels = serializers.IntegerField(help_text="Total number of channels")
 
 
 __all__ = ["ChannelStatsSerializer", "ChannelListSerializer"]

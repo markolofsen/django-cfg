@@ -7,6 +7,7 @@ Provides REST API endpoints for managing RQ jobs.
 import json
 
 from django_cfg.mixins import AdminAPIMixin
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets
@@ -32,6 +33,9 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    # Pagination for registry endpoints
+    pagination_class = DefaultPagination
 
     serializer_class = JobListSerializer
 
@@ -129,8 +133,8 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                                     serializer.is_valid(raise_exception=True)
                                     all_jobs.append(serializer.data)
 
-                                except Exception as e:
-                                    logger.debug(f"Failed to fetch job {job_id}: {e}")
+                                except Exception:
+                                    # Job was deleted from Redis (expired TTL) - skip silently
                                     continue
 
                     except Exception as e:
@@ -452,7 +456,8 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                             }
                             all_jobs.append(job_data)
                         except Exception as e:
-                            logger.debug(f"Failed to fetch job {job_id}: {e}")
+                            # Job was deleted from Redis (expired TTL) - skip silently
+                            pass
 
                 except Exception as e:
                     logger.debug(f"Failed to get failed jobs for queue {queue_name}: {e}")
@@ -529,7 +534,8 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                             }
                             all_jobs.append(job_data)
                         except Exception as e:
-                            logger.debug(f"Failed to fetch job {job_id}: {e}")
+                            # Job was deleted from Redis (expired TTL) - skip silently
+                            pass
 
                 except Exception as e:
                     logger.debug(f"Failed to get finished jobs for queue {queue_name}: {e}")
@@ -796,7 +802,8 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                             }
                             all_jobs.append(job_data)
                         except Exception as e:
-                            logger.debug(f"Failed to fetch job {job_id}: {e}")
+                            # Job was deleted from Redis (expired TTL) - skip silently
+                            pass
 
                 except Exception as e:
                     logger.debug(f"Failed to get deferred jobs for queue {queue_name}: {e}")
@@ -873,7 +880,8 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                             }
                             all_jobs.append(job_data)
                         except Exception as e:
-                            logger.debug(f"Failed to fetch job {job_id}: {e}")
+                            # Job was deleted from Redis (expired TTL) - skip silently
+                            pass
 
                 except Exception as e:
                     logger.debug(f"Failed to get started jobs for queue {queue_name}: {e}")

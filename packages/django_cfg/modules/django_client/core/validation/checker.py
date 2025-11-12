@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import List, Optional
 
-from .rules import Issue, ValidationRule
+from .rules import DictFieldRule, Issue, ValidationRule
 from .rules.type_hints import TypeHintRule
 
 
@@ -28,6 +28,7 @@ class ValidationChecker:
         if rules is None:
             # Default rules
             self.rules = [
+                DictFieldRule(),  # Check for DictField/ListField usage
                 TypeHintRule(),
                 # Future: ResponseSchemaRule(),
                 # Future: EnumConflictRule(),

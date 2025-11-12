@@ -2,6 +2,7 @@
 Subscription views.
 """
 
+from django_cfg.middleware.pagination import DefaultPagination
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -126,6 +127,9 @@ class UnsubscribeView(generics.UpdateAPIView):
 
 class SubscriptionListView(generics.ListAPIView):
     """List user's subscriptions."""
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     serializer_class = NewsletterSubscriptionSerializer
     permission_classes = [IsAuthenticated]

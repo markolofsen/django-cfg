@@ -20,11 +20,12 @@ class ScheduleCreateSerializer(serializers.Serializer):
         help_text="Function path (e.g., 'myapp.tasks.my_task')"
     )
     args = serializers.ListField(
+        child=serializers.JSONField(),
         default=list,
         required=False,
-        help_text="Function arguments"
+        help_text="Function arguments (array of any JSON values)"
     )
-    kwargs = serializers.DictField(
+    kwargs = serializers.JSONField(
         default=dict,
         required=False,
         help_text="Function keyword arguments"
@@ -106,8 +107,12 @@ class ScheduledJobSerializer(serializers.Serializer):
 
     id = serializers.CharField(help_text="Job ID")
     func = serializers.CharField(help_text="Function path")
-    args = serializers.ListField(default=list, help_text="Function arguments")
-    kwargs = serializers.DictField(default=dict, help_text="Function keyword arguments")
+    args = serializers.ListField(
+        child=serializers.JSONField(),
+        default=list,
+        help_text="Function arguments (array of any JSON values)"
+    )
+    kwargs = serializers.JSONField(default=dict, help_text="Function keyword arguments")
 
     # Schedule info
     queue_name = serializers.CharField(help_text="Queue name")
@@ -155,7 +160,7 @@ class ScheduledJobSerializer(serializers.Serializer):
         required=False,
         help_text="Job creation time"
     )
-    meta = serializers.DictField(
+    meta = serializers.JSONField(
         default=dict,
         help_text="Job metadata"
     )

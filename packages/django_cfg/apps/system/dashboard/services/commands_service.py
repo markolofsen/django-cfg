@@ -151,15 +151,24 @@ class CommandsService:
         """
         try:
             all_commands = self.get_all_commands()
-            categorized = self.get_commands_by_category()
+            categorized_dict = self.get_commands_by_category()
+
+            # Convert categorized dict to array of objects
+            categorized_array = [
+                {
+                    'category': category,
+                    'commands': commands
+                }
+                for category, commands in categorized_dict.items()
+            ]
 
             return {
                 'total_commands': len(all_commands),
                 'core_commands': len([c for c in all_commands if c['is_core']]),
                 'custom_commands': len([c for c in all_commands if c['is_custom']]),
-                'categories': list(categorized.keys()),
+                'categories': list(categorized_dict.keys()),
                 'commands': all_commands,
-                'categorized': categorized,
+                'categorized': categorized_array,
             }
 
         except Exception as e:
@@ -170,7 +179,7 @@ class CommandsService:
                 'custom_commands': 0,
                 'categories': [],
                 'commands': [],
-                'categorized': {},
+                'categorized': [],
             }
 
     def get_command_help(self, command_name: str) -> Dict[str, Any]:

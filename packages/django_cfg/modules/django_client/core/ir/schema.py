@@ -195,6 +195,10 @@ class IRSchemaObject(BaseModel):
     )
     deprecated: bool = Field(False, description="Field is deprecated")
     example: Any | None = Field(None, description="Example value")
+    default: Any | None = Field(
+        None,
+        description="Default value (used to infer array vs object for JSONField)",
+    )
 
     # ===== Computed Properties =====
 
@@ -274,15 +278,23 @@ class IRSchemaObject(BaseModel):
             'str | None'
             >>> IRSchemaObject(name="x", type="string", read_only=True).python_type
             'Any'
+            >>> IRSchemaObject(name="x", type="object", default=[]).python_type
+            'list[Any]'
         """
         # For read-only string fields, use Any since they often return complex objects
         # from SerializerMethodField in Django (e.g., dicts instead of strings)
         if self.read_only and self.type == "string":
             return "Any | None" if self.nullable else "Any"
 
-        # For object fields without defined properties (like JSONField), use Any
+        # SMART DETECTION: JSONField(default=list) case
+        # When type=object but default=[], it's actually an array
         if self.type == "object" and not self.properties:
-            return "Any | None" if self.nullable else "Any"
+            # Check if default value is a list
+            if isinstance(self.default, list):
+                return "list[Any] | None" if self.nullable else "list[Any]"
+            # Otherwise treat as dict with any values
+            # SAFETY: Always use Any for values to handle DictField edge cases
+            return "dict[str, Any] | None" if self.nullable else "dict[str, Any]"
 
         type_map = {
             "string": "str",
@@ -345,11 +357,25 @@ class IRSchemaObject(BaseModel):
                 base_type = "Array<any>"
         # Handle object with additionalProperties (e.g., Record<string, DatabaseConfig>)
         elif self.type == "object" and self.additional_properties:
-            if self.additional_properties.ref:
+            # SMART DETECTION: Check if default=[] for JSONField(default=list)
+            if isinstance(self.default, list):
+                base_type = "Array<any>"
+            elif self.additional_properties.ref:
+                # Only trust $ref types (explicit nested serializers)
                 value_type = self.additional_properties.ref
+                base_type = f"Record<string, {value_type}>"
             else:
-                value_type = self.additional_properties.typescript_type
-            base_type = f"Record<string, {value_type}>"
+                # SAFETY: Always use 'any' for additionalProperties without $ref
+                # DictField generates additionalProperties: {type: string} which is too restrictive
+                # Real data often contains boolean, number, nested objects
+                base_type = "Record<string, any>"
+        # Handle plain object without properties
+        elif self.type == "object" and not self.properties:
+            # SMART DETECTION: JSONField(default=list) case
+            if isinstance(self.default, list):
+                base_type = "Array<any>"
+            else:
+                base_type = "Record<string, any>"
         else:
             type_map = {
                 "string": "string",

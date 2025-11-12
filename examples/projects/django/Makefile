@@ -32,9 +32,9 @@ help:
 	@echo "Development:"
 	@echo "  make dev           - Run development server (kills port 8000 first)"
 	@echo "  make dev-ngrok     - Run development server with ngrok tunnel"
-	@echo "  make grpc          - Run gRPC server (kills port 50051 first)"
+	@echo "  make grpc          - Run gRPC (50051) + ASGI (8000) servers in parallel"
 	@echo "  make kill-ports    - Kill processes on port 8000"
-	@echo "  make kill-grpc     - Kill gRPC processes on port 50051"
+	@echo "  make kill-grpc     - Kill ALL manage.py, gRPC, ASGI processes"
 	@echo "  make shell         - Open Django shell"
 	@echo "  make api           - Generate and deploy API clients (OpenAPI)"
 	@echo "  make claude        - Start Claude Code"
@@ -130,16 +130,21 @@ kill-ports:
 	lsof -i :8000 | awk 'NR>1 {print $$2}' | xargs kill -9 || true
 
 kill-grpc:
-	@echo "🔪 Killing gRPC processes..."
-	@# Kill by process name (rungrpc)
-	@pkill -9 -f "manage.py rungrpc" 2>/dev/null || true
-	@# Kill by port (50051)
+	@echo "🔪 Killing all Django manage.py, gRPC and ASGI processes..."
+	@# Kill ALL manage.py processes (runserver, rungrpc, shell, etc.)
+	@pkill -9 -f "manage.py" 2>/dev/null || true
+	@# Kill uvicorn processes
+	@pkill -9 -f "uvicorn api.asgi" 2>/dev/null || true
+	@# Kill by port (50051 - gRPC)
 	@lsof -ti :50051 | xargs kill -9 2>/dev/null || true
-	@# Kill any Python processes still holding port 50051
+	@# Kill by port (8000 - ASGI/Django)
+	@lsof -ti :8000 | xargs kill -9 2>/dev/null || true
+	@# Kill any Python processes still holding ports
 	@lsof -ti :50051 -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
+	@lsof -ti :8000 -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
 	@# Small delay to ensure ports are released
 	@sleep 0.5
-	@echo "✅ gRPC processes killed"
+	@echo "✅ All Django processes, gRPC and ASGI killed"
 
 dev: kill-ports
 	$(PYTHON) manage.py runserver
@@ -148,8 +153,26 @@ dev-ngrok: kill-ports
 	$(PYTHON) manage.py runserver_ngrok
 
 grpc: kill-grpc
-	@echo "🚀 Starting gRPC server on port 50051..."
-	$(PYTHON) manage.py rungrpc
+	@echo "🚀 Starting gRPC server (port 50051) and ASGI server (port 8000) in parallel..."
+	@echo ""
+	@# Function to handle cleanup on exit (Ctrl+C)
+	@bash -c ' \
+		trap "echo; echo \"🛑 Stopping servers...\"; kill 0; exit" SIGINT SIGTERM; \
+		echo "📡 Starting gRPC server on port 50051..."; \
+		$(PYTHON) manage.py rungrpc & \
+		GRPC_PID=$$!; \
+		echo "🌐 Starting ASGI server on port 8000 (uvicorn)..."; \
+		$(POETRY) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload & \
+		ASGI_PID=$$!; \
+		echo ""; \
+		echo "✅ Servers started:"; \
+		echo "   - gRPC: http://localhost:50051 (PID: $$GRPC_PID)"; \
+		echo "   - ASGI: http://localhost:8000 (PID: $$ASGI_PID)"; \
+		echo ""; \
+		echo "💡 Press Ctrl+C to stop both servers"; \
+		echo ""; \
+		wait; \
+	'
 
 manage:
 	$(PYTHON) manage.py $(CMD)

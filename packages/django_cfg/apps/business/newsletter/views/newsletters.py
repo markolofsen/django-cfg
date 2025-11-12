@@ -2,6 +2,7 @@
 Newsletter views.
 """
 
+from django_cfg.middleware.pagination import DefaultPagination
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
@@ -12,6 +13,9 @@ from ..serializers import NewsletterSerializer
 
 class NewsletterListView(generics.ListAPIView):
     """List all active newsletters."""
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     queryset = Newsletter.objects.filter(is_active=True)
     serializer_class = NewsletterSerializer

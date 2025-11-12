@@ -2,16 +2,16 @@
 Health check serializer for Centrifugo monitoring API.
 """
 
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class HealthCheckSerializer(BaseModel):
+class HealthCheckSerializer(serializers.Serializer):
     """Health check response."""
 
-    status: str = Field(description="Health status: healthy or unhealthy")
-    wrapper_url: str = Field(description="Configured wrapper URL")
-    has_api_key: bool = Field(description="Whether API key is configured")
-    timestamp: str = Field(description="Current timestamp")
+    status = serializers.CharField(help_text="Health status: healthy or unhealthy")
+    wrapper_url = serializers.CharField(help_text="Configured wrapper URL")
+    has_api_key = serializers.BooleanField(help_text="Whether API key is configured")
+    timestamp = serializers.CharField(help_text="Current timestamp")
 
 
 __all__ = ["HealthCheckSerializer"]

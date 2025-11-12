@@ -42,6 +42,12 @@ class CommandSerializer(serializers.Serializer):
     )
 
 
+class CommandCategorySerializer(serializers.Serializer):
+    """Category with commands."""
+    category = serializers.CharField(help_text="Category name")
+    commands = CommandSerializer(many=True, help_text="Commands in this category")
+
+
 class CommandsSummarySerializer(serializers.Serializer):
     """Commands summary serializer."""
     total_commands = serializers.IntegerField()
@@ -49,7 +55,7 @@ class CommandsSummarySerializer(serializers.Serializer):
     custom_commands = serializers.IntegerField()
     categories = serializers.ListField(child=serializers.CharField())
     commands = CommandSerializer(many=True)
-    categorized = serializers.DictField()
+    categorized = CommandCategorySerializer(many=True, help_text="Commands grouped by category")
 
 
 class CommandExecuteRequestSerializer(serializers.Serializer):

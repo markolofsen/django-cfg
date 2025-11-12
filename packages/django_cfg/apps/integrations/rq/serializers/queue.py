@@ -62,7 +62,7 @@ class QueueDetailSerializer(serializers.Serializer):
         required=False,
         help_text="Timestamp of oldest job in queue",
     )
-    connection_kwargs = serializers.DictField(
+    connection_kwargs = serializers.JSONField(
         default=dict, help_text="Redis connection parameters"
     )
     is_async = serializers.BooleanField(default=True, help_text="Queue is in async mode")

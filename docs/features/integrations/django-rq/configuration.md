@@ -45,8 +45,8 @@ That's it! Django-RQ will automatically:
 - Configure default timeouts and TTL
 - Register the `default` queue
 - Enable admin interface
-- **✨ NEW:** Add automatic cleanup tasks (daily + weekly)
-- **✨ NEW:** Add demo heartbeat task (development only)
+- Add automatic cleanup tasks (daily + weekly)
+- Add demo heartbeat task (development only)
 
 ---
 
@@ -904,59 +904,69 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 
 ---
 
-## Automatic Cleanup ✨ NEW
+## Automatic Cleanup
 
 ### Overview
 
-Django-RQ v1.5.35+ includes **automatic cleanup enabled by default** to prevent Redis bloat and ensure healthy job queue operation.
+Django-RQ includes **automatic cleanup enabled by default** to keep your Redis instance healthy and prevent memory bloat from accumulated job data.
 
-### What Gets Cleaned Up
+### How It Works
 
-**1. Old Finished Jobs** (Daily)
-- Removes finished jobs older than `cleanup_max_age_days` (default: 7 days)
+Django-RQ automatically runs three maintenance tasks in the background:
+
+**Daily Cleanup (Production & Development):**
+- **cleanup_old_jobs** - Removes finished and failed jobs older than 7 days
+- Runs every 24 hours
 - Keeps recent job history for debugging
-- Runs every 24 hours (86400s)
+- Configurable retention period
 
-**2. Old Failed Jobs** (Daily)
-- Removes failed jobs older than `cleanup_max_age_days`
-- Preserves recent failures for investigation
-- Runs every 24 hours (86400s)
-
-**3. Orphaned Job Keys** (Weekly)
-- Removes job keys that don't belong to any queue/registry
+**Weekly Cleanup (Production & Development):**
+- **cleanup_orphaned_job_keys** - Removes orphaned Redis keys
+- Runs every 7 days
 - Cleans up keys left after crashes or improper cancellations
-- Runs every 7 days (604800s)
+
+**Heartbeat (Development Only):**
+- **demo_scheduler_heartbeat** - Verifies scheduler is working
+- Runs every minute
+- Logs heartbeat messages for monitoring
+- Automatically disabled in production
 
 ### Default Configuration
 
+Cleanup is enabled by default with sensible defaults:
+
 ```python
-# Zero configuration - cleanup enabled by default
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
-    # enable_auto_cleanup=True,   # Default
-    # cleanup_max_age_days=7,     # Default
+    # Cleanup is enabled by default - no configuration needed!
 )
 ```
 
-### Customize Cleanup
+### Customize Retention Period
+
+Adjust how long jobs are kept before cleanup:
 
 ```python
-# Keep jobs for 14 days instead of 7
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
-    cleanup_max_age_days=14,  # Jobs kept for 2 weeks
+    cleanup_max_age_days=14,  # Keep jobs for 2 weeks instead of 7 days
 )
+```
 
-# Disable automatic cleanup
+### Disable Automatic Cleanup
+
+If you prefer manual control:
+
+```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
-    enable_auto_cleanup=False,  # Manual cleanup only
+    enable_auto_cleanup=False,  # Disable automatic cleanup
 )
 ```
 
 ### Manual Cleanup
 
-You can still run cleanup manually:
+Run cleanup tasks manually when needed:
 
 ```python
 from django_cfg.apps.integrations.rq.tasks.maintenance import (
@@ -979,25 +989,60 @@ print(f"Queued: {stats['queue']['queued']}")
 print(f"Failed: {stats['queue']['failed']}")
 ```
 
+### Dry Run Mode
+
+Test cleanup without actually deleting anything:
+
+```python
+# Preview what would be deleted
+stats = cleanup_old_jobs(max_age_days=7, dry_run=True)
+print(f"Would delete {stats['total_deleted']} jobs")
+
+# Only delete after reviewing
+if stats['total_deleted'] < 1000:
+    cleanup_old_jobs(max_age_days=7, dry_run=False)
+```
+
+### What Gets Cleaned
+
+**Removed:**
+- Finished jobs older than `cleanup_max_age_days`
+- Failed jobs older than `cleanup_max_age_days`
+- Orphaned job keys (weekly)
+
+**Protected:**
+- Queued jobs (waiting to be processed)
+- Running jobs (currently being processed)
+- Scheduled jobs (cron/interval tasks)
+- All non-RQ Redis data
+
 ### Safety Guarantees
 
-- **No data loss**: Only removes old finished/failed jobs, never queued or running jobs
-- **No interference**: Scheduled jobs live in separate storage, won't be cleaned up
+Cleanup is designed to be safe for production use:
+
 - **Isolated scope**: Only touches RQ-specific keys (`rq:job:*`, `rq:finished:*`, `rq:failed:*`)
-- **Application data safe**: Never touches custom keys (`stockapis:*`, `wallets:*`, etc.)
+- **No interference**: Scheduled jobs use separate storage and are never cleaned
+- **Data protection**: Your application data (custom Redis keys) is never touched
+- **Configurable retention**: Keep job history as long as you need
+- **Dry run mode**: Test before applying changes
 
-### Benefits
+### Monitoring Cleanup
 
-Before automatic cleanup:
-- 4564+ scheduled job duplicates after multiple restarts
-- 501 job keys with TTL=-1 (never expire)
-- Redis memory growing indefinitely
+Check cleanup task execution in logs:
 
-After automatic cleanup:
-- Stable 6-10 scheduled jobs (no duplicates)
-- Jobs automatically expire (24h for finished, 7d for failed)
-- Automatic cleanup prevents accumulation
-- **Zero configuration required!**
+```bash
+# View cleanup logs
+tail -f logs/djangocfg/integrations.log | grep cleanup
+
+# Check scheduled jobs
+python manage.py shell -c "
+from django_rq import get_scheduler
+scheduler = get_scheduler('default')
+for job in scheduler.get_jobs():
+    if 'cleanup' in job.func_name:
+        print(f'{job.func_name}: {job.meta}')
+"
+```
 
 ---
 

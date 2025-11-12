@@ -16,9 +16,9 @@ class TestScenarioSerializer(serializers.Serializer):
         child=serializers.JSONField(),
         required=False,
         default=list,
-        help_text="Default arguments"
+        help_text="Default arguments (array of any JSON values)"
     )
-    default_kwargs = serializers.DictField(
+    default_kwargs = serializers.JSONField(
         required=False,
         default=dict,
         help_text="Default keyword arguments"
@@ -54,9 +54,9 @@ class RunDemoRequestSerializer(serializers.Serializer):
         child=serializers.JSONField(),
         required=False,
         default=list,
-        help_text="Task arguments"
+        help_text="Task arguments (array of any JSON values)"
     )
-    kwargs = serializers.DictField(
+    kwargs = serializers.JSONField(
         required=False,
         default=dict,
         help_text="Task keyword arguments"
@@ -110,7 +110,7 @@ class TestingActionResponseSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Number of items affected"
     )
-    metadata = serializers.DictField(
+    metadata = serializers.JSONField(
         required=False,
         default=dict,
         help_text="Additional metadata"

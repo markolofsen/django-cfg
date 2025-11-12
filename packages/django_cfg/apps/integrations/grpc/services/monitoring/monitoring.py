@@ -98,7 +98,7 @@ class MonitoringService:
         Returns:
             Dictionary with server information including services
         """
-        from ..services import ServiceDiscovery
+        from ..discovery.discovery import ServiceDiscovery
 
         # Get current server status
         current_server = GRPCServerStatus.objects.get_current_server()

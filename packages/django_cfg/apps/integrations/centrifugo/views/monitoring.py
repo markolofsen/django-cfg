@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from django.db import models
 from django.db.models import Avg, Count, Max
 from django.db.models.functions import TruncHour, TruncDay
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -25,6 +26,8 @@ from ..serializers import (
     HealthCheckSerializer,
     PublishSerializer,
     RecentPublishesSerializer,
+    TimelineItemSerializer,
+    TimelineResponseSerializer,
 )
 from ..services import get_centrifugo_config
 
@@ -42,6 +45,9 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     - Channel-level statistics
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    # Pagination for publishes endpoint
+    pagination_class = DefaultPagination
 
     serializer_class = PublishSerializer
 
@@ -73,8 +79,8 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 "timestamp": datetime.now().isoformat(),
             }
 
-            serializer = HealthCheckSerializer(**health_data)
-            return Response(serializer.model_dump())
+            serializer = HealthCheckSerializer(health_data)
+            return Response(serializer.data)
 
         except Exception as e:
             logger.error(f"Health check error: {e}", exc_info=True)
@@ -111,8 +117,8 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             stats = CentrifugoLog.objects.get_statistics(hours=hours)
             stats["period_hours"] = hours
 
-            serializer = CentrifugoOverviewStatsSerializer(**stats)
-            return Response(serializer.model_dump())
+            serializer = CentrifugoOverviewStatsSerializer(stats)
+            return Response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Overview stats validation error: {e}")
@@ -219,24 +225,6 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     @extend_schema(
         tags=["Centrifugo Monitoring"],
-        summary="Get channel statistics",
-        description="Returns statistics grouped by channel.",
-        parameters=[
-            OpenApiParameter(
-                name="hours",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                description="Statistics period in hours (default: 24)",
-                required=False,
-            ),
-        ],
-        responses={
-            200: ChannelListSerializer,
-            400: {"description": "Invalid parameters"},
-        },
-    )
-    @extend_schema(
-        tags=["Centrifugo Monitoring"],
         summary="Get publish timeline",
         description="Returns hourly or daily breakdown of publish counts for charts.",
         parameters=[
@@ -256,7 +244,7 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses={
-            200: {"description": "Timeline data"},
+            200: TimelineResponseSerializer,
             400: {"description": "Invalid parameters"},
         },
     )
@@ -288,23 +276,26 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 .order_by("period")
             )
 
-            timeline_list = []
-            for item in timeline_data:
-                timeline_list.append({
+            # Build timeline items
+            timeline_list = [
+                {
                     "timestamp": item["period"].isoformat(),
                     "count": item["count"],
                     "successful": item["successful"],
                     "failed": item["failed"],
                     "timeout": item["timeout"],
-                })
+                }
+                for item in timeline_data
+            ]
 
+            # Build response using DRF serializer
             response_data = {
                 "timeline": timeline_list,
                 "period_hours": hours,
                 "interval": interval,
             }
-
-            return Response(response_data)
+            serializer = TimelineResponseSerializer(response_data)
+            return Response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Timeline validation error: {e}")
@@ -318,6 +309,24 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @extend_schema(
+        tags=["Centrifugo Monitoring"],
+        summary="Get channel statistics",
+        description="Returns statistics grouped by channel.",
+        parameters=[
+            OpenApiParameter(
+                name="hours",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Statistics period in hours (default: 24)",
+                required=False,
+            ),
+        ],
+        responses={
+            200: ChannelListSerializer,
+            400: {"description": "Invalid parameters"},
+        },
+    )
     @action(detail=False, methods=["get"], url_path="channels")
     def channels(self, request):
         """Get statistics per channel."""
@@ -342,25 +351,23 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
             channels_list = []
             for stats in channel_stats:
-                channels_list.append(
-                    ChannelStatsSerializer(
-                        channel=stats["channel"],
-                        total=stats["total"],
-                        successful=stats["successful"],
-                        failed=stats["failed"],
-                        avg_duration_ms=round(stats["avg_duration_ms"] or 0, 2),
-                        avg_acks=round(stats["avg_acks"] or 0, 2),
-                        last_activity_at=stats["last_activity_at"].isoformat() if stats["last_activity_at"] else None,  # NEW
-                    )
-                )
+                channels_list.append({
+                    "channel": stats["channel"],
+                    "total": stats["total"],
+                    "successful": stats["successful"],
+                    "failed": stats["failed"],
+                    "avg_duration_ms": round(stats["avg_duration_ms"] or 0, 2),
+                    "avg_acks": round(stats["avg_acks"] or 0, 2),
+                    "last_activity_at": stats["last_activity_at"].isoformat() if stats["last_activity_at"] else None,
+                })
 
             response_data = {
-                "channels": [ch.model_dump() for ch in channels_list],
+                "channels": channels_list,
                 "total_channels": len(channels_list),
             }
 
-            serializer = ChannelListSerializer(**response_data)
-            return Response(serializer.model_dump())
+            serializer = ChannelListSerializer(response_data)
+            return Response(serializer.data)
 
         except ValueError as e:
             logger.warning(f"Channel stats validation error: {e}")

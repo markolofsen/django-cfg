@@ -21,9 +21,9 @@ class DatabaseConfigSerializer(serializers.Serializer):
     port = serializers.IntegerField(required=False, allow_null=True)
     connect_timeout = serializers.IntegerField(required=False, allow_null=True)
     sslmode = serializers.CharField(required=False, allow_null=True)
-    options = serializers.DictField(required=False, allow_null=True)
-    apps = serializers.ListField(required=False, allow_null=True)
-    operations = serializers.ListField(required=False, allow_null=True)
+    options = serializers.JSONField(required=False, allow_null=True)
+    apps = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
+    operations = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     migrate_to = serializers.CharField(required=False, allow_null=True)
     routing_description = serializers.CharField(required=False, allow_null=True)
 
@@ -64,7 +64,7 @@ class GRPCConfigDashboardSerializer(serializers.Serializer):
     max_workers = serializers.IntegerField(required=False, allow_null=True)
     reflection = serializers.BooleanField(required=False, allow_null=True)
     health_check = serializers.BooleanField(required=False, allow_null=True)
-    interceptors = serializers.ListField(required=False, allow_null=True)
+    interceptors = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
 
 
 class CentrifugoConfigSerializer(serializers.Serializer):
@@ -86,7 +86,7 @@ class RedisQueueConfigSerializer(serializers.Serializer):
     password = serializers.CharField(required=False, allow_null=True)
     default_timeout = serializers.IntegerField(required=False, allow_null=True)
     default_result_ttl = serializers.IntegerField(required=False, allow_null=True)
-    sentinels = serializers.ListField(required=False, allow_null=True)
+    sentinels = serializers.JSONField(required=False, allow_null=True)  # List of tuples (host, port)
     master_name = serializers.CharField(required=False, allow_null=True)
     socket_timeout = serializers.IntegerField(required=False, allow_null=True)
 
@@ -96,9 +96,9 @@ class RQScheduleSerializer(serializers.Serializer):
     func = serializers.CharField(required=False, allow_null=True)
     cron_string = serializers.CharField(required=False, allow_null=True)
     queue = serializers.CharField(required=False, allow_null=True)
-    kwargs = serializers.DictField(required=False, allow_null=True)
-    args = serializers.ListField(required=False, allow_null=True)
-    meta = serializers.DictField(required=False, allow_null=True)
+    kwargs = serializers.JSONField(required=False, allow_null=True)
+    args = serializers.ListField(child=serializers.JSONField(), required=False, allow_null=True)
+    meta = serializers.JSONField(required=False, allow_null=True)
     repeat = serializers.IntegerField(required=False, allow_null=True)
     result_ttl = serializers.IntegerField(required=False, allow_null=True)
 
@@ -108,7 +108,7 @@ class DjangoRQConfigSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, allow_null=True)
     queues = serializers.ListField(child=RedisQueueConfigSerializer(), required=False, allow_null=True)
     show_admin_link = serializers.BooleanField(required=False, allow_null=True)
-    exception_handlers = serializers.ListField(required=False, allow_null=True)
+    exception_handlers = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     api_token = serializers.CharField(required=False, allow_null=True)
     prometheus_enabled = serializers.BooleanField(required=False, allow_null=True)
     schedules = serializers.ListField(child=RQScheduleSerializer(), required=False, allow_null=True)
@@ -158,7 +158,7 @@ class NgrokConfigSerializer(serializers.Serializer):
     """Ngrok tunneling configuration."""
     enabled = serializers.BooleanField(required=False, allow_null=True)
     authtoken = serializers.CharField(required=False, allow_null=True)
-    basic_auth = serializers.ListField(required=False, allow_null=True)
+    basic_auth = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     compression = serializers.BooleanField(required=False, allow_null=True)
 
 
@@ -175,9 +175,9 @@ class AxesConfigSerializer(serializers.Serializer):
     verbose = serializers.BooleanField(required=False, allow_null=True)
     enable_access_failure_log = serializers.BooleanField(required=False, allow_null=True)
     ipware_proxy_count = serializers.IntegerField(required=False, allow_null=True)
-    ipware_meta_precedence_order = serializers.ListField(required=False, allow_null=True)
-    allowed_ips = serializers.ListField(required=False, allow_null=True)
-    denied_ips = serializers.ListField(required=False, allow_null=True)
+    ipware_meta_precedence_order = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
+    allowed_ips = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
+    denied_ips = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     cache_name = serializers.CharField(required=False, allow_null=True)
     use_user_agent = serializers.BooleanField(required=False, allow_null=True)
     username_form_field = serializers.CharField(required=False, allow_null=True)
@@ -192,12 +192,12 @@ class NextJSAdminConfigSerializer(serializers.Serializer):
 
 class ConstanceConfigSerializer(serializers.Serializer):
     """Django-Constance dynamic settings configuration."""
-    config = serializers.DictField(required=False, allow_null=True)
-    config_fieldsets = serializers.DictField(required=False, allow_null=True)
+    config = serializers.JSONField(required=False, allow_null=True)
+    config_fieldsets = serializers.JSONField(required=False, allow_null=True)
     backend = serializers.CharField(required=False, allow_null=True)
     database_prefix = serializers.CharField(required=False, allow_null=True)
     database_cache_backend = serializers.CharField(required=False, allow_null=True)
-    additional_config = serializers.DictField(required=False, allow_null=True)
+    additional_config = serializers.JSONField(required=False, allow_null=True)
 
 
 class OpenAPIClientConfigSerializer(serializers.Serializer):
@@ -207,9 +207,9 @@ class OpenAPIClientConfigSerializer(serializers.Serializer):
     client_name = serializers.CharField(required=False, allow_null=True)
     schema_url = serializers.CharField(required=False, allow_null=True)
     generator = serializers.CharField(required=False, allow_null=True)
-    additional_properties = serializers.DictField(required=False, allow_null=True)
-    templates = serializers.ListField(required=False, allow_null=True)
-    global_properties = serializers.DictField(required=False, allow_null=True)
+    additional_properties = serializers.JSONField(required=False, allow_null=True)
+    templates = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
+    global_properties = serializers.JSONField(required=False, allow_null=True)
 
 
 class DjangoConfigSerializer(serializers.Serializer):
@@ -238,6 +238,7 @@ class DjangoConfigSerializer(serializers.Serializer):
     enable_maintenance = serializers.BooleanField(required=False, allow_null=True)
     enable_frontend = serializers.BooleanField(required=False, allow_null=True)
     enable_drf_tailwind = serializers.BooleanField(required=False, allow_null=True)
+    enable_pool_cleanup = serializers.BooleanField(required=False, allow_null=True)
 
     # URLs
     site_url = serializers.CharField(required=False, allow_null=True)
@@ -251,7 +252,7 @@ class DjangoConfigSerializer(serializers.Serializer):
     root_urlconf = serializers.CharField(required=False, allow_null=True)
     wsgi_application = serializers.CharField(required=False, allow_null=True)
     auth_user_model = serializers.CharField(required=False, allow_null=True)
-    project_apps = serializers.ListField(required=False, allow_null=True)
+    project_apps = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
 
     # Infrastructure
     databases = serializers.DictField(child=DatabaseConfigSerializer(), required=False, allow_null=True)
@@ -260,9 +261,9 @@ class DjangoConfigSerializer(serializers.Serializer):
     cache_sessions = serializers.CharField(required=False, allow_null=True)
 
     # Security
-    security_domains = serializers.ListField(required=False, allow_null=True)
+    security_domains = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     ssl_redirect = serializers.BooleanField(required=False, allow_null=True)
-    cors_allow_headers = serializers.ListField(required=False, allow_null=True)
+    cors_allow_headers = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
 
     # Integrations
     email = EmailConfigSerializer(required=False, allow_null=True)
@@ -278,15 +279,15 @@ class DjangoConfigSerializer(serializers.Serializer):
     telegram = TelegramConfigSerializer(required=False, allow_null=True)
     ngrok = NgrokConfigSerializer(required=False, allow_null=True)
     axes = AxesConfigSerializer(required=False, allow_null=True)
-    crypto_fields = serializers.DictField(required=False, allow_null=True)
-    unfold = serializers.CharField(required=False, allow_null=True)  # String representation of Unfold config
+    crypto_fields = serializers.JSONField(required=False, allow_null=True)
+    unfold = serializers.JSONField(required=False, allow_null=True)  # Complex Unfold config object
     tailwind_app_name = serializers.CharField(required=False, allow_null=True)
     tailwind_version = serializers.IntegerField(required=False, allow_null=True)  # Integer version number
-    limits = serializers.DictField(required=False, allow_null=True)
-    api_keys = serializers.DictField(required=False, allow_null=True)
-    custom_middleware = serializers.ListField(required=False, allow_null=True)
+    limits = serializers.JSONField(required=False, allow_null=True)
+    api_keys = serializers.JSONField(required=False, allow_null=True)
+    custom_middleware = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     nextjs_admin = NextJSAdminConfigSerializer(required=False, allow_null=True)
-    admin_emails = serializers.ListField(required=False, allow_null=True)
+    admin_emails = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     constance = ConstanceConfigSerializer(required=False, allow_null=True)
     openapi_client = OpenAPIClientConfigSerializer(required=False, allow_null=True)
 
@@ -306,7 +307,7 @@ class ConfigValidationSerializer(serializers.Serializer):
         help_text="Fields present in serializer but not in config"
     )
     type_mismatches = serializers.ListField(
-        child=serializers.DictField(),
+        child=serializers.JSONField(),
         help_text="Fields with type mismatches"
     )
     total_config_fields = serializers.IntegerField(help_text="Total fields in config")
@@ -323,7 +324,7 @@ class ConfigDataSerializer(serializers.Serializer):
     django_config = DjangoConfigSerializer(
         help_text="User's DjangoConfig settings"
     )
-    django_settings = serializers.DictField(
+    django_settings = serializers.JSONField(
         help_text="Complete Django settings (sanitized, contains mixed types)"
     )
     _validation = ConfigValidationSerializer(
