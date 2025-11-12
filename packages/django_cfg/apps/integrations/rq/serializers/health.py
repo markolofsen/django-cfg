@@ -32,6 +32,19 @@ class HealthCheckSerializer(serializers.Serializer):
     )
 
 
+class ScheduleInfoSerializer(serializers.Serializer):
+    """Schedule information in config response."""
+    func = serializers.CharField()
+    queue = serializers.CharField()
+    cron = serializers.CharField(allow_null=True, required=False)
+    interval = serializers.IntegerField(allow_null=True, required=False)
+    scheduled_time = serializers.DateTimeField(allow_null=True, required=False)
+    description = serializers.CharField(allow_null=True, required=False)
+    timeout = serializers.IntegerField(allow_null=True, required=False)
+    result_ttl = serializers.IntegerField(allow_null=True, required=False)
+    repeat = serializers.IntegerField(allow_null=True, required=False)
+
+
 class RQConfigSerializer(serializers.Serializer):
     """
     RQ configuration serializer.
@@ -40,7 +53,7 @@ class RQConfigSerializer(serializers.Serializer):
     """
 
     enabled = serializers.BooleanField(help_text="RQ enabled status")
-    queues = serializers.DictField(help_text="Configured queues")
+    queues = serializers.JSONField(help_text="Configured queues")
     async_mode = serializers.BooleanField(
         default=True, help_text="Async mode enabled"
     )
@@ -54,6 +67,7 @@ class RQConfigSerializer(serializers.Serializer):
         default=False, help_text="API token is configured"
     )
     schedules = serializers.ListField(
+        child=ScheduleInfoSerializer(),
         required=False,
         default=list,
         help_text="Scheduled tasks from django-cfg config"

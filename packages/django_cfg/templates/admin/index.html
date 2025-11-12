@@ -79,14 +79,13 @@
             height: 100%;
             border: none;
             display: block;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
+            /* Show iframe immediately - preloader inside Next.js app will handle loading state */
+            visibility: visible;
+            opacity: 1;
         }
 
         .nextjs-dashboard-iframe.loaded {
-            visibility: visible;
-            opacity: 1;
+            /* No additional changes needed - iframe is already visible */
         }
 
         .iframe-container {
@@ -119,6 +118,8 @@
             transform: translate(-50%, -50%);
             text-align: center;
             z-index: 1;
+            /* Hide Django loading indicator - Next.js preloader handles loading state */
+            display: none !important;
         }
 
         .iframe-loading.hidden {
@@ -504,6 +505,7 @@
                     this.origin = origin;
                     this.messageBridge = new MessageBridge(iframe, origin);
                     this.messageListener = null;
+                    this.authSent = false; // Track if auth was already sent
                 }
 
                 init() {
@@ -514,14 +516,10 @@
 
                 _setupLoadHandler() {
                     this.iframe.addEventListener('load', () => {
-                        // Hide loading indicator
-                        if (this.loading) {
-                            this.loading.classList.add('hidden');
-                        }
-                        this.iframe.classList.add('loaded');
+                        // Reset auth flag on reload (e.g., when switching tabs)
+                        this.authSent = false;
 
-                        // Don't send auth immediately - wait for iframe-ready message
-                        // The iframe will send 'iframe-ready' when it's mounted and ready to receive messages
+                        // Iframe is visible immediately - Next.js preloader handles loading state
                     });
                 }
 
@@ -529,12 +527,27 @@
                     console.log('[Django-CFG] Received message from iframe:', type, data);
                     switch (type) {
                         case 'iframe-ready':
-                            console.log('[Django-CFG] iframe-ready received, sending auth and theme data');
-                            this.messageBridge.sendAllData();
+                            // Only send auth once to prevent infinite loop
+                            if (!this.authSent) {
+                                console.log('[Django-CFG] iframe-ready received (FIRST TIME), sending auth and theme data');
+                                this.messageBridge.sendAllData();
+                                this.authSent = true;
+                            } else {
+                                console.log('[Django-CFG] iframe-ready received (DUPLICATE), ignoring to prevent loop');
+                            }
                             break;
 
                         case 'iframe-auth-status':
                             console.log('[Django-CFG] iframe-auth-status:', data);
+
+                            // Iframe is always visible - Next.js preloader handles loading/auth states
+                            if (data?.isAuthenticated && data?.hasUser && !data?.isLoading) {
+                                console.log('[Django-CFG] User authenticated successfully');
+                                // Mark iframe as loaded (in case we need this for other logic)
+                                this.iframe.classList.add('loaded');
+                            } else if (!data?.isAuthenticated) {
+                                console.warn('[Django-CFG] User not authenticated');
+                            }
                             break;
 
                         case 'iframe-navigation':

@@ -123,7 +123,7 @@ class StatisticsService:
 
             app_stats = {
                 "name": app_config.verbose_name or app_label.title(),
-                "models": {},
+                "models": [],
                 "total_records": 0,
                 "model_count": len(models_list),
             }
@@ -133,7 +133,9 @@ class StatisticsService:
                     # Get model statistics
                     model_stats = self._get_model_stats(model)
                     if model_stats:
-                        app_stats["models"][model._meta.model_name] = model_stats
+                        # Add model_name to the stats dict
+                        model_stats["model_name"] = model._meta.model_name
+                        app_stats["models"].append(model_stats)
                         app_stats["total_records"] += model_stats.get("count", 0)
                 except Exception:
                     continue

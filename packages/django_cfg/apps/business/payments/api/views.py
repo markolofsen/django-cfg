@@ -9,13 +9,14 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.cache import cache
+from django_cfg.middleware.pagination import DefaultPagination
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 from ..models import Payment, Currency, UserBalance, Transaction
 from ..services import (
@@ -130,6 +131,9 @@ class PaymentViewSet(ReadOnlyModelViewSet):
     - GET /payments/{id}/status/ - Check payment status
     - POST /payments/{id}/confirm/ - Confirm payment
     """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentListSerializer

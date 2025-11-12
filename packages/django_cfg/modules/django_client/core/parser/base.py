@@ -511,6 +511,7 @@ class BaseParser(ABC):
             read_only=schema.readOnly,
             write_only=schema.writeOnly,
             deprecated=schema.deprecated,
+            default=schema.default,  # SMART DETECTION: Pass default value for JSONField(default=list) detection
         )
 
         # Cache

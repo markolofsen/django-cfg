@@ -12,7 +12,7 @@ import { z } from 'zod'
 export const PortfolioSchema = z.object({
   id: z.int(),
   user: z.int(),
-  user_info: z.record(z.string(), z.any()),
+  user_info: z.record(z.string(), z.record(z.string(), z.any())),
   total_balance_usd: z.string(),
   available_balance_usd: z.string().optional(),
   total_profit_loss: z.string(),

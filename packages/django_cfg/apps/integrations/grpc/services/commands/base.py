@@ -203,18 +203,74 @@ class StreamingCommandClient(Generic[TCommand], ABC):
         return self._is_same_process
 
     def get_grpc_address(self) -> str:
-        """Get gRPC server address for cross-process mode."""
-        if self.config.grpc_port is None:
-            # Try to auto-detect from django-cfg config
+        """
+        Get gRPC server address for cross-process mode.
+
+        Priority order:
+        1. self.config.grpc_host/grpc_port (if set via __init__)
+        2. DjangoConfig.grpc.server.host/port (auto-detection)
+        3. Environment variables GRPC_HOST/GRPC_PORT
+        4. Defaults: localhost:50051
+
+        Returns:
+            Address string like "localhost:50051" or "grpc.example.com:50051"
+        """
+        import os
+
+        # Auto-detect from django-cfg config if not explicitly set
+        if self.config.grpc_port is None or self.config.grpc_host == "localhost":
             try:
                 from django_cfg.core.config import get_current_config
-                self.config.grpc_port = get_current_config().grpc.port
-                logger.debug(f"Auto-detected gRPC port: {self.config.grpc_port}")
+                config = get_current_config()
+
+                if config and hasattr(config, 'grpc') and config.grpc:
+                    # Get from config.grpc.server if available
+                    if hasattr(config.grpc, 'server') and config.grpc.server:
+                        server_cfg = config.grpc.server
+
+                        # Auto-detect port
+                        if self.config.grpc_port is None and hasattr(server_cfg, 'port'):
+                            self.config.grpc_port = server_cfg.port
+                            logger.debug(f"Auto-detected gRPC port from config: {self.config.grpc_port}")
+
+                        # Auto-detect host (if still default "localhost")
+                        if self.config.grpc_host == "localhost" and hasattr(server_cfg, 'host'):
+                            # Convert [::] (IPv6) to localhost for client connections
+                            host = server_cfg.host
+                            if host in ("[:]", "[::]", "0.0.0.0"):
+                                host = "localhost"
+                            self.config.grpc_host = host
+                            logger.debug(f"Auto-detected gRPC host from config: {self.config.grpc_host}")
+
+                    # Fallback to config.grpc.port (legacy format)
+                    elif self.config.grpc_port is None and hasattr(config.grpc, 'port'):
+                        self.config.grpc_port = config.grpc.port
+                        logger.debug(f"Auto-detected gRPC port from config.grpc.port: {self.config.grpc_port}")
+
             except Exception as e:
-                raise ValueError(
-                    f"grpc_port not configured and auto-detection failed: {e}. "
-                    "Either set it in config or pass to __init__"
-                )
+                logger.debug(f"Auto-detection from config failed: {e}")
+
+        # Fallback to environment variables
+        if self.config.grpc_host == "localhost":
+            env_host = os.getenv('GRPC_HOST')
+            if env_host:
+                self.config.grpc_host = env_host
+                logger.debug(f"Using GRPC_HOST from environment: {self.config.grpc_host}")
+
+        if self.config.grpc_port is None:
+            env_port = os.getenv('GRPC_PORT')
+            if env_port:
+                try:
+                    self.config.grpc_port = int(env_port)
+                    logger.debug(f"Using GRPC_PORT from environment: {self.config.grpc_port}")
+                except ValueError:
+                    logger.warning(f"Invalid GRPC_PORT environment variable: {env_port}")
+
+        # Final fallback to default port
+        if self.config.grpc_port is None:
+            self.config.grpc_port = 50051
+            logger.debug(f"Using default gRPC port: {self.config.grpc_port}")
+
         return f"{self.config.grpc_host}:{self.config.grpc_port}"
 
 

@@ -3,6 +3,7 @@ Public API views for client access without authentication.
 """
 
 from django.db import models
+from django_cfg.middleware.pagination import DefaultPagination
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
@@ -18,6 +19,9 @@ from ..serializers.public_serializers import (
 
 class PublicDocumentViewSet(viewsets.ReadOnlyModelViewSet):
     """Public document endpoints - read-only access for clients."""
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     serializer_class = PublicDocumentSerializer
     permission_classes = [AllowAny]
@@ -101,6 +105,9 @@ class PublicDocumentViewSet(viewsets.ReadOnlyModelViewSet):
 
 class PublicCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """Public category endpoints - read-only access for clients."""
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     queryset = DocumentCategory.objects.filter(is_public=True)
     serializer_class = PublicCategorySerializer

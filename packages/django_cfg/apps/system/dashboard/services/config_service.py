@@ -122,25 +122,21 @@ class ConfigService:
         if not config:
             return {'error': 'Config not available'}
 
-        # Use Pydantic's model_dump to get full JSON-serializable structure
+        # Use Pydantic's model_dump_for_django to get full structure
         # This includes all nested models (grpc, centrifugo, databases, etc.)
-        try:
-            config_dict = config.model_dump(
-                mode='json',  # JSON-serializable types
-                exclude={
-                    '_django_settings',  # Internal cache
-                    'secret_key',  # Security - don't expose
-                },
-                exclude_none=False,  # Keep None values to show what's not set
-                by_alias=False,
-            )
-            # Sanitize sensitive data in config
-            config_dict = ConfigService._sanitize_config_dict(config_dict)
-        except Exception as e:
-            # Expected: some config fields contain functions that can't be serialized
-            # Fallback to safe extraction which replaces functions with "<function: name>"
-            logger.debug(f"Using fallback extraction due to: {e}")
-            config_dict = ConfigService._safe_extract_config(config)
+        # Uses mode='python' which handles Python objects properly
+        config_dict = config.model_dump_for_django(
+            exclude={
+                '_django_settings',  # Internal cache
+                'secret_key',  # Security - don't expose
+            }
+        )
+
+        # Clean callable objects (replace functions with string representations)
+        config_dict = ConfigService._clean_callables(config_dict)
+
+        # Sanitize sensitive data in config
+        config_dict = ConfigService._sanitize_config_dict(config_dict)
 
         # Add some computed/helpful fields
         config_dict['_meta'] = {
@@ -208,6 +204,51 @@ class ConfigService:
         return settings_dict
 
     @staticmethod
+    def _clean_callables(data: Any) -> Any:
+        """
+        Recursively clean callable objects from data structure.
+
+        Replaces functions/callables with string representations like "<function: name>".
+        Ensures data is JSON-serializable for DRF.
+
+        Args:
+            data: Data structure to clean (dict, list, or primitive)
+
+        Returns:
+            Cleaned data structure
+        """
+        import json
+
+        # Handle callable/function
+        if callable(data) and not isinstance(data, type):
+            func_name = getattr(data, '__name__', 'unknown')
+            module = getattr(data, '__module__', '')
+            if module:
+                return f"<function: {module}.{func_name}>"
+            return f"<function: {func_name}>"
+
+        # Handle dict
+        if isinstance(data, dict):
+            return {key: ConfigService._clean_callables(value) for key, value in data.items()}
+
+        # Handle list/tuple
+        if isinstance(data, (list, tuple)):
+            cleaned = [ConfigService._clean_callables(item) for item in data]
+            return cleaned if isinstance(data, list) else tuple(cleaned)
+
+        # Handle Pydantic models that weren't dumped
+        if hasattr(data, 'model_dump'):
+            return ConfigService._clean_callables(data.model_dump(mode='python'))
+
+        # Try JSON serialization to check if safe
+        try:
+            json.dumps(data)
+            return data
+        except (TypeError, ValueError):
+            # Not JSON serializable - convert to string
+            return str(data)
+
+    @staticmethod
     def _sanitize_databases(databases: Dict) -> Dict:
         """Sanitize database passwords."""
         import copy
@@ -220,56 +261,6 @@ class ConfigService:
             sanitized[alias] = sanitized_config
         return sanitized
 
-    @staticmethod
-    def _safe_extract_config(config) -> Dict[str, Any]:
-        """
-        Safely extract config fields, skipping non-serializable values.
-
-        Used as fallback when model_dump fails.
-        """
-        import json
-        safe_dict = {}
-
-        # Get model fields
-        for field_name, field_info in config.model_fields.items():
-            # Skip secret_key
-            if field_name in ('secret_key', '_django_settings'):
-                continue
-
-            try:
-                value = getattr(config, field_name)
-
-                # Replace callables/functions with descriptive string
-                if callable(value) and not isinstance(value, type):
-                    func_name = getattr(value, '__name__', 'unknown')
-                    safe_dict[field_name] = f"<function: {func_name}>"
-                    continue
-
-                # Try to JSON serialize to check if safe
-                try:
-                    json.dumps(value)
-                    safe_dict[field_name] = value
-                except (TypeError, ValueError):
-                    # Try to convert nested Pydantic models
-                    if hasattr(value, 'model_dump'):
-                        try:
-                            safe_dict[field_name] = value.model_dump(mode='json')
-                        except:
-                            safe_dict[field_name] = str(value)
-                    elif isinstance(value, dict):
-                        # Try to dump dict items - recursively clean functions
-                        safe_dict[field_name] = ConfigService._safe_dump_dict(value)
-                    else:
-                        # Convert to string as last resort
-                        safe_dict[field_name] = str(value)
-            except Exception:
-                # Skip fields that can't be accessed
-                continue
-
-        # Sanitize the extracted config
-        safe_dict = ConfigService._sanitize_config_dict(safe_dict)
-
-        return safe_dict
 
     @staticmethod
     def _sanitize_config_dict(config_dict: Dict) -> Dict:
@@ -341,53 +332,3 @@ class ConfigService:
                     if isinstance(item, dict):
                         ConfigService._sanitize_dict_recursive(item)
 
-    @staticmethod
-    def _safe_dump_dict(d: Dict) -> Dict:
-        """Recursively dump dict, converting Pydantic models and replacing functions."""
-        import json
-        result = {}
-        for key, value in d.items():
-            try:
-                # Replace callables/functions with descriptive string
-                if callable(value) and not isinstance(value, type):
-                    func_name = getattr(value, '__name__', 'unknown')
-                    result[key] = f"<function: {func_name}>"
-                elif hasattr(value, 'model_dump'):
-                    result[key] = value.model_dump(mode='json')
-                elif isinstance(value, dict):
-                    result[key] = ConfigService._safe_dump_dict(value)
-                elif isinstance(value, list):
-                    # Handle lists that might contain functions or dicts
-                    result[key] = ConfigService._safe_dump_list(value)
-                else:
-                    # Test JSON serializability
-                    json.dumps(value)
-                    result[key] = value
-            except:
-                result[key] = str(value)
-        return result
-
-    @staticmethod
-    def _safe_dump_list(lst: list) -> list:
-        """Recursively dump list, converting Pydantic models and replacing functions."""
-        import json
-        result = []
-        for item in lst:
-            try:
-                # Replace callables/functions with descriptive string
-                if callable(item) and not isinstance(item, type):
-                    func_name = getattr(item, '__name__', 'unknown')
-                    result.append(f"<function: {func_name}>")
-                elif hasattr(item, 'model_dump'):
-                    result.append(item.model_dump(mode='json'))
-                elif isinstance(item, dict):
-                    result.append(ConfigService._safe_dump_dict(item))
-                elif isinstance(item, list):
-                    result.append(ConfigService._safe_dump_list(item))
-                else:
-                    # Test JSON serializability
-                    json.dumps(item)
-                    result.append(item)
-            except:
-                result.append(str(item))
-        return result

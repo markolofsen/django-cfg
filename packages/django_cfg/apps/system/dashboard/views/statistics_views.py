@@ -90,9 +90,10 @@ class StatisticsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             app_stats = stats_service.get_app_statistics()
 
             # Convert dict to list of {app_name, statistics} objects
+            # Only iterate over the 'apps' key, not the aggregated totals
             data = [
                 {'app_name': app_name, 'statistics': stats}
-                for app_name, stats in app_stats.items()
+                for app_name, stats in app_stats.get('apps', {}).items()
             ]
 
             return Response(data)

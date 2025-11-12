@@ -4,10 +4,11 @@ Support API Views
 REST API ViewSets for tickets and messages.
 """
 
+from django_cfg.middleware.pagination import DefaultPagination
+from django_cfg.mixins import ClientAPIMixin
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import viewsets
 
-from django_cfg.mixins import ClientAPIMixin
 from ..models import Message, Ticket
 from ..serializers import MessageCreateSerializer, MessageSerializer, TicketSerializer
 
@@ -19,6 +20,9 @@ class TicketViewSet(ClientAPIMixin, viewsets.ModelViewSet):
     Requires authenticated user (JWT or Session).
     Staff users can see all tickets, regular users see only their own.
     """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     serializer_class = TicketSerializer
     lookup_field = 'uuid'
@@ -44,6 +48,9 @@ class MessageViewSet(ClientAPIMixin, viewsets.ModelViewSet):
     Requires authenticated user (JWT or Session).
     Users can only access messages for their own tickets.
     """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     serializer_class = MessageSerializer
     lookup_field = 'uuid'

@@ -149,6 +149,13 @@ class DjangoCfgConfig(DjangoConfig):
 
     # === Django-RQ Background Tasks Configuration ===
     # MAGIC: redis_url is automatically used from DjangoConfig.redis_url! 🎉
+    # NOTE: Auto-tasks are ENABLED BY DEFAULT (v1.5.35+)
+    #       Production & Development:
+    #       - cleanup_old_jobs runs daily (removes jobs older than 7 days)
+    #       - cleanup_orphaned_job_keys runs weekly
+    #       Development Only:
+    #       - demo_scheduler_heartbeat runs every minute (verifies scheduler works)
+    #       To customize: enable_auto_cleanup=True, cleanup_max_age_days=7
     django_rq: Optional[DjangoRQConfig] = DjangoRQConfig(
         enabled=True,
         queues=[

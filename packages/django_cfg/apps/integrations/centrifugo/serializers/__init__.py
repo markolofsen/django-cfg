@@ -16,7 +16,12 @@ from .admin_api import (
 )
 from .channels import ChannelListSerializer, ChannelStatsSerializer
 from .health import HealthCheckSerializer
-from .publishes import PublishSerializer, RecentPublishesSerializer
+from .publishes import (
+    PublishSerializer,
+    RecentPublishesSerializer,
+    TimelineItemSerializer,
+    TimelineResponseSerializer,
+)
 from .stats import CentrifugoOverviewStatsSerializer
 
 __all__ = [
@@ -25,6 +30,8 @@ __all__ = [
     "CentrifugoOverviewStatsSerializer",
     "PublishSerializer",
     "RecentPublishesSerializer",
+    "TimelineItemSerializer",
+    "TimelineResponseSerializer",
     "ChannelStatsSerializer",
     "ChannelListSerializer",
     # Admin API (Centrifugo server)

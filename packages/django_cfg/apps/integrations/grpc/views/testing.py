@@ -8,6 +8,7 @@ examples, and test logs.
 import json
 
 from django_cfg.mixins import AdminAPIMixin
+from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -39,6 +40,9 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
 
+    # Pagination for logs endpoint
+    pagination_class = DefaultPagination
+
     # Required for GenericViewSet
     queryset = GRPCRequestLog.objects.none()  # Placeholder, actual queries in actions
     serializer_class = GRPCTestLogSerializer  # Default serializer for schema
@@ -67,7 +71,7 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             200: GRPCExamplesListSerializer,
         },
     )
-    @action(detail=False, methods=["get"], url_path="examples")
+    @action(detail=False, methods=["get"], url_path="examples", pagination_class=None)
     def examples(self, request):
         """Get example payloads for testing."""
         try:
@@ -124,7 +128,7 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses={
-            200: GRPCTestLogSerializer,
+            200: GRPCTestLogSerializer(many=True),  # many=True for paginated response
         },
     )
     @action(detail=False, methods=["get"], url_path="logs")
@@ -199,7 +203,7 @@ class GRPCTestingViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             500: {"description": "gRPC call failed"},
         },
     )
-    @action(detail=False, methods=["post"], url_path="call")
+    @action(detail=False, methods=["post"], url_path="call", pagination_class=None)
     def call_method(self, request):
         """
         Call a gRPC method interactively.

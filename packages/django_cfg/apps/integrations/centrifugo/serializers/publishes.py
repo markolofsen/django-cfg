@@ -17,7 +17,7 @@ class PublishSerializer(serializers.Serializer):
     status = serializers.CharField()
     wait_for_ack = serializers.BooleanField()
     acks_received = serializers.IntegerField()
-    acks_expected = serializers.IntegerField()
+    acks_expected = serializers.IntegerField(allow_null=True)
     duration_ms = serializers.FloatField(allow_null=True)
     created_at = serializers.DateTimeField()
     completed_at = serializers.DateTimeField(allow_null=True)
@@ -35,4 +35,27 @@ class RecentPublishesSerializer(BaseModel):
     has_more: bool = Field(default=False, description="Whether more results are available")
 
 
-__all__ = ["PublishSerializer", "RecentPublishesSerializer"]
+class TimelineItemSerializer(serializers.Serializer):
+    """Single timeline data point for DRF."""
+
+    timestamp = serializers.CharField()
+    count = serializers.IntegerField()
+    successful = serializers.IntegerField()
+    failed = serializers.IntegerField()
+    timeout = serializers.IntegerField()
+
+
+class TimelineResponseSerializer(serializers.Serializer):
+    """Timeline response with hourly/daily breakdown for DRF."""
+
+    timeline = TimelineItemSerializer(many=True)
+    period_hours = serializers.IntegerField()
+    interval = serializers.CharField()
+
+
+__all__ = [
+    "PublishSerializer",
+    "RecentPublishesSerializer",
+    "TimelineItemSerializer",
+    "TimelineResponseSerializer",
+]

@@ -2,20 +2,20 @@
 Statistics serializers for Centrifugo monitoring API.
 """
 
-from pydantic import BaseModel, Field
+from rest_framework import serializers
 
 
-class CentrifugoOverviewStatsSerializer(BaseModel):
+class CentrifugoOverviewStatsSerializer(serializers.Serializer):
     """Overview statistics for Centrifugo publishes."""
 
-    total: int = Field(description="Total publishes in period")
-    successful: int = Field(description="Successful publishes")
-    failed: int = Field(description="Failed publishes")
-    timeout: int = Field(description="Timeout publishes")
-    success_rate: float = Field(description="Success rate percentage")
-    avg_duration_ms: float = Field(description="Average duration in milliseconds")
-    avg_acks_received: float = Field(description="Average ACKs received")
-    period_hours: int = Field(description="Statistics period in hours")
+    total = serializers.IntegerField(help_text="Total publishes in period")
+    successful = serializers.IntegerField(help_text="Successful publishes")
+    failed = serializers.IntegerField(help_text="Failed publishes")
+    timeout = serializers.IntegerField(help_text="Timeout publishes")
+    success_rate = serializers.FloatField(help_text="Success rate percentage")
+    avg_duration_ms = serializers.FloatField(help_text="Average duration in milliseconds")
+    avg_acks_received = serializers.FloatField(help_text="Average ACKs received")
+    period_hours = serializers.IntegerField(help_text="Statistics period in hours")
 
 
 __all__ = ["CentrifugoOverviewStatsSerializer"]

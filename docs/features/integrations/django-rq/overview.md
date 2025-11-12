@@ -88,7 +88,8 @@ Django-RQ provides the **best developer experience** for background tasks in Dja
 - **Job dependencies**: Chain jobs with `.depends_on()`
 - **Job scheduling**: Schedule jobs with `enqueue_at()` or `enqueue_in()`
 - **RQ Scheduler**: Cron-like scheduling with `rq-scheduler`
-- **Job TTL**: Automatic cleanup of old results
+- **Automatic cleanup**: Built-in cleanup removes old jobs daily
+- **Job TTL**: Configurable TTL for finished and failed jobs
 - **Worker pools**: Multi-process workers with `rqworker-pool`
 
 ### 📊 Built-in Monitoring
@@ -110,7 +111,8 @@ Django-RQ provides the **best developer experience** for background tasks in Dja
 ### 🎯 Django-CFG Integration
 
 - **Zero-config**: Works out of the box with redis_url
-- **Automatic setup**: Queues and workers configured automatically
+- **Automatic maintenance**: Cleanup tasks run automatically in background
+- **Smart scheduling**: Deterministic job IDs prevent duplicate schedules
 - **Centralized config**: All settings in one place
 - **Environment-aware**: Different config per environment
 - **Built-in apps**: Integration with Knowbase, Payments, etc.

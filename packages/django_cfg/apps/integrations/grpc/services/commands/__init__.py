@@ -63,6 +63,15 @@ from .registry import (
     clear_registry,
     set_streaming_service,
 )
+from .helpers import (
+    CommandBuilder,
+    command,
+    command_with_timestamps,
+    HasStatus,
+    HasConfig,
+    HasTimestamps,
+    HasStatusAndTimestamps,
+)
 
 __version__ = "1.0.0"
 
@@ -84,6 +93,15 @@ __all__ = [
     'is_registered',
     'clear_registry',
     'set_streaming_service',
+
+    # Helpers - reduce boilerplate (NEW!)
+    'CommandBuilder',
+    'command',
+    'command_with_timestamps',
+    'HasStatus',
+    'HasConfig',
+    'HasTimestamps',
+    'HasStatusAndTimestamps',
 
     # Type variables
     'TCommand',

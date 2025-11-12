@@ -64,6 +64,7 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     'app_name': app_label,
                     'statistics': {
                         'name': app_data.get('name', ''),
+                        'models': app_data.get('models', []),
                         'total_records': app_data.get('total_records', 0),
                         'model_count': app_data.get('model_count', 0),
                     }

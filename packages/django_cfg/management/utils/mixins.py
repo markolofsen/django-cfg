@@ -47,12 +47,12 @@ class _BaseCommandWithMetadata(BaseCommand):
         self.logger = get_logger(command_name)
 
         # Log initialization in debug mode
-        self.logger.debug(
-            f"Command initialized: {self.command_name} "
-            f"(web_executable={self.web_executable}, "
-            f"requires_input={self.requires_input}, "
-            f"is_destructive={self.is_destructive})"
-        )
+        # self.logger.debug(
+        #     f"Command initialized: {self.command_name} "
+        #     f"(web_executable={self.web_executable}, "
+        #     f"requires_input={self.requires_input}, "
+        #     f"is_destructive={self.is_destructive})"
+        # )
 
 
 class SafeCommand(_BaseCommandWithMetadata):

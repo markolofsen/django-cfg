@@ -2,6 +2,7 @@
 Campaign views.
 """
 
+from django_cfg.middleware.pagination import DefaultPagination
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +19,9 @@ from ..serializers import (
 
 class NewsletterCampaignListView(generics.ListCreateAPIView):
     """List and create newsletter campaigns."""
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     queryset = NewsletterCampaign.objects.all()
     serializer_class = NewsletterCampaignSerializer

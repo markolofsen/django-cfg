@@ -12,7 +12,7 @@ import { z } from 'zod'
 export const UserProfileSchema = z.object({
   id: z.int(),
   user: z.int(),
-  user_info: z.record(z.string(), z.any()),
+  user_info: z.record(z.string(), z.record(z.string(), z.any())),
   website: z.url().optional(),
   github: z.string().max(100).optional(),
   twitter: z.string().max(100).optional(),

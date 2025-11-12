@@ -2,6 +2,7 @@
 Email views.
 """
 
+from django_cfg.middleware.pagination import DefaultPagination
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -114,6 +115,9 @@ class BulkEmailView(generics.CreateAPIView):
 
 class EmailLogListView(generics.ListAPIView):
     """List email logs."""
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
 
     queryset = EmailLog.objects.all()
     serializer_class = EmailLogSerializer

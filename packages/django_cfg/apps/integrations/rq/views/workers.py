@@ -4,6 +4,8 @@ Django-RQ Worker Management ViewSet.
 Provides REST API endpoints for monitoring RQ workers.
 """
 
+from datetime import datetime
+
 from django_cfg.mixins import AdminAPIMixin
 from django_cfg.modules.django_logging import get_logger
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -82,7 +84,8 @@ class WorkerViewSet(AdminAPIMixin, viewsets.ViewSet):
                         continue
 
                     # Convert Pydantic model to dict for DRF serializer
-                    worker_dict = worker_model.model_dump()
+                    # mode='json' converts datetime objects to ISO format strings
+                    worker_dict = worker_model.model_dump(mode='json')
 
                     # DRF serializer expects 'queues' as list, not comma-separated string
                     worker_dict['queues'] = worker_model.get_queue_list()
@@ -158,8 +161,8 @@ class WorkerViewSet(AdminAPIMixin, viewsets.ViewSet):
                     total_failed += worker_model.failed_job_count
                     total_working_time += worker_model.total_working_time
 
-                    # Convert to dict for serializer
-                    worker_dict = worker_model.model_dump()
+                    # Convert to dict for serializer (mode='json' converts datetime to ISO strings)
+                    worker_dict = worker_model.model_dump(mode='json')
                     worker_dict['queues'] = worker_model.get_queue_list()
                     worker_dict['current_job'] = worker_dict.pop('current_job_id')
                     workers_list.append(worker_dict)
