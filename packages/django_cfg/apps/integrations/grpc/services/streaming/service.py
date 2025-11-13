@@ -70,6 +70,7 @@ from .types import (
     ErrorHandler,
 )
 from .config import BidirectionalStreamingConfig, StreamingMode, PingStrategy
+from .response_registry import CommandResponseRegistry
 
 # Import setup_streaming_logger for auto-created logger
 from django_cfg.apps.integrations.grpc.utils.streaming_logger import setup_streaming_logger
@@ -177,6 +178,9 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
 
         # Active connections tracking
         self._active_connections: Dict[str, asyncio.Queue[TCommand]] = {}
+
+        # Response registry for synchronous command execution (RPC-style)
+        self._response_registry = CommandResponseRegistry()
 
         if self.config.enable_logging:
             self.logger.info(
@@ -465,7 +469,9 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         client_id: Optional[str] = None
         is_first_message = True
 
+        self.logger.info("🔥 _process_async_for: Starting async for loop")
         async for message in request_iterator:
+            self.logger.info(f"🔥 _process_async_for: Received message (first={is_first_message})")
             # Extract client ID from first message
             if is_first_message:
                 client_id = self.client_id_extractor(message)
@@ -479,13 +485,25 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
                     await self.on_connect(client_id)
 
             # Process message
-            await self.message_processor(client_id, message, output_queue)
+            self.logger.info(f"🔥 About to call message_processor")
+            self.logger.info(f"🔥 message_processor = {self.message_processor}")
+            self.logger.info(f"🔥 client_id = {client_id}")
+            self.logger.info(f"🔥 message type = {type(message)}")
+            self.logger.info(f"🔥 message = {message}")
+            try:
+                await self.message_processor(client_id, message, output_queue)
+                self.logger.info(f"🔥 message_processor completed successfully")
+            except Exception as e:
+                self.logger.error(f"🔥 message_processor raised exception: {e}", exc_info=True)
+                raise
 
             # ⚠️ CRITICAL: Yield to event loop!
             # Without this, the next message read blocks output loop from yielding.
             # This is the key pattern that makes bidirectional streaming work correctly.
             if self.config.should_yield_event_loop():
+                self.logger.info(f"🔥 Yielding to event loop (sleep 0)")
                 await asyncio.sleep(0)
+                self.logger.info(f"🔥 Returned from sleep, continuing loop...")
 
     async def _process_anext(
         self,

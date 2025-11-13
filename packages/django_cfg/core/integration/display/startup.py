@@ -41,8 +41,21 @@ class StartupDisplayManager(BaseDisplayManager):
     def display_minimal_info(self):
         """Display minimal startup info (NONE mode)."""
         try:
+            panel_style, env_emoji, env_color = self.get_environment_style()
+
+            # Display beautiful ASCII art banner
+            self.print_banner(style="default", color=env_color)
+            self.print_spacing()
+
             # Use reusable header utility
             info_text = self.create_header_text(show_update_check=True)
+
+            # Add startup time if available
+            startup_time = self._get_startup_time()
+            if startup_time:
+                info_text.append(" • ", style="dim")
+                info_text.append(f"⚡ {startup_time}", style="green")
+
             self.console.print(info_text)
         except Exception as e:
             print(f"❌ ERROR in display_minimal_info: {e}")
@@ -55,8 +68,18 @@ class StartupDisplayManager(BaseDisplayManager):
         try:
             panel_style, env_emoji, env_color = self.get_environment_style()
 
+            # Display beautiful ASCII art banner
+            self.print_banner(style="default", color=env_color)
+            self.print_spacing()
+
             # Create compact header using reusable utility
             header_text = self.create_header_text(show_update_check=False)
+
+            # Add startup time if available
+            startup_time = self._get_startup_time()
+            if startup_time:
+                header_text.append(" • ", style="dim")
+                header_text.append(f"⚡ {startup_time}", style="green")
 
             header_panel = self.create_panel(
                 header_text,
@@ -83,6 +106,10 @@ class StartupDisplayManager(BaseDisplayManager):
         try:
             version = self.get_version()
             panel_style, env_emoji, env_color = self.get_environment_style()
+
+            # Display beautiful ASCII art banner
+            self.print_banner(style="default", color=env_color)
+            self.print_spacing()
 
             # Get library info
             from django_cfg.config import (
@@ -112,6 +139,11 @@ class StartupDisplayManager(BaseDisplayManager):
                 info_table.add_row("🔍 Warnings Debug", "[yellow]Enabled (full traceback)[/yellow]")
 
             info_table.add_row("🏗️ Project", self.config.project_name)
+
+            # Add startup time if available
+            startup_time = self._get_startup_time()
+            if startup_time:
+                info_table.add_row("⚡ Startup Time", f"[green]{startup_time}[/green]")
 
             # Add environment source
             env_source = getattr(self.config, 'env_mode', 'default_fallback')
@@ -822,3 +854,16 @@ class StartupDisplayManager(BaseDisplayManager):
             print(f"❌ ERROR in _display_commands_breakdown: {e}")
             traceback.print_exc()
             exit(1)
+
+    def _get_startup_time(self) -> str:
+        """
+        Get formatted startup time from timer.
+
+        Returns:
+            Formatted startup time string or None
+        """
+        try:
+            from ..timing import get_django_startup_time
+            return get_django_startup_time()
+        except ImportError:
+            return None

@@ -1,8 +1,8 @@
 """
 Widget system for Django Admin.
 
-NOTE: EncryptedFieldWidget and EncryptedPasswordWidget are lazily imported
-to avoid circular import issues with unfold.widgets which accesses settings.DEBUG
+NOTE: EncryptedFieldWidget, EncryptedPasswordWidget, and JSONEditorWidget are lazily imported
+to avoid circular import issues with unfold.widgets and django-json-widget which access settings
 at module level.
 """
 
@@ -12,16 +12,17 @@ __all__ = [
     "WidgetRegistry",
     "EncryptedFieldWidget",
     "EncryptedPasswordWidget",
+    "JSONEditorWidget",
 ]
 
 
 def __getattr__(name):
     """
-    Lazy import for EncryptedFieldWidget and EncryptedPasswordWidget.
+    Lazy import for widgets that depend on Django settings.
 
-    These widgets depend on unfold.widgets which accesses settings.DEBUG
-    at import time, causing ImproperlyConfigured errors when importing
-    django_cfg outside of Django runtime (e.g., in api/config.py).
+    These widgets depend on libraries that access settings.DEBUG or other Django settings
+    at import time, causing ImproperlyConfigured errors when importing django_cfg
+    outside of Django runtime (e.g., in api/config.py).
 
     Using PEP 562 lazy imports allows these widgets to be imported only
     when actually needed (i.e., when Django is properly configured).
@@ -32,4 +33,7 @@ def __getattr__(name):
     elif name == "EncryptedPasswordWidget":
         from .encrypted_field_widget import EncryptedPasswordWidget
         return EncryptedPasswordWidget
+    elif name == "JSONEditorWidget":
+        from .json_editor_widget import JSONEditorWidget
+        return JSONEditorWidget
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

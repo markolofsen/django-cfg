@@ -111,12 +111,22 @@ class PydanticAdminMixin:
         # Fieldsets
         if config.fieldsets:
             cls.fieldsets = config.to_django_fieldsets()
-
         # Also convert fieldsets if they're defined directly in the class as FieldsetConfig objects
         elif hasattr(cls, 'fieldsets') and isinstance(cls.fieldsets, list):
             from ..config import FieldsetConfig
             if cls.fieldsets and isinstance(cls.fieldsets[0], FieldsetConfig):
                 cls.fieldsets = tuple(fs.to_django_fieldset() for fs in cls.fieldsets)
+
+        # Collect widget configurations from AdminConfig.widgets for custom JSON widget configs
+        cls._field_widget_configs = {}
+        if config.widgets:
+            for widget_config in config.widgets:
+                if hasattr(widget_config, 'field') and hasattr(widget_config, 'to_widget_kwargs'):
+                    field_name = widget_config.field
+                    cls._field_widget_configs[field_name] = widget_config.to_widget_kwargs()
+                    logger.debug(f"Registered widget config for field '{field_name}' from AdminConfig.widgets")
+                else:
+                    logger.warning(f"Invalid widget config in AdminConfig.widgets: {widget_config}")
 
         # Actions
         if config.actions:
@@ -557,12 +567,53 @@ class PydanticAdminMixin:
         """
         Override form field for specific database field types.
 
-        Automatically detects and customizes encrypted fields from django-crypto-fields.
+        Automatically detects and customizes:
+        - JSON fields (applies django-json-widget for editable fields only)
+        - Encrypted fields from django-crypto-fields
+
         Respects the show_encrypted_fields_as_plain_text setting from AdminConfig.
         Uses custom widgets with copy-to-clipboard functionality.
         """
-        # Check if this is an EncryptedTextField or EncryptedCharField
         field_class_name = db_field.__class__.__name__
+
+        # Auto-apply JSONEditorWidget for editable JSON fields (not readonly)
+        if field_class_name == 'JSONField':
+            # Check if field is editable (not in readonly_fields)
+            is_readonly = db_field.name in self.readonly_fields
+
+            # Only apply for editable fields
+            if not is_readonly:
+                try:
+                    # Use our custom JSONEditorWidget with Unfold theme support
+                    from ..widgets import JSONEditorWidget
+
+                    # Get field-specific config from AdminConfig.widgets
+                    field_widget_config = getattr(self.__class__, '_field_widget_configs', {}).get(db_field.name, {})
+
+                    # Default widget settings with Unfold theme support
+                    widget_kwargs = {
+                        'mode': 'code',
+                        'height': '400px',
+                        'options': {
+                            'modes': ['code', 'tree', 'view'],
+                            # Unfold dark theme colors
+                            'mainMenuBar': True,
+                            'navigationBar': False,
+                        }
+                    }
+
+                    # Override with field-specific config
+                    if field_widget_config:
+                        widget_kwargs.update(field_widget_config)
+                        logger.debug(f"Applied custom JSONWidget config for '{db_field.name}': {field_widget_config}")
+
+                    # Apply JSONEditorWidget (overrides Unfold's UnfoldAdminTextareaWidget)
+                    kwargs['widget'] = JSONEditorWidget(**widget_kwargs)
+                    logger.debug(f"Auto-applied JSONEditorWidget to editable field '{db_field.name}'")
+                except ImportError:
+                    logger.warning("django-json-widget not available, using default textarea")
+
+        # Check if this is an EncryptedTextField or EncryptedCharField
         if 'Encrypted' in field_class_name and ('TextField' in field_class_name or 'CharField' in field_class_name):
             from django import forms
             from ..widgets import EncryptedFieldWidget, EncryptedPasswordWidget

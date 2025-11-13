@@ -55,11 +55,14 @@ from .config import (
     FieldConfig,
     FieldsetConfig,
     ImageField,
+    JSONWidgetConfig,
     MarkdownField,
     ResourceConfig,
     ShortUUIDField,
     TextField,
+    TextWidgetConfig,
     UserField,
+    WidgetConfig,
 )
 
 # Widget registry
@@ -110,7 +113,7 @@ __all__ = [
     "ResourceConfig",
     "BackgroundTaskConfig",
     "DocumentationConfig",
-    # Specialized Field Types
+    # Specialized Field Types (for display_fields in list_display)
     "BadgeField",
     "BooleanField",
     "CurrencyField",
@@ -120,6 +123,10 @@ __all__ = [
     "ShortUUIDField",
     "TextField",
     "UserField",
+    # Widget Configs (for AdminConfig.widgets - form fields)
+    "WidgetConfig",
+    "JSONWidgetConfig",
+    "TextWidgetConfig",
     # Advanced
     "WidgetRegistry",
     # Icons

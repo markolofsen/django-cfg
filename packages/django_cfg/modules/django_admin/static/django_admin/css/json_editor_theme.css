@@ -1,0 +1,100 @@
+/**
+ * JSONEditor Unfold Theme Integration
+ * Automatically switches between light and dark themes based on Unfold's theme
+ */
+
+/* CSS Variables for theming */
+.jsoneditor {
+    /* Light theme (default) */
+    --jsoneditor-bg-color: #ffffff;
+    --jsoneditor-text-color: #1f2937;
+    --jsoneditor-border-color: #e5e7eb;
+    --jsoneditor-hover-bg: #f9fafb;
+    --jsoneditor-select-bg: #dbeafe;
+    --jsoneditor-menu-bg: #f9fafb;
+}
+
+/* Dark theme (when .dark class is active on parent) */
+:is(.dark .jsoneditor) {
+    --jsoneditor-bg-color: #1f2937;
+    --jsoneditor-text-color: #f9fafb;
+    --jsoneditor-border-color: #374151;
+    --jsoneditor-hover-bg: #374151;
+    --jsoneditor-select-bg: #1e40af;
+    --jsoneditor-menu-bg: #111827;
+}
+
+/* Apply variables to JSONEditor elements */
+.jsoneditor {
+    background-color: var(--jsoneditor-bg-color) !important;
+    border-color: var(--jsoneditor-border-color) !important;
+    color: var(--jsoneditor-text-color) !important;
+}
+
+.jsoneditor-menu {
+    background-color: var(--jsoneditor-menu-bg) !important;
+    border-bottom-color: var(--jsoneditor-border-color) !important;
+}
+
+.jsoneditor-tree {
+    background-color: var(--jsoneditor-bg-color) !important;
+    color: var(--jsoneditor-text-color) !important;
+}
+
+.jsoneditor-field,
+.jsoneditor-value {
+    color: var(--jsoneditor-text-color) !important;
+}
+
+.jsoneditor-tree button:hover,
+.jsoneditor-tree button:focus {
+    background-color: var(--jsoneditor-hover-bg) !important;
+}
+
+.jsoneditor-selected,
+.jsoneditor-selected:hover {
+    background-color: var(--jsoneditor-select-bg) !important;
+}
+
+/* Code mode textarea */
+.jsoneditor-text,
+.jsoneditor textarea {
+    background-color: var(--jsoneditor-bg-color) !important;
+    color: var(--jsoneditor-text-color) !important;
+}
+
+/* Buttons and controls */
+.jsoneditor-mode-form,
+.jsoneditor-mode-view,
+.jsoneditor-mode-code,
+.jsoneditor-mode-tree {
+    background-color: var(--jsoneditor-menu-bg) !important;
+    color: var(--jsoneditor-text-color) !important;
+    border-color: var(--jsoneditor-border-color) !important;
+}
+
+/* Search box */
+.jsoneditor-search input {
+    background-color: var(--jsoneditor-bg-color) !important;
+    color: var(--jsoneditor-text-color) !important;
+    border-color: var(--jsoneditor-border-color) !important;
+}
+
+/* Scrollbar styling for dark mode */
+:is(.dark .jsoneditor) ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+:is(.dark .jsoneditor) ::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+:is(.dark .jsoneditor) ::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+}
+
+:is(.dark .jsoneditor) ::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}

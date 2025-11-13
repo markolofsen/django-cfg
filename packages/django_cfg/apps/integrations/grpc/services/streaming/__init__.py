@@ -73,6 +73,12 @@ from .config import (
     ConfigPresets,
 )
 
+# Response Registry (for synchronous RPC-style commands)
+from .response_registry import (
+    CommandResponseRegistry,
+    response_registry,
+)
+
 # Service - lazy import to avoid grpc dependency
 def __getattr__(name):
     """Lazy import BidirectionalStreamingService to avoid grpc dependency."""
@@ -111,6 +117,10 @@ __all__ = [
     # Configuration
     'BidirectionalStreamingConfig',
     'ConfigPresets',
+
+    # Response Registry
+    'CommandResponseRegistry',
+    'response_registry',
 
     # Service
     'BidirectionalStreamingService',

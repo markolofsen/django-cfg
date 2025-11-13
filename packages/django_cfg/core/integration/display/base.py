@@ -157,6 +157,28 @@ class BaseDisplayManager:
         for _ in range(lines):
             self.console.print()
 
+    def print_banner(self, style: str = "compact", color: str = None) -> None:
+        """
+        Print Django CFG ASCII art banner.
+
+        Args:
+            style: Banner style (compact, simple, slant, standard, block, modern, dots)
+            color: Banner color (defaults to environment color)
+        """
+        from .banner import print_banner as _print_banner
+
+        # Use environment color if not specified
+        if color is None:
+            _, _, env_color = self.get_environment_style()
+            color = env_color
+
+        _print_banner(
+            console=self.console,
+            style=style,
+            color=color,
+            with_panel=False,
+        )
+
     def create_header_text(self, show_update_check: bool = True) -> Text:
         """
         Create reusable header text for startup display.
@@ -176,7 +198,7 @@ class BaseDisplayManager:
         panel_style, env_emoji, env_color = self.get_environment_style()
 
         header_text = Text()
-        header_text.append(f"{env_emoji} Django CFG ", style="bold")
+        # header_text.append(f"{env_emoji} Django CFG ", style="bold")
         header_text.append(f"v{version}", style="cyan")
         header_text.append(" • ", style="dim")
         header_text.append(f"{self.config.env_mode}", style=env_color)

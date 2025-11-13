@@ -22,6 +22,13 @@ services:
       - "../projects/django:/app:rw"
     networks:
       - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          memory: 256M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
       interval: 30s
@@ -196,6 +203,13 @@ services:
       - .env.prod
     environment:
       NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
     networks:
       - dokploy-network
     labels:
@@ -216,6 +230,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env.prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
     networks:
       - dokploy-network
     labels:

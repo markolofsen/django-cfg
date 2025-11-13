@@ -4,18 +4,15 @@ Universal Streaming Commands
 Provides reusable command client architecture for bidirectional gRPC streaming services.
 
 Quick Start:
-    1. Create your command client:
+    1. Create your command client (just declare class attributes):
         from django_cfg.apps.integrations.grpc.services.commands.base import StreamingCommandClient
-        from your_app.grpc import service_pb2 as pb2
+        from your_app.grpc import service_pb2 as pb2, service_pb2_grpc
 
         class MyCommandClient(StreamingCommandClient[pb2.Command]):
-            async def _send_via_grpc(self, command):
-                # Implement gRPC call
-                async with grpc.aio.insecure_channel(self.get_grpc_address()) as channel:
-                    stub = service_pb2_grpc.YourServiceStub(channel)
-                    request = pb2.SendCommandRequest(client_id=self.client_id, command=command)
-                    response = await stub.SendCommandToClient(request)
-                    return response.success
+            stub_class = service_pb2_grpc.YourServiceStub
+            request_class = pb2.SendCommandRequest
+            rpc_method_name = "SendCommandToClient"
+            # That's it! Base class handles channel, stub, request, errors
 
     2. Register your streaming service:
         from django_cfg.apps.integrations.grpc.services.commands.registry import register_streaming_service
@@ -72,6 +69,9 @@ from .helpers import (
     HasTimestamps,
     HasStatusAndTimestamps,
 )
+from .viewset_mixin import (
+    StreamingCommandViewSetMixin,
+)
 
 __version__ = "1.0.0"
 
@@ -102,6 +102,9 @@ __all__ = [
     'HasConfig',
     'HasTimestamps',
     'HasStatusAndTimestamps',
+
+    # DRF ViewSet helpers
+    'StreamingCommandViewSetMixin',
 
     # Type variables
     'TCommand',

@@ -138,87 +138,25 @@ class ExampleCommandClient(StreamingCommandClient):  # [pb2.Command]
         )
         self.model = model
 
-    async def _send_via_grpc(self, command) -> bool:  # command: pb2.Command
-        """
-        Send command via gRPC RPC (cross-process mode).
+    # OPTION 1: Use class attributes (RECOMMENDED - simplest approach)
+    # Just declare these and base class handles everything:
+    #
+    # stub_class = pb2_grpc.YourServiceStub
+    # request_class = pb2.SendCommandRequest
+    # rpc_method_name = "SendCommandToClient"
+    # client_id_field = "client_id"  # default value, can omit
+    # command_field = "command"      # default value, can omit
+    #
+    # That's it! Base class will:
+    # - Create gRPC channel with standard options
+    # - Create stub instance
+    # - Build request message
+    # - Call RPC method
+    # - Handle errors and logging
 
-        This implements the abstract method from StreamingCommandClient.
-
-        Args:
-            command: Protobuf command message (pb2.Command)
-
-        Returns:
-            True if RPC succeeded, False otherwise
-
-        Implementation guide:
-            1. Import grpc and your stubs at the top of the file:
-               import grpc
-               from your_app.grpc.generated import your_service_pb2_grpc as pb2_grpc
-               from your_app.grpc.generated import your_service_pb2 as pb2
-
-            2. Create gRPC channel
-            3. Create stub instance
-            4. Create request message with client_id and command
-            5. Call SendCommandToClient RPC
-            6. Return response.success
-        """
-        # This is a template - you need to implement with your actual protobuf types
-
-        logger.warning(
-            "Example implementation: _send_via_grpc is not implemented. "
-            "Please copy this file and implement with your actual protobuf types."
-        )
-
-        # Example implementation (uncomment and adapt):
-        #
-        # try:
-        #     import grpc
-        #
-        #     async with grpc.aio.insecure_channel(
-        #         self.get_grpc_address(),
-        #         options=[
-        #             ('grpc.keepalive_time_ms', 10000),
-        #             ('grpc.keepalive_timeout_ms', 5000),
-        #         ]
-        #     ) as channel:
-        #         stub = pb2_grpc.YourServiceStub(channel)
-        #
-        #         # Create request with your service's message structure
-        #         request = pb2.SendCommandRequest(
-        #             client_id=self.client_id,
-        #             command=command,
-        #         )
-        #
-        #         # Call your service's SendCommandToClient RPC
-        #         response = await stub.SendCommandToClient(
-        #             request,
-        #             timeout=self.config.call_timeout
-        #         )
-        #
-        #         if response.success:
-        #             logger.debug(f"Command sent to {self.client_id} via gRPC")
-        #             return True
-        #         else:
-        #             logger.warning(
-        #                 f"Command failed for {self.client_id}: {response.message}"
-        #             )
-        #             return False
-        #
-        # except grpc.RpcError as e:
-        #     logger.error(
-        #         f"gRPC error sending command to {self.client_id}: "
-        #         f"{e.code()} - {e.details()}",
-        #         exc_info=True
-        #     )
-        #     return False
-        # except Exception as e:
-        #     logger.error(
-        #         f"Error sending command to {self.client_id}: {e}",
-        #         exc_info=True
-        #     )
-        #     return False
-
-        return False
+    # OPTION 2: Override _send_via_grpc() (for custom logic only)
+    # Only needed if you need custom behavior beyond standard pattern
+    pass
 
 
 __all__ = [

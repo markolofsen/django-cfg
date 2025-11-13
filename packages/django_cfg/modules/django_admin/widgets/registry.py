@@ -250,3 +250,56 @@ def _render_short_uuid(obj: Any, field: str, config: Dict[str, Any]) -> str:
 
 # ShortUUID widget
 WidgetRegistry.register("short_uuid", _render_short_uuid)
+
+
+def _render_json_editor(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """
+    Render JSON field for display (list view and readonly).
+
+    Uses JSONEditorWidget for consistent rendering across editable and readonly contexts.
+    """
+    from django.utils.safestring import mark_safe
+    import json
+
+    # Get JSON value
+    json_value = getattr(obj, field, None)
+
+    if not json_value:
+        return config.get('empty_value', "—")
+
+    # Try to format JSON nicely
+    try:
+        if isinstance(json_value, str):
+            json_obj = json.loads(json_value)
+        else:
+            json_obj = json_value
+
+        # Get configuration
+        indent = config.get('indent', 2)
+        max_display_length = config.get('max_display_length', 100)
+        formatted_json = json.dumps(json_obj, indent=indent, ensure_ascii=False)
+
+        # For compact display (list view or short JSON)
+        if len(formatted_json) <= max_display_length:
+            html = f'<pre style="margin: 0; padding: 4px; background: #f5f5f5; border-radius: 4px; font-size: 0.85em; max-width: 400px; overflow: auto;">{formatted_json}</pre>'
+            return mark_safe(html)
+
+        # For detailed display - show preview with count
+        if isinstance(json_obj, dict):
+            key_count = len(json_obj)
+            html = f'<code title="{formatted_json}">{{{key_count} keys}}</code>'
+        elif isinstance(json_obj, list):
+            item_count = len(json_obj)
+            html = f'<code title="{formatted_json}">[{item_count} items]</code>'
+        else:
+            preview = formatted_json[:max_display_length] + "..."
+            html = f'<code title="{formatted_json}">{preview}</code>'
+
+        return mark_safe(html)
+
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        return mark_safe(f"<code>Invalid JSON: {str(json_value)[:100]}</code>")
+
+
+# JSON Editor widget
+WidgetRegistry.register("json_editor", _render_json_editor)

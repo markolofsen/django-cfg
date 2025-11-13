@@ -45,6 +45,15 @@ def print_ngrok_tunnel_info(tunnel_url: str):
 
 from .commands_collector import get_all_commands, get_command_count, get_commands_with_descriptions
 from .version_checker import get_current_version, get_latest_version, get_version_info
+from .timing import (
+    ServerStartupTimer,
+    start_django_timer,
+    start_grpc_timer,
+    get_django_timer,
+    get_grpc_timer,
+    get_django_startup_time,
+    get_grpc_startup_time,
+)
 
 __all__ = [
     "add_django_cfg_urls",
@@ -58,4 +67,12 @@ __all__ = [
     "get_all_commands",
     "get_command_count",
     "get_commands_with_descriptions",
+    # Timing utilities
+    "ServerStartupTimer",
+    "start_django_timer",
+    "start_grpc_timer",
+    "get_django_timer",
+    "get_grpc_timer",
+    "get_django_startup_time",
+    "get_grpc_startup_time",
 ]
