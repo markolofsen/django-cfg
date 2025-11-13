@@ -35,11 +35,21 @@ class GRPCDisplayManager(BaseDisplayManager):
             registered_services: Number of registered services
             service_names: List of registered service names (optional)
         """
+        # Display beautiful ASCII art banner for gRPC
+        self.print_banner(style="default", color="magenta")
+        self.print_spacing()
+
         # Display header with gRPC indicator
         header_text = self.create_header_text(show_update_check=True)
         # Add gRPC server indicator
         header_text.append(" • ", style="dim")
         header_text.append("⚡ gRPC Server", style="magenta bold")
+
+        # Add startup time if available
+        startup_time = self._get_grpc_startup_time()
+        if startup_time:
+            header_text.append(" • ", style="dim")
+            header_text.append(f"⚡ {startup_time}", style="green")
 
         self.console.print(header_text)
         self.print_spacing()
@@ -67,6 +77,11 @@ class GRPCDisplayManager(BaseDisplayManager):
             else "[yellow]0 (no services registered)[/yellow]"
         )
         server_table.add_row("📦 Services", services_text)
+
+        # Add startup time
+        startup_time = self._get_grpc_startup_time()
+        if startup_time:
+            server_table.add_row("⚡ Startup Time", f"[green]{startup_time}[/green]")
 
         # Create server panel
         server_panel = self.create_panel(
@@ -139,6 +154,19 @@ class GRPCDisplayManager(BaseDisplayManager):
             header_text.append("📦 no services", style="yellow")
 
         self.console.print(header_text)
+
+    def _get_grpc_startup_time(self) -> str:
+        """
+        Get formatted gRPC startup time from timer.
+
+        Returns:
+            Formatted startup time string or None
+        """
+        try:
+            from ..timing import get_grpc_startup_time
+            return get_grpc_startup_time()
+        except ImportError:
+            return None
 
 
 __all__ = ["GRPCDisplayManager"]

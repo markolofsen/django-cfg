@@ -210,6 +210,10 @@ class Command(BaseCommand):
 
     async def _async_main(self, *args, **options):
         """Main async server loop."""
+        # Start gRPC startup timer
+        from django_cfg.core.integration.timing import start_grpc_timer
+        start_grpc_timer()
+
         # Setup streaming logger for detailed gRPC logging
         self.streaming_logger = setup_streaming_logger(
             name='grpc_rungrpc',

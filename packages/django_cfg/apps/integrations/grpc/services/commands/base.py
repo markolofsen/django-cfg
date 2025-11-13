@@ -31,6 +31,8 @@ try:
 except ImportError:
     GRPC_AVAILABLE = False
 
+from ..streaming.response_registry import CommandResponseRegistry
+
 logger = logging.getLogger(__name__)
 
 # Generic type for protobuf command messages
@@ -68,6 +70,13 @@ class StreamingCommandClient(Generic[TCommand], ABC):
     Type Parameters:
         TCommand: The protobuf message type for commands
 
+    Class Attributes (for cross-process mode):
+        stub_class: gRPC stub class (e.g., YourServiceStub)
+        request_class: Request message class (e.g., SendCommandRequest)
+        rpc_method_name: RPC method name (e.g., "SendCommandToClient")
+        client_id_field: Field name for client_id in request (default: "client_id")
+        command_field: Field name for command in request (default: "command")
+
     Example:
         # Same-process mode
         from your_app.grpc.services.registry import get_streaming_service
@@ -78,12 +87,24 @@ class StreamingCommandClient(Generic[TCommand], ABC):
             streaming_service=service
         )
 
-        # Cross-process mode
+        # Cross-process mode (with class attributes)
+        class YourCommandClient(StreamingCommandClient[pb2.Command]):
+            stub_class = pb2_grpc.YourServiceStub
+            request_class = pb2.SendCommandRequest
+            rpc_method_name = "SendCommandToClient"
+
         client = YourCommandClient(
             client_id="client-123",
             grpc_port=50051
         )
     """
+
+    # Class attributes for default gRPC implementation
+    stub_class: Optional[type] = None
+    request_class: Optional[type] = None
+    rpc_method_name: Optional[str] = None
+    client_id_field: str = "client_id"
+    command_field: str = "command"
 
     def __init__(
         self,
@@ -115,6 +136,25 @@ class StreamingCommandClient(Generic[TCommand], ABC):
 
         # Determine mode
         self._is_same_process = streaming_service is not None
+
+        # Response registry for synchronous command execution (RPC-style)
+        # Use service's registry in same-process mode, create own in cross-process
+        if self._is_same_process and hasattr(streaming_service, '_response_registry'):
+            self._response_registry = streaming_service._response_registry
+            logger.info(
+                f"✅ Client {client_id[:8]}... using SERVICE registry: {id(self._response_registry)} "
+                f"(streaming_service={id(streaming_service)})"
+            )
+        else:
+            # Cross-process mode: sync execution not typically needed (use RPC)
+            # But create registry anyway for consistency
+            self._response_registry = CommandResponseRegistry()
+            logger.warning(
+                f"⚠️  Client {client_id[:8]}... created NEW registry: {id(self._response_registry)} "
+                f"(same_process={self._is_same_process}, "
+                f"streaming_service={streaming_service}, "
+                f"has_registry={hasattr(streaming_service, '_response_registry') if streaming_service else 'N/A'})"
+            )
 
         logger.debug(
             f"Initialized {self.__class__.__name__} for client_id={client_id}, "
@@ -180,8 +220,10 @@ class StreamingCommandClient(Generic[TCommand], ABC):
         """
         Send command via gRPC RPC (cross-process mode).
 
-        This method should be overridden in subclasses to implement
-        the actual gRPC call with service-specific stub and request.
+        Default implementation uses class attributes (stub_class, request_class, rpc_method_name).
+        Subclasses can either:
+        1. Set class attributes (recommended for standard patterns)
+        2. Override this method (for custom logic)
 
         Args:
             command: Protobuf command message
@@ -190,13 +232,159 @@ class StreamingCommandClient(Generic[TCommand], ABC):
             True if RPC succeeded, False otherwise
 
         Raises:
-            NotImplementedError: Must be implemented in subclass
+            NotImplementedError: If class attributes not set and not overridden
             RuntimeError: If gRPC is not available
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement _send_via_grpc() "
-            "for cross-process communication. See EXAMPLES.md for reference."
-        )
+        # Check if class attributes are defined
+        if not all([self.stub_class, self.request_class, self.rpc_method_name]):
+            raise NotImplementedError(
+                f"{self.__class__.__name__} must either:\n"
+                f"1. Set class attributes: stub_class, request_class, rpc_method_name\n"
+                f"2. Override _send_via_grpc() method\n"
+                f"See EXAMPLES.md for reference."
+            )
+
+        if not GRPC_AVAILABLE:
+            raise RuntimeError("grpcio not installed. Install with: pip install grpcio")
+
+        try:
+            # Create gRPC channel with standard options
+            async with grpc.aio.insecure_channel(
+                self.get_grpc_address(),
+                options=[
+                    ('grpc.keepalive_time_ms', 10000),
+                    ('grpc.keepalive_timeout_ms', 5000),
+                    ('grpc.max_receive_message_length', 100 * 1024 * 1024),  # 100MB
+                ]
+            ) as channel:
+                # Create stub instance
+                stub = self.stub_class(channel)
+
+                # Build request message dynamically
+                request_kwargs = {
+                    self.client_id_field: self.client_id,
+                    self.command_field: command,
+                }
+                request = self.request_class(**request_kwargs)
+
+                # Call RPC method by name
+                rpc_method = getattr(stub, self.rpc_method_name)
+                response = await rpc_method(request, timeout=self.config.call_timeout)
+
+                # Assume response has 'success' field
+                if hasattr(response, 'success'):
+                    success = response.success
+                    if success:
+                        logger.debug(f"Command sent to {self.client_id} via gRPC")
+                    else:
+                        message = getattr(response, 'message', 'Unknown error')
+                        logger.warning(f"Command failed for {self.client_id}: {message}")
+                    return success
+                else:
+                    # If no success field, assume success
+                    logger.debug(f"Command sent to {self.client_id} via gRPC")
+                    return True
+
+        except grpc.RpcError as e:
+            logger.error(
+                f"gRPC error sending command to {self.client_id}: "
+                f"{e.code()} - {e.details()}",
+                exc_info=True
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                f"Error sending command to {self.client_id}: {e}",
+                exc_info=True
+            )
+            return False
+
+    async def send_command_and_wait(
+        self,
+        command: TCommand,
+        timeout: float = 5.0,
+        command_id_field: str = "command_id"
+    ):
+        """
+        Send command and wait for response synchronously (RPC-style).
+
+        This method provides RPC-style synchronous command execution:
+        1. Register future in response_registry with command_id
+        2. Send command to client via streaming connection
+        3. Wait for response with timeout
+        4. Return response to caller
+
+        Args:
+            command: Protobuf command message
+            timeout: Timeout in seconds to wait for response (default: 5.0)
+            command_id_field: Field name for command ID in protobuf (default: "command_id")
+
+        Returns:
+            Response protobuf with execution result
+
+        Raises:
+            CommandError: If command doesn't have command_id field or it's empty
+            ClientNotConnectedError: If client is not connected
+            CommandTimeoutError: If response not received within timeout
+
+        Example:
+            >>> from django_cfg.apps.integrations.grpc.services.commands.helpers import CommandBuilder
+            >>>
+            >>> client = YourCommandClient(client_id, streaming_service=service)
+            >>> command = CommandBuilder.create(pb2.Command, YourConverter)
+            >>> command.start.CopyFrom(pb2.StartCommand())
+            >>>
+            >>> response = await client.send_command_and_wait(command, timeout=10.0)
+            >>> print(f"Response: {response}")
+        """
+        # Extract command_id from command
+        if not hasattr(command, command_id_field):
+            raise CommandError(
+                f"Command must have '{command_id_field}' field. "
+                f"Use CommandBuilder.create() or set command_id_field parameter."
+            )
+
+        command_id = getattr(command, command_id_field)
+        if not command_id:
+            raise CommandError(
+                f"Command {command_id_field} must be set (use CommandBuilder.create)"
+            )
+
+        # Register future in response registry
+        future = await self._response_registry.register_command(command_id, timeout=timeout)
+
+        try:
+            # Send command to client
+            success = await self._send_command(command)
+
+            if not success:
+                # Cancel future and cleanup
+                await self._response_registry.cancel_command(command_id, "Client not connected")
+                raise ClientNotConnectedError(f"Client {self.client_id} not connected")
+
+            logger.info(f"⏳ Waiting for response to command {command_id} (timeout: {timeout}s)")
+
+            # Wait for response
+            try:
+                response = await asyncio.wait_for(future, timeout=timeout)
+                logger.info(f"✅ Received response to command {command_id}")
+                return response
+
+            except asyncio.TimeoutError:
+                # Cleanup expired command
+                await self._response_registry.cancel_command(command_id, "Timeout")
+                raise CommandTimeoutError(
+                    f"Command {command_id} timeout after {timeout}s (client: {self.client_id})"
+                )
+
+        except (ClientNotConnectedError, CommandTimeoutError):
+            # Re-raise expected exceptions
+            raise
+
+        except Exception as e:
+            # Unexpected error - cleanup and wrap
+            await self._response_registry.cancel_command(command_id, f"Error: {e}")
+            raise CommandError(f"Failed to send command {command_id}: {e}") from e
 
     def is_same_process(self) -> bool:
         """Check if running in same-process mode."""

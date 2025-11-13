@@ -241,6 +241,57 @@ config = AdminConfig(
 The admin automatically applies `select_related` and `prefetch_related` to all queries. No need to override `get_queryset()`!
 :::
 
+## Working with JSON Fields
+
+Automatically get a rich JSON editor for all JSONField models:
+
+```python
+from django.db import models
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    JSONWidgetConfig,
+)
+
+# Model with JSON fields
+class BotConfig(models.Model):
+    name = models.CharField(max_length=100)
+    settings = models.JSONField(default=dict)  # Auto-applied JSON editor
+    schema = models.JSONField(null=True)
+
+# Configure JSON widgets
+config = AdminConfig(
+    model=BotConfig,
+
+    # Customize JSON editor per field
+    widgets=[
+        JSONWidgetConfig(
+            field="settings",
+            mode="tree",  # Interactive tree editor
+            height="400px",
+        ),
+        JSONWidgetConfig(
+            field="schema",
+            mode="view",  # Read-only display
+            height="500px",
+            show_copy_button=True,  # Copy button for easy copying
+        ),
+    ],
+
+    fieldsets=[
+        FieldsetConfig(
+            title="Configuration",
+            fields=["name", "settings", "schema"],
+        ),
+    ],
+)
+```
+
+:::tip[JSON Widget Modes]
+- **tree** - Interactive tree view for editing complex JSON
+- **code** - Text editor with syntax highlighting
+- **view** - Read-only display with copy button
+:::
+
 ## Common Patterns
 
 ### User Admin

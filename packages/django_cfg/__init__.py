@@ -32,13 +32,21 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "1.5.36"
+__version__ = "1.5.37"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
 # Will also check config.debug_warnings later when config is loaded
 from .core.debug import setup_warnings_debug
 setup_warnings_debug()
+
+# Start Django startup timer early (at module import time)
+try:
+    from .core.integration.timing import start_django_timer, get_django_timer
+    if not get_django_timer():
+        start_django_timer()
+except ImportError:
+    pass
 
 # Import registry for organized lazy loading
 from .config import LIB_NAME

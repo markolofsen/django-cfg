@@ -12,6 +12,30 @@ class FieldsetConfig(BaseModel):
     Fieldset configuration.
 
     Groups related fields together in admin detail view.
+
+    Example:
+        FieldsetConfig(
+            title="Basic Info",
+            fields=["id", "name", "description"],
+        )
+
+        FieldsetConfig(
+            title="Advanced Settings",
+            fields=["config", "metadata"],
+            collapsed=True,
+            description="Additional configuration options"
+        )
+
+    Note: For widget configuration, use AdminConfig.widgets instead:
+        AdminConfig(
+            model=MyModel,
+            widgets=[
+                JSONWidgetConfig(field="config", mode="view", height="500px"),
+            ],
+            fieldsets=[
+                FieldsetConfig(title="Config", fields=["config"]),
+            ]
+        )
     """
 
     model_config = ConfigDict(validate_assignment=True, extra="forbid")

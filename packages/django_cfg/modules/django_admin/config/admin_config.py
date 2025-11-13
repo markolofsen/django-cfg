@@ -181,6 +181,13 @@ class AdminConfig(BaseModel):
                     "WARNING: This exposes sensitive data in the admin interface. Use only in trusted environments."
     )
 
+    # Widget configurations
+    widgets: List = Field(
+        default_factory=list,
+        description="Declarative widget configurations for fields. "
+                    "Example: [JSONWidgetConfig(field='config_schema', mode='view', height='500px')]"
+    )
+
     def get_display_field_config(self, field_name: str) -> Optional[FieldConfig]:
         """Get FieldConfig for a specific field."""
         for field_config in self.display_fields:

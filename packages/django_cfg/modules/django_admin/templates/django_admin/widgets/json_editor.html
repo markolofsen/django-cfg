@@ -1,0 +1,153 @@
+{% comment %}
+Template for JSON editor widget with copy button.
+Extends django-json-widget's JSONEditorWidget with copy button.
+{% endcomment %}
+
+<div class="relative w-full json-editor-container">
+    {# Render the JSONEditor container #}
+    <div {% if not widget.attrs.style %}style="height:{{widget.height|default:'500px'}};width:{{widget.width|default:'90%'}};display:inline-block;"{% endif %}{% include "django/forms/widgets/attrs.html" %}></div>
+
+    <textarea id="{{widget.attrs.id}}_textarea" name="{{ widget.name }}" required="" style="display: none"></textarea>
+
+    {% with script_id=widget.name|add:"_data" %}
+    {{ widget.value|json_script:script_id }}
+    {% endwith %}
+
+    {% if widget.show_copy_button %}
+        <button
+            type="button"
+            onclick="copyJSONContent(this)"
+            class="material-symbols-outlined absolute top-2 right-2 z-10 flex items-center justify-center bg-white dark:bg-base-800 text-base-400 hover:text-primary-600 dark:text-base-500 dark:hover:text-primary-500 cursor-pointer transition-colors rounded-md p-2 shadow-sm hover:shadow-md border border-base-200 dark:border-base-700"
+            title="Copy JSON to clipboard"
+            style="width: 36px; height: 36px;"
+        >
+            content_copy
+        </button>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    var container = document.getElementById("{{ widget.attrs.id }}");
+    var textarea = document.getElementById("{{widget.attrs.id}}_textarea");
+
+    var options = {{ widget.options|safe }};
+    options.onChange = function () {
+        var json = editor.get();
+        textarea.value = JSON.stringify(json);
+    }
+
+    var editor = new JSONEditor(container, options);
+    var content = document.getElementById("{{ widget.name }}_data").textContent;
+    textarea.value = content;
+    editor.set(JSON.parse(content));
+
+    // Expose editor instance for external access
+    window['{{ widget.attrs.id }}_editor'] = editor;
+    container.jsonEditor = editor;
+})();
+</script>
+
+<style>
+.json-editor-container {
+    position: relative;
+}
+
+/* Ensure JSONEditor has proper z-index */
+.json-editor-container .jsoneditor {
+    position: relative;
+    z-index: 1;
+}
+
+/* Copy button styling */
+.json-editor-container button {
+    z-index: 10;
+}
+</style>
+
+<script>
+function copyJSONContent(button) {
+    // Find the JSONEditor container (the div that wraps the whole widget)
+    const widgetContainer = button.parentElement;
+
+    // Find the actual container div where JSONEditor is initialized (div with id={{ widget.attrs.id }})
+    const editorContainer = widgetContainer.querySelector('div[id]');
+
+    if (!editorContainer) {
+        console.error('JSONEditor container not found');
+        return;
+    }
+
+    // Get the JSONEditor instance (we store it in container.jsonEditor in the init script)
+    let jsonContent = null;
+
+    try {
+        // Get content from the JSONEditor instance
+        if (editorContainer.jsonEditor) {
+            jsonContent = editorContainer.jsonEditor.get();
+        } else {
+            // Fallback: try to get from textarea
+            const textarea = widgetContainer.querySelector('textarea[id$="_textarea"]');
+            if (textarea && textarea.value) {
+                try {
+                    jsonContent = JSON.parse(textarea.value);
+                } catch (e) {
+                    jsonContent = textarea.value;
+                }
+            }
+        }
+
+        if (!jsonContent) {
+            console.warn('No JSON content to copy');
+            return;
+        }
+
+        // Convert to formatted JSON string
+        const jsonString = typeof jsonContent === 'string'
+            ? jsonContent
+            : JSON.stringify(jsonContent, null, 2);
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(jsonString).then(() => {
+            // Visual feedback - change icon temporarily
+            const originalIcon = button.textContent.trim();
+            button.textContent = 'check';
+            button.classList.add('text-green-600', 'dark:text-green-500');
+            button.style.backgroundColor = '#dcfce7';  // Light green bg
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+                button.textContent = originalIcon;
+                button.classList.remove('text-green-600', 'dark:text-green-500');
+                button.style.backgroundColor = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy JSON:', err);
+
+            // Show error feedback
+            const originalIcon = button.textContent.trim();
+            button.textContent = 'error';
+            button.classList.add('text-red-600', 'dark:text-red-500');
+            button.style.backgroundColor = '#fee2e2';  // Light red bg
+
+            setTimeout(() => {
+                button.textContent = originalIcon;
+                button.classList.remove('text-red-600', 'dark:text-red-500');
+                button.style.backgroundColor = '';
+            }, 2000);
+        });
+    } catch (e) {
+        console.error('Error copying JSON:', e);
+
+        // Show error feedback
+        const originalIcon = button.textContent.trim();
+        button.textContent = 'error';
+        button.classList.add('text-red-600', 'dark:text-red-500');
+
+        setTimeout(() => {
+            button.textContent = originalIcon;
+            button.classList.remove('text-red-600', 'dark:text-red-500');
+        }, 2000);
+    }
+}
+</script>

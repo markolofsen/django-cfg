@@ -20,6 +20,7 @@ from .field_config import (
 )
 from .fieldset_config import FieldsetConfig
 from .resource_config import ResourceConfig
+from .widget_config import JSONWidgetConfig, TextWidgetConfig, WidgetConfig
 
 __all__ = [
     "AdminConfig",
@@ -30,7 +31,7 @@ __all__ = [
     "BackgroundTaskConfig",
     "DocumentationConfig",
     "DocumentationSection",
-    # Specialized Field Types
+    # Specialized Field Types (for display_fields)
     "BadgeField",
     "BooleanField",
     "CurrencyField",
@@ -40,4 +41,8 @@ __all__ = [
     "ShortUUIDField",
     "TextField",
     "UserField",
+    # Widget Configs (for AdminConfig.widgets - form fields)
+    "WidgetConfig",
+    "JSONWidgetConfig",
+    "TextWidgetConfig",
 ]
