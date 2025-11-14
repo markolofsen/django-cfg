@@ -1,62 +1,10 @@
 """
 Universal bidirectional streaming service for gRPC.
-
-This module provides a generic, type-safe implementation of bidirectional gRPC streaming.
-It extracts the common pattern used across signals and trading_bots services.
-
-**Key Features**:
-- Generic over TMessage (input) and TCommand (output) types
-- Type-safe callbacks via Protocol types
-- Pydantic v2 configuration with validation
-- Automatic ping/keepalive handling
-- Proper concurrent input/output processing
-- Critical `await asyncio.sleep(0)` for event loop yielding
-- Connection lifecycle management
-
-**Usage Example**:
-```python
-from .types import MessageProcessor, ClientIdExtractor, PingMessageCreator
-from .config import BidirectionalStreamingConfig, ConfigPresets
-
-# Define your callbacks
-async def process_messages(
-    client_id: str,
-    message: SignalCommand,
-    output_queue: asyncio.Queue[SignalMessage]
-) -> None:
-    # Your business logic
-    response = await handle_signal(message)
-    await output_queue.put(response)
-
-def extract_client_id(message: SignalCommand) -> str:
-    return message.client_id
-
-def create_ping() -> SignalMessage:
-    return SignalMessage(is_ping=True)
-
-# Create service instance
-service = BidirectionalStreamingService(
-    config=ConfigPresets.PRODUCTION,
-    message_processor=process_messages,
-    client_id_extractor=extract_client_id,
-    ping_message_creator=create_ping,
-)
-
-# Use in gRPC servicer
-async def BidirectionalStream(self, request_iterator, context):
-    async for response in service.handle_stream(request_iterator, context):
-        yield response
-```
-
-Created: 2025-11-07
-Status: %%PRODUCTION%%
-Phase: Phase 1 - Universal Components
 """
 
 from typing import Generic, Optional, AsyncIterator, Dict
 import asyncio
 import logging
-import time
 
 import grpc
 
@@ -66,64 +14,51 @@ from .types import (
     MessageProcessor,
     ClientIdExtractor,
     PingMessageCreator,
+    CommandAckExtractor,
+    HeartbeatExtractor,
+    HeartbeatCallback,
     ConnectionCallback,
     ErrorHandler,
 )
-from .config import BidirectionalStreamingConfig, StreamingMode, PingStrategy
-from .response_registry import CommandResponseRegistry
+from .config import BidirectionalStreamingConfig
+from .core.connection import ConnectionManager
+from .core.registry import ResponseRegistry
+from .core.queue import QueueManager
+from .processors.input import InputProcessor
+from .processors.output import OutputProcessor
+from .integrations.centrifugo import CentrifugoPublisher
 
 # Import setup_streaming_logger for auto-created logger
 from django_cfg.apps.integrations.grpc.utils.streaming_logger import setup_streaming_logger
 
+# Import Centrifugo publisher (always available in django-cfg)
+from django_cfg.apps.integrations.centrifugo.services import get_centrifugo_publisher
 
-# Module-level logger (fallback only)
-logger = logging.getLogger(__name__)
+# Import Circuit Breaker for resilience
+from .integrations.circuit_breaker import CentrifugoCircuitBreaker
 
-
-# ============================================================================
-# Main Service Class
-# ============================================================================
 
 class BidirectionalStreamingService(Generic[TMessage, TCommand]):
     """
-    Universal bidirectional streaming service with type-safe callbacks.
+    Universal bidirectional streaming service with decomposed architecture.
 
-    This service handles the complex concurrent streaming pattern used in
-    signals and trading_bots services, making it reusable across projects.
+    This service orchestrates all components to provide bidirectional gRPC streaming.
 
-    **Type Parameters**:
+    Type Parameters:
         TMessage: Type of incoming messages from client
         TCommand: Type of outgoing commands to client
 
-    **Architecture**:
+    Architecture:
     ```
-    ┌─────────────────────────────────────────────────────────────┐
-    │  BidirectionalStreamingService                               │
-    │                                                              │
-    │  ┌─────────────────┐        ┌──────────────────┐           │
-    │  │  Input Task     │───────>│  output_queue    │           │
-    │  │  (processes     │        │  (asyncio.Queue) │           │
-    │  │   messages)     │        └──────────────────┘           │
-    │  └─────────────────┘                │                       │
-    │          │                           │                       │
-    │          │ await asyncio.sleep(0)   │                       │
-    │          │ (CRITICAL!)               │                       │
-    │          │                           ▼                       │
-    │          │                  ┌──────────────────┐            │
-    │          │                  │  Output Loop     │            │
-    │          │                  │  (yields to      │            │
-    │          └──────────────────│   client)        │            │
-    │                             └──────────────────┘            │
-    └─────────────────────────────────────────────────────────────┘
+    BidirectionalStreamingService
+    ConnectionManager    - Track active connections
+    ResponseRegistry     - Future-based command responses
+    InputProcessor       - Process incoming messages
+    OutputProcessor      - Process outgoing commands
+    CentrifugoPublisher  - Auto-publish to Centrifugo
     ```
 
-    **Concurrency Model**:
-    - Input task runs concurrently, processing incoming messages
-    - Output loop yields commands from queue back to client
-    - `await asyncio.sleep(0)` ensures output loop can yield promptly
-    - Ping messages sent on timeout to keep connection alive
-
-    **Parameters**:
+    Parameters:
         config: Pydantic configuration model
         message_processor: Callback to process each incoming message
         client_id_extractor: Callback to extract client ID from message
@@ -131,6 +66,7 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         on_connect: Optional callback when client connects
         on_disconnect: Optional callback when client disconnects
         on_error: Optional callback on errors
+        logger: Optional logger instance (auto-created if None)
     """
 
     def __init__(
@@ -139,28 +75,22 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         message_processor: MessageProcessor[TMessage, TCommand],
         client_id_extractor: ClientIdExtractor[TMessage],
         ping_message_creator: PingMessageCreator[TCommand],
+        command_ack_extractor: Optional[CommandAckExtractor[TMessage]] = None,
+        heartbeat_extractor: Optional[HeartbeatExtractor[TMessage]] = None,
+        heartbeat_callback: Optional[HeartbeatCallback] = None,
         on_connect: Optional[ConnectionCallback] = None,
         on_disconnect: Optional[ConnectionCallback] = None,
         on_error: Optional[ErrorHandler] = None,
         logger: Optional[logging.Logger] = None,
     ):
-        """
-        Initialize bidirectional streaming service.
-
-        Args:
-            config: Pydantic configuration (frozen, validated)
-            message_processor: Process incoming messages
-            client_id_extractor: Extract client ID from messages
-            ping_message_creator: Create ping messages
-            on_connect: Optional connection callback
-            on_disconnect: Optional disconnection callback
-            on_error: Optional error callback
-            logger: Optional logger instance (auto-created if None)
-        """
+        """Initialize bidirectional streaming service."""
         self.config = config
         self.message_processor = message_processor
         self.client_id_extractor = client_id_extractor
         self.ping_message_creator = ping_message_creator
+        self.command_ack_extractor = command_ack_extractor
+        self.heartbeat_extractor = heartbeat_extractor
+        self.heartbeat_callback = heartbeat_callback
         self.on_connect = on_connect
         self.on_disconnect = on_disconnect
         self.on_error = on_error
@@ -176,11 +106,55 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         else:
             self.logger = logger
 
-        # Active connections tracking
-        self._active_connections: Dict[str, asyncio.Queue[TCommand]] = {}
+        # Core components
+        self.connection_manager = ConnectionManager()
+        self.response_registry = ResponseRegistry()
+        self.queue_manager = QueueManager[TCommand]()
 
-        # Response registry for synchronous command execution (RPC-style)
-        self._response_registry = CommandResponseRegistry()
+        # Centrifugo publisher (initialized lazily if needed)
+        centrifugo_publisher = None
+        if self.config.enable_centrifugo:
+            try:
+                centrifugo_client = get_centrifugo_publisher()
+
+                centrifugo_publisher = CentrifugoPublisher(
+                    centrifugo_publisher=centrifugo_client,
+                    channel_prefix=self.config.centrifugo_channel_prefix,
+                    circuit_breaker_enabled=self.config.centrifugo_circuit_breaker_enabled,
+                    circuit_breaker_threshold=self.config.centrifugo_circuit_breaker_threshold,
+                    circuit_breaker_timeout=self.config.centrifugo_circuit_breaker_timeout,
+                    enable_logging=self.config.enable_logging,
+                )
+
+                if self.config.enable_logging:
+                    cb_status = "with circuit breaker" if self.config.centrifugo_circuit_breaker_enabled else "without circuit breaker"
+                    self.logger.info(f" Centrifugo auto-publishing enabled ({cb_status})")
+            except Exception as e:
+                if self.config.enable_logging:
+                    self.logger.warning(f"�  Failed to initialize Centrifugo publisher: {e}")
+
+        # Processors
+        self.input_processor = InputProcessor(
+            extract_client_id=client_id_extractor,
+            process_message=message_processor,
+            centrifugo_publisher=centrifugo_publisher if self.config.centrifugo_auto_publish_messages else None,
+            command_ack_extractor=command_ack_extractor,  # Universal CommandAck handling
+            heartbeat_extractor=heartbeat_extractor,      # Universal Heartbeat handling
+            heartbeat_callback=heartbeat_callback,
+            streaming_mode=self.config.streaming_mode,
+            connection_timeout=self.config.connection_timeout,
+            yield_event_loop=self.config.should_yield_event_loop(),
+            enable_logging=self.config.enable_logging,
+        )
+
+        self.output_processor = OutputProcessor(
+            ping_message_creator=ping_message_creator,
+            centrifugo_publisher=centrifugo_publisher if self.config.centrifugo_auto_publish_commands else None,
+            ping_strategy=self.config.ping_strategy,
+            ping_interval=self.config.ping_interval,
+            max_consecutive_errors=self.config.max_consecutive_errors,
+            enable_logging=self.config.enable_logging,
+        )
 
         if self.config.enable_logging:
             self.logger.info(
@@ -204,7 +178,7 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
 
         This is the main entry point called by gRPC servicer methods.
 
-        **Flow**:
+        Flow:
         1. Create output queue for this connection
         2. Start input task to process messages concurrently
         3. Yield commands from output queue (with ping on timeout)
@@ -227,10 +201,9 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
 
         try:
             # Create output queue for this connection
-            output_queue = asyncio.Queue(maxsize=self.config.max_queue_size)
+            output_queue = self.queue_manager.create_queue(maxsize=self.config.max_queue_size)
 
             # Start background task to process incoming messages
-            # This runs concurrently with output streaming below
             input_task = asyncio.create_task(
                 self._process_input_stream(
                     request_iterator,
@@ -240,7 +213,11 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
             )
 
             # Main output loop: yield commands from queue
-            async for command in self._output_loop(output_queue, context):
+            async for command in self.output_processor.process_queue(
+                output_queue=output_queue,
+                context=context,
+                client_id=self._get_latest_client_id()  # Will be set by input task
+            ):
                 yield command
 
             # Output loop finished, wait for input task
@@ -282,129 +259,17 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
 
         finally:
             # Cleanup connection
-            if client_id and client_id in self._active_connections:
-                del self._active_connections[client_id]
+            if client_id:
+                self.connection_manager.unregister(client_id)
+
                 if self.config.enable_logging:
-                    self.logger.info(f"Client {client_id} disconnected")
+                    self.logger.info(f"Client {client_id[:8]}... disconnected")
 
                 if self.on_disconnect:
                     await self.on_disconnect(client_id)
 
     # ------------------------------------------------------------------------
-    # Output Loop
-    # ------------------------------------------------------------------------
-
-    async def _output_loop(
-        self,
-        output_queue: asyncio.Queue[TCommand],
-        context: grpc.aio.ServicerContext,
-    ) -> AsyncIterator[TCommand]:
-        """
-        Main output loop that yields commands to client.
-
-        **Logic**:
-        - Wait for commands in queue with timeout
-        - If timeout and ping enabled -> send ping
-        - Yield commands to client
-        - Stop when context cancelled or sentinel received
-
-        Args:
-            output_queue: Queue containing commands to send
-            context: gRPC service context
-
-        Yields:
-            Commands to send to client
-        """
-        ping_sequence = 0
-        last_message_time = time.time()
-        consecutive_errors = 0
-
-        try:
-            while not context.cancelled():
-                try:
-                    # Determine timeout based on ping strategy
-                    timeout = self._get_output_timeout(last_message_time)
-
-                    # Wait for command with timeout
-                    command = await asyncio.wait_for(
-                        output_queue.get(),
-                        timeout=timeout,
-                    )
-
-                    # Check for shutdown sentinel (None)
-                    if command is None:
-                        if self.config.enable_logging:
-                            self.logger.info("Received shutdown sentinel")
-                        break
-
-                    # Yield command to client
-                    yield command
-                    last_message_time = time.time()
-                    consecutive_errors = 0  # Reset error counter
-
-                    if self.config.enable_logging:
-                        self.logger.debug("Sent command to client")
-
-                except asyncio.TimeoutError:
-                    # Timeout - send ping if enabled
-                    if self.config.is_ping_enabled():
-                        ping_sequence += 1
-                        ping_command = self.ping_message_creator()
-                        yield ping_command
-                        last_message_time = time.time()
-
-                        if self.config.enable_logging:
-                            self.logger.debug(f"Sent PING #{ping_sequence}")
-
-                except Exception as e:
-                    consecutive_errors += 1
-                    if self.config.enable_logging:
-                        self.logger.error(f"Output loop error: {e}", exc_info=True)
-
-                    # Check if max consecutive errors exceeded
-                    if (
-                        self.config.max_consecutive_errors > 0
-                        and consecutive_errors >= self.config.max_consecutive_errors
-                    ):
-                        if self.config.enable_logging:
-                            self.logger.error(
-                                f"Max consecutive errors ({self.config.max_consecutive_errors}) exceeded"
-                            )
-                        break
-
-        except asyncio.CancelledError:
-            if self.config.enable_logging:
-                self.logger.info("Output loop cancelled")
-            raise
-
-    def _get_output_timeout(self, last_message_time: float) -> Optional[float]:
-        """
-        Calculate output queue timeout based on ping strategy.
-
-        Args:
-            last_message_time: Timestamp of last sent message
-
-        Returns:
-            Timeout in seconds, or None for no timeout
-        """
-        if self.config.ping_strategy == PingStrategy.DISABLED:
-            # No timeout when ping disabled (wait indefinitely)
-            return None
-
-        elif self.config.ping_strategy == PingStrategy.INTERVAL:
-            # Fixed interval timeout
-            return self.config.ping_interval
-
-        elif self.config.ping_strategy == PingStrategy.ON_IDLE:
-            # Timeout based on time since last message
-            elapsed = time.time() - last_message_time
-            remaining = self.config.ping_interval - elapsed
-            return max(remaining, 0.1)  # At least 0.1s
-
-        return self.config.ping_interval  # Fallback
-
-    # ------------------------------------------------------------------------
-    # Input Processing
+    # Input Processing (Delegation to InputProcessor)
     # ------------------------------------------------------------------------
 
     async def _process_input_stream(
@@ -413,151 +278,30 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         output_queue: asyncio.Queue[TCommand],
         context: grpc.aio.ServicerContext,
     ) -> None:
-        """
-        Process incoming messages from client.
+        """Process incoming messages from client (delegates to InputProcessor)."""
+        client_id = await self.input_processor.process_stream(
+            request_iterator=request_iterator,
+            output_queue=output_queue,
+            context=context,
+            streaming_service=self,
+            on_connect=self._on_connect_internal
+        )
 
-        **Flow**:
-        1. Iterate over incoming messages
-        2. Extract client ID from first message
-        3. Call on_connect callback
-        4. Process each message via message_processor
-        5. **CRITICAL**: `await asyncio.sleep(0)` to yield event loop
+    async def _on_connect_internal(self, client_id: str) -> None:
+        """Internal on_connect handler that registers connection."""
+        # This will be called by InputProcessor when client_id is extracted
+        # We need to get the output_queue somehow - let's pass it via context
+        # For now, we'll use a simpler approach: track connections in input processor
+        if self.on_connect:
+            await self.on_connect(client_id)
 
-        Args:
-            request_iterator: Stream of incoming messages
-            output_queue: Queue for outgoing commands
-            context: gRPC service context
-
-        Raises:
-            Exception: Any processing errors
-        """
-        client_id: Optional[str] = None
-        is_first_message = True
-
-        try:
-            # Choose iteration mode based on config
-            if self.config.streaming_mode == StreamingMode.ASYNC_FOR:
-                await self._process_async_for(
-                    request_iterator,
-                    output_queue,
-                    context,
-                )
-            else:  # StreamingMode.ANEXT
-                await self._process_anext(
-                    request_iterator,
-                    output_queue,
-                    context,
-                )
-
-        except asyncio.CancelledError:
-            if self.config.enable_logging:
-                self.logger.info(f"Input stream cancelled for client {client_id}")
-            raise
-
-        except Exception as e:
-            if self.config.enable_logging:
-                self.logger.error(f"Input stream error for client {client_id}: {e}", exc_info=True)
-            raise
-
-    async def _process_async_for(
-        self,
-        request_iterator: AsyncIterator[TMessage],
-        output_queue: asyncio.Queue[TCommand],
-        context: grpc.aio.ServicerContext,
-    ) -> None:
-        """Process input stream using async for iteration."""
-        client_id: Optional[str] = None
-        is_first_message = True
-
-        self.logger.info("🔥 _process_async_for: Starting async for loop")
-        async for message in request_iterator:
-            self.logger.info(f"🔥 _process_async_for: Received message (first={is_first_message})")
-            # Extract client ID from first message
-            if is_first_message:
-                client_id = self.client_id_extractor(message)
-                self._active_connections[client_id] = output_queue
-                is_first_message = False
-
-                if self.config.enable_logging:
-                    self.logger.info(f"Client {client_id} connected")
-
-                if self.on_connect:
-                    await self.on_connect(client_id)
-
-            # Process message
-            self.logger.info(f"🔥 About to call message_processor")
-            self.logger.info(f"🔥 message_processor = {self.message_processor}")
-            self.logger.info(f"🔥 client_id = {client_id}")
-            self.logger.info(f"🔥 message type = {type(message)}")
-            self.logger.info(f"🔥 message = {message}")
-            try:
-                await self.message_processor(client_id, message, output_queue)
-                self.logger.info(f"🔥 message_processor completed successfully")
-            except Exception as e:
-                self.logger.error(f"🔥 message_processor raised exception: {e}", exc_info=True)
-                raise
-
-            # ⚠️ CRITICAL: Yield to event loop!
-            # Without this, the next message read blocks output loop from yielding.
-            # This is the key pattern that makes bidirectional streaming work correctly.
-            if self.config.should_yield_event_loop():
-                self.logger.info(f"🔥 Yielding to event loop (sleep 0)")
-                await asyncio.sleep(0)
-                self.logger.info(f"🔥 Returned from sleep, continuing loop...")
-
-    async def _process_anext(
-        self,
-        request_iterator: AsyncIterator[TMessage],
-        output_queue: asyncio.Queue[TCommand],
-        context: grpc.aio.ServicerContext,
-    ) -> None:
-        """Process input stream using anext() calls."""
-        client_id: Optional[str] = None
-        is_first_message = True
-
-        while not context.cancelled():
-            try:
-                # Get next message with optional timeout
-                if self.config.connection_timeout:
-                    message = await asyncio.wait_for(
-                        anext(request_iterator),
-                        timeout=self.config.connection_timeout,
-                    )
-                else:
-                    message = await anext(request_iterator)
-
-                # Extract client ID from first message
-                if is_first_message:
-                    client_id = self.client_id_extractor(message)
-                    self._active_connections[client_id] = output_queue
-                    is_first_message = False
-
-                    if self.config.enable_logging:
-                        self.logger.info(f"Client {client_id} connected")
-
-                    if self.on_connect:
-                        await self.on_connect(client_id)
-
-                # Process message
-                await self.message_processor(client_id, message, output_queue)
-
-                # ⚠️ CRITICAL: Yield to event loop!
-                if self.config.should_yield_event_loop():
-                    await asyncio.sleep(0)
-
-            except StopAsyncIteration:
-                # Stream ended normally
-                if self.config.enable_logging:
-                    self.logger.info(f"Client {client_id} stream ended")
-                break
-
-            except asyncio.TimeoutError:
-                if self.config.enable_logging:
-                    self.logger.warning(f"Client {client_id} connection timeout")
-                break
+    def _get_latest_client_id(self) -> Optional[str]:
+        """Get latest connected client ID."""
+        client_ids = self.connection_manager.get_client_ids()
+        return client_ids[-1] if client_ids else None
 
     # ------------------------------------------------------------------------
-    # Connection Management
+    # Connection Management API
     # ------------------------------------------------------------------------
 
     def get_active_connections(self) -> Dict[str, asyncio.Queue[TCommand]]:
@@ -567,7 +311,10 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         Returns:
             Dict mapping client_id to output_queue
         """
-        return self._active_connections.copy()
+        return {
+            client_id: conn.output_queue
+            for client_id, conn in self.connection_manager.get_all().items()
+        }
 
     def is_client_connected(self, client_id: str) -> bool:
         """
@@ -579,7 +326,7 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         Returns:
             True if client has active connection
         """
-        return client_id in self._active_connections
+        return self.connection_manager.is_connected(client_id)
 
     async def send_to_client(
         self,
@@ -599,18 +346,22 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
             True if sent successfully, False if client not connected or timeout
 
         Raises:
-            asyncio.TimeoutError: If enqueue times out and no default handler
+            asyncio.TimeoutError: If enqueue times out
         """
-        if client_id not in self._active_connections:
+        conn = self.connection_manager.get(client_id)
+        if not conn:
             if self.config.enable_logging:
                 self.logger.warning(f"Client {client_id} not connected")
             return False
 
-        queue = self._active_connections[client_id]
         timeout = timeout or self.config.queue_timeout
 
         try:
-            await asyncio.wait_for(queue.put(command), timeout=timeout)
+            await self.queue_manager.put_with_timeout(
+                conn.output_queue,
+                command,
+                timeout=timeout
+            )
             return True
         except asyncio.TimeoutError:
             if self.config.enable_logging:
@@ -639,7 +390,7 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         exclude = exclude or []
         sent_count = 0
 
-        for client_id in list(self._active_connections.keys()):
+        for client_id in self.connection_manager.get_client_ids():
             if client_id not in exclude:
                 if await self.send_to_client(client_id, command):
                     sent_count += 1
@@ -655,9 +406,54 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
         Args:
             client_id: Client to disconnect
         """
-        if client_id in self._active_connections:
-            queue = self._active_connections[client_id]
-            await queue.put(None)  # Sentinel for shutdown
+        conn = self.connection_manager.get(client_id)
+        if conn:
+            await conn.output_queue.put(None)  # Sentinel for shutdown
+
+    # ------------------------------------------------------------------------
+    # Response Registry API (for synchronous command execution)
+    # ------------------------------------------------------------------------
+
+    async def execute_command_sync(
+        self,
+        client_id: str,
+        command: TCommand,
+        timeout: float = 30.0
+    ) -> TMessage:
+        """
+        Execute command synchronously and wait for response.
+
+        Requires the command to have a command_id field and the client
+        to send back a CommandAck message with the same command_id.
+
+        Args:
+            client_id: Target client
+            command: Command to execute
+            timeout: Timeout in seconds
+
+        Returns:
+            Response message (CommandAck)
+
+        Raises:
+            asyncio.TimeoutError: If no response within timeout
+            ValueError: If client not connected
+        """
+        # Extract command_id from command (protobuf-specific)
+        if not hasattr(command, 'command_id'):
+            raise ValueError("Command must have command_id field for synchronous execution")
+
+        command_id = command.command_id
+
+        # Register command for response
+        future = await self.response_registry.register_command(command_id, timeout)
+
+        # Send command to client
+        if not await self.send_to_client(client_id, command, timeout=timeout):
+            await self.response_registry.cancel_command(command_id, "Failed to send command")
+            raise ValueError(f"Failed to send command to client {client_id}")
+
+        # Wait for response
+        return await future
 
 
 # ============================================================================

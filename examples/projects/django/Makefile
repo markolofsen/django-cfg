@@ -155,9 +155,18 @@ dev-ngrok: kill-ports
 grpc: kill-grpc
 	@echo "🚀 Starting gRPC server (port 50051) and ASGI server (port 8000) in parallel..."
 	@echo ""
-	@# Function to handle cleanup on exit (Ctrl+C)
+	@# Function to handle cleanup on ANY exit (Ctrl+C, errors, kill, etc.)
 	@bash -c ' \
-		trap "echo; echo \"🛑 Stopping servers...\"; kill 0; exit" SIGINT SIGTERM; \
+		cleanup() { \
+			echo ""; \
+			echo "🛑 Stopping servers..."; \
+			pkill -9 -f "manage.py rungrpc" 2>/dev/null || true; \
+			pkill -9 -f "uvicorn api.asgi" 2>/dev/null || true; \
+			lsof -ti :50051 | xargs kill -9 2>/dev/null || true; \
+			lsof -ti :8000 | xargs kill -9 2>/dev/null || true; \
+			echo "✅ All servers stopped"; \
+		}; \
+		trap cleanup EXIT SIGINT SIGTERM; \
 		echo "📡 Starting gRPC server on port 50051..."; \
 		$(PYTHON) manage.py rungrpc & \
 		GRPC_PID=$$!; \

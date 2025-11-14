@@ -2,17 +2,14 @@
 Universal bidirectional streaming components for gRPC.
 
 This package provides generic, type-safe components for implementing
-bidirectional gRPC streaming services with decomposed architecture.
+bidirectional gRPC streaming services.
 
-Components:
+**Components**:
 - types: Protocol definitions for type-safe callbacks
 - config: Pydantic v2 configuration models
-- core: Low-level connection/registry/queue management
-- processors: Input/output processing
-- integrations: Centrifugo publisher and circuit breaker
 - service: BidirectionalStreamingService implementation
 
-Usage Example:
+**Usage Example**:
 ```python
 from django_cfg.apps.integrations.grpc.services.streaming import (
     BidirectionalStreamingService,
@@ -32,9 +29,9 @@ service = BidirectionalStreamingService(
 )
 ```
 
-Created: 2025-11-14
+Created: 2025-11-07
 Status: %%PRODUCTION%%
-Phase: Phase 1 - Universal Components (Refactored)
+Phase: Phase 1 - Universal Components
 """
 
 # Type definitions
@@ -52,8 +49,15 @@ from .types import (
     ConnectionCallback,
     ErrorHandler,
 
-    # Connection info
-    ConnectionInfo,
+    # Type aliases
+    MessageProcessorType,
+    ClientIdExtractorType,
+    PingMessageCreatorType,
+
+    # Validation
+    is_valid_message_processor,
+    is_valid_client_id_extractor,
+    is_valid_ping_creator,
 )
 
 # Configuration
@@ -69,14 +73,11 @@ from .config import (
     ConfigPresets,
 )
 
-# Core components (optional - usually not needed by users)
-# from .core import ConnectionManager, ResponseRegistry, QueueManager
-
-# Processors (optional - usually not needed by users)
-# from .processors import InputProcessor, OutputProcessor
-
-# Integrations (optional - usually not needed by users)
-# from .integrations import CentrifugoPublisher, CentrifugoCircuitBreaker
+# Response Registry (for synchronous RPC-style commands)
+from .response_registry import (
+    CommandResponseRegistry,
+    response_registry,
+)
 
 # Service - lazy import to avoid grpc dependency
 def __getattr__(name):
@@ -99,8 +100,15 @@ __all__ = [
     'ConnectionCallback',
     'ErrorHandler',
 
-    # Connection info
-    'ConnectionInfo',
+    # Type aliases
+    'MessageProcessorType',
+    'ClientIdExtractorType',
+    'PingMessageCreatorType',
+
+    # Validation functions
+    'is_valid_message_processor',
+    'is_valid_client_id_extractor',
+    'is_valid_ping_creator',
 
     # Enums
     'StreamingMode',
@@ -109,6 +117,10 @@ __all__ = [
     # Configuration
     'BidirectionalStreamingConfig',
     'ConfigPresets',
+
+    # Response Registry
+    'CommandResponseRegistry',
+    'response_registry',
 
     # Service
     'BidirectionalStreamingService',
