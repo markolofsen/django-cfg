@@ -2,10 +2,19 @@
 Public serializers for client access without sensitive data.
 """
 
+from typing import TypedDict, Optional
+from uuid import UUID
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from ..models import Document, DocumentCategory
+
+
+class CategoryData(TypedDict):
+    """Type definition for serialized category data."""
+    id: Optional[UUID]
+    name: str
+    description: str
 
 
 class PublicCategorySerializer(serializers.ModelSerializer):
@@ -33,7 +42,7 @@ class PublicDocumentListSerializer(serializers.ModelSerializer):
         ]
 
     @extend_schema_field(PublicCategorySerializer)
-    def get_category(self, obj):
+    def get_category(self, obj) -> CategoryData:
         """Get first public category or create a default one."""
         public_categories = obj.categories.filter(is_public=True)
         if public_categories.exists():
@@ -62,7 +71,7 @@ class PublicDocumentSerializer(serializers.ModelSerializer):
         # Only essential fields for clients - no technical metadata
 
     @extend_schema_field(PublicCategorySerializer)
-    def get_category(self, obj):
+    def get_category(self, obj) -> CategoryData:
         """Get first public category or create a default one."""
         public_categories = obj.categories.filter(is_public=True)
         if public_categories.exists():

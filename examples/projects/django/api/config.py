@@ -142,6 +142,7 @@ class DjangoCfgConfig(DjangoConfig):
         enabled_apps=["crypto"],
         package_prefix="api",  # Flatten field - no GRPCProtoConfig import needed!
         public_url=env.grpc_url,  # Flatten field from environment - simpler!
+        publish_to_telegram=True,
         handlers_hook=[
             "apps.crypto.grpc.services.handlers.grpc_handlers",  # Auto-register CryptoService (NEW PATH!)
         ]

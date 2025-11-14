@@ -2,11 +2,72 @@
 External Data serializers for API request/response validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 from pydantic import BaseModel, Field, validator
 
 from ..models.external_data import ExternalDataType
+
+
+# Type definitions for source configurations
+class GitHubSourceConfig(TypedDict, total=False):
+    """GitHub source configuration."""
+    repository: str
+    branch: str
+    file_path: Optional[str]
+    token: Optional[str]
+
+
+class WebSourceConfig(TypedDict, total=False):
+    """Web/URL source configuration."""
+    url: str
+    headers: Optional[Dict[str, str]]
+    timeout: Optional[int]
+
+
+class APISourceConfig(TypedDict, total=False):
+    """API source configuration."""
+    endpoint: str
+    method: str
+    headers: Optional[Dict[str, str]]
+    params: Optional[Dict[str, str]]
+    auth_token: Optional[str]
+
+
+class FileSourceConfig(TypedDict, total=False):
+    """File source configuration."""
+    file_path: str
+    encoding: str
+
+
+# Union of all possible source configs
+SourceConfig = Union[GitHubSourceConfig, WebSourceConfig, APISourceConfig, FileSourceConfig, Dict[str, Any]]
+
+
+# Type definition for metadata
+class SourceMetadata(TypedDict, total=False):
+    """Source metadata."""
+    author: Optional[str]
+    created_date: Optional[str]
+    modified_date: Optional[str]
+    version: Optional[str]
+    language: Optional[str]
+    tags: Optional[List[str]]
+    custom: Optional[Dict[str, Any]]
+
+
+# Type definitions for stats breakdowns
+SourceTypeBreakdown = Dict[str, int]
+StatusBreakdown = Dict[str, int]
+
+
+# Type definition for action parameters
+class BulkActionParameters(TypedDict, total=False):
+    """Bulk action parameters."""
+    force: bool
+    async_mode: bool
+    notification: bool
+    priority: Optional[str]
 
 
 class ExternalDataCreateRequest(BaseModel):
@@ -17,8 +78,8 @@ class ExternalDataCreateRequest(BaseModel):
     source_type: ExternalDataType = Field(description="Type of external data source")
     source_identifier: str = Field(description="Unique identifier for the source")
     content: str = Field(description="Text content to vectorize")
-    source_config: Dict[str, Any] = Field(default_factory=dict, description="Source configuration")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    source_config: SourceConfig = Field(default_factory=dict, description="Source configuration")
+    metadata: SourceMetadata = Field(default_factory=dict, description="Additional metadata")
     chunk_size: int = Field(default=1000, ge=100, le=2000, description="Chunk size for vectorization")
     overlap_size: int = Field(default=200, ge=0, le=500, description="Overlap between chunks")
     embedding_model: str = Field(default="text-embedding-ada-002", description="Embedding model")
@@ -114,7 +175,7 @@ class ExternalDataSearchResult(BaseModel):
     similarity: float = Field(description="Similarity score")
     source_title: str = Field(description="Source title")
     content: str = Field(description="Chunk content")
-    metadata: Dict[str, Any] = Field(description="Additional metadata")
+    metadata: SourceMetadata = Field(description="Additional metadata")
 
     chunk_id: str = Field(description="Chunk ID")
     chunk_index: int = Field(description="Chunk index")
@@ -164,8 +225,8 @@ class ExternalDataStatsResponse(BaseModel):
     total_cost: float = Field(description="Total cost")
     average_cost_per_source: float = Field(description="Average cost per source")
 
-    source_type_breakdown: Dict[str, int] = Field(description="Breakdown by source type")
-    status_breakdown: Dict[str, int] = Field(description="Breakdown by status")
+    source_type_breakdown: SourceTypeBreakdown = Field(description="Breakdown by source type")
+    status_breakdown: StatusBreakdown = Field(description="Breakdown by status")
 
     last_processed_at: Optional[str] = Field(description="Last processing time")
 
@@ -199,8 +260,8 @@ class ExternalDataUpdateRequest(BaseModel):
     is_active: Optional[bool] = Field(default=None, description="Active status")
     is_public: Optional[bool] = Field(default=None, description="Public status")
     tags: Optional[List[str]] = Field(default=None, description="Tags")
-    source_config: Optional[Dict[str, Any]] = Field(default=None, description="Source configuration")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Metadata")
+    source_config: Optional[SourceConfig] = Field(default=None, description="Source configuration")
+    metadata: Optional[SourceMetadata] = Field(default=None, description="Metadata")
     auto_revectorize: bool = Field(default=True, description="Auto re-vectorize if content changed")
 
 
@@ -209,7 +270,7 @@ class ExternalDataBulkActionRequest(BaseModel):
 
     external_data_ids: List[str] = Field(description="List of external data IDs")
     action: str = Field(description="Action to perform")
-    parameters: Dict[str, Any] = Field(default_factory=dict, description="Action parameters")
+    parameters: BulkActionParameters = Field(default_factory=dict, description="Action parameters")
 
 
 class ExternalDataBulkActionResponse(BaseModel):
@@ -237,7 +298,7 @@ class ExternalDataImportRequest(BaseModel):
     """Request model for importing external data from various sources."""
 
     source_type: ExternalDataType = Field(description="Type of source to import")
-    source_config: Dict[str, Any] = Field(description="Configuration for import")
+    source_config: SourceConfig = Field(description="Configuration for import")
     title: str = Field(description="Title for imported data")
     description: str = Field(default="", description="Description")
     auto_vectorize: bool = Field(default=True, description="Auto vectorize after import")

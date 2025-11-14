@@ -2,7 +2,7 @@
 Archive serializers for DRF API.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypedDict, Optional, Union, Literal
 
 from rest_framework import serializers
 
@@ -14,6 +14,36 @@ from ..models.archive import (
     DocumentArchive,
 )
 from ..models.document import DocumentCategory
+
+
+class FileNode(TypedDict):
+    """Type definition for file node in file tree."""
+    type: Literal['file']
+    id: str
+    size: int
+    content_type: str
+    language: Optional[str]
+    is_processable: bool
+    chunks_count: int
+
+
+class DirectoryNode(TypedDict):
+    """Type definition for directory node in file tree."""
+    type: Literal['directory']
+    children: Dict[str, Any]  # Dict[str, Union[FileNode, DirectoryNode]] - recursive
+
+
+FileTree = Dict[str, Union[FileNode, DirectoryNode]]
+
+
+class ContextSummary(TypedDict):
+    """Type definition for chunk context summary."""
+    archive_title: str
+    item_path: str
+    item_type: str
+    language: Optional[str]
+    chunk_position: str
+    chunk_type: str
 
 
 class DocumentArchiveCreateSerializer(serializers.Serializer):
@@ -153,7 +183,7 @@ class ArchiveItemChunkSerializer(serializers.ModelSerializer):
             'embedding_cost', 'context_summary', 'created_at'
         ]
 
-    def get_context_summary(self, obj: ArchiveItemChunk) -> Dict[str, Any]:
+    def get_context_summary(self, obj: ArchiveItemChunk) -> ContextSummary:
         """Get context summary for display."""
         return obj.get_context_summary()
 
@@ -205,7 +235,7 @@ class DocumentArchiveDetailSerializer(DocumentArchiveSerializer):
     class Meta(DocumentArchiveSerializer.Meta):
         fields = DocumentArchiveSerializer.Meta.fields + ['items', 'file_tree', 'metadata']
 
-    def get_file_tree(self, obj: DocumentArchive) -> Dict[str, Any]:
+    def get_file_tree(self, obj: DocumentArchive) -> FileTree:
         """Get hierarchical file tree."""
         return obj.get_file_tree()
 
