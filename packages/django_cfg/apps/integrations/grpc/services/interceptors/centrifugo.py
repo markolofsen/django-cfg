@@ -63,44 +63,33 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
         }
     """
 
-    def __init__(
-        self,
-        enabled: bool = True,
-        publish_start: bool = False,
-        publish_end: bool = True,
-        publish_errors: bool = True,
-        publish_stream_messages: bool = False,
-        channel_template: str = "grpc#{service}#{method}#meta",
-        error_channel_template: str = "grpc#{service}#{method}#errors",
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
+    def __init__(self):
         """
-        Initialize Centrifugo interceptor.
+        Initialize Centrifugo interceptor from Django settings.
 
-        Args:
-            enabled: Enable/disable publishing
-            publish_start: Publish RPC start events
-            publish_end: Publish RPC completion events
-            publish_errors: Publish RPC error events
-            publish_stream_messages: Publish each streaming message (can be noisy)
-            channel_template: Channel name template for metadata
-            error_channel_template: Channel name template for errors
-            metadata: Additional metadata to include in all events
+        Reads configuration from settings.GRPC_CENTRIFUGO or uses defaults.
         """
-        self.enabled = enabled
-        self.publish_start = publish_start
-        self.publish_end = publish_end
-        self.publish_errors = publish_errors
-        self.publish_stream_messages = publish_stream_messages
-        self.channel_template = channel_template
-        self.error_channel_template = error_channel_template
-        self.metadata = metadata or {}
+        from django.conf import settings
+
+        # Get Centrifugo interceptor config from Django settings
+        centrifugo_config = getattr(settings, "GRPC_CENTRIFUGO", {})
+
+        self.enabled = centrifugo_config.get("enabled", True)
+        self.publish_start = centrifugo_config.get("publish_start", False)
+        self.publish_end = centrifugo_config.get("publish_end", True)
+        self.publish_errors = centrifugo_config.get("publish_errors", True)
+        self.publish_stream_messages = centrifugo_config.get("publish_stream_messages", False)
+        self.channel_template = centrifugo_config.get("channel_template", "grpc#{service}#{method}#meta")
+        self.error_channel_template = centrifugo_config.get("error_channel_template", "grpc#{service}#{method}#errors")
+        self.metadata = centrifugo_config.get("metadata", {})
+        self.publish_to_telegram = centrifugo_config.get("publish_to_telegram", False)
 
         self._centrifugo_publisher: Optional[Any] = None
+        self._telegram_service: Optional[Any] = None
         self._initialize_publisher()
 
     def _initialize_publisher(self):
-        """Initialize Centrifugo publisher lazily with direct client."""
+        """Initialize Centrifugo publisher and Telegram service lazily."""
         if not self.enabled:
             logger.debug("CentrifugoInterceptor disabled")
             return
@@ -117,6 +106,23 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
                 f"Interceptor will continue without publishing."
             )
             self.enabled = False
+
+        # Initialize Telegram if enabled
+        if self.publish_to_telegram:
+            try:
+                from django_cfg.modules.django_telegram import DjangoTelegram
+                self._telegram_service = DjangoTelegram()
+                if self._telegram_service.is_configured:
+                    logger.info("✅ CentrifugoInterceptor: Telegram notifications enabled")
+                else:
+                    logger.warning("⚠️  Telegram not configured, notifications disabled")
+                    self.publish_to_telegram = False
+            except Exception as e:
+                logger.warning(
+                    f"Failed to initialize Telegram service in interceptor: {e}. "
+                    f"Telegram notifications will be disabled."
+                )
+                self.publish_to_telegram = False
 
     async def intercept_service(
         self,
@@ -477,8 +483,47 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
 
             logger.debug(f"Published gRPC event to {channel}: {data.get('event_type')}")
 
+            # Send to Telegram if enabled and event is successful
+            if self.publish_to_telegram and data.get('status') == 'OK' and data.get('event_type') == 'rpc_end':
+                await self._send_to_telegram(**data)
+
         except Exception as e:
             logger.warning(f"Failed to publish gRPC event to Centrifugo: {e}")
+
+    async def _send_to_telegram(self, **data):
+        """Send gRPC event notification to Telegram."""
+        if not self._telegram_service:
+            return
+
+        try:
+            method = data.get('method', 'unknown')
+            duration_ms = data.get('duration_ms', 0.0)
+            peer = data.get('peer', 'unknown')
+
+            # Format message - short format
+            message = f"✅ `{method}` ({duration_ms:.2f}ms)"
+
+            # Add peer only if known
+            if peer and peer != 'unknown':
+                message += f" • {peer}"
+
+            # Send via Telegram service (sync method, run in executor)
+            import asyncio
+            from django_cfg.modules.django_telegram import TelegramParseMode
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: self._telegram_service.send_message(
+                    message=message,
+                    parse_mode=TelegramParseMode.MARKDOWN
+                )
+            )
+
+            logger.debug(f"📤 Sent gRPC success notification to Telegram: {method}")
+
+        except Exception as e:
+            logger.warning(f"Failed to send gRPC event to Telegram: {e}")
 
     async def _publish_error(self, error: Exception, **data):
         """Publish error to Centrifugo via Publisher."""

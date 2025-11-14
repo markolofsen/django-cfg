@@ -144,6 +144,119 @@ config = AdminConfig(
 )
 ```
 
+### Widgets
+
+Configure custom widgets for specific fields using `WidgetConfig` classes. This is especially useful for JSON fields, text fields, and other complex inputs.
+
+#### JSON Widget Configuration
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, JSONWidgetConfig
+
+config = AdminConfig(
+    model=BotConfig,
+
+    # Centralized widget configuration
+    widgets=[
+        # Editable JSON field
+        JSONWidgetConfig(
+            field="settings",
+            mode="tree",  # Interactive tree editor
+            height="400px",
+            show_copy_button=True,
+        ),
+        # Read-only JSON field
+        JSONWidgetConfig(
+            field="schema",
+            mode="view",  # Read-only display
+            height="500px",
+            show_copy_button=True,
+        ),
+    ],
+
+    fieldsets=[
+        FieldsetConfig(
+            title="Configuration",
+            fields=["settings", "schema"],  # Widget config applied automatically
+        ),
+    ],
+)
+```
+
+#### JSON Widget Modes
+
+| Mode | Use Case | Features |
+|------|----------|----------|
+| `tree` | Complex nested JSON | Interactive tree, expand/collapse, inline editing |
+| `code` | Raw JSON editing | Text editor with syntax highlighting |
+| `view` | Display only | Read-only, formatted display, no editing |
+
+#### JSON Widget Parameters
+
+```python
+JSONWidgetConfig(
+    field="config_schema",       # Required: field name
+    mode="tree",                 # "tree", "code", or "view"
+    height="400px",              # Editor height
+    width=None,                  # Editor width (default: 100%)
+    show_copy_button=True,       # Show copy button (default: True)
+)
+```
+
+#### Automatic JSON Widget
+
+JSONWidget is **automatically applied** to all Django JSONField models:
+
+```python
+from django.db import models
+
+class Bot(models.Model):
+    settings = models.JSONField(default=dict)  # Auto-gets JSON editor!
+
+# No widget configuration needed unless you want to customize
+```
+
+:::tip[When to Configure]
+Only add `JSONWidgetConfig` when you need to:
+- Change the editor mode (tree/code/view)
+- Adjust height for large JSON
+- Disable copy button
+- Set specific width
+:::
+
+#### Multiple Widget Types
+
+```python
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    JSONWidgetConfig,
+    TextWidgetConfig,
+)
+
+config = AdminConfig(
+    model=Article,
+
+    widgets=[
+        # JSON widget for metadata
+        JSONWidgetConfig(
+            field="metadata",
+            mode="tree",
+            height="300px",
+        ),
+        # Text widget for description
+        TextWidgetConfig(
+            field="description",
+            placeholder="Enter article description",
+            rows=5,
+        ),
+    ],
+)
+```
+
+:::warning[Widget Config Location]
+Always define widgets in `AdminConfig.widgets`, not in `FieldsetConfig`. Fieldsets only define field structure.
+:::
+
 ### Actions
 
 Define admin actions declaratively using `ActionConfig`. This provides a clean, type-safe way to define actions with enhanced UI features.

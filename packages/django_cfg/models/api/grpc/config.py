@@ -397,6 +397,11 @@ class GRPCConfig(BaseConfig):
         description="Custom service import paths: {service_name: 'path.to.Service'}",
     )
 
+    publish_to_telegram: bool = Field(
+        default=False,
+        description="Publish successful gRPC events to Telegram via Centrifugo (requires Telegram and Centrifugo configured)",
+    )
+
     @model_validator(mode="after")
     def validate_grpc_config(self) -> "GRPCConfig":
         """
