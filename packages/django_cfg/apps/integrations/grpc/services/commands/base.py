@@ -31,7 +31,7 @@ try:
 except ImportError:
     GRPC_AVAILABLE = False
 
-from ..streaming.response_registry import CommandResponseRegistry
+from ..streaming.core.registry import ResponseRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -139,8 +139,8 @@ class StreamingCommandClient(Generic[TCommand], ABC):
 
         # Response registry for synchronous command execution (RPC-style)
         # Use service's registry in same-process mode, create own in cross-process
-        if self._is_same_process and hasattr(streaming_service, '_response_registry'):
-            self._response_registry = streaming_service._response_registry
+        if self._is_same_process and hasattr(streaming_service, 'response_registry'):
+            self._response_registry = streaming_service.response_registry
             logger.info(
                 f"✅ Client {client_id[:8]}... using SERVICE registry: {id(self._response_registry)} "
                 f"(streaming_service={id(streaming_service)})"
@@ -148,12 +148,12 @@ class StreamingCommandClient(Generic[TCommand], ABC):
         else:
             # Cross-process mode: sync execution not typically needed (use RPC)
             # But create registry anyway for consistency
-            self._response_registry = CommandResponseRegistry()
+            self._response_registry = ResponseRegistry()
             logger.warning(
                 f"⚠️  Client {client_id[:8]}... created NEW registry: {id(self._response_registry)} "
                 f"(same_process={self._is_same_process}, "
                 f"streaming_service={streaming_service}, "
-                f"has_registry={hasattr(streaming_service, '_response_registry') if streaming_service else 'N/A'})"
+                f"has_registry={hasattr(streaming_service, 'response_registry') if streaming_service else 'N/A'})"
             )
 
         logger.debug(

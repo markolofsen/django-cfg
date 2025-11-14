@@ -72,6 +72,10 @@ class StreamingCommandViewSetMixin:
     # Field name on model instance for client_id (default: "id")
     client_id_field: str = "id"
 
+    # gRPC connection settings for cross-process mode (optional)
+    grpc_host: Optional[str] = None
+    grpc_port: Optional[int] = None
+
     def get_client_id(self, instance) -> str:
         """
         Extract client_id from model instance.
@@ -210,14 +214,17 @@ class StreamingCommandViewSetMixin:
                 logger.debug(
                     f"🔍 ViewSet exec_sync_command: service_name={service_name}, "
                     f"streaming_service={streaming_service}, "
-                    f"registry_id={id(streaming_service._response_registry) if streaming_service and hasattr(streaming_service, '_response_registry') else 'N/A'}"
+                    f"registry_id={id(streaming_service.response_registry) if streaming_service and hasattr(streaming_service, 'response_registry') else 'N/A'}"
                 )
 
                 # Create client with streaming_service for same-process communication
+                # Or with grpc_host/grpc_port for cross-process communication
                 client = self.command_client_class(
                     client_id,
                     instance,
-                    streaming_service=streaming_service
+                    streaming_service=streaming_service,
+                    grpc_host=getattr(self, 'grpc_host', None),
+                    grpc_port=getattr(self, 'grpc_port', None)
                 )
 
                 # Get command method

@@ -210,7 +210,7 @@ class DirectCentrifugoClient:
             except httpx.ConnectError as e:
                 last_error = CentrifugoConnectionError(
                     f"Failed to connect to Centrifugo: {e}",
-                    url=self.api_url,
+                    wrapper_url=self.api_url,
                 )
                 logger.warning(
                     f"Connection attempt {attempt + 1}/{self.max_retries} failed: {e}"

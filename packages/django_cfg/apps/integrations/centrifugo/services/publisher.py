@@ -246,7 +246,11 @@ class CentrifugoPublisher:
 
         logger.debug(f"Publishing notification: {channel} ({title})")
 
-        return await self._client.publish(channel=channel, data=event_data, user=user)
+        # DirectCentrifugoClient doesn't support 'user' parameter
+        if isinstance(self._client, DirectCentrifugoClient):
+            return await self._client.publish(channel=channel, data=event_data)
+        else:
+            return await self._client.publish(channel=channel, data=event_data, user=user)
 
     async def publish_status_change(
         self,
@@ -331,7 +335,11 @@ class CentrifugoPublisher:
 
         logger.debug(f"Publishing custom event: {channel} ({event_type})")
 
-        return await self._client.publish(channel=channel, data=event_data, user=user)
+        # DirectCentrifugoClient doesn't support 'user' parameter
+        if isinstance(self._client, DirectCentrifugoClient):
+            return await self._client.publish(channel=channel, data=event_data)
+        else:
+            return await self._client.publish(channel=channel, data=event_data, user=user)
 
 
 # Singleton instance

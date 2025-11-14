@@ -1,140 +1,55 @@
 """
-Protocol type definitions for type-safe gRPC bidirectional streaming.
+Type definitions, protocols, and callbacks for bidirectional streaming.
 
-This module defines Protocol types used for generic, reusable gRPC streaming components.
-All protocols are fully typed and support generic message/command types.
+This module defines all the core types and protocols used throughout
+the streaming system.
 
-**Design Goals**:
-- 100% type-safe callbacks
-- Zero runtime overhead (protocols are compile-time only)
-- Compatible with any protobuf message types
-- Enables IDE autocomplete and mypy validation
-
-**Usage Example**:
-```python
-# Define your processor
-async def process_signal_message(
-    client_id: str,
-    message: SignalCommand,
-    output_queue: asyncio.Queue[SignalMessage]
-) -> None:
-    # Your logic here
-    await output_queue.put(response)
-
-# Type checker validates signature matches MessageProcessor protocol
-service = BidirectionalStreamingService(
-    message_processor=process_signal_message,  # ✅ Type-safe
-    ...
-)
-```
-
-Created: 2025-11-07
+Created: 2025-11-14
 Status: %%PRODUCTION%%
-Phase: Phase 1 - Universal Components
+Phase: Phase 1 - Universal Components (Refactored)
 """
 
-from typing import Protocol, TypeVar, Any
 import asyncio
+from typing import TypeVar, Protocol, Callable, Awaitable, Optional, Any
+from google.protobuf.message import Message
 
 
 # ============================================================================
-# Generic Type Variables
+# Type Variables
 # ============================================================================
 
-TMessage = TypeVar('TMessage', contravariant=True)
-"""
-Generic type for incoming gRPC messages (commands from client).
+TMessage = TypeVar('TMessage', bound=Message)
+"""Type variable for incoming protobuf messages from client."""
 
-**Contravariant**: Allows passing more specific message types where generic is expected.
-
-Example:
-    - Protocol expects: Message (base)
-    - Can pass: SignalCommand (subclass)
-"""
-
-TCommand = TypeVar('TCommand', covariant=True)
-"""
-Generic type for outgoing gRPC commands (responses to client).
-
-**Covariant**: Allows returning more general command types where specific is expected.
-
-Example:
-    - Protocol returns: BotResponse (specific)
-    - Can be treated as: Message (base)
-"""
+TCommand = TypeVar('TCommand', bound=Message)
+"""Type variable for outgoing protobuf commands to client."""
 
 
 # ============================================================================
-# Core Processing Protocols
+# Callback Protocols
 # ============================================================================
-
-class MessageProcessor(Protocol[TMessage, TCommand]):
-    """
-    Protocol for processing incoming gRPC messages and generating responses.
-
-    This is the core business logic handler that processes each message from the client
-    and optionally enqueues response commands.
-
-    **Type Parameters**:
-        TMessage: Type of incoming messages (e.g., SignalCommand, BotCommand)
-        TCommand: Type of outgoing commands (e.g., SignalMessage, BotResponse)
-
-    **Signature**:
-        async def(client_id: str, message: TMessage, output_queue: Queue[TCommand]) -> None
-
-    **Parameters**:
-        client_id: Unique identifier for the connected client
-        message: Incoming message from client (generic type TMessage)
-        output_queue: Queue to enqueue response commands (generic type TCommand)
-
-    **Example Implementation**:
-    ```python
-    async def process_bot_command(
-        client_id: str,
-        message: BotCommand,
-        output_queue: asyncio.Queue[BotResponse]
-    ) -> None:
-        logger.info(f"Processing command for {client_id}")
-
-        if message.command_type == CommandType.START:
-            response = BotResponse(status="started")
-            await output_queue.put(response)
-    ```
-    """
-    async def __call__(
-        self,
-        client_id: str,
-        message: TMessage,
-        output_queue: asyncio.Queue[TCommand]
-    ) -> None:
-        """Process incoming message and optionally enqueue responses."""
-        ...
-
 
 class ClientIdExtractor(Protocol[TMessage]):
     """
-    Protocol for extracting client ID from incoming gRPC messages.
+    Protocol for extracting client ID from incoming message.
 
-    Different services may store client IDs in different message fields.
-    This protocol allows type-safe client ID extraction.
+    Used to identify which client sent the message.
 
-    **Type Parameters**:
-        TMessage: Type of incoming messages
-
-    **Signature**:
-        def(message: TMessage) -> str
-
-    **Example Implementation**:
-    ```python
-    def extract_bot_client_id(message: BotCommand) -> str:
-        return str(message.bot_id)
-
-    def extract_signal_client_id(message: SignalCommand) -> str:
-        return message.client_id
-    ```
+    Example:
+        def extract_bot_id(message: BotMessage) -> str:
+            return message.bot_id
     """
+
     def __call__(self, message: TMessage) -> str:
-        """Extract client ID from message."""
+        """
+        Extract client ID from message.
+
+        Args:
+            message: Incoming protobuf message
+
+        Returns:
+            Client UUID string
+        """
         ...
 
 
@@ -142,199 +57,239 @@ class PingMessageCreator(Protocol[TCommand]):
     """
     Protocol for creating ping/keepalive messages.
 
-    Bidirectional streams need periodic ping messages to keep connections alive.
-    This protocol allows type-safe ping message creation.
+    Used to send periodic keepalive messages to clients.
 
-    **Type Parameters**:
-        TCommand: Type of outgoing commands
-
-    **Signature**:
-        def() -> TCommand
-
-    **Example Implementation**:
-    ```python
-    def create_bot_ping() -> BotResponse:
-        return BotResponse(
-            message_type=MessageType.PING,
-            timestamp=int(time.time())
-        )
-
-    def create_signal_ping() -> SignalMessage:
-        return SignalMessage(is_ping=True)
-    ```
+    Example:
+        def create_ping_command(converter: ProtobufConverter) -> DjangoCommand:
+            return converter.create_ping_command(sequence=0)
     """
+
     def __call__(self) -> TCommand:
-        """Create a ping message."""
+        """
+        Create ping message.
+
+        Returns:
+            Ping command protobuf message
+        """
         ...
 
 
-# ============================================================================
-# Connection Management Protocols
-# ============================================================================
+class MessageProcessor(Protocol[TMessage, TCommand]):
+    """
+    Protocol for processing incoming messages.
+
+    The main business logic handler that processes each incoming message
+    and optionally enqueues commands to send back to the client.
+
+    Example:
+        async def process_bot_message(
+            client_id: str,
+            message: BotMessage,
+            output_queue: asyncio.Queue[DjangoCommand],
+            streaming_service: BidirectionalStreamingService
+        ) -> None:
+            # Process message and enqueue responses
+            await output_queue.put(response_command)
+    """
+
+    async def __call__(
+        self,
+        client_id: str,
+        message: TMessage,
+        output_queue: asyncio.Queue[TCommand],
+        streaming_service: Optional[Any] = None
+    ) -> None:
+        """
+        Process incoming message.
+
+        Args:
+            client_id: Client UUID
+            message: Incoming protobuf message
+            output_queue: Queue for outgoing commands
+            streaming_service: Optional reference to streaming service
+        """
+        ...
+
+
+class CommandAckExtractor(Protocol[TMessage]):
+    """
+    Protocol for extracting CommandAck from incoming messages.
+
+    Used to automatically resolve pending commands in ResponseRegistry.
+    This enables synchronous RPC-style command execution over bidirectional streams.
+
+    Example:
+        def extract_command_ack(message: BotMessage) -> Optional[CommandAck]:
+            if message.HasField('command_ack'):
+                return message.command_ack
+            return None
+    """
+
+    def __call__(self, message: TMessage) -> Optional[Message]:
+        """
+        Extract CommandAck from message.
+
+        Args:
+            message: Incoming protobuf message
+
+        Returns:
+            CommandAck protobuf message if present, None otherwise
+        """
+        ...
+
+
+class HeartbeatExtractor(Protocol[TMessage]):
+    """
+    Protocol for extracting Heartbeat from incoming messages.
+
+    Used to automatically handle heartbeat updates (last_seen timestamp, metrics, etc).
+    This is a standard pattern for keeping connections alive and tracking client health.
+
+    Example:
+        def extract_heartbeat(message: BotMessage) -> Optional[HeartbeatUpdate]:
+            if message.HasField('heartbeat'):
+                return message.heartbeat
+            return None
+    """
+
+    def __call__(self, message: TMessage) -> Optional[Message]:
+        """
+        Extract Heartbeat from message.
+
+        Args:
+            message: Incoming protobuf message
+
+        Returns:
+            Heartbeat protobuf message if present, None otherwise
+        """
+        ...
+
+
+class HeartbeatCallback(Protocol):
+    """
+    Protocol for handling heartbeat updates.
+
+    Universal callback for processing heartbeat messages:
+    - Update last_seen/last_heartbeat_at timestamp in database
+    - Update metrics (CPU, memory, etc.)
+    - Log heartbeat activity
+    - Optionally send ping acknowledgment
+
+    Example:
+        async def handle_heartbeat(
+            client_id: str,
+            heartbeat: HeartbeatUpdate,
+            output_queue: asyncio.Queue
+        ) -> None:
+            # Update DB
+            await Client.objects.filter(id=client_id).aupdate(
+                last_heartbeat_at=timezone.now()
+            )
+            # Send ping ack
+            await output_queue.put(create_ping_command())
+    """
+
+    async def __call__(
+        self,
+        client_id: str,
+        heartbeat: Message,
+        output_queue: asyncio.Queue
+    ) -> None:
+        """
+        Handle heartbeat update.
+
+        Args:
+            client_id: Client UUID
+            heartbeat: Heartbeat protobuf message
+            output_queue: Queue for sending responses (e.g., ping ack)
+        """
+        ...
+
 
 class ConnectionCallback(Protocol):
     """
     Protocol for connection lifecycle callbacks.
 
-    **Signature**:
-        async def(client_id: str) -> None
+    Used for on_connect and on_disconnect handlers.
 
-    **Use Cases**:
-        - on_connect: Initialize resources, log connection
-        - on_disconnect: Cleanup resources, update database
-        - on_error: Handle connection errors
-
-    **Example Implementation**:
-    ```python
-    async def on_client_connected(client_id: str) -> None:
-        logger.info(f"Client {client_id} connected")
-        await db.mark_client_active(client_id)
-
-    async def on_client_disconnected(client_id: str) -> None:
-        logger.info(f"Client {client_id} disconnected")
-        await db.mark_client_inactive(client_id)
-    ```
+    Example:
+        async def on_connect(client_id: str) -> None:
+            print(f"Client {client_id} connected")
+            await update_client_status(client_id, "online")
     """
+
     async def __call__(self, client_id: str) -> None:
-        """Handle connection lifecycle event."""
+        """
+        Handle connection event.
+
+        Args:
+            client_id: Client UUID
+        """
         ...
 
 
 class ErrorHandler(Protocol):
     """
-    Protocol for handling errors during streaming.
+    Protocol for error handling callbacks.
 
-    **Signature**:
-        async def(client_id: str, error: Exception) -> None
+    Used for on_error handler to process exceptions during streaming.
 
-    **Example Implementation**:
-    ```python
-    async def handle_stream_error(client_id: str, error: Exception) -> None:
-        logger.error(f"Error for {client_id}: {error}")
-
-        if isinstance(error, asyncio.CancelledError):
-            # Normal cancellation, just log
-            pass
-        elif isinstance(error, grpc.RpcError):
-            # gRPC-specific error handling
-            await notify_admin(client_id, error)
-        else:
-            # Unexpected error, escalate
-            raise
-    ```
+    Example:
+        async def on_error(client_id: str, error: Exception) -> None:
+            print(f"Error for {client_id}: {error}")
+            await log_error(client_id, error)
     """
+
     async def __call__(self, client_id: str, error: Exception) -> None:
-        """Handle streaming error."""
+        """
+        Handle error event.
+
+        Args:
+            client_id: Client UUID
+            error: Exception that occurred
+        """
         ...
 
 
 # ============================================================================
-# Type Aliases for Common Patterns
+# Connection State
 # ============================================================================
 
-MessageProcessorType = MessageProcessor[Any, Any]
-"""Type alias for MessageProcessor without generic constraints."""
-
-ClientIdExtractorType = ClientIdExtractor[Any]
-"""Type alias for ClientIdExtractor without generic constraints."""
-
-PingMessageCreatorType = PingMessageCreator[Any]
-"""Type alias for PingMessageCreator without generic constraints."""
-
-
-# ============================================================================
-# Type Guards and Validation
-# ============================================================================
-
-def is_valid_message_processor(func: Any) -> bool:
+class ConnectionInfo:
     """
-    Runtime check if function matches MessageProcessor protocol.
+    Information about an active client connection.
 
-    **Parameters**:
-        func: Function to validate
-
-    **Returns**:
-        True if function signature matches protocol
-
-    **Example**:
-    ```python
-    async def my_processor(client_id: str, msg: Command, queue: Queue) -> None:
-        pass
-
-    assert is_valid_message_processor(my_processor)  # ✅
-    ```
+    Stores metadata about the connection for management and debugging.
     """
-    if not callable(func):
-        return False
 
-    import inspect
-    sig = inspect.signature(func)
-    params = list(sig.parameters.values())
+    def __init__(
+        self,
+        client_id: str,
+        output_queue: asyncio.Queue,
+        connected_at: float,
+        metadata: Optional[dict] = None
+    ):
+        self.client_id = client_id
+        self.output_queue = output_queue
+        self.connected_at = connected_at
+        self.metadata = metadata or {}
+        self.last_message_at: Optional[float] = None
+        self.message_count: int = 0
 
-    return (
-        len(params) == 3 and
-        params[0].annotation in (str, inspect.Parameter.empty) and
-        inspect.iscoroutinefunction(func)
-    )
+    def update_activity(self, timestamp: float) -> None:
+        """Update last activity timestamp."""
+        self.last_message_at = timestamp
+        self.message_count += 1
 
-
-def is_valid_client_id_extractor(func: Any) -> bool:
-    """
-    Runtime check if function matches ClientIdExtractor protocol.
-
-    **Parameters**:
-        func: Function to validate
-
-    **Returns**:
-        True if function signature matches protocol
-
-    **Example**:
-    ```python
-    def extract_id(msg: Command) -> str:
-        return msg.client_id
-
-    assert is_valid_client_id_extractor(extract_id)  # ✅
-    ```
-    """
-    if not callable(func):
-        return False
-
-    import inspect
-    sig = inspect.signature(func)
-    params = list(sig.parameters.values())
-
-    return (
-        len(params) == 1 and
-        sig.return_annotation in (str, inspect.Parameter.empty)
-    )
-
-
-def is_valid_ping_creator(func: Any) -> bool:
-    """
-    Runtime check if function matches PingMessageCreator protocol.
-
-    **Parameters**:
-        func: Function to validate
-
-    **Returns**:
-        True if function signature matches protocol
-
-    **Example**:
-    ```python
-    def create_ping() -> Message:
-        return Message(is_ping=True)
-
-    assert is_valid_ping_creator(create_ping)  # ✅
-    ```
-    """
-    if not callable(func):
-        return False
-
-    import inspect
-    sig = inspect.signature(func)
-    params = list(sig.parameters.values())
-
-    return len(params) == 0
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            'client_id': self.client_id,
+            'connected_at': self.connected_at,
+            'last_message_at': self.last_message_at,
+            'message_count': self.message_count,
+            'metadata': self.metadata,
+        }
 
 
 # ============================================================================
@@ -346,22 +301,16 @@ __all__ = [
     'TMessage',
     'TCommand',
 
-    # Core protocols
-    'MessageProcessor',
+    # Protocols
     'ClientIdExtractor',
     'PingMessageCreator',
-
-    # Connection protocols
+    'MessageProcessor',
+    'CommandAckExtractor',
+    'HeartbeatExtractor',
+    'HeartbeatCallback',
     'ConnectionCallback',
     'ErrorHandler',
 
-    # Type aliases
-    'MessageProcessorType',
-    'ClientIdExtractorType',
-    'PingMessageCreatorType',
-
-    # Validation
-    'is_valid_message_processor',
-    'is_valid_client_id_extractor',
-    'is_valid_ping_creator',
+    # Connection state
+    'ConnectionInfo',
 ]
