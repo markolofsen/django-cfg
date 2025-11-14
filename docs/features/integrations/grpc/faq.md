@@ -376,7 +376,7 @@ class UserServiceTest(TestCase):
         self.assertEqual(response.username, 'test')
 ```
 
-## 📝 Best Practices
+## Best Practices {#best-practices}
 
 ### Service organization
 

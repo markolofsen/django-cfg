@@ -923,6 +923,249 @@ def connection_status_display(self, obj):
     return self.html.icon_text(Icons.CANCEL, "Never connected", color="secondary")
 ```
 
+## Bot/API Configuration Admin
+
+Complete example with JSON Widget for managing bot configurations and API schemas.
+
+```python
+"""
+Bot Configuration Admin - JSON Widget example
+Features: JSON editor with copy button, Read-only schemas, Multiple JSON fields
+"""
+
+from django.contrib import admin
+from django_cfg.modules.django_admin import (
+    AdminConfig, BadgeField, BooleanField, DateTimeField,
+    FieldsetConfig, Icons, JSONWidgetConfig, ShortUUIDField,
+)
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+# Model
+class Bot(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    name = models.CharField(max_length=100)
+    adapter = models.ForeignKey(Adapter, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    enabled = models.BooleanField(default=False)
+
+    # JSON fields
+    settings = models.JSONField(default=dict)  # Editable configuration
+    config_schema = models.JSONField(null=True)  # Read-only Pydantic schema
+
+    # Monitoring
+    last_heartbeat_at = models.DateTimeField(null=True)
+    is_alive = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+# Declarative configuration
+bot_config = AdminConfig(
+    model=Bot,
+
+    # List display
+    list_display=[
+        "id",
+        "name",
+        "adapter_display",
+        "status_display",
+        "enabled",
+        "is_alive_display",
+        "last_heartbeat_display",
+        "created_at",
+    ],
+
+    # Auto-generated display methods
+    display_fields=[
+        ShortUUIDField(
+            name="id",
+            title="ID",
+            length=8,
+        ),
+        BadgeField(
+            name="status",
+            title="Status",
+            label_map={
+                "stopped": "secondary",
+                "starting": "info",
+                "running": "success",
+                "paused": "warning",
+                "stopping": "warning",
+                "error": "danger",
+            },
+            icon=Icons.PLAY_CIRCLE,
+        ),
+        BooleanField(name="enabled", title="Enabled"),
+        BooleanField(name="is_alive", title="Alive"),
+        DateTimeField(name="created_at", title="Created", show_relative=True),
+        DateTimeField(name="last_heartbeat_at", title="Last Heartbeat", show_relative=True),
+    ],
+
+    # JSON Widget configurations
+    widgets=[
+        # Editable settings - tree mode
+        JSONWidgetConfig(
+            field="settings",
+            mode="tree",  # Interactive tree for editing
+            height="400px",
+            show_copy_button=True,
+        ),
+        # Read-only schema - view mode
+        JSONWidgetConfig(
+            field="config_schema",
+            mode="view",  # Read-only for Pydantic schema
+            height="500px",  # Larger height for schema
+            show_copy_button=True,  # Easy to copy schema
+        ),
+    ],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="Basic Info",
+            fields=["id", "name", "description", "adapter"],
+        ),
+        FieldsetConfig(
+            title="Runtime State",
+            fields=["status", "enabled"],
+        ),
+        FieldsetConfig(
+            title="Monitoring",
+            fields=["last_heartbeat_at", "last_trade_at", "is_alive", "heartbeat_age_seconds"],
+        ),
+        FieldsetConfig(
+            title="Settings",
+            fields=["settings"],  # Uses tree mode from widgets
+            collapsed=True,
+        ),
+        FieldsetConfig(
+            title="Config Schema",
+            fields=[
+                "config_schema",  # Uses view mode from widgets
+                "config_schema_requested_display",
+            ],
+            collapsed=True,
+            description="Pydantic JSON Schema from bot for dynamic UI generation",
+        ),
+        FieldsetConfig(
+            title="Timestamps",
+            fields=["created_at", "updated_at"],
+            collapsed=True,
+        ),
+    ],
+
+    # Configuration
+    list_filter=["status", "enabled", "adapter"],
+    search_fields=["name", "description", "id"],
+    readonly_fields=[
+        "id", "created_at", "updated_at",
+        "last_heartbeat_at", "is_alive",
+        "config_schema", "config_schema_requested_display"
+    ],
+)
+
+# Register admin
+@admin.register(Bot)
+class BotAdmin(PydanticAdmin):
+    """Admin interface for bots (unified runtime state)"""
+
+    config = bot_config
+
+    # Custom computed fields
+    @computed_field("Adapter")
+    def adapter_display(self, obj):
+        """Display adapter with icon."""
+        if obj.adapter:
+            return self.html.icon_text(Icons.EXTENSION, obj.adapter.name)
+        return self.html.empty("-")
+
+    @computed_field("Status")
+    def status_display(self, obj):
+        """Display status with icon."""
+        status_icons = {
+            Bot.Status.STOPPED: Icons.STOP,
+            Bot.Status.STARTING: Icons.PLAY_ARROW,
+            Bot.Status.RUNNING: Icons.PLAY_CIRCLE,
+            Bot.Status.PAUSED: Icons.PAUSE,
+            Bot.Status.STOPPING: Icons.STOP_CIRCLE,
+            Bot.Status.ERROR: Icons.ERROR,
+        }
+        return self.html.icon_text(
+            status_icons.get(obj.status, Icons.HELP),
+            obj.get_status_display(),
+        )
+
+    @computed_field("Alive")
+    def is_alive_display(self, obj):
+        """Display if bot is alive."""
+        if obj.is_alive:
+            return self.html.icon_text(Icons.CHECK_CIRCLE, "Yes", color="success")
+        return self.html.icon_text(Icons.CANCEL, "No", color="secondary")
+
+    @computed_field("Last Heartbeat")
+    def last_heartbeat_display(self, obj):
+        """Display last heartbeat with relative time."""
+        if obj.last_heartbeat_at:
+            from django.utils import timezone
+            from django.utils.timesince import timesince
+
+            age_seconds = (timezone.now() - obj.last_heartbeat_at).total_seconds()
+
+            if age_seconds < 120:  # < 2 minutes
+                color = "success"
+            elif age_seconds < 300:  # < 5 minutes
+                color = "warning"
+            else:
+                color = "danger"
+
+            time_ago = timesince(obj.last_heartbeat_at, timezone.now())
+            return self.html.colored_text(f"{time_ago} ago", color)
+        return self.html.empty("-")
+
+    @computed_field("Schema Requested")
+    def config_schema_requested_display(self, obj):
+        """Display when schema was requested."""
+        if obj.config_schema_requested_at:
+            from django.utils import timezone
+            from django.utils.timesince import timesince
+            time_ago = timesince(obj.config_schema_requested_at, timezone.now())
+            return self.html.colored_text(f"{time_ago} ago", "info")
+        return self.html.empty("-")
+```
+
+### Key Features
+
+**JSON Widget Configuration:**
+- `settings` field uses `mode="tree"` for interactive editing
+- `config_schema` field uses `mode="view"` for read-only display
+- Both have `show_copy_button=True` for easy copying
+- Different heights optimized for content
+
+**Centralized Widget Config:**
+```python
+widgets=[
+    JSONWidgetConfig(
+        field="settings",
+        mode="tree",  # Editable
+        height="400px",
+    ),
+    JSONWidgetConfig(
+        field="config_schema",
+        mode="view",  # Read-only
+        height="500px",
+    ),
+]
+```
+
+**Clean Fieldsets:**
+```python
+# Just field names - widget config is separate!
+FieldsetConfig(
+    title="Settings",
+    fields=["settings"],  # Widget config applied automatically
+)
+```
+
 ## Next Steps
 
 - **[Overview](./overview.md)** - Learn the philosophy

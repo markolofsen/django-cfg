@@ -119,12 +119,19 @@ class GRPCSettingsGenerator:
         if grpc_proto:
             settings["GRPC_PROTO"] = grpc_proto
 
+        # Generate Centrifugo interceptor settings
+        grpc_centrifugo = self._build_grpc_centrifugo_settings()
+        if grpc_centrifugo:
+            settings["GRPC_CENTRIFUGO"] = grpc_centrifugo
+
         logger.info("✅ gRPC framework enabled (async)")
         logger.info(f"   - Server: {self.config.grpc.server.host}:{self.config.grpc.server.port}")
         max_streams = self.config.grpc.server.max_concurrent_streams or "unlimited"
         logger.info(f"   - Max concurrent streams: {max_streams}")
         logger.info(f"   - Auth: {'enabled' if self.config.grpc.auth.enabled else 'disabled'}")
         logger.info(f"   - Reflection: {'enabled' if self.config.grpc.server.enable_reflection else 'disabled'}")
+        if self.config.grpc.publish_to_telegram:
+            logger.info(f"   - Telegram notifications: enabled")
 
         return settings
 
@@ -228,6 +235,29 @@ class GRPCSettingsGenerator:
 
         return proto_settings
 
+    def _build_grpc_centrifugo_settings(self) -> Dict[str, Any]:
+        """
+        Build GRPC_CENTRIFUGO settings dictionary.
+
+        Returns:
+            Dictionary with Centrifugo interceptor configuration
+        """
+        grpc_config = self.config.grpc
+
+        centrifugo_settings = {
+            "enabled": True,
+            "publish_start": False,
+            "publish_end": True,
+            "publish_errors": True,
+            "publish_stream_messages": False,
+            "channel_template": "grpc#{service}#{method}#meta",
+            "error_channel_template": "grpc#{service}#{method}#errors",
+            "metadata": {},
+            "publish_to_telegram": grpc_config.publish_to_telegram,
+        }
+
+        return centrifugo_settings
+
     def _build_interceptors(self) -> List[str]:
         """
         Build list of server interceptors.
@@ -269,6 +299,13 @@ class GRPCSettingsGenerator:
         interceptors.append(
             "django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor"
         )
+
+        # 1.5. Add Centrifugo interceptor (publishes events to Centrifugo/Telegram)
+        # Check if Centrifugo is enabled OR publish_to_telegram is enabled
+        if self.config.grpc.publish_to_telegram:
+            interceptors.append(
+                "django_cfg.apps.integrations.grpc.services.interceptors.CentrifugoInterceptor"
+            )
 
         # 1. Add auth interceptor LAST in list (executed FIRST - sets contextvars!)
         if self.config.grpc.auth.enabled:
