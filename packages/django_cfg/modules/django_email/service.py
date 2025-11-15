@@ -7,6 +7,7 @@ without requiring manual parameter passing.
 
 import logging
 import socket
+import threading
 from smtplib import SMTPException
 from typing import Any, Dict, List, Optional
 
@@ -18,6 +19,18 @@ from django.utils.html import strip_tags
 from ..base import BaseCfgModule
 
 logger = logging.getLogger(__name__)
+
+
+def _notify_telegram_on_email_error(error_msg: str, context: dict = None):
+    """Send telegram notification about email sending error."""
+    try:
+        from ..django_telegram import DjangoTelegram
+        DjangoTelegram.send_error(
+            error=f"Email Sending Error\n\n{error_msg}",
+            context=context
+        )
+    except Exception as e:
+        logger.debug(f"Could not send telegram notification: {e}")
 
 
 class DjangoEmailService(BaseCfgModule):
@@ -35,6 +48,32 @@ class DjangoEmailService(BaseCfgModule):
         """Initialize email service with auto-discovered config."""
         self.config = self.get_config()
         self.email_config = getattr(self.config, 'email', None)
+
+    def _send_in_background(self, func, *args, **kwargs):
+        """
+        Execute a function in a background thread to avoid blocking.
+
+        Args:
+            func: Function to execute
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+        """
+        def _wrapper():
+            try:
+                func(*args, **kwargs)
+            except Exception as e:
+                error_msg = f"Background email send failed: {e}"
+                logger.error(error_msg)
+
+                # Notify telegram about email error
+                context = {
+                    'error_type': type(e).__name__,
+                    'function': func.__name__ if hasattr(func, '__name__') else 'unknown',
+                }
+                _notify_telegram_on_email_error(str(e), context)
+
+        thread = threading.Thread(target=_wrapper, daemon=True)
+        thread.start()
 
     def _handle_email_sending(self, email_func, *args, **kwargs):
         """
@@ -72,9 +111,9 @@ class DjangoEmailService(BaseCfgModule):
         recipient_list: List[str],
         from_email: Optional[str] = None,
         fail_silently: bool = False,
-    ) -> int:
+    ) -> bool:
         """
-        Send a simple text email.
+        Send a simple text email in background thread (non-blocking).
 
         Args:
             subject: Email subject
@@ -84,18 +123,23 @@ class DjangoEmailService(BaseCfgModule):
             fail_silently: Whether to fail silently on errors
 
         Returns:
-            Number of emails sent successfully
+            True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
 
-        return self._handle_email_sending(
-            send_mail,
-            subject=subject,
-            message=message,
-            from_email=from_email,
-            recipient_list=recipient_list,
-            fail_silently=fail_silently,
-        )
+        def _do_send():
+            self._handle_email_sending(
+                send_mail,
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                fail_silently=fail_silently,
+            )
+
+        # Always send in background thread to avoid blocking
+        self._send_in_background(_do_send)
+        return True
 
     def send_html(
         self,
@@ -105,9 +149,9 @@ class DjangoEmailService(BaseCfgModule):
         text_message: Optional[str] = None,
         from_email: Optional[str] = None,
         fail_silently: bool = False,
-    ) -> int:
+    ) -> bool:
         """
-        Send an HTML email with optional plain text alternative.
+        Send an HTML email with optional plain text alternative in background thread (non-blocking).
 
         Args:
             subject: Email subject
@@ -118,22 +162,27 @@ class DjangoEmailService(BaseCfgModule):
             fail_silently: Whether to fail silently on errors
 
         Returns:
-            Number of emails sent successfully
+            True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
 
         if text_message is None:
             text_message = strip_tags(html_message)
 
-        return self._handle_email_sending(
-            send_mail,
-            subject=subject,
-            message=text_message,
-            from_email=from_email,
-            recipient_list=recipient_list,
-            html_message=html_message,
-            fail_silently=fail_silently,
-        )
+        def _do_send():
+            self._handle_email_sending(
+                send_mail,
+                subject=subject,
+                message=text_message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                html_message=html_message,
+                fail_silently=fail_silently,
+            )
+
+        # Always send in background thread to avoid blocking
+        self._send_in_background(_do_send)
+        return True
 
     def send_template(
         self,
@@ -143,9 +192,9 @@ class DjangoEmailService(BaseCfgModule):
         recipient_list: List[str],
         from_email: Optional[str] = None,
         fail_silently: bool = False,
-    ) -> int:
+    ) -> bool:
         """
-        Send an email using a Django template.
+        Send an email using a Django template in background thread (non-blocking).
 
         Args:
             subject: Email subject
@@ -156,7 +205,7 @@ class DjangoEmailService(BaseCfgModule):
             fail_silently: Whether to fail silently on errors
 
         Returns:
-            Number of emails sent successfully
+            True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
 
@@ -212,29 +261,43 @@ class DjangoEmailService(BaseCfgModule):
             raise ValueError("Either html_content or text_content must be provided")
 
         def _send_multipart_email():
-            email = EmailMultiAlternatives(
-                subject=subject,
-                body=text_content or strip_tags(html_content or ''),
-                from_email=from_email,
-                to=recipient_list,
-            )
+            try:
+                email = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text_content or strip_tags(html_content or ''),
+                    from_email=from_email,
+                    to=recipient_list,
+                )
 
-            if html_content:
-                email.attach_alternative(html_content, "text/html")
+                if html_content:
+                    email.attach_alternative(html_content, "text/html")
 
-            if attachments:
-                for filename, content, mimetype in attachments:
-                    email.attach(filename, content, mimetype)
+                if attachments:
+                    for filename, content, mimetype in attachments:
+                        email.attach(filename, content, mimetype)
 
-            email.send(fail_silently=fail_silently)
-            return True
+                email.send(fail_silently=fail_silently)
+                logger.info(f"Multipart email sent successfully to {recipient_list}")
+            except Exception as e:
+                error_msg = f"Failed to send multipart email: {e}"
+                logger.error(error_msg)
 
-        try:
-            return self._handle_email_sending(_send_multipart_email) or False
-        except Exception as e:
-            if not fail_silently:
-                raise e
-            return False
+                # Notify telegram about error
+                context = {
+                    'error_type': type(e).__name__,
+                    'subject': subject,
+                    'recipients': recipient_list,
+                    'from': from_email,
+                    'attachments_count': len(attachments) if attachments else 0,
+                }
+                _notify_telegram_on_email_error(str(e), context)
+
+                if not fail_silently:
+                    raise
+
+        # Always send in background thread to avoid blocking
+        self._send_in_background(_send_multipart_email)
+        return True
 
     def send_with_attachments(
         self,
@@ -421,9 +484,9 @@ class DjangoEmailService(BaseCfgModule):
         email_log_id: str,
         from_email: Optional[str] = None,
         fail_silently: bool = False,
-    ) -> int:
+    ) -> bool:
         """
-        Send an email using a Django template with tracking support.
+        Send an email using a Django template with tracking support in background thread (non-blocking).
 
         Args:
             subject: Email subject
@@ -435,7 +498,7 @@ class DjangoEmailService(BaseCfgModule):
             fail_silently: Whether to fail silently on errors
 
         Returns:
-            Number of emails sent successfully
+            True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
 
