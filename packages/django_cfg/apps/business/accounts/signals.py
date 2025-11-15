@@ -9,7 +9,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from django_cfg.modules.django_telegram import DjangoTelegram
+from django_cfg.modules.django_telegram import DjangoTelegram, MessagePriority
 
 from .utils.notifications import AccountNotifications
 
@@ -122,7 +122,16 @@ def send_security_telegram_alert(title: str, user_email: str, details: dict):
             **details
         }
 
-        DjangoTelegram.send_warning(f"Security Alert: {title}", alert_data)
+        # Security alerts get CRITICAL priority
+        telegram = DjangoTelegram()
+        text = f"🚨 <b>Security Alert: {title}</b>\n\n"
+        text += f"User: {user_email}\n"
+        text += f"Alert Type: {title}\n"
+        text += f"Timestamp: {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+        if details:
+            import yaml
+            text += "<pre>" + yaml.dump(details, default_flow_style=False) + "</pre>"
+        telegram.send_message(text, parse_mode="HTML", priority=MessagePriority.CRITICAL)
         logger.info(f"Security Telegram alert sent: {title} for {user_email}")
 
     except ImportError:

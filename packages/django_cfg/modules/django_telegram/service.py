@@ -4,8 +4,9 @@ Django Telegram Service for django_cfg.
 Auto-configuring Telegram notification service that integrates with DjangoConfig.
 """
 
-import logging
+import queue
 import threading
+import time
 from enum import Enum
 from typing import Any, BinaryIO, Dict, Optional, Union
 
@@ -13,8 +14,175 @@ import telebot
 import yaml
 
 from ..base import BaseCfgModule
+from ..django_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("django_cfg.telegram")
+
+
+class MessagePriority:
+    """Message priority levels for Telegram queue."""
+    CRITICAL = 1  # Security alerts, critical errors
+    HIGH = 2      # Errors, important warnings
+    NORMAL = 3    # Info, success messages
+    LOW = 4       # Debug, non-urgent notifications
+
+
+class TelegramMessageQueue:
+    """
+    Global singleton queue for all Telegram messages with rate limiting and auto-cleanup.
+
+    Ensures we don't hit Telegram API limits:
+    - 30 messages/sec to different chats
+    - 1 message/sec to same chat
+
+    We use conservative 20 msg/sec (0.05s delay) to be safe.
+
+    Queue protection:
+    - Max queue size: 1000 messages
+    - Auto-cleanup: drops LOW priority messages when > 800
+    - Emergency cleanup: drops NORMAL when > 900
+    - Critical always kept
+    """
+
+    _instance = None
+    _lock = threading.Lock()
+
+    # Queue size limits
+    MAX_QUEUE_SIZE = 1000
+    WARNING_THRESHOLD = 800  # Start dropping LOW priority
+    CRITICAL_THRESHOLD = 900  # Start dropping NORMAL priority
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+
+        self._initialized = True
+        self._queue = queue.PriorityQueue()  # Priority queue for message ordering
+        self._worker = threading.Thread(target=self._process_queue, daemon=True, name="TelegramQueueWorker")
+        self._dropped_count = 0  # Track dropped messages
+        self._last_cleanup_warning = 0  # Timestamp of last warning
+        self._worker.start()
+        logger.info(
+            f"Telegram priority queue started: "
+            f"rate_limit=20msg/sec, max_size={self.MAX_QUEUE_SIZE}, "
+            f"auto_cleanup_at={self.WARNING_THRESHOLD}"
+        )
+
+    def _process_queue(self):
+        """Worker thread that processes queued messages with rate limiting."""
+        while True:
+            try:
+                # PriorityQueue returns (priority, item)
+                priority, (func, args, kwargs) = self._queue.get(timeout=1)
+
+                try:
+                    func(*args, **kwargs)
+                    logger.debug(f"Processed telegram message with priority {priority}")
+                except Exception as e:
+                    logger.error(f"Telegram queue processing error: {e}")
+                finally:
+                    self._queue.task_done()
+                    # Rate limit: 20 messages per second (0.05s delay)
+                    time.sleep(0.05)
+
+            except queue.Empty:
+                # No messages, continue waiting
+                continue
+            except Exception as e:
+                logger.error(f"Telegram queue worker error: {e}")
+                time.sleep(1)  # Back off on errors
+
+    def enqueue(self, func, priority=MessagePriority.NORMAL, *args, **kwargs):
+        """
+        Add a message to the queue with priority and smart cleanup.
+
+        Args:
+            func: Function to execute
+            priority: Message priority (1=CRITICAL, 2=HIGH, 3=NORMAL, 4=LOW)
+            *args: Positional arguments for func
+            **kwargs: Keyword arguments for func
+        """
+        current_size = self._queue.qsize()
+
+        # Check if we need to drop this message
+        if current_size >= self.MAX_QUEUE_SIZE:
+            # Queue is full - drop everything except CRITICAL
+            if priority > MessagePriority.CRITICAL:
+                self._dropped_count += 1
+                logger.warning(
+                    f"Queue FULL ({current_size}/{self.MAX_QUEUE_SIZE}): "
+                    f"Dropped priority={priority} message. Total dropped: {self._dropped_count}"
+                )
+                return
+            else:
+                logger.critical(
+                    f"Queue FULL but CRITICAL message queued anyway: {current_size}/{self.MAX_QUEUE_SIZE}"
+                )
+
+        elif current_size >= self.CRITICAL_THRESHOLD:
+            # Emergency mode: drop NORMAL and LOW
+            if priority >= MessagePriority.NORMAL:
+                self._dropped_count += 1
+                if time.time() - self._last_cleanup_warning > 60:  # Warn once per minute
+                    logger.warning(
+                        f"Queue CRITICAL ({current_size}/{self.MAX_QUEUE_SIZE}): "
+                        f"Dropping NORMAL/LOW priority messages. Dropped: {self._dropped_count}"
+                    )
+                    self._last_cleanup_warning = time.time()
+                return
+
+        elif current_size >= self.WARNING_THRESHOLD:
+            # Warning mode: drop only LOW priority
+            if priority == MessagePriority.LOW:
+                self._dropped_count += 1
+                if time.time() - self._last_cleanup_warning > 60:  # Warn once per minute
+                    logger.warning(
+                        f"Queue WARNING ({current_size}/{self.MAX_QUEUE_SIZE}): "
+                        f"Dropping LOW priority messages. Dropped: {self._dropped_count}"
+                    )
+                    self._last_cleanup_warning = time.time()
+                return
+
+        # Queue the message
+        self._queue.put((priority, (func, args, kwargs)))
+        logger.debug(
+            f"Telegram message queued with priority {priority} "
+            f"(size: {current_size + 1}/{self.MAX_QUEUE_SIZE})"
+        )
+
+    def size(self) -> int:
+        """Get current queue size."""
+        return self._queue.qsize()
+
+    def get_stats(self) -> dict:
+        """Get queue statistics."""
+        current_size = self._queue.qsize()
+        return {
+            "queue_size": current_size,
+            "max_size": self.MAX_QUEUE_SIZE,
+            "usage_percent": round((current_size / self.MAX_QUEUE_SIZE) * 100, 1),
+            "dropped_total": self._dropped_count,
+            "warning_threshold": self.WARNING_THRESHOLD,
+            "critical_threshold": self.CRITICAL_THRESHOLD,
+            "status": (
+                "FULL" if current_size >= self.MAX_QUEUE_SIZE
+                else "CRITICAL" if current_size >= self.CRITICAL_THRESHOLD
+                else "WARNING" if current_size >= self.WARNING_THRESHOLD
+                else "OK"
+            ),
+        }
+
+
+# Global singleton instance
+_telegram_queue = TelegramMessageQueue()
 
 
 class TelegramParseMode(Enum):
@@ -46,6 +214,9 @@ class DjangoTelegram(BaseCfgModule):
 
     Provides Telegram messaging functionality with automatic configuration
     from the main DjangoConfig instance.
+
+    All messages are queued through a global singleton queue with rate limiting
+    (20 messages/second) to avoid hitting Telegram API limits.
     """
 
     # Emoji mappings for different message types
@@ -99,13 +270,16 @@ class DjangoTelegram(BaseCfgModule):
         return self._bot
 
     def get_config_info(self) -> Dict[str, Any]:
-        """Get Telegram configuration information."""
+        """Get Telegram configuration information with queue stats."""
+        queue_stats = _telegram_queue.get_stats()
+
         if not self.is_configured:
             return {
                 "configured": False,
                 "bot_token": "Not configured",
                 "chat_id": "Not configured",
                 "enabled": False,
+                **queue_stats,
             }
 
         telegram_config = self.config.telegram
@@ -115,25 +289,31 @@ class DjangoTelegram(BaseCfgModule):
             "chat_id": telegram_config.chat_id or "Not set",
             "enabled": True,
             "parse_mode": telegram_config.parse_mode or "None",
+            "rate_limit": "20 messages/second",
+            **queue_stats,
         }
 
-    def _send_in_background(self, func, *args, **kwargs):
+    @staticmethod
+    def get_queue_size() -> int:
+        """Get current number of messages in the global queue."""
+        return _telegram_queue.size()
+
+    @staticmethod
+    def get_queue_stats() -> dict:
+        """Get detailed queue statistics."""
+        return _telegram_queue.get_stats()
+
+    def _enqueue_message(self, func, priority=MessagePriority.NORMAL, *args, **kwargs):
         """
-        Execute a function in a background thread to avoid blocking.
+        Add message to global queue with priority and rate limiting.
 
         Args:
             func: Function to execute
+            priority: Message priority (1=CRITICAL, 2=HIGH, 3=NORMAL, 4=LOW)
             *args: Positional arguments for the function
             **kwargs: Keyword arguments for the function
         """
-        def _wrapper():
-            try:
-                func(*args, **kwargs)
-            except Exception as e:
-                logger.error(f"Background telegram send failed: {e}")
-
-        thread = threading.Thread(target=_wrapper, daemon=True)
-        thread.start()
+        _telegram_queue.enqueue(func, priority, *args, **kwargs)
 
     def send_message(
         self,
@@ -143,9 +323,13 @@ class DjangoTelegram(BaseCfgModule):
         disable_notification: bool = False,
         reply_to_message_id: Optional[int] = None,
         fail_silently: bool = False,
+        priority: int = MessagePriority.NORMAL,
     ) -> bool:
         """
-        Send a text message to Telegram in background thread (non-blocking).
+        Send a text message to Telegram via global queue (non-blocking, rate-limited).
+
+        Messages are queued and sent at max 20 msg/sec to avoid Telegram API limits.
+        Higher priority messages (lower number) are sent first.
 
         Args:
             message: Message text to send
@@ -154,6 +338,7 @@ class DjangoTelegram(BaseCfgModule):
             disable_notification: Send silently
             reply_to_message_id: Reply to specific message
             fail_silently: Don't raise exceptions on failure
+            priority: Message priority (1=CRITICAL, 2=HIGH, 3=NORMAL, 4=LOW)
 
         Returns:
             True if message queued successfully, False otherwise
@@ -196,8 +381,8 @@ class DjangoTelegram(BaseCfgModule):
                 )
                 logger.info(f"Telegram message sent successfully to chat {target_chat_id}")
 
-            # Always send in background thread to avoid blocking
-            self._send_in_background(_do_send)
+            # Always enqueue to global queue with rate limiting
+            self._enqueue_message(_do_send, priority=priority)
             return True
 
         except Exception as e:
@@ -214,9 +399,13 @@ class DjangoTelegram(BaseCfgModule):
         chat_id: Optional[Union[int, str]] = None,
         parse_mode: Optional[TelegramParseMode] = None,
         fail_silently: bool = False,
+        priority: int = MessagePriority.NORMAL,
     ) -> bool:
         """
-        Send a photo to Telegram in background thread (non-blocking).
+        Send a photo to Telegram via global queue (non-blocking, rate-limited).
+
+        Messages are queued and sent at max 20 msg/sec to avoid Telegram API limits.
+        Higher priority messages (lower number) are sent first.
 
         Args:
             photo: Photo file path, URL, or file-like object
@@ -224,6 +413,7 @@ class DjangoTelegram(BaseCfgModule):
             chat_id: Target chat ID (uses config default if not provided)
             parse_mode: Caption parse mode
             fail_silently: Don't raise exceptions on failure
+            priority: Message priority (1=CRITICAL, 2=HIGH, 3=NORMAL, 4=LOW)
 
         Returns:
             True if photo queued successfully, False otherwise
@@ -266,8 +456,8 @@ class DjangoTelegram(BaseCfgModule):
                 )
                 logger.info(f"Telegram photo sent successfully to chat {target_chat_id}")
 
-            # Always send in background thread to avoid blocking
-            self._send_in_background(_do_send)
+            # Always enqueue to global queue with rate limiting
+            self._enqueue_message(_do_send, priority=priority)
             return True
 
         except Exception as e:
@@ -284,9 +474,13 @@ class DjangoTelegram(BaseCfgModule):
         chat_id: Optional[Union[int, str]] = None,
         parse_mode: Optional[TelegramParseMode] = None,
         fail_silently: bool = False,
+        priority: int = MessagePriority.NORMAL,
     ) -> bool:
         """
-        Send a document to Telegram in background thread (non-blocking).
+        Send a document to Telegram via global queue (non-blocking, rate-limited).
+
+        Messages are queued and sent at max 20 msg/sec to avoid Telegram API limits.
+        Higher priority messages (lower number) are sent first.
 
         Args:
             document: Document file path, URL, or file-like object
@@ -294,6 +488,7 @@ class DjangoTelegram(BaseCfgModule):
             chat_id: Target chat ID (uses config default if not provided)
             parse_mode: Caption parse mode
             fail_silently: Don't raise exceptions on failure
+            priority: Message priority (1=CRITICAL, 2=HIGH, 3=NORMAL, 4=LOW)
 
         Returns:
             True if document queued successfully, False otherwise
@@ -336,8 +531,8 @@ class DjangoTelegram(BaseCfgModule):
                 )
                 logger.info(f"Telegram document sent successfully to chat {target_chat_id}")
 
-            # Always send in background thread to avoid blocking
-            self._send_in_background(_do_send)
+            # Always enqueue to global queue with rate limiting
+            self._enqueue_message(_do_send, priority=priority)
             return True
 
         except Exception as e:
@@ -391,59 +586,59 @@ class DjangoTelegram(BaseCfgModule):
 
     @classmethod
     def send_error(cls, error: str, context: Optional[Dict[str, Any]] = None) -> None:
-        """Send error notification."""
+        """Send error notification with HIGH priority."""
         try:
             telegram = cls()
             text = f"{cls.EMOJI_MAP['error']} <b>Error</b>\n\n{error}"
             if context:
                 text += "\n\n<pre>" + cls._format_to_yaml(context) + "</pre>"
-            telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
+            telegram.send_message(text, parse_mode=TelegramParseMode.HTML, priority=MessagePriority.HIGH)
         except Exception:
             # Silently fail - error notifications should not cause cascading failures
             pass
 
     @classmethod
     def send_success(cls, message: str, details: Optional[Dict[str, Any]] = None) -> None:
-        """Send success notification."""
+        """Send success notification with NORMAL priority."""
         try:
             telegram = cls()
             text = f"{cls.EMOJI_MAP['success']} <b>Success</b>\n\n{message}"
             if details:
                 text += "\n\n<pre>" + cls._format_to_yaml(details) + "</pre>"
-            telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
+            telegram.send_message(text, parse_mode=TelegramParseMode.HTML, priority=MessagePriority.NORMAL)
         except Exception:
             # Silently fail - success notifications should not cause failures
             pass
 
     @classmethod
     def send_warning(cls, warning: str, context: Optional[Dict[str, Any]] = None) -> None:
-        """Send warning notification."""
+        """Send warning notification with HIGH priority."""
         try:
             telegram = cls()
             text = f"{cls.EMOJI_MAP['warning']} <b>Warning</b>\n\n{warning}"
             if context:
                 text += "\n\n<pre>" + cls._format_to_yaml(context) + "</pre>"
-            telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
+            telegram.send_message(text, parse_mode=TelegramParseMode.HTML, priority=MessagePriority.HIGH)
         except Exception:
             # Silently fail - warning notifications should not cause failures
             pass
 
     @classmethod
     def send_info(cls, message: str, data: Optional[Dict[str, Any]] = None) -> None:
-        """Send informational message."""
+        """Send informational message with NORMAL priority."""
         telegram = cls()
         text = f"{cls.EMOJI_MAP['info']} <b>Info</b>\n\n{message}"
         if data:
             text += "\n\n<pre>" + cls._format_to_yaml(data) + "</pre>"
-        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML, priority=MessagePriority.NORMAL)
 
     @classmethod
     def send_stats(cls, title: str, stats: Dict[str, Any]) -> None:
-        """Send statistics data."""
+        """Send statistics data with LOW priority."""
         telegram = cls()
         text = f"{cls.EMOJI_MAP['stats']} <b>{title}</b>"
         text += "\n\n<pre>" + cls._format_to_yaml(stats) + "</pre>"
-        telegram.send_message(text, parse_mode=TelegramParseMode.HTML)
+        telegram.send_message(text, parse_mode=TelegramParseMode.HTML, priority=MessagePriority.LOW)
 
 
 __all__ = [
@@ -452,4 +647,5 @@ __all__ = [
     "TelegramConfigError",
     "TelegramSendError",
     "DjangoTelegram",
+    "MessagePriority",
 ]

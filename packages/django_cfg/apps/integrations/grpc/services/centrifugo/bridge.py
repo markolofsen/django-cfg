@@ -268,13 +268,16 @@ class CentrifugoBridgeMixin:
                 pass
             logger.info("Centrifugo bridge shutdown complete")
 
-    async def _notify_centrifugo(
+    def _notify_centrifugo(
         self,
         message: Any,  # Protobuf message
         **context: Any  # Template variables for channel rendering
-    ) -> bool:
+    ) -> None:
         """
-        Publish protobuf message to Centrifugo based on configured mappings.
+        Publish protobuf message to Centrifugo (fire-and-forget, non-blocking).
+
+        This is a non-blocking wrapper that creates a background task.
+        Does NOT block the gRPC stream while waiting for Centrifugo response.
 
         Automatically detects which field is set in the message and publishes
         to the corresponding channel.
@@ -284,33 +287,63 @@ class CentrifugoBridgeMixin:
             **context: Template variables for channel name rendering
                 Example: bot_id='123', user_id='456'
 
-        Returns:
-            True if published successfully, False otherwise
-
         Example:
             ```python
             # message = BotMessage with heartbeat field set
-            await self._notify_centrifugo(message, bot_id='bot-123')
-            # → Publishes to channel: bot#bot-123#heartbeat
+            self._notify_centrifugo(message, bot_id='bot-123')
+            # ✅ Returns immediately, publishes in background
+            # ✅ Does NOT block gRPC stream
             ```
         """
         if not self._centrifugo_enabled or not self._centrifugo_client:
+            return
+
+        # Fire-and-forget: create background task (non-blocking)
+        task = asyncio.create_task(self._notify_centrifugo_async(message, **context))
+
+        # Add error callback to prevent silent failures
+        task.add_done_callback(self._handle_publish_task_error)
+
+    async def _notify_centrifugo_async(
+        self,
+        message: Any,
+        **context: Any
+    ) -> bool:
+        """
+        Internal async method for publishing to Centrifugo.
+
+        This is called by _notify_centrifugo() in a background task.
+        Should not be called directly from gRPC stream handlers.
+        """
+        try:
+            # Lazily start retry task on first publish
+            self._ensure_retry_task_started()
+
+            # Check each mapped field
+            for field_name, mapping in self._centrifugo_mappings.items():
+                if message.HasField(field_name):
+                    return await self._publish_field(
+                        field_name,
+                        message,
+                        mapping,
+                        context
+                    )
+
             return False
 
-        # Lazily start retry task on first publish
-        self._ensure_retry_task_started()
+        except Exception as e:
+            logger.error(f"Error in Centrifugo publish task: {e}", exc_info=True)
+            return False
 
-        # Check each mapped field
-        for field_name, mapping in self._centrifugo_mappings.items():
-            if message.HasField(field_name):
-                return await self._publish_field(
-                    field_name,
-                    message,
-                    mapping,
-                    context
-                )
-
-        return False
+    def _handle_publish_task_error(self, task: asyncio.Task) -> None:
+        """Error callback for background publish tasks."""
+        try:
+            # This will raise if the task raised an exception
+            task.result()
+        except asyncio.CancelledError:
+            pass  # Task was cancelled, ignore
+        except Exception as e:
+            logger.error(f"Uncaught error in Centrifugo publish task: {e}", exc_info=True)
 
     async def _publish_field(
         self,

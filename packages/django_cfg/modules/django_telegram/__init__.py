@@ -6,6 +6,7 @@ Auto-configuring Telegram notification service that integrates with DjangoConfig
 
 from .service import (
     DjangoTelegram,
+    MessagePriority,
     TelegramConfigError,
     TelegramError,
     TelegramParseMode,
@@ -23,6 +24,7 @@ __all__ = [
     "TelegramConfigError",
     "TelegramSendError",
     "DjangoTelegram",
+    "MessagePriority",
     "send_telegram_message",
     "send_telegram_photo",
     "send_telegram_document",
