@@ -136,6 +136,7 @@ class FetchersGenerator:
         Examples:
             ("PaginatedUser", "PaginatedUserSchema")
             ("User", "UserSchema")
+            ("BotConfigSchema", "BotConfigSchemaSchema")  # handles names ending with "Schema"
             ("void", None)
         """
         # Get 2xx response
@@ -144,6 +145,9 @@ class FetchersGenerator:
                 response = operation.responses[status_code]
                 if response.schema_name:
                     schema_name = response.schema_name
+                    # Always add "Schema" suffix for Zod schema name
+                    # The schema generator always adds "Schema" suffix to create the constant name
+                    # e.g., "Bot" -> "BotSchema", "BotConfigSchema" -> "BotConfigSchemaSchema"
                     return (schema_name, f"{schema_name}Schema")
 
         # No response or void
@@ -202,7 +206,13 @@ class FetchersGenerator:
             # Collect schema names
             _, response_schema = self._get_response_info(operation)
             if response_schema:
-                schema_name = response_schema.replace("Schema", "")
+                # response_schema has "Schema" suffix added (e.g., "BotConfigSchemaSchema")
+                # Remove the last "Schema" suffix to get the original name (e.g., "BotConfigSchema")
+                # This is used in the import template: import { {{ schema_name }}Schema, ... }
+                if response_schema.endswith("Schema"):
+                    schema_name = response_schema[:-6]  # Remove last 6 chars ("Schema")
+                else:
+                    schema_name = response_schema
                 schema_names.add(schema_name)
 
             # Add request body schemas (only if they exist as components)

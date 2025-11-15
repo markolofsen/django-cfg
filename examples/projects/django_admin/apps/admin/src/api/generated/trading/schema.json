@@ -44,7 +44,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -90,7 +90,7 @@
         },
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -129,7 +129,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -185,7 +185,7 @@
         },
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -240,7 +240,7 @@
         },
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -276,7 +276,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -317,7 +317,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -356,7 +356,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -384,7 +384,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -412,7 +412,7 @@
         ],
         "security": [
           {
-            "jwtAuth": []
+            "jwtAuthWithLastLogin": []
           }
         ],
         "responses": {
@@ -943,7 +943,7 @@
       }
     },
     "securitySchemes": {
-      "jwtAuth": {
+      "jwtAuthWithLastLogin": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT"

@@ -26,9 +26,12 @@ try:
 
         Registers the authentication scheme with drf-spectacular so it appears
         correctly in the generated OpenAPI schema.
+
+        Uses unique name 'jwtAuthWithLastLogin' to avoid conflicts with
+        standard rest_framework_simplejwt.authentication.JWTAuthentication.
         """
         target_class = 'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin'
-        name = 'jwtAuth'
+        name = 'jwtAuthWithLastLogin'  # Unique name to avoid conflicts
 
         def get_security_definition(self, auto_schema):
             """Return JWT Bearer token security definition."""
