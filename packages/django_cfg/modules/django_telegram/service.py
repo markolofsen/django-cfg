@@ -5,6 +5,7 @@ Auto-configuring Telegram notification service that integrates with DjangoConfig
 """
 
 import logging
+import threading
 from enum import Enum
 from typing import Any, BinaryIO, Dict, Optional, Union
 
@@ -116,6 +117,24 @@ class DjangoTelegram(BaseCfgModule):
             "parse_mode": telegram_config.parse_mode or "None",
         }
 
+    def _send_in_background(self, func, *args, **kwargs):
+        """
+        Execute a function in a background thread to avoid blocking.
+
+        Args:
+            func: Function to execute
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+        """
+        def _wrapper():
+            try:
+                func(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"Background telegram send failed: {e}")
+
+        thread = threading.Thread(target=_wrapper, daemon=True)
+        thread.start()
+
     def send_message(
         self,
         message: str,
@@ -126,7 +145,7 @@ class DjangoTelegram(BaseCfgModule):
         fail_silently: bool = False,
     ) -> bool:
         """
-        Send a text message to Telegram.
+        Send a text message to Telegram in background thread (non-blocking).
 
         Args:
             message: Message text to send
@@ -137,7 +156,7 @@ class DjangoTelegram(BaseCfgModule):
             fail_silently: Don't raise exceptions on failure
 
         Returns:
-            True if message sent successfully, False otherwise
+            True if message queued successfully, False otherwise
         """
         try:
             if not self.is_configured:
@@ -167,15 +186,18 @@ class DjangoTelegram(BaseCfgModule):
             else:
                 parse_mode_str = None
 
-            self.bot.send_message(
-                chat_id=target_chat_id,
-                text=message,
-                parse_mode=parse_mode_str,
-                disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-            )
+            def _do_send():
+                self.bot.send_message(
+                    chat_id=target_chat_id,
+                    text=message,
+                    parse_mode=parse_mode_str,
+                    disable_notification=disable_notification,
+                    reply_to_message_id=reply_to_message_id,
+                )
+                logger.info(f"Telegram message sent successfully to chat {target_chat_id}")
 
-            logger.info(f"Telegram message sent successfully to chat {target_chat_id}")
+            # Always send in background thread to avoid blocking
+            self._send_in_background(_do_send)
             return True
 
         except Exception as e:
@@ -194,7 +216,7 @@ class DjangoTelegram(BaseCfgModule):
         fail_silently: bool = False,
     ) -> bool:
         """
-        Send a photo to Telegram.
+        Send a photo to Telegram in background thread (non-blocking).
 
         Args:
             photo: Photo file path, URL, or file-like object
@@ -204,7 +226,7 @@ class DjangoTelegram(BaseCfgModule):
             fail_silently: Don't raise exceptions on failure
 
         Returns:
-            True if photo sent successfully, False otherwise
+            True if photo queued successfully, False otherwise
         """
         try:
             if not self.is_configured:
@@ -235,14 +257,17 @@ class DjangoTelegram(BaseCfgModule):
             else:
                 parse_mode_str = None
 
-            self.bot.send_photo(
-                chat_id=target_chat_id,
-                photo=photo,
-                caption=caption,
-                parse_mode=parse_mode_str,
-            )
+            def _do_send():
+                self.bot.send_photo(
+                    chat_id=target_chat_id,
+                    photo=photo,
+                    caption=caption,
+                    parse_mode=parse_mode_str,
+                )
+                logger.info(f"Telegram photo sent successfully to chat {target_chat_id}")
 
-            logger.info(f"Telegram photo sent successfully to chat {target_chat_id}")
+            # Always send in background thread to avoid blocking
+            self._send_in_background(_do_send)
             return True
 
         except Exception as e:
@@ -261,7 +286,7 @@ class DjangoTelegram(BaseCfgModule):
         fail_silently: bool = False,
     ) -> bool:
         """
-        Send a document to Telegram.
+        Send a document to Telegram in background thread (non-blocking).
 
         Args:
             document: Document file path, URL, or file-like object
@@ -271,7 +296,7 @@ class DjangoTelegram(BaseCfgModule):
             fail_silently: Don't raise exceptions on failure
 
         Returns:
-            True if document sent successfully, False otherwise
+            True if document queued successfully, False otherwise
         """
         try:
             if not self.is_configured:
@@ -302,14 +327,17 @@ class DjangoTelegram(BaseCfgModule):
             else:
                 parse_mode_str = None
 
-            self.bot.send_document(
-                chat_id=target_chat_id,
-                document=document,
-                caption=caption,
-                parse_mode=parse_mode_str,
-            )
+            def _do_send():
+                self.bot.send_document(
+                    chat_id=target_chat_id,
+                    document=document,
+                    caption=caption,
+                    parse_mode=parse_mode_str,
+                )
+                logger.info(f"Telegram document sent successfully to chat {target_chat_id}")
 
-            logger.info(f"Telegram document sent successfully to chat {target_chat_id}")
+            # Always send in background thread to avoid blocking
+            self._send_in_background(_do_send)
             return True
 
         except Exception as e:
