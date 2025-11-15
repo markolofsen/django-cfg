@@ -5,7 +5,6 @@ This email service automatically configures itself based on the DjangoConfig ins
 without requiring manual parameter passing.
 """
 
-import logging
 import socket
 import threading
 from smtplib import SMTPException
@@ -17,8 +16,9 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
 from ..base import BaseCfgModule
+from ..django_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("django_cfg.email")
 
 
 def _notify_telegram_on_email_error(error_msg: str, context: dict = None):
