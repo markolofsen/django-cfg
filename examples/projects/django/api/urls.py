@@ -17,8 +17,6 @@ urlpatterns = [
     # Home page
     path("", TemplateView.as_view(template_name="home.html"), name="home"),
 ]
-
-# Automatically add django_cfg URLs and integrations
 # This adds:
 # - /cfg/health/ (Health check endpoint)
 # - /cfg/commands/ (Management commands interface)

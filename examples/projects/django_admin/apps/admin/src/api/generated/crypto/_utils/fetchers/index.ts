@@ -26,3 +26,4 @@
  */
 
 export * from './crypto__api__crypto'
+export * from './crypto__api__crypto_client_commands'

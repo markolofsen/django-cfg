@@ -12,6 +12,9 @@ class HealthCheckSerializer(serializers.Serializer):
     Provides overall RQ cluster health status.
     """
 
+    class Meta:
+        ref_name = 'RQHealthCheck'  # Unique name for OpenAPI schema
+
     status = serializers.CharField(help_text="Health status (healthy/degraded/unhealthy)")
     worker_count = serializers.IntegerField(help_text="Total number of active workers")
     queue_count = serializers.IntegerField(help_text="Number of configured queues")

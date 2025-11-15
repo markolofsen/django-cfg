@@ -111,6 +111,9 @@ class ServiceDetailSerializer(serializers.Serializer):
 class MethodStatsSerializer(serializers.Serializer):
     """Statistics for a single method."""
 
+    class Meta:
+        ref_name = 'GRPCServiceRegistryMethodStats'  # Unique name for OpenAPI schema
+
     total_requests = serializers.IntegerField(default=0, help_text="Total requests")
     successful = serializers.IntegerField(default=0, help_text="Successful requests")
     errors = serializers.IntegerField(default=0, help_text="Failed requests")

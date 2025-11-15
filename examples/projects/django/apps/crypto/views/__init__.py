@@ -1,6 +1,6 @@
-from .coin_views import CoinViewSet
-from .exchange_views import ExchangeViewSet
-from .wallet_views import WalletViewSet
+from .api.coin_viewsets import CoinViewSet
+from .api.exchange_viewsets import ExchangeViewSet
+from .api.wallet_viewsets import WalletViewSet
 
 __all__ = [
     "CoinViewSet",

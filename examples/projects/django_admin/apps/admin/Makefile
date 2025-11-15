@@ -8,20 +8,15 @@ help:
 	@echo "  make api        - Generate TypeScript API clients"
 	@echo ""
 
-# Generate TypeScript API clients
+# Generate API clients (calls Django management command)
 api:
-	@echo "🚀 Generating TypeScript API clients..."
-	@echo "📁 Output: src/api/generated/cfg/"
+	@echo "🚀 Generating API clients..."
 	@echo ""
-	cd ../../../django && poetry run python manage.py generate_clients --typescript --no-python
+	@echo "📦 OpenAPI clients auto-copied to Next.js admin via NextJsAdminConfig"
 	@echo ""
-	@echo "📦 Copying cfg API clients to admin app..."
-	mkdir -p src/api/generated/cfg
-	rm -rf src/api/generated/cfg/generated src/api/generated/cfg/BaseClient.ts
-	cp -r ../../../django/openapi/clients/typescript/cfg/* src/api/generated/cfg/
-	@echo "✅ Copied cfg API clients to src/api/generated/cfg!"
+	cd ../../../django && poetry run python manage.py generate_api
 	@echo ""
-	@echo "✅ TypeScript clients generated successfully!"
+	@echo "✅ API generation completed!"
 	@echo ""
 
 # Start Next.js Admin development server

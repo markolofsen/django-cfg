@@ -23,6 +23,16 @@ python -m grpc_tools.protoc \
     --pyi_out="$OUTPUT_DIR" \
     "$PROTO_DIR"/*.proto
 
+# Fix imports in generated _grpc.py files (convert absolute to relative imports)
+echo "🔧 Fixing imports..."
+find "$OUTPUT_DIR" -name "*_grpc.py" | while read -r f; do
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' 's/^import \(.*_pb2\) as/from . import \1 as/' "$f"
+    else
+        sed -i 's/^import \(.*_pb2\) as/from . import \1 as/' "$f"
+    fi
+done
+
 echo "✅ Proto generation complete!"
 echo "   Generated files in: $OUTPUT_DIR"
 

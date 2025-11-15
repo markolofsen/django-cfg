@@ -28,7 +28,6 @@ from apps.crypto.models import Coin, Wallet
 from .proto.converters import ProtobufConverter
 
 # Import configuration
-from .channels import CryptoChannels
 from .config import ProductionConfig
 
 # Import handlers
@@ -73,9 +72,6 @@ class CryptoService(
     - StreamPrices publishes to Centrifugo WebSocket
     - Clean separation of concerns
     """
-
-    # Centrifugo channel configuration
-    centrifugo_channels = CryptoChannels()
 
     def __init__(self):
         """Initialize service with Centrifugo bridge."""

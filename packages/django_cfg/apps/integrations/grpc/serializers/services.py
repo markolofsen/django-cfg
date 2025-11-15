@@ -8,6 +8,9 @@ from rest_framework import serializers
 class MethodStatsSerializer(serializers.Serializer):
     """Statistics for a single gRPC method."""
 
+    class Meta:
+        ref_name = 'GRPCMethodStats'  # Unique name for OpenAPI schema
+
     method_name = serializers.CharField(help_text="Method name")
     service_name = serializers.CharField(help_text="Service name")
     total = serializers.IntegerField(help_text="Total requests")

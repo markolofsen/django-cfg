@@ -10,6 +10,9 @@ from rest_framework import serializers
 class HealthCheckSerializer(serializers.Serializer):
     """Serializer for health check response."""
 
+    class Meta:
+        ref_name = 'DRFHealthCheck'  # Unique name for OpenAPI schema
+
     status = serializers.CharField(
         help_text="Overall health status: healthy, degraded, or unhealthy"
     )
