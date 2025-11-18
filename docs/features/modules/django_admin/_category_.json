@@ -1,0 +1,9 @@
+{
+  "label": "Django Admin",
+  "position": 8,
+  "link": {
+    "type": "generated-index",
+    "description": "Declarative Pydantic-based Django admin configuration with type-safe field definitions, automatic display methods, and modern UI components."
+  },
+  "collapsed": true
+}
