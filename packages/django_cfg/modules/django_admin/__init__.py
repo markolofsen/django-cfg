@@ -2,44 +2,54 @@
 Django Admin - Declarative Configuration with Pydantic 2.x
 
 Type-safe, reusable admin configurations using Pydantic models.
+Provides 60-80% code reduction compared to traditional Django admin.
 
-Example:
+📚 Full Documentation:
+    - README.md (this directory) - Complete examples and usage guide
+    - ../../../docs_public/django_admin/ - Detailed documentation
+    - icons/constants.py - All 2234 available Material Design Icons
+
+🎨 Available Icons (2234 total):
+    Icons.DASHBOARD, Icons.SETTINGS, Icons.PEOPLE, Icons.SYNC, Icons.CHECK_CIRCLE,
+    Icons.ERROR, Icons.WARNING, Icons.INFO, Icons.DELETE, Icons.EDIT, Icons.ADD,
+    Icons.SEARCH, Icons.FILTER, Icons.DOWNLOAD, Icons.UPLOAD, Icons.REFRESH, Icons.CLOSE,
+    Icons.MENU, Icons.NOTIFICATION, Icons.EMAIL, Icons.PHONE, Icons.MESSAGE, Icons.CALENDAR,
+    Icons.CLOCK, Icons.LOCATION, Icons.STAR, Icons.FAVORITE, Icons.SHARE, Icons.VISIBILITY,
+    Icons.LOCK, Icons.ACCOUNT_CIRCLE, Icons.PAYMENT, Icons.SHOPPING_CART, Icons.CREDIT_CARD,
+    Icons.RECEIPT, Icons.BUSINESS, Icons.WORK, Icons.HOME, Icons.SCHOOL, Icons.ATTACH_FILE,
+    Icons.FOLDER, Icons.CLOUD, Icons.STORAGE, Icons.SECURITY, Icons.PLAY_ARROW, Icons.PAUSE,
+    Icons.STOP, Icons.VOLUME_UP, Icons.WIFI, Icons.BLUETOOTH, Icons.BATTERY_FULL, and 2180+ more.
+    See icons/constants.py for the complete list.
+
+Quick Example:
     ```python
-    from django_cfg.modules.django_admin import (
-        PydanticAdmin, AdminConfig, FieldConfig, FieldsetConfig
-    )
+    from django.contrib import admin
+    from django_cfg.modules.django_admin import AdminConfig, ActionConfig, BadgeField, Icons
+    from django_cfg.modules.django_admin.base import PydanticAdmin
 
-    user_balance_config = AdminConfig(
-        model=UserBalance,
-        list_display=["user", "balance_usd", "status"],
+    config = AdminConfig(
+        model=Payment,
+        list_display=["id", "status", "amount"],
         display_fields=[
-            FieldConfig(
-                name="user",
-                title="User",
-                ui_widget="user_avatar",
-                header=True
-            ),
-            FieldConfig(
-                name="balance_usd",
-                title="Balance (USD)",
-                ui_widget="currency",
-                currency="USD",
-                precision=2
+            BadgeField(name="status", label_map={"pending": "warning"}),
+        ],
+        actions=[
+            ActionConfig(
+                name="approve",
+                description="Approve payments",
+                action_type="bulk",  # or "changelist"
+                icon=Icons.CHECK_CIRCLE,
+                handler="apps.payments.admin.actions.approve_payments",
             ),
         ],
-        fieldsets=[
-            FieldsetConfig(
-                title="Balance Details",
-                fields=["balance_usd", "total_deposited"]
-            ),
-        ],
-        select_related=["user"],
     )
 
-    @admin.register(UserBalance)
-    class UserBalanceAdmin(PydanticAdmin):
-        config = user_balance_config
+    @admin.register(Payment)
+    class PaymentAdmin(PydanticAdmin):
+        config = config
     ```
+
+For complete examples and documentation, see README.md in this directory.
 """
 
 # Core config models

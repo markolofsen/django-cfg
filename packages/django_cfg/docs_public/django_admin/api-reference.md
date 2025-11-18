@@ -207,19 +207,41 @@ class FieldsetConfig(BaseModel):
 
 ### ActionConfig
 
-Action configuration.
+Action configuration for admin actions.
 
 ```python
 class ActionConfig(BaseModel):
-    name: str                     # Action name
-    description: str              # Display description
-    handler: Callable             # Action function
-    variant: str = "primary"      # Button variant
-    permissions: List[str] = []   # Required permissions
+    name: str                              # Action name
+    description: str                       # Display description
+    action_type: Literal["bulk", "changelist"] = "bulk"  # Action type
+    handler: Union[str, Callable]          # Action function or import path
+    variant: str = "default"               # Button variant
+    icon: Optional[str] = None             # Material icon name
+    url_path: Optional[str] = None         # Custom URL path (changelist actions)
+    confirmation: bool = False             # Show confirmation dialog
+    permissions: List[str] = []            # Required permissions
 
     def get_handler_function(self) -> Callable:
-        """Get handler with attributes set."""
+        """Import and return the handler function."""
 ```
+
+**Parameters:**
+
+- **name** (str): Action function name
+- **description** (str): Display text shown in UI
+- **action_type** ("bulk" | "changelist"):
+  - `"bulk"` - Traditional bulk action (requires selection, dropdown menu)
+  - `"changelist"` - Button above listing (no selection required)
+- **handler** (str | Callable): Action handler function or Python import path
+- **variant** (str): Button color variant (default, success, warning, danger, primary, info)
+- **icon** (str | None): Material Design icon name
+- **url_path** (str | None): Custom URL path for changelist actions
+- **confirmation** (bool): Show confirmation dialog before execution
+- **permissions** (list[str]): Required permission codenames
+
+**Handler Signatures:**
+- Bulk: `handler(modeladmin, request, queryset) -> None`
+- Changelist: `handler(modeladmin, request) -> HttpResponse`
 
 ## Decorators
 

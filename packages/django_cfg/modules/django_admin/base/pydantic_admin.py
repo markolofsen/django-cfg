@@ -392,8 +392,15 @@ class PydanticAdminMixin:
 
     @classmethod
     def _register_actions(cls, config: AdminConfig):
-        """Register actions from ActionConfig with Unfold decorator support."""
-        action_functions = []
+        """
+        Register actions from ActionConfig with Unfold decorator support.
+
+        Supports two types of actions:
+        - bulk: Traditional bulk actions (require selected items)
+        - changelist: Buttons above the listing (no selection required)
+        """
+        bulk_action_functions = []
+        changelist_action_functions = []
 
         for action_config in config.actions:
             # Get handler function
@@ -404,15 +411,19 @@ class PydanticAdminMixin:
                 'description': action_config.description,
             }
 
-            # Add variant if specified
+            # Add URL path for changelist actions
+            if action_config.action_type == 'changelist':
+                url_path = action_config.url_path or action_config.name.replace('_', '-')
+                decorator_kwargs['url_path'] = url_path
+
+            # Add variant (Unfold uses ActionVariant enum, but we accept strings)
             if action_config.variant and action_config.variant != 'default':
                 decorator_kwargs['attrs'] = decorator_kwargs.get('attrs', {})
                 decorator_kwargs['attrs']['class'] = f'button-{action_config.variant}'
 
             # Add icon if specified
             if action_config.icon:
-                decorator_kwargs['attrs'] = decorator_kwargs.get('attrs', {})
-                decorator_kwargs['attrs']['data-icon'] = action_config.icon
+                decorator_kwargs['icon'] = action_config.icon
 
             # Add confirmation if enabled
             if action_config.confirmation:
@@ -429,13 +440,26 @@ class PydanticAdminMixin:
             # Store for later registration
             action_name = action_config.name
             setattr(cls, action_name, decorated_handler)
-            action_functions.append(action_name)
 
-        # Set actions list
-        if hasattr(cls, 'actions') and cls.actions:
-            cls.actions = list(cls.actions) + action_functions
-        else:
-            cls.actions = action_functions
+            # Add to appropriate list
+            if action_config.action_type == 'changelist':
+                changelist_action_functions.append(action_name)
+            else:  # bulk
+                bulk_action_functions.append(action_name)
+
+        # Set bulk actions list
+        if bulk_action_functions:
+            if hasattr(cls, 'actions') and cls.actions:
+                cls.actions = list(cls.actions) + bulk_action_functions
+            else:
+                cls.actions = bulk_action_functions
+
+        # Set changelist actions list (Unfold's actions_list)
+        if changelist_action_functions:
+            if hasattr(cls, 'actions_list') and cls.actions_list:
+                cls.actions_list = list(cls.actions_list) + changelist_action_functions
+            else:
+                cls.actions_list = changelist_action_functions
 
     def get_queryset(self, request):
         """Apply select_related, prefetch_related, and annotations from config."""

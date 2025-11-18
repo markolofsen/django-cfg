@@ -290,16 +290,26 @@ config = AdminConfig(
 
 - **name** (str, required): Action function name - must match the handler function name
 - **description** (str, required): Display text shown in the admin actions dropdown
+- **action_type** (str, optional): Type of action. Options:
+  - `"bulk"` - Traditional bulk action (requires selecting items) - **default**
+  - `"changelist"` - Button above the listing (no selection required)
 - **variant** (str, optional): Button color variant. Options:
   - `"default"` - Gray button (default)
   - `"success"` - Green button for positive actions
   - `"warning"` - Orange button for cautionary actions
   - `"danger"` - Red button for destructive actions
   - `"primary"` - Blue button for primary actions
+  - `"info"` - Light blue button for informational actions
 - **icon** (str, optional): Material Icon name (e.g., `"check_circle"`, `"warning"`, `"delete"`)
+- **url_path** (str, optional): Custom URL path for changelist actions (auto-generated if not provided)
 - **confirmation** (bool, optional): If `True`, shows confirmation dialog before executing (default: `False`)
 - **handler** (callable or str, required): Action handler function or import path to handler
 - **permissions** (list[str], optional): Required permissions to show this action
+
+:::info Action Handler Signatures
+- **Bulk actions**: `handler(modeladmin, request, queryset)` - receives selected items
+- **Changelist actions**: `handler(modeladmin, request)` - no queryset, must return HttpResponse
+:::
 
 #### Multiple Actions with Different Variants
 
@@ -493,6 +503,138 @@ config = AdminConfig(
        count = queryset.update(...)
        messages.success(request, f"Updated {count} items")
    ```
+
+#### Changelist Actions (Buttons Above Listing)
+
+Changelist actions are buttons that appear **above the listing** and don't require selecting items. They're perfect for global operations like imports, exports, synchronizations, or bulk operations.
+
+**Key Differences from Bulk Actions:**
+
+| Feature | Bulk Actions | Changelist Actions |
+|---------|-------------|-------------------|
+| Location | Dropdown menu | Buttons above listing |
+| Selection Required | ✅ Yes | ❌ No |
+| Handler Signature | `(modeladmin, request, queryset)` | `(modeladmin, request)` |
+| Return Value | None | HttpResponse (redirect) |
+| `action_type` | `"bulk"` (default) | `"changelist"` |
+
+**Example: Sync Buttons for External API**
+
+```python
+# proxies/admin/actions.py
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.contrib import messages
+from django.core.management import call_command
+from io import StringIO
+
+def sync_proxy6(modeladmin, request):
+    """Synchronize proxies from Proxy6 provider."""
+    try:
+        messages.info(request, "🔄 Syncing proxies from Proxy6...")
+
+        # Call management command
+        out = StringIO()
+        call_command('sync_proxy_providers', provider='proxy6', stdout=out)
+
+        # Show command output
+        output = out.getvalue()
+        if output:
+            messages.success(request, output)
+
+    except Exception as e:
+        messages.error(request, f"❌ Failed to sync Proxy6: {str(e)}")
+
+    # IMPORTANT: Must return redirect for changelist actions
+    return redirect(reverse('admin:proxies_proxy_changelist'))
+
+
+def sync_all_providers(modeladmin, request):
+    """Synchronize proxies from all providers."""
+    try:
+        messages.info(request, "🔄 Syncing all providers...")
+
+        out = StringIO()
+        call_command('sync_proxy_providers', provider='all', stdout=out)
+
+        output = out.getvalue()
+        if output:
+            messages.success(request, output)
+
+    except Exception as e:
+        messages.error(request, f"❌ Failed to sync: {str(e)}")
+
+    return redirect(reverse('admin:proxies_proxy_changelist'))
+```
+
+```python
+# proxies/admin/proxy_admin.py
+from django_cfg.modules.django_admin import AdminConfig, ActionConfig
+
+config = AdminConfig(
+    model=Proxy,
+
+    actions=[
+        # Bulk actions (require selection)
+        ActionConfig(
+            name='test_selected_proxies',
+            action_type='bulk',  # Default
+            description='Test selected proxies',
+            variant='warning',
+            icon='speed',
+            confirmation=True,
+            handler='apps.proxies.admin.actions.test_selected_proxies',
+        ),
+
+        # Changelist actions (buttons above listing, no selection needed)
+        ActionConfig(
+            name='sync_all_providers',
+            action_type='changelist',  # 🎯 Button above listing!
+            description='🔄 Sync All Providers',
+            variant='primary',
+            icon='sync',
+            confirmation=True,
+            handler='apps.proxies.admin.actions.sync_all_providers',
+        ),
+        ActionConfig(
+            name='sync_proxy6',
+            action_type='changelist',  # 🎯 Button above listing!
+            description='Sync Proxy6',
+            variant='info',
+            icon='cloud_sync',
+            handler='apps.proxies.admin.actions.sync_proxy6',
+        ),
+    ],
+)
+```
+
+**Result in Admin:**
+
+```
+┌────────────────────────────────────────────────────┐
+│  [🔄 Sync All Providers]  [Sync Proxy6]            │  ← Changelist actions
+├────────────────────────────────────────────────────┤
+│  Actions: [▼ Test selected proxies]                │  ← Bulk actions dropdown
+│                                                     │
+│  ☐  ID    Host      Provider   Status              │
+│  ☐  abc   1.2.3.4   proxy6     Active              │
+└────────────────────────────────────────────────────┘
+```
+
+**Common Use Cases for Changelist Actions:**
+
+- **Data Synchronization**: Sync with external APIs, refresh data
+- **Bulk Imports**: Import data from files without selecting items
+- **Reports**: Generate reports for all items
+- **Cache Operations**: Clear caches, rebuild indexes
+- **Maintenance**: Run cleanup tasks, optimize database
+
+:::warning Important for Changelist Actions
+1. **Must return HttpResponse**: Always return `redirect()` or other HttpResponse
+2. **No queryset parameter**: Handler receives only `(modeladmin, request)`
+3. **Use for model-level operations**: Not for selected items
+4. **Always provide user feedback**: Use Django messages framework
+:::
 
 #### Old-Style Actions (Not Recommended)
 
