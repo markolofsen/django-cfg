@@ -949,5 +949,10 @@
         "bearerFormat": "JWT"
       }
     }
-  }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
 }
