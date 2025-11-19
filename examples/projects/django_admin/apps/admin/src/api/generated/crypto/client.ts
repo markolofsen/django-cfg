@@ -230,6 +230,19 @@ export class APIClient {
          error.message.toLowerCase().includes('failed to fetch') ||
          error.message.toLowerCase().includes('network request failed'));
 
+      // Log specific error type first
+      if (this.logger) {
+        if (isCORSError) {
+          this.logger.error(`🚫 CORS Error: ${method} ${url}`);
+          this.logger.error(`  → ${error instanceof Error ? error.message : String(error)}`);
+          this.logger.error(`  → Configure security_domains parameter on the server`);
+        } else {
+          this.logger.error(`⚠️  Network Error: ${method} ${url}`);
+          this.logger.error(`  → ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
+      // Dispatch browser events
       if (typeof window !== 'undefined') {
         try {
           if (isCORSError) {
@@ -267,7 +280,7 @@ export class APIClient {
         ? new NetworkError(error.message, url, error)
         : new NetworkError('Unknown error', url);
 
-      // Log network error
+      // Detailed logging via logger.logError
       if (this.logger) {
         this.logger.logError(
           {

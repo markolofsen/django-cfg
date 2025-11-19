@@ -157,6 +157,7 @@ class APIFrameworksGenerator:
                 "VERSION": openapi_config.drf_version,
                 "SERVE_INCLUDE_SCHEMA": openapi_config.drf_serve_include_schema,
                 "SCHEMA_PATH_PREFIX": openapi_config.get_drf_schema_path_prefix(),
+                "SERVERS": [{"url": self.config.api_url}],  # Add base URL for OpenAPI schema
                 "SWAGGER_UI_SETTINGS": {
                     "deepLinking": True,
                     "persistAuthorization": True,
