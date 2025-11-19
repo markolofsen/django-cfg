@@ -1,9 +1,0 @@
-{
-  "label": "LLM Integration",
-  "position": 5,
-  "link": {
-    "type": "generated-index",
-    "description": "AI/LLM integration with multiple providers and intelligent text processing."
-  },
-  "collapsed": true
-}

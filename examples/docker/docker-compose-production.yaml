@@ -220,33 +220,6 @@ services:
       - "traefik.http.routers.djangocfg-demo.tls=true"
       - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
 
-  # Docusaurus Site
-  web:
-    build:
-      context: ..
-      dockerfile: docker/services/web/Dockerfile
-    image: django-cfg-web:latest
-    container_name: django-cfg-web
-    restart: unless-stopped
-    env_file:
-      - .env.prod
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          memory: 64M
-    networks:
-      - dokploy-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.djangocfg-web.rule=Host(`djangocfg.com`) || Host(`www.djangocfg.com`)"
-      - "traefik.http.routers.djangocfg-web.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-web.tls=true"
-      - "traefik.http.services.djangocfg-web.loadbalancer.server.port=3001"
-
   # RQ Dashboard is integrated into Django Admin Next.js UI
   # Access it at: https://api.djangocfg.com/cfg/admin/ → RQ tab
   # No separate service needed!
