@@ -1,8 +1,0 @@
-{
-  "label": "Ngrok Integration",
-  "position": 5,
-  "link": {
-    "type": "generated-index",
-    "description": "Auto-tunnel creation for webhook development and testing. Built-in ngrok integration for automatic public tunnel creation, webhook URL management, and local development with external services."
-  }
-}

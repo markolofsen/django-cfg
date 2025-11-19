@@ -1,8 +1,0 @@
-{
-  "label": "Django-RQ",
-  "position": 2,
-  "link": {
-    "type": "doc",
-    "id": "integrations/django-rq/overview"
-  }
-}

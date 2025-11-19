@@ -1,9 +1,0 @@
-{
-  "label": "Next.js Admin",
-  "position": 6,
-  "link": {
-    "type": "doc",
-    "id": "integrations/nextjs-admin/index"
-  },
-  "collapsed": false
-}

@@ -1,8 +1,0 @@
-{
-  "label": "Database",
-  "position": 3,
-  "link": {
-    "type": "generated-index",
-    "description": "Database configuration, multi-database setup, and routing"
-  }
-}

@@ -224,6 +224,44 @@ export class APIClient {
         throw error;
       }
 
+      // Detect CORS errors and dispatch event
+      const isCORSError = error instanceof TypeError &&
+        (error.message.toLowerCase().includes('cors') ||
+         error.message.toLowerCase().includes('failed to fetch') ||
+         error.message.toLowerCase().includes('network request failed'));
+
+      if (typeof window !== 'undefined') {
+        try {
+          if (isCORSError) {
+            // Dispatch CORS-specific error event
+            window.dispatchEvent(new CustomEvent('cors-error', {
+              detail: {
+                url: url,
+                method: method,
+                error: error instanceof Error ? error.message : String(error),
+                timestamp: new Date(),
+              },
+              bubbles: true,
+              cancelable: false,
+            }));
+          } else {
+            // Dispatch generic network error event
+            window.dispatchEvent(new CustomEvent('network-error', {
+              detail: {
+                url: url,
+                method: method,
+                error: error instanceof Error ? error.message : String(error),
+                timestamp: new Date(),
+              },
+              bubbles: true,
+              cancelable: false,
+            }));
+          }
+        } catch (eventError) {
+          // Silently fail - event dispatch should never crash the app
+        }
+      }
+
       // Wrap other errors as NetworkError
       const networkError = error instanceof Error
         ? new NetworkError(error.message, url, error)

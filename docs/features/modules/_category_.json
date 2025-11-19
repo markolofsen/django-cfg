@@ -1,9 +1,0 @@
-{
-  "label": "Auto-Configuring Modules",
-  "position": 2,
-  "collapsed": true,
-  "link": {
-    "type": "generated-index",
-    "description": "Production-ready modules organized by category: Currency, Email, Health, LLM, Telegram, Import/Export, Scheduling, and Admin."
-  }
-}

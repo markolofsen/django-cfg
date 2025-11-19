@@ -1,9 +1,0 @@
-{
-  "label": "Fundamentals",
-  "position": 3,
-  "link": {
-    "type": "generated-index",
-    "description": "Core Django-CFG concepts: architecture, configuration, environment detection, registry, and utilities."
-  },
-  "collapsed": true
-}
