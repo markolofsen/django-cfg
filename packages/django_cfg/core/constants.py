@@ -32,6 +32,7 @@ DEFAULT_APPS: List[str] = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "rest_framework_nested",
+    "adrf",  # Async Django REST Framework
     "rangefilter",
     "django_filters",
     "drf_spectacular",
