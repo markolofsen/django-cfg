@@ -169,8 +169,8 @@ class InputProcessor:
                 # Auto-resolve CommandAck (for synchronous RPC)
                 if self.command_ack_extractor and streaming_service:
                     command_ack = self.command_ack_extractor(message)
-                    if command_ack and hasattr(command_ack, 'command_id'):
-                        # Resolve in ResponseRegistry
+                    if command_ack and hasattr(command_ack, 'command_id') and command_ack.command_id:
+                        # Resolve in ResponseRegistry (only if command_id is not empty)
                         if hasattr(streaming_service, 'response_registry'):
                             await streaming_service.response_registry.resolve_command(
                                 command_ack.command_id,
@@ -280,8 +280,8 @@ class InputProcessor:
                     # Auto-resolve CommandAck (for synchronous RPC)
                     if self.command_ack_extractor and streaming_service:
                         command_ack = self.command_ack_extractor(message)
-                        if command_ack and hasattr(command_ack, 'command_id'):
-                            # Resolve in ResponseRegistry
+                        if command_ack and hasattr(command_ack, 'command_id') and command_ack.command_id:
+                            # Resolve in ResponseRegistry (only if command_id is not empty)
                             if hasattr(streaming_service, 'response_registry'):
                                 await streaming_service.response_registry.resolve_command(
                                     command_ack.command_id,

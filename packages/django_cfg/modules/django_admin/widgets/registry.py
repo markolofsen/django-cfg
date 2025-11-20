@@ -14,6 +14,7 @@ from ..models import (
     UserDisplayConfig,
 )
 from ..utils import (
+    BooleanDisplay,
     CounterBadge,
     DateTimeDisplay,
     MoneyDisplay,
@@ -148,7 +149,11 @@ WidgetRegistry.register(
 
 WidgetRegistry.register(
     "boolean",
-    lambda obj, field, cfg: bool(getattr(obj, field, False))
+    lambda obj, field, cfg: BooleanDisplay.icon(
+        getattr(obj, field, False),
+        cfg.get('true_icon') if cfg else None,
+        cfg.get('false_icon') if cfg else None
+    )
 )
 
 
