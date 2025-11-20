@@ -22,7 +22,7 @@ from .decorators import (
 )
 
 # Displays
-from .displays import DateTimeDisplay, MoneyDisplay, UserDisplay
+from .displays import BooleanDisplay, DateTimeDisplay, MoneyDisplay, UserDisplay
 
 # HTML Builders (organized by functionality)
 from .html import (
@@ -47,6 +47,7 @@ __all__ = [
     "UserDisplay",
     "MoneyDisplay",
     "DateTimeDisplay",
+    "BooleanDisplay",
     # Badge utilities
     "StatusBadge",
     "ProgressBadge",

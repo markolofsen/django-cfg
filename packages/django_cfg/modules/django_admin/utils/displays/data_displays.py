@@ -12,7 +12,6 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
-from ...icons import Icons
 from ...models.display_models import DateTimeDisplayConfig, MoneyDisplayConfig, UserDisplayConfig
 
 logger = logging.getLogger(__name__)
@@ -155,6 +154,29 @@ class MoneyDisplay:
 
         html += format_html('</div>')
         return html
+
+
+class BooleanDisplay:
+    """Boolean display utilities."""
+
+    @classmethod
+    def icon(cls, value: bool, true_icon: str = None, false_icon: str = None) -> SafeString:
+        """Display boolean as icon."""
+        # Lazy import to avoid AppRegistryNotReady
+        from ...icons import Icons
+
+        if value:
+            icon = true_icon or Icons.CHECK_CIRCLE
+            return format_html(
+                '<span class="material-symbols-outlined text-green-600 dark:text-green-400" style="font-size: 20px;">{}</span>',
+                icon
+            )
+        else:
+            icon = false_icon or Icons.CANCEL
+            return format_html(
+                '<span class="material-symbols-outlined text-red-600 dark:text-red-400" style="font-size: 20px;">{}</span>',
+                icon
+            )
 
 
 class DateTimeDisplay:
