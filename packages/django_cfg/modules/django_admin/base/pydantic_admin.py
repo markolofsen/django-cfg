@@ -63,6 +63,43 @@ class PydanticAdminMixin:
         """Universal HTML builder for display methods."""
         return HtmlBuilder
 
+    @staticmethod
+    def _highlight_json(json_obj: Any) -> str:
+        """
+        Apply syntax highlighting to JSON using Pygments (Unfold style).
+
+        Returns HTML with Pygments syntax highlighting for light and dark themes.
+        """
+        try:
+            from pygments import highlight
+            from pygments.formatters import HtmlFormatter
+            from pygments.lexers import JsonLexer
+            import json
+        except ImportError:
+            # Fallback to plain JSON if Pygments not available
+            import json
+            import html as html_lib
+            formatted_json = json.dumps(json_obj, indent=2, ensure_ascii=False)
+            return html_lib.escape(formatted_json)
+
+        def format_response(response: str, theme: str) -> str:
+            formatter = HtmlFormatter(
+                style=theme,
+                noclasses=True,
+                nobackground=True,
+                prestyles="white-space: pre-wrap; word-wrap: break-word;",
+            )
+            return highlight(response, JsonLexer(), formatter)
+
+        # Format JSON with ensure_ascii=False for proper Unicode
+        response = json.dumps(json_obj, indent=2, ensure_ascii=False)
+
+        # Return dual-theme HTML (light: colorful, dark: monokai)
+        return (
+            f'<div class="block dark:hidden">{format_response(response, "colorful")}</div>'
+            f'<div class="hidden dark:block">{format_response(response, "monokai")}</div>'
+        )
+
     def __init__(self, *args, **kwargs):
         """Process config on first instantiation."""
         # Process config once when first admin instance is created
@@ -90,7 +127,10 @@ class PydanticAdminMixin:
         cls.list_filter = config.list_filter
         cls.search_fields = config.search_fields
         cls.ordering = config.ordering if config.ordering else []
-        cls.readonly_fields = config.readonly_fields
+
+        # Auto-create display methods for readonly JSONField fields
+        # This modifies readonly_fields to use custom display methods and returns mapping
+        cls.readonly_fields, jsonfield_replacements = cls._create_jsonfield_display_methods(config)
 
         # List display options
         cls.list_display_links = config.list_display_links or getattr(cls, 'list_display_links', None)
@@ -108,14 +148,20 @@ class PydanticAdminMixin:
         # Inlines
         cls.inlines = config.inlines or getattr(cls, 'inlines', [])
 
-        # Fieldsets
+        # Fieldsets - apply JSONField replacements
         if config.fieldsets:
             cls.fieldsets = config.to_django_fieldsets()
+            # Apply JSONField replacements to fieldsets
+            if jsonfield_replacements:
+                cls.fieldsets = cls._apply_jsonfield_replacements_to_fieldsets(cls.fieldsets, jsonfield_replacements)
         # Also convert fieldsets if they're defined directly in the class as FieldsetConfig objects
         elif hasattr(cls, 'fieldsets') and isinstance(cls.fieldsets, list):
             from ..config import FieldsetConfig
             if cls.fieldsets and isinstance(cls.fieldsets[0], FieldsetConfig):
                 cls.fieldsets = tuple(fs.to_django_fieldset() for fs in cls.fieldsets)
+                # Apply JSONField replacements to fieldsets
+                if jsonfield_replacements:
+                    cls.fieldsets = cls._apply_jsonfield_replacements_to_fieldsets(cls.fieldsets, jsonfield_replacements)
 
         # Collect widget configurations from AdminConfig.widgets for custom JSON widget configs
         cls._field_widget_configs = {}
@@ -212,6 +258,129 @@ class PydanticAdminMixin:
             logger.warning(f"Could not detect app path for {self.model}: {e}")
 
         return None
+
+    @classmethod
+    def _create_jsonfield_display_methods(cls, config: AdminConfig):
+        """
+        Auto-create display methods for readonly JSONField fields.
+
+        This ensures proper Unicode display (non-ASCII characters) for readonly JSON fields.
+        Django's default display_for_field() uses json.dumps() with ensure_ascii=True,
+        which escapes Unicode characters. We override this to use ensure_ascii=False.
+
+        Returns:
+            Tuple of (updated_readonly_fields, jsonfield_replacements_dict)
+        """
+        import json
+        import html as html_lib
+        from django.utils.safestring import mark_safe
+
+        # Get model
+        model = config.model
+        if not model:
+            return config.readonly_fields, {}
+
+        # Track which fields should be replaced
+        updated_readonly_fields = []
+        jsonfield_replacements = {}
+
+        # Find JSONField fields in readonly_fields
+        for field_name in config.readonly_fields:
+            try:
+                # Get the model field
+                field = model._meta.get_field(field_name)
+                field_class_name = field.__class__.__name__
+
+                # Check if it's a JSONField
+                if field_class_name == 'JSONField':
+                    # Create a custom display method for this field
+                    def make_json_display_method(fname, field_obj):
+                        def json_display_method(self, obj):
+                            """Display JSONField with proper Unicode support."""
+                            json_value = getattr(obj, fname, None)
+
+                            if not json_value:
+                                return "—"
+
+                            try:
+                                # Parse JSON if it's a string
+                                if isinstance(json_value, str):
+                                    json_obj = json.loads(json_value)
+                                else:
+                                    json_obj = json_value
+
+                                # Syntax highlight JSON using Pygments (Unfold style)
+                                highlighted_json = self._highlight_json(json_obj)
+
+                                # Return formatted HTML (Pygments adds its own styling)
+                                return mark_safe(highlighted_json)
+
+                            except (json.JSONDecodeError, TypeError, ValueError):
+                                return mark_safe(f"<code>Invalid JSON: {str(json_value)[:100]}</code>")
+
+                        # Set method attributes for Django admin
+                        json_display_method.short_description = field_obj.verbose_name or fname.replace('_', ' ').title()
+                        return json_display_method
+
+                    # Create method name
+                    method_name = f'_auto_display_{field_name}'
+
+                    # Add method to class
+                    setattr(cls, method_name, make_json_display_method(field_name, field))
+                    logger.debug(f"Created auto-display method '{method_name}' for JSONField '{field_name}'")
+
+                    # Track replacement
+                    jsonfield_replacements[field_name] = method_name
+                    updated_readonly_fields.append(method_name)
+                else:
+                    # Not a JSONField, keep original
+                    updated_readonly_fields.append(field_name)
+
+            except Exception as e:
+                # Field might not exist or be a property - keep original
+                logger.debug(f"Skipped creating display method for '{field_name}': {e}")
+                updated_readonly_fields.append(field_name)
+
+        return updated_readonly_fields, jsonfield_replacements
+
+    @classmethod
+    def _apply_jsonfield_replacements_to_fieldsets(cls, fieldsets, replacements):
+        """
+        Apply JSONField replacements to fieldsets.
+
+        Args:
+            fieldsets: Django fieldsets tuple
+            replacements: Dict mapping original field names to replacement method names
+
+        Returns:
+            Updated fieldsets tuple
+        """
+        if not replacements:
+            return fieldsets
+
+        updated_fieldsets = []
+        for fieldset in fieldsets:
+            title, options = fieldset
+            fields = list(options.get('fields', []))
+
+            # Replace field names in fields list
+            updated_fields = []
+            for field in fields:
+                if isinstance(field, (list, tuple)):
+                    # Handle multi-column fieldsets
+                    updated_field = [replacements.get(f, f) for f in field]
+                    updated_fields.append(tuple(updated_field))
+                else:
+                    # Single field
+                    updated_fields.append(replacements.get(field, field))
+
+            # Create updated options dict
+            updated_options = options.copy()
+            updated_options['fields'] = tuple(updated_fields)
+
+            updated_fieldsets.append((title, updated_options))
+
+        return tuple(updated_fieldsets)
 
     @classmethod
     def _generate_resource_class(cls, config: AdminConfig):

@@ -58,7 +58,7 @@ services:
     depends_on:
       django:
         condition: service_healthy  # Wait for Django to be healthy (migrations complete)
-    command: poetry run python manage.py rqworker default high low knowledge
+    command: poetry run python manage.py rqworker high default low knowledge
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
       interval: 30s
