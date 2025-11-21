@@ -3,16 +3,13 @@
 # Local Development Workflow:
 # 1. make install          → Install from PyPI (production mode)
 # 2. make install-local    → Switch to local ~/djangocfg (editable)
-# 3. make check-django-cfg → Verify which version is active
-# 4. make install-prod     → Switch back to PyPI
 #
 # How it works:
 # - pyproject.toml always has: django-cfg = {version = "*", extras = ["full"]}
 # - install-local uses pip to override PyPI version with local editable install
-# - install-prod runs poetry install --sync to restore PyPI version
 # - No modifications to pyproject.toml or poetry.lock required!
 
-.PHONY: help install install-local install-prod check-django-cfg env docker test commit kill-ports kill-grpc dev dev-ngrok grpc manage migrate makemigrations shell show-urls check tree config superuser tasks-status tasks-worker api claude populate list-urls check-endpoints
+.PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api claude
 
 # Python from virtual environment (poetry)
 PYTHON := .venv/bin/python
@@ -21,57 +18,30 @@ POETRY := poetry
 DJANGO_CFG_LOCAL := $(HOME)/djangocfg
 
 help:
-	@echo "Django CFG Sample Project - Make Commands"
-	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  make install          - Install dependencies (PyPI django-cfg)"
-	@echo "  make install-local    - Switch to local django-cfg (editable)"
-	@echo "  make install-prod     - Switch back to PyPI django-cfg"
-	@echo "  make check-django-cfg - Check which django-cfg is installed"
+	@echo "🚀 Django Project - Make Commands"
 	@echo ""
 	@echo "Development:"
-	@echo "  make dev           - Run development server (kills port 8000 first)"
-	@echo "  make dev-ngrok     - Run development server with ngrok tunnel"
-	@echo "  make grpc          - Run gRPC (50051) + ASGI (8000) servers in parallel"
-	@echo "  make kill-ports    - Kill processes on port 8000"
-	@echo "  make kill-grpc     - Kill ALL manage.py, gRPC, ASGI processes"
-	@echo "  make shell         - Open Django shell"
-	@echo "  make api           - Generate and deploy API clients (OpenAPI)"
-	@echo "  make claude        - Start Claude Code"
+	@echo "  make dev       - Run dev server (port 8000)"
+	@echo "  make asgi      - Run ASGI server (uvicorn)"
+	@echo "  make grpc      - Run gRPC server (port 50051)"
+	@echo "  make run-all   - Run ASGI + gRPC + RQ worker"
 	@echo ""
-	@echo "Database:"
-	@echo "  make migrate       - Run all migrations"
-	@echo "  make populate      - Populate database with sample data"
+	@echo "Management:"
+	@echo "  make migrate   - Run migrations"
+	@echo "  make shell     - Django shell"
+	@echo "  make superuser - Create superuser"
+	@echo "  make api       - Generate API clients"
 	@echo ""
-	@echo "Configuration:"
-	@echo "  make config        - Show current configuration"
-	@echo "  make check         - Run Django system checks"
-	@echo "  make check-settings- Check django-cfg settings"
+	@echo "RQ:"
+	@echo "  make rq            - Start RQ worker (all queues)"
+	@echo "  make rq-scheduler  - Start RQ scheduler"
+	@echo "  make rq-clear      - Clear all RQ queues (Redis FLUSHDB)"
+	@echo "  make rq-stats      - Show RQ statistics"
 	@echo ""
-	@echo "URLs & Structure:"
-	@echo "  make show-urls     - Show all URL patterns"
-	@echo "  make list-urls     - List all URLs (Rich formatted)"
-	@echo "  make check-endpoints - Check API endpoints status"
-	@echo "  make tree          - Show project structure"
+	@echo "Cleanup:"
+	@echo "  make kill-all  - Stop all services"
 	@echo ""
-	@echo "Users & Auth:"
-	@echo "  make superuser     - Create superuser (interactive)"
-	@echo ""
-	@echo "Tasks (Dramatiq):"
-	@echo "  make tasks-status  - Show task system status"
-	@echo "  make tasks-worker  - Run Dramatiq worker"
-	@echo "  make tasks-clear   - Clear all pending tasks"
-	@echo ""
-	@echo "Testing:"
-	@echo "  make test          - Run tests"
-	@echo ""
-	@echo "Utils:"
-	@echo "  make manage CMD=<command> - Run manage.py command"
-	@echo ""
-	@echo "Git:"
-	@echo "  make commit        - Quick commit with message"
-	@echo ""
-	@echo "📖 Full command reference: see COMMANDS.md"
+	@echo "Other: install, install-local, test, commit, check, config"
 
 install:
 	@echo "📦 Installing dependencies (PyPI django-cfg)..."
@@ -95,30 +65,9 @@ install-local:
 	@echo ""
 	@echo "✅ Local django-cfg installed (editable mode)"
 	@echo "📍 Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"
-	@echo "💡 To switch back to PyPI: make install-prod"
-
-install-prod:
-	@echo "📦 Switching back to PyPI django-cfg..."
-	@# Reinstall all poetry dependencies (restores PyPI version)
-	@$(POETRY) install --sync
-	@echo "✅ PyPI django-cfg restored"
-	@echo "💡 To use local version again: make install-local"
-
-check-django-cfg:
-	@echo "🔍 Checking django-cfg installation..."
-	@$(POETRY) run pip show django-cfg | grep -E "^(Name|Version|Location|Editable)" || echo "❌ django-cfg not found"
-	@echo ""
-	@if $(POETRY) run pip show django-cfg | grep -q "Editable project location"; then \
-		echo "✅ Using LOCAL django-cfg (editable mode)"; \
-	else \
-		echo "✅ Using PyPI django-cfg"; \
-	fi
 
 env:
 	@$(POETRY) env info
-
-docker:
-	git pull && python3 devops/manage.py
 
 test:
 	$(PYTHON) manage.py test
@@ -146,39 +95,67 @@ kill-grpc:
 	@sleep 0.5
 	@echo "✅ All Django processes, gRPC and ASGI killed"
 
+kill-all:
+	@echo "🔪 Killing ASGI, gRPC, and RQ worker processes..."
+	@# Kill manage.py processes
+	@pkill -9 -f "manage.py rungrpc" 2>/dev/null || true
+	@pkill -9 -f "manage.py rqworker" 2>/dev/null || true
+	@# Kill uvicorn
+	@pkill -9 -f "uvicorn api.asgi" 2>/dev/null || true
+	@# Kill by ports
+	@lsof -ti :50051 | xargs kill -9 2>/dev/null || true
+	@lsof -ti :8000 | xargs kill -9 2>/dev/null || true
+	@sleep 0.5
+	@echo "✅ All services stopped"
+
 dev: kill-ports
 	$(PYTHON) manage.py runserver
 
 dev-ngrok: kill-ports
 	$(PYTHON) manage.py runserver_ngrok
 
-grpc: kill-grpc
-	@echo "🚀 Starting gRPC server (port 50051) and ASGI server (port 8000) in parallel..."
+asgi: kill-ports
+	@echo "🌐 Starting ASGI server on port 8000 (uvicorn)..."
+	$(POETRY) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload
+
+grpc:
+	@echo "📡 Starting gRPC server on port 50051..."
+	@lsof -ti :50051 | xargs kill -9 2>/dev/null || true
+	$(PYTHON) manage.py rungrpc --noreload
+
+run-all: kill-all
+	@echo "🚀 Starting ASGI + gRPC + RQ worker..."
 	@echo ""
-	@# Function to handle cleanup on ANY exit (Ctrl+C, errors, kill, etc.)
 	@bash -c ' \
 		cleanup() { \
 			echo ""; \
-			echo "🛑 Stopping servers..."; \
+			echo "🛑 Stopping all services..."; \
 			pkill -9 -f "manage.py rungrpc" 2>/dev/null || true; \
+			pkill -9 -f "manage.py rqworker" 2>/dev/null || true; \
 			pkill -9 -f "uvicorn api.asgi" 2>/dev/null || true; \
 			lsof -ti :50051 | xargs kill -9 2>/dev/null || true; \
 			lsof -ti :8000 | xargs kill -9 2>/dev/null || true; \
-			echo "✅ All servers stopped"; \
+			echo "✅ All services stopped"; \
 		}; \
 		trap cleanup EXIT SIGINT SIGTERM; \
 		echo "📡 Starting gRPC server on port 50051..."; \
-		$(PYTHON) manage.py rungrpc & \
+		$(PYTHON) manage.py rungrpc --noreload & \
 		GRPC_PID=$$!; \
+		sleep 1; \
 		echo "🌐 Starting ASGI server on port 8000 (uvicorn)..."; \
 		$(POETRY) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload & \
 		ASGI_PID=$$!; \
+		sleep 1; \
+		echo "🔄 Starting RQ worker (all queues)..."; \
+		OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES $(PYTHON) manage.py rqworker high default low --worker-class rq.SimpleWorker & \
+		RQ_PID=$$!; \
 		echo ""; \
-		echo "✅ Servers started:"; \
-		echo "   - gRPC: http://localhost:50051 (PID: $$GRPC_PID)"; \
-		echo "   - ASGI: http://localhost:8000 (PID: $$ASGI_PID)"; \
+		echo "✅ All services started:"; \
+		echo "   - gRPC:  http://localhost:50051 (PID: $$GRPC_PID)"; \
+		echo "   - ASGI:  http://localhost:8000 (PID: $$ASGI_PID)"; \
+		echo "   - RQ:    high, default, low queues (PID: $$RQ_PID)"; \
 		echo ""; \
-		echo "💡 Press Ctrl+C to stop both servers"; \
+		echo "💡 Press Ctrl+C to stop all services"; \
 		echo ""; \
 		wait; \
 	'
@@ -210,31 +187,31 @@ config:
 check:
 	$(PYTHON) manage.py check
 
-check-settings:
-	$(PYTHON) manage.py check_settings
-
 superuser:
 	$(PYTHON) manage.py superuser
-
-tasks-status:
-	$(PYTHON) manage.py task_status
-
-tasks-worker:
-	$(PYTHON) manage.py rundramatiq
-
-tasks-clear:
-	$(PYTHON) manage.py task_clear
 
 # API Generation
 api:
 	$(PYTHON) manage.py generate_api
 
-# Populate database with sample data
-populate:
-	rm -f db/*.sqlite3
-	$(PYTHON) manage.py migrate_all
-	$(PYTHON) manage.py populate_sample_data
-
 # Start Claude Code with dangerously-skip-permissions flag
 claude:
 	claude --dangerously-skip-permissions
+
+# RQ Workers and Scheduler (macOS optimized - uses SimpleWorker to prevent fork crashes)
+rq: rq-clear
+	@echo "🔄 Starting RQ worker (high, default, low queues)..."
+	@OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES $(PYTHON) manage.py rqworker high default low --worker-class rq.SimpleWorker
+
+rq-scheduler:
+	@echo "⏰ Starting RQ scheduler..."
+	@$(PYTHON) manage.py rqscheduler
+
+rq-clear:
+	@echo "🗑️  Clearing all RQ queues via Redis..."
+	@redis-cli FLUSHDB
+	@echo "✅ All queues cleared"
+
+rq-stats:
+	@echo "📊 RQ Queue Statistics:"
+	@$(PYTHON) manage.py rqstats

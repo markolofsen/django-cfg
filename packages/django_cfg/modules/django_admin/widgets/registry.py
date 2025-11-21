@@ -257,6 +257,43 @@ def _render_short_uuid(obj: Any, field: str, config: Dict[str, Any]) -> str:
 WidgetRegistry.register("short_uuid", _render_short_uuid)
 
 
+def _highlight_json(json_obj: Any) -> str:
+    """
+    Apply syntax highlighting to JSON using Pygments (Unfold style).
+
+    Returns HTML with Pygments syntax highlighting for light and dark themes.
+    """
+    try:
+        from pygments import highlight
+        from pygments.formatters import HtmlFormatter
+        from pygments.lexers import JsonLexer
+        import json
+    except ImportError:
+        # Fallback to plain JSON if Pygments not available
+        import json
+        import html as html_lib
+        formatted_json = json.dumps(json_obj, indent=2, ensure_ascii=False)
+        return html_lib.escape(formatted_json)
+
+    def format_response(response: str, theme: str) -> str:
+        formatter = HtmlFormatter(
+            style=theme,
+            noclasses=True,
+            nobackground=True,
+            prestyles="white-space: pre-wrap; word-wrap: break-word; font-size: 0.75rem;",
+        )
+        return highlight(response, JsonLexer(), formatter)
+
+    # Format JSON with ensure_ascii=False for proper Unicode
+    response = json.dumps(json_obj, indent=2, ensure_ascii=False)
+
+    # Return dual-theme HTML (light: colorful, dark: monokai)
+    return (
+        f'<div class="block dark:hidden">{format_response(response, "colorful")}</div>'
+        f'<div class="hidden dark:block">{format_response(response, "monokai")}</div>'
+    )
+
+
 def _render_json_editor(obj: Any, field: str, config: Dict[str, Any]) -> str:
     """
     Render JSON field for display (list view and readonly).
@@ -265,6 +302,7 @@ def _render_json_editor(obj: Any, field: str, config: Dict[str, Any]) -> str:
     """
     from django.utils.safestring import mark_safe
     import json
+    import html as html_lib
 
     # Get JSON value
     json_value = getattr(obj, field, None)
@@ -286,19 +324,21 @@ def _render_json_editor(obj: Any, field: str, config: Dict[str, Any]) -> str:
 
         # For compact display (list view or short JSON)
         if len(formatted_json) <= max_display_length:
-            html = f'<pre style="margin: 0; padding: 4px; background: #f5f5f5; border-radius: 4px; font-size: 0.85em; max-width: 400px; overflow: auto;">{formatted_json}</pre>'
-            return mark_safe(html)
+            # Use Pygments highlighting (no need for wrapper, it has its own styling)
+            highlighted_json = _highlight_json(json_obj)
+            return mark_safe(highlighted_json)
 
         # For detailed display - show preview with count
+        escaped_json = html_lib.escape(formatted_json)
         if isinstance(json_obj, dict):
             key_count = len(json_obj)
-            html = f'<code title="{formatted_json}">{{{key_count} keys}}</code>'
+            html = f'<code title="{escaped_json}">{{{key_count} keys}}</code>'
         elif isinstance(json_obj, list):
             item_count = len(json_obj)
-            html = f'<code title="{formatted_json}">[{item_count} items]</code>'
+            html = f'<code title="{escaped_json}">[{item_count} items]</code>'
         else:
-            preview = formatted_json[:max_display_length] + "..."
-            html = f'<code title="{formatted_json}">{preview}</code>'
+            preview = html_lib.escape(formatted_json[:max_display_length] + "...")
+            html = f'<code title="{escaped_json}">{preview}</code>'
 
         return mark_safe(html)
 
