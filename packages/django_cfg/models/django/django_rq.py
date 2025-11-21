@@ -661,6 +661,11 @@ class RQScheduleConfig(BaseModel):
         description="Force parameter for task (automatically added to kwargs)",
     )
 
+    ignore_errors: Optional[bool] = Field(
+        default=None,
+        description="Ignore errors parameter - continue execution even if task fails (automatically added to kwargs)",
+    )
+
     @field_validator("cron", "interval", "scheduled_time")
     @classmethod
     def validate_schedule_type(cls, v, info):
@@ -691,7 +696,7 @@ class RQScheduleConfig(BaseModel):
         task_params = {}
 
         # Common task parameters that should go into kwargs
-        param_fields = ['limit', 'verbosity', 'report_type', 'days', 'force']
+        param_fields = ['limit', 'verbosity', 'report_type', 'days', 'force', 'ignore_errors']
 
         for field_name in param_fields:
             field_value = getattr(self, field_name, None)
