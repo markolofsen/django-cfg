@@ -72,3 +72,39 @@ html.dark [class*="dark:border-base-700"] {
 .theme-card a .material-icons {
     margin-right: 0.5rem !important;
 }
+
+/* Fieldset Headers - Better contrast for dark theme */
+/* Override Unfold's default which uses color-mix(in oklab, white 2%, transparent) */
+
+/* Collapsed state - more contrast */
+fieldset details:not([open]) h2 {
+    background-color: oklch(92.8% .006 264.531) !important; /* Light theme: base-200 - more visible */
+    color: var(--color-font-important-light) !important;
+}
+
+html.dark fieldset details:not([open]) h2 {
+    background-color: oklch(37.3% 0 0 / 0.5) !important; /* Dark theme: base-700 with 50% opacity - more contrast */
+    color: var(--color-font-important-dark) !important;
+}
+
+/* Open state - primary color with white text */
+fieldset details[open] h2,
+fieldset h2 {
+    background-color: var(--color-primary-600) !important; /* Light theme: primary-600 */
+    color: white !important;
+}
+
+html.dark fieldset details[open] h2,
+html.dark fieldset h2 {
+    background-color: var(--color-primary-700) !important; /* Dark theme: primary-700 */
+    color: white !important;
+}
+
+/* Border for open fieldset content */
+fieldset details[open] > div {
+    border: 2px solid var(--color-primary-600) !important;
+}
+
+html.dark fieldset details[open] > div {
+    border-color: var(--color-primary-700) !important;
+}
