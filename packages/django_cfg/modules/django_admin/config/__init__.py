@@ -7,14 +7,19 @@ from .admin_config import AdminConfig
 from .background_task_config import BackgroundTaskConfig
 from .documentation_config import DocumentationConfig, DocumentationSection
 from .field_config import (
-    FieldConfig,
+    AvatarField,
     BadgeField,
+    BadgeRule,
     BooleanField,
+    CounterBadgeField,
     CurrencyField,
     DateTimeField,
+    FieldConfig,
     ImageField,
+    LinkField,
     MarkdownField,
     ShortUUIDField,
+    StatusBadgesField,
     TextField,
     UserField,
 )
@@ -32,13 +37,18 @@ __all__ = [
     "DocumentationConfig",
     "DocumentationSection",
     # Specialized Field Types (for display_fields)
+    "AvatarField",
     "BadgeField",
+    "BadgeRule",
     "BooleanField",
+    "CounterBadgeField",
     "CurrencyField",
     "DateTimeField",
     "ImageField",
+    "LinkField",
     "MarkdownField",
     "ShortUUIDField",
+    "StatusBadgesField",
     "TextField",
     "UserField",
     # Widget Configs (for AdminConfig.widgets - form fields)

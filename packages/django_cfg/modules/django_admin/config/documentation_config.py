@@ -4,7 +4,7 @@ Documentation configuration for Django Admin.
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -24,16 +24,18 @@ class DocumentationConfig(BaseModel):
     """
     Configuration for markdown documentation in Django Admin.
 
+    Displays documentation in a modal window with tree navigation (left sidebar)
+    and rendered content (right panel).
+
     Supports three modes:
 
     1. **Directory mode** (recommended):
        Automatically discovers all .md files in directory recursively.
-       Each file becomes a collapsible section.
+       Each file becomes a tree item in modal sidebar.
 
        DocumentationConfig(
            source_dir="docs",  # Relative to app
-           title="Documentation",
-           max_height="600px"
+           title="Documentation"
        )
 
     2. **Single file mode**:
@@ -76,9 +78,6 @@ class DocumentationConfig(BaseModel):
 
     # Display options
     title: str = Field("Documentation", description="Main title for documentation block")
-    collapsible: bool = Field(True, description="Make sections collapsible")
-    default_open: bool = Field(False, description="Open first section by default")
-    max_height: Optional[str] = Field("600px", description="Max height with scrolling per section")
 
     # Placement
     show_on_changelist: bool = Field(True, description="Show on list page (above table)")
@@ -387,6 +386,130 @@ class DocumentationConfig(BaseModel):
         commands.sort(key=lambda c: c['name'])
 
         return commands
+
+    def get_tree_structure(self, app_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+        """
+        Build hierarchical tree structure from documentation sections.
+
+        For modal view with sidebar navigation. Groups sections by directory path.
+
+        Args:
+            app_path: Optional path to app directory for relative path resolution
+
+        Returns:
+            List of tree nodes with 'label', 'id', 'content', and optional 'children'
+        """
+        sections = self.get_sections(app_path)
+
+        if not sections:
+            return []
+
+        # If source_dir mode, build hierarchy from file paths
+        if self.source_dir:
+            resolved_dir = self._resolve_path(self.source_dir, app_path)
+            if resolved_dir and resolved_dir.is_dir():
+                return self._build_tree_from_paths(sections, resolved_dir)
+
+        # Flat list for single file or string content mode
+        return [
+            {
+                'id': f'section-{idx}',
+                'label': section.title,
+                'content': section.content,
+                'children': []
+            }
+            for idx, section in enumerate(sections)
+        ]
+
+    def _build_tree_from_paths(
+        self,
+        sections: List[DocumentationSection],
+        base_dir: Path
+    ) -> List[Dict[str, Any]]:
+        """
+        Build hierarchical tree from file paths preserving directory structure.
+
+        Args:
+            sections: List of documentation sections with file_path
+            base_dir: Base directory for relative path calculation
+
+        Returns:
+            Tree structure as nested dictionaries
+        """
+        tree: Dict[str, Any] = {}
+
+        for idx, section in enumerate(sections):
+            if not section.file_path:
+                # Fallback for sections without file path
+                tree[section.title] = {
+                    'id': f'section-{idx}',
+                    'label': section.title,
+                    'content': section.content,
+                    'is_file': True
+                }
+                continue
+
+            # Get relative path parts
+            try:
+                rel_path = section.file_path.relative_to(base_dir)
+                parts = rel_path.parts
+            except ValueError:
+                # File outside base_dir, use title
+                tree[section.title] = {
+                    'id': f'section-{idx}',
+                    'label': section.title,
+                    'content': section.content,
+                    'is_file': True
+                }
+                continue
+
+            # Navigate/create tree structure
+            current_level = tree
+            for i, part in enumerate(parts[:-1]):  # All but last (file)
+                if part not in current_level:
+                    current_level[part] = {
+                        'id': f'folder-{"-".join(parts[:i+1])}',
+                        'label': part.replace('_', ' ').replace('-', ' ').title(),
+                        'is_file': False,
+                        'children': {}
+                    }
+                current_level = current_level[part].get('children', {})
+
+            # Add file node
+            file_name = parts[-1]
+            current_level[file_name] = {
+                'id': f'section-{idx}',
+                'label': section.title,
+                'content': section.content,
+                'is_file': True
+            }
+
+        # Convert nested dict to list format
+        return self._dict_tree_to_list(tree)
+
+    def _dict_tree_to_list(self, tree_dict: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Convert nested dictionary tree to list format for template."""
+        result = []
+
+        for key, node in sorted(tree_dict.items()):
+            if node.get('is_file'):
+                result.append({
+                    'id': node['id'],
+                    'label': node['label'],
+                    'content': node.get('content', ''),
+                    'children': []
+                })
+            else:
+                # Folder node
+                children = self._dict_tree_to_list(node.get('children', {}))
+                result.append({
+                    'id': node['id'],
+                    'label': node['label'],
+                    'content': None,  # Folders don't have content
+                    'children': children
+                })
+
+        return result
 
     def get_content(self, app_path: Optional[Path] = None) -> Optional[str]:
         """

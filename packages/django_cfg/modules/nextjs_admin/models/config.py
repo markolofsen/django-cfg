@@ -56,20 +56,6 @@ class NextJsAdminConfig(BaseModel):
         ),
     )
 
-    auto_copy_api: bool = Field(
-        default=True,
-        description="Auto-copy generated TypeScript clients to Next.js project",
-    )
-
-    auto_build: bool = Field(
-        default=False,
-        description=(
-            "Automatically build Next.js static export after API client generation. "
-            "Requires 'pnpm build' command in Next.js project. "
-            "Default: False (manual build required for production)"
-        ),
-    )
-
     static_output_path: Optional[str] = Field(
         default=None,
         description=(

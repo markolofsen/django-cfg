@@ -100,15 +100,12 @@ coin_admin_config = AdminConfig(
 
     # 📚 Markdown Documentation Configuration
     # Directory mode: Automatically discovers all .md files recursively
-    # Each file becomes a collapsible section
+    # Displays in modal window with tree navigation
     documentation=DocumentationConfig(
         source_dir="apps/crypto/@docs",  # ← Relative to app! Scans apps/crypto/docs/**/*.md
         title="📚 Coin Documentation",
-        collapsible=True,
-        default_open=False,
-        max_height="600px",
-        show_on_changelist=True,   # Show above the list
-        show_on_changeform=True,   # Show on edit/add page
+        show_on_changelist=True,   # Show FAB button above the list
+        show_on_changeform=True,   # Show FAB button on edit/add page
         enable_plugins=True,
         sort_sections=True          # Sort sections alphabetically
     ),

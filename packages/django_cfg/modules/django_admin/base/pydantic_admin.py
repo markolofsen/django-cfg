@@ -720,6 +720,12 @@ class PydanticAdminMixin:
                 extra_context['documentation_config'] = doc_config
                 extra_context['documentation_sections'] = doc_config.get_sections(app_path)
 
+                # Add tree structure for modal view
+                import json
+                tree_structure = doc_config.get_tree_structure(app_path)
+                extra_context['documentation_tree'] = mark_safe(json.dumps(tree_structure))
+                extra_context['documentation_sections_count'] = len(doc_config.get_sections(app_path))
+
                 # Add management commands if enabled
                 if doc_config.show_management_commands:
                     extra_context['management_commands'] = doc_config._discover_management_commands(app_path)
@@ -744,6 +750,12 @@ class PydanticAdminMixin:
             if doc_config.show_on_changeform:
                 extra_context['documentation_config'] = doc_config
                 extra_context['documentation_sections'] = doc_config.get_sections(app_path)
+
+                # Add tree structure for modal view
+                import json
+                tree_structure = doc_config.get_tree_structure(app_path)
+                extra_context['documentation_tree'] = mark_safe(json.dumps(tree_structure))
+                extra_context['documentation_sections_count'] = len(doc_config.get_sections(app_path))
 
                 # Add management commands if enabled
                 if doc_config.show_management_commands:

@@ -51,6 +51,7 @@ class HtmlBuilder:
     # === FormattingElements ===
     number = staticmethod(FormattingElements.number)
     uuid_short = staticmethod(FormattingElements.uuid_short)
+    truncate = staticmethod(FormattingElements.truncate)
 
     # === KeyValueElements ===
     key_value = staticmethod(KeyValueElements.key_value)

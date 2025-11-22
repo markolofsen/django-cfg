@@ -82,7 +82,7 @@ Standard Tailwind classes for components
 </button>
 ```
 
-## Forms (15)
+## Forms (19)
 
 ### Label
 Accessible label component for form inputs
@@ -97,17 +97,28 @@ import { Label } from '@djangocfg/ui';
 ```
 
 ### Button
-Interactive button with multiple variants and sizes
+Interactive button with multiple variants, sizes, and loading state. Use ButtonLink for navigation.
 
 ```tsx
-import { Button } from '@djangocfg/ui';
+import { Button, ButtonLink } from '@djangocfg/ui';
 
+// Variants
 <Button variant="default">Click me</Button>
 <Button variant="destructive">Delete</Button>
 <Button variant="outline">Outline</Button>
 <Button variant="ghost">Ghost</Button>
+
+// Sizes
 <Button size="sm">Small</Button>
 <Button size="lg">Large</Button>
+
+// Loading state
+<Button loading={true}>Saving...</Button>
+<Button loading={false}>Save</Button>
+
+// ButtonLink for navigation with Next.js Link
+<ButtonLink href="/dashboard">Go to Dashboard</ButtonLink>
+<ButtonLink href="/settings" variant="outline">Settings</ButtonLink>
 ```
 
 ### DownloadButton
@@ -250,6 +261,201 @@ import { Combobox } from '@djangocfg/ui';
 />
 ```
 
+### MultiSelect
+Multi-select dropdown with badges and search functionality
+
+```tsx
+import { MultiSelect } from '@djangocfg/ui';
+
+<MultiSelect
+  options={[
+    { value: "react", label: "React", description: "A JavaScript library for building user interfaces" },
+    { value: "vue", label: "Vue", description: "The Progressive JavaScript Framework" },
+    { value: "angular", label: "Angular", description: "Platform for building web applications" },
+    { value: "svelte", label: "Svelte", description: "Cybernetically enhanced web apps" },
+    { value: "next", label: "Next.js", description: "The React Framework for Production" },
+  ]}
+  placeholder="Select frameworks..."
+  searchPlaceholder="Search frameworks..."
+  emptyText="No framework found."
+  maxDisplay={2}
+  onChange={(value) => console.log('Selected:', value)}
+/>
+```
+
+### MultiSelectPro
+Advanced multi-select with animations, custom styling, grouped options, and comprehensive accessibility. Supports variants, icons, gradients, responsive design, and imperative control via ref.
+
+```tsx
+import { MultiSelectPro } from '@djangocfg/ui';
+
+import { MultiSelectPro } from '@djangocfg/ui';
+import type { MultiSelectProOption } from '@djangocfg/ui';
+import { useState } from 'react';
+
+// Basic usage
+const [selected, setSelected] = useState<string[]>([]);
+
+<MultiSelectPro
+  options={[
+    { value: "react", label: "React" },
+    { value: "vue", label: "Vue.js" },
+    { value: "angular", label: "Angular" },
+  ]}
+  onValueChange={setSelected}
+  defaultValue={selected}
+  placeholder="Select frameworks..."
+/>
+
+// With custom styling and icons
+const styledOptions = [
+  {
+    value: "react",
+    label: "React",
+    style: {
+      badgeColor: "#61DAFB",
+      iconColor: "#282C34",
+    },
+  },
+  {
+    value: "vue",
+    label: "Vue.js",
+    style: {
+      gradient: "linear-gradient(135deg, #4FC08D 0%, #42B883 100%)",
+    },
+  },
+];
+
+<MultiSelectPro
+  options={styledOptions}
+  onValueChange={setSelected}
+  variant="secondary"
+  animationConfig={{
+    badgeAnimation: "bounce",
+    popoverAnimation: "scale",
+    duration: 0.3,
+  }}
+  maxCount={3}
+  closeOnSelect={false}
+/>
+
+// With grouped options
+const groupedOptions = [
+  {
+    heading: "Frontend Frameworks",
+    options: [
+      { value: "react", label: "React" },
+      { value: "vue", label: "Vue.js" },
+      { value: "angular", label: "Angular", disabled: true },
+    ],
+  },
+  {
+    heading: "Backend Technologies",
+    options: [
+      { value: "node", label: "Node.js" },
+      { value: "python", label: "Python" },
+    ],
+  },
+];
+
+<MultiSelectPro
+  options={groupedOptions}
+  onValueChange={setSelected}
+  placeholder="Select technologies..."
+  searchable={true}
+  responsive={true}
+  minWidth="200px"
+  maxWidth="500px"
+/>
+
+// With imperative control via ref
+import { useRef } from 'react';
+import type { MultiSelectProRef } from '@djangocfg/ui';
+
+const ref = useRef<MultiSelectProRef>(null);
+
+// Later in code:
+ref.current?.clear();
+ref.current?.reset();
+ref.current?.setSelectedValues(['react', 'vue']);
+const values = ref.current?.getSelectedValues();
+```
+
+### MultiSelectProAsync
+Async multi-select with external API search, debouncing, and loading states. Perfect for large datasets and server-side filtering.
+
+```tsx
+import { MultiSelectProAsync, useDebounce } from '@djangocfg/ui';
+
+import { MultiSelectProAsync, useDebounce } from '@djangocfg/ui';
+import { useState, useEffect } from 'react';
+
+// Mock API function (replace with your actual API)
+const searchAPI = async (query: string) => {
+  const response = await fetch(`/api/search?q=${query}`);
+  return response.json();
+};
+
+function AsyncExample() {
+  const [searchValue, setSearchValue] = useState('');
+  const [options, setOptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+
+  // Debounce search to reduce API calls
+  const debouncedSearch = useDebounce(searchValue, 300);
+
+  // Fetch options when debounced search changes
+  useEffect(() => {
+    if (!debouncedSearch) {
+      setOptions([]);
+      return;
+    }
+
+    const fetchOptions = async () => {
+      setIsLoading(true);
+      try {
+        const results = await searchAPI(debouncedSearch);
+        setOptions(results);
+      } catch (error) {
+        console.error('Search failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOptions();
+  }, [debouncedSearch]);
+
+  return (
+    <MultiSelectProAsync
+      // Search control (managed by parent)
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      isLoading={isLoading}
+
+      // Options from API
+      options={options}
+
+      // Selection
+      onValueChange={setSelected}
+      defaultValue={selected}
+
+      // UI
+      placeholder="Search and select..."
+      searchPlaceholder="Type to search..."
+      emptyText="No results found"
+      loadingText="Searching..."
+
+      // Features
+      variant="default"
+      maxCount={3}
+      closeOnSelect={false}
+    />
+  );
+}
+```
+
 ### InputOTP
 One-time password input component
 
@@ -337,6 +543,61 @@ import { Field, FieldGroup, FieldSet, FieldLegend } from '@djangocfg/ui';
     </Field>
   </FieldGroup>
 </FieldSet>
+```
+
+### JsonSchemaForm
+Automatic form generator from JSON Schema with validation, custom widgets, and full type safety
+
+```tsx
+import { JsonSchemaForm } from '@djangocfg/ui/tools';
+
+// Basic usage
+const schema = {
+  type: 'object',
+  required: ['name', 'email'],
+  properties: {
+    name: {
+      type: 'string',
+      title: 'Full Name',
+      minLength: 2
+    },
+    email: {
+      type: 'string',
+      title: 'Email',
+      format: 'email'
+    },
+    age: {
+      type: 'number',
+      title: 'Age',
+      minimum: 18
+    },
+    subscribe: {
+      type: 'boolean',
+      title: 'Subscribe to newsletter'
+    }
+  }
+};
+
+<JsonSchemaForm
+  schema={schema}
+  onSubmit={(data) => console.log(data.formData)}
+  liveValidate={false}
+/>
+
+// With UI Schema for customization
+const uiSchema = {
+  subscribe: {
+    'ui:widget': 'SwitchWidget'
+  }
+};
+
+<JsonSchemaForm
+  schema={schema}
+  uiSchema={uiSchema}
+  formData={initialData}
+  onChange={(data) => setFormData(data.formData)}
+  onSubmit={handleSubmit}
+/>
 ```
 
 ## Layout (8)
@@ -470,7 +731,7 @@ import { Section, SectionHeader } from '@djangocfg/ui';
 ## Navigation (7)
 
 ### NavigationMenu
-Accessible navigation menu with dropdown support
+Accessible navigation menu with dropdown support and Next.js router integration
 
 ```tsx
 import {
@@ -489,6 +750,7 @@ import {
       <NavigationMenuContent>
         <ul className="grid gap-3 p-6 md:w-[400px]">
           <li>
+            {/* NavigationMenuLink with href uses Next.js Link automatically */}
             <NavigationMenuLink href="/">
               <div className="text-sm font-medium">Welcome</div>
               <p className="text-sm text-muted-foreground">
@@ -500,6 +762,7 @@ import {
       </NavigationMenuContent>
     </NavigationMenuItem>
     <NavigationMenuItem>
+      {/* Direct link with client-side navigation */}
       <NavigationMenuLink href="/docs">
         Documentation
       </NavigationMenuLink>
@@ -509,7 +772,7 @@ import {
 ```
 
 ### Breadcrumb
-Navigation breadcrumbs showing current page hierarchy
+Navigation breadcrumbs showing current page hierarchy with Next.js router support
 
 ```tsx
 import {
@@ -524,6 +787,7 @@ import {
 <Breadcrumb>
   <BreadcrumbList>
     <BreadcrumbItem>
+      {/* BreadcrumbLink with href automatically uses Next.js Link */}
       <BreadcrumbLink href="/">Home</BreadcrumbLink>
     </BreadcrumbItem>
     <BreadcrumbSeparator />
@@ -532,6 +796,7 @@ import {
     </BreadcrumbItem>
     <BreadcrumbSeparator />
     <BreadcrumbItem>
+      {/* Current page - not a link */}
       <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
     </BreadcrumbItem>
   </BreadcrumbList>
@@ -584,7 +849,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui';
 ```
 
 ### Pagination
-Page navigation with previous/next controls
+Page navigation with previous/next controls and Next.js router support
 
 ```tsx
 import {
@@ -600,22 +865,23 @@ import {
 <Pagination>
   <PaginationContent>
     <PaginationItem>
-      <PaginationPrevious href="#" />
+      {/* Previous/Next with href automatically use Next.js Link */}
+      <PaginationPrevious href="/page/1" />
     </PaginationItem>
     <PaginationItem>
-      <PaginationLink href="#" isActive>1</PaginationLink>
+      <PaginationLink href="/page/1" isActive>1</PaginationLink>
     </PaginationItem>
     <PaginationItem>
-      <PaginationLink href="#">2</PaginationLink>
+      <PaginationLink href="/page/2">2</PaginationLink>
     </PaginationItem>
     <PaginationItem>
-      <PaginationLink href="#">3</PaginationLink>
+      <PaginationLink href="/page/3">3</PaginationLink>
     </PaginationItem>
     <PaginationItem>
       <PaginationEllipsis />
     </PaginationItem>
     <PaginationItem>
-      <PaginationNext href="#" />
+      <PaginationNext href="/page/2" />
     </PaginationItem>
   </PaginationContent>
 </Pagination>
@@ -930,7 +1196,7 @@ import {
 ```
 
 ### DropdownMenu
-Dropdown menu for actions and options
+Dropdown menu for actions and options with Next.js router support
 
 ```tsx
 import {
@@ -950,15 +1216,21 @@ import {
   <DropdownMenuContent className="w-56">
     <DropdownMenuLabel>My Account</DropdownMenuLabel>
     <DropdownMenuSeparator />
-    <DropdownMenuItem>Profile</DropdownMenuItem>
-    <DropdownMenuItem>Billing</DropdownMenuItem>
-    <DropdownMenuItem>Settings</DropdownMenuItem>
+    {/* DropdownMenuItem with href automatically uses Next.js Link */}
+    <DropdownMenuItem href="/profile">Profile</DropdownMenuItem>
+    <DropdownMenuItem href="/billing">Billing</DropdownMenuItem>
+    <DropdownMenuItem href="/settings">Settings</DropdownMenuItem>
+    <DropdownMenuSeparator />
+    {/* Without href - for actions */}
+    <DropdownMenuItem onClick={() => console.log('Logout')}>
+      Logout
+    </DropdownMenuItem>
   </DropdownMenuContent>
 </DropdownMenu>
 ```
 
 ### Menubar
-Application menubar with multiple menu groups
+Application menubar with multiple menu groups and Next.js router support
 
 ```tsx
 import {
@@ -974,19 +1246,21 @@ import {
   <MenubarMenu>
     <MenubarTrigger>File</MenubarTrigger>
     <MenubarContent>
-      <MenubarItem>New Tab</MenubarItem>
-      <MenubarItem>New Window</MenubarItem>
+      {/* MenubarItem with href automatically uses Next.js Link */}
+      <MenubarItem href="/new">New Tab</MenubarItem>
+      <MenubarItem href="/window">New Window</MenubarItem>
       <MenubarSeparator />
-      <MenubarItem>Share</MenubarItem>
+      <MenubarItem href="/share">Share</MenubarItem>
       <MenubarSeparator />
-      <MenubarItem>Print</MenubarItem>
+      {/* Without href - for actions */}
+      <MenubarItem onClick={() => window.print()}>Print</MenubarItem>
     </MenubarContent>
   </MenubarMenu>
   <MenubarMenu>
     <MenubarTrigger>Edit</MenubarTrigger>
     <MenubarContent>
-      <MenubarItem>Undo</MenubarItem>
-      <MenubarItem>Redo</MenubarItem>
+      <MenubarItem onClick={() => document.execCommand('undo')}>Undo</MenubarItem>
+      <MenubarItem onClick={() => document.execCommand('redo')}>Redo</MenubarItem>
     </MenubarContent>
   </MenubarMenu>
 </Menubar>
@@ -1390,44 +1664,69 @@ const chartData = [
 ## Specialized (10)
 
 ### Sidebar
-Full-featured sidebar navigation component (23KB) with collapsible groups and icons
+Full-featured sidebar navigation component (23KB) with collapsible groups, icons, and Next.js router support
 
 ```tsx
-import { Sidebar } from '@djangocfg/ui';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from '@djangocfg/ui';
 
-// Note: Sidebar is a complex component used in layouts
-// See DashboardLayout in the Layouts section for full implementation
+// SidebarMenuButton with href automatically uses Next.js Link
+<Sidebar>
+  <SidebarContent>
+    <SidebarGroup>
+      <SidebarGroupLabel>Main</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton href="/" isActive tooltip="Dashboard">
+              <HomeIcon />
+              <span>Dashboard</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton href="/users" tooltip="Users">
+              <UsersIcon />
+              <span>Users</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
 
-<Sidebar
-  menuGroups={[
-    {
-      label: "Main",
-      items: [
-        {
-          icon: <HomeIcon />,
-          label: "Dashboard",
-          href: "/",
-          isActive: true
-        },
-        {
-          icon: <UsersIcon />,
-          label: "Users",
-          href: "/users"
-        },
-      ]
-    },
-    {
-      label: "Settings",
-      items: [
-        {
-          icon: <SettingsIcon />,
-          label: "Preferences",
-          href: "/settings"
-        },
-      ]
-    }
-  ]}
-/>
+    <SidebarGroup>
+      <SidebarGroupLabel>Settings</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton href="/settings">
+              <SettingsIcon />
+              <span>Preferences</span>
+            </SidebarMenuButton>
+            {/* Submenu items also support href */}
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <SidebarMenuSubButton href="/settings/profile">
+                  Profile
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  </SidebarContent>
+</Sidebar>
 ```
 
 ### ImageWithFallback
@@ -1608,7 +1907,7 @@ import { Item, ItemGroup } from '@djangocfg/ui';
 </ItemGroup>
 ```
 
-## Tools (3)
+## Tools (4)
 
 ### JsonTree
 Interactive JSON tree viewer with expand/collapse, search, and export functionality
@@ -1701,6 +2000,28 @@ import { Mermaid } from '@djangocfg/ui';
       C -->|One| D[Result one]
       C -->|Two| E[Result two]
   `}
+/>
+```
+
+### LottiePlayer
+Lottie animation player with size presets and playback controls
+
+```tsx
+import { LottiePlayer } from '@djangocfg/ui';
+
+<LottiePlayer
+  src="https://lottie.host/embed/a0eb3923-2f93-4a2e-9c91-3e0b0f6f3b3e/WHJEbMDJLn.json"
+  size="md"
+  autoplay
+  loop
+/>
+
+// Custom size and speed
+<LottiePlayer
+  src={animationData}
+  width={300}
+  height={300}
+  speed={1.5}
 />
 ```
 
@@ -1894,15 +2215,40 @@ const countdown = useCountdown(targetDate);
 ```
 
 ### useDebounce
-Debounce value changes
+Debounce value changes to reduce API calls and improve performance. Perfect for search inputs and form fields.
 
 ```tsx
 import { useDebounce } from '@djangocfg/ui';
 
+// Basic search debouncing
 const [search, setSearch] = useState('');
-const debouncedSearch = useDebounce(search, 500);
+const debouncedSearch = useDebounce(search, 300); // Default 300ms
 
-// debouncedSearch updates 500ms after last change
+useEffect(() => {
+  if (debouncedSearch) {
+    // API call only fires 300ms after user stops typing
+    fetchResults(debouncedSearch);
+  }
+}, [debouncedSearch]);
+
+// With MultiSelectPro (has built-in search)
+const [searchValue, setSearchValue] = useState('');
+const debouncedSearchValue = useDebounce(searchValue, 500);
+
+useEffect(() => {
+  // Fetch options from API with debounced search
+  if (debouncedSearchValue) {
+    fetchOptions(debouncedSearchValue);
+  }
+}, [debouncedSearchValue]);
+
+<MultiSelectPro
+  options={filteredOptions}
+  onValueChange={setSelected}
+  placeholder="Search and select..."
+  searchable={true}
+  // ... other props
+/>
 ```
 
 ### useIsMobile

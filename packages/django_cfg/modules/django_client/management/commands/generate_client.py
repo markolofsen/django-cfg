@@ -523,6 +523,10 @@ class Command(AdminCommand):
         if typescript and success_count > 0:
             # First copy API clients
             self._copy_to_nextjs_admin(service)
+
+            # Run TypeScript type check
+            self._check_typescript_types()
+
             # Then build Next.js (so clients are included in build)
             # Skip build if --no-build flag is set
             if not options.get("no_build"):
@@ -560,8 +564,6 @@ class Command(AdminCommand):
                 return
 
             nextjs_config = config.nextjs_admin
-            if not nextjs_config.auto_copy_api:
-                return
 
             # Resolve Next.js project path
             base_dir = config.base_dir
@@ -625,8 +627,8 @@ class Command(AdminCommand):
             import traceback
             traceback.print_exc()
 
-    def _build_nextjs_admin(self):
-        """Build Next.js admin static export (if configured)."""
+    def _check_typescript_types(self):
+        """Run TypeScript type check (tsc --noEmit) on Next.js project."""
         try:
             from django_cfg.core.config import get_current_config
             from pathlib import Path
@@ -638,7 +640,101 @@ class Command(AdminCommand):
                 return
 
             nextjs_config = config.nextjs_admin
-            if not nextjs_config.auto_build:
+
+            # Resolve Next.js project path
+            base_dir = config.base_dir
+            project_path = Path(nextjs_config.project_path)
+            if not project_path.is_absolute():
+                project_path = base_dir / project_path
+
+            if not project_path.exists():
+                return
+
+            self.stdout.write(f"\n🔍 Running TypeScript type check...")
+
+            # Check if pnpm is available
+            pnpm_path = shutil.which('pnpm')
+            if not pnpm_path:
+                self.stdout.write(self.style.WARNING(
+                    "   ⚠️  pnpm not found. Skipping type check."
+                ))
+                return
+
+            # Run tsc --noEmit
+            try:
+                result = subprocess.run(
+                    [pnpm_path, 'exec', 'tsc', '--noEmit'],
+                    cwd=str(project_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=60,  # 1 minute timeout
+                )
+
+                if result.returncode == 0:
+                    self.stdout.write(self.style.SUCCESS(
+                        "   ✅ TypeScript types are valid"
+                    ))
+                else:
+                    self.stdout.write(self.style.ERROR(
+                        f"\n   ❌ TypeScript type errors found:"
+                    ))
+                    # Show stderr (type errors)
+                    if result.stdout:
+                        # Print first 20 lines of errors
+                        lines = result.stdout.strip().split('\n')
+                        for line in lines[:20]:
+                            self.stdout.write(f"      {line}")
+                        if len(lines) > 20:
+                            self.stdout.write(f"      ... and {len(lines) - 20} more errors")
+
+                    self.stdout.write(self.style.WARNING(
+                        f"\n   💡 Fix type errors before building"
+                    ))
+
+            except subprocess.TimeoutExpired:
+                self.stdout.write(self.style.WARNING(
+                    "   ⚠️  Type check timed out (1 minute)"
+                ))
+
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(
+                f"\n⚠️  Type check failed: {e}"
+            ))
+
+    def _build_nextjs_admin(self):
+        """Build Next.js admin static export (if configured)."""
+        try:
+            from django_cfg.core.config import get_current_config
+            from pathlib import Path
+            import subprocess
+            import shutil
+            import questionary
+
+            config = get_current_config()
+            if not config or not config.nextjs_admin:
+                return
+
+            nextjs_config = config.nextjs_admin
+
+            # Resolve paths first to show in prompt
+            from django.conf import settings as django_settings
+            solution_base_dir = django_settings.BASE_DIR
+            django_static_zip = nextjs_config.get_static_zip_path(solution_base_dir)
+            relative_zip_path = django_static_zip.relative_to(solution_base_dir)
+
+            # Ask user if they want to build
+            self.stdout.write("\n" + "=" * 60)
+
+            should_build = questionary.confirm(
+                f"🏗️  Build Next.js static export?\n   📦 Will create: {relative_zip_path}",
+                default=True,
+                auto_enter=False,
+            ).ask()
+
+            if not should_build:
+                self.stdout.write(self.style.WARNING(
+                    "\n⏭️  Skipping Next.js build"
+                ))
                 return
 
             # Resolve Next.js project path

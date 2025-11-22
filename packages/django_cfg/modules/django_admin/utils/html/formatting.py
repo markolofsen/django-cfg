@@ -193,6 +193,49 @@ class FormattingElements:
         return format_html('<span>{}</span>', result)
 
     @staticmethod
+    def truncate(
+        text: str,
+        length: int = 100,
+        suffix: str = "...",
+        show_tooltip: bool = True
+    ) -> SafeString:
+        """
+        Truncate text to specified length with optional tooltip.
+
+        Args:
+            text: Text to truncate
+            length: Maximum length (default: 100)
+            suffix: Text to append when truncated (default: "...")
+            show_tooltip: Show full text on hover (default: True)
+
+        Usage:
+            html.truncate("Long message text here", length=50)
+            html.truncate(obj.description, length=80, suffix="…")
+            html.truncate(obj.message_text, show_tooltip=False)
+
+        Returns:
+            SafeString with truncated text
+        """
+        if not text:
+            return FormattingElements.empty("—")
+
+        # If text is shorter than limit, return as-is
+        if len(text) <= length:
+            return format_html('<span>{}</span>', text)
+
+        # Truncate and add suffix
+        truncated = text[:length].rstrip() + suffix
+
+        if show_tooltip:
+            return format_html(
+                '<span class="cursor-help" title="{}">{}</span>',
+                escape(text),
+                truncated
+            )
+
+        return format_html('<span>{}</span>', truncated)
+
+    @staticmethod
     def uuid_short(uuid_value: Any, length: int = 6, show_tooltip: bool = True) -> SafeString:
         """
         Shorten UUID to first N characters with optional tooltip.
