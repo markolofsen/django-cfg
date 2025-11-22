@@ -60,27 +60,9 @@ class ModelsCache:
         self.cache_ttl = cache_ttl
         self.max_cache_size = max_cache_size
 
-        # Determine cache directory
-        if cache_dir:
-            self.cache_dir = Path(cache_dir)
-        else:
-            # Try to get from Django settings
-            try:
-                from django.conf import settings
-                if hasattr(settings, 'CACHES') and 'default' in settings.CACHES:
-                    cache_location = settings.CACHES['default'].get('LOCATION')
-                    # Only use cache_location if it's a file path, not a Redis URL
-                    if cache_location and not cache_location.startswith(('redis://', 'rediss://')):
-                        self.cache_dir = Path(cache_location) / "django_llm"
-                    else:
-                        self.cache_dir = Path.cwd() / "cache" / "django_llm"
-                else:
-                    self.cache_dir = Path.cwd() / "cache" / "django_llm"
-            except:
-                self.cache_dir = Path.cwd() / "cache" / "django_llm"
-
-        # Ensure cache directory exists
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # Determine cache directory using builder
+        from .cache_dirs import get_models_cache_dir
+        self.cache_dir = get_models_cache_dir(cache_dir)
         self.cache_file = self.cache_dir / self.CACHE_FILENAME
 
         # Memory cache
