@@ -1,0 +1,30 @@
+"""DateTime field configuration."""
+
+from typing import Any, Dict, Literal, Optional
+
+from pydantic import Field
+
+from .base import FieldConfig
+
+
+class DateTimeField(FieldConfig):
+    """
+    DateTime widget configuration.
+
+    Examples:
+        DateTimeField(name="created_at", show_relative=True)
+        DateTimeField(name="updated_at", datetime_format="%Y-%m-%d %H:%M")
+    """
+
+    ui_widget: Literal["datetime_relative"] = "datetime_relative"
+
+    datetime_format: Optional[str] = Field(None, description="DateTime format string")
+    show_relative: bool = Field(True, description="Show relative time (e.g., '2 hours ago')")
+
+    def get_widget_config(self) -> Dict[str, Any]:
+        """Extract datetime widget configuration."""
+        config = super().get_widget_config()
+        if self.datetime_format is not None:
+            config['datetime_format'] = self.datetime_format
+        config['show_relative'] = self.show_relative
+        return config

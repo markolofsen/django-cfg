@@ -1,0 +1,349 @@
+/**
+ * Documentation Modal Styles
+ * Unfold semantic colors for prose and syntax highlighting
+ */
+
+/* Hide elements with x-cloak until Alpine is ready */
+[x-cloak] {
+    display: none !important;
+}
+
+/* ============================================
+   LIGHT MODE PROSE STYLES
+   ============================================ */
+
+.prose {
+    color: rgb(var(--color-base-900));
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    color: rgb(var(--color-base-900));
+}
+
+/* ============================================
+   DARK MODE PROSE STYLES - UNFOLD SEMANTIC
+   ============================================ */
+
+.dark .prose-invert {
+    color: rgb(var(--color-base-300)) !important;
+    --tw-prose-body: rgb(var(--color-base-300));
+    --tw-prose-headings: rgb(var(--color-base-100));
+    --tw-prose-lead: rgb(var(--color-base-400));
+    --tw-prose-links: rgb(96, 165, 250);
+    --tw-prose-bold: rgb(var(--color-base-100));
+    --tw-prose-counters: rgb(var(--color-base-400));
+    --tw-prose-bullets: rgb(var(--color-base-500));
+    --tw-prose-hr: rgb(var(--color-base-700));
+    --tw-prose-quotes: rgb(var(--color-base-100));
+    --tw-prose-quote-borders: rgb(var(--color-base-700));
+    --tw-prose-captions: rgb(var(--color-base-400));
+    --tw-prose-code: rgb(var(--color-base-100));
+    --tw-prose-pre-code: rgb(var(--color-base-200));
+    --tw-prose-pre-bg: rgb(var(--color-base-950));
+    --tw-prose-th-borders: rgb(var(--color-base-700));
+    --tw-prose-td-borders: rgb(var(--color-base-700));
+}
+
+/* Target all text in dark mode prose */
+.dark .prose-invert,
+.dark .prose-invert p,
+.dark .prose-invert li,
+.dark .prose-invert td,
+.dark .prose-invert th,
+.dark .prose-invert span:not(.material-symbols-outlined),
+.dark .prose-invert div {
+    color: rgb(var(--color-base-300)) !important;
+}
+
+.dark .prose-invert h1,
+.dark .prose-invert h2,
+.dark .prose-invert h3,
+.dark .prose-invert h4,
+.dark .prose-invert h5,
+.dark .prose-invert h6 {
+    color: rgb(var(--color-base-100)) !important;
+}
+
+.dark .prose-invert a {
+    color: rgb(96, 165, 250) !important;
+}
+
+.dark .prose-invert strong,
+.dark .prose-invert b {
+    color: rgb(var(--color-base-100)) !important;
+}
+
+.dark .prose-invert em,
+.dark .prose-invert i {
+    color: rgb(var(--color-base-300)) !important;
+}
+
+/* ============================================
+   CODE BLOCKS - LIGHT THEME
+   Override Prism.js backgrounds with semantic colors
+   ============================================ */
+
+.prose pre,
+.prose pre[class*="language-"],
+.prose pre[class*="language-"] code,
+:not(pre) > code[class*="language-"] {
+    background-color: rgb(249 250 251) !important;
+    background: rgb(249 250 251) !important;
+}
+
+.prose pre,
+.prose pre[class*="language-"] {
+    border: 1px solid rgb(var(--color-base-200)) !important;
+    padding: 1rem !important;
+    overflow-x: auto;
+    border-radius: 0.375rem !important;
+}
+
+/* Inline code */
+.prose code {
+    background-color: rgb(243 244 246) !important;
+    color: rgb(17 24 39) !important;
+    padding: 0.125rem 0.375rem !important;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* Code inside pre blocks - let Prism.js handle colors */
+.prose pre code {
+    background-color: transparent !important;
+    padding: 0 !important;
+    color: inherit !important;
+    border-radius: 0;
+}
+
+/* ============================================
+   CODE BLOCKS - DARK THEME
+   Override Prism.js backgrounds with semantic colors
+   ============================================ */
+
+/* Nuclear option - override ALL possible Prism selectors AND plain pre/code */
+.dark pre,
+.dark pre[class*="language-"],
+.dark code[class*="language-"],
+.dark :not(pre) > code[class*="language-"],
+html.dark pre,
+html.dark pre[class*="language-"],
+html.dark code[class*="language-"],
+body.dark pre,
+body.dark pre[class*="language-"],
+body.dark code[class*="language-"],
+.dark .prose pre,
+.dark .prose pre[class*="language-"],
+.dark .prose code[class*="language-"],
+.dark .prose-invert pre,
+.dark .prose-invert pre[class*="language-"],
+.dark .prose-invert code[class*="language-"] {
+    background-color: rgb(31 41 55) !important;
+    background: rgb(31 41 55) !important;
+}
+
+.dark .prose-invert pre,
+.dark .prose-invert pre[class*="language-"] {
+    border: 1px solid rgb(55 65 81) !important;
+    padding: 1rem !important;
+    border-radius: 0.375rem !important;
+}
+
+/* Inline code */
+.dark .prose-invert code {
+    background-color: rgb(31 41 55) !important;
+    color: rgb(243 244 246) !important;
+    padding: 0.125rem 0.375rem !important;
+    border-radius: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* Code inside pre blocks - let Prism.js handle colors */
+.dark .prose-invert pre code {
+    background-color: transparent !important;
+    padding: 0 !important;
+    border-radius: 0;
+}
+
+/* ============================================
+   LISTS - UNFOLD SEMANTIC
+   ============================================ */
+
+.dark .prose-invert ul > li::marker,
+.dark .prose-invert ol > li::marker {
+    color: rgb(var(--color-base-500)) !important;
+}
+
+/* ============================================
+   TABLES - UNFOLD SEMANTIC
+   ============================================ */
+
+.dark .prose-invert table {
+    border-color: rgb(var(--color-base-700)) !important;
+}
+
+.dark .prose-invert thead {
+    border-bottom-color: rgb(var(--color-base-700)) !important;
+    background-color: rgb(var(--color-base-800));
+}
+
+.dark .prose-invert th,
+.dark .prose-invert td {
+    border-color: rgb(var(--color-base-700)) !important;
+    color: rgb(var(--color-base-300)) !important;
+}
+
+.dark .prose-invert tbody tr {
+    border-bottom-color: rgb(var(--color-base-700)) !important;
+}
+
+.dark .prose-invert tbody tr:hover {
+    background-color: rgb(var(--color-base-800));
+}
+
+/* ============================================
+   BLOCKQUOTES - UNFOLD SEMANTIC
+   ============================================ */
+
+.dark .prose-invert blockquote {
+    border-left-color: rgb(var(--color-base-700)) !important;
+    background-color: rgb(var(--color-base-800));
+    color: rgb(var(--color-base-300)) !important;
+    padding: 1rem;
+    border-radius: 0.375rem;
+}
+
+/* ============================================
+   HORIZONTAL RULES - UNFOLD SEMANTIC
+   ============================================ */
+
+.dark .prose-invert hr {
+    border-color: rgb(var(--color-base-700)) !important;
+}
+
+/* ============================================
+   MERMAID DIAGRAMS - LIGHT AND DARK THEME
+   ============================================ */
+
+/* Mermaid container styles with Unfold semantic colors */
+.mermaid-container {
+    margin: 1.5rem 0;
+    padding: 0;
+}
+
+.mermaid-wrapper {
+    border: 1px solid rgb(var(--color-base-200));
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    background: rgb(var(--color-base-50));
+    overflow-x: auto;
+}
+
+/* Dark mode styles with semantic colors */
+.dark .mermaid-wrapper {
+    border-color: rgb(var(--color-base-700));
+    background: rgb(var(--color-base-900));
+}
+
+/* Mermaid diagram */
+.mermaid {
+    display: flex;
+    justify-content: center;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: inherit !important;
+}
+
+/* Ensure diagrams are centered */
+.mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Loading state with semantic colors */
+.mermaid[data-processed="false"] {
+    color: rgb(var(--color-base-400));
+    text-align: center;
+    padding: 2rem;
+}
+
+.dark .mermaid[data-processed="false"] {
+    color: rgb(var(--color-base-500));
+}
+
+/* Error state with semantic colors */
+.mermaid.error {
+    color: rgb(239, 68, 68);
+    border: 1px solid rgb(252, 165, 165);
+    background: rgb(254, 242, 242);
+    padding: 1rem;
+    border-radius: 0.375rem;
+}
+
+.dark .mermaid.error {
+    color: rgb(248, 113, 113);
+    border-color: rgb(153, 27, 27);
+    background: rgb(127, 29, 29);
+}
+
+/* ============================================
+   PRISM.JS SYNTAX HIGHLIGHTING - DARK THEME
+   ============================================ */
+
+.dark .token.comment,
+.dark .token.prolog,
+.dark .token.doctype,
+.dark .token.cdata {
+    color: rgb(var(--color-base-500)) !important;
+}
+
+.dark .token.punctuation {
+    color: rgb(var(--color-base-400)) !important;
+}
+
+.dark .token.property,
+.dark .token.tag,
+.dark .token.boolean,
+.dark .token.number,
+.dark .token.constant,
+.dark .token.symbol,
+.dark .token.deleted {
+    color: rgb(96, 165, 250) !important;
+}
+
+.dark .token.selector,
+.dark .token.attr-name,
+.dark .token.string,
+.dark .token.char,
+.dark .token.builtin,
+.dark .token.inserted {
+    color: rgb(134, 239, 172) !important;
+}
+
+.dark .token.operator,
+.dark .token.entity,
+.dark .token.url,
+.dark .language-css .token.string,
+.dark .style .token.string {
+    color: rgb(251, 191, 36) !important;
+}
+
+.dark .token.atrule,
+.dark .token.attr-value,
+.dark .token.keyword {
+    color: rgb(196, 181, 253) !important;
+}
+
+.dark .token.function,
+.dark .token.class-name {
+    color: rgb(251, 146, 60) !important;
+}
+
+.dark .token.regex,
+.dark .token.important,
+.dark .token.variable {
+    color: rgb(252, 165, 165) !important;
+}

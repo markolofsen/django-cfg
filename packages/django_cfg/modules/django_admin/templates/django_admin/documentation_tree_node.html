@@ -1,0 +1,124 @@
+{# Recursive Tree Node Template for Documentation Modal #}
+
+<div class="select-none">
+    {# Node Item #}
+    <div
+        @click="selectNode(node)"
+        :class="{
+            'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700': isActive(node.id),
+            'hover:bg-base-100 dark:hover:bg-white/[.04]': !isActive(node.id)
+        }"
+        class="flex items-center gap-2 px-3 py-2 rounded-default cursor-pointer transition-all duration-150 border border-transparent"
+    >
+        {# Icon - always show description for content nodes #}
+        <span class="material-symbols-outlined text-base text-primary-600 dark:text-primary-400">
+            description
+        </span>
+
+        {# Label #}
+        <span
+            class="text-sm flex-1 line-clamp-2"
+            :class="{
+                'font-semibold text-primary-700 dark:text-primary-300': isActive(node.id),
+                'text-font-default-light dark:text-font-default-dark': !isActive(node.id)
+            }"
+            x-text="node.label"
+        ></span>
+    </div>
+
+    {# Children (recursive) #}
+    <template x-if="node.children && node.children.length > 0 && isExpanded(node.id)">
+        <div class="ml-4 mt-1 space-y-1 border-l-2 border-base-200 dark:border-base-700 pl-2">
+            <template x-for="childNode in node.children" :key="childNode.id">
+                <div>
+                    {# Recursively render child nodes #}
+                    <div
+                        x-data="{ node: childNode }"
+                    >
+                        {# Inline recursive template #}
+                        <div class="select-none">
+                            <div
+                                @click="selectNode(node)"
+                                :class="{
+                                    'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700': isActive(node.id),
+                                    'hover:bg-base-100 dark:hover:bg-white/[.04]': !isActive(node.id)
+                                }"
+                                class="flex items-center gap-2 px-3 py-2 rounded-default cursor-pointer transition-all duration-150 border border-transparent"
+                            >
+                                <template x-if="node.children && node.children.length > 0">
+                                    <button
+                                        @click.stop="toggleExpand(node.id)"
+                                        class="p-0.5 hover:bg-base-200 dark:hover:bg-base-800 rounded transition-colors"
+                                    >
+                                        <span
+                                            class="material-symbols-outlined text-base text-font-default-light dark:text-font-default-dark transition-transform duration-200"
+                                            :class="isExpanded(node.id) ? 'rotate-90' : ''"
+                                            x-text="isExpanded(node.id) ? 'expand_more' : 'chevron_right'"
+                                        ></span>
+                                    </button>
+                                </template>
+
+                                <template x-if="!node.children || node.children.length === 0">
+                                    <div class="w-5"></div>
+                                </template>
+
+                                <span
+                                    class="material-symbols-outlined text-base"
+                                    :class="node.content ? 'text-primary-600 dark:text-primary-400' : 'text-font-subtle-light dark:text-font-subtle-dark'"
+                                    x-text="node.content ? 'description' : 'folder'"
+                                ></span>
+
+                                <span
+                                    class="text-sm flex-1"
+                                    :class="{
+                                        'font-semibold text-primary-700 dark:text-primary-300': isActive(node.id),
+                                        'text-font-default-light dark:text-font-default-dark': !isActive(node.id),
+                                        'font-medium': !node.content
+                                    }"
+                                    x-text="node.label"
+                                ></span>
+                            </div>
+
+                            <template x-if="node.children && node.children.length > 0 && isExpanded(node.id)">
+                                <div class="ml-4 mt-1 space-y-1 border-l-2 border-base-200 dark:border-base-700 pl-2">
+                                    <template x-for="grandChild in node.children" :key="grandChild.id">
+                                        <div x-data="{ node: grandChild }">
+                                            {# Deep nesting uses same pattern #}
+                                            <div
+                                                @click="selectNode(node)"
+                                                :class="{
+                                                    'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700': isActive(node.id),
+                                                    'hover:bg-base-100 dark:hover:bg-white/[.04]': !isActive(node.id)
+                                                }"
+                                                class="flex items-center gap-2 px-3 py-2 rounded-default cursor-pointer transition-all duration-150 border border-transparent"
+                                            >
+                                                <template x-if="!node.children || node.children.length === 0">
+                                                    <div class="w-5"></div>
+                                                </template>
+
+                                                <span
+                                                    class="material-symbols-outlined text-base"
+                                                    :class="node.content ? 'text-primary-600 dark:text-primary-400' : 'text-font-subtle-light dark:text-font-subtle-dark'"
+                                                    x-text="'description'"
+                                                ></span>
+
+                                                <span
+                                                    class="text-sm flex-1"
+                                                    :class="{
+                                                        'font-semibold text-primary-700 dark:text-primary-300': isActive(node.id),
+                                                        'text-font-default-light dark:text-font-default-dark': !isActive(node.id)
+                                                    }"
+                                                    x-text="node.label"
+                                                ></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </template>
+</div>

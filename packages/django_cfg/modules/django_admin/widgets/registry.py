@@ -348,3 +348,310 @@ def _render_json_editor(obj: Any, field: str, config: Dict[str, Any]) -> str:
 
 # JSON Editor widget
 WidgetRegistry.register("json_editor", _render_json_editor)
+
+
+def _render_avatar(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """Render avatar with fallback to initials badge."""
+    from django.utils.safestring import mark_safe
+
+    # Validate that the field exists in the model
+    if not hasattr(obj, field):
+        error_msg = (
+            f'<span class="text-red-600 font-bold">⚠️ AvatarField Error: '
+            f'Field "{field}" does not exist in model {obj.__class__.__name__}. '
+            f'Use a real model field (e.g., "first_name", "username"), not a virtual field!</span>'
+        )
+        logger.error(f"AvatarField validation error: Field '{field}' not found in {obj.__class__.__name__}")
+        return mark_safe(error_msg)
+
+    # Get field configuration
+    photo_field = config.get('photo_field')
+    name_field = config.get('name_field')
+    initials_field = config.get('initials_field')
+    subtitle_field = config.get('subtitle_field')
+
+    # Validate required configuration
+    if not photo_field or not name_field or not initials_field:
+        return mark_safe('<span class="text-gray-500">Avatar config missing (photo_field, name_field, initials_field required)</span>')
+
+    # Get field values from object
+    photo = getattr(obj, photo_field, None) if photo_field else None
+    name = str(getattr(obj, name_field, '')) if name_field else ''
+    initials_source = str(getattr(obj, initials_field, '')) if initials_field else ''
+    subtitle = str(getattr(obj, subtitle_field, '')) if subtitle_field else None
+
+    # Get configuration
+    avatar_size = config.get('avatar_size', 40)
+    show_as_card = config.get('show_as_card', False)
+    variant_field = config.get('variant_field')
+    variant_map = config.get('variant_map', {})
+    default_variant = config.get('default_variant', 'secondary')
+    initials_max_length = config.get('initials_max_length', 2)
+
+    # Extract initials
+    initials = ''.join([word[0].upper() for word in str(initials_source).split()[:initials_max_length]])
+    if not initials:
+        initials = str(name)[0].upper() if name else '?'
+
+    # Determine variant for badge fallback
+    variant = default_variant
+    if variant_field:
+        variant_value = getattr(obj, variant_field, None)
+        variant = variant_map.get(variant_value, default_variant)
+
+    # If photo exists, show image
+    if photo:
+        photo_url = photo.url if hasattr(photo, 'url') else str(photo)
+        if show_as_card:
+            html = f'''
+            <div class="flex items-center gap-2">
+                <img src="{photo_url}" alt="{name}"
+                     class="rounded-full"
+                     style="width: {avatar_size}px; height: {avatar_size}px; object-fit: cover;">
+                <div>
+                    <div class="font-medium">{name}</div>
+                    {f'<div class="text-sm text-gray-500">{subtitle}</div>' if subtitle else ''}
+                </div>
+            </div>
+            '''
+        else:
+            html = f'<img src="{photo_url}" alt="{name}" class="rounded-full" style="width: {avatar_size}px; height: {avatar_size}px; object-fit: cover;">'
+    else:
+        # Fallback to initials badge
+        badge_colors = {
+            'primary': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+            'secondary': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+            'success': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            'danger': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+            'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+            'info': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300',
+        }
+        color_class = badge_colors.get(variant, badge_colors['secondary'])
+
+        if show_as_card:
+            html = f'''
+            <div class="flex items-center gap-2">
+                <div class="rounded-full {color_class} flex items-center justify-center font-semibold"
+                     style="width: {avatar_size}px; height: {avatar_size}px;">
+                    {initials}
+                </div>
+                <div>
+                    <div class="font-medium">{name}</div>
+                    {f'<div class="text-sm text-gray-500">{subtitle}</div>' if subtitle else ''}
+                </div>
+            </div>
+            '''
+        else:
+            html = f'<div class="rounded-full {color_class} flex items-center justify-center font-semibold" style="width: {avatar_size}px; height: {avatar_size}px;">{initials}</div>'
+
+    return mark_safe(html)
+
+
+def _render_link(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """Render text with link and optional subtitle."""
+    from django.utils.safestring import mark_safe
+
+    # Validate that the field exists in the model
+    if not hasattr(obj, field):
+        error_msg = (
+            f'<span class="text-red-600 font-bold">⚠️ LinkField Error: '
+            f'Field "{field}" does not exist in model {obj.__class__.__name__}. '
+            f'Use a real model field, not a virtual field!</span>'
+        )
+        logger.error(f"LinkField validation error: Field '{field}' not found in {obj.__class__.__name__}")
+        return mark_safe(error_msg)
+
+    # Get field values
+    text = getattr(obj, field, '')
+    link_field = config.get('link_field')
+    link_url = getattr(obj, link_field, '') if link_field else ''
+
+    if not link_url:
+        return str(text)
+
+    # Get configuration
+    link_icon = config.get('link_icon')
+    link_target = config.get('link_target', '_blank')
+    subtitle_field = config.get('subtitle_field')
+    subtitle_fields = config.get('subtitle_fields')
+    subtitle_template = config.get('subtitle_template')
+    subtitle_separator = config.get('subtitle_separator', ' • ')
+    subtitle_css_class = config.get('subtitle_css_class', 'text-sm text-gray-500')
+
+    # Build subtitle
+    subtitle_text = None
+    if subtitle_template:
+        # Template with {field_name} placeholders
+        import re
+        template = subtitle_template
+        field_names = re.findall(r'\{(\w+)\}', template)
+        for field_name in field_names:
+            field_value = getattr(obj, field_name, '')
+            template = template.replace(f'{{{field_name}}}', str(field_value))
+        subtitle_text = template
+    elif subtitle_fields:
+        # Multiple fields with separator
+        parts = [str(getattr(obj, f, '')) for f in subtitle_fields if getattr(obj, f, '')]
+        subtitle_text = subtitle_separator.join(parts) if parts else None
+    elif subtitle_field:
+        # Single field
+        subtitle_text = str(getattr(obj, subtitle_field, ''))
+
+    # Build HTML
+    icon_html = f'<span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{link_icon}</span> ' if link_icon else ''
+    link_html = f'<a href="{link_url}" target="{link_target}">{icon_html}{text}</a>'
+
+    if subtitle_text:
+        html = f'''
+        <div>
+            <div>{link_html}</div>
+            <div class="{subtitle_css_class}">{subtitle_text}</div>
+        </div>
+        '''
+    else:
+        html = link_html
+
+    return mark_safe(html)
+
+
+def _render_markdown(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """Render markdown content."""
+    from django.utils.safestring import mark_safe
+
+    # Get markdown content
+    content = getattr(obj, field, '')
+    if not content:
+        return config.get('empty_value', "—")
+
+    # TODO: Implement markdown rendering with mistune
+    # For now, return plain text
+    return mark_safe(f'<div class="prose">{content}</div>')
+
+
+def _render_status_badges(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """Render multiple conditional status badges."""
+    from django.utils.safestring import mark_safe
+
+    # Validate that the field exists in the model (though it's not directly used, it's in list_display)
+    if not hasattr(obj, field):
+        error_msg = (
+            f'<span class="text-red-600 font-bold">⚠️ StatusBadgesField Error: '
+            f'Field "{field}" does not exist in model {obj.__class__.__name__}. '
+            f'Use a real model field!</span>'
+        )
+        logger.error(f"StatusBadgesField validation error: Field '{field}' not found in {obj.__class__.__name__}")
+        return mark_safe(error_msg)
+
+    badge_rules = config.get('badge_rules', [])
+    separator = config.get('separator', ' ')
+    empty_text = config.get('empty_text')
+    empty_variant = config.get('empty_variant', 'secondary')
+
+    # Check each rule and collect matching badges
+    badges = []
+    for rule in badge_rules:
+        condition_field = rule.get('condition_field')
+        condition_value = rule.get('condition_value', True)
+        label = rule.get('label', '')
+        variant = rule.get('variant', 'secondary')
+        icon = rule.get('icon')
+
+        # Check if condition matches
+        field_value = getattr(obj, condition_field, None)
+        if field_value == condition_value:
+            # Build badge
+            badge_colors = {
+                'primary': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'secondary': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                'success': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                'danger': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+                'info': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300',
+            }
+            color_class = badge_colors.get(variant, badge_colors['secondary'])
+            icon_html = f'<span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{icon}</span> ' if icon else ''
+            badge_html = f'<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium {color_class}">{icon_html}{label}</span>'
+            badges.append(badge_html)
+
+    # If no badges match, show empty state
+    if not badges and empty_text:
+        badge_colors = {
+            'secondary': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        }
+        color_class = badge_colors.get(empty_variant, badge_colors['secondary'])
+        return mark_safe(f'<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium {color_class}">{empty_text}</span>')
+
+    return mark_safe(separator.join(badges)) if badges else "—"
+
+
+def _render_counter_badge(obj: Any, field: str, config: Dict[str, Any]) -> str:
+    """Render counter badge with optional link."""
+    from django.utils.safestring import mark_safe
+
+    # Validate that the field exists in the model
+    if not hasattr(obj, field):
+        error_msg = (
+            f'<span class="text-red-600 font-bold">⚠️ CounterBadgeField Error: '
+            f'Field "{field}" does not exist in model {obj.__class__.__name__}. '
+            f'Use a real model field!</span>'
+        )
+        logger.error(f"CounterBadgeField validation error: Field '{field}' not found in {obj.__class__.__name__}")
+        return mark_safe(error_msg)
+
+    count_field = config.get('count_field')
+    count = getattr(obj, count_field, 0) if count_field else 0
+
+    variant = config.get('variant', 'primary')
+    icon = config.get('icon')
+    link_url_template = config.get('link_url_template')
+    link_target = config.get('link_target', '_self')
+    format_thousands = config.get('format_thousands', True)
+    hide_on_zero = config.get('hide_on_zero', False)
+    empty_display = config.get('empty_display', False)
+    empty_text = config.get('empty_text', '-')
+
+    # Handle zero count
+    if count == 0:
+        if hide_on_zero:
+            return ""
+        if empty_display:
+            count_display = empty_text
+        else:
+            count_display = "0"
+    else:
+        # Format number
+        count_display = f"{count:,}" if format_thousands else str(count)
+
+    # Build badge
+    badge_colors = {
+        'primary': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+        'secondary': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        'success': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+        'danger': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+        'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+        'info': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300',
+    }
+    color_class = badge_colors.get(variant, badge_colors['primary'])
+    icon_html = f'<span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{icon}</span> ' if icon else ''
+    badge_html = f'<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium {color_class}">{icon_html}{count_display}</span>'
+
+    # Wrap in link if template provided
+    if link_url_template and count > 0:
+        # Replace {obj.field} placeholders
+        import re
+        link_url = link_url_template
+        placeholders = re.findall(r'\{obj\.(\w+)\}', link_url)
+        for placeholder in placeholders:
+            value = getattr(obj, placeholder, '')
+            link_url = link_url.replace(f'{{obj.{placeholder}}}', str(value))
+        badge_html = f'<a href="{link_url}" target="{link_target}">{badge_html}</a>'
+
+    return mark_safe(badge_html)
+
+
+# Register new widgets
+WidgetRegistry.register("avatar", _render_avatar)
+WidgetRegistry.register("link", _render_link)
+WidgetRegistry.register("markdown", _render_markdown)
+WidgetRegistry.register("status_badges", _render_status_badges)
+WidgetRegistry.register("counter_badge", _render_counter_badge)

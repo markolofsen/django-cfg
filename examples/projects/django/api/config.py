@@ -410,10 +410,6 @@ class DjangoCfgConfig(DjangoConfig):
         project_path="../django_admin/apps/admin",
         # Customize where TypeScript clients are copied
         api_output_path="src/api/generated",
-        # Enable automatic building of Next.js static export after API generation
-        auto_build=True,
-        # Optional: enable/disable auto-copy after generate_client (default: True)
-        # auto_copy_api=True,
         # Optional: static files URL prefix (default: /cfg/admin/)
         # static_url="/cfg/admin/",
         # Optional: Next.js dev server URL (default: http://localhost:3001)

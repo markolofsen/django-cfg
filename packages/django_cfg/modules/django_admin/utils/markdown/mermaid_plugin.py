@@ -167,93 +167,164 @@ def get_mermaid_script(theme: str = "default") -> str:
 <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 
-    // Helper to get CSS variable value
+    // Make mermaid available globally for Alpine.js components
+    window.mermaid = mermaid;
+
+    // Helper to get CSS variable value and convert to hex
     function getCSSVar(name) {{
         const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-        // Convert "R, G, B" format to "#RRGGBB"
-        if (value.includes(',')) {{
+
+        // Handle "R, G, B" format (Unfold semantic colors)
+        if (value.includes(',') && !value.includes('(')) {{
             const [r, g, b] = value.split(',').map(x => parseInt(x.trim()));
             return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
         }}
+
+        // Handle rgb(R, G, B) format
+        if (value.startsWith('rgb(')) {{
+            const match = value.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/);
+            if (match) {{
+                const [_, r, g, b] = match;
+                return '#' + [r, g, b].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+            }}
+        }}
+
+        // Handle oklch() or other unsupported formats - return fallback
+        if (value.includes('oklch') || value.includes('(')) {{
+            return null; // Will use fallback color
+        }}
+
+        // Already hex or other valid format
         return value;
+    }}
+
+    // Safe color getter with fallback
+    function getColor(varName, fallback) {{
+        const color = getCSSVar(varName);
+        return color || fallback;
     }}
 
     // Auto-detect dark mode
     const isDarkMode = document.documentElement.classList.contains('dark') ||
                        window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // Get Unfold semantic colors
+    // Get Unfold semantic colors with fallbacks
     function getThemeColors() {{
         if (isDarkMode) {{
             return {{
-                primaryColor: '#3b82f6',
-                primaryTextColor: getCSSVar('--color-base-100'),
-                primaryBorderColor: getCSSVar('--color-base-700'),
-                lineColor: getCSSVar('--color-base-600'),
-                secondaryColor: getCSSVar('--color-base-800'),
-                tertiaryColor: getCSSVar('--color-base-700'),
-                background: getCSSVar('--color-base-900'),
-                mainBkg: getCSSVar('--color-base-800'),
-                secondBkg: getCSSVar('--color-base-700'),
-                border1: getCSSVar('--color-base-700'),
-                border2: getCSSVar('--color-base-600'),
-                note: getCSSVar('--color-base-800'),
-                noteText: getCSSVar('--color-base-200'),
-                noteBorder: getCSSVar('--color-base-600'),
-                text: getCSSVar('--color-base-200'),
-                critical: '#ef4444',
-                done: '#10b981',
-                active: '#3b82f6',
+                // Primary colors - bright blue for nodes
+                primaryColor: '#60a5fa',
+                primaryTextColor: '#f3f4f6',
+                primaryBorderColor: '#374151',
+
+                // Line and border colors - lighter for visibility
+                lineColor: '#6b7280',
+                border1: '#4b5563',
+                border2: '#6b7280',
+
+                // Background colors - dark semantic
+                background: '#111827',
+                mainBkg: '#1f2937',
+                secondBkg: '#374151',
+                tertiaryColor: '#4b5563',
+
+                // Secondary colors - accent
+                secondaryColor: '#10b981',
+
+                // Text colors - high contrast
+                text: '#e5e7eb',
+                textColor: '#e5e7eb',
+                nodeTextColor: '#111827',
+
+                // Note/label colors
+                note: '#374151',
+                noteText: '#f3f4f6',
+                noteBorder: '#6b7280',
+                labelColor: '#111827',
+
+                // State colors
+                critical: '#f87171',
+                done: '#34d399',
+                active: '#60a5fa',
+
+                // Additional contrast
+                edgeLabelBackground: '#1f2937',
+                clusterBkg: '#1f2937',
+                clusterBorder: '#4b5563',
+                defaultLinkColor: '#6b7280',
+                titleColor: '#f3f4f6',
+
+                // Grid
+                gridColor: '#374151',
+
+                // Font
+                fontFamily: 'ui-sans-serif, system-ui, sans-serif',
             }};
         }} else {{
             return {{
-                primaryColor: '#2563eb',
-                primaryTextColor: getCSSVar('--color-base-900'),
-                primaryBorderColor: getCSSVar('--color-base-300'),
-                lineColor: getCSSVar('--color-base-400'),
-                secondaryColor: getCSSVar('--color-base-100'),
+                primaryColor: '#3b82f6',
+                primaryTextColor: '#111827',
+                primaryBorderColor: '#d1d5db',
+                lineColor: '#9ca3af',
+                secondaryColor: '#10b981',
                 tertiaryColor: '#ffffff',
                 background: '#ffffff',
-                mainBkg: getCSSVar('--color-base-50'),
+                mainBkg: '#f9fafb',
                 secondBkg: '#ffffff',
-                border1: getCSSVar('--color-base-300'),
-                border2: getCSSVar('--color-base-200'),
+                border1: '#d1d5db',
+                border2: '#e5e7eb',
                 note: '#fef3c7',
-                noteText: getCSSVar('--color-base-900'),
+                noteText: '#111827',
                 noteBorder: '#fbbf24',
-                text: getCSSVar('--color-base-900'),
-                critical: '#dc2626',
-                done: '#059669',
-                active: '#2563eb',
+                text: '#111827',
+                critical: '#ef4444',
+                done: '#10b981',
+                active: '#3b82f6',
+                fontFamily: 'ui-sans-serif, system-ui, sans-serif',
             }};
         }}
     }}
 
-    // Initialize Mermaid with Unfold semantic colors
-    mermaid.initialize({{
-        startOnLoad: true,
-        theme: 'base',
-        securityLevel: 'loose',
-        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-        themeVariables: getThemeColors()
-    }});
+    // Initialize Mermaid with Unfold semantic colors and error handling
+    try {{
+        mermaid.initialize({{
+            startOnLoad: true,
+            theme: 'base',
+            securityLevel: 'loose',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+            themeVariables: getThemeColors()
+        }});
+    }} catch (error) {{
+        console.error('Mermaid initialization error:', error);
+        // Fallback to default theme
+        mermaid.initialize({{
+            startOnLoad: true,
+            theme: isDarkMode ? 'dark' : 'default',
+            securityLevel: 'loose',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        }});
+    }}
 
     // Listen for dark mode changes and re-render
     const observer = new MutationObserver((mutations) => {{
         mutations.forEach((mutation) => {{
             if (mutation.attributeName === 'class') {{
-                // Re-initialize with new theme colors
-                mermaid.initialize({{
-                    startOnLoad: true,
-                    theme: 'base',
-                    securityLevel: 'loose',
-                    fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-                    themeVariables: getThemeColors()
-                }});
-                // Re-render all diagrams
-                mermaid.run({{
-                    querySelector: '.mermaid',
-                }});
+                try {{
+                    // Re-initialize with new theme colors
+                    mermaid.initialize({{
+                        startOnLoad: true,
+                        theme: 'base',
+                        securityLevel: 'loose',
+                        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                        themeVariables: getThemeColors()
+                    }});
+                    // Re-render all diagrams
+                    mermaid.run({{
+                        querySelector: '.mermaid',
+                    }});
+                }} catch (error) {{
+                    console.error('Mermaid re-initialization error:', error);
+                }}
             }}
         }});
     }});

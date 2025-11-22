@@ -1,0 +1,300 @@
+{% load static %}
+{# Documentation Modal with Tree Navigation - Alpine.js powered #}
+
+<div x-data="docModal()" x-init="init()">
+    {# Floating Action Button (FAB) with Badge #}
+    <div style="position: fixed !important; bottom: 1.5rem !important; right: 1.5rem !important; z-index: 49 !important;">
+        <button
+            @click="open = true"
+            type="button"
+            class="flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110"
+            style="width: 3.5rem !important; height: 3.5rem !important; padding: 0 !important; border: none !important; outline: none !important; position: relative !important;"
+            title="{{ documentation_config.title }}{% if documentation_sections_count %} ({{ documentation_sections_count }} section{{ documentation_sections_count|pluralize }}){% endif %}"
+        >
+            <span class="material-symbols-outlined" style="font-size: 1.5rem !important;">description</span>
+        </button>
+
+        {# Badge with count #}
+        {% if documentation_sections_count %}
+        <span
+            class="flex items-center justify-center text-white text-xs font-bold rounded-full"
+            style="position: absolute !important; top: -0.25rem !important; right: -0.25rem !important; min-width: 1.25rem !important; height: 1.25rem !important; padding: 0 0.25rem !important; background-color: #ef4444 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important; pointer-events: none !important;"
+        >
+            {{ documentation_sections_count }}
+        </span>
+        {% endif %}
+    </div>
+
+    {# Modal Overlay & Container - FULLSCREEN #}
+    <div
+        x-show="open"
+        x-cloak
+        class="fixed inset-0 z-[1000] bg-base-900/80 backdrop-blur-sm"
+        @click.self="open = false"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+    >
+        {# Modal Window - FULLSCREEN #}
+        <div
+            class="bg-white dark:bg-base-900 shadow-2xl"
+            style="width: 100vw; height: 100vh; display: flex; flex-direction: column; overflow: hidden;"
+            @click.stop
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+        >
+            {# Header (Fixed) #}
+            <div class="flex items-center justify-between px-6 py-4 border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-950" style="flex-shrink: 0;">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-2xl text-primary-600 dark:text-primary-400">description</span>
+                    <h2 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">
+                        {{ documentation_config.title }}
+                    </h2>
+                </div>
+                <button
+                    @click="open = false"
+                    class="p-2 rounded-default hover:bg-base-100 dark:hover:bg-base-800 transition-colors duration-150"
+                >
+                    <span class="material-symbols-outlined text-xl text-font-default-light dark:text-font-default-dark">close</span>
+                </button>
+            </div>
+
+            {# Content Area: Sidebar + Main Content - FULL INLINE STYLES #}
+            <div style="display: flex; flex: 1 1 0%; min-height: 0;">
+                {# Sidebar - Tree Navigation #}
+                <div class="border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-950" style="width: 320px; display: flex; flex-direction: column;">
+                    {# Search Bar (Fixed) #}
+                    <div class="p-4 border-b border-base-200 dark:border-base-800" style="flex-shrink: 0;">
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-font-subtle-light dark:text-font-subtle-dark text-base pointer-events-none">
+                                search
+                            </span>
+                            <input
+                                type="text"
+                                x-model="searchQuery"
+                                @input="filterTree()"
+                                placeholder="Search documentation..."
+                                class="w-full pl-10 pr-4 py-2 bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-default text-sm text-font-default-light dark:text-font-default-dark placeholder-font-subtle-light dark:placeholder-font-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            >
+                        </div>
+                    </div>
+
+                    {# Tree Navigation (Scrollable) #}
+                    <div class="p-4" style="flex: 1 1 0%; overflow-y: auto; overflow-x: hidden; min-height: 0;">
+                        {# Tree items #}
+                        <div class="space-y-1">
+                            <template x-for="(node, index) in filteredTree" :key="node.id">
+                                <div>
+                                    {% include 'django_admin/documentation_tree_node.html' %}
+                                </div>
+                            </template>
+                        </div>
+
+                        {# Empty state #}
+                        <div x-show="!filteredTree || filteredTree.length === 0" class="text-center py-8">
+                            <span class="material-symbols-outlined text-4xl text-font-subtle-light dark:text-font-subtle-dark opacity-30 mb-2 block">
+                                folder_open
+                            </span>
+                            <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                                No documentation sections found
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {# Main Content Area (Scrollable) #}
+                <div x-ref="contentScroll" class="bg-white dark:bg-base-900" style="flex: 1 1 0%; overflow-y: auto; overflow-x: hidden; min-height: 0;">
+                    <div class="p-8">
+                        {# Content already has prose classes from markdown renderer #}
+                        <div
+                            x-show="activeContent"
+                            x-html="activeContent"
+                        ></div>
+
+                        {# Empty State #}
+                        <div
+                            x-show="!activeContent"
+                            class="flex flex-col items-center justify-center text-center py-12"
+                        >
+                            <span class="material-symbols-outlined text-6xl text-font-subtle-light dark:text-font-subtle-dark opacity-30 mb-4">
+                                description
+                            </span>
+                            <p class="text-font-default-light dark:text-font-default-dark text-base">
+                                Select a section from the sidebar to view documentation
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Alpine.js Component #}
+<script>
+function docModal() {
+    return {
+        open: false,
+        searchQuery: '',
+        activeNode: null,
+        activeContent: '',
+        expandedNodes: new Set(),
+        tree: {{ documentation_tree|safe }},
+        filteredTree: [],
+
+        init() {
+            this.filteredTree = this.tree || [];
+
+            // Auto-select first item with content
+            const firstNode = this.findFirstContentNode(this.filteredTree);
+            if (firstNode) {
+                this.selectNode(firstNode);
+            }
+
+            // Apply syntax highlighting and Mermaid rendering after content is loaded
+            this.$nextTick(() => {
+                if (window.Prism) {
+                    Prism.highlightAll();
+                }
+                if (window.mermaid) {
+                    mermaid.run({
+                        querySelector: '.mermaid',
+                    }).catch(err => console.error('Mermaid render error:', err));
+                }
+            });
+        },
+
+        findFirstContentNode(nodes) {
+            for (const node of nodes) {
+                if (node.content) {
+                    return node;
+                }
+                if (node.children && node.children.length > 0) {
+                    const found = this.findFirstContentNode(node.children);
+                    if (found) return found;
+                }
+            }
+            return null;
+        },
+
+        selectNode(node) {
+            if (!node.content) {
+                // Folder - toggle expand
+                this.toggleExpand(node.id);
+                return;
+            }
+
+            this.activeNode = node.id;
+            this.activeContent = node.content;
+
+            // Ensure parent folders are expanded
+            this.expandParents(node.id);
+
+            // Scroll content area to top
+            if (this.$refs.contentScroll) {
+                this.$refs.contentScroll.scrollTop = 0;
+            }
+
+            // Apply syntax highlighting and Mermaid rendering after content update
+            this.$nextTick(() => {
+                if (window.Prism) {
+                    Prism.highlightAll();
+                }
+                if (window.mermaid) {
+                    mermaid.run({
+                        querySelector: '.mermaid',
+                    }).catch(err => console.error('Mermaid render error:', err));
+                }
+            });
+        },
+
+        toggleExpand(nodeId) {
+            if (this.expandedNodes.has(nodeId)) {
+                this.expandedNodes.delete(nodeId);
+            } else {
+                this.expandedNodes.add(nodeId);
+            }
+        },
+
+        isExpanded(nodeId) {
+            return this.expandedNodes.has(nodeId);
+        },
+
+        isActive(nodeId) {
+            return this.activeNode === nodeId;
+        },
+
+        expandParents(nodeId) {
+            // Extract parent IDs from node ID pattern
+            const parts = nodeId.split('-');
+            for (let i = 1; i < parts.length; i++) {
+                const parentId = 'folder-' + parts.slice(1, i).join('-');
+                this.expandedNodes.add(parentId);
+            }
+        },
+
+        filterTree() {
+            if (!this.searchQuery.trim()) {
+                this.filteredTree = this.tree;
+                return;
+            }
+
+            const query = this.searchQuery.toLowerCase();
+            this.filteredTree = this.filterNodes(this.tree, query);
+
+            // Auto-expand all nodes when searching
+            this.expandedNodes.clear();
+            this.addAllNodeIds(this.filteredTree);
+        },
+
+        filterNodes(nodes, query) {
+            const filtered = [];
+
+            for (const node of nodes) {
+                const labelMatch = node.label.toLowerCase().includes(query);
+                let childrenMatch = [];
+
+                if (node.children && node.children.length > 0) {
+                    childrenMatch = this.filterNodes(node.children, query);
+                }
+
+                if (labelMatch || childrenMatch.length > 0) {
+                    filtered.push({
+                        ...node,
+                        children: childrenMatch
+                    });
+                }
+            }
+
+            return filtered;
+        },
+
+        addAllNodeIds(nodes) {
+            for (const node of nodes) {
+                if (!node.content) {
+                    this.expandedNodes.add(node.id);
+                }
+                if (node.children && node.children.length > 0) {
+                    this.addAllNodeIds(node.children);
+                }
+            }
+        }
+    };
+}
+</script>
+
+{# Prism.js for syntax highlighting #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+{# Documentation Modal Styles - loaded AFTER Prism to override backgrounds #}
+<link rel="stylesheet" href="{% static 'django_admin/css/documentation-modal.css' %}">
+
