@@ -141,7 +141,14 @@ class BaseElements:
         return format_html('<div>{}</div>', content)
 
     @staticmethod
-    def link(url: str, text: str, css_class: str = "", target: str = "") -> SafeString:
+    def link(
+        url: str,
+        text: str,
+        css_class: str = "",
+        target: str = "",
+        icon: Optional[str] = None,
+        variant: Optional[str] = None
+    ) -> SafeString:
         """
         Render link.
 
@@ -150,13 +157,37 @@ class BaseElements:
             text: Link text
             css_class: CSS classes
             target: Target attribute (_blank, _self, etc)
+            icon: Icon name from Icons class
+            variant: Color variant
         """
+        classes = []
+        if css_class:
+            classes.append(css_class)
+            
+        if variant:
+            variant_classes = {
+                'success': 'text-success-600 dark:text-success-400 hover:text-success-700',
+                'warning': 'text-warning-600 dark:text-warning-400 hover:text-warning-700',
+                'danger': 'text-danger-600 dark:text-danger-400 hover:text-danger-700',
+                'info': 'text-info-600 dark:text-info-400 hover:text-info-700',
+                'primary': 'text-primary-600 dark:text-primary-400 hover:text-primary-700',
+            }
+            classes.append(variant_classes.get(variant, ''))
+
+        final_css_class = " ".join(classes)
+        
+        content = escape(text)
+        if icon:
+            # Use BaseElements.icon directly
+            icon_html = BaseElements.icon(icon, size="sm", css_class="mr-1 align-text-bottom")
+            content = format_html("{} {}", icon_html, content)
+
         if target:
             return format_html(
                 '<a href="{}" class="{}" target="{}">{}</a>',
-                url, css_class, target, escape(text)
+                url, final_css_class, target, content
             )
-        return format_html('<a href="{}" class="{}">{}</a>', url, css_class, escape(text))
+        return format_html('<a href="{}" class="{}">{}</a>', url, final_css_class, content)
 
     @staticmethod
     def empty(text: str = "—") -> SafeString:

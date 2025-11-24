@@ -15,13 +15,13 @@ FROM base AS installer-admin
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Copy workspace configuration
-COPY projects/django_admin/package.json ./
-COPY projects/django_admin/pnpm-lock.yaml ./
-COPY projects/django_admin/pnpm-workspace.yaml ./
+COPY projects/frontend/package.json ./
+COPY projects/frontend/pnpm-lock.yaml ./
+COPY projects/frontend/pnpm-workspace.yaml ./
 
 # Copy apps and packages
-COPY projects/django_admin/apps ./apps
-COPY projects/django_admin/packages ./packages
+COPY projects/frontend/apps ./apps
+COPY projects/frontend/packages ./packages
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile

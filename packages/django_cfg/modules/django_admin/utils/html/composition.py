@@ -134,6 +134,22 @@ class CompositionElements:
         """
         # Filter out None values
         filtered_items = [item for item in items if item is not None]
+        return CompositionElements.join(filtered_items, separator, size, css_class)
+
+    @staticmethod
+    def join(items: list, separator: str = " ", 
+             size: str = "small", css_class: str = "") -> SafeString:
+        """
+        Join a list of items with a separator.
+        
+        Args:
+            items: List of items to join
+            separator: Separator between items
+            size: small, medium, large
+            css_class: Additional CSS classes
+        """
+        # Filter out None values
+        filtered_items = [item for item in items if item is not None]
 
         if not filtered_items:
             return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')

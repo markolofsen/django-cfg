@@ -407,7 +407,7 @@ class DjangoCfgConfig(DjangoConfig):
     # === Next.js Admin Integration ===
     nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(
         # Path to Next.js admin project (relative to manage.py directory)
-        project_path="../django_admin/apps/admin",
+        project_path="../frontend/apps/admin",
         # Customize where TypeScript clients are copied
         api_output_path="src/api/generated",
         # Optional: static files URL prefix (default: /cfg/admin/)
