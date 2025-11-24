@@ -3,12 +3,12 @@
  * Path: /admin/crypto
  */
 
-import { PageWithConfig } from '@/types';
+import { PageWithLayout } from "@djangocfg/layouts";
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { CryptoView } from '@/views';
 import { CryptoProvider } from "@/contexts";
 
-const View: PageWithConfig = () => {
+const View: PageWithLayout = () => {
   return (
     <CryptoProvider>
       <CryptoView />

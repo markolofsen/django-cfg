@@ -1,4 +1,4 @@
-import { PageWithConfig } from "@/types/pageConfig";
+import { PageWithLayout } from "@djangocfg/layouts";
 import { useAuth } from '@djangocfg/layouts'
 import { redirectToAuth } from "@/core/routes";
 import { useEffect } from "react";
@@ -7,7 +7,7 @@ import { useRouter } from "next/router";
 import { Loader2 } from "lucide-react";
 import { isDevelopment } from "@/core/settings";
 
-const Page: PageWithConfig = () => {
+const Page: PageWithLayout = () => {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 

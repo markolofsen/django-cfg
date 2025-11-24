@@ -16,7 +16,7 @@
   "dependencies": {
     "@djangocfg/api": "latest",
     "@djangocfg/centrifugo": "latest",
-    "@djangocfg/layouts": "latest",
+    "@djangocfg/layouts": "^1.4.1",
     "@djangocfg/markdown": "latest",
     "@djangocfg/og-image": "latest",
     "@djangocfg/ui": "latest",

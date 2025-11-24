@@ -1,7 +1,7 @@
 import { ProfileLayout } from "@djangocfg/layouts";
-import { PageWithConfig } from "@/types";
+import { PageWithLayout } from "@djangocfg/layouts";
 
-const Page: PageWithConfig = () => {
+const Page: PageWithLayout = () => {
   return (
     <ProfileLayout
       title="Profile"

@@ -1,17 +1,14 @@
 import type { AppProps } from 'next/app';
-import type { ReactElement, ReactNode } from 'react';
-import type { NextPage } from 'next';
 import { Inter } from 'next/font/google';
 
 // Import global styles (includes Tailwind v4, UI package, and layouts)
 import '@/styles/globals.css';
 
-import { AppLayout } from '@djangocfg/layouts';
+import { AppLayout, type PageWithLayout } from '@djangocfg/layouts';
 import { appLayoutConfig } from '@/core';
 import { CentrifugoProvider, CentrifugoMonitorFAB } from '@djangocfg/centrifugo';
-import { isDevelopment } from '@/core/settings';
 
-// Load Manrope font from Google Fonts
+// Load Inter font from Google Fonts
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600', '700', '800'],
@@ -19,37 +16,33 @@ const inter = Inter({
   display: 'swap',
 });
 
-// Add support for per-page layouts
-export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
-  getLayout?: (page: ReactElement) => ReactNode;
-};
-
 type AppPropsWithLayout = AppProps & {
-  Component: NextPageWithLayout;
+  Component: PageWithLayout;
 };
 
 /**
  * Next.js App Component
  *
- * Single AppLayout wrapper with Django CFG admin mode enabled
- * All layout and iframe logic handled automatically by AppLayout
+ * Smart AppLayout automatically handles:
+ * - component.getLayout (custom layouts)
+ * - component.layoutMode (force specific layout)
+ * - Automatic route-based detection
+ *
+ * Just pass component and pageProps - AppLayout does the rest!
  */
 export default function App({ Component, pageProps }: AppPropsWithLayout) {
-  // Check if page has custom layout
-  const hasCustomLayout = !!Component.getLayout;
+  // AppLayout handles getLayout automatically - just render the page
+  const getLayout = Component.getLayout ?? ((page) => page);
 
   return (
     <AppLayout
       config={appLayoutConfig}
+      component={Component}
+      pageProps={pageProps}
       fontFamily={inter.style.fontFamily}
     >
       <CentrifugoProvider enabled={true} autoConnect={true}>
-        {hasCustomLayout ? (
-          Component.getLayout!(<Component {...pageProps} />)
-        ) : (
-          <Component {...pageProps} />
-        )}
-        {isDevelopment && <CentrifugoMonitorFAB variant="full" />}
+        {getLayout(<Component {...pageProps} />)}
       </CentrifugoProvider>
     </AppLayout>
   );

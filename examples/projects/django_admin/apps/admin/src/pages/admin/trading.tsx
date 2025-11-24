@@ -3,12 +3,12 @@
  * Path: /admin/trading
  */
 
-import { PageWithConfig } from '@/types';
+import { PageWithLayout } from "@djangocfg/layouts";
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { TradingView } from '@/views';
 import { TradingProvider } from "@/contexts";
 
-const View: PageWithConfig = () => {
+const View: PageWithLayout = () => {
   return (
     <TradingProvider>
       <TradingView />

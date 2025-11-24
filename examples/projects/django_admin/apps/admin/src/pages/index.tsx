@@ -1,7 +1,7 @@
 import { LandingView } from "@/views";
-import { PageWithConfig } from "@/types";
+import { PageWithLayout } from "@djangocfg/layouts";
 
-const View: PageWithConfig = () => {
+const View: PageWithLayout = () => {
   return (
       <LandingView />
   );

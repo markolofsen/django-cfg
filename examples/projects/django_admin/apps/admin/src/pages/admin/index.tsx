@@ -3,14 +3,14 @@
  * Path: /admin
  */
 
-import type { PageWithConfig } from "@/types";
+import type { PageWithLayout } from "@djangocfg/layouts";
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from '@djangocfg/ui';
 import { admin } from '@/core/routes';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
 
-const View: PageWithConfig = () => {
+const View: PageWithLayout = () => {
   const router = useRouter();
 
   // Get all admin routes except the overview page
