@@ -14,11 +14,16 @@ Quick Start:
             # Your code here
 """
 
+from .migration_manager import MigrationManager
 from .mixins import (
     AdminCommand,
     DestructiveCommand,
     InteractiveCommand,
     SafeCommand,
+)
+from .postgresql import (
+    PostgreSQLExtensionManager,
+    ensure_postgresql_extensions,
 )
 
 __all__ = [
@@ -26,4 +31,7 @@ __all__ = [
     'InteractiveCommand',
     'DestructiveCommand',
     'AdminCommand',
+    'PostgreSQLExtensionManager',
+    'ensure_postgresql_extensions',
+    'MigrationManager',
 ]

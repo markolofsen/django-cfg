@@ -3,22 +3,21 @@ Smart Migration Command for Django Config Toolkit
 Simple and reliable migration for all databases.
 """
 
-from pathlib import Path
-
 import questionary
-from django.apps import apps
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
-from django.db.migrations.recorder import MigrationRecorder
 
-from django_cfg.core.config import DEFAULT_APPS
-from django_cfg.management.utils import DestructiveCommand
+from django_cfg.management.utils import DestructiveCommand, MigrationManager
 
 
 class Command(DestructiveCommand):
     command_name = 'migrator'
     help = "Smart migration command with interactive menu for multiple databases"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.manager = None
 
     def add_arguments(self, parser):
         parser.add_argument("--auto", action="store_true", help="Run automatic migration without prompts")
@@ -26,10 +25,13 @@ class Command(DestructiveCommand):
         parser.add_argument("--app", type=str, help="Migrate specific app only")
 
     def handle(self, *args, **options):
+        # Initialize migration manager
+        self.manager = MigrationManager(self.stdout, self.style, self.logger)
+        
         if options["auto"]:
             self.run_automatic_migration()
         elif options["database"]:
-            self.migrate_database(options["database"])
+            self.manager.migrate_database(options["database"])
         elif options["app"]:
             self.migrate_app(options["app"])
         else:
@@ -39,7 +41,7 @@ class Command(DestructiveCommand):
         """Show interactive menu with options"""
         self.stdout.write(self.style.SUCCESS("\n🚀 Smart Migration Tool - Django Config Toolkit\n"))
 
-        databases = self.get_all_database_names()
+        databases = self.manager.get_all_database_names()
 
         choices = [
             questionary.Choice("🔄 Run Full Migration (All Databases)", value="full"),
@@ -59,7 +61,7 @@ class Command(DestructiveCommand):
         if choice == "full":
             self.run_full_migration()
         elif choice == "makemigrations":
-            self.create_migrations()
+            self.manager.create_migrations()
         elif choice == "status":
             self.show_database_status()
         elif choice == "config":
@@ -69,141 +71,49 @@ class Command(DestructiveCommand):
             return
         elif choice.startswith("migrate_"):
             db_name = choice.replace("migrate_", "")
-            self.migrate_database(db_name)
+            self.manager.migrate_database(db_name)
 
     def run_full_migration(self):
         """Run migration for all databases"""
-        self.stdout.write(self.style.SUCCESS("🔄 Starting full migration..."))
-
-        # First migrate default database
-        self.stdout.write("📊 Migrating default database...")
-        self.migrate_database("default")
-
-        # Then migrate other databases (excluding default)
-        databases = self.get_all_database_names()
-        for db_name in databases:
-            if db_name != "default":
-                self.stdout.write(f"🔄 Migrating {db_name}...")
-                self.migrate_database(db_name)
-
-        self.stdout.write(self.style.SUCCESS("✅ Full migration completed!"))
+        self.manager.migrate_all_databases()
 
     def run_automatic_migration(self):
         """Run automatic migration for all databases"""
         self.stdout.write(self.style.SUCCESS("🚀 Running automatic migration..."))
 
         # Create migrations
-        self.create_migrations()
+        self.manager.create_migrations()
 
         # Run full migration
-        self.run_full_migration()
+        self.manager.migrate_all_databases()
 
         # Always migrate constance (required for django-cfg)
-        self.migrate_constance_if_needed()
+        self.manager.migrate_constance_if_needed()
 
-    def create_migrations(self):
-        """Create migrations for all apps"""
-        self.stdout.write(self.style.SUCCESS("📝 Creating migrations..."))
-
-        try:
-            # First try global makemigrations
-            call_command("makemigrations", verbosity=1)
-
-            # Then try for each app that has models but no migrations
-            all_apps = self.get_all_installed_apps()
-            for app in all_apps:
-                if self.app_has_models(app) and not self.app_has_migrations(app):
-                    try:
-                        self.stdout.write(f"  📝 Creating migrations for {app}...")
-                        call_command("makemigrations", app, verbosity=1)
-                    except Exception as e:
-                        self.stdout.write(self.style.WARNING(f"  ⚠️  Could not create migrations for {app}: {e}"))
-
-            self.stdout.write(self.style.SUCCESS("✅ Migrations created"))
-        except Exception as e:
-            self.stdout.write(self.style.WARNING(f"⚠️  Warning creating migrations: {e}"))
-
-    def _raise_system_exit(self, message):
-        self.stdout.write(self.style.ERROR(f"❌ {message}"))
-        self.logger.error(message)
-        # raise SystemExit(1)
-
-    def migrate_database(self, db_name):
-        """Migrate specific database"""
-        try:
-            self.stdout.write(f"🔄 Migrating {db_name}...")
-
-            # Get apps for this database
-            apps = self.get_apps_for_database(db_name)
-
-            # Debug info
-            self.stdout.write(f"  📋 Apps for {db_name}: {apps}")
-
-            if not apps:
-                self.stdout.write(self.style.WARNING(f"  ⚠️  No apps configured for {db_name}"))
-                return
-
-            # make migrations for all apps
-            self.create_migrations()
-
-            # Migrate each app
-            for app in apps:
-                try:
-                    # Skip apps without migrations
-                    if not self.app_has_migrations(app):
-                        # self.stdout.write(f"  ⚠️  Skipping {app} - no migrations")
-                        continue
-
-                    self.stdout.write(f"  📦 Migrating {app}...")
-                    call_command("migrate", app, database=db_name, verbosity=1)
-                except Exception as e:
-                    self._raise_system_exit(f"Migration failed for {app} on {db_name}: {e}")
-
-            self.stdout.write(self.style.SUCCESS(f"✅ {db_name} migration completed!"))
-
-        except Exception as e:
-            self._raise_system_exit(f"Error migrating {db_name}: {e}")
-
-    def migrate_constance_if_needed(self):
-        """Always migrate constance app if it's installed"""
-        try:
-            # Check if constance is in INSTALLED_APPS
-            if 'constance' in settings.INSTALLED_APPS:
-                self.stdout.write(self.style.SUCCESS("🔧 Migrating constance (django-cfg requirement)..."))
-
-                # Try to migrate constance on default database
-                try:
-                    call_command("migrate", "constance", database="default", verbosity=1)
-                    self.stdout.write(self.style.SUCCESS("✅ Constance migration completed!"))
-                except Exception as e:
-                    self._raise_system_exit(f"Constance migration failed: {e}")
-            else:
-                self.stdout.write(self.style.WARNING("⚠️  Constance not found in INSTALLED_APPS"))
-
-        except Exception as e:
-            self._raise_system_exit(f"Could not migrate constance: {e}")
 
     def migrate_app(self, app_name):
         """Migrate specific app across all databases"""
         self.stdout.write(f"🔄 Migrating app {app_name}...")
 
-        databases = self.get_all_database_names()
+        databases = self.manager.get_all_database_names()
         for db_name in databases:
-            apps = self.get_apps_for_database(db_name)
+            apps = self.manager.get_apps_for_database(db_name)
             if app_name in apps:
                 self.stdout.write(f"  📊 Migrating {app_name} on {db_name}...")
                 try:
                     call_command("migrate", app_name, database=db_name, verbosity=1)
                 except Exception as e:
-                    self._raise_system_exit(f"Migration failed for {app_name} on {db_name}: {e}")
+                    self.stdout.write(self.style.ERROR(f"❌ Migration failed for {app_name} on {db_name}: {e}"))
+                    self.logger.error(f"Migration failed for {app_name} on {db_name}: {e}")
+                    raise SystemExit(1)
 
     def show_database_status(self):
         """Show status of all databases and their apps"""
         self.stdout.write(self.style.SUCCESS("\n📊 Database Status Report\n"))
 
         # Get database info from Django settings
-        db_info = self.get_database_info()
-        databases = self.get_all_database_names()
+        db_info = self.manager.get_database_info()
+        databases = self.manager.get_all_database_names()
 
         for db_name in databases:
             self.stdout.write(f"\n🗄️  Database: {db_name}")
@@ -215,15 +125,11 @@ class Command(DestructiveCommand):
                 self.stdout.write(f'  🔗 Name: {info["name"]}')
 
             # Test connection
-            try:
-                with connections[db_name].cursor() as cursor:
-                    cursor.execute("SELECT 1")
+            if self.manager.check_database_connection(db_name):
                 self.stdout.write("  ✅ Connection: OK")
-            except Exception as e:
-                self.stdout.write(f"  ❌ Connection: FAILED - {e}")
 
             # Show apps
-            apps = self.get_apps_for_database(db_name)
+            apps = self.manager.get_apps_for_database(db_name)
             if apps:
                 self.stdout.write(f'  📦 Apps: {", ".join(apps)}')
             else:
@@ -268,129 +174,5 @@ class Command(DestructiveCommand):
             self.stdout.write(f"📦 Installed Apps: {len(settings.INSTALLED_APPS)}")
 
         except Exception as e:
-            self._raise_system_exit(f"Error getting Django config info: {e}")
-
-    def get_apps_for_database(self, db_name: str):
-        """Get apps for specific database with smart logic for default"""
-        if db_name == "default":
-            # For default database, get all apps that are not in other databases
-            all_apps = self.get_all_installed_apps()
-            apps_in_other_dbs = self.get_apps_in_other_databases()
-            return [app for app in all_apps if app not in apps_in_other_dbs]
-        else:
-            # For other databases, use configured apps from routing rules
-            routing_rules = getattr(settings, "DATABASE_ROUTING_RULES", {})
-
-            # Routing rules are now in Django settings
-            pass
-
-            return [app for app, db in routing_rules.items() if db == db_name]
-
-    def get_all_installed_apps(self):
-        """Get all installed Django apps by checking for apps.py files."""
-        apps_list = []
-
-        # Get all Django app configs
-        for app_config in apps.get_app_configs():
-            app_label = app_config.label
-            app_path = Path(app_config.path)
-
-            # Check if apps.py exists in the app directory
-            apps_py_path = app_path / "apps.py"
-            if apps_py_path.exists():
-                if app_label not in DEFAULT_APPS:
-                    apps_list.append(app_label)
-                continue
-
-            # Fallback: check if it's a standard Django app (has models.py or admin.py)
-            if (app_path / "models.py").exists() or (app_path / "admin.py").exists():
-                apps_list.append(app_label)
-
-        return apps_list
-
-    def get_apps_in_other_databases(self) -> set:
-        """Get all apps that are configured for non-default databases."""
-        routing_rules = getattr(settings, "DATABASE_ROUTING_RULES", {})
-
-        # Routing rules are now in Django settings
-        pass
-
-        return set(routing_rules.keys())
-
-    def get_all_database_names(self):
-        """Get all database names."""
-        return list(connections.databases.keys())
-
-    def get_database_info(self):
-        """Get database information from Django settings"""
-        try:
-            db_info = {}
-
-            # Get database info from Django settings
-            for db_name, db_config in settings.DATABASES.items():
-                db_info[db_name] = {"name": db_config.get("NAME", "unknown"), "engine": db_config.get("ENGINE", "unknown"), "host": db_config.get("HOST", ""), "port": db_config.get("PORT", ""), "apps": []}  # Will be populated by routing logic
-
-            return db_info
-
-        except Exception as e:
-            self.stdout.write(self.style.WARNING(f"⚠️  Error getting database info: {e}"))
-            return {}
-
-    def app_has_migrations(self, app_label: str) -> bool:
-        """Simple check if an app has migrations."""
-        try:
-            # Get the app config
-            app_config = apps.get_app_config(app_label)
-            if not app_config:
-                return False
-
-            # Check if migrations directory exists and has files
-            migrations_dir = Path(app_config.path) / "migrations"
-            if not migrations_dir.exists():
-                return False
-
-            # Check if there are any migration files (excluding __init__.py)
-            migration_files = [f for f in migrations_dir.glob("*.py") if f.name != "__init__.py"]
-
-            # Also check if there are any applied migrations in the database
-            # Check all databases for this app's migrations
-            for db_name in connections.databases.keys():
-                try:
-                    recorder = MigrationRecorder(connections[db_name])
-                    applied_migrations = recorder.migration_qs.filter(app=app_label)
-                    if applied_migrations.exists():
-                        return True
-                except Exception:
-                    continue
-
-            # If no applied migrations found, check if there are migration files
-            return len(migration_files) > 0
-
-        except Exception:
-            # Silently return False for apps that don't exist or have issues
-            return False
-
-    def app_has_models(self, app_label: str) -> bool:
-        """Check if an app has models defined."""
-        try:
-            # Get the app config
-            app_config = apps.get_app_config(app_label)
-            if not app_config:
-                return False
-
-            # Check if models.py exists and has content
-            models_file = Path(app_config.path) / "models.py"
-            if models_file.exists():
-                # Read the file and check if it has model definitions
-                content = models_file.read_text()
-                # Simple check for model definitions
-                if "class " in content and "models.Model" in content:
-                    return True
-
-            # Also check if the app has any registered models
-            models = app_config.get_models()
-            return len(models) > 0
-
-        except Exception:
-            # Silently return False for apps that don't exist or have issues
-            return False
+            self.stdout.write(self.style.ERROR(f"❌ Error getting Django config info: {e}"))
+            self.logger.error(f"Error getting Django config info: {e}")
