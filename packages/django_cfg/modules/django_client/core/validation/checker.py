@@ -7,6 +7,23 @@ from .rules import DictFieldRule, Issue, ValidationRule
 from .rules.type_hints import TypeHintRule
 
 
+# Directories to exclude from scanning
+EXCLUDE_DIRS = {'.venv', 'venv', 'env', 'site-packages', 'node_modules', '__pycache__', '.git', '.validation_backups'}
+
+
+def should_skip_path(path: Path) -> bool:
+    """
+    Check if path should be skipped during scanning.
+
+    Args:
+        path: Path to check
+
+    Returns:
+        True if path should be skipped
+    """
+    return any(part in EXCLUDE_DIRS for part in path.parts)
+
+
 class ValidationChecker:
     """
     Checks code against all validation rules.
@@ -82,6 +99,10 @@ class ValidationChecker:
             files = directory.glob(pattern)
 
         for file_path in files:
+            # Skip excluded directories (venv, node_modules, etc.)
+            if should_skip_path(file_path):
+                continue
+
             if file_path.is_file():
                 issues = self.check_file(file_path)
                 all_issues.extend(issues)

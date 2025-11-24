@@ -11,6 +11,7 @@ from .boolean import BooleanField
 from .counter_badge import CounterBadgeField
 from .currency import CurrencyField
 from .datetime import DateTimeField
+from .decimal import DecimalField
 from .image import ImageField
 from .link import LinkField
 from .markdown import MarkdownField
@@ -24,6 +25,7 @@ __all__ = [
     "BadgeField",
     "CurrencyField",
     "DateTimeField",
+    "DecimalField",
     "UserField",
     "TextField",
     "BooleanField",

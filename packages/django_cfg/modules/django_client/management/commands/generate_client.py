@@ -687,15 +687,38 @@ class Command(AdminCommand):
                         if len(lines) > 20:
                             self.stdout.write(f"      ... and {len(lines) - 20} more errors")
 
-                    self.stdout.write(self.style.WARNING(
-                        f"\n   💡 Fix type errors before building"
+                    self.stdout.write(self.style.ERROR(
+                        f"\n   💡 Fix type errors before continuing"
                     ))
+                    self.stdout.write(self.style.WARNING(
+                        "\n   🔍 Diagnostic tools:"
+                    ))
+                    self.stdout.write(
+                        "      • python manage.py validate_openapi --fix"
+                    )
+                    self.stdout.write(
+                        "        → Auto-fix missing type hints in Django serializers"
+                    )
+                    self.stdout.write(
+                        "      • python manage.py validate_openapi"
+                    )
+                    self.stdout.write(
+                        "        → Check OpenAPI schema quality issues"
+                    )
+
+                    # Exit with error
+                    raise CommandError(
+                        "TypeScript type check failed. Fix type errors before proceeding."
+                    )
 
             except subprocess.TimeoutExpired:
                 self.stdout.write(self.style.WARNING(
                     "   ⚠️  Type check timed out (1 minute)"
                 ))
 
+        except CommandError:
+            # Re-raise CommandError to stop execution
+            raise
         except Exception as e:
             self.stdout.write(self.style.WARNING(
                 f"\n⚠️  Type check failed: {e}"

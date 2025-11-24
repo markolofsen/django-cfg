@@ -95,7 +95,7 @@ class DictFieldRule(ValidationRule):
             if isinstance(item, ast.Assign):
                 for target in item.targets:
                     if isinstance(target, ast.Name):
-                        field_name = target.name
+                        field_name = target.id  # Fixed: ast.Name has 'id', not 'name'
                         issue = self._check_field_assignment(
                             field_name, item.value, file_path, item.lineno, lines
                         )

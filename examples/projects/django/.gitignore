@@ -45,6 +45,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+.validation_backups/
 
 # Node.js (if using npm for frontend assets)
 node_modules/
