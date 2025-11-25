@@ -1,0 +1,17 @@
+{% comment %}
+JSON Display Widget
+Shows JSON with syntax highlighting (Pygments).
+Dual theme support (light/dark).
+{% endcomment %}
+
+{% if is_compact %}
+    {# Full highlighted JSON for short content #}
+    <div class="block dark:hidden">{{ highlighted_light|safe }}</div>
+    <div class="hidden dark:block">{{ highlighted_dark|safe }}</div>
+{% elif preview_type == 'dict' %}
+    <code title="{{ escaped_json }}">{<span class="text-base-500">{{ key_count }} keys</span>}</code>
+{% elif preview_type == 'list' %}
+    <code title="{{ escaped_json }}">[<span class="text-base-500">{{ item_count }} items</span>]</code>
+{% else %}
+    <code title="{{ escaped_json }}">{{ preview }}...</code>
+{% endif %}

@@ -1,0 +1,286 @@
+{% comment %}
+Global Image Preview Modal
+Include ONCE in base template or changelist.
+Uses Alpine.js store for global state.
+
+Usage:
+1. Include this template once in base admin template
+2. Use image_preview_thumbnail.html for each image
+3. Thumbnails dispatch 'image-preview:open' event with image data
+{% endcomment %}
+
+<div
+    x-data="imagePreviewModal()"
+    x-on:image-preview:open.window="open($event.detail)"
+    x-on:keydown.escape.window="close()"
+    class="image-preview-global-modal"
+>
+    <template x-teleport="body">
+        <div
+            x-show="isOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-100 flex items-center justify-center"
+            style="display: none;"
+        >
+            {# Backdrop #}
+            <div @click="close()" class="absolute inset-0 backdrop-blur-sm" style="background: rgba(0,0,0,0.85);"></div>
+
+            {# Content wrapper #}
+            <div class="relative z-10 flex flex-col items-center" @click.stop>
+                {# Top controls bar #}
+                <div class="w-full flex items-center justify-between mb-3" style="max-width: 85vw;">
+                    {# Zoom controls - top left #}
+                    <div
+                        x-show="zoomEnabled"
+                        class="flex items-center gap-2 rounded-full px-3 py-1.5 shadow-lg"
+                        style="background: rgba(30,30,30,0.9); border: 1px solid rgba(255,255,255,0.15);"
+                    >
+                        <button
+                            @click="zoomOut()"
+                            type="button"
+                            class="transition-colors disabled:opacity-40"
+                            style="color: rgba(255,255,255,0.7);"
+                            :disabled="zoom <= zoomMin"
+                        >
+                            <span class="material-symbols-outlined text-lg">remove</span>
+                        </button>
+                        <span
+                            class="text-sm font-medium min-w-[50px] text-center cursor-pointer"
+                            style="color: #fff;"
+                            @click="resetZoom()"
+                            title="Click to reset"
+                            x-text="Math.round(zoom * 100) + '%'"
+                        ></span>
+                        <button
+                            @click="zoomIn()"
+                            type="button"
+                            class="transition-colors disabled:opacity-40"
+                            style="color: rgba(255,255,255,0.7);"
+                            :disabled="zoom >= zoomMax"
+                        >
+                            <span class="material-symbols-outlined text-lg">add</span>
+                        </button>
+                    </div>
+
+                    {# Close button - top right #}
+                    <button
+                        @click="close()"
+                        type="button"
+                        class="w-8 h-8 flex items-center justify-center rounded-full shadow-md transition-colors"
+                        style="background: rgba(30,30,30,0.9); border: 1px solid rgba(255,255,255,0.2); color: #fff;"
+                    >
+                        <span class="material-symbols-outlined text-lg">close</span>
+                    </button>
+                </div>
+
+                {# Image container #}
+                <div
+                    class="relative overflow-hidden shadow-2xl flex items-center justify-center"
+                    style="max-width: 85vw; max-height: 75vh; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: #111;"
+                    @wheel.prevent="onWheel($event)"
+                    @mousedown="startPan($event)"
+                    @mousemove="onPan($event)"
+                    @mouseup="endPan()"
+                    @mouseleave="endPan()"
+                >
+                    <img
+                        x-ref="modalImage"
+                        :src="imageUrl"
+                        :alt="imageInfo.filename || 'Image'"
+                        @load="onImageLoad($event)"
+                        class="block max-w-full max-h-[75vh] object-contain transition-transform duration-100 select-none origin-center"
+                        :class="{ 'cursor-grab': !isPanning, 'cursor-grabbing': isPanning }"
+                        :style="`transform: scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px);`"
+                        draggable="false"
+                    >
+
+                </div>
+
+                {# Info panel #}
+                <div
+                    x-show="showInfo && imageInfo.width"
+                    x-transition
+                    class="mt-4 flex items-center justify-center gap-3
+                           bg-white dark:bg-base-900
+                           rounded-full px-4 py-2 border border-base-200 dark:border-base-700 shadow-lg
+                           text-font-default-light dark:text-font-default-dark text-sm"
+                >
+                    <div class="flex items-center gap-1.5" x-show="imageInfo.filename">
+                        <span class="material-symbols-outlined text-sm text-font-subtle-light dark:text-font-subtle-dark">description</span>
+                        <span x-text="imageInfo.filename" class="max-w-[200px] truncate"></span>
+                    </div>
+
+                    <span class="text-font-subtle-light dark:text-font-subtle-dark">•</span>
+
+                    <div class="flex items-center gap-1.5" x-show="imageInfo.width">
+                        <span class="material-symbols-outlined text-sm text-font-subtle-light dark:text-font-subtle-dark">aspect_ratio</span>
+                        <span x-text="imageInfo.width + '×' + imageInfo.height"></span>
+                    </div>
+
+                    <template x-if="imageInfo.format">
+                        <span class="text-font-subtle-light dark:text-font-subtle-dark">•</span>
+                    </template>
+
+                    <div class="flex items-center gap-1.5" x-show="imageInfo.format">
+                        <span x-text="imageInfo.format" class="font-medium"></span>
+                    </div>
+                </div>
+
+                {# Keyboard shortcuts hint #}
+                <div class="mt-3 text-font-subtle-light dark:text-font-subtle-dark text-xs text-center">
+                    Scroll to zoom • Drag to pan • Esc to close
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+// Global image preview modal component
+function imagePreviewModal() {
+    return {
+        isOpen: false,
+        imageUrl: '',
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        isPanning: false,
+        panStartX: 0,
+        panStartY: 0,
+        showInfo: true,
+        zoomEnabled: true,
+        zoomMin: 0.5,
+        zoomMax: 5.0,
+        zoomStep: 0.1,
+        displayWidth: 0,
+        displayHeight: 0,
+        imageInfo: {
+            width: 0,
+            height: 0,
+            filename: '',
+            format: ''
+        },
+
+        // Viewport constraints (percentage)
+        maxVw: 90,
+        maxVh: 80,
+
+        get containerStyle() {
+            if (!this.displayWidth) return 'max-width: 90vw; max-height: 80vh;';
+            return `width: ${this.displayWidth}px; height: ${this.displayHeight}px;`;
+        },
+
+        get imageStyle() {
+            return `transform: scale(${this.zoom}) translate(${this.panX / this.zoom}px, ${this.panY / this.zoom}px); width: 100%; height: 100%; object-fit: contain;`;
+        },
+
+        open(detail) {
+            this.imageUrl = detail.url;
+            this.zoomEnabled = detail.zoomEnabled !== false;
+            this.zoomMin = detail.zoomMin || 0.5;
+            this.zoomMax = detail.zoomMax || 5.0;
+            this.zoomStep = detail.zoomStep || 0.1;
+            this.showInfo = detail.showInfo !== false;
+            this.zoom = 1;
+            this.panX = 0;
+            this.panY = 0;
+            this.displayWidth = 0;
+            this.displayHeight = 0;
+            this.imageInfo = { width: 0, height: 0, filename: '', format: '' };
+            this.isOpen = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        close() {
+            this.isOpen = false;
+            document.body.style.overflow = '';
+        },
+
+        onWheel(e) {
+            if (!this.zoomEnabled) return;
+            const delta = e.deltaY > 0 ? -this.zoomStep : this.zoomStep;
+            this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, this.zoom + delta));
+            if (this.zoom <= 1) {
+                this.panX = 0;
+                this.panY = 0;
+            }
+        },
+
+        zoomIn() {
+            this.zoom = Math.min(this.zoomMax, this.zoom + this.zoomStep * 2);
+        },
+
+        zoomOut() {
+            this.zoom = Math.max(this.zoomMin, this.zoom - this.zoomStep * 2);
+            if (this.zoom <= 1) {
+                this.panX = 0;
+                this.panY = 0;
+            }
+        },
+
+        resetZoom() {
+            this.zoom = 1;
+            this.panX = 0;
+            this.panY = 0;
+        },
+
+        startPan(e) {
+            if (this.zoom <= 1) return;
+            this.isPanning = true;
+            this.panStartX = e.clientX - this.panX;
+            this.panStartY = e.clientY - this.panY;
+        },
+
+        onPan(e) {
+            if (this.isPanning) {
+                this.panX = e.clientX - this.panStartX;
+                this.panY = e.clientY - this.panStartY;
+            }
+        },
+
+        endPan() {
+            this.isPanning = false;
+        },
+
+        onImageLoad(e) {
+            const natW = e.target.naturalWidth;
+            const natH = e.target.naturalHeight;
+
+            this.imageInfo.width = natW;
+            this.imageInfo.height = natH;
+
+            // Calculate display size - fit to viewport while maintaining aspect ratio
+            const maxW = window.innerWidth * (this.maxVw / 100);
+            const maxH = window.innerHeight * (this.maxVh / 100);
+
+            let w = natW;
+            let h = natH;
+
+            // Scale down if larger than viewport
+            if (w > maxW || h > maxH) {
+                const ratio = Math.min(maxW / w, maxH / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+
+            this.displayWidth = w;
+            this.displayHeight = h;
+
+            // Extract filename
+            const parts = this.imageUrl.split('/');
+            const fn = parts[parts.length - 1].split('?')[0];
+            this.imageInfo.filename = decodeURIComponent(fn);
+
+            const ext = fn.split('.').pop().toUpperCase();
+            if (['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP', 'SVG', 'BMP', 'AVIF'].includes(ext)) {
+                this.imageInfo.format = ext === 'JPG' ? 'JPEG' : ext;
+            }
+        }
+    }
+}
+</script>

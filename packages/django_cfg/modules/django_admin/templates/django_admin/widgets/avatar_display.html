@@ -1,0 +1,56 @@
+{% comment %}
+Avatar Display Widget
+Shows user avatar with fallback to initials badge.
+{% endcomment %}
+
+{% if photo_url %}
+    {# Has photo #}
+    {% if show_as_card %}
+    <div class="flex items-center gap-2">
+        <img
+            src="{{ photo_url }}"
+            alt="{{ name }}"
+            class="rounded-full object-cover"
+            style="width: {{ avatar_size }}px; height: {{ avatar_size }}px;"
+        >
+        <div>
+            <div class="font-medium">{{ name }}</div>
+            {% if subtitle %}
+            <div class="text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <img
+        src="{{ photo_url }}"
+        alt="{{ name }}"
+        class="rounded-full object-cover"
+        style="width: {{ avatar_size }}px; height: {{ avatar_size }}px;"
+    >
+    {% endif %}
+{% else %}
+    {# Fallback to initials #}
+    {% if show_as_card %}
+    <div class="flex items-center gap-2">
+        <div
+            class="rounded-full {{ color_class }} flex items-center justify-center font-semibold"
+            style="width: {{ avatar_size }}px; height: {{ avatar_size }}px;"
+        >
+            {{ initials }}
+        </div>
+        <div>
+            <div class="font-medium">{{ name }}</div>
+            {% if subtitle %}
+            <div class="text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div
+        class="rounded-full {{ color_class }} flex items-center justify-center font-semibold"
+        style="width: {{ avatar_size }}px; height: {{ avatar_size }}px;"
+    >
+        {{ initials }}
+    </div>
+    {% endif %}
+{% endif %}

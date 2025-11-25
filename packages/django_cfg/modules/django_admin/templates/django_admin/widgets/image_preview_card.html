@@ -1,0 +1,70 @@
+{% comment %}
+Image Preview Card - for change form detail view
+Shows thumbnail with file info in a compact card layout.
+{% endcomment %}
+
+<div class="inline-flex items-start gap-4">
+    {# Thumbnail #}
+    <div
+        class="relative group cursor-pointer flex-shrink-0"
+        @click="$dispatch('image-preview:open', {
+            url: '{{ image_url }}',
+            zoomEnabled: {{ zoom_enabled|yesno:'true,false' }},
+            zoomMin: {{ zoom_min }},
+            zoomMax: {{ zoom_max }},
+            zoomStep: {{ zoom_step }},
+            showInfo: {{ show_info|yesno:'true,false' }}
+        })"
+    >
+        <img
+            src="{{ image_url }}"
+            alt="{{ alt_text }}"
+            class="object-cover rounded-md border border-base-200 dark:border-base-700 transition-all duration-200 hover:opacity-90 hover:shadow-md"
+            style="width: {{ thumbnail_width }}; height: {{ thumbnail_height }}; object-fit: cover;"
+        >
+        <div
+            class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none rounded-md"
+        >
+            <span class="material-symbols-outlined text-white text-xl">zoom_in</span>
+        </div>
+    </div>
+
+    {# File Info #}
+    <div class="flex flex-col gap-1.5 min-w-0 py-1">
+        {% if filename %}
+        <div class="flex items-center gap-2 text-font-important-light dark:text-font-important-dark">
+            <span class="material-symbols-outlined text-base text-font-subtle-light dark:text-font-subtle-dark">image</span>
+            <span class="text-sm font-medium truncate max-w-[200px]" title="{{ filename }}">{{ filename }}</span>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-font-default-light dark:text-font-default-dark">
+            {% if file_size %}
+            <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-font-subtle-light dark:text-font-subtle-dark">storage</span>
+                <span>{{ file_size }}</span>
+            </div>
+            {% endif %}
+
+            {% if dimensions %}
+            <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-font-subtle-light dark:text-font-subtle-dark">aspect_ratio</span>
+                <span>{{ dimensions }}</span>
+            </div>
+            {% endif %}
+
+            {% if file_type %}
+            <div class="flex items-center gap-1">
+                <span class="inline-flex px-1.5 py-0.5 rounded bg-base-100 dark:bg-base-800 text-font-subtle-light dark:text-font-subtle-dark uppercase font-medium">
+                    {{ file_type }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Action hint #}
+        <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+            Click to preview
+        </div>
+    </div>
+</div>

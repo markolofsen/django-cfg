@@ -13,12 +13,14 @@ from .currency import CurrencyField
 from .datetime import DateTimeField
 from .decimal import DecimalField
 from .image import ImageField
+from .image_preview import ImagePreviewField
 from .link import LinkField
 from .markdown import MarkdownField
 from .short_uuid import ShortUUIDField
 from .status_badges import BadgeRule, StatusBadgesField
 from .text import TextField
 from .user import UserField
+from .video import VideoField
 
 __all__ = [
     "FieldConfig",
@@ -30,6 +32,7 @@ __all__ = [
     "TextField",
     "BooleanField",
     "ImageField",
+    "ImagePreviewField",
     "MarkdownField",
     "ShortUUIDField",
     "LinkField",
@@ -37,4 +40,5 @@ __all__ = [
     "StatusBadgesField",
     "BadgeRule",
     "CounterBadgeField",
+    "VideoField",
 ]

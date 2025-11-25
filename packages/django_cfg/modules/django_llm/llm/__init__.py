@@ -1,5 +1,5 @@
 """
-LLM Client, Cache and Models Cache
+LLM Client, Cache, Models Cache, and Vision
 """
 
 from .cache import LLMCache
@@ -11,6 +11,15 @@ from .cache_dirs import (
     get_models_cache_dir,
     get_translator_cache_dir,
 )
+from .vision import (
+    VisionClient,
+    ImageEncoder,
+    VisionRequest,
+    VisionResponse,
+    VisionModel,
+    VisionModelPricing,
+    VisionModelsRegistry,
+)
 
 __all__ = [
     'LLMClient',
@@ -20,4 +29,12 @@ __all__ = [
     'get_default_llm_cache_dir',
     'get_models_cache_dir',
     'get_translator_cache_dir',
+    # Vision
+    'VisionClient',
+    'ImageEncoder',
+    'VisionRequest',
+    'VisionResponse',
+    'VisionModel',
+    'VisionModelPricing',
+    'VisionModelsRegistry',
 ]

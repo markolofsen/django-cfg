@@ -1,0 +1,13 @@
+{% comment %}
+Short UUID Display Widget
+Shows truncated UUID with tooltip and copy-on-click.
+{% endcomment %}
+
+<code
+    {% if show_full_on_hover %}title="{{ full_uuid }}"{% endif %}
+    {% if copy_on_click %}
+    onclick="navigator.clipboard.writeText('{{ full_uuid }}'); this.style.backgroundColor='#e8f5e9'; setTimeout(() => this.style.backgroundColor='', 500);"
+    style="cursor: pointer;"
+    {% endif %}
+    class="text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded"
+>{{ short_uuid }}</code>

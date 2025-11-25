@@ -1,0 +1,38 @@
+{% comment %}
+Image Preview Thumbnail
+Lightweight thumbnail that opens global modal on click.
+
+Requires image_preview_modal.html to be included once in base template.
+{% endcomment %}
+
+<div class="inline-block image-preview-thumbnail">
+    <div
+        class="relative group cursor-pointer"
+        @click="$dispatch('image-preview:open', {
+            url: '{{ image_url }}',
+            zoomEnabled: {{ zoom_enabled|yesno:'true,false' }},
+            zoomMin: {{ zoom_min }},
+            zoomMax: {{ zoom_max }},
+            zoomStep: {{ zoom_step }},
+            showInfo: {{ show_info|yesno:'true,false' }}
+        })"
+    >
+        <img
+            src="{{ image_url }}"
+            alt="{{ alt_text }}"
+            class="object-cover transition-all duration-200 hover:opacity-90 hover:shadow-md border border-base-200 dark:border-base-700"
+            style="max-width: {{ thumbnail_max_width }}; max-height: {{ thumbnail_max_height }}; border-radius: {{ border_radius }};"
+        >
+        <div
+            class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+            style="border-radius: {{ border_radius }};"
+        >
+            <span class="material-symbols-outlined text-white text-xl">zoom_in</span>
+        </div>
+    </div>
+    {% if caption %}
+    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1 truncate" style="max-width: {{ thumbnail_max_width }};">
+        {{ caption }}
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,69 @@
+{# Video display widget - thumbnail with play button #}
+{% load static %}
+
+{% if show_inline and video_info.embed_url %}
+    {# Inline player #}
+    <div style="width: {{ thumbnail_width }}; border-radius: {{ border_radius }}; overflow: hidden;">
+        <iframe
+            src="{{ video_info.embed_url }}"
+            width="100%"
+            height="{{ thumbnail_height }}"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+        ></iframe>
+    </div>
+{% else %}
+    {# Thumbnail with play button #}
+    <a
+        href="{{ video_info.watch_url }}"
+        target="_blank"
+        class="group relative inline-block"
+        style="width: {{ thumbnail_width }}; height: {{ thumbnail_height }};"
+    >
+        {# Thumbnail image #}
+        {% if video_info.thumbnail_url %}
+            <img
+                src="{{ video_info.thumbnail_url }}"
+                alt="Video thumbnail"
+                class="object-cover"
+                style="width: {{ thumbnail_width }}; height: {{ thumbnail_height }}; border-radius: {{ border_radius }};"
+            >
+        {% else %}
+            {# Fallback placeholder #}
+            <div
+                class="bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+                style="width: {{ thumbnail_width }}; height: {{ thumbnail_height }}; border-radius: {{ border_radius }};"
+            >
+                <span class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500">
+                    {{ video_info.icon }}
+                </span>
+            </div>
+        {% endif %}
+
+        {# Play button overlay #}
+        <div
+            class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors"
+            style="border-radius: {{ border_radius }};"
+        >
+            <span class="material-symbols-outlined text-white text-4xl drop-shadow-lg">
+                play_circle
+            </span>
+        </div>
+
+        {# Platform badge #}
+        {% if show_platform and video_info.platform != 'unknown' %}
+            <div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-xs font-medium
+                {% if video_info.platform == 'youtube' %}
+                    bg-red-600 text-white
+                {% elif video_info.platform == 'vimeo' %}
+                    bg-blue-500 text-white
+                {% else %}
+                    bg-gray-600 text-white
+                {% endif %}
+            ">
+                {% if video_info.platform == 'youtube' %}YT{% elif video_info.platform == 'vimeo' %}Vimeo{% else %}Video{% endif %}
+            </div>
+        {% endif %}
+    </a>
+{% endif %}

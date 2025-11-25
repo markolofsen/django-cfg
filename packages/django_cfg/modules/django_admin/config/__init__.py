@@ -17,16 +17,18 @@ from .field_config import (
     DecimalField,
     FieldConfig,
     ImageField,
+    ImagePreviewField,
     LinkField,
     MarkdownField,
     ShortUUIDField,
     StatusBadgesField,
     TextField,
     UserField,
+    VideoField,
 )
 from .fieldset_config import FieldsetConfig
 from .resource_config import ResourceConfig
-from .widget_config import JSONWidgetConfig, TextWidgetConfig, WidgetConfig
+from .widget_config import ImagePreviewWidgetConfig, JSONWidgetConfig, TextWidgetConfig, WidgetConfig
 
 __all__ = [
     "AdminConfig",
@@ -47,14 +49,17 @@ __all__ = [
     "DateTimeField",
     "DecimalField",
     "ImageField",
+    "ImagePreviewField",
     "LinkField",
     "MarkdownField",
     "ShortUUIDField",
     "StatusBadgesField",
     "TextField",
     "UserField",
+    "VideoField",
     # Widget Configs (for AdminConfig.widgets - form fields)
     "WidgetConfig",
     "JSONWidgetConfig",
     "TextWidgetConfig",
+    "ImagePreviewWidgetConfig",
 ]

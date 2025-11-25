@@ -1,0 +1,21 @@
+{% comment %}
+Counter Badge Display Widget
+Shows counter with optional link.
+{% endcomment %}
+
+{% if hide_on_zero and count == 0 %}
+    {# Hidden when zero #}
+{% else %}
+    {% if link_url %}
+    <a href="{{ link_url }}" target="{{ link_target }}">
+    {% endif %}
+    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium {{ color_class }}">
+        {% if icon %}
+        <span class="material-symbols-outlined mr-1" style="font-size: 14px; vertical-align: middle;">{{ icon }}</span>
+        {% endif %}
+        {{ count_display }}
+    </span>
+    {% if link_url %}
+    </a>
+    {% endif %}
+{% endif %}

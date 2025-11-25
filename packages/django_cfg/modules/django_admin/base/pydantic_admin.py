@@ -132,6 +132,12 @@ class PydanticAdminMixin:
         # This modifies readonly_fields to use custom display methods and returns mapping
         cls.readonly_fields, jsonfield_replacements = cls._create_jsonfield_display_methods(config)
 
+        # Auto-create display methods for readonly ImageField/FileField fields
+        cls.readonly_fields, imagefield_replacements, has_image_preview = cls._create_imagefield_display_methods(
+            cls.readonly_fields, config
+        )
+        cls._has_image_preview = has_image_preview
+
         # List display options
         cls.list_display_links = config.list_display_links or getattr(cls, 'list_display_links', None)
 
@@ -148,20 +154,23 @@ class PydanticAdminMixin:
         # Inlines
         cls.inlines = config.inlines or getattr(cls, 'inlines', [])
 
-        # Fieldsets - apply JSONField replacements
+        # Combine all field replacements
+        all_replacements = {**jsonfield_replacements, **imagefield_replacements}
+
+        # Fieldsets - apply field replacements
         if config.fieldsets:
             cls.fieldsets = config.to_django_fieldsets()
-            # Apply JSONField replacements to fieldsets
-            if jsonfield_replacements:
-                cls.fieldsets = cls._apply_jsonfield_replacements_to_fieldsets(cls.fieldsets, jsonfield_replacements)
+            # Apply replacements to fieldsets
+            if all_replacements:
+                cls.fieldsets = cls._apply_jsonfield_replacements_to_fieldsets(cls.fieldsets, all_replacements)
         # Also convert fieldsets if they're defined directly in the class as FieldsetConfig objects
         elif hasattr(cls, 'fieldsets') and isinstance(cls.fieldsets, list):
             from ..config import FieldsetConfig
             if cls.fieldsets and isinstance(cls.fieldsets[0], FieldsetConfig):
                 cls.fieldsets = tuple(fs.to_django_fieldset() for fs in cls.fieldsets)
-                # Apply JSONField replacements to fieldsets
-                if jsonfield_replacements:
-                    cls.fieldsets = cls._apply_jsonfield_replacements_to_fieldsets(cls.fieldsets, jsonfield_replacements)
+                # Apply replacements to fieldsets
+                if all_replacements:
+                    cls.fieldsets = cls._apply_jsonfield_replacements_to_fieldsets(cls.fieldsets, all_replacements)
 
         # Collect widget configurations from AdminConfig.widgets for custom JSON widget configs
         cls._field_widget_configs = {}
@@ -213,6 +222,9 @@ class PydanticAdminMixin:
         if config.documentation:
             cls._setup_documentation(config)
 
+        # Image preview modal (include once if image_preview widget is used)
+        cls._setup_image_preview_modal(config)
+
     @classmethod
     def _setup_documentation(cls, config: AdminConfig):
         """
@@ -233,6 +245,28 @@ class PydanticAdminMixin:
 
         # Store documentation config for access in views
         cls.documentation_config = doc_config
+
+    @classmethod
+    def _setup_image_preview_modal(cls, config: AdminConfig):
+        """
+        Setup global image preview modal if image_preview widget is used.
+
+        Uses unfold's template hooks to include modal once per page:
+        - list_after_template: for changelist page
+        - change_form_after_template: for change form page
+        """
+        # Check if any display_fields use image_preview widget
+        has_image_preview = getattr(cls, '_has_image_preview', False)
+
+        if not has_image_preview and config.display_fields:
+            for field_config in config.display_fields:
+                if hasattr(field_config, 'ui_widget') and field_config.ui_widget == 'image_preview':
+                    has_image_preview = True
+                    break
+
+        if has_image_preview:
+            cls.list_after_template = "django_admin/widgets/image_preview_modal.html"
+            cls.change_form_after_template = "django_admin/widgets/image_preview_modal.html"
 
     def _get_app_path(self) -> Optional[Path]:
         """
@@ -342,6 +376,140 @@ class PydanticAdminMixin:
                 updated_readonly_fields.append(field_name)
 
         return updated_readonly_fields, jsonfield_replacements
+
+    @classmethod
+    def _create_imagefield_display_methods(cls, readonly_fields: list, config: AdminConfig):
+        """
+        Auto-create display methods for readonly ImageField/FileField fields.
+
+        Uses ImagePreviewDisplay for image fields to show clickable thumbnails
+        with modal preview.
+
+        Returns:
+            Tuple of (updated_readonly_fields, imagefield_replacements_dict, has_image_preview)
+        """
+        from django.utils.safestring import mark_safe
+        from ..utils import ImagePreviewDisplay
+
+        # Get model
+        model = config.model
+        if not model:
+            return readonly_fields, {}, False
+
+        # Track which fields should be replaced
+        updated_readonly_fields = list(readonly_fields)
+        imagefield_replacements = {}
+        has_image_preview = False
+
+        # Find ImageField/FileField fields in readonly_fields
+        for field_name in readonly_fields:
+            try:
+                # Get the model field
+                field = model._meta.get_field(field_name)
+                field_class_name = field.__class__.__name__
+
+                # Check if it's an ImageField or FileField
+                if field_class_name in ('ImageField', 'FileField'):
+                    # Create a custom display method for this field
+                    def make_image_display_method(fname, field_obj):
+                        def image_display_method(self, obj):
+                            """Display ImageField with preview card."""
+                            value = getattr(obj, fname, None)
+
+                            if not value:
+                                return "—"
+
+                            # Get URL from field
+                            if hasattr(value, 'url'):
+                                image_url = value.url
+                            else:
+                                image_url = str(value)
+
+                            if not image_url:
+                                return "—"
+
+                            # Check if it's actually an image
+                            is_image = field_obj.__class__.__name__ == 'ImageField'
+                            ext = image_url.lower().split('?')[0].split('.')[-1]
+                            if not is_image:
+                                # Check by file extension
+                                is_image = ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico')
+
+                            if is_image:
+                                # Try to get file info from model
+                                file_size = None
+                                dimensions = None
+
+                                # Try common field names for file size
+                                for size_field in ('file_size', 'size', f'{fname}_size'):
+                                    size_val = getattr(obj, size_field, None)
+                                    if size_val:
+                                        # Format size
+                                        if isinstance(size_val, (int, float)):
+                                            if size_val >= 1024 * 1024:
+                                                file_size = f"{size_val / (1024 * 1024):.1f} MB"
+                                            elif size_val >= 1024:
+                                                file_size = f"{size_val / 1024:.1f} KB"
+                                            else:
+                                                file_size = f"{size_val} B"
+                                        else:
+                                            file_size = str(size_val)
+                                        break
+
+                                # Try to get dimensions
+                                width = getattr(obj, 'width', None) or getattr(obj, f'{fname}_width', None)
+                                height = getattr(obj, 'height', None) or getattr(obj, f'{fname}_height', None)
+                                if width and height:
+                                    dimensions = f"{width}×{height}"
+
+                                return mark_safe(ImagePreviewDisplay.render_card(
+                                    image_url,
+                                    config={
+                                        'thumbnail_width': '120px',
+                                        'thumbnail_height': '120px',
+                                        'show_info': True,
+                                        'zoom_enabled': True,
+                                        'file_size': file_size,
+                                        'dimensions': dimensions,
+                                    }
+                                ))
+                            else:
+                                # Not an image - show link
+                                filename = image_url.split('/')[-1].split('?')[0]
+                                return mark_safe(
+                                    f'<a href="{image_url}" target="_blank" '
+                                    f'class="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline">'
+                                    f'<span class="material-symbols-outlined text-sm">attachment</span>'
+                                    f'{filename}</a>'
+                                )
+
+                        # Set method attributes for Django admin
+                        image_display_method.short_description = field_obj.verbose_name or fname.replace('_', ' ').title()
+                        return image_display_method
+
+                    # Create method name
+                    method_name = f'_auto_display_{field_name}'
+
+                    # Add method to class
+                    setattr(cls, method_name, make_image_display_method(field_name, field))
+                    logger.debug(f"Created auto-display method '{method_name}' for ImageField '{field_name}'")
+
+                    # Track replacement
+                    imagefield_replacements[field_name] = method_name
+                    has_image_preview = True
+
+                    # Replace in updated list
+                    try:
+                        idx = updated_readonly_fields.index(field_name)
+                        updated_readonly_fields[idx] = method_name
+                    except ValueError:
+                        pass
+
+            except Exception as e:
+                # Field might not exist or be a property - keep original
+                logger.debug(f"Skipped creating image display method for '{field_name}': {e}")
+
+        return updated_readonly_fields, imagefield_replacements, has_image_preview
 
     @classmethod
     def _apply_jsonfield_replacements_to_fieldsets(cls, fieldsets, replacements):

@@ -1,0 +1,21 @@
+{% comment %}
+Status Badges Display Widget
+Shows multiple conditional status badges.
+{% endcomment %}
+
+{% if badges %}
+    {% for badge in badges %}
+    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium {{ badge.color_class }}">
+        {% if badge.icon %}
+        <span class="material-symbols-outlined mr-1" style="font-size: 14px; vertical-align: middle;">{{ badge.icon }}</span>
+        {% endif %}
+        {{ badge.label }}
+    </span>{% if not forloop.last %}{{ separator|safe }}{% endif %}
+    {% endfor %}
+{% elif empty_text %}
+    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium {{ empty_color_class }}">
+        {{ empty_text }}
+    </span>
+{% else %}
+    —
+{% endif %}

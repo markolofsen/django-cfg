@@ -1,0 +1,129 @@
+/**
+ * Image Preview Widget Styles
+ * Enhances the image preview modal with smooth animations and theme support
+ */
+
+/* Widget container */
+.image-preview-widget {
+    display: inline-block;
+}
+
+/* Thumbnail hover effect */
+.image-preview-widget img {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.image-preview-widget img:hover {
+    transform: scale(1.02);
+}
+
+/* Modal image smooth zoom */
+.image-preview-modal-image {
+    transition: transform 0.1s ease-out;
+    will-change: transform;
+}
+
+/* Prevent text selection during pan */
+.image-preview-widget [x-data] {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Modal backdrop blur fallback for older browsers */
+@supports not (backdrop-filter: blur(4px)) {
+    .image-preview-backdrop {
+        background-color: rgba(0, 0, 0, 0.9);
+    }
+}
+
+/* Zoom controls styling */
+.image-preview-zoom-controls {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Info panel styling */
+.image-preview-info {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Material icons vertical alignment fix */
+.image-preview-widget .material-symbols-outlined {
+    vertical-align: middle;
+    line-height: 1;
+}
+
+/* Dark mode scrollbar for modal */
+:is(.dark .image-preview-widget) ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+:is(.dark .image-preview-widget) ::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+:is(.dark .image-preview-widget) ::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+}
+
+:is(.dark .image-preview-widget) ::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* Loading animation for images */
+.image-preview-widget img[src] {
+    animation: imagePreviewFadeIn 0.3s ease-out;
+}
+
+@keyframes imagePreviewFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .image-preview-widget img:hover {
+        transform: none;
+    }
+
+    /* Larger touch targets on mobile */
+    .image-preview-zoom-controls button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* Print styles - hide modal */
+@media print {
+    .image-preview-modal,
+    [x-teleport] {
+        display: none !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .image-preview-widget img {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .image-preview-widget img,
+    .image-preview-modal-image {
+        transition: none;
+    }
+
+    @keyframes imagePreviewFadeIn {
+        from { opacity: 1; }
+        to { opacity: 1; }
+    }
+}

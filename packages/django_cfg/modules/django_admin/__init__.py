@@ -69,6 +69,8 @@ from .config import (
     FieldConfig,
     FieldsetConfig,
     ImageField,
+    ImagePreviewField,
+    ImagePreviewWidgetConfig,
     JSONWidgetConfig,
     LinkField,
     MarkdownField,
@@ -78,6 +80,7 @@ from .config import (
     TextField,
     TextWidgetConfig,
     UserField,
+    VideoField,
     WidgetConfig,
 )
 
@@ -95,11 +98,13 @@ from .icons import IconCategories, Icons
 from .utils import (
     CounterBadge,
     DateTimeDisplay,
+    ImagePreviewDisplay,
     MarkdownRenderer,
     MoneyDisplay,
     ProgressBadge,
     StatusBadge,
     UserDisplay,
+    VideoDisplay,
     # Decorators
     annotated_field,
     badge_field,
@@ -139,16 +144,19 @@ __all__ = [
     "DateTimeField",
     "DecimalField",
     "ImageField",
+    "ImagePreviewField",
     "LinkField",
     "MarkdownField",
     "ShortUUIDField",
     "StatusBadgesField",
     "TextField",
     "UserField",
+    "VideoField",
     # Widget Configs (for AdminConfig.widgets - form fields)
     "WidgetConfig",
     "JSONWidgetConfig",
     "TextWidgetConfig",
+    "ImagePreviewWidgetConfig",
     # Advanced
     "WidgetRegistry",
     # Icons
@@ -158,6 +166,8 @@ __all__ = [
     "UserDisplay",
     "MoneyDisplay",
     "DateTimeDisplay",
+    "ImagePreviewDisplay",
+    "VideoDisplay",
     "StatusBadge",
     "ProgressBadge",
     "CounterBadge",

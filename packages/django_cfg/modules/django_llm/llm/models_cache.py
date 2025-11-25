@@ -211,7 +211,8 @@ class ModelsCache:
         logger.info("Fetching models from OpenRouter API")
 
         try:
-            async with aiohttp.ClientSession() as session:
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(
                     "https://openrouter.ai/api/v1/models",
                     headers={

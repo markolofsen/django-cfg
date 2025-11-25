@@ -1,0 +1,29 @@
+{% comment %}
+Link Display Widget
+Shows text with link and optional subtitle.
+{% endcomment %}
+
+{% if link_url %}
+    {% if subtitle_text %}
+    <div>
+        <div>
+            <a href="{{ link_url }}" target="{{ link_target }}">
+                {% if link_icon %}
+                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{{ link_icon }}</span>
+                {% endif %}
+                {{ text }}
+            </a>
+        </div>
+        <div class="{{ subtitle_css_class }}">{{ subtitle_text }}</div>
+    </div>
+    {% else %}
+    <a href="{{ link_url }}" target="{{ link_target }}">
+        {% if link_icon %}
+        <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{{ link_icon }}</span>
+        {% endif %}
+        {{ text }}
+    </a>
+    {% endif %}
+{% else %}
+    {{ text }}
+{% endif %}

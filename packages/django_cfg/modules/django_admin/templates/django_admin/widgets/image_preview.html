@@ -1,0 +1,340 @@
+{% comment %}
+Image Preview Widget with Modal Zoom & Pan
+Uses Alpine.js for interactivity and Tailwind 4 for styling.
+
+Features:
+- Click thumbnail to open modal
+- Mouse wheel zoom
+- Drag to pan
+- Image info display
+- Keyboard navigation (Escape to close)
+- Dark/light theme support
+{% endcomment %}
+
+{% load i18n %}
+
+<div
+    x-data="imagePreview_{{ widget.attrs.id|default:'preview' }}()"
+    class="image-preview-widget"
+>
+    {# Thumbnail Preview #}
+    <div class="relative inline-block group">
+        {% if widget.image_url %}
+            <img
+                src="{{ widget.image_url }}"
+                alt="{% trans 'Preview' %}"
+                @click="openModal()"
+                @load="onThumbnailLoad($event)"
+                class="cursor-pointer object-cover transition-all duration-200 hover:opacity-90 hover:shadow-lg border border-base-200 dark:border-base-700"
+                style="max-width: {{ widget.thumbnail_max_width }}; max-height: {{ widget.thumbnail_max_height }}; border-radius: {{ widget.border_radius }};"
+            >
+            {# Zoom indicator on hover #}
+            <div
+                class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                style="border-radius: {{ widget.border_radius }};"
+            >
+                <span class="material-symbols-outlined text-white text-3xl">zoom_in</span>
+            </div>
+        {% else %}
+            <div
+                class="flex flex-col items-center justify-center bg-base-100 dark:bg-base-800 border-2 border-dashed border-base-300 dark:border-base-600 text-base-400 dark:text-base-500"
+                style="width: {{ widget.thumbnail_max_width }}; height: {{ widget.thumbnail_max_height }}; border-radius: {{ widget.border_radius }};"
+            >
+                <span class="material-symbols-outlined text-4xl mb-1">image</span>
+                <span class="text-xs">{% trans 'No image' %}</span>
+            </div>
+        {% endif %}
+    </div>
+
+    {# File Input #}
+    <div class="mt-2">
+        {% include "django/forms/widgets/clearable_file_input.html" %}
+    </div>
+
+    {# Modal Overlay #}
+    <template x-teleport="body">
+        <div
+            x-show="isOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @keydown.escape.window="closeModal()"
+            class="fixed inset-0 z-[9999] flex items-center justify-center"
+            style="display: none;"
+        >
+            {# Backdrop #}
+            <div
+                @click="closeModal()"
+                class="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            ></div>
+
+            {# Modal Content #}
+            <div
+                class="relative z-10 max-w-[95vw] max-h-[95vh] flex flex-col"
+                @click.stop
+            >
+                {# Close Button #}
+                <button
+                    @click="closeModal()"
+                    class="absolute -top-10 right-0 text-white/80 hover:text-white transition-colors z-20"
+                    type="button"
+                >
+                    <span class="material-symbols-outlined text-3xl">close</span>
+                </button>
+
+                {# Image Container #}
+                <div
+                    class="relative overflow-hidden bg-base-900 rounded-lg shadow-2xl"
+                    style="max-width: 90vw; max-height: 85vh;"
+                    @wheel.prevent="onWheel($event)"
+                    @mousedown="startPan($event)"
+                    @mousemove="onPan($event)"
+                    @mouseup="endPan()"
+                    @mouseleave="endPan()"
+                >
+                    <img
+                        x-ref="modalImage"
+                        :src="imageUrl"
+                        alt="{% trans 'Full size preview' %}"
+                        class="transition-transform duration-100 select-none"
+                        :class="{ 'cursor-grab': !isPanning, 'cursor-grabbing': isPanning }"
+                        :style="`transform: scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px); transform-origin: center center;`"
+                        @load="onImageLoad($event)"
+                        draggable="false"
+                    >
+
+                    {# Zoom Controls #}
+                    {% if widget.zoom_enabled %}
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
+                        <button
+                            @click="zoomOut()"
+                            type="button"
+                            class="text-white/80 hover:text-white transition-colors disabled:opacity-40"
+                            :disabled="zoom <= {{ widget.zoom_min }}"
+                        >
+                            <span class="material-symbols-outlined">remove</span>
+                        </button>
+                        <span
+                            class="text-white text-sm font-medium min-w-[60px] text-center cursor-pointer"
+                            @click="resetZoom()"
+                            title="{% trans 'Click to reset' %}"
+                            x-text="Math.round(zoom * 100) + '%'"
+                        ></span>
+                        <button
+                            @click="zoomIn()"
+                            type="button"
+                            class="text-white/80 hover:text-white transition-colors disabled:opacity-40"
+                            :disabled="zoom >= {{ widget.zoom_max }}"
+                        >
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Image Info Panel #}
+                {% if widget.show_info %}
+                <div
+                    x-show="showInfo && imageInfo.width"
+                    x-transition
+                    class="mt-3 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-3 text-white/90"
+                >
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                        {% if widget.show_filename %}
+                        <div class="flex items-center gap-2" x-show="imageInfo.filename">
+                            <span class="material-symbols-outlined text-base opacity-60">description</span>
+                            <span x-text="imageInfo.filename"></span>
+                        </div>
+                        {% endif %}
+
+                        {% if widget.show_dimensions %}
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-base opacity-60">aspect_ratio</span>
+                            <span x-text="imageInfo.width + ' × ' + imageInfo.height + ' px'"></span>
+                        </div>
+                        {% endif %}
+
+                        {% if widget.show_size %}
+                        <div class="flex items-center gap-2" x-show="imageInfo.size">
+                            <span class="material-symbols-outlined text-base opacity-60">data_usage</span>
+                            <span x-text="imageInfo.size"></span>
+                        </div>
+                        {% endif %}
+
+                        {% if widget.show_format %}
+                        <div class="flex items-center gap-2" x-show="imageInfo.format">
+                            <span class="material-symbols-outlined text-base opacity-60">image</span>
+                            <span x-text="imageInfo.format"></span>
+                        </div>
+                        {% endif %}
+
+                        {# Toggle info button #}
+                        <button
+                            @click="showInfo = !showInfo"
+                            type="button"
+                            class="ml-auto text-white/60 hover:text-white transition-colors"
+                        >
+                            <span class="material-symbols-outlined text-base">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+
+                {# Show info button when hidden #}
+                <button
+                    x-show="!showInfo"
+                    @click="showInfo = true"
+                    type="button"
+                    class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm rounded-full p-2 text-white/60 hover:text-white transition-colors"
+                >
+                    <span class="material-symbols-outlined">info</span>
+                </button>
+                {% endif %}
+
+                {# Keyboard shortcuts hint #}
+                <div class="absolute top-2 left-2 text-white/40 text-xs">
+                    <span class="hidden sm:inline">{% trans 'Scroll to zoom' %} • {% trans 'Drag to pan' %} • Esc {% trans 'to close' %}</span>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function imagePreview_{{ widget.attrs.id|default:'preview' }}() {
+    return {
+        isOpen: false,
+        imageUrl: '{{ widget.image_url|default:"" }}',
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        isPanning: false,
+        panStartX: 0,
+        panStartY: 0,
+        lastPanX: 0,
+        lastPanY: 0,
+        showInfo: true,
+        imageInfo: {
+            width: 0,
+            height: 0,
+            size: '',
+            format: '',
+            filename: ''
+        },
+
+        // Configuration
+        zoomMin: {{ widget.zoom_min }},
+        zoomMax: {{ widget.zoom_max }},
+        zoomStep: {{ widget.zoom_step }},
+        zoomEnabled: {{ widget.zoom_enabled|yesno:"true,false" }},
+        panEnabled: {{ widget.pan_enabled|yesno:"true,false" }},
+
+        openModal() {
+            if (!this.imageUrl) return;
+            this.isOpen = true;
+            this.zoom = 1;
+            this.panX = 0;
+            this.panY = 0;
+            document.body.style.overflow = 'hidden';
+        },
+
+        closeModal() {
+            this.isOpen = false;
+            document.body.style.overflow = '';
+        },
+
+        onWheel(event) {
+            if (!this.zoomEnabled) return;
+
+            const delta = event.deltaY > 0 ? -this.zoomStep : this.zoomStep;
+            const newZoom = Math.max(this.zoomMin, Math.min(this.zoomMax, this.zoom + delta));
+
+            // Zoom towards mouse position
+            if (newZoom !== this.zoom) {
+                this.zoom = newZoom;
+
+                // Reset pan if zoomed out to original
+                if (this.zoom <= 1) {
+                    this.panX = 0;
+                    this.panY = 0;
+                }
+            }
+        },
+
+        zoomIn() {
+            if (!this.zoomEnabled) return;
+            this.zoom = Math.min(this.zoomMax, this.zoom + this.zoomStep * 2);
+        },
+
+        zoomOut() {
+            if (!this.zoomEnabled) return;
+            this.zoom = Math.max(this.zoomMin, this.zoom - this.zoomStep * 2);
+            if (this.zoom <= 1) {
+                this.panX = 0;
+                this.panY = 0;
+            }
+        },
+
+        resetZoom() {
+            this.zoom = 1;
+            this.panX = 0;
+            this.panY = 0;
+        },
+
+        startPan(event) {
+            if (!this.panEnabled || this.zoom <= 1) return;
+            this.isPanning = true;
+            this.panStartX = event.clientX - this.panX;
+            this.panStartY = event.clientY - this.panY;
+        },
+
+        onPan(event) {
+            if (!this.isPanning) return;
+            this.panX = event.clientX - this.panStartX;
+            this.panY = event.clientY - this.panStartY;
+        },
+
+        endPan() {
+            this.isPanning = false;
+        },
+
+        onThumbnailLoad(event) {
+            // Extract info from thumbnail
+            const img = event.target;
+            this.imageInfo.width = img.naturalWidth;
+            this.imageInfo.height = img.naturalHeight;
+
+            // Extract filename from URL
+            const url = this.imageUrl;
+            if (url) {
+                const parts = url.split('/');
+                const filename = parts[parts.length - 1].split('?')[0];
+                this.imageInfo.filename = decodeURIComponent(filename);
+
+                // Extract format from extension
+                const ext = filename.split('.').pop().toUpperCase();
+                if (['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP', 'SVG', 'BMP', 'ICO', 'AVIF'].includes(ext)) {
+                    this.imageInfo.format = ext === 'JPG' ? 'JPEG' : ext;
+                }
+            }
+        },
+
+        onImageLoad(event) {
+            const img = event.target;
+            this.imageInfo.width = img.naturalWidth;
+            this.imageInfo.height = img.naturalHeight;
+        },
+
+        formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+    }
+}
+</script>
