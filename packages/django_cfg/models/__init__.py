@@ -41,6 +41,13 @@ from .django.openapi import OpenAPIClientConfig
 from .infrastructure.cache import CacheConfig
 
 # Infrastructure
+from .infrastructure.backup import (
+    BackupConfig,
+    BackupDatabaseConfig,
+    BackupRetentionConfig,
+    BackupScheduleConfig,
+    BackupStorageConfig,
+)
 from .infrastructure.database import DatabaseConfig
 from .infrastructure.logging import LoggingConfig
 from .infrastructure.security import SecurityConfig
@@ -62,8 +69,13 @@ __all__ = [
     "BaseSettings",
     "BaseCfgAutoModule",
     # Infrastructure
-    "DatabaseConfig",
+    "BackupConfig",
+    "BackupDatabaseConfig",
+    "BackupRetentionConfig",
+    "BackupScheduleConfig",
+    "BackupStorageConfig",
     "CacheConfig",
+    "DatabaseConfig",
     "LoggingConfig",
     "SecurityConfig",
     # API

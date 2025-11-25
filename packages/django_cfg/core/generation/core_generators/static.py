@@ -54,8 +54,8 @@ class StaticFilesGenerator:
         is_development = self.config.debug or self.config.is_development
         
         settings = {
-            "STATIC_URL": "/static/",
-            "MEDIA_URL": "/media/",
+            "STATIC_URL": "/staticfiles/",
+            "MEDIA_URL": self.config.media_url,
             # WhiteNoise configuration - use simple storage in debug mode to avoid manifest caching
             "STATICFILES_STORAGE": (
                 "whitenoise.storage.CompressedStaticFilesStorage" if is_development

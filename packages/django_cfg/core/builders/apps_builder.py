@@ -133,6 +133,10 @@ class InstalledAppsBuilder:
         if self.config.enable_maintenance:
             apps.append("django_cfg.apps.system.maintenance")
 
+        # Database backup
+        if hasattr(self.config, 'backup') and self.config.backup and self.config.backup.enabled:
+            apps.append("django_cfg.apps.system.db")
+
         if self.config.payments and self.config.payments.enabled:
             apps.append("django_cfg.apps.business.payments")
 

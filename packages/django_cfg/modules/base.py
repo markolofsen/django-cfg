@@ -219,6 +219,21 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_backup_enabled(self) -> bool:
+        """
+        Check if django-cfg Database Backup is enabled.
+
+        Returns:
+            True if Backup is enabled, False otherwise
+        """
+        backup_config = self._get_config_key('backup', None)
+
+        # Check if backup config exists and is enabled
+        if backup_config and hasattr(backup_config, 'enabled'):
+            return backup_config.enabled
+
+        return False
+
 
 # Export the base class
 __all__ = [

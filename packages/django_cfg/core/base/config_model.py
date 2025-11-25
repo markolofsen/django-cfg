@@ -19,6 +19,7 @@ from django_cfg.apps.integrations.centrifugo.services.client.config import Djang
 from ...models import (
     ApiKeys,
     AxesConfig,
+    BackupConfig,
     CacheConfig,
     CryptoFieldsConfig,
     DatabaseConfig,
@@ -162,6 +163,12 @@ class DjangoConfig(BaseModel):
         description="Universal payment system configuration (providers, subscriptions, API keys, billing)",
     )
 
+    # === Database Backup Configuration ===
+    backup: Optional[BackupConfig] = Field(
+        default=None,
+        description="Database backup configuration (storage, schedule, retention, notifications)",
+    )
+
     # === URLs ===
     site_url: str = Field(
         default="http://localhost:3000",
@@ -171,6 +178,16 @@ class DjangoConfig(BaseModel):
     api_url: str = Field(
         default="http://localhost:8000",
         description="Backend API URL",
+    )
+
+    media_url: str = Field(
+        default="/media/",
+        description=(
+            "URL prefix for media files (MEDIA_URL). "
+            "Can be relative ('/media/') or absolute ('https://cdn.example.com/media/'). "
+            "Use '__auto__' to auto-generate from api_url (e.g., 'http://localhost:8000/media/'). "
+            "Must end with '/'."
+        ),
     )
 
     # === Core Django Settings ===
@@ -189,6 +206,15 @@ class DjangoConfig(BaseModel):
     debug_warnings: bool = Field(
         default=False,
         description="Enable detailed warnings traceback for debugging (shows full stack trace for RuntimeWarnings)",
+    )
+
+    # === Timezone Configuration ===
+    admin_timezone: Optional[str] = Field(
+        default=None,
+        description=(
+            "Timezone for admin display (e.g., 'Asia/Seoul', 'Europe/Moscow', 'America/New_York'). "
+            "If None, uses system timezone automatically via tzlocal."
+        ),
     )
 
     # === URL Configuration ===
@@ -450,6 +476,26 @@ class DjangoConfig(BaseModel):
                     f"Invalid app name '{app}': must contain only letters, "
                     f"numbers, dots, and underscores"
                 )
+
+        return v
+
+    @field_validator("media_url", mode="before")
+    @classmethod
+    def validate_media_url(cls, v: str, info) -> str:
+        """
+        Validate and transform media_url.
+
+        - '__auto__': auto-generate from api_url
+        - Ensures trailing slash
+        """
+        if v == "__auto__":
+            # Get api_url from validation context
+            api_url = info.data.get("api_url", "http://localhost:8000")
+            return f"{api_url.rstrip('/')}/media/"
+
+        # Ensure trailing slash (Django requirement)
+        if v and not v.endswith("/"):
+            return f"{v}/"
 
         return v
 

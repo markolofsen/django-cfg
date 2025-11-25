@@ -9,20 +9,22 @@ from .base import FieldConfig
 
 class TextField(FieldConfig):
     """
-    Simple text widget configuration.
+    Text widget with truncation and styling.
 
     Examples:
         TextField(name="description")
         TextField(name="email", icon=Icons.EMAIL)
         TextField(name="hash", truncate=16, monospace=True)
-        TextField(name="message", truncate=100, wrap=True)
+        TextField(name="message", truncate=60, max_width="400px")
     """
 
     ui_widget: Literal["text"] = "text"
 
-    truncate: Optional[int] = Field(None, description="Truncate text to N characters (e.g., 16, 100)")
-    monospace: bool = Field(False, description="Use monospace font (for code, hashes, etc.)")
-    wrap: bool = Field(False, description="Wrap text (default: nowrap with ellipsis)")
+    truncate: Optional[int] = Field(None, description="Truncate text to N characters")
+    monospace: bool = Field(False, description="Use monospace font")
+    nowrap: bool = Field(True, description="Prevent line wrapping (default: True)")
+    max_width: str = Field("300px", description="CSS max-width for text cell")
+    show_tooltip: bool = Field(True, description="Show full text on hover when truncated")
 
     def get_widget_config(self) -> Dict[str, Any]:
         """Extract text widget configuration."""
@@ -30,5 +32,7 @@ class TextField(FieldConfig):
         if self.truncate is not None:
             config['truncate'] = self.truncate
         config['monospace'] = self.monospace
-        config['wrap'] = self.wrap
+        config['nowrap'] = self.nowrap
+        config['max_width'] = self.max_width
+        config['show_tooltip'] = self.show_tooltip
         return config

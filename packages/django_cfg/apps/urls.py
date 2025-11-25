@@ -51,6 +51,9 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.is_grpc_enabled():
         enabled_apps.append("django_cfg.apps.integrations.grpc")
 
+    if base_module.is_backup_enabled():
+        enabled_apps.append("django_cfg.apps.system.db")
+
     return enabled_apps
 
 
@@ -141,3 +144,7 @@ if base_module.should_enable_rq():
 
 if base_module.is_grpc_enabled():
     urlpatterns.append(path('cfg/grpc/', include('django_cfg.apps.integrations.grpc.urls')))
+
+# System apps (conditional based on config)
+if base_module.is_backup_enabled():
+    urlpatterns.append(path('cfg/db/', include('django_cfg.apps.system.db.urls')))

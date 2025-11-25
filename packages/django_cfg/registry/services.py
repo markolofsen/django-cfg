@@ -7,6 +7,9 @@ SERVICES_REGISTRY = {
     "EmailConfig": ("django_cfg.models.services", "EmailConfig"),
     "DjangoEmailService": ("django_cfg.modules.django_email", "DjangoEmailService"),
     "send_email": ("django_cfg.modules.django_email", "send_email"),
+    "get_admin_emails": ("django_cfg.modules.django_email", "get_admin_emails"),
+    "send_admin_email": ("django_cfg.modules.django_email", "send_admin_email"),
+    "send_admin_notification": ("django_cfg.modules.django_email", "send_admin_notification"),
     "SendGridConfig": ("django_cfg.modules.django_twilio.models", "SendGridConfig"),
 
     # Telegram services
@@ -40,4 +43,11 @@ SERVICES_REGISTRY = {
     # Logging services
     "DjangoLogger": ("django_cfg.modules.django_logging", "DjangoLogger"),
     "get_logger": ("django_cfg.modules.django_logging", "get_logger"),
+
+    # Database Backup services
+    "BackupConfig": ("django_cfg.models.infrastructure.backup", "BackupConfig"),
+    "BackupStorageConfig": ("django_cfg.models.infrastructure.backup", "BackupStorageConfig"),
+    "BackupScheduleConfig": ("django_cfg.models.infrastructure.backup", "BackupScheduleConfig"),
+    "BackupRetentionConfig": ("django_cfg.models.infrastructure.backup", "BackupRetentionConfig"),
+    "BackupDatabaseConfig": ("django_cfg.models.infrastructure.backup", "BackupDatabaseConfig"),
 }

@@ -26,6 +26,11 @@ RUN apt-get update && apt-get install -y \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
+# Install grpc_health_probe for gRPC health checks
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.25 && \
+    curl -L https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 -o /usr/local/bin/grpc_health_probe && \
+    chmod +x /usr/local/bin/grpc_health_probe
+
 # Install Poetry via pip (more reliable than curl installer)
 RUN pip install poetry==${POETRY_VERSION} && poetry --version
 

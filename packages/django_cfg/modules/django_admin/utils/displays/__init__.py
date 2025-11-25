@@ -13,6 +13,7 @@ from .json_display import JSONDisplay
 from .link_display import LinkDisplay
 from .short_uuid_display import ShortUUIDDisplay
 from .status_badges_display import StatusBadgesDisplay
+from .text_display import TextDisplay
 from .video_display import VideoDisplay
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "StatusBadgesDisplay",
     "CounterBadgeDisplay",
     "ShortUUIDDisplay",
+    "TextDisplay",
     "VideoDisplay",
 ]

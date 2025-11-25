@@ -436,6 +436,36 @@ class DjangoRQConfig(BaseModel):
             # Config not available yet or import error - skip demo task
             pass
 
+        # Add Database Backup schedules (if backup is enabled)
+        try:
+            from django_cfg.core.state import get_current_config
+            config = get_current_config()
+
+            if config:
+                backup_config = getattr(config, "backup", None)
+                if backup_config and backup_config.enabled and backup_config.schedule.enabled:
+                    # Main backup schedule
+                    cron = backup_config.schedule.to_cron_expression()
+                    if cron:
+                        all_schedules.append(RQScheduleConfig(
+                            func="django_cfg.apps.system.db.tasks.run_all_databases_backup",
+                            cron=cron,
+                            queue=backup_config.schedule.queue,
+                            description="Database Backup (scheduled)",
+                        ))
+
+                    # Cleanup schedule (daily at 3 AM) if retention enabled
+                    if backup_config.retention.enabled:
+                        all_schedules.append(RQScheduleConfig(
+                            func="django_cfg.apps.system.db.tasks.run_backup_cleanup",
+                            cron="0 3 * * *",
+                            queue=backup_config.schedule.queue,
+                            description="Database Backup Cleanup (daily)",
+                        ))
+        except Exception:
+            # Config not available yet or import error - skip backup schedules
+            pass
+
         return all_schedules
 
     def to_django_settings(self, parent_config: Optional[Any] = None) -> Dict[str, Any]:

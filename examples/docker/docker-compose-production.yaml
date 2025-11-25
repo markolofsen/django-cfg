@@ -118,6 +118,7 @@ services:
       DJANGO_SETTINGS_MODULE: api.settings
     volumes:
       - "../files/django-logs:/app/logs"
+      - "../files/django-media:/app/media"
       - "../projects/django:/app:rw"
     depends_on:
       django:
@@ -126,7 +127,7 @@ services:
     ports:
       - "50051:50051"
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f rungrpc > /dev/null || exit 1"]
+      test: ["CMD", "grpc_health_probe", "-addr=localhost:50051"]
       interval: 30s
       timeout: 10s
       retries: 3

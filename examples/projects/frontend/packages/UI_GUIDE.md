@@ -2,6 +2,40 @@
 
 Comprehensive React UI library with 56+ components, 7 blocks, and 11 hooks built with Radix UI, Tailwind CSS v4, and TypeScript
 
+## 📋 Quick Reference - Available Components
+
+### Forms (19)
+Label, Button, DownloadButton, Input, Checkbox, RadioGroup, Select, Textarea, Switch, Slider, Combobox, MultiSelect, MultiSelectPro, MultiSelectProAsync, InputOTP, PhoneInput, Form, Field, JsonSchemaForm
+
+### Layout (8)
+Card, Separator, Skeleton, AspectRatio, Sticky, ScrollArea, Resizable, Section
+
+### Navigation (7)
+NavigationMenu, Breadcrumb, Tabs, Pagination, BreadcrumbNavigation, SSRPagination, StaticPagination
+
+### Overlay (11)
+Dialog, AlertDialog, Sheet, Drawer, Popover, HoverCard, Tooltip, Command, ContextMenu, DropdownMenu, Menubar
+
+### Feedback (6)
+Toast, Alert, Progress, Badge, Avatar, Toaster
+
+### Data (8)
+Table, Accordion, Collapsible, Toggle, ToggleGroup, Calendar, Carousel, Chart
+
+### Specialized (10)
+Sidebar, ImageWithFallback, ButtonGroup, Empty, Spinner, Kbd, TokenIcon, Sonner (Toaster), InputGroup, Item
+
+### Tools (4)
+JsonTree, PrettyCode, Mermaid, LottiePlayer
+
+### Blocks (7)
+Hero, SuperHero, FeatureSection, CTASection, NewsletterSection, StatsSection, TestimonialSection
+
+### Hooks (6)
+useMediaQuery, useTheme, useCopy, useCountdown, useDebounce, useIsMobile
+
+---
+
 ## Tailwind CSS v4.0 Guidelines
 
 ### Key Changes

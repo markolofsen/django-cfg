@@ -28,6 +28,7 @@ from ..utils import (
     ShortUUIDDisplay,
     StatusBadge,
     StatusBadgesDisplay,
+    TextDisplay,
     UserDisplay,
 )
 
@@ -152,7 +153,7 @@ WidgetRegistry.register(
 # Simple widgets
 WidgetRegistry.register(
     "text",
-    lambda obj, field, cfg: str(getattr(obj, field, ""))
+    lambda obj, field, cfg: TextDisplay.from_field(obj, field, cfg or {})
 )
 
 WidgetRegistry.register(

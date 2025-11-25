@@ -45,6 +45,11 @@ from django_cfg import (
     DjangoRQConfig,
     RQQueueConfig,
     RQScheduleConfig,
+    # Database Backup
+    BackupConfig,
+    BackupStorageConfig,
+    BackupScheduleConfig,
+    BackupRetentionConfig,
 )
 
 # Import environment configuration
@@ -234,7 +239,52 @@ class DjangoCfgConfig(DjangoConfig):
     # === URLs ===
     site_url: str = env.app.site_url
     api_url: str = env.app.api_url
-    
+
+    # === Media URL Configuration ===
+    # Options:
+    # 1. "/media/" - Local serving (default, development)
+    # 2. "__auto__" - Auto-generate from api_url (e.g., "https://api.example.com/media/")
+    # 3. "https://cdn.example.com/media/" - CDN/external storage (production)
+    media_url: str = "/media/"  # or "__auto__" for CDN based on api_url
+
+    # === Database Backup Configuration ===
+    # Auto-schedules backups via Django-RQ if enabled
+    # Manual backups: python manage.py db_backup
+    backup: Optional[BackupConfig] = BackupConfig(
+        enabled=True,
+        # Storage: local or S3-compatible (AWS S3, Cloudflare R2, MinIO)
+        storage=BackupStorageConfig(
+            backend="local",  # "local" or "s3"
+            local_path="backups/",
+            # S3 example (uncomment for production):
+            # backend="s3",
+            # s3_bucket="my-backups",
+            # s3_endpoint_url="https://xxx.r2.cloudflarestorage.com",  # For R2
+            # s3_access_key="${R2_ACCESS_KEY}",
+            # s3_secret_key="${R2_SECRET_KEY}",
+            # s3_region="auto",
+        ),
+        # Schedule: auto-registered with Django-RQ if enabled
+        schedule=BackupScheduleConfig(
+            enabled=True,
+            cron="0 2 * * *",  # Daily at 2 AM
+            # Or use simple options:
+            # interval_hours=6,  # Every 6 hours
+            # daily_time=time(2, 0),  # Daily at 02:00
+            queue="default",
+        ),
+        # Retention policy (auto-cleanup old backups)
+        retention=BackupRetentionConfig(
+            enabled=True,
+            keep_daily=7,    # Keep 7 daily backups
+            keep_weekly=4,   # Keep 4 weekly backups
+            keep_monthly=3,  # Keep 3 monthly backups
+        ),
+        compression="gzip",  # gzip, bz2, xz, none
+        notify_on_failure=True,
+        notify_on_success=False,
+    )
+
     # === Security Domains ===
     security_domains: list[str] = env.security_domains or []
 

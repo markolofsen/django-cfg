@@ -184,6 +184,18 @@ class NavigationManager(BaseCfgModule):
                 items=system_items
             ))
 
+        # Add Database Backup section if enabled (system/infrastructure)
+        if self.is_backup_enabled():
+            navigation_sections.append(NavigationSection(
+                title="Database Backup",
+                separator=True,
+                collapsible=True,
+                items=[
+                    NavigationItem(title="Backups", icon=Icons.BACKUP, link=str(reverse_lazy("admin:db_backup_backuprecord_changelist"))),
+                    NavigationItem(title="Restore History", icon=Icons.RESTORE, link=str(reverse_lazy("admin:db_backup_restorerecord_changelist"))),
+                ]
+            ))
+
         # Add Accounts section if enabled
         if self.is_accounts_enabled():
             navigation_sections.append(NavigationSection(

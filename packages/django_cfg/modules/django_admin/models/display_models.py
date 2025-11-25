@@ -30,3 +30,4 @@ class DateTimeDisplayConfig(BaseConfig):
     show_relative: bool = Field(default=True)
     show_seconds: bool = Field(default=False)
     datetime_format: str = Field(default="%Y-%m-%d %H:%M:%S")
+    use_local_tz: bool = Field(default=True, description="Convert to local timezone (default: True)")
