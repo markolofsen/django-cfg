@@ -142,7 +142,7 @@ Django accounts module with OTP authentication and user management. Provides com
 ```python
 user, created = CustomUser.objects.register_user(
     "user@example.com", 
-    source_url="https://dashboard.unrealon.com"
+    source_url="https://my.djangocfg.com"
 )
 ```
 

@@ -5,8 +5,9 @@ Lead Views - API views for Lead model.
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+
+from django_cfg.mixins import PublicAPIMixin
 
 from .models import Lead
 from .serializers import (
@@ -16,15 +17,15 @@ from .serializers import (
 )
 
 
-class LeadViewSet(viewsets.ModelViewSet):
+class LeadViewSet(PublicAPIMixin, viewsets.ModelViewSet):
     """
     ViewSet for Lead model.
-    
+
     Provides only submission functionality for leads from frontend forms.
+    Uses PublicAPIMixin for open CORS and no authentication.
     """
     queryset = Lead.objects.all()
     serializer_class = LeadSubmissionSerializer
-    permission_classes = [AllowAny]
 
     @extend_schema(
         summary="Submit Lead Form",
@@ -54,7 +55,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             )
         ]
     )
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'])
     def submit(self, request):
         """Submit a new lead from frontend form."""
         serializer = LeadSubmissionSerializer(data=request.data)

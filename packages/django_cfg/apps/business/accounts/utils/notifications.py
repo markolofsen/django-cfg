@@ -64,8 +64,8 @@ class AccountNotifications:
                 main_text=f"Welcome {user.username}! Your account has been successfully created.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Welcome {user.username}!</p>',
                 secondary_text="You can now access all our services and start exploring our API.",
-                button_text="Go to Dashboard",
-                button_url=f"{config.site_url}/dashboard",
+                button_text="Go to Private",
+                button_url=f"{config.site_url}/private",
             )
             logger.info(f"Welcome email sent to {user.email}")
 
@@ -124,8 +124,8 @@ class AccountNotifications:
                     main_text="Your account has been activated and is now ready to use!",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Account Activated!</p>',
                     secondary_text="You now have full access to all our services and features.",
-                    button_text="Access Dashboard",
-                    button_url=f"{config.site_url}/dashboard",
+                    button_text="Access Private",
+                    button_url=f"{config.site_url}/private",
                 )
                 logger.info(f"Account activation email sent to {user.email}")
 

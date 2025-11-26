@@ -195,8 +195,7 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: docker/services/frontend/Dockerfile
-      target: admin
+      dockerfile: docker/services/frontend/Dockerfile.admin
     image: django-cfg-frontend:latest
     container_name: django-cfg-frontend
     restart: unless-stopped

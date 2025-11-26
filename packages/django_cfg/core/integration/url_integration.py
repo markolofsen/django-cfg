@@ -151,16 +151,33 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
 
     # Add media files serving (both dev and prod)
     # Using serve view for consistent behavior across environments
-    # Skip if MEDIA_URL is absolute (external CDN/storage)
     if hasattr(settings, 'MEDIA_URL') and hasattr(settings, 'MEDIA_ROOT'):
         media_url = settings.MEDIA_URL
-        # Only add local serve if MEDIA_URL is relative (not absolute URL)
-        if not media_url.startswith(('http://', 'https://', '//')):
-            # Remove leading slash from MEDIA_URL for path()
+
+        # Determine media prefix for URL routing
+        if media_url.startswith(('http://', 'https://', '//')):
+            # Absolute URL - extract path part for local serving
+            # e.g., "http://localhost:8000/media/" -> "media/"
+            from urllib.parse import urlparse
+            parsed = urlparse(media_url)
+            media_prefix = parsed.path.lstrip('/')
+
+            # Only serve locally if it's localhost/127.0.0.1 (development)
+            is_local = parsed.netloc in ('localhost', '127.0.0.1') or \
+                       parsed.netloc.startswith('localhost:') or \
+                       parsed.netloc.startswith('127.0.0.1:')
+
+            if is_local and media_prefix:
+                new_patterns += [
+                    path(f"{media_prefix}<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
+                ]
+        else:
+            # Relative URL - serve directly
             media_prefix = media_url.lstrip('/')
-            new_patterns += [
-                path(f"{media_prefix}<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
-            ]
+            if media_prefix:
+                new_patterns += [
+                    path(f"{media_prefix}<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
+                ]
 
     # Show startup info based on config
     try:

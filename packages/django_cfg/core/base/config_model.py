@@ -502,6 +502,13 @@ class DjangoConfig(BaseModel):
     @model_validator(mode="after")
     def validate_configuration_consistency(self) -> "DjangoConfig":
         """Validate overall configuration consistency."""
+        # In development mode, force media_url to use api_url
+        # This ensures media files are served correctly from Django backend
+        if self.is_development:
+            dev_media_url = f"{self.api_url.rstrip('/')}/media/"
+            if self.media_url != dev_media_url:
+                object.__setattr__(self, 'media_url', dev_media_url)
+
         # Ensure at least one database is configured
         if not self.databases:
             raise ConfigurationError(

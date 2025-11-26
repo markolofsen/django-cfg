@@ -37,14 +37,15 @@ RUN pip install poetry==${POETRY_VERSION} && poetry --version
 # Set working directory
 WORKDIR /app
 
-# Copy pyproject.toml only (poetry.lock excluded in .dockerignore)
+# Copy pyproject.toml only
 COPY projects/django/pyproject.toml ./
 
 # Install dependencies (production only)
 # 1. Poetry installs all dependencies from pyproject.toml
 # 2. Pip upgrades django-cfg to latest version (ensures fresh security patches)
+# 3. Install uvicorn separately to ensure it's available
 RUN poetry install --only main --no-root --no-cache && \
-    pip install --upgrade django-cfg[full] && \
+    pip install --upgrade django-cfg[full] uvicorn[standard] && \
     rm -rf $POETRY_CACHE_DIR
 
 # Copy application code

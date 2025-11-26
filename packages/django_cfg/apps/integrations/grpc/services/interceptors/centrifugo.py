@@ -7,6 +7,8 @@ Works alongside CentrifugoBridgeMixin for complete event visibility.
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import logging
 import time
 from datetime import datetime, timezone as tz
@@ -16,6 +18,25 @@ import grpc
 import grpc.aio
 
 logger = logging.getLogger(__name__)
+
+
+def _maybe_await(result):
+    """
+    Helper to handle both sync and async handler results.
+
+    gRPC handlers can be either sync or async. For example, grpc_health's
+    HealthServicer.Check returns a sync HealthCheckResponse, but this
+    interceptor wraps it in an async function that tries to await it.
+
+    This helper checks if the result is a coroutine and awaits it if so,
+    otherwise returns the result directly.
+    """
+    if asyncio.iscoroutine(result) or inspect.isawaitable(result):
+        return result  # Will be awaited by caller
+    # Return a completed future for sync results
+    future = asyncio.get_event_loop().create_future()
+    future.set_result(result)
+    return future
 
 
 class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
@@ -236,7 +257,9 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
         async def wrapper(request, context):
             start_time = time.time()
             try:
-                response = await behavior(request, context)
+                # Handle both sync and async handlers (e.g., grpc_health's Check is sync)
+                result = behavior(request, context)
+                response = await _maybe_await(result)
                 duration = (time.time() - start_time) * 1000
 
                 if self.publish_end:
@@ -349,7 +372,9 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
                     for r in requests:
                         yield r
 
-                response = await behavior(request_iter(), context)
+                # Handle both sync and async handlers
+                result = behavior(request_iter(), context)
+                response = await _maybe_await(result)
                 duration = (time.time() - start_time) * 1000
 
                 if self.publish_end:

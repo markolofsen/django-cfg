@@ -4,7 +4,7 @@
  * Routes accessible without authentication
  */
 
-import { LayoutDashboard, LogIn, Book, Shield, FileText, Cookie, Palette, Lock } from 'lucide-react';
+import { LayoutDashboard, LogIn, Book, Shield, FileText, Cookie, Palette, Lock, Package, Globe } from 'lucide-react';
 import { defineRoute } from '../shared';
 
 export const home = defineRoute('/', {
@@ -77,5 +77,25 @@ export const security = defineRoute('/legal/security', {
   order: 4,
 });
 
+// Packages
+export const packages = defineRoute('/packages', {
+  label: 'Packages',
+  description: '@djangocfg monorepo ecosystem',
+  icon: Package,
+  protected: false,
+  group: 'packages',
+  order: 1,
+});
+
+// Projects
+export const projects = defineRoute('/projects', {
+  label: 'Projects',
+  description: 'Production projects built with DjangoCFG',
+  icon: Globe,
+  protected: false,
+  group: 'projects',
+  order: 1,
+});
+
 // All routes as array
-export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security];
+export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security, packages, projects];

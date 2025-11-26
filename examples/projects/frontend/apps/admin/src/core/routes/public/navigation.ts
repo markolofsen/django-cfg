@@ -17,12 +17,20 @@ export function generateNavigation(): NavigationSection[] {
       items: getGroupItems('main'),
     },
     {
-      title: 'Demo',
-      items: getGroupItems('demo'),
-    },
-    {
       title: 'Components',
       items: getGroupItems('components'),
+    },
+    {
+      title: 'Packages',
+      items: getGroupItems('packages'),
+    },
+    {
+      title: 'Projects',
+      items: getGroupItems('projects'),
+    },
+    {
+      title: 'Demo',
+      items: getGroupItems('demo'),
     },
     {
       title: 'Legal',

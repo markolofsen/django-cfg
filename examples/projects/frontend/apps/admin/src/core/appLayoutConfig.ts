@@ -6,7 +6,7 @@
  */
 
 import type { AppLayoutConfig } from '@djangocfg/layouts';
-import { Car } from 'lucide-react';
+import { CloudLightning } from 'lucide-react';
 import { settings } from './settings';
 import {
   routes,
@@ -73,7 +73,7 @@ export const appLayoutConfig: AppLayoutConfig = {
     },
     footer: {
       badge: {
-        icon: Car,
+        icon: CloudLightning,
         text: settings.app.name,
       },
       links: {

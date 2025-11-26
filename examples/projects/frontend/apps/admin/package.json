@@ -20,6 +20,7 @@
     "@djangocfg/markdown": "latest",
     "@djangocfg/og-image": "latest",
     "@djangocfg/ui": "latest",
+    "@djangocfg/imgai": "latest",
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",
     "consola": "^3.4.2",

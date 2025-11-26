@@ -27,7 +27,7 @@ class OTPRequestSerializer(serializers.Serializer):
     source_url = serializers.URLField(
         required=False,
         allow_blank=True,
-        help_text="Source URL for tracking registration (e.g., https://dashboard.unrealon.com)",
+        help_text="Source URL for tracking registration (e.g., https://my.djangocfg.com)",
     )
 
     def validate_identifier(self, value):
@@ -75,7 +75,7 @@ class OTPVerifySerializer(serializers.Serializer):
     source_url = serializers.URLField(
         required=False,
         allow_blank=True,
-        help_text="Source URL for tracking login (e.g., https://dashboard.unrealon.com)",
+        help_text="Source URL for tracking login (e.g., https://my.djangocfg.com)",
     )
 
     def validate_identifier(self, value):

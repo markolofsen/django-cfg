@@ -342,7 +342,7 @@
  * @typedef {Object} OTPRequestRequest * @description Serializer for OTP request. * @property {string} identifier - Email address or phone number for OTP delivery * @property {"email" | "phone"} [channel] - Delivery channel: 'email' or 'phone'. Auto-detected if not provided.
 
 * `email` - Email
-* `phone` - Phone * @property {string} [source_url] - Source URL for tracking registration (e.g., https://dashboard.unrealon.com) */
+* `phone` - Phone * @property {string} [source_url] - Source URL for tracking registration (e.g., https://my.djangocfg.com) */
 
 /**
  * @typedef {Object} OTPRequestResponse * @description OTP request response. * @property {string} message - Success message */
@@ -351,7 +351,7 @@
  * @typedef {Object} OTPVerifyRequest * @description Serializer for OTP verification. * @property {string} identifier - Email address or phone number used for OTP request * @property {string} otp * @property {"email" | "phone"} [channel] - Delivery channel: 'email' or 'phone'. Auto-detected if not provided.
 
 * `email` - Email
-* `phone` - Phone * @property {string} [source_url] - Source URL for tracking login (e.g., https://dashboard.unrealon.com) */
+* `phone` - Phone * @property {string} [source_url] - Source URL for tracking login (e.g., https://my.djangocfg.com) */
 
 /**
  * @typedef {Object} OTPVerifyResponse * @description OTP verification response. * @property {string} refresh - JWT refresh token * @property {string} access - JWT access token * @property {any} user - User information */
