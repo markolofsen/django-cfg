@@ -33,8 +33,8 @@ export function generateNavigation(): NavigationSection[] {
       items: getGroupItems('demo'),
     },
     {
-      title: 'Legal',
-      items: getGroupItems('legal'),
+      title: 'Contact',
+      items: getGroupItems('contact'),
     },
   ].filter(s => s.items.length > 0);
 }

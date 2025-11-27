@@ -4,7 +4,7 @@
  * Routes accessible without authentication
  */
 
-import { LayoutDashboard, LogIn, Book, Shield, FileText, Cookie, Palette, Lock, Package, Globe } from 'lucide-react';
+import { LayoutDashboard, LogIn, Book, Shield, FileText, Cookie, Palette, Lock, Package, Globe, Mail } from 'lucide-react';
 import { defineRoute } from '../shared';
 
 export const home = defineRoute('/', {
@@ -97,5 +97,15 @@ export const projects = defineRoute('/projects', {
   order: 1,
 });
 
+// Contact
+export const contact = defineRoute('/contact', {
+  label: 'Contact',
+  description: 'Get in touch with us',
+  icon: Mail,
+  protected: false,
+  group: 'contact',
+  order: 1,
+});
+
 // All routes as array
-export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security, packages, projects];
+export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security, packages, projects, contact];

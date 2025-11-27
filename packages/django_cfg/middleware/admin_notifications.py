@@ -121,7 +121,7 @@ try:
     from axes.signals import user_login_failed, user_locked_out
 
     @receiver(user_login_failed)
-    def notify_failed_admin_login(sender, credentials, request, **kwargs):
+    def notify_failed_admin_login(sender, credentials=None, request=None, **kwargs):
         """
         Send Telegram warning on failed admin login attempt.
 
@@ -130,13 +130,17 @@ try:
 
         Args:
             sender: Signal sender
-            credentials: Dict with login credentials (username, password)
-            request: HttpRequest object
+            credentials: Dict with login credentials (username, password) (keyword argument)
+            request: HttpRequest object (keyword argument)
             **kwargs: Additional signal arguments
         """
         # Only monitor admin panel
         if not request or not request.path.startswith('/admin/'):
             return
+
+        # Handle missing credentials
+        if credentials is None:
+            credentials = {}
 
         ip_address = get_client_ip(request)
         username = credentials.get('username', 'Unknown')
@@ -159,7 +163,7 @@ try:
 
 
     @receiver(user_locked_out)
-    def notify_admin_lockout(sender, request, credentials, **kwargs):
+    def notify_admin_lockout(sender, request=None, credentials=None, **kwargs):
         """
         Send Telegram alert when admin account is locked out.
 
@@ -168,13 +172,17 @@ try:
 
         Args:
             sender: Signal sender
-            request: HttpRequest object
-            credentials: Dict with login credentials
+            request: HttpRequest object (optional, keyword argument)
+            credentials: Dict with login credentials (optional, keyword argument)
             **kwargs: Additional signal arguments
         """
         # Only monitor admin panel
         if not request or not request.path.startswith('/admin/'):
             return
+
+        # Handle missing credentials
+        if credentials is None:
+            credentials = {}
 
         ip_address = get_client_ip(request)
         username = credentials.get('username', 'Unknown')

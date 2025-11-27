@@ -667,11 +667,15 @@ class Command(BaseCommand):
         try:
             from django_cfg.apps.integrations.grpc.services.discovery import discover_and_register_services
 
-            # Service registration is sync, run in thread
-            count = await asyncio.to_thread(
-                discover_and_register_services,
-                server
-            )
+            # IMPORTANT: Do NOT use asyncio.to_thread() here!
+            # grpc.aio.server is NOT thread-safe for adding handlers.
+            # Running add_generic_rpc_handlers() in a different thread
+            # causes the handlers to NOT be visible to the server.
+            #
+            # The discover_and_register_services() function is fast
+            # (just imports and calls add_generic_rpc_handlers) so
+            # running it synchronously is fine.
+            count = discover_and_register_services(server)
             return count
 
         except Exception as e:

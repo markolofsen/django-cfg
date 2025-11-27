@@ -151,33 +151,29 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
 
     # Add media files serving (both dev and prod)
     # Using serve view for consistent behavior across environments
-    if hasattr(settings, 'MEDIA_URL') and hasattr(settings, 'MEDIA_ROOT'):
-        media_url = settings.MEDIA_URL
+    # Django will serve media files when MEDIA_ROOT is set
+    # If using external CDN, requests won't reach Django anyway
+    media_root = getattr(settings, 'MEDIA_ROOT', None)
+    media_url = getattr(settings, 'MEDIA_URL', None)
 
-        # Determine media prefix for URL routing
+    if media_root and media_url:
+        from django.urls import re_path
+        from urllib.parse import urlparse
+
+        # Extract path prefix from media_url
         if media_url.startswith(('http://', 'https://', '//')):
-            # Absolute URL - extract path part for local serving
-            # e.g., "http://localhost:8000/media/" -> "media/"
-            from urllib.parse import urlparse
+            # Absolute URL - extract path part
+            # e.g., "https://api.example.com/media/" -> "media/"
             parsed = urlparse(media_url)
-            media_prefix = parsed.path.lstrip('/')
-
-            # Only serve locally if it's localhost/127.0.0.1 (development)
-            is_local = parsed.netloc in ('localhost', '127.0.0.1') or \
-                       parsed.netloc.startswith('localhost:') or \
-                       parsed.netloc.startswith('127.0.0.1:')
-
-            if is_local and media_prefix:
-                new_patterns += [
-                    path(f"{media_prefix}<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
-                ]
+            media_prefix = parsed.path.strip('/')
         else:
-            # Relative URL - serve directly
-            media_prefix = media_url.lstrip('/')
-            if media_prefix:
-                new_patterns += [
-                    path(f"{media_prefix}<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
-                ]
+            # Relative URL - use directly
+            media_prefix = media_url.strip('/')
+
+        if media_prefix:
+            new_patterns += [
+                re_path(rf'^{media_prefix}/(?P<path>.*)$', serve, {'document_root': media_root}),
+            ]
 
     # Show startup info based on config
     try:

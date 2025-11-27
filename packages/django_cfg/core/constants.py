@@ -53,6 +53,8 @@ DEFAULT_APPS: List[str] = [
 DEFAULT_MIDDLEWARE: List[str] = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Public API CORS - handles /cfg/leads/ and other public endpoints BEFORE corsheaders
+    "django_cfg.core.middleware.PublicAPICORSMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

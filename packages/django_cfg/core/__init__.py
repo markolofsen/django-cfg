@@ -18,6 +18,7 @@ Public API:
 # Main exports for convenient access
 from .base import DjangoConfig
 from .constants import DEFAULT_APPS, DEFAULT_MIDDLEWARE
+from .middleware import PublicAPICORSMiddleware
 
 # Integration utilities
 from .integration import (
@@ -48,6 +49,8 @@ __all__ = [
     # Constants
     "DEFAULT_APPS",
     "DEFAULT_MIDDLEWARE",
+    # Middleware
+    "PublicAPICORSMiddleware",
     # Global state
     "get_current_config",
     "set_current_config",
