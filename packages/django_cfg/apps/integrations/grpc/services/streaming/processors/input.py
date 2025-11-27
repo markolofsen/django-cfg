@@ -241,6 +241,10 @@ class InputProcessor:
         is_first_message = True
 
         try:
+            # DEBUG: Check context state before loop
+            if self.enable_logging:
+                logger.info(f"_process_anext starting, context.cancelled()={context.cancelled()}")
+
             while not context.cancelled():
                 try:
                     # Get next message with optional timeout
@@ -336,6 +340,10 @@ class InputProcessor:
                     if self.enable_logging:
                         logger.warning(f"Client {client_id} connection timeout")
                     break
+
+            # DEBUG: Log when while loop exits normally (context.cancelled() == True)
+            if self.enable_logging:
+                logger.info(f"_process_anext while loop exited, context.cancelled()={context.cancelled()}, client_id={client_id}")
 
         except asyncio.CancelledError:
             if self.enable_logging:

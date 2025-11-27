@@ -188,16 +188,18 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
         try:
             from django_cfg.apps.integrations.grpc.models import GrpcApiKey
 
-            # Django 5.2: Native async ORM
-            api_key_obj = await GrpcApiKey.objects.filter(
+            # Django 5.2: Native async ORM with select_related to avoid sync FK access
+            api_key_obj = await GrpcApiKey.objects.select_related('user').filter(
                 key=api_key, is_active=True
             ).afirst()
 
             if api_key_obj and api_key_obj.is_valid:
                 # Update usage tracking (async method call)
                 await api_key_obj.amark_used()
-                logger.debug(f"Valid API key for user {api_key_obj.user.id} ({api_key_obj.user.username})")
-                return api_key_obj.user, api_key_obj
+                # User is already loaded via select_related, no sync DB hit
+                user = api_key_obj.user
+                logger.debug(f"Valid API key for user {user.id} ({user.username})")
+                return user, api_key_obj
             else:
                 logger.debug("API key not found or invalid in database")
                 return None, None

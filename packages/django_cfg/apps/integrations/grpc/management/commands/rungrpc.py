@@ -299,16 +299,17 @@ class Command(BaseCommand):
         )
 
         # Discover and register services FIRST
-        service_count = await self._register_services_async(self.server)
+        service_count, registered_service_names = await self._register_services_async(self.server)
 
         # Add health check with registered services
         health_servicer = None
         if enable_health_check:
             health_servicer = await self._add_health_check_async(self.server)
 
-        # Add reflection
+        # Add reflection with explicit service names
+        # (grpc.aio.server doesn't expose registered handlers like sync server)
         if enable_reflection:
-            await self._add_reflection_async(self.server)
+            await self._add_reflection_async(self.server, registered_service_names)
 
         # Bind server
         address = f"{host}:{port}"
@@ -615,19 +616,25 @@ class Command(BaseCommand):
             self.logger.error(f"Failed to add health check service: {e}")
             return None
 
-    async def _add_reflection_async(self, server):
+    async def _add_reflection_async(self, server, registered_service_names: list[str] = None):
         """
         Add reflection service to async server.
 
         Args:
             server: Async gRPC server instance
+            registered_service_names: List of service names to expose via reflection.
+                                     For grpc.aio.server(), the server._state doesn't exist,
+                                     so we must pass service names explicitly.
         """
         try:
             from grpc_reflection.v1alpha import reflection
 
-            # Get service names from async server
-            service_names = []
-            if hasattr(server, '_state') and hasattr(server._state, 'generic_handlers'):
+            # Use provided service names (required for async server)
+            # grpc.aio.server() does NOT have _state.generic_handlers like sync server
+            service_names = list(registered_service_names) if registered_service_names else []
+
+            # Fallback: try to get from server._state (works for sync server only)
+            if not service_names and hasattr(server, '_state') and hasattr(server._state, 'generic_handlers'):
                 for handler in server._state.generic_handlers:
                     if hasattr(handler, 'service_name'):
                         names = handler.service_name()
@@ -644,7 +651,7 @@ class Command(BaseCommand):
             # Add reflection to async server
             reflection.enable_server_reflection(service_names, server)
 
-            self.logger.info(f"Server reflection enabled for {len(service_names)} service(s)")
+            self.logger.info(f"Server reflection enabled for {len(service_names)} service(s): {service_names}")
 
         except ImportError:
             self.logger.warning(
@@ -654,7 +661,7 @@ class Command(BaseCommand):
         except Exception as e:
             self.logger.error(f"Failed to enable server reflection: {e}")
 
-    async def _register_services_async(self, server) -> int:
+    async def _register_services_async(self, server) -> tuple[int, list[str]]:
         """
         Discover and register services to async server.
 
@@ -662,7 +669,7 @@ class Command(BaseCommand):
             server: Async gRPC server instance
 
         Returns:
-            Number of services registered
+            Tuple of (number of services registered, list of service names)
         """
         try:
             from django_cfg.apps.integrations.grpc.services.discovery import discover_and_register_services
@@ -675,15 +682,15 @@ class Command(BaseCommand):
             # The discover_and_register_services() function is fast
             # (just imports and calls add_generic_rpc_handlers) so
             # running it synchronously is fine.
-            count = discover_and_register_services(server)
-            return count
+            count, service_names = discover_and_register_services(server)
+            return count, service_names
 
         except Exception as e:
             self.logger.error(f"Failed to register services: {e}", exc_info=True)
             self.stdout.write(
                 self.style.ERROR(f"Error registering services: {e}")
             )
-            return 0
+            return 0, []
 
     async def _heartbeat_loop(self, interval: int = 30):
         """

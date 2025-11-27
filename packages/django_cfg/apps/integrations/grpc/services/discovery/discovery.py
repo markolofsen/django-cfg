@@ -510,7 +510,7 @@ class ServiceDiscovery:
         return hooks
 
 
-def discover_and_register_services(server: Any) -> int:
+def discover_and_register_services(server: Any) -> Tuple[int, List[str]]:
     """
     Discover and register all gRPC services to a server.
 
@@ -518,7 +518,7 @@ def discover_and_register_services(server: Any) -> int:
         server: gRPC server instance
 
     Returns:
-        Number of services registered
+        Tuple of (number of services registered, list of full service names for reflection)
 
     Example:
         ```python
@@ -530,8 +530,8 @@ def discover_and_register_services(server: Any) -> int:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
         # Auto-discover and register services
-        count = discover_and_register_services(server)
-        print(f"Registered {count} services")
+        count, service_names = discover_and_register_services(server)
+        print(f"Registered {count} services: {service_names}")
 
         # Start server
         server.add_insecure_port('[::]:50051')
@@ -540,14 +540,43 @@ def discover_and_register_services(server: Any) -> int:
     """
     discovery = ServiceDiscovery()
     count = 0
+    service_names: List[str] = []
 
     # Try handlers hooks first (can be multiple)
+    # Handlers hooks return list of (service_class, add_to_server_func) tuples
+    # and may also return service names via grpc_service_name attribute
     handlers_hooks = discovery.get_handlers_hooks()
     for hook in handlers_hooks:
         try:
-            hook(server)
+            result = hook(server)
             logger.info(f"Successfully called handlers hook: {hook.__name__}")
-            count += 1  # We don't know exact count, but at least 1
+
+            # Try to extract service names from the result
+            # grpc_handlers() returns list of (service_class, add_to_server_func) tuples
+            if isinstance(result, list):
+                for item in result:
+                    if isinstance(item, tuple) and len(item) >= 1:
+                        service_class = item[0]
+                        # Try to get service name from class
+                        # Convention: SignalStreamingService -> signals.SignalStreamingService
+                        if hasattr(service_class, 'GRPC_SERVICE_NAME'):
+                            service_names.append(service_class.GRPC_SERVICE_NAME)
+                        elif hasattr(service_class, '__module__'):
+                            # Build service name from module and class
+                            # e.g. signals.SignalStreamingService
+                            module_parts = service_class.__module__.split('.')
+                            # Find the package name (usually first meaningful part)
+                            package = module_parts[0] if module_parts else 'unknown'
+                            # For apps like apps.telegram_spy.grpc.services.server
+                            # we want to use a cleaner name
+                            for part in module_parts:
+                                if part in ('signals', 'streaming', 'grpc'):
+                                    package = part
+                                    break
+                            full_name = f"{package}.{service_class.__name__}"
+                            service_names.append(full_name)
+                            logger.debug(f"Extracted service name: {full_name}")
+            count += 1
         except Exception as e:
             logger.error(f"Error calling handlers hook {hook.__name__}: {e}", exc_info=True)
 
@@ -562,6 +591,16 @@ def discover_and_register_services(server: Any) -> int:
             # Register with server
             add_to_server_func(servicer, server)
 
+            # Extract service name
+            if hasattr(service_class, 'GRPC_SERVICE_NAME'):
+                service_names.append(service_class.GRPC_SERVICE_NAME)
+            else:
+                # Build from module/class name
+                module_parts = service_class.__module__.split('.')
+                package = module_parts[0] if module_parts else 'unknown'
+                full_name = f"{package}.{service_class.__name__}"
+                service_names.append(full_name)
+
             logger.debug(f"Registered service: {service_class.__name__}")
             count += 1
 
@@ -571,8 +610,8 @@ def discover_and_register_services(server: Any) -> int:
                 exc_info=True,
             )
 
-    logger.info(f"Registered {count} gRPC service(s)")
-    return count
+    logger.info(f"Registered {count} gRPC service(s): {service_names}")
+    return count, service_names
 
 
 __all__ = ["ServiceDiscovery", "discover_and_register_services"]

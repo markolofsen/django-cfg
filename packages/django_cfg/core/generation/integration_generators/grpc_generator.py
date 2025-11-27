@@ -286,18 +286,18 @@ class GRPCSettingsGenerator:
         # 4. Add metrics interceptor in dev mode (executed LAST)
         if is_dev:
             interceptors.append(
-                "django_cfg.apps.integrations.grpc.interceptors.MetricsInterceptor"
+                "django_cfg.apps.integrations.grpc.services.interceptors.MetricsInterceptor"
             )
 
         # 3. Add logging interceptor in dev mode (executed 3rd)
         if is_dev:
             interceptors.append(
-                "django_cfg.apps.integrations.grpc.interceptors.LoggingInterceptor"
+                "django_cfg.apps.integrations.grpc.services.interceptors.LoggingInterceptor"
             )
 
         # 2. Add request logger interceptor (executed 2nd - needs context vars from auth)
         interceptors.append(
-            "django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor"
+            "django_cfg.apps.integrations.grpc.services.interceptors.RequestLoggerInterceptor"
         )
 
         # 1.5. Add Centrifugo interceptor (publishes events to Centrifugo/Telegram)
