@@ -1,1 +1,0 @@
-# Django CFG Sample Apps

@@ -1,0 +1,87 @@
+# ============================================================================
+# Django-CFG - Docker Build Context Exclusions
+# ============================================================================
+# Files excluded from Docker build context to reduce image size and avoid
+# conflicts during poetry dependency resolution
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ⚠️  IMPORTANT: Exclude poetry.lock to force fresh PyPI resolution
+# This prevents conflicts with local development paths in [tool.poetry.group.local]
+poetry.lock
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+tests/
+test_*.py
+*_test.py
+pytest.ini
+.pytest_cache/
+
+# Environment files (managed by docker-compose)
+.env.local
+.env.*.local
+
+# CRITICAL: Never include secrets in Docker images
+.env.secrets
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Media and static files
+media/
+staticfiles/
+
+# Exclude static folder but include nextjs_admin.zip
+static/
+!static/nextjs_admin.zip
+
+# Database files
+*.sqlite3
+*.db
+
+# Temporary files
+tmp/
+*.tmp

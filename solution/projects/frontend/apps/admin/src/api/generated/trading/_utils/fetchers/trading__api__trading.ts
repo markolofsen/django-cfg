@@ -1,0 +1,633 @@
+/**
+ * Typed fetchers for Trading
+ *
+ * Universal functions that work in any environment:
+ * - Next.js (App Router / Pages Router / Server Components)
+ * - React Native
+ * - Node.js backend
+ *
+ * These fetchers use Zod schemas for runtime validation.
+ *
+ * Usage:
+ * ```typescript
+ * // Configure API once (in your app entry point)
+ * import { configureAPI } from '../../api-instance'
+ * configureAPI({ baseUrl: 'https://api.example.com' })
+ *
+ * // Then use fetchers anywhere
+ * const users = await getUsers({ page: 1 })
+ *
+ * // With SWR
+ * const { data } = useSWR(['users', params], () => getUsers(params))
+ *
+ * // With React Query
+ * const { data } = useQuery(['users', params], () => getUsers(params))
+ *
+ * // In Server Component or SSR (pass custom client)
+ * import { API } from '../../index'
+ * const api = new API('https://api.example.com')
+ * const users = await getUsers({ page: 1 }, api)
+ * ```
+ */
+import { consola } from 'consola'
+import { OrderSchema, type Order } from '../schemas/Order.schema'
+import { OrderCreateSchema, type OrderCreate } from '../schemas/OrderCreate.schema'
+import { OrderCreateRequestSchema, type OrderCreateRequest } from '../schemas/OrderCreateRequest.schema'
+import { OrderRequestSchema, type OrderRequest } from '../schemas/OrderRequest.schema'
+import { PaginatedOrderListSchema, type PaginatedOrderList } from '../schemas/PaginatedOrderList.schema'
+import { PaginatedPortfolioListSchema, type PaginatedPortfolioList } from '../schemas/PaginatedPortfolioList.schema'
+import { PatchedOrderRequestSchema, type PatchedOrderRequest } from '../schemas/PatchedOrderRequest.schema'
+import { PortfolioSchema, type Portfolio } from '../schemas/Portfolio.schema'
+import { PortfolioStatsSchema, type PortfolioStats } from '../schemas/PortfolioStats.schema'
+import { getAPIInstance } from '../../api-instance'
+
+/**
+ * List orders
+ *
+ * @method GET
+ * @path /api/trading/orders/
+ */
+export async function getTradingOrdersList(  params?: { page?: number; page_size?: number },  client?: any
+): Promise<PaginatedOrderList> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.ordersList(params?.page, params?.page_size)
+  try {
+    return PaginatedOrderListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingOrdersList',
+      message: `Path: /api/trading/orders/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingOrdersList',
+            path: '/api/trading/orders/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Create order
+ *
+ * @method POST
+ * @path /api/trading/orders/
+ */
+export async function createTradingOrdersCreate(  data: OrderCreateRequest,  client?: any
+): Promise<OrderCreate> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.ordersCreate(data)
+  try {
+    return OrderCreateSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'createTradingOrdersCreate',
+      message: `Path: /api/trading/orders/\nMethod: POST`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'createTradingOrdersCreate',
+            path: '/api/trading/orders/',
+            method: 'POST',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get order
+ *
+ * @method GET
+ * @path /api/trading/orders/{id}/
+ */
+export async function getTradingOrdersRetrieve(  id: number,  client?: any
+): Promise<Order> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.ordersRetrieve(id)
+  try {
+    return OrderSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingOrdersRetrieve',
+      message: `Path: /api/trading/orders/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingOrdersRetrieve',
+            path: '/api/trading/orders/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * API operation
+ *
+ * @method PUT
+ * @path /api/trading/orders/{id}/
+ */
+export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest,  client?: any
+): Promise<Order> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.ordersUpdate(id, data)
+  try {
+    return OrderSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'updateTradingOrdersUpdate',
+      message: `Path: /api/trading/orders/{id}/\nMethod: PUT`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'updateTradingOrdersUpdate',
+            path: '/api/trading/orders/{id}/',
+            method: 'PUT',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * API operation
+ *
+ * @method PATCH
+ * @path /api/trading/orders/{id}/
+ */
+export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data?: PatchedOrderRequest,  client?: any
+): Promise<Order> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.ordersPartialUpdate(id, data)
+  try {
+    return OrderSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'partialUpdateTradingOrdersPartialUpdate',
+      message: `Path: /api/trading/orders/{id}/\nMethod: PATCH`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'partialUpdateTradingOrdersPartialUpdate',
+            path: '/api/trading/orders/{id}/',
+            method: 'PATCH',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * API operation
+ *
+ * @method DELETE
+ * @path /api/trading/orders/{id}/
+ */
+export async function deleteTradingOrdersDestroy(  id: number,  client?: any
+): Promise<void> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.ordersDestroy(id)
+  return response
+}
+
+
+/**
+ * List portfolios
+ *
+ * @method GET
+ * @path /api/trading/portfolios/
+ */
+export async function getTradingPortfoliosList(  params?: { page?: number; page_size?: number },  client?: any
+): Promise<PaginatedPortfolioList> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.portfoliosList(params?.page, params?.page_size)
+  try {
+    return PaginatedPortfolioListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosList',
+      message: `Path: /api/trading/portfolios/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosList',
+            path: '/api/trading/portfolios/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get portfolio
+ *
+ * @method GET
+ * @path /api/trading/portfolios/{id}/
+ */
+export async function getTradingPortfoliosRetrieve(  id: number,  client?: any
+): Promise<Portfolio> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.portfoliosRetrieve(id)
+  try {
+    return PortfolioSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosRetrieve',
+      message: `Path: /api/trading/portfolios/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosRetrieve',
+            path: '/api/trading/portfolios/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get my portfolio
+ *
+ * @method GET
+ * @path /api/trading/portfolios/me/
+ */
+export async function getTradingPortfoliosMeRetrieve(  client?: any
+): Promise<Portfolio> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.portfoliosMeRetrieve()
+  try {
+    return PortfolioSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosMeRetrieve',
+      message: `Path: /api/trading/portfolios/me/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosMeRetrieve',
+            path: '/api/trading/portfolios/me/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get portfolio statistics
+ *
+ * @method GET
+ * @path /api/trading/portfolios/stats/
+ */
+export async function getTradingPortfoliosStatsRetrieve(  client?: any
+): Promise<PortfolioStats> {
+  const api = client || getAPIInstance()
+  const response = await api.trading_trading.portfoliosStatsRetrieve()
+  try {
+    return PortfolioStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getTradingPortfoliosStatsRetrieve',
+      message: `Path: /api/trading/portfolios/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getTradingPortfoliosStatsRetrieve',
+            path: '/api/trading/portfolios/stats/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+

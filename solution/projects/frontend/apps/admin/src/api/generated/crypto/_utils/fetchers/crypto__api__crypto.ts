@@ -1,0 +1,489 @@
+/**
+ * Typed fetchers for Crypto
+ *
+ * Universal functions that work in any environment:
+ * - Next.js (App Router / Pages Router / Server Components)
+ * - React Native
+ * - Node.js backend
+ *
+ * These fetchers use Zod schemas for runtime validation.
+ *
+ * Usage:
+ * ```typescript
+ * // Configure API once (in your app entry point)
+ * import { configureAPI } from '../../api-instance'
+ * configureAPI({ baseUrl: 'https://api.example.com' })
+ *
+ * // Then use fetchers anywhere
+ * const users = await getUsers({ page: 1 })
+ *
+ * // With SWR
+ * const { data } = useSWR(['users', params], () => getUsers(params))
+ *
+ * // With React Query
+ * const { data } = useQuery(['users', params], () => getUsers(params))
+ *
+ * // In Server Component or SSR (pass custom client)
+ * import { API } from '../../index'
+ * const api = new API('https://api.example.com')
+ * const users = await getUsers({ page: 1 }, api)
+ * ```
+ */
+import { consola } from 'consola'
+import { CoinSchema, type Coin } from '../schemas/Coin.schema'
+import { CoinStatsSchema, type CoinStats } from '../schemas/CoinStats.schema'
+import { ExchangeSchema, type Exchange } from '../schemas/Exchange.schema'
+import { PaginatedCoinListListSchema, type PaginatedCoinListList } from '../schemas/PaginatedCoinListList.schema'
+import { PaginatedExchangeListSchema, type PaginatedExchangeList } from '../schemas/PaginatedExchangeList.schema'
+import { PaginatedWalletListSchema, type PaginatedWalletList } from '../schemas/PaginatedWalletList.schema'
+import { WalletSchema, type Wallet } from '../schemas/Wallet.schema'
+import { getAPIInstance } from '../../api-instance'
+
+/**
+ * List coins
+ *
+ * @method GET
+ * @path /api/crypto/coins/
+ */
+export async function getCryptoCoinsList(  params?: { page?: number; page_size?: number },  client?: any
+): Promise<PaginatedCoinListList> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.coinsList(params?.page, params?.page_size)
+  try {
+    return PaginatedCoinListListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoCoinsList',
+      message: `Path: /api/crypto/coins/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoCoinsList',
+            path: '/api/crypto/coins/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get coin details
+ *
+ * @method GET
+ * @path /api/crypto/coins/{id}/
+ */
+export async function getCryptoCoinsRetrieve(  id: number,  client?: any
+): Promise<Coin> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.coinsRetrieve(id)
+  try {
+    return CoinSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoCoinsRetrieve',
+      message: `Path: /api/crypto/coins/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoCoinsRetrieve',
+            path: '/api/crypto/coins/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get coin statistics
+ *
+ * @method GET
+ * @path /api/crypto/coins/stats/
+ */
+export async function getCryptoCoinsStatsRetrieve(  client?: any
+): Promise<CoinStats> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.coinsStatsRetrieve()
+  try {
+    return CoinStatsSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoCoinsStatsRetrieve',
+      message: `Path: /api/crypto/coins/stats/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoCoinsStatsRetrieve',
+            path: '/api/crypto/coins/stats/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * List exchanges
+ *
+ * @method GET
+ * @path /api/crypto/exchanges/
+ */
+export async function getCryptoExchangesList(  params?: { page?: number; page_size?: number },  client?: any
+): Promise<PaginatedExchangeList> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.exchangesList(params?.page, params?.page_size)
+  try {
+    return PaginatedExchangeListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoExchangesList',
+      message: `Path: /api/crypto/exchanges/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoExchangesList',
+            path: '/api/crypto/exchanges/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get exchange details
+ *
+ * @method GET
+ * @path /api/crypto/exchanges/{slug}/
+ */
+export async function getCryptoExchangesRetrieve(  slug: string,  client?: any
+): Promise<Exchange> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.exchangesRetrieve(slug)
+  try {
+    return ExchangeSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoExchangesRetrieve',
+      message: `Path: /api/crypto/exchanges/{slug}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoExchangesRetrieve',
+            path: '/api/crypto/exchanges/{slug}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * List wallets
+ *
+ * @method GET
+ * @path /api/crypto/wallets/
+ */
+export async function getCryptoWalletsList(  params?: { page?: number; page_size?: number },  client?: any
+): Promise<PaginatedWalletList> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.walletsList(params?.page, params?.page_size)
+  try {
+    return PaginatedWalletListSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoWalletsList',
+      message: `Path: /api/crypto/wallets/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoWalletsList',
+            path: '/api/crypto/wallets/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+
+/**
+ * Get wallet details
+ *
+ * @method GET
+ * @path /api/crypto/wallets/{id}/
+ */
+export async function getCryptoWalletsRetrieve(  id: string,  client?: any
+): Promise<Wallet> {
+  const api = client || getAPIInstance()
+  const response = await api.crypto_crypto.walletsRetrieve(id)
+  try {
+    return WalletSchema.parse(response)
+  } catch (error) {
+    // Zod validation error - log detailed information
+    consola.error('❌ Zod Validation Failed');
+    consola.box({
+      title: 'getCryptoWalletsRetrieve',
+      message: `Path: /api/crypto/wallets/{id}/\nMethod: GET`,
+      style: {
+        borderColor: 'red',
+        borderStyle: 'rounded'
+      }
+    });
+
+    if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
+      consola.error('Validation Issues:');
+      (error as any).issues.forEach((issue: any, index: number) => {
+        consola.error(`  ${index + 1}. ${issue.path.join('.') || 'root'}`);
+        consola.error(`     ├─ Message: ${issue.message}`);
+        if (issue.expected) consola.error(`     ├─ Expected: ${issue.expected}`);
+        if (issue.received) consola.error(`     └─ Received: ${issue.received}`);
+      });
+    }
+
+    consola.error('Response data:', response);
+
+    // Dispatch browser CustomEvent (only if window is defined)
+    if (typeof window !== 'undefined' && error instanceof Error && 'issues' in error) {
+      try {
+        const event = new CustomEvent('zod-validation-error', {
+          detail: {
+            operation: 'getCryptoWalletsRetrieve',
+            path: '/api/crypto/wallets/{id}/',
+            method: 'GET',
+            error: error,
+            response: response,
+            timestamp: new Date(),
+          },
+          bubbles: true,
+          cancelable: false,
+        });
+        window.dispatchEvent(event);
+      } catch (eventError) {
+        // Silently fail - event dispatch should never crash the app
+        consola.warn('Failed to dispatch validation error event:', eventError);
+      }
+    }
+
+    // Re-throw the error
+    throw error;
+  }
+}
+
+

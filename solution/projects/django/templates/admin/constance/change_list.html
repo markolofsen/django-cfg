@@ -1,0 +1,109 @@
+{% extends "admin/base_site.html" %}
+
+{% load admin_list static i18n %}
+
+{% block extrahead %}
+    {% url 'admin:jsi18n' as jsi18nurl %}
+    <script type="text/javascript" src="{{ jsi18nurl|default:'../../jsi18n/' }}"></script>
+    {{ block.super }}
+    {{ media.js }}
+    <script type="text/javascript" src="{% static 'admin/js/constance.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="bg-base-50 border border-base-200 rounded-default px-4 py-3 mb-6 dark:bg-base-800 dark:border-base-700">
+        <h3 class="font-semibold text-sm mb-2 text-font-important-light dark:text-font-important-dark">About Django Constance</h3>
+        <p class="text-sm text-font-default-light dark:text-font-default-dark leading-relaxed">
+            Django Constance integration in django-cfg allows you to define runtime configuration fields directly in your <code class="bg-base-100 px-1.5 py-0.5 rounded text-xs dark:bg-base-700">config.py</code> using <code class="bg-base-100 px-1.5 py-0.5 rounded text-xs dark:bg-base-700">ConstanceConfig</code> and <code class="bg-base-100 px-1.5 py-0.5 rounded text-xs dark:bg-base-700">ConstanceField</code>. Fields are automatically registered at Django startup and grouped into collapsible fieldsets. All settings are stored in the database and can be modified at runtime without restarting the application.
+        </p>
+    </div>
+
+    <style>
+        /* Custom Constance table styles for text wrapping */
+        .constance table {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+        .constance table tbody td,
+        .constance table tbody th {
+            word-break: break-word;
+            vertical-align: top;
+        }
+
+        /* Constrain width of input/textarea/select fields inside table */
+        .constance table input,
+        .constance table textarea,
+        .constance table select {
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box;
+        }
+
+        .constance table textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Constrain width of wrapper div for input fields */
+        .constance table td > div {
+            max-width: 100% !important;
+        }
+
+        /* Fix label/span overflow - allow wrapping */
+        .constance table td span {
+            white-space: normal !important;
+            display: inline !important;
+            max-width: 100%;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+    </style>
+    <div id="content-main" class="constance">
+        <div id="changelist" class="flex flex-col gap-8 w-full">
+            <form id="changelist-form" action="" method="post" enctype="multipart/form-data" novalidate class="flex flex-col gap-8 w-full">
+                {% csrf_token %}
+
+                {% include "unfold/helpers/form_errors.html" with errors=form.non_field_errors %}
+
+                {% for field in form.hidden_fields %}
+                    {{ field }}
+                {% endfor %}
+
+                <div class="border border-base-200 rounded-default overflow-x-auto simplebar-horizontal-scrollbar-top dark:border-base-800" data-simplebar data-simplebar-auto-hide="false">
+                    <table class="w-full border-collapse">
+                        <colgroup>
+                            <col style="width: 18%;">  <!-- Name -->
+                            <col style="width: 35%;">  <!-- Value -->
+                            <col style="width: 18%;">  <!-- Default -->
+                            <col style="width: 15%;">  <!-- Code -->
+                            <col style="width: 8%;">   <!-- Modified -->
+                            <col style="width: 6%;">   <!-- Actions -->
+                        </colgroup>
+
+                        {% if fieldsets %}
+                            {% for fieldset in fieldsets %}
+                                {% with config_values=fieldset.config_values %}
+                                    {% include "admin/constance/includes/results_list.html" %}
+                                {% endwith %}
+                            {% endfor %}
+                        {% else %}
+                            {% include "admin/constance/includes/results_list.html" %}
+                        {% endif %}
+
+                        <tfoot>
+                            <tr>
+                                <td class="border-t border-base-200 px-3 py-2 dark:border-base-800" colspan="100%">
+                                    <div class="flex justify-end">
+                                        {% trans "Save" as title %}
+                                        {% include "unfold/helpers/submit.html" with title=title %}
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

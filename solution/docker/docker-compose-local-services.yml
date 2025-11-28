@@ -1,0 +1,132 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG - Local Services (Centrifugo, Redis, RQ)
+# ═════════════════════════════════════════════════════════════════
+# Run Centrifugo + Redis + RQ for development/testing
+
+name: djangocfg-services
+
+services:
+  # Redis for ACK tracking, caching, and task queue
+  redis:
+    image: redis:7-alpine
+    container_name: djangocfg_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --databases 16
+    ports:
+      - "7379:6379"  # Different port to avoid conflicts with main Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - services-network
+    volumes:
+      - redis_data:/data
+
+  # Centrifugo WebSocket server
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: djangocfg_centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    environment:
+      # Only Centrifugo-specific variables (no CENTRIFUGO__ prefixed vars)
+      CENTRIFUGO_API_KEY: centrifugo-api-key-change-in-production-min-32-chars
+      CENTRIFUGO_TOKEN_HMAC_SECRET: django-secret-key-change-in-production-at-least-32-chars
+      CENTRIFUGO_ADMIN_PASSWORD: admin
+      CENTRIFUGO_ADMIN_SECRET: admin-secret-change-in-production
+      CENTRIFUGO_LOG_LEVEL: info
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    ports:
+      - "8120:8000"  # Centrifugo (Universal dev port across all projects)
+    networks:
+      - services-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  # RQ Worker (Background tasks processor)
+  # Note: This requires Django project to be available
+  # Alternative: run `python manage.py rqworker` from Django project directly
+  rq_worker:
+    build:
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    container_name: djangocfg_rq_worker
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw
+    networks:
+      - services-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: poetry run python manage.py rqworker default high low knowledge
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # RQ Scheduler (Scheduled Tasks - Cron-like)
+  rq_scheduler:
+    build:
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    container_name: djangocfg_rq_scheduler
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw
+    networks:
+      - services-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: poetry run python manage.py rqscheduler
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # RQ Dashboard is integrated into Django Admin Next.js UI
+  # No separate web UI needed - access it via Django Admin at /cfg/admin/
+
+networks:
+  services-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

@@ -1,0 +1,18 @@
+# Persistent volumes - ignore completely
+volumes/
+
+# Runtime files and logs
+files/
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

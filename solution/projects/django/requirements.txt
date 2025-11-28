@@ -1,0 +1,23 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ⚠️  THIS PROJECT USES POETRY - NO INSTALLATION NEEDED
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ❌ DO NOT use pip install -r requirements.txt
+# ❌ DO NOT use poetry install
+# ❌ DO NOT manually install dependencies
+#
+# ✅ Everything is ALREADY installed and configured
+# ✅ All dependencies are managed in: pyproject.toml
+#
+# 📋 JUST RUN YOUR COMMANDS:
+#
+#   poetry run python manage.py migrate
+#   poetry run python manage.py runserver
+#   poetry run python manage.py createsuperuser
+#   poetry run pytest
+#
+# 🔗 NEED LOCAL DJANGO-CFG LINKING? (only if required)
+#
+#   make install-local
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

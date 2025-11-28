@@ -19,7 +19,7 @@
 
 **Type-safe configuration** • **Next.js Admin** • **gRPC Streaming** • **Real-time WebSockets** • **AI Agents** • **8 Enterprise Apps**
 
-**[🎯 Live Demo](http://demo.djangocfg.com)** • **[📚 Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[🐙 GitHub](https://github.com/markolofsen/django-cfg)**
+**[🎯 Live Demo](https://djangocfg.com/demo)** • **[📚 Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[🐙 GitHub](https://github.com/markolofsen/django-cfg)**
 
 </div>
 
@@ -101,7 +101,7 @@ pip install django-cfg[grpc,centrifugo,rq]
 
 **See Django-CFG in action:**
 
-**[→ http://demo.djangocfg.com](http://demo.djangocfg.com)**
+**[→ https://djangocfg.com/demo](https://djangocfg.com/demo)**
 
 **Demo credentials:**
 - **Admin:** `admin@example.com` / `admin123`
@@ -505,7 +505,7 @@ class ProductionConfig(DjangoConfig):
 - 💬 **[Discussions](https://github.com/markolofsen/django-cfg/discussions)** - Community support
 
 ### Links
-- **[🎯 Live Demo](http://demo.djangocfg.com)** - See it in action
+- **[🎯 Live Demo](https://djangocfg.com/demo)** - See it in action
 - **[📦 PyPI](https://pypi.org/project/django-cfg/)** - Package repository
 - **[📚 Documentation](https://djangocfg.com/docs)** - Complete guides
 
@@ -529,6 +529,6 @@ Django-CFG is the modern Django framework for enterprise applications. Built wit
 
 ---
 
-**Get Started:** **[Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[Live Demo](http://demo.djangocfg.com)** • **[GitHub](https://github.com/markolofsen/django-cfg)**
+**Get Started:** **[Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[Live Demo](https://djangocfg.com/demo)** • **[GitHub](https://github.com/markolofsen/django-cfg)**
 
 </div>

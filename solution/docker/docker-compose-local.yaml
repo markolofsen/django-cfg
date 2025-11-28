@@ -1,0 +1,264 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG - Monolithic Docker Compose
+# ═════════════════════════════════════════════════════════════════
+# All services +100 ports (compared to StockAPIs)
+
+name: djangocfg
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # Infrastructure
+  # ─────────────────────────────────────────────────────────────────
+
+  traefik:
+    image: traefik:v2.11
+    container_name: djangocfg_traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=djangocfg_djangocfg-network"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websocket.address=:8081"
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+    ports:
+      - "7330:80"         # HTTP (Django-CFG: base 7300 +30)
+      - "7331:443"        # HTTPS (+31)
+      - "7333:8081"       # WebSocket (+33)
+      - "7332:8080"       # Dashboard (+32)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - djangocfg-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=web"
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: djangocfg_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - ../../volumes/postgres:/var/lib/postgresql/data
+      - ./services/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - djangocfg_django_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: djangocfg_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --databases 3
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - djangocfg_django_network
+
+  # ─────────────────────────────────────────────────────────────────
+  # Backend Services
+  # ─────────────────────────────────────────────────────────────────
+
+  django:
+    build:
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    image: djangocfg-django:latest
+    container_name: django
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      # Django Core
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw  # Mount Django code for hot-reload
+      - ../../volumes/django/media:/app/media:rw
+    ports:
+      - "7301:8000"  # Django-CFG: base 7300 (+01 Django API)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - djangocfg-network
+      - djangocfg_django_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.djangocfg-api.rule=Host(`api.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-api.entrypoints=web"
+      - "traefik.http.routers.djangocfg-api.service=djangocfg-api"
+      - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
+
+  # RQ Worker (Background Tasks Processor)
+  # Optional: uncomment to run locally, or use docker-compose-local-services.yml
+  # rq-worker:
+  #   image: djangocfg-django:latest
+  #   container_name: djangocfg_rq_worker
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env.local
+  #   environment:
+  #     DJANGO_SETTINGS_MODULE: api.settings
+  #   volumes:
+  #     - ../projects/django:/app:rw  # Mount Django code
+  #     - ../../volumes/django/media:/app/media:rw
+  #   depends_on:
+  #     django:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   command: poetry run python manage.py rqworker default high low knowledge
+  #   networks:
+  #     - djangocfg-network
+  #     - djangocfg_django_network
+
+  # RQ Scheduler (Scheduled Tasks - Cron-like)
+  # Optional: uncomment to run scheduled tasks locally
+  # rq-scheduler:
+  #   image: djangocfg-django:latest
+  #   container_name: djangocfg_rq_scheduler
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env.local
+  #   environment:
+  #     DJANGO_SETTINGS_MODULE: api.settings
+  #   volumes:
+  #     - ../projects/django:/app:rw  # Mount Django code
+  #     - ../../volumes/django/media:/app/media:rw
+  #   depends_on:
+  #     django:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   command: poetry run python manage.py rqscheduler
+  #   networks:
+  #     - djangocfg-network
+  #     - djangocfg_django_network
+
+  # For separate RQ services, use: docker-compose-local-services.yml
+  # docker compose -f docker-compose-local-services.yml up -d
+
+  # gRPC Server (Django gRPC Service)
+  grpc:
+    image: djangocfg-django:latest
+    container_name: djangocfg_grpc
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - ../projects/django:/app:rw  # Mount Django code for hot-reload
+      - ../../volumes/django/media:/app/media:rw
+    depends_on:
+      django:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: poetry run python manage.py rungrpc
+    ports:
+      - "7351:50051"  # Django-CFG: base 7300 (+51 gRPC)
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rungrpc > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - djangocfg-network
+      - djangocfg_django_network
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: djangocfg_centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    env_file:
+      - .env.local
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    ports:
+      - "8120:8000"  # Centrifugo (Universal dev port across all projects)
+    networks:
+      - djangocfg-network        # For local Traefik (development)
+      - djangocfg_django_network # For Redis access
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.djangocfg-centrifugo.rule=Host(`ws.localhost`)"
+      - "traefik.http.routers.djangocfg-centrifugo.entrypoints=web"
+      - "traefik.http.routers.djangocfg-centrifugo.service=djangocfg-centrifugo"
+      - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Frontend Services
+  # ─────────────────────────────────────────────────────────────────
+  # NOTE: Frontend services removed from local compose for faster development
+  # Run frontend locally instead:
+  #   cd ../projects/frontend/apps/admin && npm run dev  # Demo on :3000
+  #   cd ../projects/web && npm run dev                   # Docs on :3001
+
+# ═════════════════════════════════════════════════════════════════
+# Networks
+# ═════════════════════════════════════════════════════════════════
+
+networks:
+  djangocfg-network:
+    driver: bridge
+  djangocfg_django_network:
+    driver: bridge
+    internal: true
+
+# ═════════════════════════════════════════════════════════════════
+# Local volumes - no named volumes needed
+# ═════════════════════════════════════════════════════════════════

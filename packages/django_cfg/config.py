@@ -46,7 +46,7 @@ def is_feature_available(feature: str) -> bool:
 LIB_NAME = "django-cfg"
 LIB_SITE_URL = "https://djangocfg.com"
 LIB_GITHUB_URL = "https://github.com/django-cfg/django-cfg"
-LIB_SUPPORT_URL = "https://demo.djangocfg.com"
+LIB_SUPPORT_URL = "https://djangocfg.com/demo"
 LIB_HEALTH_URL = "/cfg/health/"
 
 
