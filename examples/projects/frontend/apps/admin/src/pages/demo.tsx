@@ -1,9 +1,9 @@
-import { AdminView } from "@/views";
+import { DashboardView } from "@/views";
 import { PageWithLayout } from "@djangocfg/layouts";
 
 const View: PageWithLayout = () => {
   return (
-      <AdminView />
+      <DashboardView />
   );
 };
 

@@ -191,13 +191,42 @@ services:
       - "traefik.http.routers.djangocfg-centrifugo.tls=true"
       - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
 
-  # Frontend
-  frontend:
+  # Frontend Admin (demo.djangocfg.com) - DISABLED
+  # frontend:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/services/frontend/Dockerfile.admin
+  #   image: django-cfg-frontend:latest
+  #   container_name: django-cfg-frontend
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env.prod
+  #   environment:
+  #     NODE_ENV: production
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '1.0'
+  #         memory: 512M
+  #       reservations:
+  #         memory: 128M
+  #   networks:
+  #     - dokploy-network
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.docker.network=dokploy-network"
+  #     - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
+  #     - "traefik.http.routers.djangocfg-demo.entrypoints=websecure"
+  #     - "traefik.http.routers.djangocfg-demo.tls=true"
+  #     - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
+
+  # Docs (djangocfg.com)
+  docs:
     build:
       context: ..
-      dockerfile: docker/services/frontend/Dockerfile.admin
-    image: django-cfg-frontend:latest
-    container_name: django-cfg-frontend
+      dockerfile: docker/services/frontend/Dockerfile.docs
+    image: django-cfg-docs:latest
+    container_name: django-cfg-docs
     restart: unless-stopped
     env_file:
       - .env.prod
@@ -215,10 +244,15 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
-      - "traefik.http.routers.djangocfg-demo.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-demo.tls=true"
-      - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
+      - "traefik.http.routers.djangocfg-docs.rule=Host(`djangocfg.com`) || Host(`www.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-docs.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-docs.tls=true"
+      - "traefik.http.services.djangocfg-docs.loadbalancer.server.port=3000"
+      # Redirect www to non-www
+      - "traefik.http.middlewares.djangocfg-www-redirect.redirectregex.regex=^https://www\\.djangocfg\\.com/(.*)"
+      - "traefik.http.middlewares.djangocfg-www-redirect.redirectregex.replacement=https://djangocfg.com/$${1}"
+      - "traefik.http.middlewares.djangocfg-www-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.djangocfg-docs.middlewares=djangocfg-www-redirect"
 
   # RQ Dashboard is integrated into Django Admin Next.js UI
   # Access it at: https://api.djangocfg.com/cfg/admin/ → RQ tab

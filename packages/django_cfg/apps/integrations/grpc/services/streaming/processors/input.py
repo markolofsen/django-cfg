@@ -10,6 +10,7 @@ Phase: Phase 1 - Universal Components (Refactored)
 
 import asyncio
 import logging
+import traceback
 from typing import AsyncIterator, Optional, Any
 import grpc
 
@@ -140,6 +141,11 @@ class InputProcessor:
                 logger.info("Starting async for loop")
 
             async for message in request_iterator:
+                # DEBUG: Log every received message
+                msg_type = message.WhichOneof('payload') if hasattr(message, 'WhichOneof') else 'unknown'
+                print(f"\n📥📥📥 [INPUT_PROCESSOR] Received message type={msg_type}", flush=True)
+                logger.info(f"📥 [INPUT_PROCESSOR] Received message type={msg_type}")
+
                 # Extract client ID from first message
                 if is_first_message:
                     client_id = self.extract_client_id(message)
@@ -223,7 +229,11 @@ class InputProcessor:
 
         except Exception as e:
             if self.enable_logging:
-                logger.error(f"Input stream error for client {client_id}: {e}", exc_info=True)
+                logger.error(
+                    f"❌ [INPUT_PROCESSOR] Input stream error for client {client_id}:\n"
+                    f"   Error: {type(e).__name__}: {e}\n"
+                    f"   Traceback:\n{traceback.format_exc()}"
+                )
             raise
 
         return client_id
@@ -352,7 +362,11 @@ class InputProcessor:
 
         except Exception as e:
             if self.enable_logging:
-                logger.error(f"Input stream error for client {client_id}: {e}", exc_info=True)
+                logger.error(
+                    f"❌ [INPUT_PROCESSOR] Input stream error (anext) for client {client_id}:\n"
+                    f"   Error: {type(e).__name__}: {e}\n"
+                    f"   Traceback:\n{traceback.format_exc()}"
+                )
             raise
 
         return client_id

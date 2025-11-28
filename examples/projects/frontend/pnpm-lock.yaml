@@ -26,25 +26,25 @@ importers:
     dependencies:
       '@djangocfg/api':
         specifier: latest
-        version: 1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
+        version: 1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
       '@djangocfg/centrifugo':
         specifier: latest
-        version: 1.4.27(@djangocfg/layouts@1.4.27(yqpwadamq3ju7mtudnyzpyl7de))(@djangocfg/ui@1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13))(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 1.4.28(@djangocfg/layouts@1.4.28(ubdwoqj2okkv3dwd6wv2qeio54))(@djangocfg/ui@1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13))(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@djangocfg/imgai':
         specifier: latest
-        version: 1.0.13
+        version: 1.0.14
       '@djangocfg/layouts':
         specifier: ^1.4.1
-        version: 1.4.27(yqpwadamq3ju7mtudnyzpyl7de)
+        version: 1.4.28(ubdwoqj2okkv3dwd6wv2qeio54)
       '@djangocfg/markdown':
         specifier: latest
-        version: 1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
+        version: 1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
       '@djangocfg/og-image':
         specifier: latest
-        version: 1.4.27(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
+        version: 1.4.28(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
       '@djangocfg/ui':
         specifier: latest
-        version: 1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
+        version: 1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.65.0(react@19.1.0))
@@ -93,7 +93,7 @@ importers:
     devDependencies:
       '@djangocfg/typescript-config':
         specifier: latest
-        version: 1.4.27
+        version: 1.4.28
       '@next/bundle-analyzer':
         specifier: ^16.0.1
         version: 16.0.5
@@ -178,8 +178,8 @@ packages:
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
 
-  '@djangocfg/api@1.4.27':
-    resolution: {integrity: sha512-UosPCqtDjokRioz59b0LiJzp8CyzUyvmBFSs/MoskesjKQYU0gTBl+cETJ8LKQZR1evlFRaY0IIOdDo+mDYu0g==}
+  '@djangocfg/api@1.4.28':
+    resolution: {integrity: sha512-4XaCzdjvInCoFecuL9ivcVKRko2G8TrREkgTOn2BYGgxjbbbGWfBQYDPRAw+BQTiHVYSXpchzczPKStrvEf/rg==}
     engines: {node: '>=20.11.1'}
     peerDependencies:
       consola: ^3.4.2
@@ -190,27 +190,27 @@ packages:
       swr: ^2.3.0
       zod: ^4.0.10
 
-  '@djangocfg/centrifugo@1.4.27':
-    resolution: {integrity: sha512-jutebmdfChomIPnfWF6yY5AlHP/c/v/8jovG4HLlRxPiZqMFG3ogOgIS4LWwkDn0x65i7oYWJ+uXk8/xDB97SA==}
+  '@djangocfg/centrifugo@1.4.28':
+    resolution: {integrity: sha512-S++nucUn7FdMfu9fpfWHyr5m1y2p48fAmhlOMSM1y0+6MxuutqoQmsQ/4qPQ6H/vlrMI7+7kvgImPI6mJE0O9Q==}
     peerDependencies:
-      '@djangocfg/layouts': ^1.4.27
-      '@djangocfg/ui': ^1.4.27
+      '@djangocfg/layouts': ^1.4.28
+      '@djangocfg/ui': ^1.4.28
       consola: ^3.4.2
       lucide-react: ^0.468.0
       moment: ^2.30.1
       react: 19.1.0
       react-dom: 19.1.0
 
-  '@djangocfg/imgai@1.0.13':
-    resolution: {integrity: sha512-gLPV2wJa+/KywLA/q+PviOVlVQAJOMfMNeJK+F/3ZuwK6DeZ/qV8yqR88vpDxgDWId+HcHbGy6vw/bw2bwCLJQ==}
+  '@djangocfg/imgai@1.0.14':
+    resolution: {integrity: sha512-KN0e634j3qHCUDxFxCMliKk/m0yktp+fkmfnLcxnNmSkmT82JAI4vPhX5M/36mQ+JDFiXIEU6oWETQTPmVtHew==}
     hasBin: true
 
-  '@djangocfg/layouts@1.4.27':
-    resolution: {integrity: sha512-P+x/9GpIUn/6fotTgyfGhaDLX1hT/0LJ1c91RPvJS+zfxySpJlcJNZB+1RyL63Ac25F29zQfF96OEQo8fpQCOA==}
+  '@djangocfg/layouts@1.4.28':
+    resolution: {integrity: sha512-wQbzAcKcflo/ryEehyk61bdBc15noWKvZCbb5vhKBvBxJ7FExcMKGsAQMSNLA8Ma+gxUqtLjBFlcOXkJpv5qVA==}
     peerDependencies:
-      '@djangocfg/api': ^1.4.27
-      '@djangocfg/og-image': ^1.4.27
-      '@djangocfg/ui': ^1.4.27
+      '@djangocfg/api': ^1.4.28
+      '@djangocfg/og-image': ^1.4.28
+      '@djangocfg/ui': ^1.4.28
       '@hookform/resolvers': ^5.2.0
       consola: ^3.4.2
       lucide-react: ^0.468.0
@@ -225,27 +225,27 @@ packages:
       tailwindcss-animate: ^1.0.7
       zod: ^4.0.10
 
-  '@djangocfg/markdown@1.4.27':
-    resolution: {integrity: sha512-e8U/clZGGgNDTRuhDCdKs+HalVE6AD/H90XUVjLqREQbA8aGopNZWic1/SjuqQYuGinxh6CQhKVKTl+gaHetCA==}
+  '@djangocfg/markdown@1.4.28':
+    resolution: {integrity: sha512-gWUhUocfVbFyChig6QOdumap25HDmpfqCTonNpaO2UMDAcXjujnXv8SahbZLnD+1Sj9MwKMiJKB3WZIO0mgZTQ==}
     engines: {node: '>=20.11.1'}
     peerDependencies:
       next: 15.5.4
       react: 19.1.0
       react-dom: 19.1.0
 
-  '@djangocfg/og-image@1.4.27':
-    resolution: {integrity: sha512-GgoROxnmp1tQBEoTe1nMYUqJSiDE4g1laNOK7E8lBL139rkWf9flRAJL12C+MmGq1elLNMbM6miDT/A7aGCcUw==}
+  '@djangocfg/og-image@1.4.28':
+    resolution: {integrity: sha512-bV4I5+AQS4zEfLOxjGDV5tYsTS9FQamMFMXS2wjemWkGgd/OYIsry3qBnbcoD1xOPt3l9SivWD8d1KtchEiOKQ==}
     peerDependencies:
       next: '>=13.0.0'
       react: 19.1.0
 
-  '@djangocfg/typescript-config@1.4.27':
-    resolution: {integrity: sha512-UKJfzcPbrs4nQG69oGdp0G0ZriIRHj9oUg171KQb4fdaoIo6FQ5CfEAT2wNQlvBZbaL2cAK6qe9NCpTverg24Q==}
+  '@djangocfg/typescript-config@1.4.28':
+    resolution: {integrity: sha512-qKl/OAROAFndZBSTKCoAEroEJgVqWPTkePBuLhuVgH/jLF30l7tIkFVlSxyt7wLgrkW9ZienCMsuq6+tfBQyXg==}
 
-  '@djangocfg/ui@1.4.27':
-    resolution: {integrity: sha512-OUxVmr48y9jOkIJtD+NZaX+wliWLXhsfUST8dsAbUnZU/3ja6la69FShvNYXve3Ust8r9eyeK8C3YBS9/aphww==}
+  '@djangocfg/ui@1.4.28':
+    resolution: {integrity: sha512-wWKYyrFLo4qBJ2quDxqU7x2dO549OJr4yO5XtkqztIMfELTDBqtHeWxbBDjcjLUFNyjQHJqXxJzUX3AVmTIxRA==}
     peerDependencies:
-      '@djangocfg/api': ^1.4.27
+      '@djangocfg/api': ^1.4.28
       consola: ^3.4.2
       lucide-react: ^0.468.0
       moment: ^2.30.1
@@ -4782,7 +4782,7 @@ snapshots:
 
   '@discoveryjs/json-ext@0.5.7': {}
 
-  '@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)':
+  '@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)':
     dependencies:
       consola: 3.4.2
       moment: 2.30.1
@@ -4792,10 +4792,10 @@ snapshots:
       swr: 2.3.6(react@19.1.0)
       zod: 4.1.13
 
-  '@djangocfg/centrifugo@1.4.27(@djangocfg/layouts@1.4.27(yqpwadamq3ju7mtudnyzpyl7de))(@djangocfg/ui@1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13))(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@djangocfg/centrifugo@1.4.28(@djangocfg/layouts@1.4.28(ubdwoqj2okkv3dwd6wv2qeio54))(@djangocfg/ui@1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13))(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
-      '@djangocfg/layouts': 1.4.27(yqpwadamq3ju7mtudnyzpyl7de)
-      '@djangocfg/ui': 1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
+      '@djangocfg/layouts': 1.4.28(ubdwoqj2okkv3dwd6wv2qeio54)
+      '@djangocfg/ui': 1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
       centrifuge: 5.5.2
       consola: 3.4.2
       lucide-react: 0.545.0(react@19.1.0)
@@ -4803,7 +4803,7 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@djangocfg/imgai@1.0.13':
+  '@djangocfg/imgai@1.0.14':
     dependencies:
       '@anthropic-ai/sdk': 0.32.1
       chalk: 5.6.2
@@ -4820,11 +4820,11 @@ snapshots:
       - encoding
       - ws
 
-  '@djangocfg/layouts@1.4.27(yqpwadamq3ju7mtudnyzpyl7de)':
+  '@djangocfg/layouts@1.4.28(ubdwoqj2okkv3dwd6wv2qeio54)':
     dependencies:
-      '@djangocfg/api': 1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
-      '@djangocfg/og-image': 1.4.27(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
-      '@djangocfg/ui': 1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
+      '@djangocfg/api': 1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
+      '@djangocfg/og-image': 1.4.28(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
+      '@djangocfg/ui': 1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.65.0(react@19.1.0))
       '@vidstack/react': 0.6.15(@types/react@19.2.2)(maverick.js@0.37.0)(react@19.1.0)(vidstack@0.6.15)
       consola: 3.4.2
@@ -4845,9 +4845,9 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@djangocfg/markdown@1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)':
+  '@djangocfg/markdown@1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)':
     dependencies:
-      '@djangocfg/ui': 1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.469.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
+      '@djangocfg/ui': 1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.469.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)
       lucide-react: 0.469.0(react@19.1.0)
       micromark-extension-gfm-strikethrough: 2.1.0
       micromark-extension-gfm-table: 2.1.1
@@ -4869,17 +4869,17 @@ snapshots:
       - typescript
       - zod
 
-  '@djangocfg/og-image@1.4.27(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)':
+  '@djangocfg/og-image@1.4.28(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)':
     dependencies:
       '@vercel/og': 0.8.5
       next: 15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react: 19.1.0
 
-  '@djangocfg/typescript-config@1.4.27': {}
+  '@djangocfg/typescript-config@1.4.28': {}
 
-  '@djangocfg/ui@1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.469.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)':
+  '@djangocfg/ui@1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.469.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)':
     dependencies:
-      '@djangocfg/api': 1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
+      '@djangocfg/api': 1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.65.0(react@19.1.0))
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -4952,9 +4952,9 @@ snapshots:
       - '@types/react-dom'
       - typescript
 
-  '@djangocfg/ui@1.4.27(@djangocfg/api@1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)':
+  '@djangocfg/ui@1.4.28(@djangocfg/api@1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13))(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(next@15.5.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.65.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.17)(typescript@5.9.3)(zod@4.1.13)':
     dependencies:
-      '@djangocfg/api': 1.4.27(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
+      '@djangocfg/api': 1.4.28(consola@3.4.2)(moment@2.30.1)(p-retry@7.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.3.6(react@19.1.0))(zod@4.1.13)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.65.0(react@19.1.0))
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

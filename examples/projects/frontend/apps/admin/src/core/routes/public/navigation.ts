@@ -21,14 +21,6 @@ export function generateNavigation(): NavigationSection[] {
       items: getGroupItems('components'),
     },
     {
-      title: 'Packages',
-      items: getGroupItems('packages'),
-    },
-    {
-      title: 'Projects',
-      items: getGroupItems('projects'),
-    },
-    {
       title: 'Demo',
       items: getGroupItems('demo'),
     },

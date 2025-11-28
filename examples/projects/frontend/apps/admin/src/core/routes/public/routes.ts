@@ -4,7 +4,7 @@
  * Routes accessible without authentication
  */
 
-import { LayoutDashboard, LogIn, Book, Shield, FileText, Cookie, Palette, Lock, Package, Globe, Mail } from 'lucide-react';
+import { LayoutDashboard, LogIn, Shield, FileText, Cookie, Mail } from 'lucide-react';
 import { defineRoute } from '../shared';
 
 export const home = defineRoute('/', {
@@ -13,15 +13,6 @@ export const home = defineRoute('/', {
   icon: LayoutDashboard,
   protected: false,
   group: 'main',
-  order: 1,
-});
-
-export const ui = defineRoute('/ui', {
-  label: 'UI Components',
-  description: 'UI component library and showcase',
-  icon: Palette,
-  protected: false,
-  group: 'components',
   order: 1,
 });
 
@@ -77,26 +68,6 @@ export const security = defineRoute('/legal/security', {
   order: 4,
 });
 
-// Packages
-export const packages = defineRoute('/packages', {
-  label: 'Packages',
-  description: '@djangocfg monorepo ecosystem',
-  icon: Package,
-  protected: false,
-  group: 'packages',
-  order: 1,
-});
-
-// Projects
-export const projects = defineRoute('/projects', {
-  label: 'Projects',
-  description: 'Production projects built with DjangoCFG',
-  icon: Globe,
-  protected: false,
-  group: 'projects',
-  order: 1,
-});
-
 // Contact
 export const contact = defineRoute('/contact', {
   label: 'Contact',
@@ -108,4 +79,4 @@ export const contact = defineRoute('/contact', {
 });
 
 // All routes as array
-export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security, packages, projects, contact];
+export const allRoutes = [home, ui, demo, auth, privacy, terms, cookies, security, contact];

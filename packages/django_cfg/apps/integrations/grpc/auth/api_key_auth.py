@@ -8,6 +8,7 @@ Simple, secure, and manageable through Django admin.
 import asyncio
 import contextvars
 import logging
+import traceback
 from typing import Callable, Optional
 
 import grpc
@@ -16,6 +17,11 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
+
+
+class APIKeyValidationError(Exception):
+    """Non-fatal API key validation error (logged but not thrown to caller)."""
+    pass
 
 User = get_user_model()
 
@@ -181,7 +187,10 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
                     logger.warning("No active superuser found for SECRET_KEY authentication")
                     return None, None
             except Exception as e:
-                logger.error(f"Error loading superuser for SECRET_KEY: {e}")
+                logger.error(
+                    f"❌ [API_KEY_AUTH] Error loading superuser for SECRET_KEY: {e}\n"
+                    f"Traceback:\n{traceback.format_exc()}"
+                )
                 return None, None
 
         # Check API key in database
@@ -198,14 +207,25 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
                 await api_key_obj.amark_used()
                 # User is already loaded via select_related, no sync DB hit
                 user = api_key_obj.user
-                logger.debug(f"Valid API key for user {user.id} ({user.username})")
+                logger.debug(f"✅ [API_KEY_AUTH] Valid API key for user {user.id} ({user.username})")
                 return user, api_key_obj
             else:
-                logger.debug("API key not found or invalid in database")
+                # Log masked API key for debugging (first 8 and last 4 chars)
+                masked_key = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "***"
+                logger.warning(
+                    f"⚠️ [API_KEY_AUTH] API key validation failed:\n"
+                    f"   - Masked key: {masked_key}\n"
+                    f"   - Key found in DB: {api_key_obj is not None}\n"
+                    f"   - Key is_valid: {api_key_obj.is_valid if api_key_obj else 'N/A'}\n"
+                    f"   - Key is_active: {api_key_obj.is_active if api_key_obj else 'N/A'}"
+                )
                 return None, None
 
         except Exception as e:
-            logger.error(f"Error validating API key: {e}")
+            logger.error(
+                f"❌ [API_KEY_AUTH] Database error validating API key: {e}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
             return None, None
 
     async def _continue_with_user(

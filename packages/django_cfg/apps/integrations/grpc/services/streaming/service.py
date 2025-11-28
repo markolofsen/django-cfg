@@ -5,6 +5,7 @@ Universal bidirectional streaming service for gRPC.
 from typing import Generic, Optional, AsyncIterator, Dict
 import asyncio
 import logging
+import traceback
 
 import grpc
 
@@ -230,7 +231,11 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
                     self.logger.info("Input task completed successfully")
             except Exception as e:
                 if self.config.enable_logging:
-                    self.logger.error(f"Input task error: {e}", exc_info=True)
+                    self.logger.error(
+                        f"❌ [STREAMING_SERVICE] Input task error:\n"
+                        f"   Error: {type(e).__name__}: {e}\n"
+                        f"   Traceback:\n{traceback.format_exc()}"
+                    )
                 if self.on_error and client_id:
                     await self.on_error(client_id, e)
 
@@ -250,7 +255,11 @@ class BidirectionalStreamingService(Generic[TMessage, TCommand]):
 
         except Exception as e:
             if self.config.enable_logging:
-                self.logger.error(f"Client {client_id} stream error: {e}", exc_info=True)
+                self.logger.error(
+                    f"❌ [STREAMING_SERVICE] Client {client_id} stream error:\n"
+                    f"   Error: {type(e).__name__}: {e}\n"
+                    f"   Traceback:\n{traceback.format_exc()}"
+                )
 
             if self.on_error and client_id:
                 await self.on_error(client_id, e)

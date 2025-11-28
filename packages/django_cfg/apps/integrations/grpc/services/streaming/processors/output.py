@@ -11,6 +11,7 @@ Phase: Phase 1 - Universal Components (Refactored)
 import asyncio
 import time
 import logging
+import traceback
 from typing import AsyncIterator, Optional
 import grpc
 
@@ -136,7 +137,11 @@ class OutputProcessor:
                 except Exception as e:
                     consecutive_errors += 1
                     if self.enable_logging:
-                        logger.error(f"Output loop error: {e}", exc_info=True)
+                        logger.error(
+                            f"❌ [OUTPUT_PROCESSOR] Output loop error (attempt {consecutive_errors}):\n"
+                            f"   Error: {type(e).__name__}: {e}\n"
+                            f"   Traceback:\n{traceback.format_exc()}"
+                        )
 
                     # Check if max consecutive errors exceeded
                     if (
@@ -145,7 +150,7 @@ class OutputProcessor:
                     ):
                         if self.enable_logging:
                             logger.error(
-                                f"Max consecutive errors ({self.max_consecutive_errors}) exceeded"
+                                f"❌ [OUTPUT_PROCESSOR] Max consecutive errors ({self.max_consecutive_errors}) exceeded - stopping output loop"
                             )
                         break
 
