@@ -46,7 +46,11 @@ class PublicAPICORSMiddleware:
     # Default CORS headers for public APIs
     CORS_HEADERS = {
         "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+        "Access-Control-Allow-Headers": (
+            "Content-Type, Authorization, X-Requested-With, Accept, Origin, "
+            "X-CSRFToken, X-Forwarded-For, User-Agent, Referer, "
+            "sec-ch-ua, sec-ch-ua-mobile, sec-ch-ua-platform"
+        ),
         "Access-Control-Max-Age": "86400",
     }
 
@@ -107,12 +111,22 @@ class PublicAPICORSMiddleware:
         return False
 
     def _add_cors_headers(self, response: HttpResponse, request: HttpRequest) -> None:
-        """Add CORS headers to response."""
-        # Get origin from request, or use * as fallback
+        """
+        Add CORS headers to response.
+        
+        For public APIs we allow ANY origin without restrictions.
+        Always echo back the Origin header if present, or use * as fallback.
+        """
+        # Get origin from request, default to * for universal access
         origin = request.META.get("HTTP_ORIGIN", "*")
 
+        # Always allow the requesting origin
         response["Access-Control-Allow-Origin"] = origin
         response["Access-Control-Allow-Methods"] = self.CORS_HEADERS["Access-Control-Allow-Methods"]
         response["Access-Control-Allow-Headers"] = self.CORS_HEADERS["Access-Control-Allow-Headers"]
         response["Access-Control-Max-Age"] = self.CORS_HEADERS["Access-Control-Max-Age"]
-        response["Access-Control-Allow-Credentials"] = "true"
+        
+        # Only set credentials when we have specific origin (not wildcard)
+        # This is required by CORS spec: can't use credentials with '*'
+        if origin != "*":
+            response["Access-Control-Allow-Credentials"] = "true"

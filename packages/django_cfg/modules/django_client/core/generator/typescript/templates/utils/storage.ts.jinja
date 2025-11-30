@@ -21,6 +21,9 @@ export interface StorageAdapter {
 /**
  * LocalStorage adapter with safe try-catch for browser environments.
  * Works in modern browsers with localStorage support.
+ * 
+ * Note: This adapter uses window.localStorage and should only be used in browser/client environments.
+ * For server-side usage, use MemoryStorageAdapter or CookieStorageAdapter instead.
  */
 export class LocalStorageAdapter implements StorageAdapter {
   private logger?: APILogger;

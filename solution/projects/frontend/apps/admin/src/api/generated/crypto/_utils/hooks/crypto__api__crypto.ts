@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * SWR Hooks for Crypto
  *

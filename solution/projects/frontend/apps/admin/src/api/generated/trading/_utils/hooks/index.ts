@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * SWR Hooks - React data fetching hooks
  *
