@@ -52,7 +52,7 @@ class NextJsAdminConfig(BaseModel):
         default=None,
         description=(
             "Path for generated TypeScript clients (relative to project_path). "
-            "Default: 'apps/admin/src/api/generated'"
+            "Default: 'apps/admin/app/_lib/api/generated'"
         ),
     )
 
@@ -107,7 +107,7 @@ class NextJsAdminConfig(BaseModel):
 
     def get_api_output_path(self) -> str:
         """Get API output path with default."""
-        return self.api_output_path or "apps/admin/src/api/generated"
+        return self.api_output_path or "apps/admin/app/_lib/api/generated"
 
     def get_static_output_path(self) -> str:
         """Get static output path with default."""

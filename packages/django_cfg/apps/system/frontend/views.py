@@ -24,7 +24,15 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import UserPassesTestMixin
-from rest_framework_simplejwt.tokens import RefreshToken
+
+from .utils import (
+    fix_html_links_after_extraction,
+    resolve_spa_path,
+    find_precompressed_file,
+    should_inject_jwt,
+    inject_jwt_tokens,
+    convert_file_response_to_http_response,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +123,9 @@ class ZipExtractionMixin:
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     zip_ref.extractall(base_dir)
 
+                # Fix HTML links after extraction
+                # fix_html_links_after_extraction(base_dir, app_name)
+
                 # Write marker file with current metadata
                 marker_file.write_text(current_meta)
                 logger.info(f"[{app_name}] Successfully extracted {zip_path.name} and saved marker (meta: {current_meta})")
@@ -194,7 +205,7 @@ class NextJSStaticView(ZipExtractionMixin, View):
             logger.debug(f"Root path requested, serving: {path}")
 
         # Resolve file path with SPA routing fallback strategy
-        path = self._resolve_spa_path(base_dir, path)
+        path = resolve_spa_path(base_dir, path)
 
         # For HTML files, remove conditional GET headers to force full response
         # This allows JWT token injection (can't inject into 304 Not Modified responses)
@@ -204,7 +215,8 @@ class NextJSStaticView(ZipExtractionMixin, View):
             request.META.pop('HTTP_IF_NONE_MATCH', None)
 
         # Try to serve precompressed file if browser supports it
-        compressed_path, encoding = self._find_precompressed_file(base_dir, path, request)
+        accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
+        compressed_path, encoding = find_precompressed_file(base_dir, path, accept_encoding)
         if compressed_path:
             logger.debug(f"[Compression] Serving {encoding} for {path}")
             response = serve(request, compressed_path, document_root=str(base_dir))
@@ -218,23 +230,13 @@ class NextJSStaticView(ZipExtractionMixin, View):
 
         # Convert FileResponse to HttpResponse for HTML files to enable JWT injection
         if isinstance(response, FileResponse):
-            content_type = response.get('Content-Type', '')
-            if 'text/html' in content_type and request.user.is_authenticated:
-                content = b''.join(response.streaming_content)
-                original_response = response
-                response = HttpResponse(
-                    content=content,
-                    status=original_response.status_code,
-                    content_type=content_type
-                )
-                # Copy headers from original response
-                for header, value in original_response.items():
-                    if header.lower() not in ('content-length', 'content-type'):
-                        response[header] = value
+            converted_response = convert_file_response_to_http_response(response, request)
+            if converted_response:
+                response = converted_response
 
         # Inject JWT tokens for authenticated users on HTML responses
-        if self._should_inject_jwt(request, response):
-            self._inject_jwt_tokens(request, response)
+        if should_inject_jwt(request, response):
+            inject_jwt_tokens(request, response)
 
         # Disable caching for HTML files (prevent Cloudflare/browser caching)
         if is_html_file:
@@ -243,199 +245,6 @@ class NextJSStaticView(ZipExtractionMixin, View):
             response['Expires'] = '0'
 
         return response
-
-    def _find_precompressed_file(self, base_dir, path, request):
-        """
-        Find and return precompressed file (.br or .gz) if available and supported by browser.
-
-        Brotli (.br) is preferred over Gzip (.gz) as it provides better compression.
-
-        Args:
-            base_dir: Base directory for static files
-            path: Requested file path
-            request: Django request object
-
-        Returns:
-            tuple: (compressed_path, encoding) if precompressed file found and supported,
-                   (None, None) otherwise
-
-        Examples:
-            _app.js → _app.js.br (if Accept-Encoding: br)
-            _app.js → _app.js.gz (if Accept-Encoding: gzip, no .br)
-            _app.js → (None, None) (if no precompressed files or not supported)
-        """
-        # Get Accept-Encoding header
-        accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '').lower()
-
-        # Check if browser supports brotli (preferred) or gzip
-        supports_br = 'br' in accept_encoding
-        supports_gzip = 'gzip' in accept_encoding
-
-        if not (supports_br or supports_gzip):
-            return None, None
-
-        # Don't compress HTML files - we need to inject JWT tokens
-        # JWT injection requires modifying content, which is incompatible with compression
-        if path.endswith('.html'):
-            return None, None
-
-        # Build full file path
-        file_path = base_dir / path
-
-        # Check if original file exists (safety check)
-        if not file_path.exists() or not file_path.is_file():
-            return None, None
-
-        # Try Brotli first (better compression, ~5-15% smaller than gzip)
-        if supports_br:
-            br_path = f"{path}.br"
-            br_file = base_dir / br_path
-            if br_file.exists() and br_file.is_file():
-                return br_path, 'br'
-
-        # Fallback to Gzip
-        if supports_gzip:
-            gz_path = f"{path}.gz"
-            gz_file = base_dir / gz_path
-            if gz_file.exists() and gz_file.is_file():
-                return gz_path, 'gzip'
-
-        # No precompressed file found or not supported
-        return None, None
-
-    def _resolve_spa_path(self, base_dir, path):
-        """
-        Resolve SPA path with multiple fallback strategies.
-
-        Resolution order:
-        1. Exact file match (e.g., script.js, style.css)
-        2. path/index.html (e.g., private/centrifugo/index.html)
-        3. path.html (e.g., private.html for /private)
-        4. Fallback to root index.html for SPA routing
-
-        Examples:
-            /private/centrifugo → private/centrifugo/index.html
-            /private → private.html OR private/index.html
-            /_next/static/... → _next/static/... (exact match)
-            /unknown/route → index.html (SPA fallback)
-        """
-        file_path = base_dir / path
-
-        # Remove trailing slash for processing
-        path_normalized = path.rstrip('/')
-
-        # Strategy 1: Exact file match (for static assets like JS, CSS, images)
-        if file_path.exists() and file_path.is_file():
-            logger.debug(f"[SPA Router] Exact match: {path}")
-            return path
-
-        # Strategy 2: Try path/index.html (most common for SPA routes)
-        index_in_dir = base_dir / path_normalized / 'index.html'
-        if index_in_dir.exists():
-            resolved_path = f"{path_normalized}/index.html"
-            logger.debug(f"[SPA Router] Resolved {path} → {resolved_path}")
-            return resolved_path
-
-        # Strategy 3: Try with trailing slash + index.html
-        if path.endswith('/'):
-            index_path = path + 'index.html'
-            if (base_dir / index_path).exists():
-                logger.debug(f"[SPA Router] Trailing slash resolved: {index_path}")
-                return index_path
-
-        # Strategy 4: Try path.html (Next.js static export behavior)
-        html_file = base_dir / (path_normalized + '.html')
-        if html_file.exists():
-            resolved_path = path_normalized + '.html'
-            logger.debug(f"[SPA Router] HTML file match: {resolved_path}")
-            return resolved_path
-
-        # Strategy 5: Check if it's a directory without index.html
-        if file_path.exists() and file_path.is_dir():
-            # Try index.html in that directory
-            index_in_existing_dir = file_path / 'index.html'
-            if index_in_existing_dir.exists():
-                resolved_path = f"{path_normalized}/index.html"
-                logger.debug(f"[SPA Router] Directory with index: {resolved_path}")
-                return resolved_path
-
-        # Strategy 6: SPA fallback - serve root index.html
-        # This allows client-side routing to handle unknown routes
-        root_index = base_dir / 'index.html'
-        if root_index.exists():
-            logger.debug(f"[SPA Router] Fallback to index.html for route: {path}")
-            return 'index.html'
-
-        # Strategy 7: Nothing found - return original path (will 404)
-        logger.warning(f"[SPA Router] No match found for: {path}")
-        return path
-
-    def _should_inject_jwt(self, request, response):
-        """Check if JWT tokens should be injected."""
-        # Only for authenticated users
-        if not request.user or not request.user.is_authenticated:
-            return False
-
-        # Only for HttpResponse (not FileResponse or StreamingHttpResponse)
-        if not isinstance(response, HttpResponse) or isinstance(response, FileResponse):
-            return False
-
-        # Check if response has content attribute
-        if not hasattr(response, 'content'):
-            return False
-
-        # Only for HTML responses
-        content_type = response.get('Content-Type', '')
-        return 'text/html' in content_type
-
-    def _inject_jwt_tokens(self, request, response):
-        """Inject JWT tokens into HTML response."""
-        try:
-            # Generate JWT tokens
-            refresh = RefreshToken.for_user(request.user)
-            access_token = str(refresh.access_token)
-            refresh_token = str(refresh)
-
-            # Create injection script
-            injection_script = f"""
-<script>
-(function() {{
-    try {{
-        localStorage.setItem('auth_token', '{access_token}');
-        localStorage.setItem('refresh_token', '{refresh_token}');
-        console.log('[Django-CFG] JWT tokens injected successfully');
-    }} catch (e) {{
-        console.error('[Django-CFG] Failed to inject JWT tokens:', e);
-    }}
-}})();
-</script>
-"""
-
-            # Decode response content
-            try:
-                content = response.content.decode('utf-8')
-            except UnicodeDecodeError:
-                logger.warning("Failed to decode response content as UTF-8, skipping JWT injection")
-                return
-
-            # Inject before </head> or </body>
-            if '</head>' in content:
-                content = content.replace('</head>', f'{injection_script}</head>', 1)
-                logger.debug(f"JWT tokens injected before </head> for user {request.user.pk}")
-            elif '</body>' in content:
-                content = content.replace('</body>', f'{injection_script}</body>', 1)
-                logger.debug(f"JWT tokens injected before </body> for user {request.user.pk}")
-            else:
-                logger.warning(f"No </head> or </body> tag found in HTML, skipping JWT injection")
-                return
-
-            # Update response
-            response.content = content.encode('utf-8')
-            response['Content-Length'] = len(response.content)
-
-        except Exception as e:
-            # Log error but don't break the response
-            logger.error(f"Failed to inject JWT tokens for user {request.user.pk}: {e}", exc_info=True)
 
 
 class AdminView(UserPassesTestMixin, NextJSStaticView):

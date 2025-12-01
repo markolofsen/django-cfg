@@ -3,17 +3,28 @@
   "compilerOptions": {
     "paths": {
       "@/*": [
-        "./src/*"
+        "./app/_lib/*"
+      ],
+      "@core/*": [
+        "./app/_core/*"
+      ],
+      "@routes/*": [
+        "./app/_routes/*"
+      ],
+      "@layouts/*": [
+        "./app/_layouts/*"
       ]
     },
     "noEmit": true
   },
   "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
     "next-env.d.ts",
-    "src/**/*.ts",
-    "src/**/*.tsx"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "@*"
   ]
 }

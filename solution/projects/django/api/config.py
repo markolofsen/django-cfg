@@ -459,7 +459,7 @@ class DjangoCfgConfig(DjangoConfig):
         # Path to Next.js admin project (relative to manage.py directory)
         project_path="../frontend/apps/admin",
         # Customize where TypeScript clients are copied
-        api_output_path="src/api/generated",
+        api_output_path="app/_lib/api/generated",
         # Optional: static files URL prefix (default: /cfg/admin/)
         # static_url="/cfg/admin/",
         # Optional: Next.js dev server URL (default: http://localhost:3001)

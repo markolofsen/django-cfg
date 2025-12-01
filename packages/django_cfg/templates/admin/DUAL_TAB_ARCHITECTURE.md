@@ -321,7 +321,7 @@ from django_cfg import NextJsAdminConfig
 config = DjangoConfig(
     nextjs_admin=NextJsAdminConfig(
         project_path="../django_admin/apps/admin",
-        api_output_path="src/api/generated",
+        api_output_path="app/_lib/api/generated",
         auto_build=True,
         # Optional overrides:
         # static_url="/cfg/nextjs-admin/",

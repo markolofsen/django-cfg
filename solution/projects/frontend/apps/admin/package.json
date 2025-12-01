@@ -16,9 +16,9 @@
   "dependencies": {
     "@djangocfg/api": "latest",
     "@djangocfg/centrifugo": "latest",
-    "@djangocfg/layouts": "^1.4.1",
+    "@djangocfg/layouts": "latest",
     "@djangocfg/markdown": "latest",
-    "@djangocfg/og-image": "latest",
+    "@djangocfg/nextjs": "latest",
     "@djangocfg/ui": "latest",
     "@djangocfg/imgai": "latest",
     "@hookform/resolvers": "^5.2.2",

@@ -1,0 +1,131 @@
+/**
+ * Global API Instance - Singleton configuration
+ *
+ * This module provides a global API instance that can be configured once
+ * and used throughout your application.
+ *
+ * Usage:
+ * ```typescript
+ * // Configure once (e.g., in your app entry point)
+ * import { configureAPI } from './api-instance'
+ *
+ * configureAPI({
+ *   baseUrl: 'https://api.example.com',
+ *   token: 'your-jwt-token'
+ * })
+ *
+ * // Then use fetchers and hooks anywhere without configuration
+ * import { getUsers } from './fetchers'
+ * const users = await getUsers({ page: 1 })
+ * ```
+ *
+ * For SSR or multiple instances:
+ * ```typescript
+ * import { API } from './index'
+ * import { getUsers } from './fetchers'
+ *
+ * const api = new API('https://api.example.com')
+ * const users = await getUsers({ page: 1 }, api)
+ * ```
+ */
+
+import { API, type APIOptions } from './index'
+
+let globalAPI: API | null = null
+
+/**
+ * Get the global API instance
+ * @throws Error if API is not configured
+ */
+export function getAPIInstance(): API {
+  if (!globalAPI) {
+    throw new Error(
+      'API not configured. Call configureAPI() with your base URL before using fetchers or hooks.\n\n' +
+      'Example:\n' +
+      '  import { configureAPI } from "./api-instance"\n' +
+      '  configureAPI({ baseUrl: "https://api.example.com" })'
+    )
+  }
+  return globalAPI
+}
+
+/**
+ * Check if API is configured
+ */
+export function isAPIConfigured(): boolean {
+  return globalAPI !== null
+}
+
+/**
+ * Configure the global API instance
+ *
+ * @param baseUrl - Base URL for the API
+ * @param options - Optional configuration (storage, retry, logger)
+ *
+ * @example
+ * ```typescript
+ * configureAPI({
+ *   baseUrl: 'https://api.example.com',
+ *   token: 'jwt-token',
+ *   options: {
+ *     retryConfig: { maxRetries: 3 },
+ *     loggerConfig: { enabled: true }
+ *   }
+ * })
+ * ```
+ */
+export function configureAPI(config: {
+  baseUrl: string
+  token?: string
+  refreshToken?: string
+  options?: APIOptions
+}): API {
+  globalAPI = new API(config.baseUrl, config.options)
+
+  if (config.token) {
+    globalAPI.setToken(config.token, config.refreshToken)
+  }
+
+  return globalAPI
+}
+
+/**
+ * Reconfigure the global API instance with new settings
+ * Useful for updating tokens or base URL
+ */
+export function reconfigureAPI(updates: {
+  baseUrl?: string
+  token?: string
+  refreshToken?: string
+}): API {
+  const instance = getAPIInstance()
+
+  if (updates.baseUrl) {
+    instance.setBaseUrl(updates.baseUrl)
+  }
+
+  if (updates.token) {
+    instance.setToken(updates.token, updates.refreshToken)
+  }
+
+  return instance
+}
+
+/**
+ * Clear tokens from the global API instance
+ */
+export function clearAPITokens(): void {
+  const instance = getAPIInstance()
+  instance.clearTokens()
+}
+
+/**
+ * Reset the global API instance
+ * Useful for testing or logout scenarios
+ */
+export function resetAPI(): void {
+  if (globalAPI) {
+    globalAPI.clearTokens()
+  }
+  globalAPI = null
+}
