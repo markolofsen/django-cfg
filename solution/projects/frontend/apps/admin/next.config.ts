@@ -15,6 +15,10 @@ const withBundleAnalyzer = bundleAnalyzer({
 // Create config with base settings
 // Add project-specific overrides here if needed
 const config = createBaseNextConfig({
+
+  // Automatically open browser in development mode
+  openBrowser: true,
+  
   // Example: Add custom transpile packages if needed
   // transpilePackages: ['my-custom-package'],
 

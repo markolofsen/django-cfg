@@ -44,10 +44,14 @@ import type { LoggerConfig } from "./logger";
 import { APILogger } from "./logger";
 import { TradingTrading } from "./trading__api__trading/client";
 export * as TradingTradingTypes from "./trading__api__trading/models";
+// Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
+// Use namespace exports like CfgAccountsTypes.User or import from specific modules
 export * as Enums from "./enums";
 
 // Re-export Zod schemas for runtime validation
 export * as Schemas from "./_utils/schemas";
+// Also export all schemas directly for convenience
+export * from "./_utils/schemas";
 
 // Re-export Zod validation events for browser integration
 export type { ValidationErrorDetail, ValidationErrorEvent } from "./validation-events";
@@ -69,6 +73,8 @@ export {
 
 // Re-export SWR hooks for React
 export * as Hooks from "./_utils/hooks";
+// Also export all hooks directly for convenience
+export * from "./_utils/hooks";
 
 // Re-export core client
 export { APIClient };

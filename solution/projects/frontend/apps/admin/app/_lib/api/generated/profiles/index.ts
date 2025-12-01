@@ -44,9 +44,13 @@ import type { LoggerConfig } from "./logger";
 import { APILogger } from "./logger";
 import { ProfilesProfiles } from "./profiles__api__profiles/client";
 export * as ProfilesProfilesTypes from "./profiles__api__profiles/models";
+// Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
+// Use namespace exports like CfgAccountsTypes.User or import from specific modules
 
 // Re-export Zod schemas for runtime validation
 export * as Schemas from "./_utils/schemas";
+// Also export all schemas directly for convenience
+export * from "./_utils/schemas";
 
 // Re-export Zod validation events for browser integration
 export type { ValidationErrorDetail, ValidationErrorEvent } from "./validation-events";
@@ -68,6 +72,8 @@ export {
 
 // Re-export SWR hooks for React
 export * as Hooks from "./_utils/hooks";
+// Also export all hooks directly for convenience
+export * from "./_utils/hooks";
 
 // Re-export core client
 export { APIClient };

@@ -47,6 +47,8 @@ import { {{ tag.class_name }} } from "./{{ tag.slug }}/client";
 {% endfor %}
 {% for tag in tags %}
 export * as {{ tag.class_name }}Types from "./{{ tag.slug }}/models";
+// Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
+// Use namespace exports like CfgAccountsTypes.User or import from specific modules
 {% endfor %}
 {% if has_enums %}
 export * as Enums from "./enums";
@@ -55,6 +57,8 @@ export * as Enums from "./enums";
 
 // Re-export Zod schemas for runtime validation
 export * as Schemas from "./_utils/schemas";
+// Also export all schemas directly for convenience
+export * from "./_utils/schemas";
 
 // Re-export Zod validation events for browser integration
 export type { ValidationErrorDetail, ValidationErrorEvent } from "./validation-events";
@@ -80,6 +84,8 @@ export {
 
 // Re-export SWR hooks for React
 export * as Hooks from "./_utils/hooks";
+// Also export all hooks directly for convenience
+export * from "./_utils/hooks";
 {% endif %}
 
 // Re-export core client
