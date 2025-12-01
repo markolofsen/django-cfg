@@ -2,6 +2,6 @@
  * Cookie Policy Page
  * Path: /legal/cookies
  */
-import { CookiesPage } from '@djangocfg/nextjs/legal';
+import { CookiesPage } from '@djangocfg/layouts/pages';
 
 export default CookiesPage;

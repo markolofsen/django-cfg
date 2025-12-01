@@ -20,7 +20,7 @@ interface PrivateLayoutProps {
  */
 function convertMenuGroupsToSidebar(menuGroups: Array<{ label: string; items: Array<{ path: string; label: string; icon?: string | any; badge?: string | number }> }>): SidebarConfig {
   return {
-    homeHref: routes.user.home.path,
+    homeHref: routes.private.home.path,
     items: menuGroups.flatMap(group => 
       group.items.map(item => ({
         label: item.label,
@@ -43,7 +43,7 @@ export function PrivateLayout({ children }: PrivateLayoutProps) {
   
   const header: HeaderConfig = {
     title: 'Dashboard',
-    profilePath: routes.user.profile.path,
+    profilePath: routes.private.profile.path,
   };
   
   return (

@@ -1,4 +1,4 @@
-import { HomePage } from '@djangocfg/nextjs/components';
+import { RedirectPage } from '@djangocfg/layouts/components';
 import { redirectToAuth, routes } from '@routes/index';
 
 /**
@@ -7,8 +7,8 @@ import { redirectToAuth, routes } from '@routes/index';
  */
 export default function Page() {
   return (
-    <HomePage
-      authenticatedPath={routes.user.home.path}
+    <RedirectPage
+      authenticatedPath={routes.private.home.path}
       unauthenticatedPath={redirectToAuth()}
     />
   );

@@ -15,7 +15,7 @@ export default function AuthPage() {
       supportUrl={routes.public.contact?.path}
       termsUrl={routes.public.terms?.path}
       privacyUrl={routes.public.privacy?.path}
-      enablePhoneAuth={settings.layouts.enablePhoneAuth}
+      enablePhoneAuth={false}
     >
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground">

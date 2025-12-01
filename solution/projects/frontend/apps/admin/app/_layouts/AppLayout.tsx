@@ -43,7 +43,7 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
       apiUrl: settings.api.baseUrl,
       routes: {
         auth: routes.public.auth.path,
-        defaultCallback: routes.admin.overview?.path || routes.user.home.path,
+        defaultCallback: routes.private.home.path,
         defaultAuthCallback: routes.public.auth.path,
       },
     },

@@ -106,24 +106,6 @@ export const settings = {
   links: {
     docsUrl: 'https://djangocfg.com',
   },
-
-  // Feature flags
-  features: {
-    search: false,
-    notifications: false,
-    darkMode: true,
-  },
-
-  // SWR (React Query) configuration
-  swr: {
-    /**
-     * All SWR revalidation is disabled because we use WebSocket
-     * for real-time updates instead of polling.
-     */
-    refreshInterval: 0,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  },
 } as const;
 
 // ============================================================================

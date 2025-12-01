@@ -22,7 +22,7 @@
  */
 
 import * as publicDomain from './public';
-import * as userDomain from './private';
+import * as privateDomain from './private';
 import * as adminDomain from './admin';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ import * as adminDomain from './admin';
 
 export {
   publicDomain as public,
-  userDomain as user,
+  privateDomain as private,
   adminDomain as admin,
 };
 
@@ -48,9 +48,9 @@ export * from '@djangocfg/nextjs/navigation';
 /**
  * Pre-generated menus
  */
-export const userMenuGroups = userDomain.generateMenu();
+export const privateMenuGroups = privateDomain.generateMenu();
 export const adminMenuGroups = adminDomain.generateMenu();
-export const menuGroups = userMenuGroups;  // Backwards compatibility
+export const menuGroups = privateMenuGroups;  // Backwards compatibility
 
 /**
  * Pre-generated navigation
@@ -63,14 +63,13 @@ export const generateFooterNavigation = () => publicDomain.generateFooter();
  */
 export const routes = {
   public: publicDomain.routes,
-  user: userDomain.routes,
   admin: adminDomain.routes,
-  private: userDomain.routes,  // Alias for backwards compatibility
+  private: privateDomain.routes,
 
   getAllRoutes() {
     return [
       ...publicDomain.allRoutes,
-      ...userDomain.allRoutes,
+      ...privateDomain.allRoutes,
       ...adminDomain.allRoutes,
     ];
   },

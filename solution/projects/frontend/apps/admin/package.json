@@ -18,9 +18,7 @@
     "@djangocfg/centrifugo": "latest",
     "@djangocfg/layouts": "latest",
     "@djangocfg/markdown": "latest",
-    "@djangocfg/nextjs": "latest",
     "@djangocfg/ui": "latest",
-    "@djangocfg/imgai": "latest",
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",
     "consola": "^3.4.2",
@@ -38,6 +36,8 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@djangocfg/nextjs": "latest",
+    "@djangocfg/imgai": "latest",
     "@djangocfg/typescript-config": "latest",
     "@next/bundle-analyzer": "^16.0.1",
     "@tailwindcss/forms": "^0.5.10",

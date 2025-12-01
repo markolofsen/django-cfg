@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { settings } from '@core/settings';
-import { ErrorLayout } from '@djangocfg/nextjs/errors';
+import { ErrorLayout } from '@djangocfg/layouts/components';
 
 export default function Error({
   error,

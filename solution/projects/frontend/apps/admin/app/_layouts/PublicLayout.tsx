@@ -51,8 +51,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   };
   
   const userMenu = {
-    profilePath: routes.user.profile.path,
-    dashboardPath: routes.user.home.path,
+    profilePath: routes.private.profile.path,
+    dashboardPath: routes.private.home.path,
     authPath: routes.public.auth.path,
   };
   
