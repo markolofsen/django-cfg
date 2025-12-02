@@ -17,7 +17,6 @@
     "@djangocfg/api": "latest",
     "@djangocfg/centrifugo": "latest",
     "@djangocfg/layouts": "latest",
-    "@djangocfg/markdown": "latest",
     "@djangocfg/ui": "latest",
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",
