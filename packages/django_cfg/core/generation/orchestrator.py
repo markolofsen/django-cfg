@@ -77,6 +77,7 @@ class SettingsOrchestrator:
             settings.update(self._generate_session_settings())
             settings.update(self._generate_third_party_settings())
             settings.update(self._generate_api_settings())
+            settings.update(self._generate_oauth_settings())
             settings.update(self._generate_django_rq_settings())
             settings.update(self._generate_grpc_settings())
             settings.update(self._generate_tailwind_settings())
@@ -214,6 +215,15 @@ class SettingsOrchestrator:
             return generator.generate()
         except Exception as e:
             raise ConfigurationError(f"Failed to generate API settings: {e}") from e
+
+    def _generate_oauth_settings(self) -> Dict[str, Any]:
+        """Generate OAuth provider settings."""
+        try:
+            from .integration_generators.oauth import OAuthSettingsGenerator
+            generator = OAuthSettingsGenerator(self.config)
+            return generator.generate()
+        except Exception as e:
+            raise ConfigurationError(f"Failed to generate OAuth settings: {e}") from e
 
     def _generate_django_rq_settings(self) -> Dict[str, Any]:
         """Generate Django-RQ task queue and scheduler settings."""

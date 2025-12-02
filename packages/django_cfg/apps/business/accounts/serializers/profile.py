@@ -64,13 +64,25 @@ class UserSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.URLField(allow_null=True))
     def get_avatar(self, obj):
-        """Return full URL for avatar or None."""
-        if obj.avatar:
+        """
+        Return avatar URL with fallback to OAuth provider avatar.
+
+        Uses user.avatar_url property which handles:
+        1. Local uploaded avatar
+        2. GitHub/OAuth provider avatar
+        3. None
+        """
+        avatar_url = obj.avatar_url
+        if not avatar_url:
+            return None
+
+        # Build absolute URL for local avatars
+        if obj.avatar and avatar_url == obj.avatar.url:
             request = self.context.get('request')
             if request is not None:
-                return request.build_absolute_uri(obj.avatar.url)
-            return obj.avatar.url
-        return None
+                return request.build_absolute_uri(avatar_url)
+
+        return avatar_url
 
     @extend_schema_field(CentrifugoTokenSerializer(allow_null=True))
     def get_centrifugo(self, obj):

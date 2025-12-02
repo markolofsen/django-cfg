@@ -30,6 +30,9 @@ from .choices import (
 # Import integration models
 from .integrations import TwilioResponse
 
+# Import OAuth models
+from .oauth import OAuthConnection, OAuthProvider, OAuthState
+
 # Import registration models
 from .registration import (
     RegistrationSource,
@@ -64,4 +67,9 @@ __all__ = [
 
     # Integration models
     'TwilioResponse',
+
+    # OAuth models
+    'OAuthConnection',
+    'OAuthProvider',
+    'OAuthState',
 ]

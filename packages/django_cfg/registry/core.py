@@ -47,6 +47,10 @@ CORE_REGISTRY = {
     # JWT models
     "JWTConfig": ("django_cfg.models.api.jwt", "JWTConfig"),
 
+    # OAuth models
+    "GitHubOAuthConfig": ("django_cfg.models.api.oauth", "GitHubOAuthConfig"),
+    "OAuthConfig": ("django_cfg.models.api.oauth", "OAuthConfig"),
+
     # Django-RQ models
     "DjangoRQConfig": ("django_cfg.models.django.django_rq", "DjangoRQConfig"),
     "RQQueueConfig": ("django_cfg.models.django.django_rq", "RQQueueConfig"),

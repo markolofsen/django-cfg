@@ -9,6 +9,7 @@ from django.contrib.auth.models import Group
 
 from .activity_admin import UserActivityAdmin
 from .group_admin import GroupAdmin
+from .oauth_admin import OAuthConnectionAdmin, OAuthStateAdmin
 from .otp_admin import OTPSecretAdmin
 from .registration_admin import RegistrationSourceAdmin, UserRegistrationSourceAdmin
 from .twilio_admin import TwilioResponseAdmin, TwilioResponseInline
@@ -42,4 +43,6 @@ __all__ = [
     'GroupAdmin',
     'TwilioResponseAdmin',
     'TwilioResponseInline',
+    'OAuthConnectionAdmin',
+    'OAuthStateAdmin',
 ]

@@ -198,17 +198,26 @@ class NavigationManager(BaseCfgModule):
 
         # Add Accounts section if enabled
         if self.is_accounts_enabled():
+            accounts_items = [
+                NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),
+                NavigationItem(title="User Groups", icon=Icons.GROUP, link=str(reverse_lazy("admin:auth_group_changelist"))),
+                NavigationItem(title="OTP Secrets", icon=Icons.SECURITY, link=str(reverse_lazy("admin:django_cfg_accounts_otpsecret_changelist"))),
+                NavigationItem(title="Registration Sources", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_registrationsource_changelist"))),
+                NavigationItem(title="User Registration Sources", icon=Icons.PERSON, link=str(reverse_lazy("admin:django_cfg_accounts_userregistrationsource_changelist"))),
+            ]
+
+            # Add OAuth links if GitHub OAuth is enabled
+            if self.is_github_oauth_enabled():
+                accounts_items.extend([
+                    NavigationItem(title="OAuth Connections", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_oauthconnection_changelist"))),
+                    NavigationItem(title="OAuth States", icon=Icons.KEY, link=str(reverse_lazy("admin:django_cfg_accounts_oauthstate_changelist"))),
+                ])
+
             navigation_sections.append(NavigationSection(
                 title="Users & Access",
                 separator=True,
                 collapsible=True,
-                items=[
-                    NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),
-                    NavigationItem(title="User Groups", icon=Icons.GROUP, link=str(reverse_lazy("admin:auth_group_changelist"))),
-                    NavigationItem(title="OTP Secrets", icon=Icons.SECURITY, link=str(reverse_lazy("admin:django_cfg_accounts_otpsecret_changelist"))),
-                    NavigationItem(title="Registration Sources", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_registrationsource_changelist"))),
-                    NavigationItem(title="User Registration Sources", icon=Icons.PERSON, link=str(reverse_lazy("admin:django_cfg_accounts_userregistrationsource_changelist"))),
-                ]
+                items=accounts_items
             ))
 
         # Add Support section if enabled

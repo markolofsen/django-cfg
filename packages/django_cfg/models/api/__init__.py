@@ -13,6 +13,7 @@ from .drf.swagger import SwaggerUISettings
 from .jwt import JWTConfig
 from .keys import ApiKeys
 from .limits import LimitsConfig
+from .oauth import GitHubOAuthConfig, OAuthConfig
 
 __all__ = [
     "APIConfig",
@@ -24,4 +25,6 @@ __all__ = [
     "SpectacularConfig",
     "SwaggerUISettings",
     "RedocUISettings",
+    "GitHubOAuthConfig",
+    "OAuthConfig",
 ]

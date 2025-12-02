@@ -75,6 +75,38 @@ class CustomUser(AbstractUser):
         ).first()
         return user_source.source if user_source else None
 
+    @property
+    def avatar_url(self) -> Optional[str]:
+        """
+        Get avatar URL with fallback to OAuth provider avatar.
+
+        Priority:
+        1. Local uploaded avatar
+        2. GitHub/OAuth provider avatar
+        3. None
+
+        Returns:
+            Avatar URL string or None
+        """
+        # 1. Local avatar
+        if self.avatar:
+            return self.avatar.url
+
+        # 2. OAuth provider avatar
+        try:
+            oauth_connection = self.oauth_connections.filter(
+                provider_avatar_url__isnull=False
+            ).exclude(
+                provider_avatar_url=''
+            ).first()
+
+            if oauth_connection:
+                return oauth_connection.provider_avatar_url
+        except Exception:
+            pass
+
+        return None
+
     class Meta:
         app_label = 'django_cfg_accounts'
         verbose_name = "User"

@@ -212,6 +212,22 @@ class OpenAPIClientConfigSerializer(serializers.Serializer):
     global_properties = serializers.JSONField(required=False, allow_null=True)
 
 
+class GitHubOAuthConfigSerializer(serializers.Serializer):
+    """GitHub OAuth configuration."""
+    enabled = serializers.BooleanField(required=False, allow_null=True)
+    client_id = serializers.CharField(required=False, allow_null=True)
+    client_secret = serializers.CharField(required=False, allow_null=True)
+    scope = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
+    authorize_url = serializers.CharField(required=False, allow_null=True)
+    token_url = serializers.CharField(required=False, allow_null=True)
+    user_api_url = serializers.CharField(required=False, allow_null=True)
+    emails_api_url = serializers.CharField(required=False, allow_null=True)
+    callback_path = serializers.CharField(required=False, allow_null=True)
+    state_timeout_seconds = serializers.IntegerField(required=False, allow_null=True)
+    allow_account_linking = serializers.BooleanField(required=False, allow_null=True)
+    auto_create_user = serializers.BooleanField(required=False, allow_null=True)
+
+
 class DjangoConfigSerializer(serializers.Serializer):
     """
     Typed serializer for user's DjangoConfig settings.
@@ -279,6 +295,7 @@ class DjangoConfigSerializer(serializers.Serializer):
     telegram = TelegramConfigSerializer(required=False, allow_null=True)
     ngrok = NgrokConfigSerializer(required=False, allow_null=True)
     axes = AxesConfigSerializer(required=False, allow_null=True)
+    github_oauth = GitHubOAuthConfigSerializer(required=False, allow_null=True)
     crypto_fields = serializers.JSONField(required=False, allow_null=True)
     unfold = serializers.JSONField(required=False, allow_null=True)  # Complex Unfold config object
     tailwind_app_name = serializers.CharField(required=False, allow_null=True)

@@ -1,21 +1,29 @@
 'use client';
 
-import { AuthLayout as BaseAuthLayout } from '@djangocfg/layouts';
+import { AuthLayout } from '@djangocfg/layouts';
 import { routes } from '@routes/index';
 import { settings } from '@core/settings';
 
 /**
  * Authentication Page
  * Path: /auth
+ *
+ * Handles both:
+ * - Regular OTP auth (email form)
+ * - GitHub OAuth callback (/auth?provider=github&code=XXX&state=YYY)
+ *
+ * OAuthCallback is automatically included when enableGithubAuth=true
  */
 export default function AuthPage() {
   return (
-    <BaseAuthLayout
+    <AuthLayout
       sourceUrl={settings.app.siteUrl}
       supportUrl={routes.public.contact?.path}
       termsUrl={routes.public.terms?.path}
       privacyUrl={routes.public.privacy?.path}
       enablePhoneAuth={false}
+      enableGithubAuth={true}
+      redirectUrl={routes.private.home.path}
     >
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground">
@@ -25,6 +33,6 @@ export default function AuthPage() {
           Secure authentication powered by OTP
         </p>
       </div>
-    </BaseAuthLayout>
+    </AuthLayout>
   );
 }

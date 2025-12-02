@@ -13,6 +13,7 @@ from .loader import (
     AppConfig,
     EnvironmentMode,
     CentrifugoConfig,
+    GitHubOAuthEnvConfig,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "AppConfig",
     "EnvironmentMode",
     "CentrifugoConfig",
+    "GitHubOAuthEnvConfig",
 ]

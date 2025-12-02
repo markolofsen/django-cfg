@@ -28,6 +28,7 @@ from .api.drf.swagger import SwaggerUISettings
 from .api.jwt import JWTConfig
 from .api.keys import ApiKeys
 from .api.limits import LimitsConfig
+from .api.oauth import GitHubOAuthConfig, OAuthConfig
 from .base.config import BaseConfig, BaseSettings
 from .base.module import BaseCfgAutoModule
 
@@ -108,4 +109,7 @@ __all__ = [
     # Payments
     "PaymentsConfig",
     "NowPaymentsConfig",
+    # OAuth
+    "GitHubOAuthConfig",
+    "OAuthConfig",
 ]

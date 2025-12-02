@@ -19,7 +19,7 @@
 
 **Type-safe configuration** • **Next.js Admin** • **gRPC Streaming** • **Real-time WebSockets** • **AI Agents** • **8 Enterprise Apps**
 
-**[🎯 Live Demo](https://djangocfg.com/demo)** • **[📚 Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[🐙 GitHub](https://github.com/markolofsen/django-cfg)**
+**[🎯 Live Demo](https://djangocfg.com/demo)** • **[📚 Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[🤖 MCP Server](https://djangocfg.com/mcp)** • **[🐙 GitHub](https://github.com/markolofsen/django-cfg)**
 
 </div>
 

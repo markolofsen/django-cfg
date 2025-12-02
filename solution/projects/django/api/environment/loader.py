@@ -105,6 +105,18 @@ class AppConfig(BaseSettings):
     )
 
 
+class GitHubOAuthEnvConfig(BaseSettings):
+    """GitHub OAuth configuration."""
+
+    client_id: str = Field(default="", description="GitHub OAuth App Client ID")
+    client_secret: str = Field(default="", description="GitHub OAuth App Client Secret")
+
+    model_config = SettingsConfigDict(
+        env_prefix="GITHUB_OAUTH__",
+        env_nested_delimiter="__",
+    )
+
+
 class CentrifugoConfig(BaseSettings):
     """Centrifugo WebSocket pub/sub configuration."""
 
@@ -212,6 +224,7 @@ class EnvironmentConfig(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
+    github_oauth: GitHubOAuthEnvConfig = Field(default_factory=GitHubOAuthEnvConfig)
 
     # gRPC Configuration
     grpc_url: Optional[str] = Field(

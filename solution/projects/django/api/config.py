@@ -50,6 +50,8 @@ from django_cfg import (
     BackupStorageConfig,
     BackupScheduleConfig,
     BackupRetentionConfig,
+    # OAuth
+    GitHubOAuthConfig,
 )
 
 # Import environment configuration
@@ -388,6 +390,18 @@ class DjangoCfgConfig(DjangoConfig):
     jwt: Optional[JWTConfig] = JWTConfig(
         access_token_lifetime_hours=None,  # If None = maximum: 8760 hours/1 year
         refresh_token_lifetime_days=None,  # If None = maximum: 365 days/1 year
+    )
+
+    # === GitHub OAuth Configuration ===
+    # ENV: GITHUB_OAUTH__CLIENT_ID, GITHUB_OAUTH__CLIENT_SECRET
+    github_oauth: Optional[GitHubOAuthConfig] = (
+        GitHubOAuthConfig(
+            enabled=True,
+            client_id=env.github_oauth.client_id,
+            client_secret=env.github_oauth.client_secret,
+        )
+        if env.github_oauth.client_id and env.github_oauth.client_secret
+        else None
     )
 
     # === Ngrok Development Configuration ===

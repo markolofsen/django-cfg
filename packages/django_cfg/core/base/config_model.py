@@ -26,6 +26,7 @@ from ...models import (
     DjangoRQConfig,
     DRFConfig,
     EmailConfig,
+    GitHubOAuthConfig,
     LimitsConfig,
     SpectacularConfig,
     TelegramConfig,
@@ -321,6 +322,12 @@ class DjangoConfig(BaseModel):
     telegram: Optional[TelegramConfig] = Field(
         default=None,
         description="Telegram service configuration",
+    )
+
+    # === OAuth Configuration ===
+    github_oauth: Optional[GitHubOAuthConfig] = Field(
+        default=None,
+        description="GitHub OAuth configuration for social authentication",
     )
 
     ngrok: Optional[NgrokConfig] = Field(

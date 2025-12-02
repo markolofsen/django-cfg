@@ -4,6 +4,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import OTPViewSet
+from .views.oauth import (
+    GitHubAuthorizeView,
+    GitHubCallbackView,
+    OAuthConnectionsView,
+    OAuthDisconnectView,
+    OAuthProvidersView,
+)
 from .views.profile import (
     UserProfilePartialUpdateView,
     UserProfileUpdateView,
@@ -36,6 +43,15 @@ profile_patterns = [
     path('avatar/', upload_avatar, name='profile_avatar_upload'),
 ]
 
+# OAuth-related URLs
+oauth_patterns = [
+    path('providers/', OAuthProvidersView.as_view(), name='oauth_providers'),
+    path('github/authorize/', GitHubAuthorizeView.as_view(), name='github_authorize'),
+    path('github/callback/', GitHubCallbackView.as_view(), name='github_callback'),
+    path('connections/', OAuthConnectionsView.as_view(), name='oauth_connections'),
+    path('disconnect/', OAuthDisconnectView.as_view(), name='oauth_disconnect'),
+]
+
 # Main URL patterns with nested structure
 urlpatterns = [
     # ViewSet-based endpoints
@@ -46,4 +62,7 @@ urlpatterns = [
 
     # Profile endpoints
     path('profile/', include(profile_patterns)),
+
+    # OAuth endpoints
+    path('oauth/', include(oauth_patterns)),
 ]

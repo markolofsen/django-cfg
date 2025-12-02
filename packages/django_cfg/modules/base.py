@@ -234,6 +234,21 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_github_oauth_enabled(self) -> bool:
+        """
+        Check if GitHub OAuth is enabled and configured.
+
+        Returns:
+            True if GitHub OAuth is properly configured, False otherwise
+        """
+        github_oauth_config = self._get_config_key('github_oauth', None)
+
+        # Check if github_oauth config exists and is properly configured
+        if github_oauth_config and hasattr(github_oauth_config, 'is_configured'):
+            return github_oauth_config.is_configured()
+
+        return False
+
 
 # Export the base class
 __all__ = [
