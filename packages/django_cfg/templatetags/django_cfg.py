@@ -73,6 +73,38 @@ def lib_name():
 
 
 @register.simple_tag
+def version_update_info():
+    """
+    Get version update information from PyPI.
+
+    Returns a dict with:
+    - current_version: installed version
+    - latest_version: latest on PyPI
+    - update_available: bool
+    - update_url: PyPI URL
+
+    Cached for 1 hour to avoid excessive API calls.
+
+    Usage in template:
+        {% load django_cfg %}
+        {% version_update_info as version %}
+        {% if version.update_available %}
+            Update: {{ version.current_version }} → {{ version.latest_version }}
+        {% endif %}
+    """
+    try:
+        from django_cfg.core.integration.version_checker import get_version_info
+        return get_version_info()
+    except Exception:
+        return {
+            'current_version': None,
+            'latest_version': None,
+            'update_available': False,
+            'update_url': None,
+        }
+
+
+@register.simple_tag
 def lib_site_url():
     """Get the library site URL."""
     # Lazy import to avoid AppRegistryNotReady error

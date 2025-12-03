@@ -2,22 +2,63 @@
 Environment Configuration Loader for Django CFG Sample
 
 Modern approach using pydantic-settings BaseSettings.
-Priority: ENV > .env > Defaults (automatic via pydantic-settings)
+Priority: ENV > .env.prod (if exists) > .env > Defaults
 
 Loading strategy:
 1. Environment variables with __ notation (e.g., EMAIL__HOST, DATABASE__URL)
-2. Load .env file (automatic via pydantic-settings)
-3. Use defaults from field definitions
+2. Load .env.prod file if IS_PROD=true (overrides .env)
+3. Load .env file (base/dev configuration)
+4. Use defaults from field definitions
+
+File structure:
+    - .env          - Base configuration (dev values, secrets)
+    - .env.prod     - Production overrides (only prod-specific values)
 
 Dependencies:
     - pydantic-settings
     - python-dotenv
 """
 
+import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Environment file detection
+# ─────────────────────────────────────────────────────────────────────────────
+ENV_DIR = Path(__file__).parent
+
+
+def get_env_files() -> Tuple[str, ...]:
+    """
+    Determine which .env files to load based on environment.
+
+    Priority (later files override earlier):
+    1. .env - always loaded (base/dev config)
+    2. .env.prod - loaded only if IS_PROD=true
+
+    Returns tuple of file paths for pydantic-settings.
+    """
+    base_env = ENV_DIR / ".env"
+    prod_env = ENV_DIR / ".env.prod"
+
+    # Check if production mode (from ENV variable)
+    is_prod = os.getenv("IS_PROD", "false").lower() in ("true", "1", "yes")
+
+    files = []
+
+    # Base .env file (always load if exists)
+    if base_env.exists():
+        files.append(str(base_env))
+
+    # Production overrides (only if IS_PROD=true and file exists)
+    if is_prod and prod_env.exists():
+        files.append(str(prod_env))
+
+    return tuple(files) if files else (str(base_env),)
 
 
 class DatabaseConfig(BaseSettings):
@@ -263,7 +304,7 @@ class EnvironmentConfig(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=str(Path(__file__).parent / ".env"),
+        env_file=get_env_files(),
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         case_sensitive=False,
@@ -272,5 +313,9 @@ class EnvironmentConfig(BaseSettings):
 
 
 # Global environment configuration instance
-# Auto-loads from: ENV variables > .env file > defaults
+# Automatically loads from:
+# 1. Environment variables (highest priority)
+# 2. .env.prod file (if IS_PROD=true and file exists)
+# 3. .env file (base/dev configuration)
+# 4. Default values defined above
 env = EnvironmentConfig()

@@ -239,6 +239,35 @@
             </div>
             {% endif %}
 
+            {% version_update_info as version %}
+            {% if version.update_available %}
+            <!-- Package Update Available Banner -->
+            <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-3 mb-2" role="alert">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="material-icons text-amber-500 mr-3" style="font-size: 20px;">system_update</span>
+                        <div>
+                            <p class="font-medium text-amber-800 dark:text-amber-200">
+                                Django-CFG update available:
+                                <span class="text-amber-600 dark:text-amber-400">{{ version.current_version }}</span>
+                                <span class="mx-1">→</span>
+                                <span class="text-green-600 dark:text-green-400 font-bold">{{ version.latest_version }}</span>
+                            </p>
+                            <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                                Run: <code class="bg-amber-200/50 dark:bg-amber-800/50 px-1.5 py-0.5 rounded font-mono">pip install django-cfg --upgrade</code>
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ version.update_url }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="ml-4 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white transition-colors duration-150 whitespace-nowrap">
+                        View on PyPI
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Tab Navigation -->
             {% is_dev as is_development %}
             <div>

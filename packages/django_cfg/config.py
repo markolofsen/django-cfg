@@ -45,9 +45,19 @@ def is_feature_available(feature: str) -> bool:
 # Library configuration
 LIB_NAME = "django-cfg"
 LIB_SITE_URL = "https://djangocfg.com"
-LIB_GITHUB_URL = "https://github.com/django-cfg/django-cfg"
+LIB_GITHUB_URL = "https://github.com/markolofsen/django-cfg"
+LIB_GITHUB_RAW_URL = "https://github.com/markolofsen/django-cfg/raw/refs/heads/main"
 LIB_SUPPORT_URL = "https://djangocfg.com/demo"
 LIB_HEALTH_URL = "/cfg/health/"
+
+# Frontend assets configuration (for auto-download when not bundled in PyPI package)
+FRONTEND_ASSETS = {
+    "admin": {
+        "filename": "admin.zip",
+        "download_url": f"{LIB_GITHUB_RAW_URL}/packages/django_cfg/static/frontend/admin.zip",
+        "relative_path": "static/frontend",
+    },
+}
 
 
 def get_maintenance_url(domain: str) -> str:

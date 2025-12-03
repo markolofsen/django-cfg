@@ -13,11 +13,11 @@ from cachetools import TTLCache
 
 class VersionChecker:
     """
-    Checks for library updates on PyPI with 24-hour caching using cachetools.
+    Checks for library updates on PyPI with 1-hour caching using cachetools.
     """
 
-    # Cache for 24 hours (86400 seconds)
-    CACHE_TTL = 86400
+    # Cache for 1 hour (3600 seconds)
+    CACHE_TTL = 3600
 
     def __init__(self):
         """Initialize version checker with TTL cache."""

@@ -32,6 +32,7 @@ from .utils import (
     should_inject_jwt,
     inject_jwt_tokens,
     convert_file_response_to_http_response,
+    ensure_frontend_asset,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,10 +76,13 @@ class ZipExtractionMixin:
         """
         should_extract = False
 
-        # Check if ZIP exists first
+        # Check if ZIP exists, try to download if not
         if not zip_path.exists():
-            logger.error(f"[{app_name}] ZIP not found: {zip_path}")
-            return False
+            logger.info(f"[{app_name}] ZIP not found locally, attempting auto-download...")
+            if not ensure_frontend_asset(app_name):
+                logger.error(f"[{app_name}] ZIP not found and download failed: {zip_path}")
+                return False
+            logger.info(f"[{app_name}] ZIP downloaded successfully")
 
         # Get ZIP metadata (size + mtime for reliable comparison)
         zip_stat = zip_path.stat()

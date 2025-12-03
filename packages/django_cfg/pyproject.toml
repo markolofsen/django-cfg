@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.5.91"
+version = "1.5.93"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration, real-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, 90% less code. Production-ready with AI agents, auto-generated TypeScript clients, and zero-config features."
 readme = "README.md"
 keywords = [ "django", "configuration", "pydantic", "settings", "type-safety", "pydantic-settings", "django-environ", "startup-validation", "ide-autocomplete", "nextjs-admin", "react-admin", "websocket", "centrifugo", "real-time", "typescript-generation", "ai-agents", "enterprise-django", "django-settings", "type-safe-config", "modern-django",]
@@ -132,11 +132,11 @@ fakeredis = "^2.31.3"
 
 [tool.hatch.build.targets.wheel]
 packages = [ "src/django_cfg",]
-exclude = [ "scripts/", "src/django_admin/", "**/.gitignore", "**/static/frontend/admin/", "**/static/frontend/nextjs_admin/",]
+exclude = [ "scripts/", "src/django_admin/", "**/.gitignore", "**/static/frontend/admin/", "**/static/frontend/nextjs_admin/", "**/static/frontend/*.zip", "**/static/frontend/*.version",]
 
 [tool.hatch.build.targets.sdist]
 include = [ "src/django_cfg", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "requirements*.txt", "MANIFEST.in",]
-exclude = [ "@*", "tests", "scripts", "*.log", ".env*", "src/django_admin/", "**/.gitignore", "**/static/frontend/admin/", "**/static/frontend/nextjs_admin/",]
+exclude = [ "@*", "tests", "scripts", "*.log", ".env*", "src/django_admin/", "**/.gitignore", "**/static/frontend/admin/", "**/static/frontend/nextjs_admin/", "**/static/frontend/*.zip", "**/static/frontend/*.version",]
 
 [tool.hatch.build.targets.wheel.force-include]
 LICENSE = "django_cfg/LICENSE"
