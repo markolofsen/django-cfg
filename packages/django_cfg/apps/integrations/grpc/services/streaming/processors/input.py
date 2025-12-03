@@ -252,12 +252,16 @@ class InputProcessor:
 
         try:
             # DEBUG: Check context state before loop
+            print(f"\n🔍 [INPUT_PROCESSOR] _process_anext starting", flush=True)
+            print(f"   context.cancelled()={context.cancelled()}", flush=True)
+            print(f"   request_iterator type={type(request_iterator)}", flush=True)
             if self.enable_logging:
                 logger.info(f"_process_anext starting, context.cancelled()={context.cancelled()}")
 
             while not context.cancelled():
                 try:
                     # Get next message with optional timeout
+                    print(f"   ⏳ Waiting for next message (context.cancelled()={context.cancelled()})...", flush=True)
                     if self.connection_timeout:
                         message = await asyncio.wait_for(
                             anext(request_iterator),
@@ -265,6 +269,7 @@ class InputProcessor:
                         )
                     else:
                         message = await anext(request_iterator)
+                    print(f"   ✅ Got message: {type(message)}", flush=True)
 
                     # Extract client ID from first message
                     if is_first_message:
@@ -342,11 +347,13 @@ class InputProcessor:
 
                 except StopAsyncIteration:
                     # Stream ended normally
+                    print(f"   ⚠️ StopAsyncIteration - stream ended", flush=True)
                     if self.enable_logging:
                         logger.info(f"Client {client_id} stream ended")
                     break
 
                 except asyncio.TimeoutError:
+                    print(f"   ⚠️ TimeoutError - connection timeout", flush=True)
                     if self.enable_logging:
                         logger.warning(f"Client {client_id} connection timeout")
                     break
@@ -356,11 +363,13 @@ class InputProcessor:
                 logger.info(f"_process_anext while loop exited, context.cancelled()={context.cancelled()}, client_id={client_id}")
 
         except asyncio.CancelledError:
+            print(f"   🚫 CancelledError - input stream cancelled (client_id={client_id})", flush=True)
             if self.enable_logging:
                 logger.info(f"Input stream cancelled for client {client_id}")
             raise
 
         except Exception as e:
+            print(f"   ❌ Exception: {type(e).__name__}: {e}", flush=True)
             if self.enable_logging:
                 logger.error(
                     f"❌ [INPUT_PROCESSOR] Input stream error (anext) for client {client_id}:\n"
@@ -369,6 +378,7 @@ class InputProcessor:
                 )
             raise
 
+        print(f"   🏁 _process_anext returning, client_id={client_id}", flush=True)
         return client_id
 
 

@@ -8,8 +8,8 @@ No Django dependencies - can be used standalone or with any framework.
 __version__ = "1.0.0"
 
 # Configuration
-# Archive
-from .archive import ArchiveManager
+# Archiver
+from .archiver import ArchiveManager
 from .config import (
     DjangoOpenAPI,
     OpenAPIConfig,

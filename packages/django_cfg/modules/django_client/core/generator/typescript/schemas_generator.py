@@ -175,7 +175,10 @@ class SchemasGenerator:
             elif schema_format in ("uri", "url"):
                 base_type = "z.url()"
             elif schema_format == "uuid":
-                base_type = "z.uuid()"
+                # Use regex instead of z.uuid() for more lenient validation
+                # z.uuid() uses strict RFC 4122 validation that rejects some valid UUIDs
+                # (e.g., "00000000-0000-0000-0000-000000000001" fails version check)
+                base_type = "z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)"
 
             # Add length constraints (only for plain strings, not formatted ones)
             if base_type == "z.string()":

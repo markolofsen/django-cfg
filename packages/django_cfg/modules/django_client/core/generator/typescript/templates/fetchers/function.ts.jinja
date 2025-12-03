@@ -22,14 +22,7 @@ export async function {{ func_name }}(
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: '{{ func_name }}',
-      message: `Path: {{ operation.path }}\nMethod: {{ operation.http_method }}`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`{{ func_name }}\nPath: {{ operation.path }}\nMethod: {{ operation.http_method }}`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');

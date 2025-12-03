@@ -34,7 +34,7 @@ export function generateMetadata(metadata: Metadata): Metadata {
     metadata,
     undefined, // Auto-extract from metadata
     {
-      ogImageBaseUrl: 'https://djangocfg.com/api/og', // or '/api/og',
+      // ogImageBaseUrl: 'https://djangocfg.com/api/og', // or '/api/og',
       siteUrl: settings.app.siteUrl, // Pass siteUrl for metadataBase auto-detection
       defaultParams: {
         siteName: settings.app.name,

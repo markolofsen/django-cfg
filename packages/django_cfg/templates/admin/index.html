@@ -242,30 +242,27 @@
             {% version_update_info as version %}
             {% if version.update_available %}
             <!-- Package Update Available Banner -->
-            <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-3 mb-2" role="alert">
+            <a href="{{ version.update_url }}"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="block bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 hover:border-primary-300 dark:hover:border-primary-700 rounded-md p-3 mb-3 transition-colors cursor-pointer">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <span class="material-icons text-amber-500 mr-3" style="font-size: 20px;">system_update</span>
+                    <div class="flex items-center gap-3">
+                        <span class="material-icons text-amber-500" style="font-size: 20px;">system_update</span>
                         <div>
-                            <p class="font-medium text-amber-800 dark:text-amber-200">
-                                Django-CFG update available:
-                                <span class="text-amber-600 dark:text-amber-400">{{ version.current_version }}</span>
-                                <span class="mx-1">→</span>
-                                <span class="text-green-600 dark:text-green-400 font-bold">{{ version.latest_version }}</span>
-                            </p>
-                            <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                                Run: <code class="bg-amber-200/50 dark:bg-amber-800/50 px-1.5 py-0.5 rounded font-mono">pip install django-cfg --upgrade</code>
-                            </p>
+                            <div class="text-font-default-light dark:text-font-default-dark text-sm font-medium">
+                                New django-cfg version available
+                            </div>
+                            <div class="text-font-subtle-light dark:text-font-subtle-dark text-xs mt-0.5">
+                                {{ version.current_version }} → <span class="text-green-600 dark:text-green-500 font-medium">{{ version.latest_version }}</span>
+                                <span class="mx-1.5">•</span>
+                                <code class="bg-base-100 dark:bg-base-800 px-1 py-0.5 rounded font-mono">poetry add django-cfg@latest</code>
+                            </div>
                         </div>
                     </div>
-                    <a href="{{ version.update_url }}"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="ml-4 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white transition-colors duration-150 whitespace-nowrap">
-                        View on PyPI
-                    </a>
+                    <span class="material-icons text-font-subtle-light dark:text-font-subtle-dark" style="font-size: 18px;">open_in_new</span>
                 </div>
-            </div>
+            </a>
             {% endif %}
 
             <!-- Tab Navigation -->
@@ -338,7 +335,7 @@
 
                                 <!-- Version info (always visible) -->
                                 {% load django_cfg %}
-                                <a href="{% lib_site_url %}"
+                                <a href="https://pypi.org/project/django-cfg/"
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    class="text-xs font-medium text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-500 transition-colors duration-150 whitespace-nowrap">
