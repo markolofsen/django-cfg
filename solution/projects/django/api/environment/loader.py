@@ -2,17 +2,19 @@
 Environment Configuration Loader for Django CFG Sample
 
 Modern approach using pydantic-settings BaseSettings.
-Priority: ENV > .env.prod (if exists) > .env > Defaults
+Priority: ENV > .env.secrets (if exists) > .env.prod (if prod) > .env > Defaults
 
 Loading strategy:
 1. Environment variables with __ notation (e.g., EMAIL__HOST, DATABASE__URL)
-2. Load .env.prod file if IS_PROD=true (overrides .env)
-3. Load .env file (base/dev configuration)
-4. Use defaults from field definitions
+2. Load .env.secrets file if exists (contains actual secrets, never committed)
+3. Load .env.prod file if IS_PROD=true (production overrides)
+4. Load .env file (base/dev configuration)
+5. Use defaults from field definitions
 
 File structure:
-    - .env          - Base configuration (dev values, secrets)
+    - .env          - Base configuration (non-sensitive defaults)
     - .env.prod     - Production overrides (only prod-specific values)
+    - .env.secrets  - Secrets (API keys, passwords) - NEVER commit!
 
 Dependencies:
     - pydantic-settings
@@ -39,11 +41,13 @@ def get_env_files() -> Tuple[str, ...]:
     Priority (later files override earlier):
     1. .env - always loaded (base/dev config)
     2. .env.prod - loaded only if IS_PROD=true
+    3. .env.secrets - loaded if exists (contains actual secrets)
 
     Returns tuple of file paths for pydantic-settings.
     """
     base_env = ENV_DIR / ".env"
     prod_env = ENV_DIR / ".env.prod"
+    secrets_env = ENV_DIR / ".env.secrets"
 
     # Check if production mode (from ENV variable)
     is_prod = os.getenv("IS_PROD", "false").lower() in ("true", "1", "yes")
@@ -57,6 +61,10 @@ def get_env_files() -> Tuple[str, ...]:
     # Production overrides (only if IS_PROD=true and file exists)
     if is_prod and prod_env.exists():
         files.append(str(prod_env))
+
+    # Secrets file (highest priority, loaded last to override)
+    if secrets_env.exists():
+        files.append(str(secrets_env))
 
     return tuple(files) if files else (str(base_env),)
 
@@ -315,7 +323,8 @@ class EnvironmentConfig(BaseSettings):
 # Global environment configuration instance
 # Automatically loads from:
 # 1. Environment variables (highest priority)
-# 2. .env.prod file (if IS_PROD=true and file exists)
-# 3. .env file (base/dev configuration)
-# 4. Default values defined above
+# 2. .env.secrets file (if exists - contains actual secrets)
+# 3. .env.prod file (if IS_PROD=true and file exists)
+# 4. .env file (base/dev configuration)
+# 5. Default values defined above
 env = EnvironmentConfig()

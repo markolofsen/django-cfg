@@ -284,21 +284,19 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
                     context=context,
                 )
 
-                try:
-                    # Count requests (async for)
-                    requests = []
-                    request_count = 0
+                # For bidirectional streaming, we must NOT collect all requests first.
+                # Instead, we pass request_iterator through a counting wrapper.
+                request_count = 0
+                response_count = 0
+
+                async def counting_request_iterator():
+                    nonlocal request_count
                     async for req in request_iterator:
                         request_count += 1
-                        requests.append(req)
+                        yield req
 
-                    # Process and count responses (async for)
-                    async def async_iter():
-                        for r in requests:
-                            yield r
-
-                    response_count = 0
-                    async for response in behavior(async_iter(), context):
+                try:
+                    async for response in behavior(counting_request_iterator(), context):
                         response_count += 1
                         yield response
 
@@ -327,30 +325,17 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
             return wrapper
 
         # Return wrapped handler based on type
+        # IMPORTANT: For grpc.aio, we must NOT use grpc.*_rpc_method_handler()
+        # functions as they create sync handlers. Instead, we use _WrappedHandler
+        # that preserves async methods.
         if handler.unary_unary:
-            return grpc.unary_unary_rpc_method_handler(
-                wrap_unary_unary(handler.unary_unary),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, unary_unary=wrap_unary_unary(handler.unary_unary))
         elif handler.unary_stream:
-            return grpc.unary_stream_rpc_method_handler(
-                wrap_unary_stream(handler.unary_stream),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, unary_stream=wrap_unary_stream(handler.unary_stream))
         elif handler.stream_unary:
-            return grpc.stream_unary_rpc_method_handler(
-                wrap_stream_unary(handler.stream_unary),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, stream_unary=wrap_stream_unary(handler.stream_unary))
         elif handler.stream_stream:
-            return grpc.stream_stream_rpc_method_handler(
-                wrap_stream_stream(handler.stream_stream),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, stream_stream=wrap_stream_stream(handler.stream_stream))
         else:
             return handler
 
@@ -527,6 +512,35 @@ class RequestLoggerInterceptor(grpc.aio.ServerInterceptor):
         except Exception as e:
             logger.debug(f"Failed to serialize message: {e}")
             return None
+
+
+class _WrappedHandler:
+    """
+    Wrapper for RpcMethodHandler that preserves async methods for grpc.aio.
+
+    The standard grpc.*_rpc_method_handler() functions create sync handlers,
+    which don't work properly with grpc.aio async server. This class simply
+    wraps the original handler and replaces one method with a wrapped version.
+    """
+
+    def __init__(self, original_handler, **wrapped_methods):
+        """
+        Create wrapped handler.
+
+        Args:
+            original_handler: Original RpcMethodHandler
+            **wrapped_methods: Methods to replace (unary_unary, stream_stream, etc.)
+        """
+        self.request_streaming = original_handler.request_streaming
+        self.response_streaming = original_handler.response_streaming
+        self.request_deserializer = original_handler.request_deserializer
+        self.response_serializer = original_handler.response_serializer
+
+        # Copy original methods, replace with wrapped versions
+        self.unary_unary = wrapped_methods.get('unary_unary', original_handler.unary_unary)
+        self.unary_stream = wrapped_methods.get('unary_stream', original_handler.unary_stream)
+        self.stream_unary = wrapped_methods.get('stream_unary', original_handler.stream_unary)
+        self.stream_stream = wrapped_methods.get('stream_stream', original_handler.stream_stream)
 
 
 __all__ = ["RequestLoggerInterceptor"]

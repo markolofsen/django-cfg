@@ -209,46 +209,32 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
         Returns:
             Wrapped RPC method handler
         """
-        # Determine handler type and wrap accordingly
+        # IMPORTANT: For grpc.aio, we must NOT use grpc.*_rpc_method_handler()
+        # functions as they create sync handlers. Instead, we use _WrappedHandler
+        # that preserves async methods.
         if handler.unary_unary:
             wrapped = self._wrap_unary_unary(
                 handler.unary_unary, method_name, service_name, method_short, peer
             )
-            return grpc.unary_unary_rpc_method_handler(
-                wrapped,
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, unary_unary=wrapped)
 
         if handler.unary_stream:
             wrapped = self._wrap_unary_stream(
                 handler.unary_stream, method_name, service_name, method_short, peer
             )
-            return grpc.unary_stream_rpc_method_handler(
-                wrapped,
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, unary_stream=wrapped)
 
         if handler.stream_unary:
             wrapped = self._wrap_stream_unary(
                 handler.stream_unary, method_name, service_name, method_short, peer
             )
-            return grpc.stream_unary_rpc_method_handler(
-                wrapped,
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, stream_unary=wrapped)
 
         if handler.stream_stream:
             wrapped = self._wrap_stream_stream(
                 handler.stream_stream, method_name, service_name, method_short, peer
             )
-            return grpc.stream_stream_rpc_method_handler(
-                wrapped,
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, stream_stream=wrapped)
 
         return handler
 
@@ -606,6 +592,35 @@ class CentrifugoInterceptor(grpc.aio.ServerInterceptor):
         if len(parts) == 2:
             return parts[0], parts[1]
         return "unknown", full_method
+
+
+class _WrappedHandler:
+    """
+    Wrapper for RpcMethodHandler that preserves async methods for grpc.aio.
+
+    The standard grpc.*_rpc_method_handler() functions create sync handlers,
+    which don't work properly with grpc.aio async server. This class simply
+    wraps the original handler and replaces one method with a wrapped version.
+    """
+
+    def __init__(self, original_handler, **wrapped_methods):
+        """
+        Create wrapped handler.
+
+        Args:
+            original_handler: Original RpcMethodHandler
+            **wrapped_methods: Methods to replace (unary_unary, stream_stream, etc.)
+        """
+        self.request_streaming = original_handler.request_streaming
+        self.response_streaming = original_handler.response_streaming
+        self.request_deserializer = original_handler.request_deserializer
+        self.response_serializer = original_handler.response_serializer
+
+        # Copy original methods, replace with wrapped versions
+        self.unary_unary = wrapped_methods.get('unary_unary', original_handler.unary_unary)
+        self.unary_stream = wrapped_methods.get('unary_stream', original_handler.unary_stream)
+        self.stream_unary = wrapped_methods.get('stream_unary', original_handler.stream_unary)
+        self.stream_stream = wrapped_methods.get('stream_stream', original_handler.stream_stream)
 
 
 __all__ = ["CentrifugoInterceptor"]

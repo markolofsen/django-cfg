@@ -60,6 +60,9 @@ class LoggingInterceptor(grpc.aio.ServerInterceptor):
         method_name = handler_call_details.method
         peer = self._extract_peer(handler_call_details.invocation_metadata)
 
+        # DEBUG: Print to stdout to ensure we see it
+        print(f"\n🔥🔥🔥 [LOGGING_INTERCEPTOR] intercept_service called! method={method_name}", flush=True)
+
         # Log incoming request
         logger.info(f"[gRPC] ➡️  {method_name} | peer={peer}")
 
@@ -90,6 +93,16 @@ class LoggingInterceptor(grpc.aio.ServerInterceptor):
         Returns:
             Wrapped RPC method handler
         """
+        # DEBUG: Print handler info
+        print(f"\n🔧🔧🔧 [LOGGING_INTERCEPTOR] _wrap_handler called!", flush=True)
+        print(f"   handler type: {type(handler)}", flush=True)
+        print(f"   handler.unary_unary: {handler.unary_unary}", flush=True)
+        print(f"   handler.unary_stream: {handler.unary_stream}", flush=True)
+        print(f"   handler.stream_unary: {handler.stream_unary}", flush=True)
+        print(f"   handler.stream_stream: {handler.stream_stream}", flush=True)
+        print(f"   request_streaming: {handler.request_streaming}", flush=True)
+        print(f"   response_streaming: {handler.response_streaming}", flush=True)
+
         def wrap_unary_unary(behavior):
             def wrapper(request, context):
                 start_time = time.time()
@@ -183,8 +196,10 @@ class LoggingInterceptor(grpc.aio.ServerInterceptor):
             return wrapper
 
         def wrap_stream_stream(behavior):
+            print(f"\n🎯🎯🎯 [LOGGING_INTERCEPTOR] wrap_stream_stream called for behavior={behavior}", flush=True)
             # All behaviors are async now
             async def async_wrapper(request_iterator, context):
+                print(f"\n🚀🚀🚀 [LOGGING_INTERCEPTOR] async_wrapper INVOKED!", flush=True)
                 start_time = time.time()
                 out_count = 0
                 try:
@@ -217,30 +232,17 @@ class LoggingInterceptor(grpc.aio.ServerInterceptor):
             return async_wrapper
 
         # Return wrapped handler based on type
+        # IMPORTANT: For grpc.aio, we must NOT use grpc.*_rpc_method_handler()
+        # functions as they create sync handlers. Instead, we create a simple
+        # object that mimics RpcMethodHandler but preserves async methods.
         if handler.unary_unary:
-            return grpc.unary_unary_rpc_method_handler(
-                wrap_unary_unary(handler.unary_unary),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, unary_unary=wrap_unary_unary(handler.unary_unary))
         elif handler.unary_stream:
-            return grpc.unary_stream_rpc_method_handler(
-                wrap_unary_stream(handler.unary_stream),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, unary_stream=wrap_unary_stream(handler.unary_stream))
         elif handler.stream_unary:
-            return grpc.stream_stream_rpc_method_handler(
-                wrap_stream_unary(handler.stream_unary),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, stream_unary=wrap_stream_unary(handler.stream_unary))
         elif handler.stream_stream:
-            return grpc.stream_stream_rpc_method_handler(
-                wrap_stream_stream(handler.stream_stream),
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            )
+            return _WrappedHandler(handler, stream_stream=wrap_stream_stream(handler.stream_stream))
         else:
             return handler
 
@@ -262,6 +264,35 @@ class LoggingInterceptor(grpc.aio.ServerInterceptor):
 
         # Try to get user-agent or return unknown
         return metadata_dict.get("user-agent", "unknown")
+
+
+class _WrappedHandler:
+    """
+    Wrapper for RpcMethodHandler that preserves async methods for grpc.aio.
+
+    The standard grpc.*_rpc_method_handler() functions create sync handlers,
+    which don't work properly with grpc.aio async server. This class simply
+    wraps the original handler and replaces one method with a wrapped version.
+    """
+
+    def __init__(self, original_handler, **wrapped_methods):
+        """
+        Create wrapped handler.
+
+        Args:
+            original_handler: Original RpcMethodHandler
+            **wrapped_methods: Methods to replace (unary_unary, stream_stream, etc.)
+        """
+        self.request_streaming = original_handler.request_streaming
+        self.response_streaming = original_handler.response_streaming
+        self.request_deserializer = original_handler.request_deserializer
+        self.response_serializer = original_handler.response_serializer
+
+        # Copy original methods, replace with wrapped versions
+        self.unary_unary = wrapped_methods.get('unary_unary', original_handler.unary_unary)
+        self.unary_stream = wrapped_methods.get('unary_stream', original_handler.unary_stream)
+        self.stream_unary = wrapped_methods.get('stream_unary', original_handler.stream_unary)
+        self.stream_stream = wrapped_methods.get('stream_stream', original_handler.stream_stream)
 
 
 __all__ = ["LoggingInterceptor"]

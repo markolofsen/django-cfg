@@ -563,16 +563,22 @@ def discover_and_register_services(server: Any) -> Tuple[int, List[str]]:
                             service_names.append(service_class.GRPC_SERVICE_NAME)
                         elif hasattr(service_class, '__module__'):
                             # Build service name from module and class
-                            # e.g. signals.SignalStreamingService
+                            # e.g. trading_bots.BotStreamingService
                             module_parts = service_class.__module__.split('.')
-                            # Find the package name (usually first meaningful part)
+                            # Find 'grpc' in path and use part BEFORE it as package
+                            # For apps like apps.trading_bots.grpc.services.server
+                            # we want 'trading_bots' (the app name before 'grpc')
                             package = module_parts[0] if module_parts else 'unknown'
-                            # For apps like apps.telegram_spy.grpc.services.server
-                            # we want to use a cleaner name
-                            for part in module_parts:
-                                if part in ('signals', 'streaming', 'grpc'):
-                                    package = part
-                                    break
+                            try:
+                                grpc_idx = module_parts.index('grpc')
+                                if grpc_idx > 0:
+                                    package = module_parts[grpc_idx - 1]
+                            except ValueError:
+                                # No 'grpc' in path, fall back to first meaningful part
+                                for part in module_parts:
+                                    if part in ('signals', 'streaming'):
+                                        package = part
+                                        break
                             full_name = f"{package}.{service_class.__name__}"
                             service_names.append(full_name)
                             logger.debug(f"Extracted service name: {full_name}")
@@ -596,8 +602,16 @@ def discover_and_register_services(server: Any) -> Tuple[int, List[str]]:
                 service_names.append(service_class.GRPC_SERVICE_NAME)
             else:
                 # Build from module/class name
+                # e.g. trading_bots.BotStreamingService
                 module_parts = service_class.__module__.split('.')
                 package = module_parts[0] if module_parts else 'unknown'
+                # Find 'grpc' and use part BEFORE it as package
+                try:
+                    grpc_idx = module_parts.index('grpc')
+                    if grpc_idx > 0:
+                        package = module_parts[grpc_idx - 1]
+                except ValueError:
+                    pass
                 full_name = f"{package}.{service_class.__name__}"
                 service_names.append(full_name)
 

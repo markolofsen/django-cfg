@@ -261,7 +261,7 @@ class InputProcessor:
             while not context.cancelled():
                 try:
                     # Get next message with optional timeout
-                    print(f"   ⏳ Waiting for next message (context.cancelled()={context.cancelled()})...", flush=True)
+                    # NOTE: connection_timeout is for non-blocking read, not for closing connection
                     if self.connection_timeout:
                         message = await asyncio.wait_for(
                             anext(request_iterator),
@@ -269,7 +269,6 @@ class InputProcessor:
                         )
                     else:
                         message = await anext(request_iterator)
-                    print(f"   ✅ Got message: {type(message)}", flush=True)
 
                     # Extract client ID from first message
                     if is_first_message:
@@ -353,10 +352,10 @@ class InputProcessor:
                     break
 
                 except asyncio.TimeoutError:
-                    print(f"   ⚠️ TimeoutError - connection timeout", flush=True)
-                    if self.enable_logging:
-                        logger.warning(f"Client {client_id} connection timeout")
-                    break
+                    # connection_timeout is for non-blocking read, NOT for closing connection.
+                    # Just continue the loop to check context.cancelled() and wait for more messages.
+                    # The real connection timeout should be handled via ping_timeout in OutputProcessor.
+                    continue
 
             # DEBUG: Log when while loop exits normally (context.cancelled() == True)
             if self.enable_logging:
