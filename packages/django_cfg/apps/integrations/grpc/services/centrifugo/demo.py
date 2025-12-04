@@ -1,10 +1,14 @@
 """
-Demo Service for Testing CentrifugoInterceptor + CentrifugoBridgeMixin.
+Demo Service for Testing Centrifugo Integration.
 
-This module provides a complete working example of how to use both
-Centrifugo integration mechanisms:
-1. CentrifugoInterceptor - Automatic RPC metadata publishing
+This module provides a complete working example of Centrifugo integration:
+
+1. ObservabilityInterceptor - Automatic RPC metadata publishing (built-in)
 2. CentrifugoBridgeMixin - Service-level message data publishing
+
+Note:
+    CentrifugoInterceptor has been merged into ObservabilityInterceptor
+    to fix the bidirectional streaming StopAsyncIteration bug.
 
 Usage:
     # Send single demo event

@@ -113,7 +113,13 @@ class GRPCServerConfig(BaseConfig):
 
     interceptors: List[str] = Field(
         default_factory=list,
-        description="Server interceptor import paths (e.g., 'myapp.interceptors.AuthInterceptor')",
+        description=(
+            "Additional custom interceptors (added AFTER built-in interceptors). "
+            "Built-in interceptors (auto-added by generator): "
+            "ObservabilityInterceptor (metrics, logging, DB logging, Centrifugo) + "
+            "ApiKeyAuthInterceptor (if auth.enabled=True). "
+            "Example: ['myapp.interceptors.RateLimitInterceptor']"
+        ),
     )
 
     @field_validator("compression")
@@ -291,6 +297,38 @@ class GRPCProtoConfig(BaseConfig):
         return self
 
 
+class GRPCObservabilityConfig(BaseConfig):
+    """
+    gRPC observability configuration.
+
+    Simple, production-ready defaults. Most users won't need to change anything.
+
+    Example:
+        >>> config = GRPCObservabilityConfig(
+        ...     log_to_db=False,  # Disable DB logging in high-traffic production
+        ... )
+    """
+
+    # === Database Logging (GRPCRequestLog) ===
+    log_to_db: bool = Field(
+        default=True,
+        description="Log requests to database (GRPCRequestLog). Disable for high-traffic production.",
+    )
+
+    log_errors_only: bool = Field(
+        default=False,
+        description="Only log errors to DB (skip successful requests).",
+    )
+
+    # === Heartbeat (GRPCServerStatus) ===
+    heartbeat_interval: int = Field(
+        default=300,
+        description="Heartbeat interval in seconds (default 5 min).",
+        ge=30,
+        le=3600,
+    )
+
+
 class GRPCConfig(BaseConfig):
     """
     Main gRPC configuration.
@@ -370,6 +408,11 @@ class GRPCConfig(BaseConfig):
         description="Proto generation configuration (optional, use flatten fields above for common settings)",
     )
 
+    observability: GRPCObservabilityConfig = Field(
+        default_factory=GRPCObservabilityConfig,
+        description="Observability configuration: logging, metrics, DB tracking (optional)",
+    )
+
     handlers_hook: str | List[str] = Field(
         default="",
         description="Import path(s) to grpc_handlers function (optional, e.g., '{ROOT_URLCONF}.grpc_handlers' or list of paths)",
@@ -395,11 +438,6 @@ class GRPCConfig(BaseConfig):
     custom_services: Dict[str, str] = Field(
         default_factory=dict,
         description="Custom service import paths: {service_name: 'path.to.Service'}",
-    )
-
-    publish_to_telegram: bool = Field(
-        default=False,
-        description="Publish successful gRPC events to Telegram via Centrifugo (requires Telegram and Centrifugo configured)",
     )
 
     @model_validator(mode="after")

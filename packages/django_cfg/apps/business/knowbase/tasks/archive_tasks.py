@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from ..models.archive import ArchiveItem, ArchiveItemChunk, DocumentArchive
 from ..models.base import ProcessingStatus
-from ..services.archive import (
+from ..services.archiver import (
     ArchiveProcessingError,
     ArchiveVectorizationService,
     DocumentArchiveService,

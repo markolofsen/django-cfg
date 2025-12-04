@@ -86,10 +86,6 @@ def __getattr__(name):
         from .monitoring.monitoring import MonitoringService
         return MonitoringService
 
-    if name == 'TestingService':
-        from .monitoring.testing import TestingService
-        return TestingService
-
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
@@ -106,7 +102,6 @@ __all__ = [
 
     # Monitoring
     "MonitoringService",
-    "TestingService",
 
     # Client
     "DynamicGRPCClient",

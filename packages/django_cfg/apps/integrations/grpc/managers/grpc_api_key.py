@@ -26,9 +26,7 @@ class GrpcApiKeyManager(models.Manager):
         user: User,
         name: str,
         description: str = "",
-        key_type: str = "service",
         expires_in_days: Optional[int] = None,
-        created_by: Optional[User] = None,
     ) -> "GrpcApiKey":
         """
         Create a new API key for a user.
@@ -37,9 +35,7 @@ class GrpcApiKeyManager(models.Manager):
             user: User this key authenticates as
             name: Descriptive name for this key
             description: Additional details about this key
-            key_type: Type of key (service, cli, webhook, etc.)
             expires_in_days: Number of days until expiration (None = never)
-            created_by: User who created this key
 
         Returns:
             Created GrpcApiKey instance
@@ -60,9 +56,7 @@ class GrpcApiKeyManager(models.Manager):
             user=user,
             name=name,
             description=description,
-            key_type=key_type,
             expires_at=expires_at,
-            created_by=created_by or user,
         )
 
     def get_by_key(self, key: str) -> Optional["GrpcApiKey"]:

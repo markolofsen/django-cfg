@@ -130,8 +130,6 @@ class GRPCSettingsGenerator:
         logger.info(f"   - Max concurrent streams: {max_streams}")
         logger.info(f"   - Auth: {'enabled' if self.config.grpc.auth.enabled else 'disabled'}")
         logger.info(f"   - Reflection: {'enabled' if self.config.grpc.server.enable_reflection else 'disabled'}")
-        if self.config.grpc.publish_to_telegram:
-            logger.info(f"   - Telegram notifications: enabled")
 
         return settings
 
@@ -253,7 +251,6 @@ class GRPCSettingsGenerator:
             "channel_template": "grpc#{service}#{method}#meta",
             "error_channel_template": "grpc#{service}#{method}#errors",
             "metadata": {},
-            "publish_to_telegram": grpc_config.publish_to_telegram,
         }
 
         return centrifugo_settings
@@ -265,47 +262,31 @@ class GRPCSettingsGenerator:
         IMPORTANT: Interceptors are executed in reverse order for requests!
         The first interceptor in the list wraps all others.
 
-        Correct order for our use case:
-        1. Auth interceptor (MUST be first to set context.api_key before logging)
-        2. Request logger interceptor (uses context.api_key from auth)
-        3. Logging interceptor (if dev mode)
-        4. Metrics interceptor (if dev mode)
-        5. Custom interceptors (from config)
+        Architecture (after consolidation to fix bidi streaming bug):
+            Auth → Observability → Handler (only 2 layers!)
+
+        The ObservabilityInterceptor combines:
+        - MetricsInterceptor (metrics collection)
+        - LoggingInterceptor (request/response logging)
+        - RequestLoggerInterceptor (DB request logging)
+        - CentrifugoInterceptor (real-time event publishing)
+
+        This eliminates 4 layers of async generator nesting that caused
+        StopAsyncIteration after ~15 messages in bidirectional streaming.
 
         Returns:
             List of interceptor class paths
         """
         interceptors = []
 
-        # Check if we're in dev mode
-        is_dev = self.config.env_mode in ("local", "development", "dev")
-
         # NOTE: Interceptors are applied in REVERSE order (last added = first executed)!
         # So add them in reverse order of execution:
 
-        # 4. Add metrics interceptor in dev mode (executed LAST)
-        if is_dev:
-            interceptors.append(
-                "django_cfg.apps.integrations.grpc.services.interceptors.MetricsInterceptor"
-            )
-
-        # 3. Add logging interceptor in dev mode (executed 3rd)
-        if is_dev:
-            interceptors.append(
-                "django_cfg.apps.integrations.grpc.services.interceptors.LoggingInterceptor"
-            )
-
-        # 2. Add request logger interceptor (executed 2nd - needs context vars from auth)
+        # 2. Add ObservabilityInterceptor (combines metrics, logging, request_logger, centrifugo)
+        # This is executed AFTER auth (which sets contextvars)
         interceptors.append(
-            "django_cfg.apps.integrations.grpc.services.interceptors.RequestLoggerInterceptor"
+            "django_cfg.apps.integrations.grpc.services.interceptors.ObservabilityInterceptor"
         )
-
-        # 1.5. Add Centrifugo interceptor (publishes events to Centrifugo/Telegram)
-        # Check if Centrifugo is enabled OR publish_to_telegram is enabled
-        if self.config.grpc.publish_to_telegram:
-            interceptors.append(
-                "django_cfg.apps.integrations.grpc.services.interceptors.CentrifugoInterceptor"
-            )
 
         # 1. Add auth interceptor LAST in list (executed FIRST - sets contextvars!)
         if self.config.grpc.auth.enabled:
@@ -313,7 +294,7 @@ class GRPCSettingsGenerator:
                 "django_cfg.apps.integrations.grpc.auth.ApiKeyAuthInterceptor"
             )
 
-        # 5. Add custom interceptors from server config
+        # 3. Add custom interceptors from server config
         if self.config.grpc.server.interceptors:
             interceptors.extend(self.config.grpc.server.interceptors)
 

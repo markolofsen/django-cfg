@@ -369,12 +369,19 @@ class Command(BaseCommand):
                 self.logger.warning(f"Could not mark server as running: {e}")
 
         # Start heartbeat background task
+        # Get interval from GRPCObservabilityConfig (default 300 = 5 min)
+        heartbeat_interval = 300
+        if config and hasattr(config, 'grpc') and config.grpc:
+            obs_config = config.grpc.observability
+            if obs_config:
+                heartbeat_interval = obs_config.heartbeat_interval
+
         heartbeat_task = None
         if server_status:
             heartbeat_task = asyncio.create_task(
-                self._heartbeat_loop(interval=30)
+                self._heartbeat_loop(interval=heartbeat_interval)
             )
-            self.logger.info("Started heartbeat background task (30s interval)")
+            self.logger.info(f"Started heartbeat background task ({heartbeat_interval}s interval)")
 
         # Display gRPC-specific startup info
         try:

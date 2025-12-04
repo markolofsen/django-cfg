@@ -11,10 +11,6 @@ from django.utils import timezone
 class GRPCRequestLogQuerySet(models.QuerySet):
     """Custom QuerySet for GRPCRequestLog with filtering helpers."""
 
-    def pending(self):
-        """Get all pending logs."""
-        return self.filter(status="pending")
-
     def successful(self):
         """Get all successful logs."""
         return self.filter(status="success")
@@ -54,7 +50,7 @@ class GRPCRequestLogQuerySet(models.QuerySet):
 
     def completed(self):
         """Get all completed logs (success, error, cancelled, timeout)."""
-        return self.exclude(status="pending")
+        return self.filter(status__in=["success", "error", "cancelled", "timeout"])
 
     def by_performance(self):
         """Order by duration (fastest first)."""
@@ -71,10 +67,6 @@ class GRPCRequestLogManager(models.Manager):
     def get_queryset(self):
         """Return custom QuerySet."""
         return GRPCRequestLogQuerySet(self.model, using=self._db)
-
-    def pending(self):
-        """Get pending logs."""
-        return self.get_queryset().pending()
 
     def successful(self):
         """Get successful logs."""
@@ -169,8 +161,6 @@ class GRPCRequestLogManager(models.Manager):
         self,
         log_instance,
         duration_ms: int | None = None,
-        response_size: int | None = None,
-        response_data: dict | None = None,
     ):
         """
         Mark request as successful.
@@ -178,8 +168,6 @@ class GRPCRequestLogManager(models.Manager):
         Args:
             log_instance: GRPCRequestLog instance
             duration_ms: Duration in milliseconds
-            response_size: Response size in bytes
-            response_data: Response data
         """
         from ..models import GRPCRequestLog
 
@@ -189,12 +177,6 @@ class GRPCRequestLogManager(models.Manager):
 
         if duration_ms is not None:
             log_instance.duration_ms = duration_ms
-
-        if response_size is not None:
-            log_instance.response_size = response_size
-
-        if response_data is not None:
-            log_instance.response_data = response_data
 
         log_instance.save(
             update_fields=[
@@ -202,8 +184,6 @@ class GRPCRequestLogManager(models.Manager):
                 "grpc_status_code",
                 "completed_at",
                 "duration_ms",
-                "response_size",
-                "response_data",
             ]
         )
 
@@ -211,8 +191,6 @@ class GRPCRequestLogManager(models.Manager):
         self,
         log_instance,
         duration_ms: int | None = None,
-        response_size: int | None = None,
-        response_data: dict | None = None,
     ):
         """
         Mark request as successful (ASYNC - Django 5.2).
@@ -220,8 +198,6 @@ class GRPCRequestLogManager(models.Manager):
         Args:
             log_instance: GRPCRequestLog instance
             duration_ms: Duration in milliseconds
-            response_size: Response size in bytes
-            response_data: Response data
         """
         from ..models import GRPCRequestLog
 
@@ -232,20 +208,12 @@ class GRPCRequestLogManager(models.Manager):
         if duration_ms is not None:
             log_instance.duration_ms = duration_ms
 
-        if response_size is not None:
-            log_instance.response_size = response_size
-
-        if response_data is not None:
-            log_instance.response_data = response_data
-
         await log_instance.asave(
             update_fields=[
                 "status",
                 "grpc_status_code",
                 "completed_at",
                 "duration_ms",
-                "response_size",
-                "response_data",
             ]
         )
 
@@ -254,7 +222,6 @@ class GRPCRequestLogManager(models.Manager):
         log_instance,
         grpc_status_code: str,
         error_message: str,
-        error_details: dict | None = None,
         duration_ms: int | None = None,
     ):
         """
@@ -264,7 +231,6 @@ class GRPCRequestLogManager(models.Manager):
             log_instance: GRPCRequestLog instance
             grpc_status_code: gRPC status code
             error_message: Error message
-            error_details: Additional error details
             duration_ms: Duration in milliseconds
         """
         from ..models import GRPCRequestLog
@@ -274,9 +240,6 @@ class GRPCRequestLogManager(models.Manager):
         log_instance.error_message = error_message
         log_instance.completed_at = timezone.now()
 
-        if error_details is not None:
-            log_instance.error_details = error_details
-
         if duration_ms is not None:
             log_instance.duration_ms = duration_ms
 
@@ -285,7 +248,6 @@ class GRPCRequestLogManager(models.Manager):
                 "status",
                 "grpc_status_code",
                 "error_message",
-                "error_details",
                 "completed_at",
                 "duration_ms",
             ]
@@ -296,7 +258,6 @@ class GRPCRequestLogManager(models.Manager):
         log_instance,
         grpc_status_code: str,
         error_message: str,
-        error_details: dict | None = None,
         duration_ms: int | None = None,
     ):
         """
@@ -306,7 +267,6 @@ class GRPCRequestLogManager(models.Manager):
             log_instance: GRPCRequestLog instance
             grpc_status_code: gRPC status code
             error_message: Error message
-            error_details: Additional error details
             duration_ms: Duration in milliseconds
         """
         from ..models import GRPCRequestLog
@@ -316,9 +276,6 @@ class GRPCRequestLogManager(models.Manager):
         log_instance.error_message = error_message
         log_instance.completed_at = timezone.now()
 
-        if error_details is not None:
-            log_instance.error_details = error_details
-
         if duration_ms is not None:
             log_instance.duration_ms = duration_ms
 
@@ -327,7 +284,6 @@ class GRPCRequestLogManager(models.Manager):
                 "status",
                 "grpc_status_code",
                 "error_message",
-                "error_details",
                 "completed_at",
                 "duration_ms",
             ]

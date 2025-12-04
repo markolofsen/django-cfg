@@ -29,6 +29,7 @@ export const profile = defineRoute('/private/profile', {
   order: 1,
 });
 
+
 // All routes as array
 export const allRoutes: RouteDefinition[] = [home, profile];
 

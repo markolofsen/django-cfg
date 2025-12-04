@@ -56,14 +56,7 @@ export async function getTradingOrdersList(  params?: { page?: number; page_size
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getTradingOrdersList',
-      message: `Path: /api/trading/orders/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getTradingOrdersList\nPath: /api/trading/orders/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -120,14 +113,7 @@ export async function createTradingOrdersCreate(  data: OrderCreateRequest,  cli
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'createTradingOrdersCreate',
-      message: `Path: /api/trading/orders/\nMethod: POST`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`createTradingOrdersCreate\nPath: /api/trading/orders/\nMethod: POST`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -184,14 +170,7 @@ export async function getTradingOrdersRetrieve(  id: number,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getTradingOrdersRetrieve',
-      message: `Path: /api/trading/orders/{id}/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getTradingOrdersRetrieve\nPath: /api/trading/orders/{id}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -248,14 +227,7 @@ export async function updateTradingOrdersUpdate(  id: number, data: OrderRequest
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'updateTradingOrdersUpdate',
-      message: `Path: /api/trading/orders/{id}/\nMethod: PUT`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`updateTradingOrdersUpdate\nPath: /api/trading/orders/{id}/\nMethod: PUT`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -312,14 +284,7 @@ export async function partialUpdateTradingOrdersPartialUpdate(  id: number, data
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'partialUpdateTradingOrdersPartialUpdate',
-      message: `Path: /api/trading/orders/{id}/\nMethod: PATCH`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`partialUpdateTradingOrdersPartialUpdate\nPath: /api/trading/orders/{id}/\nMethod: PATCH`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -390,14 +355,7 @@ export async function getTradingPortfoliosList(  params?: { page?: number; page_
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getTradingPortfoliosList',
-      message: `Path: /api/trading/portfolios/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getTradingPortfoliosList\nPath: /api/trading/portfolios/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -454,14 +412,7 @@ export async function getTradingPortfoliosRetrieve(  id: number,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getTradingPortfoliosRetrieve',
-      message: `Path: /api/trading/portfolios/{id}/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getTradingPortfoliosRetrieve\nPath: /api/trading/portfolios/{id}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -518,14 +469,7 @@ export async function getTradingPortfoliosMeRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getTradingPortfoliosMeRetrieve',
-      message: `Path: /api/trading/portfolios/me/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getTradingPortfoliosMeRetrieve\nPath: /api/trading/portfolios/me/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -582,14 +526,7 @@ export async function getTradingPortfoliosStatsRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getTradingPortfoliosStatsRetrieve',
-      message: `Path: /api/trading/portfolios/stats/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getTradingPortfoliosStatsRetrieve\nPath: /api/trading/portfolios/stats/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');

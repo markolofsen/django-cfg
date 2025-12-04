@@ -28,13 +28,6 @@ class GrpcApiKeyAdmin(PydanticAdmin):
 
     config = grpcapikey_config
 
-    # Permissions
-    def save_model(self, request, obj, form, change):
-        """Save model with created_by tracking."""
-        if not change:  # New object
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
-
     # Display methods
     @computed_field("Status", ordering="is_active")
     def status_indicator(self, obj):

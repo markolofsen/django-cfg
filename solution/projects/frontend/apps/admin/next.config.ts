@@ -15,18 +15,14 @@ const withBundleAnalyzer = bundleAnalyzer({
 // Create config with base settings
 // Add project-specific overrides here if needed
 const config = createBaseNextConfig({
-
   // Automatically open browser in development mode
   openBrowser: true,
-  
-  // Example: Add custom transpile packages if needed
-  // transpilePackages: ['my-custom-package'],
 
-  // Example: Add custom webpack rules (will be called AFTER base webpack logic)
-  // webpack: (config, options) => {
-  //   // Your custom webpack configuration
-  //   return config;
-  // },
+  // Check for @djangocfg/* package updates on startup
+  checkUpdates: true,
+
+  // Check for missing optional packages
+  checkPackages: true,
 });
 
 export default withBundleAnalyzer(config);

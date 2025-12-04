@@ -13,7 +13,6 @@ class ApiKeySerializer(serializers.Serializer):
 
     id = serializers.IntegerField(help_text="Database ID")
     name = serializers.CharField(help_text="Key name/description")
-    key_type = serializers.CharField(help_text="Type of API key")
     masked_key = serializers.CharField(help_text="Masked API key (first 4 and last 4 chars)")
     is_active = serializers.BooleanField(help_text="Whether key is active")
     is_valid = serializers.BooleanField(help_text="Whether key is valid (active and not expired)")
@@ -30,10 +29,6 @@ class ApiKeySerializer(serializers.Serializer):
         help_text="When key expires (null = never)"
     )
     created_at = serializers.DateTimeField(help_text="When key was created")
-    created_by = serializers.CharField(
-        allow_null=True,
-        help_text="User who created this key"
-    )
 
 
 class ApiKeyListSerializer(serializers.Serializer):
@@ -50,10 +45,6 @@ class ApiKeyStatsSerializer(serializers.Serializer):
     active_keys = serializers.IntegerField(help_text="Active API keys")
     expired_keys = serializers.IntegerField(help_text="Expired API keys")
     total_requests = serializers.IntegerField(help_text="Total requests across all keys")
-    keys_by_type = serializers.DictField(
-        child=serializers.IntegerField(),
-        help_text="Count of keys by type"
-    )
 
 
 __all__ = [

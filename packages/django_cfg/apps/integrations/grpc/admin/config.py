@@ -44,7 +44,6 @@ grpcrequestlog_config = AdminConfig(
             name="status",
             title="Status",
             label_map={
-                "pending": "warning",
                 "success": "success",
                 "error": "danger",
                 "cancelled": "secondary",
@@ -77,11 +76,7 @@ grpcrequestlog_config = AdminConfig(
         "request_id",
         "created_at",
         "completed_at",
-        "request_data_display",
-        "response_data_display",
-        "error_details_display",
         "performance_stats_display",
-        "client_info_display",
     ],
     # Date hierarchy
     date_hierarchy="created_at",
@@ -141,13 +136,9 @@ grpcserverstatus_config = AdminConfig(
         "started_at",
         "last_heartbeat",
         "stopped_at",
-        "created_at",
-        "updated_at",
         "uptime_display",
-        "is_running",
         "server_config_display",
         "process_info_display",
-        "registered_services_display",
         "error_display",
         "lifecycle_display",
     ],
@@ -168,13 +159,12 @@ grpcapikey_config = AdminConfig(
     model=GrpcApiKey,
 
     # Performance optimization
-    select_related=["user", "created_by"],
+    select_related=["user"],
 
     # List display
     list_display=[
         "status_indicator",
         "name",
-        "key_type",
         "user",
         "masked_key_display",
         "request_count_display",
@@ -186,24 +176,13 @@ grpcapikey_config = AdminConfig(
     # Auto-generated display methods
     display_fields=[
         TextField(name="name", title="Name", ordering="name"),
-        BadgeField(
-            name="key_type",
-            title="Type",
-            label_map={
-                "service": "info",
-                "cli": "primary",
-                "webhook": "warning",
-                "internal": "secondary",
-                "development": "danger",
-            },
-        ),
         UserField(name="user", title="User", header=True, ordering="user__username"),
         DateTimeField(name="last_used_at", title="Last Used", ordering="last_used_at"),
         DateTimeField(name="created_at", title="Created", ordering="created_at"),
     ],
 
     # Filters
-    list_filter=["is_active", "key_type", "created_at", "expires_at", "user"],
+    list_filter=["is_active", "created_at", "expires_at", "user"],
     search_fields=["name", "description", "user__username", "user__email", "key"],
 
     # Readonly fields
@@ -214,14 +193,13 @@ grpcapikey_config = AdminConfig(
         "last_used_at",
         "created_at",
         "updated_at",
-        "created_by",
     ],
 
     # Fieldsets
     fieldsets=[
         FieldsetConfig(
             title="Basic Information",
-            fields=["name", "description", "key_type", "is_active"],
+            fields=["name", "description", "is_active"],
         ),
         FieldsetConfig(
             title="API Key",
@@ -229,7 +207,7 @@ grpcapikey_config = AdminConfig(
         ),
         FieldsetConfig(
             title="User Association",
-            fields=["user", "created_by"],
+            fields=["user"],
         ),
         FieldsetConfig(
             title="Expiration",

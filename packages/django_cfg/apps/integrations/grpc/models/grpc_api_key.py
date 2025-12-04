@@ -2,22 +2,17 @@
 gRPC API Key Model.
 
 Django model for managing API keys used for gRPC authentication.
-Provides secure, revocable authentication for services and CLI tools.
 """
 
 import secrets
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 
 def generate_api_key() -> str:
-    """
-    Generate a secure random API key.
-
-    Returns:
-        32-character hex string (128 bits of entropy)
-    """
+    """Generate a secure random API key (64 hex chars = 256 bits)."""
     return secrets.token_hex(32)
 
 
@@ -25,44 +20,14 @@ class GrpcApiKey(models.Model):
     """
     API Key for gRPC authentication.
 
-    Provides secure, revocable authentication for:
-    - Service-to-service communication
-    - CLI tools and scripts
-    - Internal systems
-    - Development and testing
-
-    Features:
-    - Auto-generated secure keys
-    - User association for permissions
-    - Expiration support
-    - Usage tracking
-    - Easy revocation via admin
-
     Example:
-        >>> # Create API key for a service
-        >>> key = GrpcApiKey.objects.create_for_user(
-        ...     user=admin_user,
-        ...     name="Analytics Service",
-        ...     description="Internal analytics microservice"
-        ... )
-        >>> print(key.key)  # Use this in service config
-
-        >>> # Check if key is valid
-        >>> if key.is_valid:
-        ...     user = key.user
+        >>> key = GrpcApiKey.objects.create(user=admin_user, name="Bot Service")
+        >>> print(key.key)  # Use this in x-api-key header
     """
 
-    # Custom manager
     from ..managers.grpc_api_key import GrpcApiKeyManager
-    objects: GrpcApiKeyManager = GrpcApiKeyManager()
 
-    class KeyTypeChoices(models.TextChoices):
-        """Type of API key."""
-        SERVICE = "service", "Service-to-Service"
-        CLI = "cli", "CLI Tool"
-        WEBHOOK = "webhook", "Webhook"
-        INTERNAL = "internal", "Internal System"
-        DEVELOPMENT = "development", "Development"
+    objects: GrpcApiKeyManager = GrpcApiKeyManager()
 
     # Identity
     key = models.CharField(
@@ -70,82 +35,39 @@ class GrpcApiKey(models.Model):
         unique=True,
         default=generate_api_key,
         db_index=True,
-        help_text="API key (auto-generated)",
     )
 
     name = models.CharField(
         max_length=255,
-        help_text="Descriptive name for this key (e.g., 'Analytics Service')",
+        help_text="Descriptive name (e.g., 'Bot Service')",
     )
 
-    description = models.TextField(
-        blank=True,
-        help_text="Additional details about this key's purpose",
-    )
-
-    key_type = models.CharField(
-        max_length=20,
-        choices=KeyTypeChoices.choices,
-        default=KeyTypeChoices.SERVICE,
-        help_text="Type of API key",
-    )
+    description = models.TextField(blank=True)
 
     # User association
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="grpc_api_keys",
-        help_text="User this key authenticates as",
     )
 
     # Status
-    is_active = models.BooleanField(
-        default=True,
-        db_index=True,
-        help_text="Whether this key is currently active (can be used)",
-    )
+    is_active = models.BooleanField(default=True, db_index=True)
 
-    # Expiration
     expires_at = models.DateTimeField(
         null=True,
         blank=True,
         db_index=True,
-        help_text="When this key expires (null = never expires)",
+        help_text="Null = never expires",
     )
 
     # Usage tracking
-    last_used_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When this key was last used",
-    )
-
-    request_count = models.IntegerField(
-        default=0,
-        help_text="Total number of requests made with this key",
-    )
-
-    # Metadata
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="created_grpc_api_keys",
-        help_text="User who created this key",
-    )
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    request_count = models.IntegerField(default=0)
 
     # Timestamps
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        db_index=True,
-        help_text="When this key was created",
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        help_text="When this key was last updated",
-    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "django_cfg_grpc_api_key"
@@ -153,8 +75,6 @@ class GrpcApiKey(models.Model):
         indexes = [
             models.Index(fields=["user", "-created_at"]),
             models.Index(fields=["is_active", "-created_at"]),
-            models.Index(fields=["expires_at"]),
-            models.Index(fields=["key_type", "-created_at"]),
         ]
         verbose_name = "gRPC API Key"
         verbose_name_plural = "gRPC API Keys"

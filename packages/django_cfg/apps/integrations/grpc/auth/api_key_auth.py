@@ -255,6 +255,9 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
 
         # Wrap the handler to inject user and api_key into contextvars (not context directly)
         # All wrappers must be async for grpc.aio
+        # IMPORTANT: Must use _WrappedHandler instead of grpc.*_rpc_method_handler()
+        # as the standard grpc functions create sync handlers which break grpc.aio!
+
         async def wrapped_unary_unary(request, context):
             # Set context variables for async context
             _grpc_user_var.set(user)
@@ -278,35 +281,31 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
 
         async def wrapped_stream_stream(request_iterator, context):
             # Set context variables for async context
+            # IMPORTANT: No counting_iterator wrapper here!
+            # Adding another async generator layer causes StopAsyncIteration bug.
+            # ObservabilityInterceptor handles message counting.
             _grpc_user_var.set(user)
             _grpc_api_key_var.set(api_key_instance)
+            logger.debug(f"[Auth] Set contextvar user={user}, api_key={api_key_instance}")
+
+            # Pass request_iterator directly to handler - NO wrapping!
             async for response in handler.stream_stream(request_iterator, context):
                 yield response
 
         # Return wrapped handler based on type
-        return grpc.unary_unary_rpc_method_handler(
-            wrapped_unary_unary,
-            request_deserializer=handler.request_deserializer,
-            response_serializer=handler.response_serializer,
-        ) if handler.unary_unary else (
-            grpc.unary_stream_rpc_method_handler(
-                wrapped_unary_stream,
-                request_deserializer=handler.request_deserializer,
-                response_serializer=handler.response_serializer,
-            ) if handler.unary_stream else (
-                grpc.stream_unary_rpc_method_handler(
-                    wrapped_stream_unary,
-                    request_deserializer=handler.request_deserializer,
-                    response_serializer=handler.response_serializer,
-                ) if handler.stream_unary else (
-                    grpc.stream_stream_rpc_method_handler(
-                        wrapped_stream_stream,
-                        request_deserializer=handler.request_deserializer,
-                        response_serializer=handler.response_serializer,
-                    ) if handler.stream_stream else None
-                )
-            )
-        )
+        # IMPORTANT: For grpc.aio, we must NOT use grpc.*_rpc_method_handler()
+        # functions as they create sync handlers. Instead, we use _WrappedHandler
+        # that preserves async methods.
+        if handler.unary_unary:
+            return _WrappedHandler(handler, unary_unary=wrapped_unary_unary)
+        elif handler.unary_stream:
+            return _WrappedHandler(handler, unary_stream=wrapped_unary_stream)
+        elif handler.stream_unary:
+            return _WrappedHandler(handler, stream_unary=wrapped_stream_unary)
+        elif handler.stream_stream:
+            return _WrappedHandler(handler, stream_stream=wrapped_stream_stream)
+        else:
+            return handler
 
     def _abort_unauthenticated(self, message: str) -> grpc.RpcMethodHandler:
         """
@@ -328,6 +327,35 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
             request_deserializer=lambda x: x,
             response_serializer=lambda x: x,
         )
+
+
+class _WrappedHandler:
+    """
+    Wrapper for RpcMethodHandler that preserves async methods for grpc.aio.
+
+    The standard grpc.*_rpc_method_handler() functions create sync handlers,
+    which don't work properly with grpc.aio async server. This class simply
+    wraps the original handler and replaces one method with a wrapped version.
+    """
+
+    def __init__(self, original_handler, **wrapped_methods):
+        """
+        Create wrapped handler.
+
+        Args:
+            original_handler: Original RpcMethodHandler
+            **wrapped_methods: Methods to replace (unary_unary, stream_stream, etc.)
+        """
+        self.request_streaming = original_handler.request_streaming
+        self.response_streaming = original_handler.response_streaming
+        self.request_deserializer = original_handler.request_deserializer
+        self.response_serializer = original_handler.response_serializer
+
+        # Copy original methods, replace with wrapped versions
+        self.unary_unary = wrapped_methods.get('unary_unary', original_handler.unary_unary)
+        self.unary_stream = wrapped_methods.get('unary_stream', original_handler.unary_stream)
+        self.stream_unary = wrapped_methods.get('stream_unary', original_handler.stream_unary)
+        self.stream_stream = wrapped_methods.get('stream_stream', original_handler.stream_stream)
 
 
 __all__ = ["ApiKeyAuthInterceptor", "get_current_grpc_user", "get_current_grpc_api_key"]

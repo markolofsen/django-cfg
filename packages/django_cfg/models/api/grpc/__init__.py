@@ -16,20 +16,22 @@ Example:
     ... )
 
     Advanced with nested configs (optional):
-    >>> from django_cfg.models.api.grpc.config import GRPCServerConfig
+    >>> from django_cfg.models.api.grpc.config import GRPCServerConfig, GRPCObservabilityConfig
     >>> config = GRPCConfig(
     ...     enabled=True,
-    ...     server=GRPCServerConfig(max_workers=50, compression="gzip")
+    ...     server=GRPCServerConfig(max_workers=50, compression="gzip"),
+    ...     observability=GRPCObservabilityConfig(log_to_db=False, sampling_rate=0.1),
     ... )
 """
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .config import GRPCConfig
+    from .config import GRPCConfig, GRPCObservabilityConfig
 
 __all__ = [
     "GRPCConfig",
+    "GRPCObservabilityConfig",
 ]
 
 
@@ -37,10 +39,11 @@ def __getattr__(name: str):
     """Lazy import with helpful error message."""
     if name in __all__:
         try:
-            from .config import GRPCConfig
+            from .config import GRPCConfig, GRPCObservabilityConfig
 
             return {
                 "GRPCConfig": GRPCConfig,
+                "GRPCObservabilityConfig": GRPCObservabilityConfig,
             }[name]
 
         except ImportError as e:

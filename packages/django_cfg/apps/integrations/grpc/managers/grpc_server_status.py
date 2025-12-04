@@ -27,9 +27,6 @@ class GRPCServerStatusManager(models.Manager):
         host: str,
         port: int,
         pid: int = None,
-        max_workers: int = 10,
-        enable_reflection: bool = False,
-        enable_health_check: bool = True,
     ):
         """
         Start tracking a new server instance (SYNC).
@@ -38,9 +35,6 @@ class GRPCServerStatusManager(models.Manager):
             host: Server host address
             port: Server port
             pid: Process ID (defaults to current process)
-            max_workers: Maximum worker threads
-            enable_reflection: Whether reflection is enabled
-            enable_health_check: Whether health check is enabled
 
         Returns:
             GRPCServerStatus instance
@@ -53,10 +47,6 @@ class GRPCServerStatusManager(models.Manager):
             ... )
             >>> status.is_running
             True
-
-        Note:
-            External/internal server detection is automatic based on env_mode.
-            Production mode assumes external server (Docker), dev/test assumes local.
         """
         if pid is None:
             pid = os.getpid()
@@ -78,9 +68,6 @@ class GRPCServerStatusManager(models.Manager):
                 "pid": pid,
                 "hostname": hostname,
                 "status": self.model.StatusChoices.STARTING,
-                "max_workers": max_workers,
-                "enable_reflection": enable_reflection,
-                "enable_health_check": enable_health_check,
                 "started_at": timezone.now(),
                 "last_heartbeat": timezone.now(),
             },
@@ -93,9 +80,6 @@ class GRPCServerStatusManager(models.Manager):
         host: str,
         port: int,
         pid: int = None,
-        max_workers: int = 10,
-        enable_reflection: bool = False,
-        enable_health_check: bool = True,
     ):
         """
         Start tracking a new server instance (ASYNC - Django 5.2).
@@ -104,9 +88,6 @@ class GRPCServerStatusManager(models.Manager):
             host: Server host address
             port: Server port
             pid: Process ID (defaults to current process)
-            max_workers: Maximum worker threads
-            enable_reflection: Whether reflection is enabled
-            enable_health_check: Whether health check is enabled
 
         Returns:
             GRPCServerStatus instance
@@ -119,10 +100,6 @@ class GRPCServerStatusManager(models.Manager):
             ... )
             >>> status.is_running
             True
-
-        Note:
-            External/internal server detection is automatic based on env_mode.
-            Production mode assumes external server (Docker), dev/test assumes local.
         """
         if pid is None:
             pid = os.getpid()
@@ -144,9 +121,6 @@ class GRPCServerStatusManager(models.Manager):
                 "pid": pid,
                 "hostname": hostname,
                 "status": self.model.StatusChoices.STARTING,
-                "max_workers": max_workers,
-                "enable_reflection": enable_reflection,
-                "enable_health_check": enable_health_check,
                 "started_at": timezone.now(),
                 "last_heartbeat": timezone.now(),
             },

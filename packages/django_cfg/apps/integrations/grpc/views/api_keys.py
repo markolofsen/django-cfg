@@ -5,7 +5,7 @@ Provides REST API endpoints for viewing API keys.
 Create/Update/Delete operations handled through Django Admin.
 """
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django_cfg.middleware.pagination import DefaultPagination
 from django_cfg.mixins import AdminAPIMixin
@@ -55,13 +55,6 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 required=False,
             ),
             OpenApiParameter(
-                name="key_type",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="Filter by key type (service, cli, webhook, internal, development)",
-                required=False,
-            ),
-            OpenApiParameter(
                 name="user_id",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
@@ -78,17 +71,13 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         """List all API keys."""
         try:
             # Build queryset with filters
-            queryset = GrpcApiKey.objects.select_related("user", "created_by").all()
+            queryset = GrpcApiKey.objects.select_related("user").all()
 
             # Apply filters
             is_active = request.GET.get("is_active")
             if is_active is not None:
                 is_active_bool = is_active.lower() in ("true", "1", "yes")
                 queryset = queryset.filter(is_active=is_active_bool)
-
-            key_type = request.GET.get("key_type")
-            if key_type:
-                queryset = queryset.filter(key_type=key_type)
 
             user_id = request.GET.get("user_id")
             if user_id:
@@ -106,7 +95,6 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     results.append({
                         "id": key.id,
                         "name": key.name,
-                        "key_type": key.key_type,
                         "masked_key": key.masked_key,
                         "is_active": key.is_active,
                         "is_valid": key.is_valid,
@@ -117,7 +105,6 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                         "last_used_at": key.last_used_at,
                         "expires_at": key.expires_at,
                         "created_at": key.created_at,
-                        "created_by": key.created_by.username if key.created_by else None,
                     })
                 return self.get_paginated_response(results)
 
@@ -127,7 +114,6 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 results.append({
                     "id": key.id,
                     "name": key.name,
-                    "key_type": key.key_type,
                     "masked_key": key.masked_key,
                     "is_active": key.is_active,
                     "is_valid": key.is_valid,
@@ -138,7 +124,6 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     "last_used_at": key.last_used_at,
                     "expires_at": key.expires_at,
                     "created_at": key.created_at,
-                    "created_by": key.created_by.username if key.created_by else None,
                 })
 
             return Response({"results": results, "count": len(results)})
@@ -167,12 +152,11 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     def retrieve(self, request, pk=None):
         """Get details of a specific API key."""
         try:
-            key = GrpcApiKey.objects.select_related("user", "created_by").get(pk=pk)
+            key = GrpcApiKey.objects.select_related("user").get(pk=pk)
 
             data = {
                 "id": key.id,
                 "name": key.name,
-                "key_type": key.key_type,
                 "masked_key": key.masked_key,
                 "is_active": key.is_active,
                 "is_valid": key.is_valid,
@@ -183,7 +167,6 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 "last_used_at": key.last_used_at,
                 "expires_at": key.expires_at,
                 "created_at": key.created_at,
-                "created_by": key.created_by.username if key.created_by else None,
             }
 
             serializer = ApiKeySerializer(data=data)
@@ -230,18 +213,11 @@ class GRPCApiKeyViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 total=Sum("request_count")
             )["total"] or 0
 
-            # Keys by type
-            keys_by_type_qs = GrpcApiKey.objects.values("key_type").annotate(
-                count=Count("id")
-            )
-            keys_by_type = {item["key_type"]: item["count"] for item in keys_by_type_qs}
-
             stats_data = {
                 "total_keys": total_keys,
                 "active_keys": active_keys,
                 "expired_keys": expired_keys,
                 "total_requests": total_requests,
-                "keys_by_type": keys_by_type,
             }
 
             serializer = ApiKeyStatsSerializer(data=stats_data)

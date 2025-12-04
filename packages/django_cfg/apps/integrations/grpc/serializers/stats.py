@@ -25,15 +25,11 @@ class GRPCServerStatusSerializer(serializers.Serializer):
     port = serializers.IntegerField(help_text="Server port")
     address = serializers.CharField(help_text="Full server address (host:port)")
     pid = serializers.IntegerField(allow_null=True, help_text="Process ID")
+    hostname = serializers.CharField(help_text="Server hostname")
     started_at = serializers.DateTimeField(allow_null=True, help_text="Server start time")
     uptime_seconds = serializers.IntegerField(help_text="Server uptime in seconds")
-    uptime_display = serializers.CharField(help_text="Human-readable uptime")
-    registered_services_count = serializers.IntegerField(help_text="Number of registered services")
-    enable_reflection = serializers.BooleanField(help_text="Whether reflection is enabled")
-    enable_health_check = serializers.BooleanField(help_text="Whether health check is enabled")
     last_heartbeat = serializers.DateTimeField(allow_null=True, help_text="Last heartbeat timestamp")
     services = GRPCRegisteredServiceSerializer(many=True, help_text="List of registered services with stats")
-    services_healthy = serializers.BooleanField(help_text="Whether all services are healthy (no recent errors)")
 
 
 class GRPCOverviewStatsSerializer(serializers.Serializer):

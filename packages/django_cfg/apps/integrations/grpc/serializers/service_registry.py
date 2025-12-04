@@ -157,6 +157,13 @@ class ServiceMethodsSerializer(serializers.Serializer):
     total_methods = serializers.IntegerField(help_text="Total number of methods")
 
 
+class MethodListSerializer(serializers.Serializer):
+    """List of methods response (for monitoring endpoint)."""
+
+    methods = MethodSummarySerializer(many=True, default=list, help_text="List of methods")
+    total_methods = serializers.IntegerField(help_text="Total number of methods")
+
+
 class RequestSchemaField(serializers.Serializer):
     """Schema field information."""
 
@@ -254,6 +261,7 @@ __all__ = [
     "MethodInfoSerializer",
     "MethodSummarySerializer",
     "ServiceMethodsSerializer",
+    "MethodListSerializer",
     "MethodStatsSerializer",
     "MethodDetailSerializer",
     "RecentErrorSerializer",

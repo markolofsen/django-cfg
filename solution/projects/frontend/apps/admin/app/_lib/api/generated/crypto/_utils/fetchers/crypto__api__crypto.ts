@@ -54,14 +54,7 @@ export async function getCryptoCoinsList(  params?: { page?: number; page_size?:
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoCoinsList',
-      message: `Path: /api/crypto/coins/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoCoinsList\nPath: /api/crypto/coins/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -118,14 +111,7 @@ export async function getCryptoCoinsRetrieve(  id: number,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoCoinsRetrieve',
-      message: `Path: /api/crypto/coins/{id}/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoCoinsRetrieve\nPath: /api/crypto/coins/{id}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -182,14 +168,7 @@ export async function getCryptoCoinsStatsRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoCoinsStatsRetrieve',
-      message: `Path: /api/crypto/coins/stats/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoCoinsStatsRetrieve\nPath: /api/crypto/coins/stats/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -246,14 +225,7 @@ export async function getCryptoExchangesList(  params?: { page?: number; page_si
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoExchangesList',
-      message: `Path: /api/crypto/exchanges/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoExchangesList\nPath: /api/crypto/exchanges/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -310,14 +282,7 @@ export async function getCryptoExchangesRetrieve(  slug: string,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoExchangesRetrieve',
-      message: `Path: /api/crypto/exchanges/{slug}/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoExchangesRetrieve\nPath: /api/crypto/exchanges/{slug}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -374,14 +339,7 @@ export async function getCryptoWalletsList(  params?: { page?: number; page_size
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoWalletsList',
-      message: `Path: /api/crypto/wallets/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoWalletsList\nPath: /api/crypto/wallets/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -438,14 +396,7 @@ export async function getCryptoWalletsRetrieve(  id: string,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getCryptoWalletsRetrieve',
-      message: `Path: /api/crypto/wallets/{id}/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getCryptoWalletsRetrieve\nPath: /api/crypto/wallets/{id}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');

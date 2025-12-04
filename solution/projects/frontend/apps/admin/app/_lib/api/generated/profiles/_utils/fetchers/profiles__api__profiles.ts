@@ -55,14 +55,7 @@ export async function getProfilesProfilesList(  params?: { page?: number; page_s
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getProfilesProfilesList',
-      message: `Path: /api/profiles/profiles/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getProfilesProfilesList\nPath: /api/profiles/profiles/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -119,14 +112,7 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'createProfilesProfilesCreate',
-      message: `Path: /api/profiles/profiles/\nMethod: POST`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`createProfilesProfilesCreate\nPath: /api/profiles/profiles/\nMethod: POST`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -183,14 +169,7 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getProfilesProfilesRetrieve',
-      message: `Path: /api/profiles/profiles/{id}/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getProfilesProfilesRetrieve\nPath: /api/profiles/profiles/{id}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -247,14 +226,7 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'updateProfilesProfilesUpdate',
-      message: `Path: /api/profiles/profiles/{id}/\nMethod: PUT`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`updateProfilesProfilesUpdate\nPath: /api/profiles/profiles/{id}/\nMethod: PUT`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -311,14 +283,7 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'partialUpdateProfilesProfilesPartialUpdate',
-      message: `Path: /api/profiles/profiles/{id}/\nMethod: PATCH`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`partialUpdateProfilesProfilesPartialUpdate\nPath: /api/profiles/profiles/{id}/\nMethod: PATCH`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -389,14 +354,7 @@ export async function getProfilesProfilesMeRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getProfilesProfilesMeRetrieve',
-      message: `Path: /api/profiles/profiles/me/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getProfilesProfilesMeRetrieve\nPath: /api/profiles/profiles/me/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -453,14 +411,7 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'updateProfilesProfilesMeUpdate',
-      message: `Path: /api/profiles/profiles/me/\nMethod: PUT`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`updateProfilesProfilesMeUpdate\nPath: /api/profiles/profiles/me/\nMethod: PUT`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -517,14 +468,7 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'partialUpdateProfilesProfilesMePartialUpdate',
-      message: `Path: /api/profiles/profiles/me/\nMethod: PATCH`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`partialUpdateProfilesProfilesMePartialUpdate\nPath: /api/profiles/profiles/me/\nMethod: PATCH`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -581,14 +525,7 @@ export async function getProfilesProfilesStatsRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'getProfilesProfilesStatsRetrieve',
-      message: `Path: /api/profiles/profiles/stats/\nMethod: GET`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`getProfilesProfilesStatsRetrieve\nPath: /api/profiles/profiles/stats/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');

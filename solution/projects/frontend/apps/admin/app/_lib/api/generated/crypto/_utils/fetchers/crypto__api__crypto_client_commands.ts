@@ -76,14 +76,7 @@ export async function createCryptoCommandsPauseCreate(  id: string,  client?: an
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'createCryptoCommandsPauseCreate',
-      message: `Path: /api/crypto/commands/{id}/pause/\nMethod: POST`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`createCryptoCommandsPauseCreate\nPath: /api/crypto/commands/{id}/pause/\nMethod: POST`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -154,14 +147,7 @@ export async function createCryptoCommandsRequestStatusCreate(  id: string, para
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'createCryptoCommandsRequestStatusCreate',
-      message: `Path: /api/crypto/commands/{id}/request_status/\nMethod: POST`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`createCryptoCommandsRequestStatusCreate\nPath: /api/crypto/commands/{id}/request_status/\nMethod: POST`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -218,14 +204,7 @@ export async function createCryptoCommandsResumeCreate(  id: string,  client?: a
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box({
-      title: 'createCryptoCommandsResumeCreate',
-      message: `Path: /api/crypto/commands/{id}/resume/\nMethod: POST`,
-      style: {
-        borderColor: 'red',
-        borderStyle: 'rounded'
-      }
-    });
+    consola.box(`createCryptoCommandsResumeCreate\nPath: /api/crypto/commands/{id}/resume/\nMethod: POST`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');

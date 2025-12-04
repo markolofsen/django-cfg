@@ -4,7 +4,7 @@ Knowledge Base Services
 Business logic layer for knowledge management system.
 """
 
-from .archive import *
+from .archiver import *
 from .base import *
 from .chat_service import *
 from .document_service import *

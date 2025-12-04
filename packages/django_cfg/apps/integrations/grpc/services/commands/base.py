@@ -247,6 +247,9 @@ class StreamingCommandClient(Generic[TCommand], ABC):
         if not GRPC_AVAILABLE:
             raise RuntimeError("grpcio not installed. Install with: pip install grpcio")
 
+        # Check if running under ASGI - cross-process gRPC commands require ASGI!
+        self._check_asgi_requirement()
+
         try:
             # Create gRPC channel with standard options
             async with grpc.aio.insecure_channel(
@@ -389,6 +392,88 @@ class StreamingCommandClient(Generic[TCommand], ABC):
     def is_same_process(self) -> bool:
         """Check if running in same-process mode."""
         return self._is_same_process
+
+    def _check_asgi_requirement(self) -> None:
+        """
+        Check if running under ASGI and warn if not.
+
+        Cross-process gRPC commands (via ExecuteCommandSync) require ASGI server
+        (uvicorn) instead of Django's built-in runserver. This is because:
+        1. runserver uses synchronous WSGI which doesn't support async gRPC calls well
+        2. ASGI (uvicorn) provides proper async event loop for gRPC operations
+
+        This method prints a BIG warning if not running under ASGI to help
+        developers understand why commands might fail with "Deadline Exceeded".
+        """
+        import sys
+        import os
+
+        # Check for ASGI indicators
+        is_asgi = False
+        server_type = "unknown"
+
+        # Check for uvicorn (most common ASGI server)
+        if 'uvicorn' in sys.modules:
+            is_asgi = True
+            server_type = "uvicorn"
+
+        # Check for daphne
+        elif 'daphne' in sys.modules:
+            is_asgi = True
+            server_type = "daphne"
+
+        # Check for hypercorn
+        elif 'hypercorn' in sys.modules:
+            is_asgi = True
+            server_type = "hypercorn"
+
+        # Check environment variable (fallback)
+        elif os.environ.get('ASGI_APPLICATION'):
+            is_asgi = True
+            server_type = "ASGI (env)"
+
+        # Check for Django runserver (WSGI)
+        if 'django.core.management.commands.runserver' in sys.modules:
+            is_asgi = False
+            server_type = "Django runserver (WSGI)"
+
+        if not is_asgi:
+            # Print HUGE warning
+            warning_msg = f"""
+{'='*80}
+{'!'*80}
+
+    ⚠️  WARNING: CROSS-PROCESS gRPC COMMAND WITHOUT ASGI!  ⚠️
+
+{'!'*80}
+
+    You are trying to execute a cross-process gRPC command (ExecuteCommandSync)
+    but the server is NOT running under ASGI!
+
+    Current server: {server_type}
+
+    This will likely cause:
+    ❌ "Deadline Exceeded" errors
+    ❌ Commands timing out
+    ❌ Async operations hanging
+
+    SOLUTION:
+    =========
+    Instead of:   python manage.py runserver
+    Use:          uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload
+
+    Or with Makefile:
+    Instead of:   make dev
+    Use:          make asgi
+
+    For full stack (ASGI + gRPC + RQ):
+    Use:          make run-all
+
+{'!'*80}
+{'='*80}
+"""
+            logger.warning(warning_msg)
+            print(warning_msg, file=sys.stderr)
 
     def get_grpc_address(self) -> str:
         """

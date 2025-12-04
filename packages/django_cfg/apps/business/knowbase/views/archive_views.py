@@ -31,7 +31,7 @@ from ..serializers.archive_serializers import (
     VectorizationResultSerializer,
     VectorizationStatisticsSerializer,
 )
-from ..services.archive import (
+from ..services.archiver import (
     ArchiveProcessingError,
     ArchiveValidationError,
     ArchiveVectorizationService,

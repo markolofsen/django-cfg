@@ -12,6 +12,24 @@ from ..models import GRPCServerStatus
 from .config import grpcserverstatus_config
 
 
+def format_uptime(seconds: int) -> str:
+    """Format uptime in seconds to human readable string."""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        mins = seconds // 60
+        secs = seconds % 60
+        return f"{mins}m {secs}s"
+    elif seconds < 86400:
+        hours = seconds // 3600
+        mins = (seconds % 3600) // 60
+        return f"{hours}h {mins}m"
+    else:
+        days = seconds // 86400
+        hours = (seconds % 86400) // 3600
+        return f"{days}d {hours}h"
+
+
 @admin.register(GRPCServerStatus)
 class GRPCServerStatusAdmin(PydanticAdmin):
     """
@@ -21,7 +39,6 @@ class GRPCServerStatusAdmin(PydanticAdmin):
     - Real-time server status indicators
     - Uptime tracking and display
     - Process information (PID, hostname)
-    - Service registration details
     - Error tracking and display
     """
 
@@ -30,7 +47,8 @@ class GRPCServerStatusAdmin(PydanticAdmin):
     @computed_field("Uptime", ordering="started_at")
     def uptime_display(self, obj):
         """Display server uptime with performance indicator."""
-        uptime_text = obj.uptime_display
+        uptime_seconds = obj.uptime_seconds
+        uptime_text = format_uptime(uptime_seconds)
 
         if not obj.is_running:
             return self.html.badge(
@@ -40,7 +58,6 @@ class GRPCServerStatusAdmin(PydanticAdmin):
             )
 
         # Color code based on uptime
-        uptime_seconds = obj.uptime_seconds
         if uptime_seconds > 86400:  # > 1 day
             variant = "success"
             icon = Icons.CHECK_CIRCLE
@@ -67,26 +84,6 @@ class GRPCServerStatusAdmin(PydanticAdmin):
             self.html.key_value(
                 "Port",
                 self.html.text(str(obj.port), variant="primary")
-            ),
-            self.html.key_value(
-                "Max Workers",
-                self.html.badge(str(obj.max_workers), variant="secondary", icon=Icons.SETTINGS)
-            ),
-            self.html.key_value(
-                "Reflection",
-                self.html.badge(
-                    "Enabled" if obj.enable_reflection else "Disabled",
-                    variant="success" if obj.enable_reflection else "secondary",
-                    icon=Icons.VISIBILITY if obj.enable_reflection else Icons.VISIBILITY_OFF
-                )
-            ),
-            self.html.key_value(
-                "Health Check",
-                self.html.badge(
-                    "Enabled" if obj.enable_health_check else "Disabled",
-                    variant="success" if obj.enable_health_check else "secondary",
-                    icon=Icons.HEALTH_AND_SAFETY if obj.enable_health_check else Icons.CANCEL
-                )
             ),
         )
 
@@ -119,20 +116,6 @@ class GRPCServerStatusAdmin(PydanticAdmin):
 
     process_info_display.short_description = "Process Information"
 
-    def registered_services_display(self, obj):
-        """Display registered services."""
-        if not obj.registered_services:
-            return self.html.empty("No services registered")
-
-        import json
-        try:
-            formatted = json.dumps(obj.registered_services, indent=2)
-            return self.html.code_block(formatted, language="json", max_height="400px")
-        except Exception:
-            return self.html.code(str(obj.registered_services))
-
-    registered_services_display.short_description = "Registered Services"
-
     def error_display(self, obj):
         """Display error information if status is ERROR."""
         if obj.status != "error" or not obj.error_message:
@@ -160,6 +143,7 @@ class GRPCServerStatusAdmin(PydanticAdmin):
 
     def lifecycle_display(self, obj):
         """Display server lifecycle timestamps."""
+        uptime_text = format_uptime(obj.uptime_seconds)
         return self.html.breakdown(
             self.html.key_value(
                 "Started",
@@ -184,7 +168,7 @@ class GRPCServerStatusAdmin(PydanticAdmin):
             ) if obj.stopped_at else None,
             self.html.key_value(
                 "Uptime",
-                self.html.badge(obj.uptime_display, variant="primary", icon=Icons.TIMER)
+                self.html.badge(uptime_text, variant="primary", icon=Icons.TIMER)
             ),
         )
 
@@ -200,26 +184,17 @@ class GRPCServerStatusAdmin(PydanticAdmin):
             ),
             (
                 "Configuration",
-                {"fields": ("server_config_display", "host", "port", "max_workers", "enable_reflection", "enable_health_check")},
+                {"fields": ("server_config_display", "host", "port")},
             ),
             (
                 "Process Information",
-                {"fields": ("process_info_display", "pid", "hostname", "is_running")},
+                {"fields": ("process_info_display", "pid", "hostname")},
             ),
             (
                 "Lifecycle",
                 {"fields": ("lifecycle_display", "started_at", "last_heartbeat", "stopped_at", "uptime_display")},
             ),
         ]
-
-        # Add registered services section if available
-        if obj and obj.registered_services:
-            fieldsets.append(
-                (
-                    "Registered Services",
-                    {"fields": ("registered_services_display",), "classes": ("collapse",)},
-                )
-            )
 
         # Add error section only if status is ERROR
         if obj and obj.status == "error":
