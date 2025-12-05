@@ -16,21 +16,15 @@
   },
   "rpc": {
     "proxy": {
-      "enabled": true,
       "endpoint": "${CENTRIFUGO_RPC_PROXY_ENDPOINT}",
       "timeout": "10s"
+    },
+    "without_namespace": {
+      "proxy_enabled": true
     }
   },
   "channel": {
     "namespaces": [
-      {
-        "name": "rpc",
-        "presence": false,
-        "join_leave": false,
-        "force_recovery": false,
-        "history_size": 0,
-        "history_ttl": "0s"
-      },
       {
         "name": "user",
         "presence": true,

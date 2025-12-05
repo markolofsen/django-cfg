@@ -326,8 +326,9 @@ Trading Bot ──gRPC──> Django gRPC Service ──WebSocket──> Browser
 **Access documentation from anywhere:**
 
 ```bash
-# CLI search
-poetry run python manage.py ai_docs search "database configuration"
+# CLI search (fast, no Django required)
+django-cfg search "database configuration"
+django-cfg search "redis cache" --limit 3
 
 # Python API
 from django_cfg.modules.django_ai import search, get_docs

@@ -17,6 +17,7 @@ import logging
 import traceback
 from typing import Any
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -60,6 +61,7 @@ class RPCConnection:
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
 class RPCProxyView(View):
     """
     Centrifugo RPC Proxy endpoint.
@@ -87,7 +89,7 @@ class RPCProxyView(View):
             body = json.loads(request.body)
             rpc_request = RPCProxyRequest(**body)
 
-            logger.debug(
+            logger.info(
                 f"RPC proxy: method={rpc_request.method} "
                 f"user={rpc_request.user} client={rpc_request.client[:8]}..."
             )
@@ -146,7 +148,7 @@ class RPCProxyView(View):
                 else:
                     result_data = {"result": result}
 
-                logger.debug(f"RPC success: {rpc_request.method}")
+                logger.info(f"RPC success: {rpc_request.method}")
                 return self._success_response(result_data)
 
             except Exception as e:

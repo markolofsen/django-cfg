@@ -61,9 +61,11 @@ export function InteractiveTerminal({ sessionId, isActive }: InteractiveTerminal
     switch (message.type) {
       case 'output':
         if (message.data) {
-          // Decode base64 data
+          // Decode base64 data (with Unicode support for Cyrillic etc.)
           try {
-            const decoded = atob(message.data);
+            const binaryString = atob(message.data);
+            const bytes = Uint8Array.from(binaryString, (c) => c.charCodeAt(0));
+            const decoded = new TextDecoder().decode(bytes);
             terminalRef.current.write(decoded);
           } catch (e) {
             // If not base64, write directly
@@ -105,8 +107,9 @@ export function InteractiveTerminal({ sessionId, isActive }: InteractiveTerminal
       if (!client || !isConnected || !isActive) return;
 
       try {
-        // Encode to base64
-        const encoded = btoa(data);
+        // Encode to base64 (with Unicode support for Cyrillic etc.)
+        const bytes = new TextEncoder().encode(data);
+        const encoded = btoa(String.fromCharCode(...bytes));
         // Use namedRPC for native Centrifugo RPC proxy
         await client.namedRPC('terminal.input', {
           session_id: sessionId,

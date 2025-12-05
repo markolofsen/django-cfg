@@ -36,23 +36,13 @@ Add to Cursor settings (MCP configuration):
 
 Use the server URL: `https://mcp.djangocfg.com/mcp`
 
-## CLI Commands
-
-Search documentation from terminal:
+## CLI Search (Fast, no Django required)
 
 ```bash
 # Search for topics
-poetry run python manage.py ai_docs search "database configuration"
-poetry run python manage.py ai_docs search "redis cache" --limit 5
-
-# Get MCP server info
-poetry run python manage.py ai_docs mcp
-
-# Show AI hint for your project
-poetry run python manage.py ai_docs hint
-
-# JSON output for scripts
-poetry run python manage.py ai_docs search "email" --json
+django-cfg search "database configuration"
+django-cfg search "redis cache" --limit 5
+django-cfg search "email" --json
 ```
 
 ## Python API
@@ -79,9 +69,6 @@ Access via HTTP:
 ```bash
 # Search
 curl 'https://mcp.djangocfg.com/api/search?q=database&limit=5'
-
-# Get specific topic
-curl 'https://mcp.djangocfg.com/api/docs?topic=DatabaseConfig'
 ```
 
 ## CLAUDE.md File

@@ -8,6 +8,7 @@ import click
 
 from .commands.create_project import create_project
 from .commands.info import info
+from .commands.search import search
 
 
 def get_version() -> str:
@@ -34,6 +35,7 @@ def cli():
 # Register commands
 cli.add_command(create_project)
 cli.add_command(info)
+cli.add_command(search)
 
 
 def main():

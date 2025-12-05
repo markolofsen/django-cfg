@@ -20,7 +20,7 @@ AI_HINTS = [
         "category": "docs",
         "priority": "high",
         "hint": "DjangoCFG docs available via MCP server for AI assistants",
-        "example": "poetry run python manage.py ai_docs search \"database config\"",
+        "example": "django-cfg search \"database config\"",
         "docs": "https://mcp.djangocfg.com/mcp",
     },
     {
@@ -94,7 +94,7 @@ class AIHintsDisplayManager(BaseDisplayManager):
             hints_text.append("MCP ", style="cyan")
             hints_text.append(mcp_hint.get("docs", "https://mcp.djangocfg.com/mcp"), style="bright_blue underline")
             hints_text.append(" | ", style="dim")
-            hints_text.append("poetry run python manage.py ai_docs search \"query\"", style="dim")
+            hints_text.append("django-cfg search \"query\"", style="dim")
 
         self.console.print(hints_text)
 

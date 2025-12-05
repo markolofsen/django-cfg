@@ -4,15 +4,15 @@ Django AI Documentation Module for django_cfg.
 Provides AI-friendly access to DjangoCFG documentation via MCP server.
 
 Quick Start:
+    # CLI (fast, no Django required)
+    django-cfg search "database configuration"
+    django-cfg search "redis cache" --limit 3
+
     # Python API
     from django_cfg.modules.django_ai import search, get_docs
 
     results = search("How to configure database?")
     docs = get_docs("DatabaseConfig")
-
-    # Django Management Command
-    poetry run python manage.py ai_docs search "database configuration"
-    poetry run python manage.py ai_docs info DatabaseConfig
 
 MCP Server:
     Add to your AI assistant configuration:

@@ -14,6 +14,14 @@ DjangoCFG documentation is available via MCP server.
 }
 ```
 
+## CLI Search (Fast, no Django required)
+
+```bash
+django-cfg search "database configuration"
+django-cfg search "redis cache" --limit 3
+django-cfg search "email smtp" --json
+```
+
 ## API
 
 ```bash
@@ -32,17 +40,6 @@ for r in results:
 
 # Get formatted documentation
 print(get_docs("database configuration"))
-```
-
-## Django Command
-
-```bash
-poetry run python manage.py ai_docs search "database configuration"
-poetry run python manage.py ai_docs search "redis cache" --limit 3
-poetry run python manage.py ai_docs search "email smtp" --json
-poetry run python manage.py ai_docs info DatabaseConfig
-poetry run python manage.py ai_docs mcp
-poetry run python manage.py ai_docs hint
 ```
 
 ## Common Topics

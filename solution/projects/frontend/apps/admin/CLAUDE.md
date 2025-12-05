@@ -12,11 +12,11 @@
 }
 ```
 
-## CLI
+## CLI Search (Fast)
 
 ```bash
-pnpm ai-docs search "database configuration"
-pnpm ai-docs mcp
+django-cfg search "database configuration"
+django-cfg search "redis cache" --limit 3
 ```
 
 ## API

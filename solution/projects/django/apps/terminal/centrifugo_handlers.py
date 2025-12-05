@@ -99,21 +99,33 @@ async def terminal_input(conn, params: TerminalInputParams) -> SuccessResult:
     Forwards keyboard input from browser to Electron via gRPC.
     Data should be base64 encoded.
     """
-    from .grpc.services.handlers import get_terminal_service
+    import grpc
+
+    try:
+        from .grpc.services.generated import terminal_streaming_service_pb2 as pb2
+        from .grpc.services.generated import terminal_streaming_service_pb2_grpc as pb2_grpc
+    except ImportError:
+        logger.error("Proto files not generated")
+        return SuccessResult(success=False, message="Proto files not generated")
 
     try:
         # Decode base64 input
         data = base64.b64decode(params.data)
 
-        # Forward to gRPC service
-        service = get_terminal_service()
-        success = await service.send_input(params.session_id, data)
+        # Forward to gRPC server via client
+        async with grpc.aio.insecure_channel("localhost:50051") as channel:
+            stub = pb2_grpc.TerminalStreamingServiceStub(channel)
+            request = pb2.SendInputRequest(session_id=params.session_id, data=data)
+            response = await stub.SendInput(request)
 
-        if success:
-            return SuccessResult(success=True, message="Input sent")
-        else:
-            return SuccessResult(success=False, message="Session not connected")
+            if response.success:
+                return SuccessResult(success=True, message="Input sent")
+            else:
+                return SuccessResult(success=False, message=response.error or "Session not connected")
 
+    except grpc.aio.AioRpcError as e:
+        logger.error(f"terminal.input gRPC error: {e.code()}: {e.details()}")
+        return SuccessResult(success=False, message=f"gRPC error: {e.details()}")
     except Exception as e:
         logger.error(f"terminal.input error: {e}", exc_info=True)
         return SuccessResult(success=False, message=str(e))
@@ -126,21 +138,32 @@ async def terminal_resize(conn, params: TerminalResizeParams) -> SuccessResult:
 
     Updates terminal dimensions in Electron PTY.
     """
-    from .grpc.services.handlers import get_terminal_service
+    import grpc
 
     try:
-        service = get_terminal_service()
-        success = await service.send_resize(
-            params.session_id,
-            params.cols,
-            params.rows
-        )
+        from .grpc.services.generated import terminal_streaming_service_pb2 as pb2
+        from .grpc.services.generated import terminal_streaming_service_pb2_grpc as pb2_grpc
+    except ImportError:
+        return SuccessResult(success=False, message="Proto files not generated")
 
-        if success:
-            return SuccessResult(success=True, message=f"Resized to {params.cols}x{params.rows}")
-        else:
-            return SuccessResult(success=False, message="Session not connected")
+    try:
+        async with grpc.aio.insecure_channel("localhost:50051") as channel:
+            stub = pb2_grpc.TerminalStreamingServiceStub(channel)
+            request = pb2.SendResizeRequest(
+                session_id=params.session_id,
+                cols=params.cols,
+                rows=params.rows
+            )
+            response = await stub.SendResize(request)
 
+            if response.success:
+                return SuccessResult(success=True, message=f"Resized to {params.cols}x{params.rows}")
+            else:
+                return SuccessResult(success=False, message=response.error or "Session not connected")
+
+    except grpc.aio.AioRpcError as e:
+        logger.error(f"terminal.resize gRPC error: {e.code()}: {e.details()}")
+        return SuccessResult(success=False, message=f"gRPC error: {e.details()}")
     except Exception as e:
         logger.error(f"terminal.resize error: {e}", exc_info=True)
         return SuccessResult(success=False, message=str(e))
