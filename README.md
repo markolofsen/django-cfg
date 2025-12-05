@@ -49,11 +49,22 @@
 
 ## 🚀 Quick Start
 
+### Requirements
+
+- **Python 3.12+** (required)
+- pip or poetry
+
 ### Installation
 
 ```bash
-pip install django-cfg
+# Create virtual environment with Python 3.12
+python3.12 -m venv .venv && source .venv/bin/activate
+
+# Install django-cfg and create project
+pip3 install 'django-cfg[full]'
 django-cfg create-project my_app
+
+# Start the server
 cd my_app/projects/django
 poetry install
 poetry run python manage.py runserver
@@ -89,17 +100,19 @@ Install additional features based on your needs:
 
 ```bash
 # Full installation (recommended for production)
-pip install django-cfg[full]
+pip3 install 'django-cfg[full]'
 
 # Individual extras
-pip install django-cfg[grpc]        # gRPC microservices
-pip install django-cfg[centrifugo]  # Real-time WebSockets
-pip install django-cfg[rq]          # Background tasks with Redis Queue
-pip install django-cfg[ai]          # AI agents with Pydantic AI
+pip3 install 'django-cfg[grpc]'        # gRPC microservices
+pip3 install 'django-cfg[centrifugo]'  # Real-time WebSockets
+pip3 install 'django-cfg[rq]'          # Background tasks with Redis Queue
+pip3 install 'django-cfg[ai]'          # AI agents with Pydantic AI
 
 # Combine multiple extras
-pip install django-cfg[grpc,centrifugo,rq]
+pip3 install 'django-cfg[grpc,centrifugo,rq]'
 ```
+
+> **Note:** Quotes around extras are required for zsh compatibility.
 
 **Available extras:**
 - 🔄 **`[full]`** - All features (grpc + centrifugo + rq + ai)
