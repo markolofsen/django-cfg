@@ -99,7 +99,7 @@ export function InteractiveTerminal({ sessionId, isActive }: InteractiveTerminal
     enabled: isConnected && isActive,
   });
 
-  // Send input to terminal via RPC
+  // Send input to terminal via native Centrifugo RPC
   const sendInput = useCallback(
     async (data: string) => {
       if (!client || !isConnected || !isActive) return;
@@ -107,7 +107,8 @@ export function InteractiveTerminal({ sessionId, isActive }: InteractiveTerminal
       try {
         // Encode to base64
         const encoded = btoa(data);
-        await client.rpc('terminal.input', {
+        // Use namedRPC for native Centrifugo RPC proxy
+        await client.namedRPC('terminal.input', {
           session_id: sessionId,
           data: encoded,
         });
@@ -118,13 +119,14 @@ export function InteractiveTerminal({ sessionId, isActive }: InteractiveTerminal
     [client, isConnected, isActive, sessionId]
   );
 
-  // Send resize to terminal via RPC
+  // Send resize to terminal via native Centrifugo RPC
   const sendResize = useCallback(
     async (cols: number, rows: number) => {
       if (!client || !isConnected || !isActive) return;
 
       try {
-        await client.rpc('terminal.resize', {
+        // Use namedRPC for native Centrifugo RPC proxy
+        await client.namedRPC('terminal.resize', {
           session_id: sessionId,
           cols,
           rows,

@@ -14,6 +14,13 @@
     "password": "${CENTRIFUGO_ADMIN_PASSWORD}",
     "secret": "${CENTRIFUGO_ADMIN_SECRET}"
   },
+  "rpc": {
+    "proxy": {
+      "enabled": true,
+      "endpoint": "${CENTRIFUGO_RPC_PROXY_ENDPOINT}",
+      "timeout": "10s"
+    }
+  },
   "channel": {
     "namespaces": [
       {
@@ -39,6 +46,14 @@
         "force_recovery": true,
         "history_size": 50,
         "history_ttl": "600s"
+      },
+      {
+        "name": "terminal",
+        "presence": true,
+        "join_leave": false,
+        "force_recovery": true,
+        "history_size": 100,
+        "history_ttl": "60s"
       }
     ]
   },
