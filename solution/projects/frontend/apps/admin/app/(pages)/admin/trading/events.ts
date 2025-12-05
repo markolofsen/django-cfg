@@ -1,4 +1,4 @@
-import { events } from '@djangocfg/ui/hooks';
+import { events } from '@djangocfg/ui-nextjs/hooks';
 import type { OrderCreateRequest } from '@/api/generated/trading/trading__api__trading/models';
 
 export const TRADING_DIALOG_EVENTS = {

@@ -4,11 +4,21 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "out/**"]
     },
     "@djangocfg/api#build": {
       "dependsOn": [],
       "outputs": ["dist/**"]
+    },
+    "@djangocfg/electron#build": {
+      "dependsOn": [],
+      "outputs": ["out/**", ".vite/**"],
+      "cache": false
+    },
+    "@djangocfg/electron#dev": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": true
     },
     "dev": {
       "cache": false,

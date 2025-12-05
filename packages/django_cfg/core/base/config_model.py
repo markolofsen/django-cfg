@@ -118,6 +118,11 @@ class DjangoConfig(BaseModel):
         description="Startup information display mode: none (minimal), short (essential), full (complete)",
     )
 
+    show_ai_hints: bool = Field(
+        default=True,
+        description="Show AI development hints in startup output (Django 5.2+ async patterns, best practices)",
+    )
+
     enable_support: bool = Field(
         default=True,
         description="Enable django-cfg Support application (tickets, messages, chat interface)",

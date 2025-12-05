@@ -13,7 +13,7 @@ update:
 	@echo "$(YELLOW)Cleaning and updating dependencies...$(NC)"
 	@rm -rf node_modules apps/*/node_modules packages/*/node_modules pnpm-lock.yaml
 	@pnpm install
-	@pnpm update '@djangocfg/*@latest'
+	@pnpm update --latest '@djangocfg/*'
 	@echo "$(GREEN)Done$(NC)"
 
 .DEFAULT_GOAL := update

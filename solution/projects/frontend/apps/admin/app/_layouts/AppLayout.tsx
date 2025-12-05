@@ -56,8 +56,8 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
     // Centrifugo configuration
     // url is optional - will auto-detect from NEXT_PUBLIC_CENTRIFUGO_URL if not provided
     centrifugo: {
-      enabled: false,
-      autoConnect: false,
+      enabled: true,
+      autoConnect: true,
     },
 
     // Error tracking configuration

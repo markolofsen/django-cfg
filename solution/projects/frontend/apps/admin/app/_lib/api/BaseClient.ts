@@ -14,6 +14,7 @@
 import { API as ProfilesAPI, LocalStorageAdapter as ProfilesStorage } from './generated/profiles';
 import { API as TradingAPI, LocalStorageAdapter as TradingStorage } from './generated/trading';
 import { API as CryptoAPI, LocalStorageAdapter as CryptoStorage } from './generated/crypto';
+import { API as TerminalAPI, LocalStorageAdapter as TerminalStorage } from './generated/terminal';
 import { APIError } from './generated/profiles/errors';
 import { settings } from '@core/settings';
 import consola from 'consola';
@@ -29,6 +30,7 @@ consola.log('[BaseClient] baseUrl', baseUrl);
 const profilesApi = new ProfilesAPI(baseUrl, { storage: new ProfilesStorage() });
 const tradingApi = new TradingAPI(baseUrl, { storage: new TradingStorage() });
 const cryptoApi = new CryptoAPI(baseUrl, { storage: new CryptoStorage() });
+const terminalApi = new TerminalAPI(baseUrl, { storage: new TerminalStorage() });
 
 export class BaseClient {
   /**
@@ -53,7 +55,15 @@ export class BaseClient {
    * - this.cryptoApi.crypto_crypto.wallets
    */
   protected static cryptoApi = cryptoApi;
+
+  /**
+   * Terminal API client
+   * Available:
+   * - this.terminalApi.terminal_terminal.sessions
+   * - this.terminalApi.terminal_terminal.commands
+   */
+  protected static terminalApi = terminalApi;
 }
 
 // Export API instances and error classes
-export { profilesApi, tradingApi as tradingClient, cryptoApi as cryptoClient, APIError };
+export { profilesApi, tradingApi as tradingClient, cryptoApi as cryptoClient, terminalApi as terminalClient, APIError };

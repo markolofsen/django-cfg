@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { events } from '@djangocfg/ui/hooks';
+import { events } from '@djangocfg/ui-nextjs/hooks';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@djangocfg/ui';
+} from '@djangocfg/ui-nextjs';
 import { useTrading } from '@/contexts';
 import { TRADING_DIALOG_EVENTS } from '../events';
 import type { OrderCreateRequest } from '@/api/generated/trading/trading__api__trading/models';

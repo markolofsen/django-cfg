@@ -1,4 +1,4 @@
-import { ButtonLink, Card } from '@djangocfg/ui';
+import { ButtonLink, Card } from '@djangocfg/ui-nextjs';
 import { ArrowRight, Github } from 'lucide-react';
 import { routes } from '@routes/index';
 import { settings } from '@core/settings';

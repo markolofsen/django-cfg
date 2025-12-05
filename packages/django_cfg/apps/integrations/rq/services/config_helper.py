@@ -264,17 +264,21 @@ def register_schedules_from_config():
 
                 # Get schedule type and register
                 if schedule_config.cron:
-                    scheduler.cron(
-                        schedule_config.cron,
-                        func=func,
-                        args=schedule_config.args,
-                        kwargs=schedule_config.kwargs,
-                        queue_name=schedule_config.queue,
-                        timeout=schedule_config.timeout,
-                        result_ttl=schedule_config.result_ttl,
-                        id=job_id,
-                        repeat=schedule_config.repeat,
-                    )
+                    # Suppress FutureWarning from crontab library (rq-scheduler dependency)
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings('ignore', category=FutureWarning)
+                        scheduler.cron(
+                            schedule_config.cron,
+                            func=func,
+                            args=schedule_config.args,
+                            kwargs=schedule_config.kwargs,
+                            queue_name=schedule_config.queue,
+                            timeout=schedule_config.timeout,
+                            result_ttl=schedule_config.result_ttl,
+                            id=job_id,
+                            repeat=schedule_config.repeat,
+                        )
                     logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron})")
 
                 elif schedule_config.interval:

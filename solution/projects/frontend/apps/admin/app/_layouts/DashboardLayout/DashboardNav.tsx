@@ -14,7 +14,7 @@
 
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Tabs, TabsList, TabsTrigger } from '@djangocfg/ui';
+import { Tabs, TabsList, TabsTrigger } from '@djangocfg/ui-nextjs';
 import { allRoutes } from '@routes/admin';
 
 export function DashboardNav() {

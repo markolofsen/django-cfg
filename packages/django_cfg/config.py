@@ -50,6 +50,10 @@ LIB_GITHUB_RAW_URL = "https://github.com/markolofsen/django-cfg/raw/refs/heads/m
 LIB_SUPPORT_URL = "https://djangocfg.com/demo"
 LIB_HEALTH_URL = "/cfg/health/"
 
+# Template configuration for create-project command
+TEMPLATE_ARCHIVE_URL = f"{LIB_GITHUB_URL}/archive/refs/heads/main.zip"
+TEMPLATE_PATH_IN_ARCHIVE = "solution"  # path inside the archive to extract
+
 # Frontend assets configuration (for auto-download when not bundled in PyPI package)
 FRONTEND_ASSETS = {
     "admin": {

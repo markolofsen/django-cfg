@@ -1,4 +1,4 @@
-import { SuperHero } from '@djangocfg/ui/blocks';
+import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
 import { Sparkles, Code2, Zap, Shield, Palette } from 'lucide-react';
 import { routes } from '@routes/index';
 import { settings } from '@core/settings';

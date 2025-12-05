@@ -16,7 +16,6 @@
  * ```
  */
 
-export * from './ClientCommand.schema'
 export * from './Coin.schema'
 export * from './CoinList.schema'
 export * from './CoinStats.schema'

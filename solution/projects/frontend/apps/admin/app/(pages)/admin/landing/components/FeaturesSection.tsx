@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
 import {
   Zap,
   Code2,

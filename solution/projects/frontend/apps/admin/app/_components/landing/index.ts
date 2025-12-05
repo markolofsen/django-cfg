@@ -1,0 +1,5 @@
+export { HeroSection } from './hero-section'
+export { FeaturesSection } from './features-section'
+export { QuickStartSection } from './quick-start-section'
+export { AIDocsSection } from './ai-docs-section'
+export { CTASectionComponent } from './cta-section'

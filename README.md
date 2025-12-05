@@ -17,7 +17,7 @@
 
 ### 🚀 The Modern Django Framework for Enterprise Applications
 
-**Type-safe configuration** • **Next.js Admin** • **gRPC Streaming** • **Real-time WebSockets** • **AI Agents** • **8 Enterprise Apps**
+**Type-safe configuration** • **AI-Native Docs** • **Next.js Admin** • **gRPC Streaming** • **Real-time WebSockets** • **AI Agents** • **8 Enterprise Apps**
 
 **[🎯 Live Demo](https://djangocfg.com/demo)** • **[📚 Documentation](https://djangocfg.com/docs/getting-started/intro)** • **[🤖 MCP Server](https://djangocfg.com/mcp)** • **[🐙 GitHub](https://github.com/markolofsen/django-cfg)**
 
@@ -53,15 +53,28 @@
 
 ```bash
 pip install django-cfg
-django-cfg create-project "My App"
-cd my-app && python manage.py runserver
+django-cfg create-project my_app
+cd my_app/projects/django
+poetry install
+poetry run python manage.py runserver
 ```
 
 **What you get instantly:**
 - 🎨 **Modern Admin UI** → `http://127.0.0.1:8000/admin/`
-- ⚡ **Next.js Dashboard** (optional) → Modern React admin interface
+- ⚡ **Next.js Dashboard** → Modern React admin interface
 - 📡 **Real-time WebSockets** → Live updates with Centrifugo
-- 🚀 **Production-ready** → Type-safe config, security hardened
+- 🐳 **Docker Ready** → Production deployment configs
+- 🖥️ **Electron App** → Desktop app template
+
+**Project structure:**
+```
+my_app/
+├── docker/              # Docker deployment
+└── projects/
+    ├── django/          # Django backend
+    ├── frontend/        # Next.js frontend
+    └── electron/        # Desktop app
+```
 
 <div align="center">
 <img src="https://raw.githubusercontent.com/markolofsen/django-cfg/refs/heads/main/static/startup.png" alt="Django-CFG Startup Screen" width="800">
@@ -283,7 +296,45 @@ Trading Bot ──gRPC──> Django gRPC Service ──WebSocket──> Browser
 
 ---
 
-### 🤖 AI-Ready Infrastructure
+### 🤖 AI-Native Documentation
+
+**First Django framework with MCP server** - Your AI coding assistant can access DjangoCFG docs instantly.
+
+```json
+{
+  "mcpServers": {
+    "djangocfg-docs": {
+      "url": "https://mcp.djangocfg.com/mcp"
+    }
+  }
+}
+```
+
+**Access documentation from anywhere:**
+
+```bash
+# CLI search
+poetry run python manage.py ai_docs search "database configuration"
+
+# Python API
+from django_cfg.modules.django_ai import search, get_docs
+results = search("How to configure Redis cache?")
+
+# REST API
+curl 'https://mcp.djangocfg.com/api/search?q=database&limit=5'
+```
+
+**Supported AI assistants:**
+- 🤖 **Claude Desktop** - Add MCP server to config
+- 🖥️ **Cursor IDE** - Native MCP support
+- 💬 **ChatGPT** - Via API integration
+- 🔧 **Any MCP Client** - Universal protocol
+
+**[📚 AI Documentation Guide →](https://djangocfg.com/docs/ai-agents/documentation-access)**
+
+---
+
+### 🤖 AI Agents Framework
 
 **Built-in AI agent framework** - LLM workflow automation with Django ORM integration.
 
@@ -486,7 +537,8 @@ class ProductionConfig(DjangoConfig):
 - **[Database](https://djangocfg.com/docs/fundamentals/database/multi-database)** - Multi-DB routing
 - **[Type Safety](https://djangocfg.com/docs/fundamentals/core/type-safety)** - Pydantic validation
 
-### 🤖 AI Features (Optional)
+### 🤖 AI Features
+- **[AI-Native Docs](https://djangocfg.com/docs/ai-agents/documentation-access)** - MCP server for AI assistants
 - **[AI Agents](https://djangocfg.com/docs/ai-agents/introduction)** - Workflow automation
 - **[Creating Agents](https://djangocfg.com/docs/ai-agents/creating-agents)** - Build custom agents
 - **[Django Integration](https://djangocfg.com/docs/ai-agents/django-integration)** - ORM integration
@@ -523,9 +575,9 @@ class ProductionConfig(DjangoConfig):
 
 <div align="center">
 
-**Modern Django Framework** • **Type-Safe Configuration** • **Next.js Admin** • **gRPC Streaming** • **Real-Time WebSockets** • **AI-Ready**
+**Modern Django Framework** • **Type-Safe Configuration** • **AI-Native Docs** • **Next.js Admin** • **gRPC Streaming** • **Real-Time WebSockets**
 
-Django-CFG is the modern Django framework for enterprise applications. Built with Pydantic v2 for type-safe configuration, includes Next.js admin integration, gRPC bidirectional streaming with WebSocket bridge, Centrifugo real-time support, AI agent framework, and 8 production-ready apps. Perfect for building scalable microservices and real-time Django applications with reduced boilerplate and enterprise features out of the box.
+Django-CFG is the modern Django framework for enterprise applications. Built with Pydantic v2 for type-safe configuration, **first Django framework with MCP server for AI assistants**, includes Next.js admin integration, gRPC bidirectional streaming with WebSocket bridge, Centrifugo real-time support, AI agent framework, and 8 production-ready apps. Perfect for building scalable microservices and real-time Django applications with reduced boilerplate and enterprise features out of the box.
 
 ---
 

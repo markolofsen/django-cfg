@@ -10,6 +10,7 @@ import traceback
 
 from .base import BaseDisplayManager
 from .ngrok import NgrokDisplayManager
+from .ai_hints import AIHintsDisplayManager
 
 
 class StartupDisplayManager(BaseDisplayManager):
@@ -19,6 +20,7 @@ class StartupDisplayManager(BaseDisplayManager):
         """Initialize startup display manager."""
         super().__init__(config)
         self.ngrok_manager = NgrokDisplayManager(config)
+        self.ai_hints_manager = AIHintsDisplayManager(config)
 
     def display_startup_info(self):
         """Display startup information based on config.startup_info_mode."""
@@ -95,6 +97,9 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Create columns for essential info
             self._display_essential_columns()
+
+            # Display AI hints (short mode)
+            self._display_ai_hints(mode="short")
         except Exception as e:
             print(f"❌ ERROR in display_essential_info: {e}")
             print("🔍 TRACEBACK:")
@@ -181,6 +186,9 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Management commands
             self._display_commands_info()
+
+            # Display AI hints (full mode)
+            self._display_ai_hints(mode="full")
 
             self.print_spacing()
         except Exception as e:
@@ -867,3 +875,21 @@ class StartupDisplayManager(BaseDisplayManager):
             return get_django_startup_time()
         except ImportError:
             return None
+
+    def _display_ai_hints(self, mode: str = "short"):
+        """
+        Display AI development hints.
+
+        Args:
+            mode: "short" for compact view, "full" for detailed view
+        """
+        try:
+            # Check if AI hints are enabled in config
+            if self.config and hasattr(self.config, 'show_ai_hints'):
+                if not self.config.show_ai_hints:
+                    return
+
+            self.ai_hints_manager.display_ai_hints(mode=mode)
+        except Exception as e:
+            # Don't crash on AI hints error, just skip
+            pass

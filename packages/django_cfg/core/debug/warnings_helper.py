@@ -24,6 +24,11 @@ def warning_with_traceback(message, category, filename, lineno, file=None, line=
 
     This helps identify WHERE in the code the warning is triggered from.
     """
+    # Skip known third-party library warnings
+    message_str = str(message)
+    if 'crontab' in filename or 'rq_scheduler' in filename:
+        return  # Ignore crontab/rq-scheduler FutureWarnings
+
     log = file if hasattr(file, 'write') else sys.stderr
 
     # Print separator for clarity

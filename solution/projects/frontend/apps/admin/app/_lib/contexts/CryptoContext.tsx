@@ -11,14 +11,12 @@ import {
   useCryptoCoinsStatsRetrieve,
   useCryptoExchangesList,
   useCryptoWalletsList
-} from '../api/generated/crypto/_utils/hooks/crypto__api__crypto';
+} from '../api/generated/crypto/_utils/hooks';
 import type { API } from '../api/generated/crypto';
-import type {
-  CoinList,
-  CoinStats,
-  Exchange,
-  Wallet
-} from '../api/generated/crypto/crypto__api__crypto/models';
+import type { CoinList } from '../api/generated/crypto/_utils/schemas/CoinList.schema';
+import type { CoinStats } from '../api/generated/crypto/_utils/schemas/CoinStats.schema';
+import type { Exchange } from '../api/generated/crypto/_utils/schemas/Exchange.schema';
+import type { Wallet } from '../api/generated/crypto/_utils/schemas/Wallet.schema';
 
 interface CryptoContextType {
   // Coins data

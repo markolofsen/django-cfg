@@ -64,7 +64,7 @@ import {
   EmptyContent,
   EmptyMedia,
   JsonTree,
-} from '@djangocfg/ui';
+} from '@djangocfg/ui-nextjs';
 import {
   AlertCircle,
   CheckCircle2,

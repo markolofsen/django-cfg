@@ -42,11 +42,7 @@ import {
 import type { RetryConfig } from "./retry";
 import type { LoggerConfig } from "./logger";
 import { APILogger } from "./logger";
-import { CryptoClientCommands } from "./crypto__api__crypto_client_commands/client";
 import { CryptoCrypto } from "./crypto__api__crypto/client";
-export * as CryptoClientCommandsTypes from "./crypto__api__crypto_client_commands/models";
-// Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
-// Use namespace exports like CfgAccountsTypes.User or import from specific modules
 export * as CryptoCryptoTypes from "./crypto__api__crypto/models";
 // Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
 // Use namespace exports like CfgAccountsTypes.User or import from specific modules
@@ -122,7 +118,6 @@ export class API {
   private options?: APIOptions;
 
   // Sub-clients
-  public crypto_client_commands!: CryptoClientCommands;
   public crypto_crypto!: CryptoCrypto;
 
   constructor(baseUrl: string, options?: APIOptions) {
@@ -147,7 +142,6 @@ export class API {
     this._injectAuthHeader();
 
     // Initialize sub-clients from APIClient
-    this.crypto_client_commands = this._client.crypto_client_commands;
     this.crypto_crypto = this._client.crypto_crypto;
   }
 
@@ -166,7 +160,6 @@ export class API {
     this._injectAuthHeader();
 
     // Reinitialize sub-clients
-    this.crypto_client_commands = this._client.crypto_client_commands;
     this.crypto_crypto = this._client.crypto_crypto;
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@djangocfg/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@djangocfg/ui-nextjs';
 import { Plus, RefreshCw } from 'lucide-react';
 import { useTrading } from '@/contexts';
 import { PortfolioStats, OrderCard, CreateOrderDialog } from './components';

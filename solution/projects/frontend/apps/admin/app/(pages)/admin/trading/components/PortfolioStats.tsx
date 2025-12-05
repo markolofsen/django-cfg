@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@djangocfg/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
 import { DollarSign, TrendingUp, Target, Award } from 'lucide-react';
 import type { Portfolio, PortfolioStats } from '@/api/generated/trading/trading__api__trading/models';
 

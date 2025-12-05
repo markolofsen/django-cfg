@@ -146,12 +146,12 @@ class DjangoCfgConfig(DjangoConfig):
         enabled=True,
         host="0.0.0.0",
         port=50051,
-        enabled_apps=["crypto"],
+        enabled_apps=["terminal"],
         package_prefix="api",  # Flatten field - no GRPCProtoConfig import needed!
         public_url=env.grpc_url,  # Flatten field from environment - simpler!
         publish_to_telegram=True,
         handlers_hook=[
-            "apps.crypto.grpc.services.handlers.grpc_handlers",  # Auto-register CryptoService (NEW PATH!)
+            "apps.terminal.grpc.services.handlers.grpc_handlers",  # Terminal streaming service
         ]
     )
 
@@ -296,6 +296,7 @@ class DjangoCfgConfig(DjangoConfig):
         "apps.profiles",
         "apps.trading",
         "apps.crypto",
+        "apps.terminal",
     ]
 
     # === Database Configuration with Routing ===
@@ -383,6 +384,15 @@ class DjangoCfgConfig(DjangoConfig):
                         NavigationItem(title="User Profiles", icon=Icons.PERSON, link="admin:profiles_userprofile_changelist"),
                     ]
                 ),
+                NavigationSection(
+                    title="Terminal",
+                    separator=True,
+                    collapsible=True,
+                    items=[
+                        NavigationItem(title="Sessions", icon=Icons.TERMINAL, link="admin:terminal_terminalsession_changelist"),
+                        NavigationItem(title="Command History", icon=Icons.CODE, link="admin:terminal_commandhistory_changelist"),
+                    ]
+                ),
             ],
     )
 
@@ -462,6 +472,13 @@ class DjangoCfgConfig(DjangoConfig):
                 apps=["apps.crypto"],
                 title="Crypto API",
                 description="Crypto operations management",
+                version="1.0.0",
+            ),
+            OpenAPIGroupConfig(
+                name="terminal",
+                apps=["apps.terminal"],
+                title="Terminal API",
+                description="Terminal operations management",
                 version="1.0.0",
             ),
         ],

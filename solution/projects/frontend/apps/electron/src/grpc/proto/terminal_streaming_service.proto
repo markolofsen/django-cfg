@@ -1,0 +1,241 @@
+// Terminal Streaming Service - Bidirectional streaming for terminal I/O.
+//
+// Architecture:
+//   Browser (xterm.js) → WebSocket → Django → gRPC → Electron → PTY
+//
+// Flow:
+//   1. Browser opens terminal → Django creates TerminalSession
+//   2. Electron connects via gRPC with session_id
+//   3. Bidirectional streaming established
+//   4. Input: Browser → Django → Electron (stdin)
+//   5. Output: Electron → Django → Browser (stdout/stderr)
+//
+// Version: 1.0.0
+// Date: 2025-12-04
+
+syntax = "proto3";
+
+package terminal;
+
+option go_package = "terminal/proto";
+
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+// ============================================================================
+// SERVICE DEFINITION
+// ============================================================================
+
+service TerminalStreamingService {
+  // PRIMARY: Bidirectional streaming for terminal I/O
+  // Electron opens stream → Django sends input → Electron sends output
+  rpc ConnectTerminal(stream ElectronMessage) returns (stream DjangoMessage);
+
+  // Session management RPCs
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
+  rpc GetSessionStatus(GetSessionStatusRequest) returns (GetSessionStatusResponse);
+
+  // Health check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// ============================================================================
+// ELECTRON → DJANGO MESSAGES (via stream)
+// ============================================================================
+
+// Message from Electron to Django
+message ElectronMessage {
+  string session_id = 1;                     // Session UUID
+  string message_id = 2;                     // Unique message ID
+  google.protobuf.Timestamp timestamp = 3;
+
+  oneof payload {
+    // Connection lifecycle
+    RegisterRequest register = 10;           // Initial registration
+    HeartbeatUpdate heartbeat = 11;          // Keepalive
+
+    // Terminal output
+    TerminalOutput output = 20;              // PTY stdout/stderr chunk
+    CommandComplete command_complete = 21;  // Command finished
+
+    // Status updates
+    StatusUpdate status = 30;                // Session status change
+    ErrorReport error = 31;                  // Error notification
+
+    // Acknowledgements
+    CommandAck ack = 40;                     // Command acknowledgement
+  }
+}
+
+// Registration request from Electron
+message RegisterRequest {
+  string version = 1;                        // Electron app version
+  string hostname = 2;                       // Machine hostname
+  string platform = 3;                       // OS platform (darwin, win32, linux)
+  repeated string supported_shells = 4;      // Available shells
+  TerminalSize initial_size = 5;             // Initial terminal size
+}
+
+// Heartbeat (empty, just for keepalive)
+message HeartbeatUpdate {}
+
+// Terminal output chunk (stdout/stderr from PTY)
+message TerminalOutput {
+  bytes data = 1;                            // Raw output bytes
+  bool is_stderr = 2;                        // True if from stderr
+  int64 sequence = 3;                        // Sequence number for ordering
+}
+
+// Command completed notification
+message CommandComplete {
+  string command_id = 1;                     // Command that completed
+  int32 exit_code = 2;                       // Exit code
+  int64 duration_ms = 3;                     // Execution time in ms
+}
+
+// Status update from Electron
+message StatusUpdate {
+  SessionStatus old_status = 1;
+  SessionStatus new_status = 2;
+  string reason = 3;                         // Reason for status change
+  string working_directory = 4;              // Current working directory
+}
+
+// Error report
+message ErrorReport {
+  string error_code = 1;                     // Error code
+  string message = 2;                        // Error message
+  string stack_trace = 3;                    // Optional stack trace
+  bool is_fatal = 4;                         // If true, session will close
+}
+
+// Command acknowledgement
+message CommandAck {
+  string command_id = 1;                     // ID of acknowledged command
+  bool success = 2;                          // Successful?
+  string message = 3;                        // Optional message
+}
+
+// ============================================================================
+// DJANGO → ELECTRON MESSAGES (via stream)
+// ============================================================================
+
+// Message from Django to Electron
+message DjangoMessage {
+  string command_id = 1;                     // Unique command ID
+  google.protobuf.Timestamp timestamp = 2;
+
+  oneof payload {
+    // Terminal input
+    TerminalInput input = 10;                // Keyboard input from browser
+    ResizeCommand resize = 11;               // Terminal resize
+
+    // Session control
+    StartSessionCommand start_session = 20;  // Start terminal session
+    CloseSessionCommand close_session = 21;  // Close terminal session
+
+    // Process control
+    SignalCommand signal = 30;               // Send signal (SIGINT, SIGTERM, etc.)
+    CancelCommand cancel = 31;               // Cancel running command
+
+    // Connection management
+    PingCommand ping = 40;                   // Ping for latency check
+    ConfigUpdateCommand config_update = 41;  // Update session config
+  }
+}
+
+// Terminal input from browser (keyboard, paste)
+message TerminalInput {
+  bytes data = 1;                            // Raw input bytes
+  int64 sequence = 2;                        // Sequence number
+}
+
+// Terminal resize
+message ResizeCommand {
+  TerminalSize size = 1;                     // New terminal size
+}
+
+// Start terminal session (after registration)
+message StartSessionCommand {
+  SessionConfig config = 1;                  // Session configuration
+}
+
+// Close terminal session
+message CloseSessionCommand {
+  string reason = 1;                         // Reason for closing
+  bool force = 2;                            // Force close (kill processes)
+}
+
+// Send signal to PTY process
+message SignalCommand {
+  int32 signal = 1;                          // Signal number (2=SIGINT, 15=SIGTERM, 9=SIGKILL)
+}
+
+// Cancel running command
+message CancelCommand {
+  string command_id = 1;                     // Command to cancel (if tracking)
+}
+
+// Ping for latency measurement
+message PingCommand {
+  int64 sequence = 1;                        // Ping sequence number
+}
+
+// Configuration update
+message ConfigUpdateCommand {
+  SessionConfig config = 1;                  // New configuration
+}
+
+// ============================================================================
+// RPC REQUEST/RESPONSE MESSAGES
+// ============================================================================
+
+// Create session
+message CreateSessionRequest {
+  string user_id = 1;                        // User ID (from auth)
+  string name = 2;                           // Optional session name
+  SessionConfig config = 3;                  // Initial configuration
+}
+
+message CreateSessionResponse {
+  bool success = 1;
+  string session_id = 2;                     // Created session UUID
+  string error = 3;                          // Error message if failed
+}
+
+// Close session
+message CloseSessionRequest {
+  string session_id = 1;
+  string reason = 2;
+  bool force = 3;
+}
+
+message CloseSessionResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// Get session status
+message GetSessionStatusRequest {
+  string session_id = 1;
+}
+
+message GetSessionStatusResponse {
+  bool exists = 1;
+  SessionStatus status = 2;
+  string electron_hostname = 3;
+  google.protobuf.Timestamp connected_at = 4;
+  google.protobuf.Timestamp last_heartbeat_at = 5;
+  int32 commands_count = 6;
+}
+
+// Health check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string version = 2;
+  int32 active_sessions = 3;
+  int32 connected_clients = 4;
+}

@@ -1,7 +1,16 @@
 """
 URL configuration for Django CFG Sample Project.
 
-Demonstrates automatic URL integration with django_cfg.
+NOTE: Don't manually register app URLs here!
+API URLs are auto-registered via OpenAPIGroupConfig in config.py.
+Each group in openapi_client.groups automatically registers its URLs at /api/{name}/.
+
+Example in config.py:
+    OpenAPIGroupConfig(
+        name="crypto",           # -> /api/crypto/
+        apps=["apps.crypto"],    # Uses apps/crypto/urls.py
+        ...
+    )
 """
 
 from django.contrib import admin
@@ -16,7 +25,9 @@ urlpatterns = [
 
     # Home page
     path("", TemplateView.as_view(template_name="home.html"), name="home"),
+
 ]
+
 # This adds:
 # - /cfg/health/ (Health check endpoint)
 # - /cfg/commands/ (Management commands interface)

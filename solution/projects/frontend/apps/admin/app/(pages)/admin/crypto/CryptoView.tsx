@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui-nextjs';
 import { RefreshCw } from 'lucide-react';
 import { useCrypto } from '@/contexts';
 import { CryptoStats, CoinCard, ExchangeCard, WalletCard } from './components';

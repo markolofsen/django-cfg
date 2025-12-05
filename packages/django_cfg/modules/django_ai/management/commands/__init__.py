@@ -1,0 +1,1 @@
+"""Django AI management commands."""

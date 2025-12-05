@@ -2,51 +2,48 @@
 
 Comprehensive React UI library with 50+ components built with Radix UI, Tailwind CSS v4, and TypeScript
 
-Total Components: 104
+Total Components: 121
 
 ## 📋 Quick Reference - Available Components
 
-### Interactive (8)
-Interactive Button, Interactive Badge, Interactive Alert, Interactive Progress, Interactive Color Box, Toggle, ToggleGroup, Command
+### Interactive (3)
+Command, Toggle, ToggleGroup
 
-### Forms (18)
-Button, Input, Label, Checkbox, RadioGroup, Select, Textarea, Switch, Slider, Combobox, MultiSelect, MultiSelectPro, InputOTP, PhoneInput, DownloadButton, Field, ButtonGroup, InputGroup
+### Forms (23)
+Button, ButtonGroup, ButtonLink, Checkbox, Combobox, CopyButton, CopyField, DownloadButton, Field, Form, Input, InputGroup, InputOTP, Label, MultiSelect, MultiSelectPro, MultiSelectProAsync, PhoneInput, RadioGroup, Select, Slider, Switch, Textarea
 
-### Layout (9)
-Card, Separator, Skeleton, AspectRatio, ScrollArea, Resizable, Sticky, Section, Sidebar
+### Layout (14)
+AspectRatio, Card, ImageWithFallback, Item, Kbd, Portal, Preloader, Resizable, ScrollArea, Section, Separator, Sidebar, Skeleton, Sticky
 
 ### Navigation (6)
-Tabs, Breadcrumb, BreadcrumbNavigation, NavigationMenu, Pagination, Menubar
+Breadcrumb, BreadcrumbNavigation, Menubar, NavigationMenu, Pagination, Tabs
 
 ### Overlay (9)
-Dialog, Sheet, Drawer, Popover, Tooltip, DropdownMenu, ContextMenu, AlertDialog, HoverCard
+AlertDialog, ContextMenu, Dialog, Drawer, DropdownMenu, HoverCard, Popover, Sheet, Tooltip
 
-### Feedback (7)
-Toast, Alert, Progress, Badge, Avatar, Empty, Spinner
+### Feedback (4)
+Alert, Badge, Progress, Toast
 
-### Data Display (9)
-Table, Accordion, Collapsible, Calendar, Carousel, ChartContainer, Pagination, SSRPagination, StaticPagination
+### Data Display (7)
+Accordion, Calendar, Carousel, Collapsible, SSRPagination, StaticPagination, Table
 
-### Specialized (10)
-Sidebar, ImageWithFallback, ButtonGroup, Empty, Spinner, Kbd, TokenIcon, Toaster (Sonner), InputGroup, Item
+### Specialized (9)
+ButtonGroup, Empty, InputGroup, Item, Kbd, OgImage, Sidebar, Spinner, Toaster
 
-### Developer Tools (6)
-JsonTree, PrettyCode, Mermaid, LottiePlayer, JsonSchemaForm, OpenapiViewer
+### Developer Tools (10)
+Interactive JsonSchemaForm, JsonTree, LottiePlayer, MarkdownMessage with Mermaid, MarkdownMessage, Mermaid, OgImageTemplate, OpenapiViewer, PrettyCode, UseQueryParams
 
 ### Blocks (7)
-Hero, SuperHero, FeatureSection, CTASection, NewsletterSection, StatsSection, TestimonialSection
+CTASection, FeatureSection, Hero, NewsletterSection, StatsSection, SuperHero, TestimonialSection
 
-### Hooks (10)
-useMediaQuery, useTheme, useCopy, useCountdown, useDebounce, useIsMobile, useLocalStorage, useSessionStorage, useEventListener, useImageLoader
+### Hooks (12)
+useCopy, useCountdown, useDebounce, useDebouncedCallback, useDebugTools, useEventListener, useImageLoader, useIsMobile, useLocalStorage, useMediaQuery, useSessionStorage, useTheme
 
-### App Layouts (1)
-Error Layout
+### Charts (7)
+Area Chart, Bar Chart, ChartContainer, Donut Chart, Line Chart, Pie Chart, Radial Bar Chart
 
-### Authentication (1)
-Auth Dialog
-
-### Snippets (3)
-Breadcrumbs, Video Player, Contact Form
+### Animations (8)
+Aurora Borealis, Color Schemes, Floating Orbs, Geometric Flow, AnimatedBackground, Liquid Gradient, Mesh Gradient, Spotlight
 
 ---
 
@@ -117,190 +114,9 @@ Breadcrumbs, Video Player, Contact Form
 
 ---
 
-## Interactive (8)
+## Interactive (3)
 
 Interactive demos with live controls. Try changing props in real-time!
-
-### Interactive Button
-
-Interactive Button demo with live controls. Change variant, size, loading state, and more in the right panel.
-
-**Import:**
-```tsx
-import { Button } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-// Use fixture hooks for interactive demos
-import { useValue, useSelect, useBoolean } from '@djangocfg/demo';
-
-function InteractiveButtonPreview() {
-  const [label] = useValue('label', { defaultValue: 'Click me' });
-  const [variant] = useSelect('variant', {
-    options: ['default', 'secondary', 'destructive'],
-    defaultValue: 'default',
-  });
-  const [disabled] = useBoolean('disabled', { defaultValue: false });
-
-  return (
-    <Button variant={variant} disabled={disabled}>
-      {label}
-    </Button>
-  );
-}
-```
-
-**Tags:** button, interactive, controls, live
-
----
-
-### Interactive Badge
-
-Interactive Badge demo with live variant and text controls.
-
-**Import:**
-```tsx
-import { Badge } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const [text] = useValue('text', { defaultValue: 'Badge' });
-const [variant] = useSelect('variant', {
-  options: ['default', 'secondary', 'destructive', 'outline'],
-});
-
-<Badge variant={variant}>{text}</Badge>
-```
-
-**Tags:** badge, interactive, controls
-
----
-
-### Interactive Alert
-
-Interactive Alert demo with customizable title, description, and variant.
-
-**Import:**
-```tsx
-import { Alert, AlertTitle, AlertDescription } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const [title] = useValue('title', { defaultValue: 'Heads up!' });
-const [description] = useValue('description', { defaultValue: 'Important message.' });
-const [variant] = useSelect('variant', { options: ['default', 'destructive'] });
-
-<Alert variant={variant}>
-  <AlertTitle>{title}</AlertTitle>
-  <AlertDescription>{description}</AlertDescription>
-</Alert>
-```
-
-**Tags:** alert, interactive, feedback
-
----
-
-### Interactive Progress
-
-Interactive Progress bar with slider control for the value.
-
-**Import:**
-```tsx
-import { Progress } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const [value] = useNumber('value', {
-  defaultValue: 60,
-  min: 0,
-  max: 100,
-  step: 5,
-});
-
-<Progress value={value} />
-```
-
-**Tags:** progress, interactive, number
-
----
-
-### Interactive Color Box
-
-Interactive demo showing color picker and number controls.
-
-**Import:**
-```tsx
-// Custom component example
-```
-
-**Example:**
-```tsx
-const [bgColor] = useColor('backgroundColor', { defaultValue: '#3b82f6' });
-const [borderRadius] = useNumber('borderRadius', { defaultValue: 8, max: 50 });
-const [size] = useNumber('size', { defaultValue: 100, min: 50, max: 200 });
-
-<div
-  style={{
-    backgroundColor: bgColor,
-    borderRadius: `${borderRadius}px`,
-    width: `${size}px`,
-    height: `${size}px`,
-  }}
-/>
-```
-
-**Tags:** color, interactive, custom, number
-
----
-
-### Toggle
-
-Two-state toggle button
-
-**Import:**
-```tsx
-import { Toggle } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Toggle aria-label="Toggle bold">
-  <Bold className="h-4 w-4" />
-</Toggle>
-```
-
-**Tags:** toggle, button, switch, state
-
----
-
-### ToggleGroup
-
-Group of toggle buttons with single or multiple selection
-
-**Import:**
-```tsx
-import { ToggleGroup, ToggleGroupItem } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ToggleGroup type="multiple">
-  <ToggleGroupItem value="bold" aria-label="Toggle bold">
-    <Bold className="h-4 w-4" />
-  </ToggleGroupItem>
-  <ToggleGroupItem value="italic" aria-label="Toggle italic">
-    <Italic className="h-4 w-4" />
-  </ToggleGroupItem>
-</ToggleGroup>
-```
-
-**Tags:** toggle, group, toolbar, selection
-
----
 
 ### Command
 
@@ -308,7 +124,7 @@ Command palette / search interface (cmdk)
 
 **Import:**
 ```tsx
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@djangocfg/ui';
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -329,7 +145,52 @@ import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, Comma
 
 ---
 
-## Forms (18)
+### Toggle
+
+Two-state toggle button
+
+**Import:**
+```tsx
+import { Toggle } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Toggle aria-label="Toggle bold">
+  <Bold className="h-4 w-4" />
+</Toggle>
+```
+
+**Tags:** toggle, button, switch, state
+
+---
+
+### ToggleGroup
+
+Group of toggle buttons with single or multiple selection
+
+**Import:**
+```tsx
+import { ToggleGroup, ToggleGroupItem } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ToggleGroup type="multiple">
+  <ToggleGroupItem value="bold" aria-label="Toggle bold">
+    <Bold className="h-4 w-4" />
+  </ToggleGroupItem>
+  <ToggleGroupItem value="italic" aria-label="Toggle italic">
+    <Italic className="h-4 w-4" />
+  </ToggleGroupItem>
+</ToggleGroup>
+```
+
+**Tags:** toggle, group, toolbar, selection
+
+---
+
+## Forms (23)
 
 Input fields, buttons, checkboxes, selects, and form validation
 
@@ -339,7 +200,7 @@ Interactive button with multiple variants, sizes, and loading state
 
 **Import:**
 ```tsx
-import { Button, ButtonLink } from '@djangocfg/ui';
+import { Button, ButtonLink } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -361,54 +222,57 @@ import { Button, ButtonLink } from '@djangocfg/ui';
 <ButtonLink href="/dashboard">Go to Dashboard</ButtonLink>
 ```
 
-**Props:**
-- `variant`: `'default' | 'destructive' | 'outline' | 'ghost' | 'secondary' | 'link'` - Visual variant
-- `size`: `'default' | 'sm' | 'lg' | 'icon'` - Button size
-- `loading`: `boolean` - Show loading spinner
-- `disabled`: `boolean` - Disable interaction
-
 **Tags:** button, action, click, submit, link
 
 ---
 
-### Input
+### ButtonGroup
 
-Text input field with validation support
+Group of buttons with connected styling
 
 **Import:**
 ```tsx
-import { Input } from '@djangocfg/ui';
+import { ButtonGroup, Button } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-<Input type="text" placeholder="Enter text..." />
-<Input type="email" placeholder="Email" />
-<Input type="password" placeholder="Password" disabled />
+<ButtonGroup>
+  <Button variant="outline">Left</Button>
+  <Button variant="outline">Center</Button>
+  <Button variant="outline">Right</Button>
+</ButtonGroup>
 ```
 
-**Tags:** input, text, field, form
+**Tags:** button, group, connected, toolbar
 
 ---
 
-### Label
+### ButtonLink
 
-Accessible label component for form inputs
+Link styled as a button with all button variants
 
 **Import:**
 ```tsx
-import { Label } from '@djangocfg/ui';
+import { ButtonLink } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-<div className="space-y-2">
-  <Label htmlFor="email">Email address</Label>
-  <Input id="email" type="email" placeholder="Enter your email" />
-</div>
+// Navigation link styled as button
+<ButtonLink href="/dashboard">Go to Dashboard</ButtonLink>
+
+// With variants
+<ButtonLink href="/docs" variant="outline">Documentation</ButtonLink>
+<ButtonLink href="/settings" variant="ghost">Settings</ButtonLink>
+
+// External link
+<ButtonLink href="https://github.com" target="_blank">
+  GitHub
+</ButtonLink>
 ```
 
-**Tags:** label, form, accessibility
+**Tags:** button, link, navigation, anchor, href
 
 ---
 
@@ -418,7 +282,7 @@ Checkbox with label support
 
 **Import:**
 ```tsx
-import { Checkbox, Label } from '@djangocfg/ui';
+import { Checkbox, Label } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -433,13 +297,371 @@ import { Checkbox, Label } from '@djangocfg/ui';
 
 ---
 
+### Combobox
+
+Searchable dropdown with autocomplete
+
+**Import:**
+```tsx
+import { Combobox } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Combobox
+  options={[
+    { value: "javascript", label: "JavaScript" },
+    { value: "typescript", label: "TypeScript" },
+    { value: "python", label: "Python" },
+  ]}
+  placeholder="Select language..."
+  searchPlaceholder="Search..."
+  emptyText="No language found."
+/>
+```
+
+**Tags:** combobox, autocomplete, search, select
+
+---
+
+### CopyButton
+
+Button to copy text to clipboard
+
+**Import:**
+```tsx
+import { CopyButton } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<CopyButton value="Text to copy" />
+```
+
+**Tags:** copy, clipboard, button
+
+---
+
+### CopyField
+
+Field with copy button to copy value to clipboard
+
+**Import:**
+```tsx
+import { CopyField } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<CopyField label="API Key" value="sk-1234567890abcdef" mono={true} />
+```
+
+**Tags:** copy, clipboard, field
+
+---
+
+### DownloadButton
+
+Button with download functionality and status indicators
+
+**Import:**
+```tsx
+import { DownloadButton } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<DownloadButton
+  url="/api/files/report.pdf"
+  filename="monthly-report.pdf"
+>
+  Download Report
+</DownloadButton>
+```
+
+**Tags:** download, file, export, button
+
+---
+
+### Field
+
+Field wrapper component for form inputs with label, description, and error handling
+
+**Import:**
+```tsx
+import { Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldContent } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<FieldGroup>
+  <Field>
+    <FieldLabel>Email</FieldLabel>
+    <FieldContent>
+      <Input type="email" placeholder="Enter email" />
+      <FieldDescription>We'll never share your email.</FieldDescription>
+    </FieldContent>
+  </Field>
+  <Field>
+    <FieldLabel>Password</FieldLabel>
+    <FieldContent>
+      <Input type="password" />
+      <FieldError>Password is required</FieldError>
+    </FieldContent>
+  </Field>
+</FieldGroup>
+```
+
+**Tags:** field, form, label, validation, error
+
+---
+
+### Form
+
+Form component built on react-hook-form with accessible form controls and validation
+
+**Import:**
+```tsx
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@djangocfg/ui-nextjs';
+import { useForm } from 'react-hook-form';
+```
+
+**Example:**
+```tsx
+const form = useForm({
+  defaultValues: {
+    username: '',
+    email: '',
+  },
+});
+
+<Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <FormField
+      control={form.control}
+      name="username"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Username</FormLabel>
+          <FormControl>
+            <Input placeholder="johndoe" {...field} />
+          </FormControl>
+          <FormDescription>
+            This is your public display name.
+          </FormDescription>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+    <Button type="submit">Submit</Button>
+  </form>
+</Form>
+```
+
+**Tags:** form, validation, react-hook-form, zod
+
+---
+
+### Input
+
+Text input field with validation support
+
+**Import:**
+```tsx
+import { Input } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Input type="text" placeholder="Enter text..." />
+<Input type="email" placeholder="Email" />
+<Input type="password" placeholder="Password" disabled />
+```
+
+**Tags:** input, text, field, form
+
+---
+
+### InputGroup
+
+Input with prefix/suffix addons
+
+**Import:**
+```tsx
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<InputGroup>
+  <InputGroupAddon>$</InputGroupAddon>
+  <InputGroupInput type="number" placeholder="0.00" />
+  <InputGroupAddon align="inline-end">USD</InputGroupAddon>
+</InputGroup>
+```
+
+**Tags:** input, addon, prefix, suffix
+
+---
+
+### InputOTP
+
+One-time password input component
+
+**Import:**
+```tsx
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<InputOTP maxLength={6}>
+  <InputOTPGroup>
+    <InputOTPSlot index={0} />
+    <InputOTPSlot index={1} />
+    <InputOTPSlot index={2} />
+    <InputOTPSlot index={3} />
+    <InputOTPSlot index={4} />
+    <InputOTPSlot index={5} />
+  </InputOTPGroup>
+</InputOTP>
+```
+
+**Tags:** otp, verification, code, pin
+
+---
+
+### Label
+
+Accessible label component for form inputs
+
+**Import:**
+```tsx
+import { Label } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="email">Email address</Label>
+  <Input id="email" type="email" placeholder="Enter your email" />
+</div>
+```
+
+**Tags:** label, form, accessibility
+
+---
+
+### MultiSelect
+
+Multi-select dropdown with badges and search
+
+**Import:**
+```tsx
+import { MultiSelect } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<MultiSelect
+  options={[
+    { value: "react", label: "React" },
+    { value: "vue", label: "Vue" },
+    { value: "angular", label: "Angular" },
+  ]}
+  placeholder="Select frameworks..."
+  maxDisplay={2}
+/>
+```
+
+**Tags:** multiselect, multiple, tags, badges
+
+---
+
+### MultiSelectPro
+
+Advanced multi-select with animations, variants, and grouped options
+
+**Import:**
+```tsx
+import { MultiSelectPro } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<MultiSelectPro
+  options={[
+    { value: "react", label: "React" },
+    { value: "vue", label: "Vue.js" },
+  ]}
+  onValueChange={setSelected}
+  defaultValue={selected}
+  variant="secondary"
+  maxCount={3}
+/>
+```
+
+**Tags:** multiselect, pro, animations, grouped
+
+---
+
+### MultiSelectProAsync
+
+Async multi-select with debounced search and remote data loading
+
+**Import:**
+```tsx
+import { MultiSelectProAsync } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const searchUsers = async (query: string) => {
+  const response = await fetch(`/api/users?search=${query}`);
+  return response.json();
+};
+
+<MultiSelectProAsync
+  loadOptions={searchUsers}
+  onValueChange={setSelected}
+  defaultValue={[]}
+  placeholder="Search users..."
+  debounceMs={300}
+/>
+```
+
+**Tags:** multiselect, async, search, remote, api
+
+---
+
+### PhoneInput
+
+International phone number input with country selector
+
+**Import:**
+```tsx
+import { PhoneInput } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<PhoneInput
+  defaultCountry="US"
+  placeholder="Enter phone number"
+/>
+```
+
+**Tags:** phone, telephone, international, country
+
+---
+
 ### RadioGroup
 
 Radio button group for single selection
 
 **Import:**
 ```tsx
-import { RadioGroup, RadioGroupItem, Label } from '@djangocfg/ui';
+import { RadioGroup, RadioGroupItem, Label } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -466,7 +688,7 @@ Dropdown select component
 
 **Import:**
 ```tsx
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@djangocfg/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -487,21 +709,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 ---
 
-### Textarea
+### Slider
 
-Multi-line text input
+Range slider input
 
 **Import:**
 ```tsx
-import { Textarea } from '@djangocfg/ui';
+import { Slider } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-<Textarea placeholder="Enter your message..." rows={4} />
+<Slider defaultValue={[50]} max={100} step={1} className="w-[200px]" />
 ```
 
-**Tags:** textarea, multiline, text, form
+**Tags:** slider, range, number, form
 
 ---
 
@@ -511,7 +733,7 @@ Toggle switch component
 
 **Import:**
 ```tsx
-import { Switch, Label } from '@djangocfg/ui';
+import { Switch, Label } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -526,258 +748,51 @@ import { Switch, Label } from '@djangocfg/ui';
 
 ---
 
-### Slider
+### Textarea
 
-Range slider input
+Multi-line text input
 
 **Import:**
 ```tsx
-import { Slider } from '@djangocfg/ui';
+import { Textarea } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-<Slider defaultValue={[50]} max={100} step={1} className="w-[200px]" />
+<Textarea placeholder="Enter your message..." rows={4} />
 ```
 
-**Tags:** slider, range, number, form
+**Tags:** textarea, multiline, text, form
 
 ---
 
-### Combobox
-
-Searchable dropdown with autocomplete
-
-**Import:**
-```tsx
-import { Combobox } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Combobox
-  options={[
-    { value: "javascript", label: "JavaScript" },
-    { value: "typescript", label: "TypeScript" },
-    { value: "python", label: "Python" },
-  ]}
-  placeholder="Select language..."
-  searchPlaceholder="Search..."
-  emptyText="No language found."
-/>
-```
-
-**Tags:** combobox, autocomplete, search, select
-
----
-
-### MultiSelect
-
-Multi-select dropdown with badges and search
-
-**Import:**
-```tsx
-import { MultiSelect } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<MultiSelect
-  options={[
-    { value: "react", label: "React" },
-    { value: "vue", label: "Vue" },
-    { value: "angular", label: "Angular" },
-  ]}
-  placeholder="Select frameworks..."
-  maxDisplay={2}
-/>
-```
-
-**Tags:** multiselect, multiple, tags, badges
-
----
-
-### MultiSelectPro
-
-Advanced multi-select with animations, variants, and grouped options
-
-**Import:**
-```tsx
-import { MultiSelectPro } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<MultiSelectPro
-  options={[
-    { value: "react", label: "React" },
-    { value: "vue", label: "Vue.js" },
-  ]}
-  onValueChange={setSelected}
-  defaultValue={selected}
-  variant="secondary"
-  maxCount={3}
-/>
-```
-
-**Tags:** multiselect, pro, animations, grouped
-
----
-
-### InputOTP
-
-One-time password input component
-
-**Import:**
-```tsx
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<InputOTP maxLength={6}>
-  <InputOTPGroup>
-    <InputOTPSlot index={0} />
-    <InputOTPSlot index={1} />
-    <InputOTPSlot index={2} />
-    <InputOTPSlot index={3} />
-    <InputOTPSlot index={4} />
-    <InputOTPSlot index={5} />
-  </InputOTPGroup>
-</InputOTP>
-```
-
-**Tags:** otp, verification, code, pin
-
----
-
-### PhoneInput
-
-International phone number input with country selector
-
-**Import:**
-```tsx
-import { PhoneInput } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<PhoneInput
-  defaultCountry="US"
-  placeholder="Enter phone number"
-/>
-```
-
-**Tags:** phone, telephone, international, country
-
----
-
-### DownloadButton
-
-Button with download functionality and status indicators
-
-**Import:**
-```tsx
-import { DownloadButton } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<DownloadButton
-  url="/api/files/report.pdf"
-  filename="monthly-report.pdf"
->
-  Download Report
-</DownloadButton>
-```
-
-**Tags:** download, file, export, button
-
----
-
-### Field
-
-Field wrapper component for form inputs with label, description, and error handling
-
-**Import:**
-```tsx
-import { Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldContent } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<FieldGroup>
-  <Field>
-    <FieldLabel>Email</FieldLabel>
-    <FieldContent>
-      <Input type="email" placeholder="Enter email" />
-      <FieldDescription>We'll never share your email.</FieldDescription>
-    </FieldContent>
-  </Field>
-  <Field>
-    <FieldLabel>Password</FieldLabel>
-    <FieldContent>
-      <Input type="password" />
-      <FieldError>Password is required</FieldError>
-    </FieldContent>
-  </Field>
-</FieldGroup>
-```
-
-**Props:**
-- `orientation`: `'vertical' | 'horizontal' | 'responsive'` - Field layout orientation
-
-**Tags:** field, form, label, validation, error
-
----
-
-### ButtonGroup
-
-Group of buttons with connected styling
-
-**Import:**
-```tsx
-import { ButtonGroup, Button } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ButtonGroup>
-  <Button variant="outline">Left</Button>
-  <Button variant="outline">Center</Button>
-  <Button variant="outline">Right</Button>
-</ButtonGroup>
-```
-
-**Tags:** button, group, connected, toolbar
-
----
-
-### InputGroup
-
-Input with prefix/suffix addons
-
-**Import:**
-```tsx
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<InputGroup>
-  <InputGroupAddon>$</InputGroupAddon>
-  <InputGroupInput type="number" placeholder="0.00" />
-  <InputGroupAddon align="inline-end">USD</InputGroupAddon>
-</InputGroup>
-```
-
-**Tags:** input, addon, prefix, suffix
-
----
-
-## Layout (9)
+## Layout (14)
 
 Cards, separators, skeletons, and structural components
+
+### AspectRatio
+
+Maintain aspect ratio for responsive images
+
+**Import:**
+```tsx
+import { AspectRatio } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<AspectRatio ratio={16 / 9}>
+  <img
+    src="/image.jpg"
+    alt="Image"
+    className="rounded-md object-cover w-full h-full"
+  />
+</AspectRatio>
+```
+
+**Tags:** aspect, ratio, image, responsive
+
+---
 
 ### Card
 
@@ -785,7 +800,7 @@ Container for related content and actions
 
 **Import:**
 ```tsx
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@djangocfg/ui';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -808,13 +823,275 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 ---
 
+### ImageWithFallback
+
+Image component with automatic fallback icons when image fails to load
+
+**Import:**
+```tsx
+import { ImageWithFallback } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Basic usage with default car icon fallback
+<ImageWithFallback
+  src="/car-image.jpg"
+  alt="Car image"
+  className="w-24 h-24 rounded-lg"
+/>
+
+// With specific fallback icon
+<ImageWithFallback
+  src="/user-avatar.jpg"
+  fallbackIcon="user"
+  alt="User avatar"
+  className="w-16 h-16 rounded-full"
+/>
+
+// With custom fallback content
+<ImageWithFallback
+  src="/product.jpg"
+  fallbackContent={<div className="bg-muted p-4">No image</div>}
+  alt="Product"
+/>
+
+// Available fallback icons: 'car' | 'image' | 'user' | 'package' | 'location'
+```
+
+**Tags:** image, fallback, error, placeholder, loading
+
+---
+
+### Item
+
+Flexible list item component with media, content, and actions
+
+**Import:**
+```tsx
+import { Item, ItemMedia, ItemContent, ItemTitle, ItemDescription, ItemActions, ItemGroup, ItemSeparator } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ItemGroup>
+  <Item>
+    <ItemMedia variant="icon">
+      <FileText className="size-4" />
+    </ItemMedia>
+    <ItemContent>
+      <ItemTitle>Document Title</ItemTitle>
+      <ItemDescription>Description of the document</ItemDescription>
+    </ItemContent>
+    <ItemActions>
+      <Button variant="ghost" size="sm">Edit</Button>
+    </ItemActions>
+  </Item>
+  <ItemSeparator />
+  <Item variant="muted">
+    <ItemMedia variant="image">
+      <img src="/avatar.jpg" alt="User" />
+    </ItemMedia>
+    <ItemContent>
+      <ItemTitle>User Name <Badge>New</Badge></ItemTitle>
+      <ItemDescription>user@example.com</ItemDescription>
+    </ItemContent>
+  </Item>
+</ItemGroup>
+```
+
+**Tags:** item, list, row, media, content
+
+---
+
+### Kbd
+
+Keyboard key representation for shortcuts and documentation
+
+**Import:**
+```tsx
+import { Kbd, KbdGroup } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Single key
+<Kbd>Ctrl</Kbd>
+
+// Key combination with KbdGroup
+<KbdGroup>
+  <Kbd>Ctrl</Kbd>
+  <Kbd>C</Kbd>
+</KbdGroup>
+
+// Multiple shortcuts
+<KbdGroup>
+  <Kbd>⌘</Kbd>
+  <Kbd>Shift</Kbd>
+  <Kbd>P</Kbd>
+</KbdGroup>
+```
+
+**Tags:** keyboard, shortcut, key, hotkey, documentation
+
+---
+
+### Portal
+
+Renders children into a different part of the DOM (similar to MUI Portal)
+
+**Import:**
+```tsx
+import { Portal } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Render to document.body (default)
+<Portal>
+  <div className="fixed inset-0 z-50 bg-black/50">
+    Modal content rendered at body
+  </div>
+</Portal>
+
+// Render to custom container
+<Portal container={document.getElementById('modal-root')}>
+  <div>Content in custom container</div>
+</Portal>
+
+// Disable portal (render in place)
+<Portal disablePortal>
+  <div>Rendered normally in DOM hierarchy</div>
+</Portal>
+
+// With ref container
+const containerRef = useRef<HTMLDivElement>(null);
+<div ref={containerRef} />
+<Portal container={containerRef}>
+  <div>Content in ref container</div>
+</Portal>
+```
+
+**Tags:** portal, modal, overlay, teleport, render
+
+---
+
+### Preloader
+
+Universal loading indicator with multiple variants
+
+**Import:**
+```tsx
+import { Preloader, PreloaderSkeleton } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Inline loading
+<Preloader text="Loading..." />
+
+// Fullscreen with backdrop
+<Preloader variant="fullscreen" text="Loading data..." />
+
+// Different sizes
+<Preloader size="sm" text="Small" />
+<Preloader size="lg" text="Large" />
+
+// Skeleton variant
+<PreloaderSkeleton lines={3} showAvatar />
+```
+
+**Tags:** loading, spinner, preloader, skeleton, indicator
+
+---
+
+### Resizable
+
+Resizable panel layout with smart drag handles. Supports size variants, hover indicators, and classic dots handle.
+
+**Import:**
+```tsx
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ResizablePanelGroup direction="horizontal" className="min-h-[200px]">
+  <ResizablePanel defaultSize={50}>
+    <div className="p-4">Left panel</div>
+  </ResizablePanel>
+  <ResizableHandle size="md" showIndicator />
+  <ResizablePanel defaultSize={50}>
+    <div className="p-4">Right panel</div>
+  </ResizablePanel>
+</ResizablePanelGroup>
+```
+
+**Props:**
+- `size`: `"sm" | "md" | "lg"` - Handle size variant - controls hit area
+- `showIndicator`: `boolean` - Show visual pill indicator on hover
+- `indicatorHeight`: `number` - Custom indicator height in pixels
+- `withHandle`: `boolean` - Show classic dots handle icon
+
+**Tags:** resizable, panel, split, drag, resize
+
+---
+
+### ScrollArea
+
+Custom scrollable area with styled scrollbars
+
+**Import:**
+```tsx
+import { ScrollArea } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ScrollArea className="h-[200px] w-[350px] rounded-md border p-4">
+  <div className="space-y-4">
+    {items.map((item) => (
+      <div key={item}>{item}</div>
+    ))}
+  </div>
+</ScrollArea>
+```
+
+**Tags:** scroll, overflow, scrollbar, container
+
+---
+
+### Section
+
+Content section with optional header
+
+**Import:**
+```tsx
+import { Section, SectionHeader } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Section>
+  <SectionHeader
+    title="Section Title"
+    subtitle="Optional subtitle text"
+  />
+  <div>Section content goes here</div>
+</Section>
+```
+
+**Tags:** section, content, header, layout
+
+---
+
 ### Separator
 
 Visual separator between content sections
 
 **Import:**
 ```tsx
-import { Separator } from '@djangocfg/ui';
+import { Separator } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -836,160 +1113,13 @@ import { Separator } from '@djangocfg/ui';
 
 ---
 
-### Skeleton
-
-Loading placeholder for content
-
-**Import:**
-```tsx
-import { Skeleton } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<div className="flex items-center space-x-4">
-  <Skeleton className="h-12 w-12 rounded-full" />
-  <div className="space-y-2">
-    <Skeleton className="h-4 w-[250px]" />
-    <Skeleton className="h-4 w-[200px]" />
-  </div>
-</div>
-```
-
-**Tags:** skeleton, loading, placeholder, shimmer
-
----
-
-### AspectRatio
-
-Maintain aspect ratio for responsive images
-
-**Import:**
-```tsx
-import { AspectRatio } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<AspectRatio ratio={16 / 9}>
-  <img
-    src="/image.jpg"
-    alt="Image"
-    className="rounded-md object-cover w-full h-full"
-  />
-</AspectRatio>
-```
-
-**Props:**
-- `ratio`: `number` - Aspect ratio (e.g., 16/9)
-
-**Tags:** aspect, ratio, image, responsive
-
----
-
-### ScrollArea
-
-Custom scrollable area with styled scrollbars
-
-**Import:**
-```tsx
-import { ScrollArea } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ScrollArea className="h-[200px] w-[350px] rounded-md border p-4">
-  <div className="space-y-4">
-    {items.map((item) => (
-      <div key={item}>{item}</div>
-    ))}
-  </div>
-</ScrollArea>
-```
-
-**Tags:** scroll, overflow, scrollbar, container
-
----
-
-### Resizable
-
-Resizable panel layout with drag handles
-
-**Import:**
-```tsx
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ResizablePanelGroup direction="horizontal" className="min-h-[200px]">
-  <ResizablePanel defaultSize={50}>
-    <div className="p-4">Left panel</div>
-  </ResizablePanel>
-  <ResizableHandle />
-  <ResizablePanel defaultSize={50}>
-    <div className="p-4">Right panel</div>
-  </ResizablePanel>
-</ResizablePanelGroup>
-```
-
-**Tags:** resizable, panel, split, drag
-
----
-
-### Sticky
-
-Sticky positioned element wrapper
-
-**Import:**
-```tsx
-import { Sticky } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Sticky offsetTop={0} className="z-50">
-  <header className="bg-background border-b p-4">
-    Sticky Header
-  </header>
-</Sticky>
-```
-
-**Tags:** sticky, fixed, position, header
-
----
-
-### Section
-
-Content section with optional header
-
-**Import:**
-```tsx
-import { Section, SectionHeader } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Section>
-  <SectionHeader
-    title="Section Title"
-    subtitle="Optional subtitle text"
-  />
-  <div>Section content goes here</div>
-</Section>
-```
-
-**Tags:** section, content, header, layout
-
----
-
 ### Sidebar
 
 Full-featured sidebar navigation component with collapsible menu, groups, and mobile support
 
 **Import:**
 ```tsx
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@djangocfg/ui';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1031,7 +1161,51 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 
 **Tags:** sidebar, navigation, menu, drawer, collapsible
 
-**Related:** NavigationMenu, Sheet
+---
+
+### Skeleton
+
+Loading placeholder for content
+
+**Import:**
+```tsx
+import { Skeleton } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<div className="flex items-center space-x-4">
+  <Skeleton className="h-12 w-12 rounded-full" />
+  <div className="space-y-2">
+    <Skeleton className="h-4 w-[250px]" />
+    <Skeleton className="h-4 w-[200px]" />
+  </div>
+</div>
+```
+
+**Tags:** skeleton, loading, placeholder, shimmer
+
+---
+
+### Sticky
+
+Sticky positioned element wrapper
+
+**Import:**
+```tsx
+import { Sticky } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Sticky offsetTop={0} className="z-50">
+  <header className="bg-background border-b p-4">
+    Sticky Header
+  </header>
+</Sticky>
+```
+
+**Tags:** sticky, fixed, position, header, footer
 
 ---
 
@@ -1039,42 +1213,13 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 
 Menus, breadcrumbs, tabs, and pagination
 
-### Tabs
-
-Tab-based navigation between content sections
-
-**Import:**
-```tsx
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Tabs defaultValue="account">
-  <TabsList>
-    <TabsTrigger value="account">Account</TabsTrigger>
-    <TabsTrigger value="password">Password</TabsTrigger>
-  </TabsList>
-  <TabsContent value="account">
-    Account settings content
-  </TabsContent>
-  <TabsContent value="password">
-    Password settings content
-  </TabsContent>
-</Tabs>
-```
-
-**Tags:** tabs, navigation, switch, sections
-
----
-
 ### Breadcrumb
 
 Breadcrumb navigation for page hierarchy
 
 **Import:**
 ```tsx
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@djangocfg/ui';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1106,7 +1251,7 @@ Simplified breadcrumb component with items array
 
 **Import:**
 ```tsx
-import { BreadcrumbNavigation } from '@djangocfg/ui';
+import { BreadcrumbNavigation } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1125,13 +1270,41 @@ import { BreadcrumbNavigation } from '@djangocfg/ui';
 
 ---
 
+### Menubar
+
+Horizontal menu bar with dropdowns
+
+**Import:**
+```tsx
+import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Menubar>
+  <MenubarMenu>
+    <MenubarTrigger>File</MenubarTrigger>
+    <MenubarContent>
+      <MenubarItem>New</MenubarItem>
+      <MenubarItem>Open</MenubarItem>
+      <MenubarSeparator />
+      <MenubarItem>Save</MenubarItem>
+    </MenubarContent>
+  </MenubarMenu>
+</Menubar>
+```
+
+**Tags:** menubar, menu, toolbar, application
+
+---
+
 ### NavigationMenu
 
 Main navigation menu with dropdowns
 
 **Import:**
 ```tsx
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from '@djangocfg/ui';
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1164,7 +1337,7 @@ Pagination controls for lists
 
 **Import:**
 ```tsx
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@djangocfg/ui';
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1197,31 +1370,32 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 
 ---
 
-### Menubar
+### Tabs
 
-Horizontal menu bar with dropdowns
+Tab-based navigation between content sections
 
 **Import:**
 ```tsx
-import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from '@djangocfg/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-<Menubar>
-  <MenubarMenu>
-    <MenubarTrigger>File</MenubarTrigger>
-    <MenubarContent>
-      <MenubarItem>New</MenubarItem>
-      <MenubarItem>Open</MenubarItem>
-      <MenubarSeparator />
-      <MenubarItem>Save</MenubarItem>
-    </MenubarContent>
-  </MenubarMenu>
-</Menubar>
+<Tabs defaultValue="account">
+  <TabsList>
+    <TabsTrigger value="account">Account</TabsTrigger>
+    <TabsTrigger value="password">Password</TabsTrigger>
+  </TabsList>
+  <TabsContent value="account">
+    Account settings content
+  </TabsContent>
+  <TabsContent value="password">
+    Password settings content
+  </TabsContent>
+</Tabs>
 ```
 
-**Tags:** menubar, menu, toolbar, application
+**Tags:** tabs, navigation, switch, sections
 
 ---
 
@@ -1229,213 +1403,13 @@ import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, Me
 
 Dialogs, sheets, popovers, tooltips, and dropdowns
 
-### Dialog
-
-Modal dialog for focused interactions
-
-**Import:**
-```tsx
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Dialog>
-  <DialogTrigger asChild>
-    <Button variant="outline">Open Dialog</Button>
-  </DialogTrigger>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Dialog Title</DialogTitle>
-      <DialogDescription>
-        Dialog description goes here.
-      </DialogDescription>
-    </DialogHeader>
-    <div className="py-4">Content here</div>
-    <DialogFooter>
-      <Button type="submit">Save</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-```
-
-**Tags:** dialog, modal, popup, overlay
-
----
-
-### Sheet
-
-Slide-out panel from screen edge
-
-**Import:**
-```tsx
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Sheet>
-  <SheetTrigger asChild>
-    <Button variant="outline">Open Sheet</Button>
-  </SheetTrigger>
-  <SheetContent>
-    <SheetHeader>
-      <SheetTitle>Sheet Title</SheetTitle>
-      <SheetDescription>Sheet description</SheetDescription>
-    </SheetHeader>
-    <div className="py-4">Content here</div>
-  </SheetContent>
-</Sheet>
-```
-
-**Tags:** sheet, sidebar, panel
-
----
-
-### Drawer
-
-Mobile-friendly drawer with swipe gestures (vaul)
-
-**Import:**
-```tsx
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Drawer>
-  <DrawerTrigger asChild>
-    <Button variant="outline">Open Drawer</Button>
-  </DrawerTrigger>
-  <DrawerContent>
-    <DrawerHeader>
-      <DrawerTitle>Drawer Title</DrawerTitle>
-      <DrawerDescription>Drawer description</DrawerDescription>
-    </DrawerHeader>
-    <div className="p-4">Content here</div>
-  </DrawerContent>
-</Drawer>
-```
-
-**Tags:** drawer, mobile, swipe, vaul, bottom-sheet
-
----
-
-### Popover
-
-Floating content triggered by click
-
-**Import:**
-```tsx
-import { Popover, PopoverContent, PopoverTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Popover>
-  <PopoverTrigger asChild>
-    <Button variant="outline">Open Popover</Button>
-  </PopoverTrigger>
-  <PopoverContent>
-    <p>Popover content here</p>
-  </PopoverContent>
-</Popover>
-```
-
-**Tags:** popover, popup, dropdown, float
-
----
-
-### Tooltip
-
-Hover tooltip for additional information
-
-**Import:**
-```tsx
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<TooltipProvider>
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button variant="outline">Hover me</Button>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>Tooltip content</p>
-    </TooltipContent>
-  </Tooltip>
-</TooltipProvider>
-```
-
-**Tags:** tooltip, hover, hint, help
-
----
-
-### DropdownMenu
-
-Accessible dropdown menu
-
-**Import:**
-```tsx
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline">Open Menu</Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem>Profile</DropdownMenuItem>
-    <DropdownMenuItem>Settings</DropdownMenuItem>
-    <DropdownMenuItem>Logout</DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-```
-
-**Tags:** dropdown, menu, actions, options
-
----
-
-### ContextMenu
-
-Right-click context menu
-
-**Import:**
-```tsx
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ContextMenu>
-  <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed">
-    Right click here
-  </ContextMenuTrigger>
-  <ContextMenuContent>
-    <ContextMenuItem>Edit</ContextMenuItem>
-    <ContextMenuItem>Duplicate</ContextMenuItem>
-    <ContextMenuItem>Delete</ContextMenuItem>
-  </ContextMenuContent>
-</ContextMenu>
-```
-
-**Tags:** context, rightclick, menu
-
----
-
 ### AlertDialog
 
 Confirmation dialog for destructive actions
 
 **Import:**
 ```tsx
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@djangocfg/ui';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1463,13 +1437,132 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 ---
 
+### ContextMenu
+
+Right-click context menu
+
+**Import:**
+```tsx
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ContextMenu>
+  <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed">
+    Right click here
+  </ContextMenuTrigger>
+  <ContextMenuContent>
+    <ContextMenuItem>Edit</ContextMenuItem>
+    <ContextMenuItem>Duplicate</ContextMenuItem>
+    <ContextMenuItem>Delete</ContextMenuItem>
+  </ContextMenuContent>
+</ContextMenu>
+```
+
+**Tags:** context, rightclick, menu
+
+---
+
+### Dialog
+
+Modal dialog for focused interactions
+
+**Import:**
+```tsx
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Dialog>
+  <DialogTrigger asChild>
+    <Button variant="outline">Open Dialog</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Dialog Title</DialogTitle>
+      <DialogDescription>
+        Dialog description goes here.
+      </DialogDescription>
+    </DialogHeader>
+    <div className="py-4">Content here</div>
+    <DialogFooter>
+      <Button type="submit">Save</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Tags:** dialog, modal, popup, overlay
+
+---
+
+### Drawer
+
+Mobile-friendly drawer with swipe gestures (vaul)
+
+**Import:**
+```tsx
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Drawer>
+  <DrawerTrigger asChild>
+    <Button variant="outline">Open Drawer</Button>
+  </DrawerTrigger>
+  <DrawerContent>
+    <DrawerHeader>
+      <DrawerTitle>Drawer Title</DrawerTitle>
+      <DrawerDescription>Drawer description</DrawerDescription>
+    </DrawerHeader>
+    <div className="p-4">Content here</div>
+  </DrawerContent>
+</Drawer>
+```
+
+**Tags:** drawer, mobile, swipe, vaul, bottom-sheet
+
+---
+
+### DropdownMenu
+
+Accessible dropdown menu
+
+**Import:**
+```tsx
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline">Open Menu</Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem>Profile</DropdownMenuItem>
+    <DropdownMenuItem>Settings</DropdownMenuItem>
+    <DropdownMenuItem>Logout</DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+**Tags:** dropdown, menu, actions, options
+
+---
+
 ### HoverCard
 
 Preview card on hover
 
 **Import:**
 ```tsx
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@djangocfg/ui';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1488,9 +1581,161 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@djangocfg/ui';
 
 ---
 
-## Feedback (7)
+### Popover
+
+Floating content triggered by click
+
+**Import:**
+```tsx
+import { Popover, PopoverContent, PopoverTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Popover>
+  <PopoverTrigger asChild>
+    <Button variant="outline">Open Popover</Button>
+  </PopoverTrigger>
+  <PopoverContent>
+    <p>Popover content here</p>
+  </PopoverContent>
+</Popover>
+```
+
+**Tags:** popover, popup, dropdown, float
+
+---
+
+### Sheet
+
+Slide-out panel from screen edge
+
+**Import:**
+```tsx
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Sheet>
+  <SheetTrigger asChild>
+    <Button variant="outline">Open Sheet</Button>
+  </SheetTrigger>
+  <SheetContent>
+    <SheetHeader>
+      <SheetTitle>Sheet Title</SheetTitle>
+      <SheetDescription>Sheet description</SheetDescription>
+    </SheetHeader>
+    <div className="py-4">Content here</div>
+  </SheetContent>
+</Sheet>
+```
+
+**Tags:** sheet, sidebar, panel
+
+---
+
+### Tooltip
+
+Hover tooltip for additional information
+
+**Import:**
+```tsx
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button variant="outline">Hover me</Button>
+    </TooltipTrigger>
+    <TooltipContent>
+      <p>Tooltip content</p>
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+```
+
+**Tags:** tooltip, hover, hint, help
+
+---
+
+## Feedback (4)
 
 Toasts, alerts, progress bars, and status indicators
+
+### Alert
+
+Alert messages for important information
+
+**Import:**
+```tsx
+import { Alert, AlertDescription, AlertTitle } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Alert>
+  <AlertTitle>Heads up!</AlertTitle>
+  <AlertDescription>
+    You can add components to your app using the cli.
+  </AlertDescription>
+</Alert>
+
+<Alert variant="destructive">
+  <AlertTitle>Error</AlertTitle>
+  <AlertDescription>
+    Your session has expired. Please log in again.
+  </AlertDescription>
+</Alert>
+```
+
+**Tags:** alert, warning, info, error
+
+---
+
+### Badge
+
+Status badges for labels and categories
+
+**Import:**
+```tsx
+import { Badge } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Badge>Default</Badge>
+<Badge variant="secondary">Secondary</Badge>
+<Badge variant="destructive">Destructive</Badge>
+<Badge variant="outline">Outline</Badge>
+```
+
+**Tags:** badge, tag, label, status
+
+---
+
+### Progress
+
+Progress bar for showing completion status
+
+**Import:**
+```tsx
+import { Progress } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Progress value={25} />
+<Progress value={50} />
+<Progress value={75} />
+```
+
+**Tags:** progress, loading, percentage, status
+
+---
 
 ### Toast
 
@@ -1498,7 +1743,7 @@ Toast notifications for user feedback
 
 **Import:**
 ```tsx
-import { useToast, Toaster } from '@djangocfg/ui';
+import { useToast, Toaster } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1523,167 +1768,230 @@ function Component() {
 
 **Tags:** toast, notification, alert, message
 
-**Related:** Alert, Toaster
-
 ---
 
-### Alert
-
-Alert messages for important information
-
-**Import:**
-```tsx
-import { Alert, AlertDescription, AlertTitle } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Alert>
-  <AlertTitle>Heads up!</AlertTitle>
-  <AlertDescription>
-    You can add components to your app using the cli.
-  </AlertDescription>
-</Alert>
-
-<Alert variant="destructive">
-  <AlertTitle>Error</AlertTitle>
-  <AlertDescription>
-    Your session has expired. Please log in again.
-  </AlertDescription>
-</Alert>
-```
-
-**Props:**
-- `variant`: `'default' | 'destructive'` - Alert variant
-
-**Tags:** alert, warning, info, error
-
----
-
-### Progress
-
-Progress bar for showing completion status
-
-**Import:**
-```tsx
-import { Progress } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Progress value={25} />
-<Progress value={50} />
-<Progress value={75} />
-```
-
-**Props:**
-- `value`: `number` - Progress percentage (0-100)
-
-**Tags:** progress, loading, percentage, status
-
----
-
-### Badge
-
-Status badges for labels and categories
-
-**Import:**
-```tsx
-import { Badge } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Badge>Default</Badge>
-<Badge variant="secondary">Secondary</Badge>
-<Badge variant="destructive">Destructive</Badge>
-<Badge variant="outline">Outline</Badge>
-```
-
-**Props:**
-- `variant`: `'default' | 'secondary' | 'destructive' | 'outline'` - Badge variant
-
-**Tags:** badge, tag, label, status
-
----
-
-### Avatar
-
-User avatar with fallback support
-
-**Import:**
-```tsx
-import { Avatar, AvatarFallback, AvatarImage } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Avatar>
-  <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-  <AvatarFallback>CN</AvatarFallback>
-</Avatar>
-```
-
-**Tags:** avatar, user, profile, image
-
----
-
-### Empty
-
-Empty state component for showing when there is no data
-
-**Import:**
-```tsx
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Empty>
-  <EmptyHeader>
-    <EmptyMedia variant="icon">
-      <Inbox className="size-6" />
-    </EmptyMedia>
-    <EmptyTitle>No messages</EmptyTitle>
-    <EmptyDescription>
-      You don't have any messages yet.
-    </EmptyDescription>
-  </EmptyHeader>
-  <EmptyContent>
-    <Button>Create message</Button>
-  </EmptyContent>
-</Empty>
-```
-
-**Props:**
-- `variant`: `'default' | 'icon'` - Media variant for icon styling
-
-**Tags:** empty, state, no-data, placeholder
-
----
-
-### Spinner
-
-Loading spinner animation
-
-**Import:**
-```tsx
-import { Spinner } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Spinner />
-<Spinner className="size-8" />
-```
-
-**Tags:** spinner, loading, animation, progress
-
----
-
-## Data Display (9)
+## Data Display (7)
 
 Tables, accordions, and data visualization
+
+### Accordion
+
+Collapsible content sections
+
+**Import:**
+```tsx
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Accordion type="single" collapsible>
+  <AccordionItem value="item-1">
+    <AccordionTrigger>Is it accessible?</AccordionTrigger>
+    <AccordionContent>
+      Yes. It adheres to the WAI-ARIA design pattern.
+    </AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="item-2">
+    <AccordionTrigger>Is it styled?</AccordionTrigger>
+    <AccordionContent>
+      Yes. It comes with default styles that match.
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>
+```
+
+**Tags:** accordion, collapse, expand, faq
+
+---
+
+### Calendar
+
+Date picker calendar component
+
+**Import:**
+```tsx
+import { Calendar } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const [date, setDate] = useState<Date | undefined>(new Date());
+
+<Calendar
+  mode="single"
+  selected={date}
+  onSelect={setDate}
+  className="rounded-md border"
+/>
+```
+
+**Tags:** calendar, date, picker, datepicker
+
+---
+
+### Carousel
+
+Touch-friendly carousel/slider component
+
+**Import:**
+```tsx
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Carousel className="w-full max-w-xs">
+  <CarouselContent>
+    {items.map((_, index) => (
+      <CarouselItem key={index}>
+        <Card>
+          <CardContent className="flex aspect-square items-center justify-center p-6">
+            <span className="text-4xl font-semibold">{index + 1}</span>
+          </CardContent>
+        </Card>
+      </CarouselItem>
+    ))}
+  </CarouselContent>
+  <CarouselPrevious />
+  <CarouselNext />
+</Carousel>
+```
+
+**Tags:** carousel, slider, gallery, swipe
+
+---
+
+### Collapsible
+
+Simple collapsible content block
+
+**Import:**
+```tsx
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Collapsible>
+  <CollapsibleTrigger asChild>
+    <Button variant="ghost">
+      Toggle content
+      <ChevronsUpDown className="h-4 w-4" />
+    </Button>
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    <p>Hidden content here</p>
+  </CollapsibleContent>
+</Collapsible>
+```
+
+**Tags:** collapsible, toggle, expand, hide
+
+---
+
+### SSRPagination
+
+Server-side rendered pagination with URL-based navigation for Next.js SSR/SSG
+
+**Import:**
+```tsx
+import { SSRPagination } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// In your Next.js page component
+import { SSRPagination } from '@djangocfg/ui-nextjs';
+
+export default function ProductsPage({ searchParams }: { searchParams: { page?: string } }) {
+  const currentPage = Number(searchParams.page) || 1;
+  const itemsPerPage = 20;
+
+  // Fetch data from database/API
+  const { items, total } = await getProducts({ page: currentPage, limit: itemsPerPage });
+
+  const totalPages = Math.ceil(total / itemsPerPage);
+
+  return (
+    <div>
+      <ProductList items={items} />
+
+      <SSRPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={total}
+        itemsPerPage={itemsPerPage}
+        hasNextPage={currentPage < totalPages}
+        hasPreviousPage={currentPage > 1}
+        showInfo={true}
+        maxVisiblePages={7}
+      />
+    </div>
+  );
+}
+```
+
+**Tags:** pagination, ssr, navigation, nextjs, seo
+
+---
+
+### StaticPagination
+
+Client-side pagination for Django REST Framework paginated API responses
+
+**Import:**
+```tsx
+import { StaticPagination, useDRFPagination } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Client component with API calls
+'use client';
+
+import { StaticPagination, useDRFPagination } from '@djangocfg/ui-nextjs';
+import { useQuery } from '@tanstack/react-query';
+
+function UserList() {
+  const pagination = useDRFPagination();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['users', pagination.params],
+    queryFn: () => fetchUsers(pagination.params),
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <ul>
+        {data.results.map(user => (
+          <li key={user.id}>{user.name}</li>
+        ))}
+      </ul>
+
+      <StaticPagination
+        data={data}
+        onPageChange={pagination.setPage}
+        showInfo={true}
+      />
+    </div>
+  );
+}
+
+// API response format (DRF standard):
+// {
+//   count: 100,
+//   next: "https://api.example.com/users/?page=2",
+//   previous: null,
+//   results: [...]
+// }
+```
+
+**Tags:** pagination, drf, django, client-side, api
+
+---
 
 ### Table
 
@@ -1691,7 +1999,7 @@ Data table with headers and rows
 
 **Import:**
 ```tsx
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@djangocfg/ui';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -1719,273 +2027,174 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 
 ---
 
-### Accordion
-
-Collapsible content sections
-
-**Import:**
-```tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Accordion type="single" collapsible>
-  <AccordionItem value="item-1">
-    <AccordionTrigger>Is it accessible?</AccordionTrigger>
-    <AccordionContent>
-      Yes. It adheres to the WAI-ARIA design pattern.
-    </AccordionContent>
-  </AccordionItem>
-  <AccordionItem value="item-2">
-    <AccordionTrigger>Is it styled?</AccordionTrigger>
-    <AccordionContent>
-      Yes. It comes with default styles that match.
-    </AccordionContent>
-  </AccordionItem>
-</Accordion>
-```
-
-**Tags:** accordion, collapse, expand, faq
-
----
-
-### Collapsible
-
-Simple collapsible content block
-
-**Import:**
-```tsx
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Collapsible>
-  <CollapsibleTrigger asChild>
-    <Button variant="ghost">
-      Toggle content
-      <ChevronsUpDown className="h-4 w-4" />
-    </Button>
-  </CollapsibleTrigger>
-  <CollapsibleContent>
-    <p>Hidden content here</p>
-  </CollapsibleContent>
-</Collapsible>
-```
-
-**Tags:** collapsible, toggle, expand, hide
-
----
-
-### Calendar
-
-Date picker calendar component
-
-**Import:**
-```tsx
-import { Calendar } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const [date, setDate] = useState<Date | undefined>(new Date());
-
-<Calendar
-  mode="single"
-  selected={date}
-  onSelect={setDate}
-  className="rounded-md border"
-/>
-```
-
-**Tags:** calendar, date, picker, datepicker
-
----
-
-### Carousel
-
-Touch-friendly carousel/slider component
-
-**Import:**
-```tsx
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Carousel className="w-full max-w-xs">
-  <CarouselContent>
-    {items.map((_, index) => (
-      <CarouselItem key={index}>
-        <Card>
-          <CardContent className="flex aspect-square items-center justify-center p-6">
-            <span className="text-4xl font-semibold">{index + 1}</span>
-          </CardContent>
-        </Card>
-      </CarouselItem>
-    ))}
-  </CarouselContent>
-  <CarouselPrevious />
-  <CarouselNext />
-</Carousel>
-```
-
-**Tags:** carousel, slider, gallery, swipe
-
----
-
-### ChartContainer
-
-Wrapper for Recharts components with theme-aware styling
-
-**Import:**
-```tsx
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const chartConfig = {
-  desktop: { label: "Desktop", color: "hsl(var(--chart-1))" },
-  mobile: { label: "Mobile", color: "hsl(var(--chart-2))" },
-};
-
-<ChartContainer config={chartConfig} className="h-[200px]">
-  <BarChart data={data}>
-    <XAxis dataKey="month" />
-    <YAxis />
-    <ChartTooltip content={<ChartTooltipContent />} />
-    <ChartLegend content={<ChartLegendContent />} />
-    <Bar dataKey="desktop" fill="var(--color-desktop)" />
-    <Bar dataKey="mobile" fill="var(--color-mobile)" />
-  </BarChart>
-</ChartContainer>
-```
-
-**Props:**
-- `config`: `ChartConfig` (required) - Chart configuration with colors and labels
-- `children`: `ReactNode` (required) - Recharts chart components
-
-**Tags:** chart, recharts, visualization, graph
-
-**Related:** Progress
-
----
-
-### Pagination
-
-Basic pagination component with navigation controls
-
-**Import:**
-```tsx
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Pagination>
-  <PaginationContent>
-    <PaginationItem>
-      <PaginationPrevious href="#" />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">1</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#" isActive>2</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">3</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationEllipsis />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationNext href="#" />
-    </PaginationItem>
-  </PaginationContent>
-</Pagination>
-```
-
-**Tags:** pagination, navigation, pages
-
-**Related:** SSRPagination, StaticPagination
-
----
-
-### SSRPagination
-
-Server-side rendered pagination with URL-based navigation
-
-**Import:**
-```tsx
-import { SSRPagination } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<SSRPagination
-  currentPage={1}
-  totalPages={10}
-  totalItems={100}
-  itemsPerPage={10}
-  hasNextPage={true}
-  hasPreviousPage={false}
-  showInfo={true}
-  maxVisiblePages={7}
-/>
-```
-
-**Props:**
-- `currentPage`: `number` (required)
-- `totalPages`: `number` (required)
-- `totalItems`: `number` (required)
-- `itemsPerPage`: `number` (required)
-- `hasNextPage`: `boolean` (required)
-- `hasPreviousPage`: `boolean` (required)
-
-**Tags:** pagination, ssr, navigation
-
-**Related:** Pagination, StaticPagination
-
----
-
-### StaticPagination
-
-Client-side pagination for DRF paginated responses
-
-**Import:**
-```tsx
-import { StaticPagination, useDRFPagination } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const pagination = useDRFPagination();
-const { data } = useMyAPI(pagination.params);
-
-<StaticPagination
-  data={data}
-  onPageChange={pagination.setPage}
-  showInfo={true}
-/>
-```
-
-**Props:**
-- `data`: `DRFPaginatedResponse` - DRF paginated response
-- `onPageChange`: `(page: number) => void` (required)
-- `showInfo`: `boolean`
-
-**Tags:** pagination, drf, django, client-side
-
-**Related:** Pagination, SSRPagination
-
----
-
-## Specialized (10)
+## Specialized (9)
 
 Advanced components like sidebar and image handling
+
+### ButtonGroup
+
+Group buttons together with shared borders
+
+**Import:**
+```tsx
+import { ButtonGroup, Button } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ButtonGroup orientation="horizontal">
+  <Button variant="outline">Left</Button>
+  <Button variant="outline">Center</Button>
+  <Button variant="outline">Right</Button>
+</ButtonGroup>
+```
+
+**Tags:** button, group, toolbar
+
+---
+
+### Empty
+
+Empty state component for no data scenarios
+
+**Import:**
+```tsx
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+  EmptyMedia,
+} from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<Empty>
+  <EmptyHeader>
+    <EmptyMedia variant="icon">
+      <InboxIcon />
+    </EmptyMedia>
+    <EmptyTitle>No results found</EmptyTitle>
+    <EmptyDescription>
+      Try adjusting your search or filter.
+    </EmptyDescription>
+  </EmptyHeader>
+  <EmptyContent>
+    <Button>Clear filters</Button>
+  </EmptyContent>
+</Empty>
+```
+
+**Tags:** empty, state, placeholder
+
+---
+
+### InputGroup
+
+Enhanced input with prefix/suffix addons
+
+**Import:**
+```tsx
+import { InputGroup, Input } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<InputGroup>
+  <InputGroupAddon align="inline-start">
+    <SearchIcon className="size-4" />
+  </InputGroupAddon>
+  <Input placeholder="Search..." />
+  <InputGroupAddon align="inline-end">
+    <Kbd>⌘K</Kbd>
+  </InputGroupAddon>
+</InputGroup>
+```
+
+**Tags:** input, group, addon
+
+---
+
+### Item
+
+List item component with variants and layouts
+
+**Import:**
+```tsx
+import { Item, ItemGroup } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<ItemGroup>
+  <Item variant="outline" size="default">
+    <ItemIcon>
+      <FileIcon />
+    </ItemIcon>
+    <ItemContent>
+      <ItemTitle>Document.pdf</ItemTitle>
+      <ItemDescription>Updated 2 hours ago</ItemDescription>
+    </ItemContent>
+    <ItemAction>
+      <Button variant="ghost" size="sm">View</Button>
+    </ItemAction>
+  </Item>
+</ItemGroup>
+```
+
+**Tags:** list, item, row
+
+---
+
+### Kbd
+
+Keyboard key display component
+
+**Import:**
+```tsx
+import { Kbd } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<div className="flex gap-2 items-center">
+  <span>Press</span>
+  <Kbd>⌘</Kbd>
+  <Kbd>K</Kbd>
+  <span>to open</span>
+</div>
+```
+
+**Tags:** keyboard, shortcut, key
+
+---
+
+### OgImage
+
+Dynamic Open Graph image component using the OG Image API
+
+**Import:**
+```tsx
+import { OgImage } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<OgImage
+  params={{
+    title: 'My Page Title',
+    description: 'Page description text',
+    siteName: 'My Site',
+  }}
+  className="rounded-lg"
+/>
+```
+
+**Tags:** image, og, seo, meta
+
+---
 
 ### Sidebar
 
@@ -2002,7 +2211,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from '@djangocfg/ui';
+} from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2028,101 +2237,6 @@ import {
 
 **Tags:** navigation, menu, layout
 
-**Related:** NavigationMenu, Menubar
-
----
-
-### ImageWithFallback
-
-Enhanced image component with loading states and fallback support
-
-**Import:**
-```tsx
-import { ImageWithFallback } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ImageWithFallback
-  src="/images/example.jpg"
-  alt="Example image"
-  width={300}
-  height={200}
-  fallbackSrc="/images/placeholder.jpg"
-  className="rounded-md"
-/>
-```
-
-**Tags:** image, media, fallback
-
-**Related:** Avatar
-
----
-
-### ButtonGroup
-
-Group buttons together with shared borders
-
-**Import:**
-```tsx
-import { ButtonGroup, Button } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ButtonGroup orientation="horizontal">
-  <Button variant="outline">Left</Button>
-  <Button variant="outline">Center</Button>
-  <Button variant="outline">Right</Button>
-</ButtonGroup>
-```
-
-**Props:**
-- `orientation`: `'horizontal' | 'vertical'`
-- `children`: `ReactNode` (required)
-
-**Tags:** button, group, toolbar
-
-**Related:** Button
-
----
-
-### Empty
-
-Empty state component for no data scenarios
-
-**Import:**
-```tsx
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-  EmptyContent,
-  EmptyMedia,
-} from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<Empty>
-  <EmptyHeader>
-    <EmptyMedia variant="icon">
-      <InboxIcon />
-    </EmptyMedia>
-    <EmptyTitle>No results found</EmptyTitle>
-    <EmptyDescription>
-      Try adjusting your search or filter.
-    </EmptyDescription>
-  </EmptyHeader>
-  <EmptyContent>
-    <Button>Clear filters</Button>
-  </EmptyContent>
-</Empty>
-```
-
-**Tags:** empty, state, placeholder
-
 ---
 
 ### Spinner
@@ -2131,7 +2245,7 @@ Loading spinner indicator
 
 **Import:**
 ```tsx
-import { Spinner } from '@djangocfg/ui';
+import { Spinner } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2143,71 +2257,17 @@ import { Spinner } from '@djangocfg/ui';
 </div>
 ```
 
-**Props:**
-- `className`: `string` - Custom size via size-* classes
-
 **Tags:** loading, spinner, indicator
 
-**Related:** Progress, Skeleton
-
 ---
 
-### Kbd
-
-Keyboard key display component
-
-**Import:**
-```tsx
-import { Kbd } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<div className="flex gap-2 items-center">
-  <span>Press</span>
-  <Kbd>⌘</Kbd>
-  <Kbd>K</Kbd>
-  <span>to open</span>
-</div>
-```
-
-**Tags:** keyboard, shortcut, key
-
----
-
-### TokenIcon
-
-Cryptocurrency token icon component
-
-**Import:**
-```tsx
-import { TokenIcon } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<div className="flex gap-4">
-  <TokenIcon symbol="btc" size={32} />
-  <TokenIcon symbol="eth" size={32} />
-  <TokenIcon symbol="usdt" size={32} />
-</div>
-```
-
-**Props:**
-- `symbol`: `string` (required) - Token symbol (btc, eth, etc.)
-- `size`: `number` - Icon size in pixels
-
-**Tags:** crypto, token, icon, currency
-
----
-
-### Toaster (Sonner)
+### Toaster
 
 Toast notifications powered by Sonner library
 
 **Import:**
 ```tsx
-import { Toaster } from '@djangocfg/ui';
+import { Toaster } from '@djangocfg/ui-nextjs';
 import { toast } from 'sonner';
 ```
 
@@ -2229,78 +2289,48 @@ toast.promise(fetchData(), {
 
 **Tags:** toast, notification, sonner
 
-**Related:** Alert
-
 ---
 
-### InputGroup
-
-Enhanced input with prefix/suffix addons
-
-**Import:**
-```tsx
-import { InputGroup, Input } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<InputGroup>
-  <InputGroupAddon align="inline-start">
-    <SearchIcon className="size-4" />
-  </InputGroupAddon>
-  <Input placeholder="Search..." />
-  <InputGroupAddon align="inline-end">
-    <Kbd>⌘K</Kbd>
-  </InputGroupAddon>
-</InputGroup>
-```
-
-**Tags:** input, group, addon
-
-**Related:** Input
-
----
-
-### Item
-
-List item component with variants and layouts
-
-**Import:**
-```tsx
-import { Item, ItemGroup } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-<ItemGroup>
-  <Item variant="outline" size="default">
-    <ItemIcon>
-      <FileIcon />
-    </ItemIcon>
-    <ItemContent>
-      <ItemTitle>Document.pdf</ItemTitle>
-      <ItemDescription>Updated 2 hours ago</ItemDescription>
-    </ItemContent>
-    <ItemAction>
-      <Button variant="ghost" size="sm">View</Button>
-    </ItemAction>
-  </Item>
-</ItemGroup>
-```
-
-**Props:**
-- `variant`: `'default' | 'outline' | 'muted'`
-- `size`: `'default' | 'sm' | 'lg'`
-
-**Tags:** list, item, row
-
-**Related:** Card, Table
-
----
-
-## Developer Tools (6)
+## Developer Tools (10)
 
 JSON viewer, code highlighting, Mermaid diagrams
+
+### Interactive JsonSchemaForm
+
+Interactive JSON Schema Form playground - try different schemas and see live form generation
+
+**Import:**
+```tsx
+import { JsonSchemaForm } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const schema = {
+  type: "object",
+  title: "User Profile",
+  required: ["name", "email"],
+  properties: {
+    name: { type: "string", title: "Full Name", minLength: 2 },
+    email: { type: "string", title: "Email", format: "email" },
+    age: { type: "integer", title: "Age", minimum: 0, maximum: 150 },
+    notifications: { type: "boolean", title: "Enable Notifications" }
+  }
+};
+
+<JsonSchemaForm
+  schema={schema}
+  onSubmit={(data) => console.log(data.formData)}
+  onChange={(data) => setFormData(data.formData)}
+  liveValidate={true}
+  showSubmitButton={true}
+  submitButtonText="Save"
+/>
+```
+
+**Tags:** form, json-schema, generator, dynamic, interactive
+
+---
 
 ### JsonTree
 
@@ -2308,7 +2338,7 @@ Interactive JSON tree viewer with expand/collapse, search, and export functional
 
 **Import:**
 ```tsx
-import { JsonTree } from '@djangocfg/ui';
+import { JsonTree } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2334,56 +2364,113 @@ import { JsonTree } from '@djangocfg/ui';
 />
 ```
 
-**Props:**
-- `data`: `object | array` (required) - JSON data to display
-- `title`: `string` - Header title
-- `config`: `JsonTreeConfig` - Configuration options
-
 **Tags:** json, tree, viewer, debug
-
-**Related:** PrettyCode
 
 ---
 
-### PrettyCode
+### LottiePlayer
 
-Syntax-highlighted code display with automatic language detection and theme support
+Lottie animation player with size presets and playback controls
 
 **Import:**
 ```tsx
-import { PrettyCode } from '@djangocfg/ui';
+import { LottiePlayer } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-// Code as string
-<PrettyCode
-  data={pythonCode}
-  language="python"
+<LottiePlayer
+  src="https://djangocfg.com/static/lottie/coding.json"
+  size="md"
+  autoplay
+  loop
 />
 
-// JSON object (auto-formatted)
-<PrettyCode
-  data={{ user: "John", age: 30 }}
-  language="json"
-/>
-
-// Inline code
-<PrettyCode
-  data="const x = 42;"
-  language="javascript"
-  inline
+// Custom size and speed
+<LottiePlayer
+  src={animationData}
+  width={300}
+  height={300}
+  speed={1.5}
 />
 ```
 
-**Props:**
-- `data`: `string | object` (required) - Code to display
-- `language`: `string` - Language for syntax highlighting
-- `inline`: `boolean` - Inline code display
+**Tags:** animation, lottie, motion
 
-**Tags:** code, syntax, highlight, prism
+---
 
-**Related:** JsonTree
+### MarkdownMessage with Mermaid
+
+Example of MarkdownMessage rendering Mermaid diagrams inline
+
+**Import:**
+```tsx
+import { MarkdownMessage } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<MarkdownMessage
+  content={`
+# Mermaid Diagram
+
+Here's a flowchart:
+
+\`\`\`mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E
+\`\`\`
+  `}
+/>
+```
+
+**Tags:** markdown, mermaid, diagram, flowchart
+
+---
+
+### MarkdownMessage
+
+Markdown renderer with GFM support, syntax highlighting, Mermaid diagrams, and chat-optimized styling
+
+**Import:**
+```tsx
+import { MarkdownMessage } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+<MarkdownMessage
+  content="# Hello World\n\nThis is **bold** text with `code`."
+/>
+
+// User message styling (inverted colors)
+<MarkdownMessage
+  content="Some user message"
+  isUser
+/>
+
+// With code blocks and mermaid
+<MarkdownMessage
+  content={`
+## Code Example
+
+\`\`\`typescript
+const greeting = "Hello!";
+\`\`\`
+
+\`\`\`mermaid
+graph TD
+  A --> B
+\`\`\`
+  `}
+/>
+```
+
+**Tags:** markdown, gfm, syntax, mermaid, chat, message, interactive
 
 ---
 
@@ -2393,7 +2480,7 @@ Interactive Mermaid diagram renderer with fullscreen view and theme support
 
 **Import:**
 ```tsx
-import { Mermaid } from '@djangocfg/ui';
+import { Mermaid } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2421,86 +2508,39 @@ import { Mermaid } from '@djangocfg/ui';
 />
 ```
 
-**Props:**
-- `chart`: `string` (required) - Mermaid diagram code
-
 **Tags:** diagram, mermaid, flowchart, chart
 
 ---
 
-### LottiePlayer
+### OgImageTemplate
 
-Lottie animation player with size presets and playback controls
+Interactive OG Image template with customizable design and live preview
 
 **Import:**
 ```tsx
-import { LottiePlayer } from '@djangocfg/ui';
+import { DefaultTemplate } from '@djangocfg/nextjs/og-image/components';
 ```
 
 **Example:**
 ```tsx
-<LottiePlayer
-  src="https://lottie.host/embed/animation.json"
-  size="md"
-  autoplay
-  loop
-/>
+import { createOgImageDynamicRoute } from '@djangocfg/nextjs/og-image';
+import { DefaultTemplate } from '@djangocfg/nextjs/og-image/components';
 
-// Custom size and speed
-<LottiePlayer
-  src={animationData}
-  width={300}
-  height={300}
-  speed={1.5}
-/>
-```
-
-**Props:**
-- `src`: `string | object` (required) - Animation URL or JSON data
-- `size`: `'sm' | 'md' | 'lg'` - Size preset
-- `autoplay`: `boolean` - Auto-start animation
-- `loop`: `boolean` - Loop animation
-- `speed`: `number` - Playback speed
-
-**Tags:** animation, lottie, motion
-
----
-
-### JsonSchemaForm
-
-Dynamic form generator from JSON Schema with validation and custom widgets
-
-**Import:**
-```tsx
-import { JsonSchemaForm } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const schema = {
-  type: "object",
-  properties: {
-    name: { type: "string", title: "Name" },
-    email: { type: "string", format: "email", title: "Email" },
-    age: { type: "number", title: "Age", minimum: 0 }
+const handler = createOgImageDynamicRoute({
+  template: DefaultTemplate,
+  defaultProps: {
+    siteName: "Django CFG",
+    logo: "https://djangocfg.com/logo.svg",
   },
-  required: ["name", "email"]
-};
-
-<JsonSchemaForm
-  schema={schema}
-  onSubmit={(data) => console.log(data)}
-/>
+  fonts: [
+    { family: 'Manrope', weight: 700 },
+    { family: 'Manrope', weight: 500 },
+  ],
+  size: { width: 1200, height: 630 },
+});
 ```
 
-**Props:**
-- `schema`: `JSONSchema7` (required) - JSON Schema object
-- `onSubmit`: `(data) => void` - Submit handler
-- `widgets`: `object` - Custom widget components
-
-**Tags:** form, json-schema, generator, dynamic
-
-**Related:** Form
+**Tags:** og-image, metadata, seo, nextjs, template
 
 ---
 
@@ -2510,7 +2550,7 @@ Interactive OpenAPI/Swagger documentation viewer with API playground
 
 **Import:**
 ```tsx
-import { OpenapiViewer } from '@djangocfg/ui';
+import { OpenapiViewer } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2529,11 +2569,64 @@ import { OpenapiViewer } from '@djangocfg/ui';
 />
 ```
 
-**Props:**
-- `spec`: `string | object` (required) - OpenAPI spec URL or object
-- `config`: `PlaygroundConfig` - Playground configuration
+**Tags:** openapi, swagger, api, documentation, playground
 
-**Tags:** openapi, swagger, api, documentation
+---
+
+### PrettyCode
+
+Syntax-highlighted code display with automatic language detection and theme support
+
+**Import:**
+```tsx
+import { PrettyCode } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Code as string
+<PrettyCode
+  data={pythonCode}
+  language="python"
+/>
+
+// JSON object (auto-formatted)
+<PrettyCode
+  data={{ user: "John", age: 30 }}
+  language="json"
+/>
+
+// Inline code
+<PrettyCode
+  data="const x = 42;"
+  language="javascript"
+  inline
+/>
+```
+
+**Tags:** code, syntax, highlight, prism
+
+---
+
+### UseQueryParams
+
+Hook for safely accessing URL query parameters without Suspense boundary
+
+**Import:**
+```tsx
+import { useQueryParams } from '@djangocfg/ui-nextjs/hooks';
+```
+
+**Example:**
+```tsx
+const queryParams = useQueryParams();
+const flow = queryParams.get('flow');
+const page = queryParams.get('page');
+const tags = queryParams.getAll('tags');
+const hasFlow = queryParams.has('flow');
+```
+
+**Tags:** hooks, query-params, url, router
 
 ---
 
@@ -2541,13 +2634,69 @@ import { OpenapiViewer } from '@djangocfg/ui';
 
 Pre-built landing page sections
 
+### CTASection
+
+Call-to-action section to drive conversions
+
+**Import:**
+```tsx
+import { CTASection } from '@djangocfg/ui-nextjs/blocks';
+```
+
+**Example:**
+```tsx
+<CTASection
+  title="Ready to Get Started?"
+  subtitle="Join thousands of developers building amazing products"
+  primaryCTA={{ label: "Start Free Trial", href: "/signup" }}
+  secondaryCTA={{ label: "Contact Sales", href: "/contact" }}
+/>
+```
+
+**Tags:** cta, call-to-action, landing
+
+---
+
+### FeatureSection
+
+Grid of features with icons and descriptions
+
+**Import:**
+```tsx
+import { FeatureSection } from '@djangocfg/ui-nextjs/blocks';
+```
+
+**Example:**
+```tsx
+<FeatureSection
+  title="Everything You Need"
+  subtitle="All the tools to build modern applications"
+  features={[
+    {
+      icon: <Zap className="w-6 h-6" />,
+      title: "Lightning Fast",
+      description: "Optimized for performance"
+    },
+    {
+      icon: <Shield className="w-6 h-6" />,
+      title: "Secure",
+      description: "Built with security in mind"
+    }
+  ]}
+/>
+```
+
+**Tags:** features, grid, landing
+
+---
+
 ### Hero
 
 Hero section with title, description, and CTAs
 
 **Import:**
 ```tsx
-import { Hero } from '@djangocfg/ui/blocks';
+import { Hero } from '@djangocfg/ui-nextjs/blocks';
 ```
 
 **Example:**
@@ -2560,15 +2709,56 @@ import { Hero } from '@djangocfg/ui/blocks';
 />
 ```
 
-**Props:**
-- `title`: `string` (required)
-- `description`: `string`
-- `primaryAction`: `{ label: string; href: string }`
-- `secondaryAction`: `{ label: string; href: string }`
-
 **Tags:** hero, landing, section
 
-**Related:** SuperHero, CTASection
+---
+
+### NewsletterSection
+
+Email capture section for newsletters
+
+**Import:**
+```tsx
+import { NewsletterSection } from '@djangocfg/ui-nextjs/blocks';
+```
+
+**Example:**
+```tsx
+<NewsletterSection
+  title="Stay Updated"
+  description="Get the latest news delivered to your inbox"
+  placeholder="Enter your email"
+  buttonText="Subscribe"
+  onSubmit={(email) => console.log(email)}
+/>
+```
+
+**Tags:** newsletter, email, subscription, landing
+
+---
+
+### StatsSection
+
+Display key metrics and statistics
+
+**Import:**
+```tsx
+import { StatsSection } from '@djangocfg/ui-nextjs/blocks';
+```
+
+**Example:**
+```tsx
+<StatsSection
+  title="Our Impact"
+  stats={[
+    { icon: <Users className="w-6 h-6" />, number: "10K+", label: "Active Users" },
+    { icon: <Building2 className="w-6 h-6" />, number: "500+", label: "Companies" },
+    { icon: <TrendingUp className="w-6 h-6" />, number: "99.9%", label: "Uptime" },
+  ]}
+/>
+```
+
+**Tags:** stats, metrics, numbers, landing
 
 ---
 
@@ -2578,7 +2768,7 @@ Enhanced hero with badge, gradient title, features, and stats
 
 **Import:**
 ```tsx
-import { SuperHero } from '@djangocfg/ui/blocks';
+import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
 ```
 
 **Example:**
@@ -2602,152 +2792,7 @@ import { SuperHero } from '@djangocfg/ui/blocks';
 />
 ```
 
-**Props:**
-- `badge`: `{ icon: ReactNode; text: string }`
-- `title`: `string` (required)
-- `titleGradient`: `string`
-- `features`: `Array<{ icon: ReactNode; text: string }>`
-- `stats`: `Array<{ number: string; label: string }>`
-- `backgroundVariant`: `'none' | 'waves' | 'dots' | 'grid'`
-
 **Tags:** hero, landing, gradient, animated
-
-**Related:** Hero, StatsSection
-
----
-
-### FeatureSection
-
-Grid of features with icons and descriptions
-
-**Import:**
-```tsx
-import { FeatureSection } from '@djangocfg/ui/blocks';
-```
-
-**Example:**
-```tsx
-<FeatureSection
-  title="Everything You Need"
-  subtitle="All the tools to build modern applications"
-  features={[
-    {
-      icon: <Zap className="w-6 h-6" />,
-      title: "Lightning Fast",
-      description: "Optimized for performance"
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Secure",
-      description: "Built with security in mind"
-    }
-  ]}
-/>
-```
-
-**Props:**
-- `title`: `string` (required)
-- `subtitle`: `string`
-- `features`: `Array<{ icon: ReactNode; title: string; description: string }>` (required)
-
-**Tags:** features, grid, landing
-
-**Related:** Hero, StatsSection
-
----
-
-### CTASection
-
-Call-to-action section to drive conversions
-
-**Import:**
-```tsx
-import { CTASection } from '@djangocfg/ui/blocks';
-```
-
-**Example:**
-```tsx
-<CTASection
-  title="Ready to Get Started?"
-  subtitle="Join thousands of developers building amazing products"
-  primaryCTA={{ label: "Start Free Trial", href: "/signup" }}
-  secondaryCTA={{ label: "Contact Sales", href: "/contact" }}
-/>
-```
-
-**Props:**
-- `title`: `string` (required)
-- `subtitle`: `string`
-- `primaryCTA`: `{ label: string; href: string }` (required)
-- `secondaryCTA`: `{ label: string; href: string }`
-
-**Tags:** cta, call-to-action, landing
-
-**Related:** Hero, NewsletterSection
-
----
-
-### NewsletterSection
-
-Email capture section for newsletters
-
-**Import:**
-```tsx
-import { NewsletterSection } from '@djangocfg/ui/blocks';
-```
-
-**Example:**
-```tsx
-<NewsletterSection
-  title="Stay Updated"
-  description="Get the latest news delivered to your inbox"
-  placeholder="Enter your email"
-  buttonText="Subscribe"
-  onSubmit={(email) => console.log(email)}
-/>
-```
-
-**Props:**
-- `title`: `string` (required)
-- `description`: `string`
-- `placeholder`: `string`
-- `buttonText`: `string`
-- `onSubmit`: `(email: string) => void` (required)
-
-**Tags:** newsletter, email, subscription, landing
-
-**Related:** CTASection
-
----
-
-### StatsSection
-
-Display key metrics and statistics
-
-**Import:**
-```tsx
-import { StatsSection } from '@djangocfg/ui/blocks';
-```
-
-**Example:**
-```tsx
-<StatsSection
-  title="Our Impact"
-  stats={[
-    { icon: <Users className="w-6 h-6" />, number: "10K+", label: "Active Users" },
-    { icon: <Building2 className="w-6 h-6" />, number: "500+", label: "Companies" },
-    { icon: <TrendingUp className="w-6 h-6" />, number: "99.9%", label: "Uptime" },
-  ]}
-/>
-```
-
-**Props:**
-- `title`: `string`
-- `stats`: `Array<{ icon?: ReactNode; number: string; label: string }>` (required)
-
-**Tags:** stats, metrics, numbers, landing
-
-**Related:** FeatureSection
 
 ---
 
@@ -2757,7 +2802,7 @@ Customer testimonials and reviews
 
 **Import:**
 ```tsx
-import { TestimonialSection } from '@djangocfg/ui/blocks';
+import { TestimonialSection } from '@djangocfg/ui-nextjs/blocks';
 ```
 
 **Example:**
@@ -2776,72 +2821,13 @@ import { TestimonialSection } from '@djangocfg/ui/blocks';
 />
 ```
 
-**Props:**
-- `title`: `string`
-- `testimonials`: `Array<{ content: string; author: { name: string; title: string; company: string; avatar?: string } }>` (required)
-
 **Tags:** testimonials, reviews, social-proof, landing
 
-**Related:** StatsSection
-
 ---
 
-## Hooks (10)
+## Hooks (12)
 
 Custom React hooks for common functionality
-
-### useMediaQuery
-
-Responsive media query hook for conditional rendering
-
-**Import:**
-```tsx
-import { useMediaQuery } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const isMobile = useMediaQuery('(max-width: 768px)');
-const isDesktop = useMediaQuery('(min-width: 1024px)');
-const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
-
-return isMobile ? <MobileView /> : <DesktopView />;
-```
-
-**Props:**
-- `query`: `string` (required) - CSS media query string
-
-**Tags:** responsive, media-query, viewport
-
-**Related:** useIsMobile
-
----
-
-### useTheme
-
-Theme management hook for light/dark mode
-
-**Import:**
-```tsx
-import { useTheme } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const theme = useTheme(); // Returns 'light' | 'dark'
-
-// Check current theme
-if (theme === 'dark') {
-  // Dark mode specific logic
-}
-
-// Toggle theme manually
-document.documentElement.classList.toggle('dark');
-```
-
-**Tags:** theme, dark-mode, light-mode
-
----
 
 ### useCopy
 
@@ -2849,7 +2835,7 @@ Copy to clipboard hook with async support
 
 **Import:**
 ```tsx
-import { useCopy } from '@djangocfg/ui';
+import { useCopy } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2870,9 +2856,7 @@ return (
 );
 ```
 
-**Tags:** clipboard, copy, paste
-
-**Related:** Kbd
+**Tags:** hook, clipboard, copy, paste
 
 ---
 
@@ -2882,7 +2866,7 @@ Countdown timer hook with days, hours, minutes, seconds
 
 **Import:**
 ```tsx
-import { useCountdown } from '@djangocfg/ui';
+import { useCountdown } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2903,10 +2887,7 @@ return (
 );
 ```
 
-**Props:**
-- `targetDate`: `string` (required) - ISO date string for countdown target
-
-**Tags:** countdown, timer, time
+**Tags:** hook, countdown, timer, time
 
 ---
 
@@ -2916,7 +2897,7 @@ Debounce value changes to reduce API calls and improve performance
 
 **Import:**
 ```tsx
-import { useDebounce } from '@djangocfg/ui';
+import { useDebounce } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -2940,96 +2921,62 @@ return (
 );
 ```
 
-**Props:**
-- `value`: `T` (required) - Value to debounce
-- `delay`: `number` - Delay in milliseconds
-
-**Tags:** debounce, performance, search
-
-**Related:** Input
+**Tags:** hook, debounce, performance, search
 
 ---
 
-### useIsMobile
+### useDebouncedCallback
 
-Check if device is mobile (viewport < 768px)
+Create a debounced version of a callback function
 
 **Import:**
 ```tsx
-import { useIsMobile } from '@djangocfg/ui';
+import { useDebouncedCallback } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-const isMobile = useIsMobile(); // Boolean
+const debouncedSearch = useDebouncedCallback((term: string) => {
+  // This function will only run 300ms after the user stops typing
+  searchAPI(term);
+}, 300);
 
-return isMobile ? <MobileMenu /> : <DesktopMenu />;
-
-// Or conditionally render
-{isMobile && <MobileNavigation />}
-{!isMobile && <DesktopNavigation />}
+// Use in event handler
+<Input onChange={(e) => debouncedSearch(e.target.value)} />
 ```
 
-**Tags:** mobile, responsive, viewport
-
-**Related:** useMediaQuery
+**Tags:** hook, debounce, callback, performance, function
 
 ---
 
-### useLocalStorage
+### useDebugTools
 
-Persist state to localStorage with automatic serialization
+Debug utilities for development environment
 
 **Import:**
 ```tsx
-import { useLocalStorage } from '@djangocfg/ui';
+import { useDebugTools } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-const [settings, setSettings] = useLocalStorage('user-settings', {
-  theme: 'dark',
-  notifications: true
-});
+const debug = useDebugTools('MyComponent');
 
-// Updates both state and localStorage
-setSettings({ ...settings, theme: 'light' });
+// Log component state changes
+debug.log('State updated:', state);
+
+// Measure performance
+debug.time('expensive-operation');
+doExpensiveWork();
+debug.timeEnd('expensive-operation');
+
+// Log only in development
+debug.info('Component mounted');
+debug.warn('Deprecated prop used');
+debug.error('Something went wrong');
 ```
 
-**Props:**
-- `key`: `string` (required) - localStorage key
-- `initialValue`: `T` (required) - Initial value if key not found
-
-**Tags:** storage, persist, state
-
-**Related:** useSessionStorage
-
----
-
-### useSessionStorage
-
-Persist state to sessionStorage (cleared on tab close)
-
-**Import:**
-```tsx
-import { useSessionStorage } from '@djangocfg/ui';
-```
-
-**Example:**
-```tsx
-const [cart, setCart] = useSessionStorage('shopping-cart', []);
-
-// Add item
-setCart([...cart, newItem]);
-```
-
-**Props:**
-- `key`: `string` (required) - sessionStorage key
-- `initialValue`: `T` (required) - Initial value if key not found
-
-**Tags:** storage, session, state
-
-**Related:** useLocalStorage
+**Tags:** hook, debug, logging, development, performance
 
 ---
 
@@ -3039,7 +2986,7 @@ Subscribe to custom events with type-safe event bus
 
 **Import:**
 ```tsx
-import { useEventListener, events } from '@djangocfg/ui';
+import { useEventListener, events } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -3053,11 +3000,7 @@ useEventListener('user-login', (data) => {
 events.emit('user-login', { userId: '123' });
 ```
 
-**Props:**
-- `eventName`: `string` (required) - Name of the event to listen for
-- `handler`: `(data: T) => void` (required) - Event handler callback
-
-**Tags:** events, pubsub, communication
+**Tags:** hook, events, pubsub, communication
 
 ---
 
@@ -3067,7 +3010,7 @@ Preload images and track loading state
 
 **Import:**
 ```tsx
-import { useImageLoader } from '@djangocfg/ui';
+import { useImageLoader } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
@@ -3083,167 +3026,619 @@ return (
 );
 ```
 
-**Props:**
-- `src`: `string` (required) - Image URL to preload
-
-**Tags:** image, loading, preload
-
-**Related:** ImageWithFallback, Skeleton
+**Tags:** hook, image, loading, preload
 
 ---
 
-## App Layouts (1)
+### useIsMobile
 
-Application layout templates
-
-### Error Layout
-
-Universal error page layout with auto-configured content for common HTTP errors.
+Check if device is mobile (viewport < 768px)
 
 **Import:**
 ```tsx
-import { ErrorLayout } from '@djangocfg/layouts';
+import { useIsMobile } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-import { ErrorLayout } from '@djangocfg/layouts';
+const isMobile = useIsMobile(); // Boolean
 
-// Auto-configure from error code
-<ErrorLayout code="404" />
+return isMobile ? <MobileMenu /> : <DesktopMenu />;
 
-// Custom content
-<ErrorLayout
-  code="500"
-  title="Oops!"
-  description="Something went wrong."
-  supportEmail="help@example.com"
-/>
+// Or conditionally render
+{isMobile && <MobileNavigation />}
+{!isMobile && <DesktopNavigation />}
+```
 
-// In Next.js pages/404.tsx
-export default function NotFound() {
-  return <ErrorLayout code="404" />;
+**Tags:** hook, mobile, responsive, viewport
+
+---
+
+### useLocalStorage
+
+Persist state to localStorage with automatic serialization
+
+**Import:**
+```tsx
+import { useLocalStorage } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const [settings, setSettings] = useLocalStorage('user-settings', {
+  theme: 'dark',
+  notifications: true
+});
+
+// Updates both state and localStorage
+setSettings({ ...settings, theme: 'light' });
+```
+
+**Tags:** hook, storage, persist, state
+
+---
+
+### useMediaQuery
+
+Responsive media query hook for conditional rendering
+
+**Import:**
+```tsx
+import { useMediaQuery } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const isMobile = useMediaQuery('(max-width: 768px)');
+const isDesktop = useMediaQuery('(min-width: 1024px)');
+const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+
+return isMobile ? <MobileView /> : <DesktopView />;
+```
+
+**Tags:** hook, responsive, media-query, viewport
+
+---
+
+### useSessionStorage
+
+Persist state to sessionStorage (cleared on tab close)
+
+**Import:**
+```tsx
+import { useSessionStorage } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const [cart, setCart] = useSessionStorage('shopping-cart', []);
+
+// Add item
+setCart([...cart, newItem]);
+```
+
+**Tags:** hook, storage, session, state
+
+---
+
+### useTheme
+
+Theme management hook for light/dark mode
+
+**Import:**
+```tsx
+import { useTheme } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const theme = useTheme(); // Returns 'light' | 'dark'
+
+// Check current theme
+if (theme === 'dark') {
+  // Dark mode specific logic
 }
+
+// Toggle theme manually
+document.documentElement.classList.toggle('dark');
 ```
 
-**Tags:** layout, error, 404, 500, 403, page
+**Tags:** hook, theme, dark-mode, light-mode
 
 ---
 
-## Authentication (1)
+## Charts (7)
 
-Login, signup, and auth components
+Data visualization with Area, Bar, Line, Pie, and Radar charts
 
-### Auth Dialog
+### Area Chart
 
-Authentication prompt dialog triggered via events when user needs to sign in.
+Filled area chart for visualizing volume over time
 
 **Import:**
 ```tsx
-import { AuthDialog, openAuthDialog } from '@djangocfg/layouts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@djangocfg/ui-nextjs';
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 ```
 
 **Example:**
 ```tsx
-import { AuthDialog, openAuthDialog } from '@djangocfg/layouts';
+const chartConfig = {
+  revenue: { label: "Revenue", color: "hsl(var(--chart-1))" },
+  expenses: { label: "Expenses", color: "hsl(var(--chart-2))" },
+};
 
-// Add to layout
-<AuthDialog authPath="/auth" />
-
-// Trigger from anywhere
-openAuthDialog({ message: 'Sign in to continue' });
+<ChartContainer config={chartConfig} className="h-[300px] w-full">
+  <AreaChart data={data}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="month" />
+    <YAxis />
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <Area
+      type="monotone"
+      dataKey="revenue"
+      fill="var(--color-revenue)"
+      fillOpacity={0.4}
+      stroke="var(--color-revenue)"
+    />
+    <Area
+      type="monotone"
+      dataKey="expenses"
+      fill="var(--color-expenses)"
+      fillOpacity={0.4}
+      stroke="var(--color-expenses)"
+    />
+  </AreaChart>
+</ChartContainer>
 ```
 
-**Tags:** auth, dialog, login, signin
+**Tags:** chart, area, stacked, volume, analytics
 
 ---
 
-## Snippets (3)
+### Bar Chart
 
-Ready-to-use code snippets
-
-### Breadcrumbs
-
-Navigation breadcrumbs with automatic path generation or custom items.
+Vertical bar chart for comparing categorical data
 
 **Import:**
 ```tsx
-import Breadcrumbs from '@djangocfg/layouts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@djangocfg/ui-nextjs';
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 ```
 
 **Example:**
 ```tsx
-import Breadcrumbs from '@djangocfg/layouts';
+const chartConfig = {
+  desktop: { label: "Desktop", color: "hsl(var(--chart-1))" },
+  mobile: { label: "Mobile", color: "hsl(var(--chart-2))" },
+};
 
-// Auto-generate from current path
-<Breadcrumbs />
+const data = [
+  { month: "Jan", desktop: 186, mobile: 80 },
+  { month: "Feb", desktop: 305, mobile: 200 },
+  // ...
+];
 
-// Or provide custom items
-<Breadcrumbs
-  items={[
-    { path: '/', label: 'Home', isActive: false },
-    { path: '/products', label: 'Products', isActive: true },
-  ]}
-/>
+<ChartContainer config={chartConfig} className="h-[300px] w-full">
+  <BarChart data={data}>
+    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+    <XAxis dataKey="month" tickLine={false} axisLine={false} />
+    <YAxis tickLine={false} axisLine={false} />
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <ChartLegend content={<ChartLegendContent />} />
+    <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
+    <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
+  </BarChart>
+</ChartContainer>
 ```
 
-**Tags:** navigation, breadcrumbs, path
+**Tags:** chart, bar, comparison, analytics, recharts
 
 ---
 
-### Video Player
+### ChartContainer
 
-Professional video player with Vidstack. Supports YouTube, Vimeo, MP4, HLS.
+Base wrapper component for all chart types with theme-aware styling
 
 **Import:**
 ```tsx
-import { VideoPlayer } from '@djangocfg/layouts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-import { VideoPlayer } from '@djangocfg/layouts';
+// ChartConfig type
+type ChartConfig = {
+  [key: string]: {
+    label?: ReactNode;
+    icon?: ComponentType;
+    color?: string;
+    // or use theme-aware colors:
+    theme?: {
+      light: string;
+      dark: string;
+    };
+  };
+};
 
-<VideoPlayer
-  source={{
-    url: 'https://youtube.com/watch?v=...',
-    title: 'My Video',
-    poster: '/thumbnail.jpg',
-  }}
-  theme="modern"
-  controls
-  onPlay={() => console.log('Playing')}
-/>
+// Basic usage
+const chartConfig: ChartConfig = {
+  sales: {
+    label: "Sales",
+    color: "hsl(var(--chart-1))",
+  },
+  revenue: {
+    label: "Revenue",
+    color: "hsl(var(--chart-2))",
+  },
+};
+
+<ChartContainer config={chartConfig} className="h-[300px]">
+  {/* Any Recharts component */}
+  <BarChart data={data}>
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <ChartLegend content={<ChartLegendContent />} />
+    <Bar dataKey="sales" fill="var(--color-sales)" />
+    <Bar dataKey="revenue" fill="var(--color-revenue)" />
+  </BarChart>
+</ChartContainer>
 ```
 
-**Tags:** video, player, youtube, vimeo, media
+**Tags:** chart, container, wrapper, recharts, config
 
 ---
 
-### Contact Form
+### Donut Chart
 
-Contact form with validation, localStorage draft saving, and API integration.
+Donut chart with center label for showing progress or distribution
 
 **Import:**
 ```tsx
-import { ContactForm } from '@djangocfg/layouts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@djangocfg/ui-nextjs';
+import { Pie, PieChart, Label } from 'recharts';
 ```
 
 **Example:**
 ```tsx
-import { ContactForm } from '@djangocfg/layouts';
-
-<ContactForm
-  apiUrl="https://api.example.com"
-  texts={{
-    title: 'Get in Touch',
-    submitText: 'Send Message',
-  }}
-  onSuccess={(result) => console.log('Sent!', result)}
-/>
+<ChartContainer config={chartConfig} className="h-[250px] w-full">
+  <PieChart>
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <Pie
+      data={data}
+      dataKey="value"
+      nameKey="name"
+      innerRadius={60}
+      outerRadius={80}
+    >
+      <Label
+        content={({ viewBox }) => (
+          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
+            <tspan
+              style={{ fill: 'hsl(var(--foreground))', fontSize: '30px', fontWeight: 'bold' }}
+              x={viewBox.cx}
+              y={viewBox.cy}
+            >
+              65%
+            </tspan>
+            <tspan
+              x={viewBox.cx}
+              y={viewBox.cy + 20}
+              style={{ fill: 'hsl(var(--muted-foreground))', fontSize: '14px' }}
+            >
+              Completed
+            </tspan>
+          </text>
+        )}
+      />
+    </Pie>
+  </PieChart>
+</ChartContainer>
 ```
 
-**Tags:** form, contact, lead, email
+**Tags:** chart, donut, progress, ring, analytics
+
+---
+
+### Line Chart
+
+Line chart for showing trends over time
+
+**Import:**
+```tsx
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@djangocfg/ui-nextjs';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
+```
+
+**Example:**
+```tsx
+const chartConfig = {
+  visitors: { label: "Visitors", color: "hsl(var(--chart-1))" },
+  pageViews: { label: "Page Views", color: "hsl(var(--chart-2))" },
+};
+
+<ChartContainer config={chartConfig} className="h-[300px] w-full">
+  <LineChart data={data}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="date" />
+    <YAxis />
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <Line
+      type="monotone"
+      dataKey="visitors"
+      stroke="var(--color-visitors)"
+      strokeWidth={2}
+      dot={false}
+    />
+    <Line
+      type="monotone"
+      dataKey="pageViews"
+      stroke="var(--color-pageViews)"
+      strokeWidth={2}
+      dot={false}
+    />
+  </LineChart>
+</ChartContainer>
+```
+
+**Tags:** chart, line, trend, time-series, analytics
+
+---
+
+### Pie Chart
+
+Pie chart for showing proportions of a whole
+
+**Import:**
+```tsx
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@djangocfg/ui-nextjs';
+import { Pie, PieChart, Cell } from 'recharts';
+```
+
+**Example:**
+```tsx
+const chartConfig = {
+  Chrome: { label: "Chrome", color: "hsl(var(--chart-1))" },
+  Safari: { label: "Safari", color: "hsl(var(--chart-2))" },
+  Firefox: { label: "Firefox", color: "hsl(var(--chart-3))" },
+};
+
+const data = [
+  { name: "Chrome", value: 275, fill: "hsl(var(--chart-1))" },
+  { name: "Safari", value: 200, fill: "hsl(var(--chart-2))" },
+  { name: "Firefox", value: 187, fill: "hsl(var(--chart-3))" },
+];
+
+<ChartContainer config={chartConfig} className="h-[300px] w-full">
+  <PieChart>
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <Pie
+      data={data}
+      dataKey="value"
+      nameKey="name"
+      cx="50%"
+      cy="50%"
+      outerRadius={100}
+    />
+    <ChartLegend content={<ChartLegendContent />} />
+  </PieChart>
+</ChartContainer>
+```
+
+**Tags:** chart, pie, proportion, distribution, analytics
+
+---
+
+### Radial Bar Chart
+
+Radial bar chart for comparing values in a circular format
+
+**Import:**
+```tsx
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@djangocfg/ui-nextjs';
+import { RadialBar, RadialBarChart, PolarGrid, PolarAngleAxis } from 'recharts';
+```
+
+**Example:**
+```tsx
+const chartConfig = {
+  visitors: { label: "Visitors" },
+  Chrome: { label: "Chrome", color: "hsl(var(--chart-1))" },
+  Safari: { label: "Safari", color: "hsl(var(--chart-2))" },
+  Firefox: { label: "Firefox", color: "hsl(var(--chart-3))" },
+};
+
+<ChartContainer config={chartConfig} className="h-[300px] w-full">
+  <RadialBarChart data={data} innerRadius={30} outerRadius={100}>
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <PolarGrid gridType="circle" />
+    <RadialBar dataKey="visitors" background />
+  </RadialBarChart>
+</ChartContainer>
+```
+
+**Tags:** chart, radial, circular, gauge, analytics
+
+---
+
+## Animations (8)
+
+Animated backgrounds and visual effects for hero sections
+
+### Aurora Borealis
+
+Flowing northern lights effect with multi-color bands
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<AnimatedBackground variant="aurora-borealis" intensity="medium" colorScheme="vibrant" />
+```
+
+**Tags:** aurora, borealis, northern lights, wave, colorful
+
+---
+
+### Color Schemes
+
+Comparison of different color schemes
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+// Vibrant - all chart colors
+<AnimatedBackground variant="mesh-gradient" colorScheme="vibrant" />
+
+// Cool - blue and purple tones
+<AnimatedBackground variant="mesh-gradient" colorScheme="cool" />
+
+// Warm - orange and red tones
+<AnimatedBackground variant="mesh-gradient" colorScheme="warm" />
+
+// Monochrome - primary color only
+<AnimatedBackground variant="mesh-gradient" colorScheme="monochrome" />
+```
+
+**Tags:** color, scheme, palette, theme
+
+---
+
+### Floating Orbs
+
+Animated glowing spheres with various colors
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<AnimatedBackground variant="floating-orbs" intensity="medium" colorScheme="vibrant" />
+```
+
+**Tags:** orbs, spheres, floating, glow, particles
+
+---
+
+### Geometric Flow
+
+Clean geometric grid patterns with animated lines
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<AnimatedBackground variant="geometric-flow" intensity="medium" colorScheme="cool" />
+```
+
+**Tags:** grid, lines, geometric, tech, pattern
+
+---
+
+### AnimatedBackground
+
+Animated background effects for hero sections and landing pages with multi-color gradients
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<div className="relative h-[500px]">
+  <AnimatedBackground
+    variant="mesh-gradient"
+    intensity="medium"
+    colorScheme="vibrant"
+  />
+  <div className="relative z-10 flex items-center justify-center h-full">
+    <h1>Your Content Here</h1>
+  </div>
+</div>
+
+// Available variants:
+// - aurora-borealis: Flowing northern lights effect
+// - mesh-gradient: Modern Apple-style gradient mesh
+// - floating-orbs: Animated glowing spheres
+// - geometric-flow: Clean geometric patterns
+// - liquid-gradient: Smooth flowing liquid effect
+// - spotlight: Dramatic spotlight effect
+// - none: No background
+
+// Color schemes:
+// - vibrant: Multi-color (blue, green, purple, orange, red)
+// - cool: Blue and purple tones
+// - warm: Orange and red tones
+// - monochrome: Primary color only
+```
+
+**Tags:** animation, background, hero, landing, effects, gradient
+
+---
+
+### Liquid Gradient
+
+Smooth flowing liquid effect with bubbles
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<AnimatedBackground variant="liquid-gradient" intensity="medium" colorScheme="warm" />
+```
+
+**Tags:** liquid, waves, flow, bubbles, ocean
+
+---
+
+### Mesh Gradient
+
+Modern Apple-style floating gradient orbs
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<AnimatedBackground variant="mesh-gradient" intensity="medium" colorScheme="vibrant" />
+```
+
+**Tags:** gradient, mesh, orbs, floating, apple
+
+---
+
+### Spotlight
+
+Dramatic rotating conic gradient spotlight
+
+**Import:**
+```tsx
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+```
+
+**Example:**
+```tsx
+<AnimatedBackground variant="spotlight" intensity="medium" colorScheme="vibrant" />
+```
+
+**Tags:** spotlight, conic, rotating, dramatic, hero
 
 ---
 

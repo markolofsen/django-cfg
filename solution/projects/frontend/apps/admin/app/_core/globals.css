@@ -10,7 +10,7 @@
 @plugin "tailwindcss-animate";
 
 /* 3. Import UI package styles (theme, base, utilities) */
-@import "@djangocfg/ui/styles";
+@import "@djangocfg/ui-nextjs/styles";
 
 /* 4. Import layouts styles */
 @import "@djangocfg/layouts/styles";

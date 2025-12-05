@@ -1,4 +1,3 @@
-import { CryptoClientCommands } from "./crypto__api__crypto_client_commands";
 import { CryptoCrypto } from "./crypto__api__crypto";
 import { HttpClientAdapter, FetchAdapter } from "./http";
 import { APIError, NetworkError } from "./errors";
@@ -28,7 +27,6 @@ export class APIClient {
   private retryConfig: RetryConfig | null = null;
 
   // Sub-clients
-  public crypto_client_commands: CryptoClientCommands;
   public crypto_crypto: CryptoCrypto;
 
   constructor(
@@ -53,7 +51,6 @@ export class APIClient {
     }
 
     // Initialize sub-clients
-    this.crypto_client_commands = new CryptoClientCommands(this);
     this.crypto_crypto = new CryptoCrypto(this);
   }
 
