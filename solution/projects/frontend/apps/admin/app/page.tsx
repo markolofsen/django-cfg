@@ -6,14 +6,12 @@ import {
   CTASectionComponent
 } from './_components/landing'
 
-import { RedirectPage } from '@djangocfg/layouts/components';
-import { redirectToAuth, routes } from '@routes/index';
-
+import { RedirectPage } from '@djangocfg/layouts/components'
+import { redirectToAuth, routes } from '@routes/index'
 
 export default function Page() {
+  const useRedirect = false
 
-  const useRedirect = false;
-  
   if (useRedirect) {
     /* Redirect to /private if authenticated, otherwise to /auth */
     return (
@@ -21,7 +19,7 @@ export default function Page() {
         authenticatedPath={routes.private.home.path}
         unauthenticatedPath={redirectToAuth()}
       />
-    );
+    )
   }
 
   return (

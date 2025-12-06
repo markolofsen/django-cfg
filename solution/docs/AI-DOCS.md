@@ -38,6 +38,21 @@ Use the server URL: `https://mcp.djangocfg.com/mcp`
 
 ## CLI Search (Fast, no Django required)
 
+### Node.js
+
+```bash
+# Install globally
+npm install -g @djangocfg/nextjs
+
+# Search for topics
+djangocfg-docs search "database configuration"
+djangocfg-docs search "redis cache"
+djangocfg-docs mcp
+djangocfg-docs info
+```
+
+### Python
+
 ```bash
 # Search for topics
 django-cfg search "database configuration"

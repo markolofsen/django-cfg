@@ -20,10 +20,19 @@ export const home = defineRoute('/', {
   order: 1,
 });
 
-export const demo = defineRoute('/demo', {
+export const adminDemo = defineRoute('/admin', {
   label: 'Admin Demo',
-  description: 'Admin interface demo',
+  description: 'Django-CFG admin integration demo',
   icon: 'LayoutDashboard',
+  protected: false,
+  group: 'demo',
+  order: 1,
+});
+
+export const privateDemo = defineRoute('/private', {
+  label: 'Private Demo',
+  description: 'Protected area demo',
+  icon: 'Lock',
   protected: false,
   group: 'demo',
   order: 2,
@@ -84,7 +93,8 @@ export const security = defineRoute('/legal/security', {
 // All routes as array
 export const allRoutes: RouteDefinition[] = [
   home,
-  demo,
+  adminDemo,
+  privateDemo,
   auth,
   contact,
   privacy,
@@ -96,7 +106,8 @@ export const allRoutes: RouteDefinition[] = [
 // Routes object (for backwards compatibility)
 export const routes = {
   home,
-  demo,
+  adminDemo,
+  privateDemo,
   auth,
   contact,
   privacy,

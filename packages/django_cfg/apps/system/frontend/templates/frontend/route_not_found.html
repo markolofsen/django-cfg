@@ -1,0 +1,33 @@
+{% extends 'django_tailwind/simple.html' %}
+{% load django_cfg %}
+
+{% block title %}Route Not Available{% endblock %}
+
+{% block theme_toggle %}{% endblock %}
+
+{% block icon %}<span class="material-icons text-6xl text-amber-500">warning</span>{% endblock %}
+
+{% block heading %}Route Not Available{% endblock %}
+
+{% block message %}
+<span class="block mb-2">
+    The route <code class="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded text-sm font-mono">{{ path }}</code> is not available in static export mode.
+</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">
+    This page requires <code class="text-xs">generateStaticParams()</code> or development server.
+</span>
+{% endblock %}
+
+{% block actions %}
+<a href="/cfg/admin/"
+   class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+    <span class="material-icons text-lg mr-2">home</span>
+    Admin Dashboard
+</a>
+<a href="https://djangocfg.com/docs/guides/nextjs-admin-setup/troubleshooting"
+   target="_blank"
+   class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+    <span class="material-icons text-lg mr-2">menu_book</span>
+    Documentation
+</a>
+{% endblock %}

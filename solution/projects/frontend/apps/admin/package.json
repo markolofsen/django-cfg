@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "ai-docs": "pnpm --filter @djangocfg/nextjs ai-docs",
+    "ai-docs": "djangocfg-docs",
     "kill-port": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
     "dev": "next dev",
     "build": "pnpm check && next build",

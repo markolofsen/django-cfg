@@ -1,28 +1,28 @@
 'use client'
 
 import { SuperHero } from '@djangocfg/ui-nextjs/blocks'
-import { Sparkles, Zap, Shield, Database } from 'lucide-react'
+import { Sparkles, Zap, Bot, Rocket } from 'lucide-react'
+import { routes } from '@routes/public'
 
 export function HeroSection() {
   return (
     <SuperHero
-      badge={{ icon: <Sparkles className="w-4 h-4" />, text: "Django-CFG" }}
-      title="Your New"
-      titleGradient="Project is Ready"
-      subtitle="Production-ready Django backend with Next.js admin. Type-safe configuration, modern UI, and AI-native documentation out of the box."
-      codeCommand="django-cfg create-project my_app"
+      badge={{ icon: <Sparkles className="w-4 h-4" />, text: "DjangoCFG Demo" }}
+      title="Build Your"
+      titleGradient="AI-Powered MVP"
+      subtitle="Launch your AI solution faster. Production-ready Django backend with modern Next.js frontend, type-safe APIs, and seamless AI integrations."
       features={[
-        { icon: <Database className="w-4 h-4" />, text: "PostgreSQL" },
-        { icon: <Zap className="w-4 h-4" />, text: "Redis" },
-        { icon: <Shield className="w-4 h-4" />, text: "JWT Auth" },
-        { icon: <Sparkles className="w-4 h-4" />, text: "AI-Native" }
+        { icon: <Bot className="w-4 h-4" />, text: "AI Ready" },
+        { icon: <Zap className="w-4 h-4" />, text: "Fast Setup" },
+        { icon: <Rocket className="w-4 h-4" />, text: "Production" },
+        { icon: <Sparkles className="w-4 h-4" />, text: "Modern Stack" }
       ]}
-      primaryAction={{ label: "Open Admin", href: "/private" }}
-      secondaryAction={{ label: "API Docs", href: "/api/docs" }}
+      primaryAction={{ label: "Try Admin Demo", href: routes.adminDemo.path }}
+      secondaryAction={{ label: "Private Area", href: routes.privateDemo.path }}
       stats={[
-        { number: "8+", label: "Built-in Apps" },
+        { number: "10x", label: "Faster Launch" },
         { number: "100%", label: "Type Safe" },
-        { number: "30s", label: "Setup Time" }
+        { number: "AI", label: "Native" }
       ]}
       backgroundVariant="mesh-gradient"
       backgroundIntensity="medium"

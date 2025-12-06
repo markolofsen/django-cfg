@@ -25,7 +25,6 @@
     "check": "tsc --noEmit",
     "generate:proto": "../../apps/electron/node_modules/.bin/protoc --ts_out=./src/grpc/generated --ts_opt=generate_dependencies --ts_opt=long_type_string --proto_path=./src/grpc/proto ./src/grpc/proto/*.proto",
     "clean": "rm -rf dist",
-    "postinstall": "electron-rebuild -f -w node-pty || true",
     "rebuild:pty": "electron-rebuild -f -w node-pty"
   },
   "dependencies": {

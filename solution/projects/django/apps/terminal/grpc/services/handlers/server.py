@@ -388,7 +388,7 @@ class TerminalStreamingServiceServicer:
         session_id = request.session_id
         data = request.data
 
-        logger.info(f"📥 SendInput RPC: session={session_id[:8]}..., bytes={len(data)}")
+        logger.debug(f"SendInput RPC: session={session_id[:8]}..., bytes={len(data)}")
 
         success = await self.send_input(session_id, data)
 
@@ -406,7 +406,7 @@ class TerminalStreamingServiceServicer:
         cols = request.cols
         rows = request.rows
 
-        logger.info(f"📐 SendResize RPC: session={session_id[:8]}..., {cols}x{rows}")
+        logger.debug(f"SendResize RPC: session={session_id[:8]}..., {cols}x{rows}")
 
         success = await self.send_resize(session_id, cols, rows)
 
@@ -423,7 +423,7 @@ class TerminalStreamingServiceServicer:
         session_id = request.session_id
         signal = request.signal
 
-        logger.info(f"⚡ SendSignal RPC: session={session_id[:8]}..., signal={signal}")
+        logger.debug(f"SendSignal RPC: session={session_id[:8]}..., signal={signal}")
 
         success = await self.send_signal(session_id, signal)
 

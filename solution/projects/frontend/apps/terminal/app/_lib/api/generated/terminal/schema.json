@@ -1,0 +1,1278 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Django CFG API",
+    "version": "1.0.0",
+    "description": "Complete API documentation for Django CFG Demo Project",
+    "x-django-metadata": {
+      "group": "terminal",
+      "apps": [
+        "terminal"
+      ],
+      "generator": "django-client",
+      "generator_version": "1.0.0"
+    }
+  },
+  "paths": {
+    "/api/terminal/commands/": {
+      "get": {
+        "operationId": "terminal_commands_list",
+        "description": "ViewSet for Terminal Command History (read-only).\n\nQuery parameters:\n- session: Filter by session ID\n- status: Filter by status (SUCCESS, FAILED, etc.)\n- search: Search in command text",
+        "summary": "List command history",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search in command text"
+          },
+          {
+            "in": "query",
+            "name": "session",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by session UUID"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by status (SUCCESS, FAILED, etc.)"
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCommandHistoryListList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/commands/{id}/": {
+      "get": {
+        "operationId": "terminal_commands_retrieve",
+        "description": "ViewSet for Terminal Command History (read-only).\n\nQuery parameters:\n- session: Filter by session ID\n- status: Filter by status (SUCCESS, FAILED, etc.)\n- search: Search in command text",
+        "summary": "Get command details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandHistoryDetail"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/": {
+      "get": {
+        "operationId": "terminal_sessions_list",
+        "description": "ViewSet for Terminal Session management.\n\nProvides REST API for:\n- Creating/listing/closing terminal sessions\n- Sending input to terminal\n- Resizing terminal\n- Sending signals (SIGINT, SIGTERM, SIGKILL)\n\nReal-time output is delivered via Centrifugo WebSocket:\n- Channel: terminal#session#{session_id}\n- Events: output, status, error, command_complete",
+        "summary": "List user's terminal sessions",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTerminalSessionListList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "post": {
+        "operationId": "terminal_sessions_create",
+        "description": "Create a new terminal session.",
+        "summary": "Create new terminal session",
+        "tags": [
+          "terminal"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSessionCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSessionCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSessionCreateRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalSessionCreate"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/{id}/": {
+      "get": {
+        "operationId": "terminal_sessions_retrieve",
+        "description": "ViewSet for Terminal Session management.\n\nProvides REST API for:\n- Creating/listing/closing terminal sessions\n- Sending input to terminal\n- Resizing terminal\n- Sending signals (SIGINT, SIGTERM, SIGKILL)\n\nReal-time output is delivered via Centrifugo WebSocket:\n- Channel: terminal#session#{session_id}\n- Events: output, status, error, command_complete",
+        "summary": "Get session details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A UUID string identifying this Terminal Session.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalSessionDetail"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "delete": {
+        "operationId": "terminal_sessions_destroy",
+        "description": "Close terminal session.",
+        "summary": "Close terminal session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A UUID string identifying this Terminal Session.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/{id}/history/": {
+      "get": {
+        "operationId": "terminal_sessions_history_list",
+        "description": "Get command history for this session with pagination.",
+        "summary": "Get command history for session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A UUID string identifying this Terminal Session.",
+            "required": true
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCommandHistoryListList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/{id}/input/": {
+      "post": {
+        "operationId": "terminal_sessions_input_create",
+        "description": "Send input data to terminal session.",
+        "summary": "Send input to terminal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A UUID string identifying this Terminal Session.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalInputRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalInputRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalInputRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/{id}/resize/": {
+      "post": {
+        "operationId": "terminal_sessions_resize_create",
+        "description": "Resize terminal dimensions.",
+        "summary": "Resize terminal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A UUID string identifying this Terminal Session.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalResizeRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalResizeRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalResizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/{id}/signal/": {
+      "post": {
+        "operationId": "terminal_sessions_signal_create",
+        "description": "Send signal to terminal process (SIGINT, SIGTERM, SIGKILL).",
+        "summary": "Send signal to terminal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A UUID string identifying this Terminal Session.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSignalRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSignalRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSignalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/api/terminal/sessions/active/": {
+      "get": {
+        "operationId": "terminal_sessions_active_list",
+        "description": "List only active (connected) sessions with pagination.",
+        "summary": "Get active sessions only",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": [
+          "terminal"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTerminalSessionListList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommandHistoryDetail": {
+        "type": "object",
+        "description": "Full serializer for command details.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "session_name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "duration_ms": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "is_success": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "command": {
+            "type": "string",
+            "description": "Executed command"
+          },
+          "working_directory": {
+            "type": "string",
+            "description": "Working directory when command was executed",
+            "maxLength": 500
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "success",
+              "failed",
+              "cancelled",
+              "timeout"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "c791ad4bb18c4356",
+            "description": "Command execution status\n\n* `pending` - Pending\n* `running` - Running\n* `success` - Success\n* `failed` - Failed\n* `cancelled` - Cancelled\n* `timeout` - Timeout"
+          },
+          "stdout": {
+            "type": "string",
+            "description": "Standard output"
+          },
+          "stderr": {
+            "type": "string",
+            "description": "Standard error"
+          },
+          "exit_code": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "nullable": true,
+            "description": "Process exit code"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When command started executing"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When command finished"
+          },
+          "bytes_in": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Bytes sent to process (stdin)"
+          },
+          "bytes_out": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Bytes received from process (stdout+stderr)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "session": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Terminal session"
+          }
+        },
+        "required": [
+          "command",
+          "created_at",
+          "duration_ms",
+          "id",
+          "is_success",
+          "session",
+          "session_id",
+          "session_name",
+          "updated_at"
+        ]
+      },
+      "CommandHistoryList": {
+        "type": "object",
+        "description": "Lightweight serializer for command lists.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "command": {
+            "type": "string",
+            "description": "Executed command"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "success",
+              "failed",
+              "cancelled",
+              "timeout"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "c791ad4bb18c4356",
+            "description": "Command execution status\n\n* `pending` - Pending\n* `running` - Running\n* `success` - Success\n* `failed` - Failed\n* `cancelled` - Cancelled\n* `timeout` - Timeout"
+          },
+          "exit_code": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "nullable": true,
+            "description": "Process exit code"
+          },
+          "output_preview": {
+            "type": "string",
+            "readOnly": true
+          },
+          "duration_ms": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "is_success": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "command",
+          "created_at",
+          "duration_ms",
+          "id",
+          "is_success",
+          "output_preview",
+          "session_id"
+        ]
+      },
+      "PaginatedCommandHistoryListList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandHistoryList"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedTerminalSessionListList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TerminalSessionList"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "TerminalInputRequest": {
+        "type": "object",
+        "description": "Serializer for sending input.",
+        "properties": {
+          "data": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Input data as string"
+          },
+          "data_base64": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64 encoded input data"
+          }
+        }
+      },
+      "TerminalResizeRequest": {
+        "type": "object",
+        "description": "Serializer for resize command.",
+        "properties": {
+          "cols": {
+            "type": "integer",
+            "maximum": 500,
+            "minimum": 1
+          },
+          "rows": {
+            "type": "integer",
+            "maximum": 200,
+            "minimum": 1
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "cols",
+          "rows"
+        ]
+      },
+      "TerminalSessionCreate": {
+        "type": "object",
+        "description": "Serializer for creating new session.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "default": "",
+            "maxLength": 100
+          },
+          "shell": {
+            "type": "string",
+            "default": "/bin/zsh",
+            "maxLength": 50
+          },
+          "working_directory": {
+            "type": "string",
+            "default": "~",
+            "maxLength": 500
+          },
+          "environment": {}
+        }
+      },
+      "TerminalSessionCreateRequest": {
+        "type": "object",
+        "description": "Serializer for creating new session.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "default": "",
+            "maxLength": 100
+          },
+          "shell": {
+            "type": "string",
+            "minLength": 1,
+            "default": "/bin/zsh",
+            "maxLength": 50
+          },
+          "working_directory": {
+            "type": "string",
+            "minLength": 1,
+            "default": "~",
+            "maxLength": 500
+          },
+          "environment": {}
+        }
+      },
+      "TerminalSessionDetail": {
+        "type": "object",
+        "description": "Full serializer for session details.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "is_alive": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "is_active": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "display_name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "heartbeat_age_seconds": {
+            "type": "number",
+            "format": "double",
+            "readOnly": true
+          },
+          "recent_commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandHistoryList"
+            },
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Session display name",
+            "maxLength": 100
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "connected",
+              "disconnected",
+              "error"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "67e1538ba5b1b2dc",
+            "readOnly": true,
+            "description": "Current session status\n\n* `pending` - Pending\n* `connected` - Connected\n* `disconnected` - Disconnected\n* `error` - Error"
+          },
+          "electron_hostname": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Connected Electron client hostname"
+          },
+          "electron_version": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Electron client version"
+          },
+          "working_directory": {
+            "type": "string",
+            "description": "Current working directory in terminal",
+            "maxLength": 500
+          },
+          "shell": {
+            "type": "string",
+            "description": "Shell to use (e.g., /bin/bash, /bin/zsh)",
+            "maxLength": 100
+          },
+          "environment": {
+            "description": "Environment variables for the session"
+          },
+          "commands_count": {
+            "type": "integer",
+            "readOnly": true,
+            "description": "Total commands executed in this session"
+          },
+          "bytes_sent": {
+            "type": "integer",
+            "readOnly": true,
+            "description": "Total bytes sent to terminal"
+          },
+          "bytes_received": {
+            "type": "integer",
+            "readOnly": true,
+            "description": "Total bytes received from terminal"
+          },
+          "connected_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true,
+            "description": "When Electron client connected"
+          },
+          "last_heartbeat_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true,
+            "description": "Last heartbeat from Electron"
+          },
+          "disconnected_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true,
+            "description": "When session was disconnected"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "user": {
+            "type": "integer",
+            "readOnly": true,
+            "nullable": true,
+            "description": "Session owner (null for auto-created sessions)"
+          }
+        },
+        "required": [
+          "bytes_received",
+          "bytes_sent",
+          "commands_count",
+          "connected_at",
+          "created_at",
+          "disconnected_at",
+          "display_name",
+          "electron_hostname",
+          "electron_version",
+          "heartbeat_age_seconds",
+          "id",
+          "is_active",
+          "is_alive",
+          "last_heartbeat_at",
+          "recent_commands",
+          "status",
+          "updated_at",
+          "user"
+        ]
+      },
+      "TerminalSessionList": {
+        "type": "object",
+        "description": "Lightweight serializer for session lists.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Session display name",
+            "maxLength": 100
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "connected",
+              "disconnected",
+              "error"
+            ],
+            "type": "string",
+            "x-spec-enum-id": "67e1538ba5b1b2dc",
+            "description": "Current session status\n\n* `pending` - Pending\n* `connected` - Connected\n* `disconnected` - Disconnected\n* `error` - Error"
+          },
+          "display_name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "is_alive": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "electron_hostname": {
+            "type": "string",
+            "description": "Connected Electron client hostname",
+            "maxLength": 255
+          },
+          "working_directory": {
+            "type": "string",
+            "description": "Current working directory in terminal",
+            "maxLength": 500
+          },
+          "shell": {
+            "type": "string",
+            "description": "Shell to use (e.g., /bin/bash, /bin/zsh)",
+            "maxLength": 100
+          },
+          "connected_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When Electron client connected"
+          },
+          "last_heartbeat_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Last heartbeat from Electron"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "display_name",
+          "id",
+          "is_alive"
+        ]
+      },
+      "TerminalSignalRequest": {
+        "type": "object",
+        "description": "Serializer for signal command.",
+        "properties": {
+          "signal": {
+            "enum": [
+              2,
+              9,
+              15
+            ],
+            "type": "integer",
+            "description": "* `2` - SIGINT\n* `9` - SIGKILL\n* `15` - SIGTERM",
+            "x-spec-enum-id": "b517d898ada0e6aa"
+          }
+        },
+        "required": [
+          "signal"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "jwtAuthWithLastLogin": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}

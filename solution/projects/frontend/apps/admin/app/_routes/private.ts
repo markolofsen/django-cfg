@@ -29,31 +29,14 @@ export const profile = defineRoute('/private/profile', {
   order: 1,
 });
 
-export const terminal = defineRoute('/private/terminal', {
-  label: 'Terminal',
-  description: 'Manage terminal sessions and command history',
-  icon: 'Terminal',
-  protected: true,
-  group: 'tools',
-  order: 1,
-});
-
-/**
- * Get terminal session URL by session ID
- */
-export function terminalSession(sessionId: string): string {
-  return `/private/terminal/${sessionId}`;
-}
-
 
 // All routes as array
-export const allRoutes: RouteDefinition[] = [home, profile, terminal];
+export const allRoutes: RouteDefinition[] = [home, profile];
 
 // Routes object (for backwards compatibility)
 export const routes = {
   home,
   profile,
-  terminal,
   allRoutes,
 };
 

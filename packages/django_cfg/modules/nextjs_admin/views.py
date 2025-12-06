@@ -96,7 +96,16 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
         static_dir = base_dir
 
         # Resolve path with SPA routing
-        resolved_path = self._resolve_spa_path(static_dir, path, nextjs_config)
+        resolved_path, is_fallback = self._resolve_spa_path(static_dir, path, nextjs_config)
+
+        # If route doesn't exist in static build, show helpful error page
+        # This prevents infinite redirect loops when Next.js tries to navigate
+        # to routes that weren't exported (e.g., /private without index.html)
+        if is_fallback:
+            logger.warning(f"[nextjs_admin] Route not found in static build: {path}")
+            return render(request, 'frontend/route_not_found.html', {
+                'path': path,
+            }, status=404)
 
         # Remove conditional GET headers for HTML files to enable JWT injection
         is_html = resolved_path.endswith('.html')
@@ -108,12 +117,11 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
         try:
             response = serve(request, resolved_path, document_root=str(static_dir))
         except Http404:
-            # If file not found, try fallback to root index.html for SPA
-            root_index = static_dir / 'index.html'
-            if root_index.exists():
-                response = serve(request, 'index.html', document_root=str(static_dir))
-            else:
-                raise
+            # If file not found, show helpful error page instead of generic 404
+            logger.warning(f"[nextjs_admin] File not found: {resolved_path}")
+            return render(request, 'frontend/route_not_found.html', {
+                'path': path,
+            }, status=404)
 
         # Convert FileResponse to HttpResponse for HTML to enable content modification
         if isinstance(response, FileResponse) and is_html:
@@ -136,7 +144,7 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
 
         return response
 
-    def _resolve_spa_path(self, base_dir: Path, path: str, nextjs_config) -> str:
+    def _resolve_spa_path(self, base_dir: Path, path: str, nextjs_config) -> tuple[str, bool]:
         """
         Resolve SPA path with Next.js routing conventions.
 
@@ -145,21 +153,27 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
         2. Exact file match (static assets)
         3. path/index.html (SPA routes)
         4. path.html (single page)
-        5. Fallback to index.html
+        5. Fallback to admin/index.html (NOT root index.html to prevent redirect loops)
+
+        Returns:
+            tuple[str, bool]: (resolved_path, is_fallback)
+            - resolved_path: The path to serve
+            - is_fallback: True if this is a fallback (route doesn't exist in static build)
 
         Examples:
-            '' → 'admin/index.html'
-            'admin' → 'admin/index.html'
-            'admin/centrifugo' → 'admin/centrifugo/index.html'
-            '_next/static/...' → '_next/static/...' (exact)
+            '' → ('admin/index.html', False)
+            'admin' → ('admin/index.html', False)
+            'admin/centrifugo' → ('admin/centrifugo/index.html', False)
+            '_next/static/...' → ('_next/static/...', False)
+            'private' (no index.html) → ('admin/index.html', True) - fallback!
         """
         # Empty path or 'admin' - serve /admin route
         if not path or path == '/' or path == 'admin' or path == 'admin/':
             admin_index = base_dir / 'admin' / 'index.html'
             if admin_index.exists():
-                return 'admin/index.html'
+                return 'admin/index.html', False
             # Fallback to root index.html
-            return 'index.html'
+            return 'index.html', False
 
         path_normalized = path.rstrip('/')
         file_path = base_dir / path
@@ -167,28 +181,28 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
         # Strategy 1: Exact file match (for static assets)
         if file_path.exists() and file_path.is_file():
             logger.debug(f"[Next.js SPA] Exact match: {path}")
-            return path
+            return path, False
 
         # Strategy 2: Try path/index.html (most common for SPA)
         index_in_dir = base_dir / path_normalized / 'index.html'
         if index_in_dir.exists():
             resolved = f"{path_normalized}/index.html"
             logger.debug(f"[Next.js SPA] Resolved {path} → {resolved}")
-            return resolved
+            return resolved, False
 
         # Strategy 3: Try with trailing slash + index.html
         if path.endswith('/'):
             index_path = path + 'index.html'
             if (base_dir / index_path).exists():
                 logger.debug(f"[Next.js SPA] Trailing slash: {index_path}")
-                return index_path
+                return index_path, False
 
         # Strategy 4: Try path.html
         html_file = base_dir / f"{path_normalized}.html"
         if html_file.exists():
             resolved = f"{path_normalized}.html"
             logger.debug(f"[Next.js SPA] HTML file: {resolved}")
-            return resolved
+            return resolved, False
 
         # Strategy 5: Check if directory with index.html
         if file_path.exists() and file_path.is_dir():
@@ -196,17 +210,25 @@ class NextJsAdminView(ZipExtractionMixin, LoginRequiredMixin, View):
             if index_in_existing.exists():
                 resolved = f"{path_normalized}/index.html"
                 logger.debug(f"[Next.js SPA] Directory index: {resolved}")
-                return resolved
+                return resolved, False
 
-        # Strategy 6: Fallback to root index.html (SPA will handle routing)
+        # Strategy 6: SAFE FALLBACK - redirect to admin/index.html instead of root
+        # This prevents redirect loops when Next.js app tries to navigate to
+        # routes that don't exist in static export (e.g., /private without index.html)
+        admin_index = base_dir / 'admin' / 'index.html'
+        if admin_index.exists():
+            logger.warning(f"[Next.js SPA] Route not found: {path} → fallback to admin/index.html")
+            return 'admin/index.html', True
+
+        # Last resort: root index.html
         root_index = base_dir / 'index.html'
         if root_index.exists():
-            logger.debug(f"[Next.js SPA] Fallback to index.html for: {path}")
-            return 'index.html'
+            logger.warning(f"[Next.js SPA] Route not found: {path} → fallback to index.html")
+            return 'index.html', True
 
         # Not found - return original (will 404)
         logger.warning(f"[Next.js SPA] No match for: {path}")
-        return path
+        return path, False
 
     def _inject_jwt_tokens(self, request, response):
         """Inject JWT tokens into HTML response."""

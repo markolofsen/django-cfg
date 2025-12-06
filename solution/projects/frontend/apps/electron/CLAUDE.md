@@ -12,11 +12,16 @@
 }
 ```
 
-## CLI Search (Fast)
+## CLI
 
 ```bash
-django-cfg search "database configuration"
-django-cfg search "redis cache" --limit 3
+# In this project
+pnpm ai-docs search "database configuration"
+pnpm ai-docs mcp
+
+# Or globally (after: npm install -g @djangocfg/nextjs)
+djangocfg-docs search "database configuration"
+djangocfg-docs mcp
 ```
 
 ## API

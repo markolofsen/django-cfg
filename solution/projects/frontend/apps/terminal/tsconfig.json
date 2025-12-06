@@ -1,0 +1,19 @@
+{
+  "extends": "@djangocfg/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./app/_lib/*"],
+      "@components": ["./app/_components"],
+      "@components/*": ["./app/_components/*"],
+      "@views": ["./app/_views"],
+      "@views/*": ["./app/_views/*"],
+      "@lib/*": ["./app/_lib/*"],
+      "@api/*": ["./app/_lib/api/*"]
+    },
+    "plugins": [{ "name": "next" }],
+    "noEmit": true
+  },
+  "include": ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

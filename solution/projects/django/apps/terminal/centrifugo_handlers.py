@@ -179,21 +179,35 @@ async def terminal_signal(conn, params: TerminalSignalParams) -> SuccessResult:
     - 9 (SIGKILL): Kill
     - 15 (SIGTERM): Terminate
     """
-    from .grpc.services.handlers import get_terminal_service
+    import grpc
+
+    try:
+        from .grpc.services.generated import terminal_streaming_service_pb2 as pb2
+        from .grpc.services.generated import terminal_streaming_service_pb2_grpc as pb2_grpc
+    except ImportError:
+        return SuccessResult(success=False, message="Proto files not generated")
 
     signal_names = {2: "SIGINT", 9: "SIGKILL", 15: "SIGTERM"}
 
     try:
-        service = get_terminal_service()
-        success = await service.send_signal(params.session_id, params.signal)
+        async with grpc.aio.insecure_channel("localhost:50051") as channel:
+            stub = pb2_grpc.TerminalStreamingServiceStub(channel)
+            request = pb2.SendSignalRequest(
+                session_id=params.session_id,
+                signal=params.signal
+            )
+            response = await stub.SendSignal(request)
 
-        signal_name = signal_names.get(params.signal, f"signal {params.signal}")
+            signal_name = signal_names.get(params.signal, f"signal {params.signal}")
 
-        if success:
-            return SuccessResult(success=True, message=f"Sent {signal_name}")
-        else:
-            return SuccessResult(success=False, message="Session not connected")
+            if response.success:
+                return SuccessResult(success=True, message=f"Sent {signal_name}")
+            else:
+                return SuccessResult(success=False, message=response.error or "Session not connected")
 
+    except grpc.aio.AioRpcError as e:
+        logger.error(f"terminal.signal gRPC error: {e.code()}: {e.details()}")
+        return SuccessResult(success=False, message=f"gRPC error: {e.details()}")
     except Exception as e:
         logger.error(f"terminal.signal error: {e}", exc_info=True)
         return SuccessResult(success=False, message=str(e))
@@ -206,22 +220,39 @@ async def terminal_close(conn, params: TerminalCloseParams) -> SuccessResult:
 
     Sends close command to Electron and updates session status.
     """
-    from .grpc.services.handlers import get_terminal_service
+    import grpc
 
     try:
-        service = get_terminal_service()
-        await service.close_session(params.session_id, params.reason)
+        from .grpc.services.generated import terminal_streaming_service_pb2 as pb2
+        from .grpc.services.generated import terminal_streaming_service_pb2_grpc as pb2_grpc
+    except ImportError:
+        return SuccessResult(success=False, message="Proto files not generated")
 
-        # Update session status in DB
-        await TerminalSession.objects.filter(
-            id=params.session_id
-        ).aupdate(
-            status=TerminalSession.Status.DISCONNECTED,
-            disconnected_at=timezone.now(),
-        )
+    try:
+        async with grpc.aio.insecure_channel("localhost:50051") as channel:
+            stub = pb2_grpc.TerminalStreamingServiceStub(channel)
+            request = pb2.CloseSessionRequest(
+                session_id=params.session_id,
+                reason=params.reason
+            )
+            response = await stub.CloseSession(request)
 
-        return SuccessResult(success=True, message="Session closed")
+            # Update session status in DB regardless of gRPC response
+            await TerminalSession.objects.filter(
+                id=params.session_id
+            ).aupdate(
+                status=TerminalSession.Status.DISCONNECTED,
+                disconnected_at=timezone.now(),
+            )
 
+            if response.success:
+                return SuccessResult(success=True, message="Session closed")
+            else:
+                return SuccessResult(success=False, message=response.error or "Failed to close")
+
+    except grpc.aio.AioRpcError as e:
+        logger.error(f"terminal.close gRPC error: {e.code()}: {e.details()}")
+        return SuccessResult(success=False, message=f"gRPC error: {e.details()}")
     except Exception as e:
         logger.error(f"terminal.close error: {e}", exc_info=True)
         return SuccessResult(success=False, message=str(e))
