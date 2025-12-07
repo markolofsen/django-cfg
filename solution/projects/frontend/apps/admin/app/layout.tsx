@@ -6,6 +6,8 @@ import { AppLayout } from '@layouts/AppLayout';
 import { settings } from '@core/settings';
 import { generateMetadata } from '@core/metadata';
 
+import { AIChatWidget } from '@djangocfg/layouts/snippets';
+
 // Base metadata - will be inherited by all pages
 // Pages can override with their own generateMetadata call
 export const metadata: Metadata = generateMetadata({
@@ -34,6 +36,7 @@ export default function RootLayout({
         <AppLayout>
           {children}
         </AppLayout>
+        <AIChatWidget />
       </body>
     </html>
   );

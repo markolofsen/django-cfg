@@ -54,7 +54,41 @@
 - **Python 3.12+** (required)
 - pip or poetry
 
-### Installation
+## 🚀 Quick Install
+
+### Interactive Installer (Recommended)
+
+**Visit our interactive installer page** that automatically detects your operating system:
+
+**[→ https://djangocfg.com/installer](https://djangocfg.com/installer)**
+
+The installer automatically:
+- Detects your OS and architecture
+- Downloads the correct Go binary installer
+- Runs system checks (Python, Docker, Node.js, etc.)
+- Installs missing dependencies
+- Creates a complete project structure
+- Configures environment files
+
+### One-Line Commands
+
+**Linux / macOS**
+```bash
+curl -L https://djangocfg.com/install.sh | sh
+```
+
+**Windows (PowerShell)**
+```powershell
+powershell -c "iwr https://djangocfg.com/install.ps1 | iex"
+```
+
+> **Note:** If you get a PowerShell execution policy error, run PowerShell as Administrator and execute:
+> ```powershell
+> Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+
+## 📦 Manual Installation
 
 ```bash
 # Create virtual environment with Python 3.12

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import nextDynamic from 'next/dynamic';
 import {
   Card,
   CardContent,
@@ -12,8 +13,13 @@ import { ArrowLeft, Terminal, RotateCcw, Loader2 } from 'lucide-react';
 import { useTerminalSessionsRetrieve } from '@lib/api/generated/terminal/_utils/hooks';
 import { terminalClient } from '@lib/api/BaseClient';
 import type { API } from '@lib/api/generated/terminal';
-import { InteractiveTerminal } from '@components/InteractiveTerminal';
 import { TerminalHeader } from '@components';
+
+// Dynamic import to avoid SSR issues with xterm (uses browser APIs like 'self')
+const InteractiveTerminal = nextDynamic(
+  () => import('@components/InteractiveTerminal').then(mod => ({ default: mod.InteractiveTerminal })),
+  { ssr: false, loading: () => <div className="h-full w-full bg-black flex items-center justify-center"><Terminal className="w-8 h-8 animate-pulse text-green-500" /></div> }
+);
 
 interface TerminalSessionViewProps {
   sessionId: string;

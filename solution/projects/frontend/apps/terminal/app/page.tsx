@@ -1,15 +1,18 @@
 'use client';
 
+// Disable static generation - xterm uses browser APIs (self)
+export const dynamic = 'force-dynamic';
+
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { Terminal } from 'lucide-react';
 import { Spinner } from '@djangocfg/ui-nextjs';
 import { TerminalProvider } from '@lib/contexts';
 import { TerminalView } from '@views';
 
 // Dynamic import to avoid SSR issues with xterm (uses browser APIs like 'self')
-const InteractiveTerminal = dynamic(
+const InteractiveTerminal = nextDynamic(
   () => import('./_components/InteractiveTerminal').then(mod => ({ default: mod.InteractiveTerminal })),
   { ssr: false, loading: () => <div className="h-full w-full bg-black flex items-center justify-center"><Terminal className="w-8 h-8 animate-pulse text-green-500" /></div> }
 );
