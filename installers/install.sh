@@ -2,12 +2,48 @@
 
 # Django CFG Thin Bootstrapper
 # This script downloads the appropriate Go binary and executes it.
+#
+# Usage:
+#   Interactive mode:  curl -L https://djangocfg.com/install.sh | sh
+#   Headless mode:     curl -L https://djangocfg.com/install.sh | sh -s -- --config '{"project_name":"myapp","main_domain":"example.com"}'
+#
+# Config JSON fields:
+#   project_name  - Project directory name (required for headless)
+#   main_domain   - Main domain (e.g., example.com)
+#   api_domain    - API domain (e.g., api.example.com)
+#   db_name       - Database name (default: djangocfg)
+#   db_user       - Database user (default: postgres)
+#   db_password   - Database password (default: empty for local)
 
 set -e
 
+# Helper function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
 REPO="markolofsen/django-cfg"
-VERSION="latest" # Or specific version
 BINARY_NAME="djangocfg-installer"
+
+# Parse arguments - look for --config
+CONFIG_JSON=""
+EXTRA_ARGS=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --config)
+            CONFIG_JSON="$2"
+            shift 2
+            ;;
+        --config=*)
+            CONFIG_JSON="${1#*=}"
+            shift
+            ;;
+        *)
+            EXTRA_ARGS="$EXTRA_ARGS $1"
+            shift
+            ;;
+    esac
+done
 
 # Detect OS and Arch
 OS="$(uname -s)"
@@ -29,18 +65,9 @@ esac
 echo "🚀 Starting Django CFG Installer..."
 echo "💻 Detected: $OS/$ARCH"
 
-# Construct Download URL
-# GoReleaser naming: djangocfg-installer-linux-x86_64.tar.gz
-# We mapped x86_64 -> amd64 in script, but GoReleaser uses x86_64. Let's fix script mapping.
-
-case "${ARCH}" in
-    amd64)     ARCH=x86_64;;
-    arm64)     ARCH=arm64;;
-    *)         echo "Unsupported Architecture: ${ARCH}"; exit 1;;
-esac
-
-ARCHIVE_NAME="$BINARY_NAME-$OS-$ARCH.tar.gz"
-DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$ARCHIVE_NAME"
+# Construct Download URL (binary files without .tar.gz extension)
+BINARY_FILE="$BINARY_NAME-$OS-$ARCH"
+DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$BINARY_FILE"
 
 echo "⬇️  Downloading installer from: $DOWNLOAD_URL"
 
@@ -51,25 +78,26 @@ cleanup() {
 }
 trap cleanup EXIT
 
-ARCHIVE_FILE="$TMP_DIR/$ARCHIVE_NAME"
-EXTRACT_DIR="$TMP_DIR/extracted"
-mkdir -p "$EXTRACT_DIR"
+BINARY_PATH="$TMP_DIR/$BINARY_NAME"
 
-# Download and Extract
+# Download binary
 if command_exists curl; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$ARCHIVE_FILE"
+    curl -fsSL "$DOWNLOAD_URL" -o "$BINARY_PATH"
 elif command_exists wget; then
-    wget -q "$DOWNLOAD_URL" -O "$ARCHIVE_FILE"
+    wget -q "$DOWNLOAD_URL" -O "$BINARY_PATH"
 else
     echo "❌ Error: curl or wget is required."
     exit 1
 fi
 
-tar -xzf "$ARCHIVE_FILE" -C "$EXTRACT_DIR"
-
-# Find the binary (it might be in a subdirectory depending on goreleaser config, usually root)
-BINARY_PATH="$EXTRACT_DIR/$BINARY_NAME"
 chmod +x "$BINARY_PATH"
 
 echo "🚀 Running installer..."
-"$BINARY_PATH"
+
+# Run installer with config if provided
+if [ -n "$CONFIG_JSON" ]; then
+    echo "📋 Running in headless mode with config..."
+    "$BINARY_PATH" --headless --config "$CONFIG_JSON" $EXTRA_ARGS
+else
+    "$BINARY_PATH" $EXTRA_ARGS
+fi

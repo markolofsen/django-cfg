@@ -1,40 +1,56 @@
 # Django CFG Thin Bootstrapper (Windows)
 # This script downloads the appropriate Go binary and executes it.
+#
+# Usage:
+#   Interactive mode:  iwr https://djangocfg.com/install.ps1 -UseBasicParsing | iex
+#   Headless mode:     $env:DJANGOCFG_CONFIG='{"project_name":"myapp","main_domain":"example.com"}'; iwr https://djangocfg.com/install.ps1 -UseBasicParsing | iex
+#
+# Config JSON fields:
+#   project_name  - Project directory name (required for headless)
+#   main_domain   - Main domain (e.g., example.com)
+#   api_domain    - API domain (e.g., api.example.com)
+#   db_name       - Database name (default: djangocfg)
+#   db_user       - Database user (default: postgres)
+#   db_password   - Database password (default: empty for local)
 
 $ErrorActionPreference = "Stop"
 $REPO = "markolofsen/django-cfg"
-$VERSION = "latest"
-$BINARY_NAME = "djangocfg-installer.exe"
+$BINARY_NAME = "djangocfg-installer"
 
 Write-Host "🚀 Starting Django CFG Installer..." -ForegroundColor Cyan
 
 # Detect Architecture
-$arch = "x86_64" # GoReleaser uses x86_64 for amd64
+$arch = "amd64"
 if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
     $arch = "arm64"
 }
 
 Write-Host "💻 Detected: Windows/$arch"
 
-# Construct Download URL
-$archiveName = "$BINARY_NAME-windows-$arch.zip"
-$downloadUrl = "https://github.com/$REPO/releases/latest/download/$archiveName"
+# Construct Download URL (binary files, .exe for Windows)
+$binaryFile = "$BINARY_NAME-windows-$arch.exe"
+$downloadUrl = "https://github.com/$REPO/releases/latest/download/$binaryFile"
 
 Write-Host "⬇️  Downloading installer from: $downloadUrl"
 
 # Create temp directory
 $tmpDir = [System.IO.Path]::GetTempPath()
-$archiveFile = Join-Path $tmpDir $archiveName
-$extractDir = Join-Path $tmpDir "djangocfg_extracted"
+$binaryPath = Join-Path $tmpDir "$BINARY_NAME.exe"
 
 # Download
-Invoke-WebRequest -Uri $downloadUrl -OutFile $archiveFile
+Invoke-WebRequest -Uri $downloadUrl -OutFile $binaryPath
 
-# Extract
-Write-Host "📂 Extracting..."
-Expand-Archive -Path $archiveFile -DestinationPath $extractDir -Force
-
-# Run
-$binaryPath = Join-Path $extractDir $BINARY_NAME
 Write-Host "🚀 Running installer..."
-& $binaryPath
+
+# Check for config from environment variable
+$configJson = $env:DJANGOCFG_CONFIG
+
+if ($configJson) {
+    Write-Host "📋 Running in headless mode with config..."
+    & $binaryPath --headless --config $configJson
+} else {
+    & $binaryPath
+}
+
+# Cleanup
+Remove-Item -Path $binaryPath -Force -ErrorAction SilentlyContinue
