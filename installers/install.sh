@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# Django CFG Thin Bootstrapper
+# Django CFG Installer
 # This script downloads the appropriate Go binary and executes it.
 #
 # Usage:
-#   Interactive mode:  curl -L https://djangocfg.com/install.sh | sh
-#   Headless mode:     curl -L https://djangocfg.com/install.sh | sh -s -- --config '{"project_name":"myapp","main_domain":"example.com"}'
+#   New project (interactive):    curl -L https://djangocfg.com/install.sh | sh
+#   New project (headless):       curl -L https://djangocfg.com/install.sh | sh -s -- --config '{"project_name":"myapp"}'
+#   Setup cloned project:         ./installers/install.sh --setup
+#   Auto-detect mode:             ./installers/install.sh  (detects if inside existing project)
 #
-# Config JSON fields:
+# Config JSON fields (for new projects):
 #   project_name  - Project directory name (required for headless)
 #   main_domain   - Main domain (e.g., example.com)
 #   api_domain    - API domain (e.g., api.example.com)
@@ -25,7 +27,7 @@ command_exists() {
 REPO="markolofsen/django-cfg"
 BINARY_NAME="djangocfg-installer"
 
-# Parse arguments - look for --config
+# Parse arguments
 CONFIG_JSON=""
 EXTRA_ARGS=""
 while [[ $# -gt 0 ]]; do
@@ -36,6 +38,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --config=*)
             CONFIG_JSON="${1#*=}"
+            shift
+            ;;
+        --setup|--simulate|--dry-run|--headless)
+            EXTRA_ARGS="$EXTRA_ARGS $1"
             shift
             ;;
         *)
@@ -94,7 +100,7 @@ chmod +x "$BINARY_PATH"
 
 echo "🚀 Running installer..."
 
-# Run installer with config if provided
+# Build command with all arguments
 if [ -n "$CONFIG_JSON" ]; then
     echo "📋 Running in headless mode with config..."
     "$BINARY_PATH" --headless --config "$CONFIG_JSON" $EXTRA_ARGS
