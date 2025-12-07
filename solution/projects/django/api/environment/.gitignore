@@ -1,7 +1,3 @@
 # Environment files with secrets (DO NOT commit)
-# .env
-# .env.prod
-# .env.local
-
-# Allow template/example files
-!.env.example
+!.env*
+.env.secrets

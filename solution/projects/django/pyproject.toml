@@ -28,7 +28,7 @@ django = "^5.2.0"
 #
 # 🔍 BEFORE ADDING NEW DEPENDENCIES:
 # ALWAYS check django-cfg[full] includes first to avoid duplicates!
-# Check: @projects/django-cfg/projects/django-cfg-dev/pyproject.toml
+# Check: @projects/django-cfg/projects/django-cfg/pyproject.toml
 # Line 35: full = [...] contains all included packages
 #
 # Already included (DO NOT ADD):
