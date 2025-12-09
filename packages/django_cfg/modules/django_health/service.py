@@ -231,7 +231,8 @@ class HealthCheckView(View):
             if config:
                 config_status["django_cfg"].update({
                     "project_name": config.project_name if hasattr(config, 'project_name') else "Unknown",
-                    "enable_accounts": config.enable_accounts if hasattr(config, 'enable_accounts') else False,
+                    # accounts is always enabled - core django-cfg functionality
+                    "enable_accounts": True,
                     "enable_tasks": config.enable_tasks if hasattr(config, 'enable_tasks') else False,
                 })
 

@@ -396,7 +396,7 @@ class BackupConfig(BaseModel):
             return None
 
         return {
-            "func": "django_cfg.apps.system.db.tasks.run_scheduled_backup",
+            "func": "extensions.apps.backup.tasks.run_scheduled_backup",
             "cron": cron,
             "queue": schedule.queue,
             "kwargs": {"database_alias": database_alias},

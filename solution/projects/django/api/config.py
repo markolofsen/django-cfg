@@ -1,296 +1,167 @@
 """
 Django CFG Sample Project Configuration
 
-This is a complete example showing all django_cfg features:
+Complete example demonstrating all django_cfg features:
 - Type-safe configuration with Pydantic v2
-- YAML-based environment configuration  
-- Multiple databases with routing
-- Cache configuration
-- Email and Telegram services
-- JWT authentication configuration
+- YAML-based environment configuration
+- Database, Cache, Email, Telegram
+- JWT & OAuth authentication
 - Unfold admin interface
 - Constance dynamic settings
-- DRF API configuration
-- Automatic URL integration
+- DRF API & OpenAPI generation
+- Background tasks (Django-RQ)
+- Real-time (Centrifugo, gRPC)
+- Database backups
+- Payments (NowPayments)
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
+
 from django_cfg import (
+    # Core
     DjangoConfig,
     StartupInfoMode,
+    set_current_config,
+    # Infrastructure
     DatabaseConfig,
+    BackupConfig,
+    BackupStorageConfig,
+    BackupScheduleConfig,
+    BackupRetentionConfig,
+    ApiKeys,
+    AxesConfig,
+    # Services
     EmailConfig,
     TelegramConfig,
+    # Auth
     JWTConfig,
+    GitHubOAuthConfig,
+    # Admin
     UnfoldConfig,
     UnfoldColors,
     UnfoldSidebar,
     SiteDropdownItem,
     NavigationSection,
     NavigationItem,
+    Icons,
+    # API
     OpenAPIClientConfig,
     OpenAPIGroupConfig,
-    NgrokConfig,
-    ConstanceConfig,
-    ConstanceField,
-    Icons,
-    set_current_config,
-    PaymentsConfig,
-    NowPaymentsConfig,
-    ApiKeys,
-    AxesConfig,
-    DjangoCfgCentrifugoConfig,
-    GRPCConfig,
-    NextJsAdminConfig,
+    # Background Tasks
     DjangoRQConfig,
     RQQueueConfig,
     RQScheduleConfig,
-    # Database Backup
-    BackupConfig,
-    BackupStorageConfig,
-    BackupScheduleConfig,
-    BackupRetentionConfig,
-    # OAuth
-    GitHubOAuthConfig,
+    # Integrations
+    DjangoCfgCentrifugoConfig,
+    GRPCConfig,
+    NgrokConfig,
+    NextJsAdminConfig,
+    # Payments
+    PaymentsConfig,
+    NowPaymentsConfig,
+    # Dynamic Settings
+    ConstanceConfig,
+    ConstanceField,
 )
 
-# Import environment configuration
 from .environment import env
 
 
 class DjangoCfgConfig(DjangoConfig):
     """
-    Django CFG configuration.
+    Django CFG Demo Project Configuration.
 
-    Demonstrates all features and best practices with YAML environment loading.
+    All settings are organized by logical groups matching DjangoConfig structure.
     """
 
-    # Keep env_mode as string like stockapis - prevents Pydantic enum conversion
-    env_mode: str = env.env.env_mode
-    debug_warnings: bool = True
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         PROJECT INFORMATION                              ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Project Information ===
     project_name: str = env.app.name
-    project_logo: str = env.app.logo_url
     project_version: str = "1.0.0"
     project_description: str = "Demo Project"
+    project_logo: str = env.app.logo_url
 
-    # === Admin Configuration ===
-    admin_emails: List[str] = ["admin@sample.local"]
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         ENVIRONMENT & DEBUG                              ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Security ===
-    secret_key: str = env.secret_key
+    env_mode: str = env.env.env_mode
     debug: bool = env.debug
+    debug_warnings: bool = True
+    admin_emails: list[str] = ["admin@sample.local"]
 
-    # === Django-Axes: Brute-force Protection ===
-    # Custom configuration (optional - smart defaults used if None)
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                              SECURITY                                    ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    secret_key: str = env.secret_key
+    security_domains: list[str] = env.security_domains or []
+
+    # Django-Axes: Brute-force protection
     axes: AxesConfig = AxesConfig(
-        failure_limit=3,  # Only 3 attempts (stricter than default)
-        cooloff_time=48,  # 48 hours lockout (stricter than default)
-        lockout_template=None,  # Use default lockout page
-        # Whitelist your admin IPs if needed
-        # allowed_ips=['192.168.1.100'],
+        failure_limit=3,
+        cooloff_time=48,
+        lockout_template=None,
     )
 
-    # === URL Configuration ===
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                               URLS                                       ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    site_url: str = env.app.site_url
+    api_url: str = env.app.api_url
+    media_url: str = "/media/"
     root_urlconf: str = "api.urls"
     wsgi_application: str = "api.wsgi.application"
 
-    # === Django CFG Features ===
-    startup_info_mode: StartupInfoMode = StartupInfoMode.SHORT  # FULL shows all info, SHORT for essential, NONE for minimal
-    
-    enable_support: bool = True
-    enable_accounts: bool = True
-    enable_newsletter: bool = True
-    enable_leads: bool = True
-    enable_knowbase: bool = True  # Requires tasks - auto-generates "knowledge" queue
-    enable_agents: bool = True     # Enable agents for app generation
-    enable_maintenance: bool = True
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                             DATABASE                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Payments Configuration ===
-    payments: PaymentsConfig = PaymentsConfig(
-        enabled=True,
-        nowpayments=NowPaymentsConfig(
-            api_key=env.payments_api_keys.nowpayments_api_key,
-            ipn_secret=env.payments_api_keys.nowpayments_ipn_secret or "",
-            sandbox=env.payments_api_keys.nowpayments_sandbox_mode,
-            enabled=bool(env.payments_api_keys.nowpayments_api_key),
-        )
-    )
-    
-    # === Centrifugo Configuration ===
-    centrifugo: Optional[DjangoCfgCentrifugoConfig] = (
-        DjangoCfgCentrifugoConfig(
-            enabled=env.centrifugo.enabled,
-            # Wrapper configuration
-            wrapper_url=env.centrifugo.wrapper_url,
-            wrapper_api_key=env.centrifugo.wrapper_api_key,
-            # Centrifugo server configuration
-            centrifugo_url=env.centrifugo.centrifugo_url,
-            centrifugo_api_url=env.centrifugo.centrifugo_api_url,
-            centrifugo_api_key=env.centrifugo.centrifugo_api_key,
-            centrifugo_token_hmac_secret=env.centrifugo.centrifugo_token_hmac_secret,
-            # Timeouts and behavior
-            ack_timeout=env.centrifugo.default_ack_timeout,
-            log_level=env.centrifugo.log_level,
-            # Database logging configuration
-            log_all_calls=env.centrifugo.log_all_calls,
-            log_only_with_ack=env.centrifugo.log_only_with_ack,
-        )
-        if env.centrifugo.enabled
-        else None
-    )
+    databases: Dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig.from_url(
+            url=env.database.url,
+            conn_max_age=0,
+            conn_health_checks=False,
+        ),
+    }
 
-    # === gRPC Configuration ===
-    grpc: Optional[GRPCConfig] = GRPCConfig(
-        enabled=True,
-        host="0.0.0.0",
-        port=50051,
-        enabled_apps=["terminal"],
-        package_prefix="api",  # Flatten field - no GRPCProtoConfig import needed!
-        public_url=env.grpc_url,  # Flatten field from environment - simpler!
-        publish_to_telegram=True,
-        handlers_hook=[
-            "apps.terminal.grpc.services.handlers.grpc_handlers",  # Terminal streaming service
-        ]
-    )
-
-    # === Django-RQ Background Tasks Configuration ===
-    # MAGIC: redis_url is automatically used from DjangoConfig.redis_url! 🎉
-    # NOTE: Auto-tasks are ENABLED BY DEFAULT (v1.5.35+)
-    #       Production & Development:
-    #       - cleanup_old_jobs runs daily (removes jobs older than 7 days)
-    #       - cleanup_orphaned_job_keys runs weekly
-    #       Development Only:
-    #       - demo_scheduler_heartbeat runs every minute (verifies scheduler works)
-    #       To customize: enable_auto_cleanup=True, cleanup_max_age_days=7
-    django_rq: Optional[DjangoRQConfig] = DjangoRQConfig(
-        enabled=True,
-        queues=[
-            # Default queue for general tasks
-            RQQueueConfig(
-                queue="default",
-                default_timeout=360,
-                default_result_ttl=500,
-            ),
-            # High priority queue for urgent tasks
-            RQQueueConfig(
-                queue="high",
-                default_timeout=180,
-                default_result_ttl=300,
-            ),
-            # Low priority queue for background tasks
-            RQQueueConfig(
-                queue="low",
-                default_timeout=600,
-                default_result_ttl=800,
-            ),
-            # Knowledge base queue (for enable_knowbase)
-            RQQueueConfig(
-                queue="knowledge",
-                default_timeout=600,
-                default_result_ttl=3600,
-            ),
-        ],
-        show_admin_link=True,
-        prometheus_enabled=True,
-        # RQ Scheduler - scheduled jobs (cron-like tasks)
-        schedules=[
-            # Update cryptocurrency prices every 5 minutes
-            RQScheduleConfig(
-                func="apps.crypto.tasks.update_coin_prices",
-                interval=300,  # Every 5 minutes
-                queue="default",
-                limit=50,
-                verbosity=0,
-                description="Update coin prices (frequent)",
-            ),
-            # Update all coin prices hourly with verbose output
-            RQScheduleConfig(
-                func="apps.crypto.tasks.update_coin_prices",
-                interval=3600,  # Every hour
-                queue="default",
-                limit=100,
-                verbosity=1,
-                description="Update coin prices (hourly)",
-            ),
-            # Import new coins daily
-            RQScheduleConfig(
-                func="apps.crypto.tasks.import_coins",
-                interval=86400,  # Every 24 hours
-                queue="low",
-                description="Import new coins (daily)",
-            ),
-            # Generate daily crypto market report
-            RQScheduleConfig(
-                func="apps.crypto.tasks.generate_report",
-                interval=86400,  # Every 24 hours
-                queue="low",
-                report_type="daily",
-                description="Generate daily crypto market report",
-            ),
-        ],
-    )
-
-    # === API Keys Configuration ===
-    api_keys: ApiKeys = ApiKeys(
-        openai=env.api_keys.openai,
-        openrouter=env.api_keys.openrouter
-    )
-
-    # === URLs ===
-    site_url: str = env.app.site_url
-    api_url: str = env.app.api_url
-
-    # === Media URL Configuration ===
-    # Options:
-    # 1. "/media/" - Local serving (default, development)
-    # 2. "__auto__" - Auto-generate from api_url (e.g., "https://api.example.com/media/")
-    # 3. "https://cdn.example.com/media/" - CDN/external storage (production)
-    media_url: str = "/media/"  # or "__auto__" for CDN based on api_url
-
-    # === Database Backup Configuration ===
-    # Auto-schedules backups via Django-RQ if enabled
-    # Manual backups: python manage.py db_backup
+    # Database backup configuration
     backup: Optional[BackupConfig] = BackupConfig(
         enabled=True,
-        # Storage: local or S3-compatible (AWS S3, Cloudflare R2, MinIO)
         storage=BackupStorageConfig(
-            backend="local",  # "local" or "s3"
+            backend="local",
             local_path="backups/",
-            # S3 example (uncomment for production):
-            # backend="s3",
-            # s3_bucket="my-backups",
-            # s3_endpoint_url="https://xxx.r2.cloudflarestorage.com",  # For R2
-            # s3_access_key="${R2_ACCESS_KEY}",
-            # s3_secret_key="${R2_SECRET_KEY}",
-            # s3_region="auto",
         ),
-        # Schedule: auto-registered with Django-RQ if enabled
         schedule=BackupScheduleConfig(
             enabled=True,
             cron="0 2 * * *",  # Daily at 2 AM
-            # Or use simple options:
-            # interval_hours=6,  # Every 6 hours
-            # daily_time=time(2, 0),  # Daily at 02:00
             queue="default",
         ),
-        # Retention policy (auto-cleanup old backups)
         retention=BackupRetentionConfig(
             enabled=True,
-            keep_daily=7,    # Keep 7 daily backups
-            keep_weekly=4,   # Keep 4 weekly backups
-            keep_monthly=3,  # Keep 3 monthly backups
+            keep_daily=7,
+            keep_weekly=4,
+            keep_monthly=3,
         ),
-        compression="gzip",  # gzip, bz2, xz, none
+        compression="gzip",
         notify_on_failure=True,
         notify_on_success=False,
     )
 
-    # === Security Domains ===
-    security_domains: list[str] = env.security_domains or []
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                               CACHE                                      ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Project Applications ===
+    # Auto-creates Redis cache backend
+    redis_url: Optional[str] = env.redis_url
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                            APPLICATIONS                                  ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
     project_apps: list[str] = [
         "core",
         "apps.profiles",
@@ -299,39 +170,22 @@ class DjangoCfgConfig(DjangoConfig):
         "apps.terminal",
     ]
 
-    # === Database Configuration with Routing ===
-    # CRITICAL: Connection management to prevent connection exhaustion
-    # Note: NOT using CONN_MAX_AGE because:
-    # 1. RQ workers explicitly close connections with connection.close()
-    # 2. Django pooling + persistent connections = ImproperlyConfigured error
-    # 3. For production pooling, use external solution (PgBouncer)
-    databases: Dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig.from_url(
-            url=env.database.url,
-            conn_max_age=0,             # Close connections immediately (no persistence)
-            conn_health_checks=False,   # Not needed without pooling
-        ),
-    }
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                             SERVICES                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Cache Configuration ===
-    # MAGIC: Django-cfg auto-creates Redis cache from redis_url!
-    # No need for explicit cache_default - it's handled automatically in CacheSettingsGenerator
-    redis_url: Optional[str] = env.redis_url  # That's it! 🎉
-
-    # === Email Configuration ===
     email: Optional[EmailConfig] = EmailConfig(
-        backend=env.email.backend,  # "smtp" for real emails, "console" for development
+        backend=env.email.backend,
         host=env.email.host,
         port=env.email.port,
-        username=env.email.username,  # SMTP username
-        password=env.email.password,  # SMTP password
+        username=env.email.username,
+        password=env.email.password,
         use_tls=env.email.use_tls,
         use_ssl=env.email.use_ssl,
-        ssl_verify=env.email.ssl_verify,  # Verify SSL certs (False for self-signed in dev)
-        default_from=env.email.default_from,  # Correct parameter name
+        ssl_verify=env.email.ssl_verify,
+        default_from=env.email.default_from,
     )
 
-    # === Telegram Configuration ===
     telegram: Optional[TelegramConfig] = (
         TelegramConfig(
             bot_token=env.telegram.bot_token,
@@ -341,69 +195,15 @@ class DjangoCfgConfig(DjangoConfig):
         else None
     )
 
-    # === Unfold Admin Configuration ===
-    unfold: UnfoldConfig = UnfoldConfig(
-            site_title=f"{env.app.name} Admin",
-            site_header=env.app.name,
-            site_subheader="Demo Project",
-            site_url="/",
-            site_symbol=Icons.ROCKET_LAUNCH,
-            theme='dark',  # None enables theme switcher, "light"/"dark" forces theme or None for auto detection
-            colors=UnfoldColors(
-                primary="#3b82f6",
-            ),
-            # Sidebar configuration
-            sidebar=UnfoldSidebar(
-                show_search=True,
-                show_all_applications=True,
-            ),
-            # Site dropdown menu
-            site_dropdown=[
-                SiteDropdownItem(
-                    icon=Icons.DEVELOPER_BOARD,
-                    title="Developer",
-                    link="https://djangocfg.com",
-                ),
-            ],
-            # Navigation is auto-generated by django-cfg! 🎉
-            # System sections (Dashboard, Operations, Accounts, Support, etc.) are automatically added
-            # To add custom project-specific sections, add them via navigation parameter
-            # You can use URL names (auto-resolved via reverse()) or direct URLs
-            navigation=[
-                NavigationSection(
-                    title="Crypto Exchange",
-                    separator=True,
-                    collapsible=True,
-                    items=[
-                        # URL names are auto-resolved via reverse()
-                        NavigationItem(title="Portfolios", icon=Icons.ACCOUNT_BALANCE_WALLET, link="admin:trading_portfolio_changelist"),
-                        NavigationItem(title="Orders", icon=Icons.SHOPPING_CART, link="admin:trading_order_changelist"),
-                        NavigationItem(title="Coins", icon=Icons.CURRENCY_BITCOIN, link="admin:crypto_coin_changelist"),
-                        NavigationItem(title="Exchanges", icon=Icons.STOREFRONT, link="admin:crypto_exchange_changelist"),
-                        NavigationItem(title="Wallets", icon=Icons.ACCOUNT_BALANCE_WALLET, link="admin:crypto_wallet_changelist"),
-                        NavigationItem(title="User Profiles", icon=Icons.PERSON, link="admin:profiles_userprofile_changelist"),
-                    ]
-                ),
-                NavigationSection(
-                    title="Terminal",
-                    separator=True,
-                    collapsible=True,
-                    items=[
-                        NavigationItem(title="Sessions", icon=Icons.TERMINAL, link="admin:terminal_terminalsession_changelist"),
-                        NavigationItem(title="Command History", icon=Icons.CODE, link="admin:terminal_commandhistory_changelist"),
-                    ]
-                ),
-            ],
-    )
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                        AUTHENTICATION & OAUTH                            ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === JWT Configuration ===
     jwt: Optional[JWTConfig] = JWTConfig(
-        access_token_lifetime_hours=None,  # If None = maximum: 8760 hours/1 year
-        refresh_token_lifetime_days=None,  # If None = maximum: 365 days/1 year
+        access_token_lifetime_hours=None,  # Max: 1 year
+        refresh_token_lifetime_days=None,  # Max: 1 year
     )
 
-    # === GitHub OAuth Configuration ===
-    # ENV: GITHUB_OAUTH__CLIENT_ID, GITHUB_OAUTH__CLIENT_SECRET
     github_oauth: Optional[GitHubOAuthConfig] = (
         GitHubOAuthConfig(
             enabled=True,
@@ -414,33 +214,73 @@ class DjangoCfgConfig(DjangoConfig):
         else None
     )
 
-    # === Ngrok Development Configuration ===
-    ngrok: Optional[NgrokConfig] = None if not env.debug else NgrokConfig(
-        enabled=True,
-        compression=True,
-    )
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          ADMIN INTERFACE                                 ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Constance Dynamic Settings ===
-    constance: ConstanceConfig = ConstanceConfig(
-        fields=[
-            ConstanceField(
-                name="SITE_NAME",
-                default=env.app.name,
-                help_text="The name of the site",
-                field_type="str",
-                group="General",
+    unfold: UnfoldConfig = UnfoldConfig(
+        # Development autofill (auto-enabled in DEBUG mode)
+        dev_autofill_email="admin@example.com",
+        dev_autofill_password="admin123",
+        dev_autofill_force=True,
+        # Branding
+        site_title=f"{env.app.name} Admin",
+        site_header=env.app.name,
+        site_subheader="Demo Project",
+        site_url="/",
+        site_symbol=Icons.ROCKET_LAUNCH,
+        # Theme
+        theme="dark",
+        colors=UnfoldColors(primary="#3b82f6"),
+        # Sidebar
+        sidebar=UnfoldSidebar(
+            show_search=True,
+            show_all_applications=True,
+        ),
+        # Site dropdown
+        site_dropdown=[
+            SiteDropdownItem(
+                icon=Icons.DEVELOPER_BOARD,
+                title="Developer",
+                link="https://djangocfg.com",
             ),
-            ConstanceField(
-                name="SITE_DESCRIPTION",
-                default="A complete demonstration of django_cfg features",
-                help_text="Brief description of the site",
-                field_type="str",
-                group="General",
+        ],
+        # Navigation (auto-generated by django-cfg)
+        navigation=[
+            NavigationSection(
+                title="Crypto Exchange",
+                separator=True,
+                collapsible=True,
+                items=[
+                    NavigationItem(title="Portfolios", icon=Icons.ACCOUNT_BALANCE_WALLET, link="admin:trading_portfolio_changelist"),
+                    NavigationItem(title="Orders", icon=Icons.SHOPPING_CART, link="admin:trading_order_changelist"),
+                    NavigationItem(title="Coins", icon=Icons.CURRENCY_BITCOIN, link="admin:crypto_coin_changelist"),
+                    NavigationItem(title="Exchanges", icon=Icons.STOREFRONT, link="admin:crypto_exchange_changelist"),
+                    NavigationItem(title="Wallets", icon=Icons.ACCOUNT_BALANCE_WALLET, link="admin:crypto_wallet_changelist"),
+                    NavigationItem(title="User Profiles", icon=Icons.PERSON, link="admin:profiles_userprofile_changelist"),
+                ],
+            ),
+            NavigationSection(
+                title="Terminal",
+                separator=True,
+                collapsible=True,
+                items=[
+                    NavigationItem(title="Sessions", icon=Icons.TERMINAL, link="admin:terminal_terminalsession_changelist"),
+                    NavigationItem(title="Command History", icon=Icons.CODE, link="admin:terminal_commandhistory_changelist"),
+                ],
             ),
         ],
     )
 
-    # === Django Client (OpenAPI) Configuration ===
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                               API                                        ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    api_keys: ApiKeys = ApiKeys(
+        openai=env.api_keys.openai,
+        openrouter=env.api_keys.openrouter,
+    )
+
     openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
         generate_package_files=True,
@@ -453,57 +293,115 @@ class DjangoCfgConfig(DjangoConfig):
         drf_description="Complete API documentation for Django CFG Demo Project",
         drf_version="1.0.0",
         groups=[
-            OpenAPIGroupConfig(
-                name="profiles",
-                apps=["apps.profiles"],
-                title="Profiles API",
-                description="User profiles management",
-                version="1.0.0",
-            ),
-            OpenAPIGroupConfig(
-                name="trading",
-                apps=["apps.trading"],
-                title="Trading API",
-                description="Trading operations management",
-                version="1.0.0",
-            ),
-            OpenAPIGroupConfig(
-                name="crypto",
-                apps=["apps.crypto"],
-                title="Crypto API",
-                description="Crypto operations management",
-                version="1.0.0",
-            ),
-            OpenAPIGroupConfig(
-                name="terminal",
-                apps=["apps.terminal"],
-                title="Terminal API",
-                description="Terminal operations management",
-                version="1.0.0",
-            ),
+            OpenAPIGroupConfig(name="profiles", apps=["apps.profiles"], title="Profiles API", description="User profiles management", version="1.0.0"),
+            OpenAPIGroupConfig(name="trading", apps=["apps.trading"], title="Trading API", description="Trading operations management", version="1.0.0"),
+            OpenAPIGroupConfig(name="crypto", apps=["apps.crypto"], title="Crypto API", description="Crypto operations management", version="1.0.0"),
+            OpenAPIGroupConfig(name="terminal", apps=["apps.terminal"], title="Terminal API", description="Terminal operations management", version="1.0.0"),
+        ],
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          BACKGROUND TASKS                                ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    django_rq: Optional[DjangoRQConfig] = DjangoRQConfig(
+        enabled=True,
+        queues=[
+            RQQueueConfig(queue="default", default_timeout=360, default_result_ttl=500),
+            RQQueueConfig(queue="high", default_timeout=180, default_result_ttl=300),
+            RQQueueConfig(queue="low", default_timeout=600, default_result_ttl=800),
+            RQQueueConfig(queue="knowledge", default_timeout=600, default_result_ttl=3600),
+        ],
+        show_admin_link=True,
+        prometheus_enabled=True,
+        schedules=[
+            RQScheduleConfig(func="apps.crypto.tasks.update_coin_prices", interval=300, queue="default", limit=50, verbosity=0, description="Update coin prices (frequent)"),
+            RQScheduleConfig(func="apps.crypto.tasks.update_coin_prices", interval=3600, queue="default", limit=100, verbosity=1, description="Update coin prices (hourly)"),
+            RQScheduleConfig(func="apps.crypto.tasks.import_coins", interval=86400, queue="low", description="Import new coins (daily)"),
+            RQScheduleConfig(func="apps.crypto.tasks.generate_report", interval=86400, queue="low", report_type="daily", description="Generate daily crypto market report"),
+        ],
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                           INTEGRATIONS                                   ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = (
+        DjangoCfgCentrifugoConfig(
+            enabled=env.centrifugo.enabled,
+            wrapper_url=env.centrifugo.wrapper_url,
+            wrapper_api_key=env.centrifugo.wrapper_api_key,
+            centrifugo_url=env.centrifugo.centrifugo_url,
+            centrifugo_api_url=env.centrifugo.centrifugo_api_url,
+            centrifugo_api_key=env.centrifugo.centrifugo_api_key,
+            centrifugo_token_hmac_secret=env.centrifugo.centrifugo_token_hmac_secret,
+            ack_timeout=env.centrifugo.default_ack_timeout,
+            log_level=env.centrifugo.log_level,
+            log_all_calls=env.centrifugo.log_all_calls,
+            log_only_with_ack=env.centrifugo.log_only_with_ack,
+        )
+        if env.centrifugo.enabled
+        else None
+    )
+
+    grpc: Optional[GRPCConfig] = GRPCConfig(
+        enabled=True,
+        host="0.0.0.0",
+        port=50051,
+        enabled_apps=["terminal"],
+        package_prefix="api",
+        public_url=env.grpc_url,
+        publish_to_telegram=True,
+        handlers_hook=[
+            "apps.terminal.grpc.services.handlers.grpc_handlers",
+        ],
+    )
+
+    ngrok: Optional[NgrokConfig] = (
+        NgrokConfig(enabled=True, compression=True)
+        if env.debug
+        else None
+    )
+
+    nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(
+        project_path="../frontend/apps/admin",
+        api_output_path="app/_lib/api/generated",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                            PAYMENTS                                      ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    # payments: Optional[PaymentsConfig] = PaymentsConfig(
+    #     enabled=True,
+    #     providers=[
+    #         NowPaymentsConfig(
+    #             enabled=True,
+    #             api_key=env.nowpayments.api_key,
+    #             ipn_secret=env.nowpayments.ipn_secret,
+    #             sandbox=env.debug,
+    #         ),
+    #     ],
+    # )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         DJANGO-CFG SETTINGS                              ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    startup_info_mode: StartupInfoMode = StartupInfoMode.SHORT
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         DYNAMIC SETTINGS                                 ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    constance: ConstanceConfig = ConstanceConfig(
+        fields=[
+            ConstanceField(name="SITE_NAME", default=env.app.name, help_text="The name of the site", field_type="str", group="General"),
+            ConstanceField(name="SITE_DESCRIPTION", default="A complete demonstration of django_cfg features", help_text="Brief description of the site", field_type="str", group="General"),
         ],
     )
 
 
-    # === Next.js Admin Integration ===
-    nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(
-        # Path to Next.js admin project (relative to manage.py directory)
-        project_path="../frontend/apps/admin",
-        # Customize where TypeScript clients are copied
-        api_output_path="app/_lib/api/generated",
-        # Optional: static files URL prefix (default: /cfg/admin/)
-        # static_url="/cfg/admin/",
-        # Optional: Next.js dev server URL (default: http://localhost:3001)
-        # dev_url="http://localhost:3001",
-        # Optional: iframe route for default view (default: /private)
-        # iframe_route="/private",
-        # Optional: tab title in admin (default: Next.js Admin)
-        # tab_title="Dashboard",
-    )
-
-
-# Create configuration instance
+# Create and register configuration
 config = DjangoCfgConfig()
-
-# Set as current config for global access
 set_current_config(config)

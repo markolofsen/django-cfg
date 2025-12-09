@@ -280,7 +280,7 @@ def _get_command_metadata(command_name: str, app_name: str) -> dict:
     """
     try:
         from django.core.management import load_command_class
-        from django_cfg.apps.system.dashboard.services.commands_security import is_command_allowed, get_command_risk_level
+        from django_cfg.apps.api.dashboard.services.commands_security import is_command_allowed, get_command_risk_level
 
         command_instance = load_command_class(app_name, command_name)
 

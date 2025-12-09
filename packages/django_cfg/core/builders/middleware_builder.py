@@ -83,13 +83,12 @@ class MiddlewareBuilder:
         middleware = []
 
         # Accounts middleware (user activity tracking)
-        if self.config.enable_accounts:
-            middleware.append("django_cfg.middleware.UserActivityMiddleware")
+        # accounts is always enabled - core django-cfg functionality
+        middleware.append("django_cfg.middleware.UserActivityMiddleware")
 
-        # Payments middleware (if enabled and configured)
-        if self.config.payments and self.config.payments.enabled:
-            payment_middleware = self.config.payments.get_middleware_classes()
-            middleware.extend(payment_middleware)
+        # Extension middleware (from extensions/apps/)
+        # Extensions define middleware via middleware_classes or get_middleware_classes()
+        middleware.extend(self._get_extension_middleware())
 
         # Tailwind CSS middleware (browser reload in development)
         # Note: Must be after middleware that encodes responses (like GZipMiddleware)
@@ -102,6 +101,29 @@ class MiddlewareBuilder:
                 pass
 
         return middleware
+
+    def _get_extension_middleware(self) -> List[str]:
+        """
+        Get middleware from auto-discovered extensions.
+
+        Extensions can define middleware via:
+        - middleware_classes field in __cfg__.py
+        - Override get_middleware_classes() method
+
+        Returns:
+            List of middleware class paths from extensions
+        """
+        try:
+            from django_cfg.extensions import get_extension_loader
+
+            loader = get_extension_loader(base_path=self.config.base_dir)
+            return loader.get_middleware()
+        except Exception as e:
+            # Don't fail if extensions module has issues
+            from django_cfg.modules.django_logging import get_logger
+            logger = get_logger(__name__)
+            logger.debug(f"Extension middleware discovery skipped: {e}")
+            return []
 
 
 # Export builder

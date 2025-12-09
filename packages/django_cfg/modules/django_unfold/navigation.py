@@ -4,18 +4,19 @@ Default Navigation Configuration for Django CFG Unfold
 Provides default navigation sections based on enabled django-cfg modules.
 """
 
-import logging
+import importlib
 import traceback
 from typing import Any, Dict, List, Optional
 
 from django.urls import reverse_lazy, NoReverseMatch
 
 from django_cfg.modules.django_admin.icons import Icons
+from django_cfg.modules.django_logging import get_logger
 from django_cfg.modules.base import BaseCfgModule
 
 from .models.navigation import NavigationItem, NavigationSection
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class NavigationManager(BaseCfgModule):
@@ -98,6 +99,85 @@ class NavigationManager(BaseCfgModule):
 
         return NavigationItem(title=title, icon=icon, link=link)
 
+    def _get_extension_navigation(self) -> List[NavigationSection]:
+        """
+        Get navigation sections from auto-discovered extensions.
+
+        Reads navigation from extension's __cfg__.py -> settings.navigation
+
+        Returns:
+            List of NavigationSection for discovered extensions
+        """
+        sections = []
+
+        try:
+            extensions = self._get_discovered_extensions()
+            logger.info(f"_get_extension_navigation: found {len(extensions)} extensions")
+
+            for ext in extensions:
+                try:
+                    logger.debug(f"Processing extension: {ext.name}, type={ext.type}, has_manifest={ext.manifest is not None}")
+                    if ext.type != "app" or not ext.manifest:
+                        continue
+
+                    # Load navigation from __cfg__.py
+                    try:
+                        config_mod = importlib.import_module(f"extensions.apps.{ext.name}.__cfg__")
+                        nav = getattr(config_mod.settings, "navigation", None)
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to load navigation for extension '{ext.name}': {e}\n"
+                            f"Traceback:\n{traceback.format_exc()}"
+                        )
+                        continue
+
+                    if not nav:
+                        logger.debug(f"Extension '{ext.name}' has no navigation")
+                        continue
+
+                    logger.info(f"Loading navigation for extension '{ext.name}': {nav.title} with {len(nav.items)} items")
+                    items = []
+                    for item in nav.items:
+                        try:
+                            # Use resolved_link which handles app/model -> URL conversion
+                            link = getattr(item, 'resolved_link', None) or item.link
+                            if link and link != "#":
+                                # icon can be Icons.XXX or string "XXX"
+                                icon = item.icon if not isinstance(item.icon, str) else getattr(Icons, item.icon, Icons.EXTENSION)
+                                items.append(NavigationItem(title=item.title, icon=icon, link=link))
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to process navigation item '{getattr(item, 'title', '?')}' for extension '{ext.name}': {e}\n"
+                                f"Traceback:\n{traceback.format_exc()}"
+                            )
+
+                    if items:
+                        # icon can be Icons.XXX or string "XXX" (icon is optional on section)
+                        section_icon = getattr(nav, 'icon', None)
+                        if section_icon and isinstance(section_icon, str):
+                            section_icon = getattr(Icons, section_icon, Icons.EXTENSION)
+                        sections.append(NavigationSection(
+                            title=nav.title,
+                            separator=True,
+                            collapsible=getattr(nav, 'collapsible', True),
+                            items=items,
+                        ))
+
+                except Exception as e:
+                    # Catch-all: don't let one broken extension break others
+                    logger.error(
+                        f"Extension '{ext.name}' navigation failed completely: {e}\n"
+                        f"Traceback:\n{traceback.format_exc()}"
+                    )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to load extension navigation: {e}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
+
+        return sections
+
     def get_navigation_config(self) -> List[Dict[str, Any]]:
         """Get complete default navigation configuration for Unfold sidebar."""
         # Dashboard section with safe URL resolution
@@ -162,154 +242,42 @@ class NavigationManager(BaseCfgModule):
                 )
             )
 
-        # System Operations section
-        system_items = []
+        # Add Accounts section
+        accounts_items = [
+            NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),
+            NavigationItem(title="User Groups", icon=Icons.GROUP, link=str(reverse_lazy("admin:auth_group_changelist"))),
+            NavigationItem(title="OTP Secrets", icon=Icons.SECURITY, link=str(reverse_lazy("admin:django_cfg_accounts_otpsecret_changelist"))),
+            NavigationItem(title="Registration Sources", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_registrationsource_changelist"))),
+            NavigationItem(title="User Registration Sources", icon=Icons.PERSON, link=str(reverse_lazy("admin:django_cfg_accounts_userregistrationsource_changelist"))),
+        ]
 
-        # Maintenance Mode (if enabled)
-        if self.is_maintenance_enabled():
-            maintenance_item = self._create_nav_item(
-                title="Maintenance",
-                icon=Icons.BUILD,
-                url_name="admin:maintenance_cloudflaresite_changelist"
-            )
-            if maintenance_item:
-                system_items.append(maintenance_item)
+        # Add OAuth links if GitHub OAuth is enabled
+        if self.is_github_oauth_enabled():
+            accounts_items.extend([
+                NavigationItem(title="OAuth Connections", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_oauthconnection_changelist"))),
+                NavigationItem(title="OAuth States", icon=Icons.KEY, link=str(reverse_lazy("admin:django_cfg_accounts_oauthstate_changelist"))),
+            ])
 
-        # Add System Operations section if there are any items
-        if system_items:
-            navigation_sections.append(NavigationSection(
-                title="System Operations",
-                separator=True,
-                collapsible=True,
-                items=system_items
-            ))
+        navigation_sections.append(NavigationSection(
+            title="Users & Access",
+            separator=True,
+            collapsible=True,
+            items=accounts_items
+        ))
 
-        # Add Database Backup section if enabled (system/infrastructure)
-        if self.is_backup_enabled():
-            navigation_sections.append(NavigationSection(
-                title="Database Backup",
-                separator=True,
-                collapsible=True,
-                items=[
-                    NavigationItem(title="Backups", icon=Icons.BACKUP, link=str(reverse_lazy("admin:db_backup_backuprecord_changelist"))),
-                    NavigationItem(title="Restore History", icon=Icons.RESTORE, link=str(reverse_lazy("admin:db_backup_restorerecord_changelist"))),
-                ]
-            ))
+        # Support section - NOW handled via extensions navigation (see _get_extension_navigation)
+        # Newsletter section - NOW handled via extensions navigation (see _get_extension_navigation)
+        # Leads section - NOW handled via extensions navigation (see _get_extension_navigation)
 
-        # Add Accounts section if enabled
-        if self.is_accounts_enabled():
-            accounts_items = [
-                NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),
-                NavigationItem(title="User Groups", icon=Icons.GROUP, link=str(reverse_lazy("admin:auth_group_changelist"))),
-                NavigationItem(title="OTP Secrets", icon=Icons.SECURITY, link=str(reverse_lazy("admin:django_cfg_accounts_otpsecret_changelist"))),
-                NavigationItem(title="Registration Sources", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_registrationsource_changelist"))),
-                NavigationItem(title="User Registration Sources", icon=Icons.PERSON, link=str(reverse_lazy("admin:django_cfg_accounts_userregistrationsource_changelist"))),
-            ]
+        # Agents section - NOW handled via extensions navigation (see _get_extension_navigation)
 
-            # Add OAuth links if GitHub OAuth is enabled
-            if self.is_github_oauth_enabled():
-                accounts_items.extend([
-                    NavigationItem(title="OAuth Connections", icon=Icons.LINK, link=str(reverse_lazy("admin:django_cfg_accounts_oauthconnection_changelist"))),
-                    NavigationItem(title="OAuth States", icon=Icons.KEY, link=str(reverse_lazy("admin:django_cfg_accounts_oauthstate_changelist"))),
-                ])
+        # Knowbase section - NOW handled via extensions navigation (see _get_extension_navigation)
 
-            navigation_sections.append(NavigationSection(
-                title="Users & Access",
-                separator=True,
-                collapsible=True,
-                items=accounts_items
-            ))
+        # Payments section - NOW handled via extensions navigation (see _get_extension_navigation)
 
-        # Add Support section if enabled
-        if self.is_support_enabled():
-            navigation_sections.append(NavigationSection(
-                title="Support",
-                separator=True,
-                collapsible=True,
-                items=[
-                    NavigationItem(title="Tickets", icon=Icons.SUPPORT_AGENT, link=str(reverse_lazy("admin:django_cfg_support_ticket_changelist"))),
-                    NavigationItem(title="Messages", icon=Icons.CHAT, link=str(reverse_lazy("admin:django_cfg_support_message_changelist"))),
-                ]
-            ))
-
-        # Add Newsletter section if enabled
-        if self.is_newsletter_enabled():
-            navigation_sections.append(NavigationSection(
-                title="Newsletter",
-                separator=True,
-                collapsible=True,
-                items=[
-                    NavigationItem(title="Newsletters", icon=Icons.EMAIL, link=str(reverse_lazy("admin:django_cfg_newsletter_newsletter_changelist"))),
-                    NavigationItem(title="Subscriptions", icon=Icons.PERSON_ADD, link=str(reverse_lazy("admin:django_cfg_newsletter_newslettersubscription_changelist"))),
-                    NavigationItem(title="Campaigns", icon=Icons.CAMPAIGN, link=str(reverse_lazy("admin:django_cfg_newsletter_newslettercampaign_changelist"))),
-                    NavigationItem(title="Email Logs", icon=Icons.MAIL_OUTLINE, link=str(reverse_lazy("admin:django_cfg_newsletter_emaillog_changelist"))),
-                ]
-            ))
-
-        # Add Leads section if enabled
-        if self.is_leads_enabled():
-            navigation_sections.append(NavigationSection(
-                title="Leads",
-                separator=True,
-                collapsible=True,
-                items=[
-                    NavigationItem(title="Leads", icon=Icons.CONTACT_PAGE, link=str(reverse_lazy("admin:django_cfg_leads_lead_changelist"))),
-                ]
-            ))
-
-        # Add Agents section if enabled
-        if self.is_agents_enabled():
-            navigation_sections.append(NavigationSection(
-                title="AI Agents",
-                separator=True,
-                collapsible=True,
-                items=[
-                    NavigationItem(title="Agent Definitions", icon=Icons.SMART_TOY, link=str(reverse_lazy("admin:django_cfg_agents_agentdefinition_changelist"))),
-                    NavigationItem(title="Agent Templates", icon=Icons.DESCRIPTION, link=str(reverse_lazy("admin:django_cfg_agents_agenttemplate_changelist"))),
-                    NavigationItem(title="Agent Executions", icon=Icons.PLAY_ARROW, link=str(reverse_lazy("admin:django_cfg_agents_agentexecution_changelist"))),
-                    NavigationItem(title="Workflow Executions", icon=Icons.AUTORENEW, link=str(reverse_lazy("admin:django_cfg_agents_workflowexecution_changelist"))),
-                    NavigationItem(title="Tool Executions", icon=Icons.BUILD, link=str(reverse_lazy("admin:django_cfg_agents_toolexecution_changelist"))),
-                    NavigationItem(title="Toolset Configurations", icon=Icons.SETTINGS, link=str(reverse_lazy("admin:django_cfg_agents_toolsetconfiguration_changelist"))),
-                ]
-            ))
-
-        # Add Knowledge Base section if enabled
-        if self.is_knowbase_enabled():
-            navigation_sections.append(NavigationSection(
-                title="Knowledge Base",
-                separator=True,
-                collapsible=True,
-                items=[
-                    NavigationItem(title="Document Categories", icon=Icons.FOLDER, link=str(reverse_lazy("admin:django_cfg_knowbase_documentcategory_changelist"))),
-                    NavigationItem(title="Documents", icon=Icons.DESCRIPTION, link=str(reverse_lazy("admin:django_cfg_knowbase_document_changelist"))),
-                    NavigationItem(title="Document Chunks", icon=Icons.TEXT_SNIPPET, link=str(reverse_lazy("admin:django_cfg_knowbase_documentchunk_changelist"))),
-                    NavigationItem(title="Document Archives", icon=Icons.ARCHIVE, link=str(reverse_lazy("admin:django_cfg_knowbase_documentarchive_changelist"))),
-                    NavigationItem(title="Archive Items", icon=Icons.FOLDER_OPEN, link=str(reverse_lazy("admin:django_cfg_knowbase_archiveitem_changelist"))),
-                    NavigationItem(title="Archive Item Chunks", icon=Icons.SNIPPET_FOLDER, link=str(reverse_lazy("admin:django_cfg_knowbase_archiveitemchunk_changelist"))),
-                    NavigationItem(title="External Data", icon=Icons.CLOUD_SYNC, link=str(reverse_lazy("admin:django_cfg_knowbase_externaldata_changelist"))),
-                    NavigationItem(title="External Data Chunks", icon=Icons.AUTO_AWESOME_MOTION, link=str(reverse_lazy("admin:django_cfg_knowbase_externaldatachunk_changelist"))),
-                    NavigationItem(title="Chat Sessions", icon=Icons.CHAT, link=str(reverse_lazy("admin:django_cfg_knowbase_chatsession_changelist"))),
-                    NavigationItem(title="Chat Messages", icon=Icons.MESSAGE, link=str(reverse_lazy("admin:django_cfg_knowbase_chatmessage_changelist"))),
-                ]
-            ))
-
-        # Add Payments section if enabled (v2.0)
-        if self.is_payments_enabled():
-            payments_items = [
-                # Core payment models (v2.0)
-                NavigationItem(title="Payments", icon=Icons.ACCOUNT_BALANCE, link=str(reverse_lazy("admin:payments_payment_changelist"))),
-                NavigationItem(title="Currencies", icon=Icons.CURRENCY_BITCOIN, link=str(reverse_lazy("admin:payments_currency_changelist"))),
-                NavigationItem(title="User Balances", icon=Icons.ACCOUNT_BALANCE_WALLET, link=str(reverse_lazy("admin:payments_userbalance_changelist"))),
-                NavigationItem(title="Transactions", icon=Icons.RECEIPT_LONG, link=str(reverse_lazy("admin:payments_transaction_changelist"))),
-                NavigationItem(title="Withdrawal Requests", icon=Icons.DOWNLOAD, link=str(reverse_lazy("admin:payments_withdrawalrequest_changelist"))),
-            ]
-
-            navigation_sections.append(NavigationSection(
-                title="Payments",
-                separator=True,
-                collapsible=True,
-                items=payments_items
-            ))
+        # Add auto-discovered extension navigation sections
+        extension_sections = self._get_extension_navigation()
+        navigation_sections.extend(extension_sections)
 
         # Convert all NavigationSection objects to dictionaries
         return [section.to_dict() for section in navigation_sections]

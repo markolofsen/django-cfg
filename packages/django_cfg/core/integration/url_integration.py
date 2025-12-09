@@ -134,6 +134,16 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     if openapi_urls:
         new_patterns += openapi_urls
 
+    # Automatically add extension URLs (from extensions/ folder)
+    try:
+        from django_cfg.extensions.urls import get_extension_url_patterns
+        extension_urls = get_extension_url_patterns(url_prefix="cfg")
+        if extension_urls:
+            new_patterns += extension_urls
+    except Exception as e:
+        sys.stderr.write(f"❌ ERROR: Could not auto-add extension URLs: {e}\n")
+        sys.stderr.flush()
+
     # Add django-browser-reload URLs in development (if installed)
     if settings.DEBUG:
         try:

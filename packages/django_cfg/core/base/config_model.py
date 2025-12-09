@@ -6,8 +6,6 @@ This module contains ONLY the data model definition:
 - Field validators
 - Simple properties
 - NO business logic (moved to builders and services)
-
-Total size: ~350 lines (down from 903 in original config.py)
 """
 
 from pathlib import Path
@@ -19,7 +17,6 @@ from django_cfg.apps.integrations.centrifugo.services.client.config import Djang
 from ...models import (
     ApiKeys,
     AxesConfig,
-    BackupConfig,
     CacheConfig,
     CryptoFieldsConfig,
     DatabaseConfig,
@@ -34,7 +31,6 @@ from ...models import (
 )
 from ...models.api.grpc import GRPCConfig
 from ...models.ngrok import NgrokConfig
-from ...models.payments import PaymentsConfig
 from ...modules.nextjs_admin import NextJsAdminConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
@@ -81,13 +77,10 @@ class DjangoConfig(BaseModel):
         "str_strip_whitespace": True,
     }
 
-    # === Environment Configuration ===
-    env_mode: EnvironmentMode = Field(
-        default=EnvironmentMode.PRODUCTION,
-        description="Environment mode: development, production, or test",
-    )
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         PROJECT INFORMATION                               ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Project Information ===
     project_name: str = Field(
         ...,
         description="Human-readable project name",
@@ -95,14 +88,9 @@ class DjangoConfig(BaseModel):
         max_length=100,
     )
 
-    project_logo: str = Field(
-        default="",
-        description="Project logo URL",
-    )
-
     project_version: str = Field(
         default="1.0.0",
-        description="Project version",
+        description="Project version (semver format)",
         pattern=r"^\d+\.\d+\.\d+.*$",
     )
 
@@ -112,96 +100,18 @@ class DjangoConfig(BaseModel):
         max_length=500,
     )
 
-    # === Django CFG Features ===
-    startup_info_mode: StartupInfoMode = Field(
-        default=StartupInfoMode.FULL,
-        description="Startup information display mode: none (minimal), short (essential), full (complete)",
+    project_logo: str = Field(
+        default="",
+        description="Project logo URL",
     )
 
-    show_ai_hints: bool = Field(
-        default=True,
-        description="Show AI development hints in startup output (Django 5.2+ async patterns, best practices)",
-    )
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         ENVIRONMENT & DEBUG                               ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    enable_support: bool = Field(
-        default=True,
-        description="Enable django-cfg Support application (tickets, messages, chat interface)",
-    )
-
-    enable_accounts: bool = Field(
-        default=False,
-        description="Enable django-cfg Accounts application (advanced user management, OTP, profiles, activity tracking)",
-    )
-
-    enable_newsletter: bool = Field(
-        default=False,
-        description="Enable django-cfg Newsletter application (email campaigns, subscriptions, bulk emails)",
-    )
-
-    enable_leads: bool = Field(
-        default=False,
-        description="Enable django-cfg Leads application (lead collection, contact forms, CRM integration)",
-    )
-
-    enable_knowbase: bool = Field(
-        default=False,
-        description="Enable django-cfg Knowledge Base application (documents, AI chat, embeddings, search)",
-    )
-
-    enable_agents: bool = Field(
-        default=False,
-        description="Enable django-cfg AI Agents application (agent definitions, executions, workflows, tools)",
-    )
-
-    enable_maintenance: bool = Field(
-        default=False,
-        description="Enable django-cfg Maintenance application (multi-site maintenance mode with Cloudflare)",
-    )
-
-    enable_frontend: bool = Field(
-        default=True,
-        description="Enable django-cfg Frontend application (Next.js admin panel static serving)",
-    )
-
-    # === Payment System Configuration ===
-    payments: Optional[PaymentsConfig] = Field(
-        default=None,
-        description="Universal payment system configuration (providers, subscriptions, API keys, billing)",
-    )
-
-    # === Database Backup Configuration ===
-    backup: Optional[BackupConfig] = Field(
-        default=None,
-        description="Database backup configuration (storage, schedule, retention, notifications)",
-    )
-
-    # === URLs ===
-    site_url: str = Field(
-        default="http://localhost:3000",
-        description="Frontend site URL",
-    )
-
-    api_url: str = Field(
-        default="http://localhost:8000",
-        description="Backend API URL",
-    )
-
-    media_url: str = Field(
-        default="/media/",
-        description=(
-            "URL prefix for media files (MEDIA_URL). "
-            "Can be relative ('/media/') or absolute ('https://cdn.example.com/media/'). "
-            "Use '__auto__' to auto-generate from api_url (e.g., 'http://localhost:8000/media/'). "
-            "Must end with '/'."
-        ),
-    )
-
-    # === Core Django Settings ===
-    secret_key: str = Field(
-        ...,
-        description="Django SECRET_KEY",
-        min_length=50,
-        repr=False,  # Don't show in repr for security
+    env_mode: EnvironmentMode = Field(
+        default=EnvironmentMode.PRODUCTION,
+        description="Environment mode: development, production, or test",
     )
 
     debug: bool = Field(
@@ -211,96 +121,30 @@ class DjangoConfig(BaseModel):
 
     debug_warnings: bool = Field(
         default=False,
-        description="Enable detailed warnings traceback for debugging (shows full stack trace for RuntimeWarnings)",
+        description="Enable detailed warnings traceback for debugging",
     )
 
-    # === Timezone Configuration ===
-    admin_timezone: Optional[str] = Field(
-        default=None,
-        description=(
-            "Timezone for admin display (e.g., 'Asia/Seoul', 'Europe/Moscow', 'America/New_York'). "
-            "If None, uses system timezone automatically via tzlocal."
-        ),
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                              SECURITY                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    secret_key: str = Field(
+        ...,
+        description="Django SECRET_KEY (min 50 chars)",
+        min_length=50,
+        repr=False,  # Don't show in repr for security
     )
 
-    # === URL Configuration ===
-    root_urlconf: Optional[str] = Field(
-        default=None,
-        description="Django ROOT_URLCONF setting",
-    )
-
-    wsgi_application: Optional[str] = Field(
-        default=None,
-        description="Django WSGI_APPLICATION setting",
-    )
-
-    # === Custom User Model ===
-    auth_user_model: Optional[str] = Field(
-        default=None,
-        description="Custom user model (AUTH_USER_MODEL). If None and enable_accounts=True, uses 'django_cfg.apps.business.accounts.CustomUser'",
-        pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$",
-    )
-
-    # === Project Applications ===
-    project_apps: List[str] = Field(
-        default_factory=list,
-        description="List of project-specific Django apps",
-    )
-
-    # === Database Configuration ===
-    databases: Dict[str, DatabaseConfig] = Field(
-        default_factory=dict,
-        description="Database connections",
-    )
-
-    enable_pool_cleanup: bool = Field(
-        default=False,
-        description=(
-            "Enable explicit connection pool cleanup middleware. "
-            "Django already closes connections automatically, but this middleware "
-            "adds explicit guarantees and rollback on errors. "
-            "Enable only if you experience connection leaks. "
-            "Note: Not needed with ATOMIC_REQUESTS=True (default)."
-        ),
-    )
-
-    # === Cache Configuration ===
-    # Redis URL - used for automatic cache configuration if cache_default is not set
-    redis_url: Optional[str] = Field(
-        default=None,
-        description=(
-            "Redis connection URL (redis://host:port/db). "
-            "If set and cache_default is None, automatically creates RedisCache backend. "
-            "Also used by Django-RQ if queues don't specify connection details."
-        ),
-    )
-
-    cache_default: Optional[CacheConfig] = Field(
-        default=None,
-        description="Default cache backend (auto-created from redis_url if not set)",
-    )
-
-    cache_sessions: Optional[CacheConfig] = Field(
-        default=None,
-        description="Sessions cache backend",
-    )
-
-    # === Security Configuration ===
     security_domains: List[str] = Field(
         default_factory=lambda: ["localhost", "127.0.0.1"],
-        description="Domains for automatic security configuration (CORS, SSL, etc.)",
+        description="Domains for ALLOWED_HOSTS, CORS, CSRF (auto-configured)",
     )
 
     ssl_redirect: Optional[bool] = Field(
         default=None,
-        description=(
-            "Force SSL redirect (SECURE_SSL_REDIRECT). "
-            "None (default) = disabled (assumes reverse proxy handles SSL termination). "
-            "Set to True only if Django handles SSL directly (rare: bare metal without proxy)."
-        ),
+        description="Force SSL redirect. None = disabled (proxy handles SSL)",
     )
 
-    # === CORS Configuration ===
     cors_allow_headers: List[str] = Field(
         default_factory=lambda: [
             "accept",
@@ -315,52 +159,201 @@ class DjangoConfig(BaseModel):
             "x-api-key",
             "x-api-token",
         ],
-        description="CORS allowed headers with common defaults for API usage",
+        description="CORS allowed headers",
     )
 
-    # === Services Configuration ===
+    axes: Optional[AxesConfig] = Field(
+        default=None,
+        description="Django-Axes brute-force protection (None = smart defaults)",
+    )
+
+    crypto_fields: Optional[CryptoFieldsConfig] = Field(
+        default=None,
+        description="Django Crypto Fields encryption for sensitive data",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                               URLS                                        ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    site_url: str = Field(
+        default="http://localhost:3000",
+        description="Frontend site URL",
+    )
+
+    api_url: str = Field(
+        default="http://localhost:8000",
+        description="Backend API URL",
+    )
+
+    media_url: str = Field(
+        default="/media/",
+        description="Media URL. Use '__auto__' to derive from api_url",
+    )
+
+    root_urlconf: Optional[str] = Field(
+        default=None,
+        description="Django ROOT_URLCONF (e.g., 'api.urls')",
+    )
+
+    wsgi_application: Optional[str] = Field(
+        default=None,
+        description="Django WSGI_APPLICATION (e.g., 'api.wsgi.application')",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                             DATABASE                                      ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    databases: Dict[str, DatabaseConfig] = Field(
+        default_factory=dict,
+        description="Database connections. 'default' is required",
+    )
+
+    enable_pool_cleanup: bool = Field(
+        default=False,
+        description="Enable explicit connection pool cleanup middleware",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                               CACHE                                       ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    redis_url: Optional[str] = Field(
+        default=None,
+        description="Redis URL (redis://host:port/db). Auto-creates cache backend",
+    )
+
+    cache_default: Optional[CacheConfig] = Field(
+        default=None,
+        description="Default cache backend (auto-created from redis_url if not set)",
+    )
+
+    cache_sessions: Optional[CacheConfig] = Field(
+        default=None,
+        description="Sessions cache backend",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                            APPLICATIONS                                   ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    project_apps: List[str] = Field(
+        default_factory=list,
+        description="Project-specific Django apps",
+    )
+
+    custom_middleware: List[str] = Field(
+        default_factory=list,
+        description="Custom middleware classes",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                             SERVICES                                      ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
     email: Optional[EmailConfig] = Field(
         default=None,
-        description="Email service configuration",
+        description="Email service (SMTP/console backend)",
     )
 
     telegram: Optional[TelegramConfig] = Field(
         default=None,
-        description="Telegram service configuration",
+        description="Telegram bot notifications",
     )
 
-    # === OAuth Configuration ===
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                        AUTHENTICATION & OAUTH                             ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
     github_oauth: Optional[GitHubOAuthConfig] = Field(
         default=None,
-        description="GitHub OAuth configuration for social authentication",
+        description="GitHub OAuth for social authentication",
     )
 
-    ngrok: Optional[NgrokConfig] = Field(
-        default=None,
-        description="Ngrok tunneling service configuration (for development/webhooks)",
-    )
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          ADMIN INTERFACE                                  ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    # === Security Configuration ===
-    axes: Optional["AxesConfig"] = Field(
-        default=None,
-        description="Django-Axes brute-force protection configuration (None = smart defaults)",
-    )
-
-    crypto_fields: Optional["CryptoFieldsConfig"] = Field(
-        default=None,
-        description="Django Crypto Fields encryption configuration for sensitive data (API keys, tokens, passwords)",
-    )
-
-    # === Admin Interface Configuration ===
     unfold: Optional[UnfoldConfig] = Field(
         default=None,
         description="Unfold admin interface configuration",
     )
 
-    # === Frontend Configuration (Tailwind CSS) ===
+    admin_timezone: Optional[str] = Field(
+        default=None,
+        description="Admin timezone (e.g., 'Asia/Seoul'). None = auto-detect",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                               API                                         ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    drf: Optional[DRFConfig] = Field(
+        default=None,
+        description="Django REST Framework configuration",
+    )
+
+    spectacular: Optional[SpectacularConfig] = Field(
+        default=None,
+        description="DRF Spectacular OpenAPI configuration",
+    )
+
+    grpc: Optional[GRPCConfig] = Field(
+        default=None,
+        description="gRPC server configuration",
+    )
+
+    api_keys: Optional[ApiKeys] = Field(
+        default=None,
+        description="External API keys (OpenAI, OpenRouter, etc.)",
+    )
+
+    limits: Optional[LimitsConfig] = Field(
+        default=None,
+        description="Application limits (file uploads, requests, etc.)",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          BACKGROUND TASKS                                 ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    django_rq: Optional[DjangoRQConfig] = Field(
+        default=None,
+        description="Django-RQ task queue and scheduler",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                           INTEGRATIONS                                    ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = Field(
+        default=None,
+        description="Centrifugo WebSocket pub/sub",
+    )
+
+    ngrok: Optional[NgrokConfig] = Field(
+        default=None,
+        description="Ngrok tunneling for development/webhooks",
+    )
+
+    nextjs_admin: Optional[NextJsAdminConfig] = Field(
+        default=None,
+        description="Next.js admin panel integration",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          FRONTEND / UI                                    ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    enable_frontend: bool = Field(
+        default=True,
+        description="Enable Next.js admin panel static serving",
+    )
+
     tailwind_app_name: str = Field(
         default="theme",
-        description="Name of the Tailwind theme app (django-tailwind integration)",
+        description="Tailwind theme app name",
         min_length=1,
         max_length=50,
     )
@@ -374,70 +367,34 @@ class DjangoConfig(BaseModel):
 
     enable_drf_tailwind: bool = Field(
         default=True,
-        description="Enable modern Tailwind CSS theme for Django REST Framework Browsable API",
+        description="Enable Tailwind CSS theme for DRF Browsable API",
     )
 
-    # === Django-RQ Task Queue & Scheduler ===
-    django_rq: Optional[DjangoRQConfig] = Field(
-        default=None,
-        description="Django-RQ task queue and scheduler configuration (sync tasks, cron scheduling)",
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                         DJANGO-CFG SETTINGS                               ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    startup_info_mode: StartupInfoMode = Field(
+        default=StartupInfoMode.FULL,
+        description="Startup info: NONE, SHORT, or FULL",
     )
 
-    # === Centrifugo Configuration ===
-    centrifugo: Optional[DjangoCfgCentrifugoConfig] = Field(
-        default=None,
-        description="Centrifugo pub/sub configuration (WebSocket notifications with ACK tracking)",
+    show_ai_hints: bool = Field(
+        default=True,
+        description="Show AI development hints in startup output",
     )
 
-    # === API Configuration ===
-    drf: Optional[DRFConfig] = Field(
-        default=None,
-        description="Extended Django REST Framework configuration (supplements OpenAPI Client)",
-    )
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          INTERNAL STATE                                   ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    spectacular: Optional[SpectacularConfig] = Field(
-        default=None,
-        description="Extended DRF Spectacular configuration (supplements OpenAPI Client)",
-    )
-
-    grpc: Optional[GRPCConfig] = Field(
-        default=None,
-        description="gRPC framework configuration (server, authentication, proto generation)",
-    )
-
-    # === Limits Configuration ===
-    limits: Optional[LimitsConfig] = Field(
-        default=None,
-        description="Application limits configuration (file uploads, requests, etc.)",
-    )
-
-    # === API Keys Configuration ===
-    api_keys: Optional[ApiKeys] = Field(
-        default=None,
-        description="API keys for external services (OpenAI, OpenRouter, etc.)",
-    )
-
-    # === Middleware Configuration ===
-    custom_middleware: List[str] = Field(
-        default_factory=list,
-        description="Custom middleware classes (standard middleware added automatically)",
-    )
-
-    # === Next.js Admin Integration ===
-    nextjs_admin: Optional["NextJsAdminConfig"] = Field(
-        default=None,
-        description=(
-            "Next.js admin panel integration. "
-            "Example: NextJsAdminConfig(project_path='../django_admin')"
-        ),
-    )
-
-    # === Internal State (Private) ===
     _base_dir: Optional[Path] = PrivateAttr(default=None)
     _django_settings: Optional[Dict[str, Any]] = PrivateAttr(default=None)
-    _service: Optional[Any] = PrivateAttr(default=None)  # ConfigService instance
+    _service: Optional[Any] = PrivateAttr(default=None)
 
-    # === Field Validators ===
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                            VALIDATORS                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
     @field_validator("project_name")
     @classmethod
@@ -457,7 +414,7 @@ class DjangoConfig(BaseModel):
         if len(v) < 50:
             raise ValueError("SECRET_KEY must be at least 50 characters long")
 
-        # Check for common insecure patterns (warning only, not error)
+        # Check for common insecure patterns (warning only)
         insecure_patterns = [
             "django-insecure",
             "change-me",
@@ -469,8 +426,7 @@ class DjangoConfig(BaseModel):
         v_lower = v.lower()
         for pattern in insecure_patterns:
             if pattern in v_lower:
-                # This is a warning, not an error - allow for development
-                break
+                break  # Warning only, allow for development
 
         return v
 
@@ -482,7 +438,6 @@ class DjangoConfig(BaseModel):
             if not app:
                 raise ValueError("Empty app name in project_apps")
 
-            # Basic app name validation
             if not app.replace(".", "").replace("_", "").isalnum():
                 raise ValueError(
                     f"Invalid app name '{app}': must contain only letters, "
@@ -494,18 +449,11 @@ class DjangoConfig(BaseModel):
     @field_validator("media_url", mode="before")
     @classmethod
     def validate_media_url(cls, v: str, info) -> str:
-        """
-        Validate and transform media_url.
-
-        - '__auto__': auto-generate from api_url
-        - Ensures trailing slash
-        """
+        """Validate and transform media_url."""
         if v == "__auto__":
-            # Get api_url from validation context
             api_url = info.data.get("api_url", "http://localhost:8000")
             return f"{api_url.rstrip('/')}/media/"
 
-        # Ensure trailing slash (Django requirement)
         if v and not v.endswith("/"):
             return f"{v}/"
 
@@ -515,7 +463,6 @@ class DjangoConfig(BaseModel):
     def validate_configuration_consistency(self) -> "DjangoConfig":
         """Validate overall configuration consistency."""
         # In development mode, force media_url to use api_url
-        # This ensures media files are served correctly from Django backend
         if self.is_development:
             dev_media_url = f"{self.api_url.rstrip('/')}/media/"
             if self.media_url != dev_media_url:
@@ -538,7 +485,7 @@ class DjangoConfig(BaseModel):
 
         # Validate database routing consistency
         referenced_databases = set()
-        for alias, db_config in self.databases.items():
+        for _alias, db_config in self.databases.items():
             if db_config.migrate_to:
                 referenced_databases.add(db_config.migrate_to)
 
@@ -552,24 +499,16 @@ class DjangoConfig(BaseModel):
 
         return self
 
-    def model_post_init(self, __context: Any) -> None:
-        """
-        Initialize configuration after Pydantic validation.
-
-        Auto-detects environment from DJANGO_ENV, ENVIRONMENT, or ENV variables
-        if env_mode was not explicitly set.
-        """
+    def model_post_init(self, _context: Any) -> None:
+        """Initialize configuration after Pydantic validation."""
         import os
 
-        # Only auto-detect if using default value (PRODUCTION)
-        # This allows explicit setting to override auto-detection
+        # Auto-detect environment from env variables
         if self.env_mode == EnvironmentMode.PRODUCTION:
-            # Check if any env variable was explicitly set
             env_vars = ['DJANGO_ENV', 'ENVIRONMENT', 'ENV']
             for env_var in env_vars:
                 env_value = os.environ.get(env_var)
                 if env_value:
-                    # Try to map to EnvironmentMode
                     env_normalized = env_value.lower().strip()
                     if env_normalized in ('dev', 'devel', 'develop', 'development', 'local'):
                         object.__setattr__(self, 'env_mode', EnvironmentMode.DEVELOPMENT)
@@ -581,7 +520,9 @@ class DjangoConfig(BaseModel):
                         object.__setattr__(self, 'env_mode', EnvironmentMode.TEST)
                         break
 
-    # === Simple Properties (NO business logic!) ===
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                            PROPERTIES                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
     @property
     def is_development(self) -> bool:
@@ -600,32 +541,24 @@ class DjangoConfig(BaseModel):
 
     @property
     def base_dir(self) -> Path:
-        """
-        Get the base directory of the project.
-
-        Looks for manage.py starting from current working directory and going up.
-        Falls back to current working directory if not found.
-        
-        This ensures we find the Django project root, not the django-cfg package location.
-        """
+        """Get the base directory of the project."""
         if self._base_dir is None:
-            # Start from current working directory (where Django runs)
             current_path = Path.cwd().resolve()
 
-            # Look for manage.py in current directory and parents
             for path in [current_path] + list(current_path.parents):
                 manage_py = path / "manage.py"
                 if manage_py.exists() and manage_py.is_file():
                     self._base_dir = path
                     break
 
-            # If still not found, use current working directory
             if self._base_dir is None:
                 self._base_dir = current_path
 
         return self._base_dir
 
-    # === Facade Methods (delegate to service) ===
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                              METHODS                                      ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
     @property
     def service(self) -> Any:
@@ -636,34 +569,22 @@ class DjangoConfig(BaseModel):
         return self._service
 
     def get_installed_apps(self) -> List[str]:
-        """Get complete INSTALLED_APPS list (delegates to service)."""
+        """Get complete INSTALLED_APPS list."""
         return self.service.get_installed_apps()
 
     def get_middleware(self) -> List[str]:
-        """Get complete MIDDLEWARE list (delegates to service)."""
+        """Get complete MIDDLEWARE list."""
         return self.service.get_middleware()
 
     def get_allowed_hosts(self) -> List[str]:
-        """Get ALLOWED_HOSTS (delegates to service)."""
+        """Get ALLOWED_HOSTS."""
         return self.service.get_allowed_hosts()
 
     def get_all_settings(self) -> Dict[str, Any]:
-        """
-        Generate complete Django settings dictionary.
-
-        Delegates to SettingsGenerator for actual generation.
-
-        Returns:
-            Complete Django settings ready for use
-
-        Raises:
-            ConfigurationError: If settings generation fails
-        """
-        # Set as current config
+        """Generate complete Django settings dictionary."""
         from ..state.registry import set_current_config
         set_current_config(self)
 
-        # Setup warnings debug if enabled in config
         from ..debug import setup_warnings_debug
         setup_warnings_debug()
 
@@ -681,37 +602,11 @@ class DjangoConfig(BaseModel):
         return self._django_settings
 
     def invalidate_cache(self) -> None:
-        """
-        Invalidate cached Django settings.
-
-        Forces regeneration of settings on next call to get_all_settings().
-        Useful when configuration has changed and settings need to be regenerated.
-
-        Example:
-            >>> config.invalidate_cache()
-            >>> new_settings = config.get_all_settings()  # Will regenerate
-        """
+        """Invalidate cached Django settings."""
         self._django_settings = None
 
     def model_dump_for_django(self, **kwargs) -> Dict[str, Any]:
-        """
-        Serialize model data in Django-compatible format.
-
-        This method provides a dictionary representation suitable for Django settings,
-        with proper serialization of nested Pydantic models.
-
-        Args:
-            **kwargs: Additional arguments passed to model_dump()
-
-        Returns:
-            Dictionary with serialized configuration data
-
-        Example:
-            >>> config = DjangoConfig(project_name="My Project", ...)
-            >>> dump = config.model_dump_for_django()
-            >>> dump["project_name"]
-            'My Project'
-        """
+        """Serialize model data in Django-compatible format."""
         return self.model_dump(
             mode="python",
             exclude_none=False,
@@ -720,18 +615,10 @@ class DjangoConfig(BaseModel):
         )
 
     def should_enable_rq(self) -> bool:
-        """
-        Determine if Django-RQ should be enabled.
-
-        Django-RQ is enabled if explicitly configured via django_rq field.
-
-        Returns:
-            True if Django-RQ should be enabled, False otherwise
-        """
+        """Determine if Django-RQ should be enabled."""
         if hasattr(self, 'django_rq') and self.django_rq and self.django_rq.enabled:
             return True
-
         return False
 
-# Export main class
+
 __all__ = ["DjangoConfig"]

@@ -152,7 +152,6 @@ class PublicEndpointsMiddleware(MiddlewareMixin):
         return {
             **self.stats,
             'public_patterns_count': len(self.public_patterns),
-            'middleware_active': True,
         }
 
     def reset_stats(self):

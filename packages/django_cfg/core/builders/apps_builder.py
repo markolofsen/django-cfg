@@ -68,10 +68,13 @@ class InstalledAppsBuilder:
         # Step 3: Add optional apps (tasks, dashboard)
         apps.extend(self._get_optional_apps())
 
-        # Step 4: Add project-specific apps
+        # Step 4: Add auto-discovered extensions
+        apps.extend(self._get_extension_apps())
+
+        # Step 5: Add project-specific apps
         apps.extend(self.config.project_apps)
 
-        # Step 5: Remove duplicates while preserving order
+        # Step 6: Remove duplicates while preserving order
         return self._deduplicate(apps)
 
     def _get_default_apps(self) -> List[str]:
@@ -86,12 +89,12 @@ class InstalledAppsBuilder:
         """
         apps = []
 
-        # Add apps one by one, inserting accounts before admin if enabled
+        # Add apps one by one, inserting accounts before admin
         for app in DEFAULT_APPS:
             if app == "django.contrib.admin":
-                # Insert accounts before admin if enabled (for proper migration order)
-                if self.config.enable_accounts:
-                    apps.append("django_cfg.apps.business.accounts")
+                # Insert accounts before admin (for proper migration order)
+                # accounts is always enabled - core django-cfg functionality
+                apps.append("django_cfg.apps.system.accounts")
             apps.append(app)
 
         return apps
@@ -108,38 +111,13 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
-            "django_cfg.apps.system.dashboard",  # Dashboard API
+            "django_cfg.apps.api.dashboard",  # Dashboard API
         ]
 
         if self.config.enable_frontend:
             apps.append("django_cfg.apps.system.frontend")
 
-        # Add optional apps based on configuration
-        if self.config.enable_support:
-            apps.append("django_cfg.apps.business.support")
-
-        if self.config.enable_newsletter:
-            apps.append("django_cfg.apps.business.newsletter")
-
-        if self.config.enable_leads:
-            apps.append("django_cfg.apps.business.leads")
-
-        if self.config.enable_knowbase:
-            apps.append("django_cfg.apps.business.knowbase")
-
-        if self.config.enable_agents:
-            apps.append("django_cfg.apps.business.agents")
-
-        if self.config.enable_maintenance:
-            apps.append("django_cfg.apps.system.maintenance")
-
-        # Database backup
-        if hasattr(self.config, 'backup') and self.config.backup and self.config.backup.enabled:
-            apps.append("django_cfg.apps.system.db")
-
-        if self.config.payments and self.config.payments.enabled:
-            apps.append("django_cfg.apps.business.payments")
-
+        # Integrations (enabled via config)
         if self.config.centrifugo and self.config.centrifugo.enabled:
             apps.append("django_cfg.apps.integrations.centrifugo")
 
@@ -154,6 +132,29 @@ class InstalledAppsBuilder:
             apps.append("django_cfg.modules.nextjs_admin")
 
         return apps
+
+    def _get_extension_apps(self) -> List[str]:
+        """
+        Get auto-discovered extension apps from extensions/ folder.
+
+        Extensions are discovered automatically from:
+        - extensions/apps/ - Django apps with models
+        - extensions/modules/ - Utility modules (not added to INSTALLED_APPS)
+
+        Returns:
+            List of extension app labels
+        """
+        try:
+            from django_cfg.extensions import get_extension_loader
+
+            loader = get_extension_loader(base_path=self.config.base_dir)
+            return loader.get_installed_apps()
+        except Exception as e:
+            # Don't fail if extensions module has issues
+            from django_cfg.modules.django_logging import get_logger
+            logger = get_logger(__name__)
+            logger.debug(f"Extension discovery skipped: {e}")
+            return []
 
     def _get_optional_apps(self) -> List[str]:
         """

@@ -50,9 +50,6 @@ class UserActivityMiddleware(MiddlewareMixin, BaseCfgModule):
         Args:
             request: Django HttpRequest object
         """
-        # Only process if accounts app is enabled
-        if not self.is_accounts_enabled():
-            return None
 
         # Only track authenticated users
         if not hasattr(request, 'user') or not request.user.is_authenticated:
@@ -169,6 +166,4 @@ class UserActivityMiddleware(MiddlewareMixin, BaseCfgModule):
             'tracked_users': len(self._last_updates),
             'update_interval': self.update_interval,
             'api_only': self.api_only,
-            'accounts_enabled': self.is_accounts_enabled(),
-            'middleware_active': self.is_accounts_enabled(),
         }

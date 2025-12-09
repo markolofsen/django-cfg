@@ -7,7 +7,7 @@
  * Note: For static export builds, this route is marked as static to allow the build to complete.
  */
 
-import { createContactRoute } from '@djangocfg/nextjs/contact';
+import { createContactRoute } from '@djangocfg/ext-leads/api';
 
 // Mark as static for static export compatibility
 export const dynamic = 'force-static';

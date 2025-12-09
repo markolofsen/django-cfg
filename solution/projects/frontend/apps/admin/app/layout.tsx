@@ -1,6 +1,6 @@
 import './_core/globals.css';
 
-import { Inter } from 'next/font/google';
+import { Manrope } from 'next/font/google';
 import type { Metadata } from 'next';
 import { AppLayout } from '@layouts/AppLayout';
 import { settings } from '@core/settings';
@@ -18,10 +18,10 @@ export const metadata: Metadata = generateMetadata({
   description: settings.app.description,
 });
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-inter',
+  variable: '--font-manrope',
   display: 'swap',
 });
 
@@ -32,7 +32,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning className="dark">
-      <body className={inter.className} style={{ fontFamily: inter.style.fontFamily }}>
+      <body className={manrope.className} style={{ fontFamily: manrope.style.fontFamily }}>
         <AppLayout>
           {children}
         </AppLayout>

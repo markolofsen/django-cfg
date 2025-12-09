@@ -15,6 +15,8 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
+    "@djangocfg/ext-base": "latest",
+    "@djangocfg/ext-leads": "latest",
     "@djangocfg/api": "latest",
     "@djangocfg/centrifugo": "latest",
     "@djangocfg/layouts": "latest",
@@ -32,7 +34,7 @@
     "react-dom": "19.2.0",
     "react-hook-form": "7.65.0",
     "recharts": "2.15.4",
-    "swr": "^2.3.6",
+    "swr": "^2.3.7",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.1.12"
   },

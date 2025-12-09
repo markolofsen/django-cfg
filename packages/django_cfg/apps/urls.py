@@ -13,35 +13,22 @@ from django_cfg.modules.base import BaseCfgModule
 
 def get_enabled_cfg_apps() -> List[str]:
     """
-    Get list of enabled django-cfg apps based on configuration.
+    Get list of enabled django-cfg built-in apps based on configuration.
+
+    Note: Business apps (knowbase, newsletter, agents, payments, support, leads)
+    are now handled via the extensions system (extensions/apps/).
+    Use get_extension_apps() for those.
 
     Returns:
-        List of enabled app paths (e.g., ['django_cfg.apps.business.accounts', ...])
+        List of enabled built-in app paths
     """
     base_module = BaseCfgModule()
     enabled_apps = []
 
-    if base_module.is_accounts_enabled():
-        enabled_apps.append("django_cfg.apps.business.accounts")
+    # System apps
+    enabled_apps.append("django_cfg.apps.system.accounts")
 
-    if base_module.is_knowbase_enabled():
-        enabled_apps.append("django_cfg.apps.business.knowbase")
-
-    if base_module.is_support_enabled():
-        enabled_apps.append("django_cfg.apps.business.support")
-
-    if base_module.is_newsletter_enabled():
-        enabled_apps.append("django_cfg.apps.business.newsletter")
-
-    if base_module.is_leads_enabled():
-        enabled_apps.append("django_cfg.apps.business.leads")
-
-    if base_module.is_agents_enabled():
-        enabled_apps.append("django_cfg.apps.business.agents")
-
-    if base_module.is_payments_enabled():
-        enabled_apps.append("django_cfg.apps.business.payments")
-
+    # Integration apps
     if base_module.is_centrifugo_enabled():
         enabled_apps.append("django_cfg.apps.integrations.centrifugo")
 
@@ -51,10 +38,28 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.is_grpc_enabled():
         enabled_apps.append("django_cfg.apps.integrations.grpc")
 
-    if base_module.is_backup_enabled():
-        enabled_apps.append("django_cfg.apps.system.db")
-
     return enabled_apps
+
+
+def get_extension_apps() -> List[str]:
+    """
+    Get list of enabled extension apps from extensions/apps/ folder.
+
+    Returns:
+        List of extension app paths (e.g., ['extensions.apps.knowbase', ...])
+    """
+    try:
+        from django_cfg.extensions import get_extension_loader
+        from django_cfg.core.state import get_current_config
+
+        config = get_current_config()
+        if not config:
+            return []
+
+        loader = get_extension_loader(base_path=config.base_dir)
+        return loader.get_installed_apps()
+    except Exception:
+        return []
 
 
 def get_default_cfg_group():
@@ -96,8 +101,9 @@ urlpatterns = [
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_client.urls')),
-    path('cfg/dashboard/', include('django_cfg.apps.system.dashboard.urls')),
+    path('cfg/dashboard/', include('django_cfg.apps.api.dashboard.urls')),
     path('cfg/admin/', include('django_cfg.apps.system.frontend.urls')),
+    path('cfg/accounts/', include('django_cfg.apps.system.accounts.urls')),
 ]
 
 # External Next.js Admin Integration (conditional)
@@ -112,29 +118,6 @@ except Exception:
 # Business apps (conditional based on config)
 base_module = BaseCfgModule()
 
-if base_module.is_accounts_enabled():
-    urlpatterns.append(path('cfg/accounts/', include('django_cfg.apps.business.accounts.urls')))
-
-if base_module.is_knowbase_enabled():
-    urlpatterns.append(path('cfg/knowbase/', include('django_cfg.apps.business.knowbase.urls')))
-    urlpatterns.append(path('cfg/knowbase/system/', include('django_cfg.apps.business.knowbase.urls_system')))
-    urlpatterns.append(path('cfg/knowbase/admin/', include('django_cfg.apps.business.knowbase.urls_admin')))
-
-if base_module.is_support_enabled():
-    urlpatterns.append(path('cfg/support/', include('django_cfg.apps.business.support.urls')))
-
-if base_module.is_newsletter_enabled():
-    urlpatterns.append(path('cfg/newsletter/', include('django_cfg.apps.business.newsletter.urls')))
-
-if base_module.is_leads_enabled():
-    urlpatterns.append(path('cfg/leads/', include('django_cfg.apps.business.leads.urls')))
-
-if base_module.is_agents_enabled():
-    urlpatterns.append(path('cfg/agents/', include('django_cfg.apps.business.agents.urls')))
-
-if base_module.is_payments_enabled():
-    urlpatterns.append(path('cfg/payments/', include('django_cfg.apps.business.payments.urls')))
-
 # Integration apps (conditional based on config)
 if base_module.is_centrifugo_enabled():
     urlpatterns.append(path('cfg/centrifugo/', include('django_cfg.apps.integrations.centrifugo.urls')))
@@ -144,7 +127,3 @@ if base_module.should_enable_rq():
 
 if base_module.is_grpc_enabled():
     urlpatterns.append(path('cfg/grpc/', include('django_cfg.apps.integrations.grpc.urls')))
-
-# System apps (conditional based on config)
-if base_module.is_backup_enabled():
-    urlpatterns.append(path('cfg/db/', include('django_cfg.apps.system.db.urls')))

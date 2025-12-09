@@ -107,6 +107,18 @@ class Command(AdminCommand):
             help="Run in interactive mode",
         )
 
+        parser.add_argument(
+            "--copy-cfg-clients",
+            action="store_true",
+            help="Copy cfg_* API clients to Next.js admin (by default they come from @djangocfg/api package)",
+        )
+
+        parser.add_argument(
+            "--skip-nextjs-copy",
+            action="store_true",
+            help="Skip copying clients to Next.js admin project (use for extensions/packages generation)",
+        )
+
     def handle(self, *args, **options):
         """Handle command execution."""
         try:
@@ -403,6 +415,11 @@ class Command(AdminCommand):
                 ir_context = parse_openapi(schema_dict)
                 self.stdout.write(f"  ✅ Parsed: {len(ir_context.schemas)} schemas, {len(ir_context.operations)} operations")
 
+                # Skip generation if no operations (no API endpoints)
+                if len(ir_context.operations) == 0:
+                    self.stdout.write(self.style.WARNING(f"  ⏭️  Skipping {group_name}: no API operations"))
+                    continue
+
                 # Generate Python client
                 if python:
                     self.stdout.write("  → Generating Python client...")
@@ -520,9 +537,9 @@ class Command(AdminCommand):
                 traceback.print_exc()
 
         # Build and copy to Next.js admin (if configured)
-        if typescript and success_count > 0:
+        if typescript and success_count > 0 and not options.get('skip_nextjs_copy'):
             # First copy API clients
-            self._copy_to_nextjs_admin(service)
+            self._copy_to_nextjs_admin(service, options)
 
             # Run TypeScript type check
             self._check_typescript_types()
@@ -552,7 +569,7 @@ class Command(AdminCommand):
         if go:
             self.stdout.write(f"  Go:         {service.config.get_go_clients_dir()}")
 
-    def _copy_to_nextjs_admin(self, service):
+    def _copy_to_nextjs_admin(self, service, options):
         """Copy TypeScript clients to Next.js admin project (if configured)."""
         try:
             from django_cfg.core.config import get_current_config
@@ -596,7 +613,7 @@ class Command(AdminCommand):
             # Recreate directory
             api_output_path.mkdir(parents=True, exist_ok=True)
 
-            # Copy each group (exclude 'cfg' for Next.js admin)
+            # Copy each group (exclude ext_* and cfg_* unless copy_cfg_clients is enabled)
             copied_count = 0
             for group_dir in ts_source.iterdir():
                 if not group_dir.is_dir():
@@ -604,10 +621,21 @@ class Command(AdminCommand):
 
                 group_name = group_dir.name
 
-                # Skip 'cfg' group for Next.js admin
-                if group_name == 'cfg':
-                    self.stdout.write(f"  ⏭️  Skipping 'cfg' group (excluded from Next.js admin)")
+                # Skip ext_* groups (they come from extension packages)
+                if group_name.startswith('ext_'):
+                    self.stdout.write(f"  ⏭️  Skipping '{group_name}' (from extension package)")
                     continue
+
+                # Always skip 'cfg' group (it contains all cfg_* groups combined, not needed)
+                if group_name == 'cfg':
+                    self.stdout.write(f"  ⏭️  Skipping '{group_name}' (combined group, not needed)")
+                    continue
+
+                # Skip cfg_* groups by default (unless --copy-cfg-clients flag is set)
+                if group_name.startswith('cfg_'):
+                    if not options.get('copy_cfg_clients'):
+                        self.stdout.write(f"  ⏭️  Skipping '{group_name}' (use --copy-cfg-clients to copy, from @djangocfg/api package)")
+                        continue
 
                 target_dir = api_output_path / group_name
 

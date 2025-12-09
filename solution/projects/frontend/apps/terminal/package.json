@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@djangocfg/centrifugo": "latest",
-    "consola": "^3.4.2",
     "@djangocfg/layouts": "latest",
     "@djangocfg/ui-core": "latest",
     "@djangocfg/ui-nextjs": "latest",
+    "consola": "^3.4.2",
     "@xterm/xterm": "^5.5.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
@@ -22,7 +22,7 @@
     "next": "15.5.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "swr": "^2.3.4",
+    "swr": "^2.3.7",
     "zod": "^4.1.13",
     "p-retry": "^7.1.0"
   },

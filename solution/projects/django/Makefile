@@ -50,21 +50,23 @@ install:
 	@echo "💡 To use local django-cfg: make install-local"
 
 install-local:
-	@echo "📦 Switching to local django-cfg..."
-	@echo "   Path: $(DJANGO_CFG_LOCAL)"
-	@# Check if local django-cfg exists
-	@test -d $(DJANGO_CFG_LOCAL) || (echo "❌ Error: $(DJANGO_CFG_LOCAL) not found" && exit 1)
-	@# Remove lock file to ensure clean state
-	@rm -f poetry.lock
-	@echo "🔄 Regenerating poetry.lock..."
-	@# Install poetry dependencies (auto-creates new lock file)
-	$(POETRY) install
-	@# Then install local django-cfg with pip (overwrites PyPI version)
-	@echo "🔧 Installing local django-cfg (editable mode)..."
-	$(POETRY) run pip install -e "$(DJANGO_CFG_LOCAL)[full]"
-	@echo ""
-	@echo "✅ Local django-cfg installed (editable mode)"
-	@echo "📍 Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"
+	@bash -c ' \
+		set -e; \
+		eval "$$(conda shell.bash hook 2>/dev/null || true)"; \
+		conda deactivate 2>/dev/null || true; \
+		echo "📦 Updating lock file..."; \
+		$(POETRY) lock; \
+		echo "📦 Installing dependencies (production mode)..."; \
+		$(POETRY) install; \
+		echo "📦 Switching to local django-cfg..."; \
+		echo "   Path: $(DJANGO_CFG_LOCAL)"; \
+		test -d $(DJANGO_CFG_LOCAL) || (echo "❌ Error: $(DJANGO_CFG_LOCAL) not found" && exit 1); \
+		echo "🔧 Installing local django-cfg (editable mode)..."; \
+		$(POETRY) run pip install -e "$(DJANGO_CFG_LOCAL)[full]"; \
+		echo ""; \
+		echo "✅ Local django-cfg installed (editable mode)"; \
+		echo "📍 Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"; \
+	'
 
 env:
 	@$(POETRY) env info

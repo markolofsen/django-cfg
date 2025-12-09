@@ -12,7 +12,7 @@
 #
 # 📋 HOW TO TEST YOUR CHANGES:
 #
-# This library (django-cfg) is automatically symlinked to:
+# This library (django-cfg-dev) is automatically symlinked to:
 # ../../../../solution/projects/django/
 #
 # All testing MUST be done through the Django project:
@@ -33,18 +33,18 @@
 # 📁 PROJECT STRUCTURE:
 #
 #   @projects/django-cfg/
-#   ├── projects/django-cfg/           ← Django-CFG library (YOU ARE HERE)
+#   ├── projects/django-cfg-dev/           ← Django-CFG library (YOU ARE HERE)
 #   │   └── src/django_cfg/               ← Library source code
 #   └── solution/projects/django/         ← Django test project (GO HERE)
 #       ├── manage.py                     ← Run commands here
 #       ├── pyproject.toml                ← Django project dependencies
-#       └── .venv/                        ← Contains symlink to django-cfg
+#       └── .venv/                        ← Contains symlink to django-cfg-dev
 #
 # 🔗 SYMLINK DETAILS:
 #
 # The symlink is created automatically via: make install-local
 # Located at: ../../../../solution/projects/django/.venv/lib/python3.12/site-packages/django_cfg
-# Points to: projects/django-cfg/src/django_cfg (this directory)
+# Points to: projects/django-cfg-dev/src/django_cfg (this directory)
 #
 # 💡 TIP: If symlink is broken, run from django-cfg root:
 #   make install-local

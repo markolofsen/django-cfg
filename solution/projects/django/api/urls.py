@@ -11,6 +11,14 @@ Example in config.py:
         apps=["apps.crypto"],    # Uses apps/crypto/urls.py
         ...
     )
+
+To verify URLs are registered correctly, run:
+    poetry run python manage.py show_urls
+
+This will show all registered URLs including:
+    - /api/{app_name}/ (API endpoints)
+    - /admin/{app_name}/ (Admin interface)
+    - /cfg/openapi/{app_name}/schema/ (OpenAPI schema)
 """
 
 from django.contrib import admin

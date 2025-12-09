@@ -63,7 +63,7 @@ class JWTAuthenticationWithLastLogin(JWTAuthentication):
     Usage:
         Add to REST_FRAMEWORK settings:
         'DEFAULT_AUTHENTICATION_CLASSES': [
-            'django_cfg.apps.business.accounts.authentication.JWTAuthenticationWithLastLogin',
+            'django_cfg.apps.system.accounts.authentication.JWTAuthenticationWithLastLogin',
         ]
     """
 

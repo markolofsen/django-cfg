@@ -36,7 +36,7 @@ class NavigationItem(BaseModel):
     @computed_field
     @property
     def resolved_link(self) -> Union[str, Callable]:
-        """Get the link resolved for Unfold (computed field to avoid recursion)."""
+        """Get the link resolved for Unfold."""
         if self.link:
             return auto_resolve_url(self.link)
         return "#"

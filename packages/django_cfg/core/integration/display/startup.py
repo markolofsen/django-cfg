@@ -479,32 +479,36 @@ class StartupDisplayManager(BaseDisplayManager):
             # Count fields by source
             user_fields = len(constance_config.fields)
 
-            # Count by app
+            # Count by app (extensions are now auto-discovered)
             tasks_count = 0
             knowbase_count = 0
             payments_count = 0
 
-            config = self.config
+            try:
+                from django_cfg.modules.base import BaseCfgModule
+                base_module = BaseCfgModule()
 
-            if config and config.enable_knowbase:
-                try:
-                    from django_cfg.apps.business.knowbase.config import (
-                        get_django_cfg_knowbase_constance_fields,
-                    )
-                    knowbase_fields = get_django_cfg_knowbase_constance_fields()
-                    knowbase_count = len(knowbase_fields)
-                except:
-                    pass
+                if base_module.is_extension_enabled("knowbase"):
+                    try:
+                        from extensions.apps.knowbase.config import (
+                            get_django_cfg_knowbase_constance_fields,
+                        )
+                        knowbase_fields = get_django_cfg_knowbase_constance_fields()
+                        knowbase_count = len(knowbase_fields)
+                    except:
+                        pass
 
-            if config and config.payments and config.payments.enabled:
-                try:
-                    from django_cfg.apps.business.payments.config import (
-                        get_django_cfg_payments_constance_fields,
-                    )
-                    payments_fields = get_django_cfg_payments_constance_fields()
-                    payments_count = len(payments_fields)
-                except:
-                    pass
+                if base_module.is_extension_enabled("payments"):
+                    try:
+                        from extensions.apps.payments.config import (
+                            get_django_cfg_payments_constance_fields,
+                        )
+                        payments_fields = get_django_cfg_payments_constance_fields()
+                        payments_count = len(payments_fields)
+                    except:
+                        pass
+            except:
+                pass
 
             summary_table.add_row("User Defined", f"[blue]{user_fields}[/blue]")
             if tasks_count > 0:
@@ -629,33 +633,36 @@ class StartupDisplayManager(BaseDisplayManager):
             user_fields = len(constance_config.fields)  # User-defined fields
             app_fields = constance_config._get_app_constance_fields()
 
-            # Count by app
+            # Count by app (extensions are now auto-discovered)
             tasks_count = 0
             knowbase_count = 0
             payments_count = 0
 
-            # Try to get individual app field counts
-            config = self.config
+            try:
+                from django_cfg.modules.base import BaseCfgModule
+                base_module = BaseCfgModule()
 
-            if config and config.enable_knowbase:
-                try:
-                    from django_cfg.apps.business.knowbase.config import (
-                        get_django_cfg_knowbase_constance_fields,
-                    )
-                    knowbase_fields = get_django_cfg_knowbase_constance_fields()
-                    knowbase_count = len(knowbase_fields)
-                except:
-                    pass
+                if base_module.is_extension_enabled("knowbase"):
+                    try:
+                        from extensions.apps.knowbase.config import (
+                            get_django_cfg_knowbase_constance_fields,
+                        )
+                        knowbase_fields = get_django_cfg_knowbase_constance_fields()
+                        knowbase_count = len(knowbase_fields)
+                    except:
+                        pass
 
-            if config and config.payments and config.payments.enabled:
-                try:
-                    from django_cfg.apps.business.payments.config import (
-                        get_django_cfg_payments_constance_fields,
-                    )
-                    payments_fields = get_django_cfg_payments_constance_fields()
-                    payments_count = len(payments_fields)
-                except:
-                    pass
+                if base_module.is_extension_enabled("payments"):
+                    try:
+                        from extensions.apps.payments.config import (
+                            get_django_cfg_payments_constance_fields,
+                        )
+                        payments_fields = get_django_cfg_payments_constance_fields()
+                        payments_count = len(payments_fields)
+                    except:
+                        pass
+            except:
+                pass
 
             # Create summary table
             summary_table = self.create_table()

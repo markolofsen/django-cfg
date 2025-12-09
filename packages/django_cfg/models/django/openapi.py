@@ -105,11 +105,61 @@ class OpenAPIClientConfig(OpenAPIConfig):
 
     def get_groups_with_defaults(self) -> Dict[str, OpenAPIGroupConfig]:
         """
-        Get groups as a dictionary.
+        Get groups as a dictionary, including auto-detected cfg modules and extensions.
+
+        Automatically creates individual groups for:
+        - Each django_cfg.apps.* module (cfg_dashboard, cfg_accounts, cfg_centrifugo, etc.)
+        - Each extensions.apps.* app (ext_knowbase, ext_support, etc.)
 
         Returns:
-            Dict of groups from configuration
+            Dict of groups from configuration + auto-detected groups
         """
         # Convert list to dict for compatibility
-        return {group.name: group for group in self.groups}
+        groups = {group.name: group for group in self.groups}
+
+        try:
+            from django.apps import apps
+
+            # Auto-add individual cfg module groups
+            cfg_apps = [
+                app.name for app in apps.get_app_configs()
+                if app.name.startswith("django_cfg.apps.")
+            ]
+            for app_name in cfg_apps:
+                # Extract module name: django_cfg.apps.api.dashboard -> dashboard
+                # django_cfg.apps.integrations.centrifugo -> centrifugo
+                parts = app_name.split(".")
+                module_name = parts[-1]  # Last part is the module name
+                group_name = f"cfg_{module_name}"
+
+                if group_name not in groups:
+                    groups[group_name] = OpenAPIGroupConfig(
+                        name=group_name,
+                        apps=[app_name],
+                        title=f"{module_name.replace('_', ' ').title()} API",
+                        description=f"Django-CFG {module_name} module API",
+                        version="1.0.0",
+                    )
+
+            # Auto-add individual extension groups
+            extension_apps = [
+                app.name for app in apps.get_app_configs()
+                if app.name.startswith("extensions.apps.")
+            ]
+            for app_name in extension_apps:
+                ext_name = app_name.split(".")[-1]  # "knowbase" from "extensions.apps.knowbase"
+                group_name = f"ext_{ext_name}"  # "ext_knowbase"
+
+                if group_name not in groups:
+                    groups[group_name] = OpenAPIGroupConfig(
+                        name=group_name,
+                        apps=[app_name],
+                        title=f"{ext_name.replace('_', ' ').title()} Extension API",
+                        description=f"Auto-discovered {ext_name} extension API",
+                        version="1.0.0",
+                    )
+        except Exception:
+            pass  # Django not ready yet
+
+        return groups
 

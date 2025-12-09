@@ -70,12 +70,9 @@ class CoreSettingsGenerator:
         if self.config.wsgi_application:
             settings["WSGI_APPLICATION"] = self.config.wsgi_application
 
-        # Add custom user model
-        if self.config.auth_user_model:
-            settings["AUTH_USER_MODEL"] = self.config.auth_user_model
-        elif self.config.enable_accounts:
-            # Auto-use django-cfg accounts CustomUser if accounts is enabled
-            settings["AUTH_USER_MODEL"] = "django_cfg_accounts.CustomUser"
+        # Add custom user model - always use django-cfg accounts
+        # accounts is always enabled - core django-cfg functionality
+        settings["AUTH_USER_MODEL"] = "django_cfg_accounts.CustomUser"
 
         # Add base directory (always set, auto-detects from manage.py location)
         settings["BASE_DIR"] = self.config.base_dir

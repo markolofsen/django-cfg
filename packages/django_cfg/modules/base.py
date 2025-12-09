@@ -5,23 +5,30 @@ Provides base functionality for all auto-configuring modules.
 """
 
 import importlib
+import logging
 import os
+import traceback
 from abc import ABC
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from django_cfg.core.config import DjangoConfig
+    from django_cfg.extensions.scanner import DiscoveredExtension
 
 
 class BaseCfgModule(ABC):
     """
     Base class for all django_cfg modules.
-    
+
     Provides common functionality and configuration access.
     Auto-discovers configuration from Django settings.
+    Includes extension discovery methods via ExtensionMixin pattern.
     """
 
     _config_instance: Optional["DjangoConfig"] = None
+    _extension_cache: Optional[List["DiscoveredExtension"]] = None
 
     def __init__(self):
         """Initialize the base module."""
@@ -102,59 +109,65 @@ class BaseCfgModule(ABC):
             # Return default on any error
             return default
 
-    def is_support_enabled(self) -> bool:
-        """
-        Check if django-cfg Support is enabled.
-        
-        Returns:
-            True if Support is enabled, False otherwise
-        """
-        return self._get_config_key('enable_support', True)
+    # === Extension Discovery Methods ===
 
-    def is_accounts_enabled(self) -> bool:
+    @classmethod
+    def _get_discovered_extensions(cls) -> List["DiscoveredExtension"]:
         """
-        Check if django-cfg Accounts is enabled.
-        
-        Returns:
-            True if Accounts is enabled, False otherwise
-        """
-        return self._get_config_key('enable_accounts', False)
+        Get all discovered extensions (cached).
 
-    def is_newsletter_enabled(self) -> bool:
-        """
-        Check if django-cfg Newsletter is enabled.
-        
         Returns:
-            True if Newsletter is enabled, False otherwise
+            List of DiscoveredExtension objects
         """
-        return self._get_config_key('enable_newsletter', False)
+        if cls._extension_cache is not None:
+            return cls._extension_cache
 
-    def is_leads_enabled(self) -> bool:
-        """
-        Check if django-cfg Leads is enabled.
-        
-        Returns:
-            True if Leads is enabled, False otherwise
-        """
-        return self._get_config_key('enable_leads', False)
+        try:
+            from django_cfg.extensions import get_extension_loader
 
-    def is_agents_enabled(self) -> bool:
-        """
-        Check if django-cfg Agents is enabled.
-        
-        Returns:
-            True if Agents is enabled, False otherwise
-        """
-        return self._get_config_key('enable_agents', False)
+            config = cls.get_config()
+            if not config or not hasattr(config, "base_dir"):
+                logger.warning("_get_discovered_extensions: config or base_dir not available")
+                return []
 
-    def is_knowbase_enabled(self) -> bool:
+            loader = get_extension_loader(base_path=config.base_dir)
+            cls._extension_cache = loader.scanner.discover_all()
+            logger.debug(f"_get_discovered_extensions: found {len(cls._extension_cache)} extensions")
+            return cls._extension_cache
+
+        except Exception as e:
+            logger.error(
+                f"_get_discovered_extensions failed: {e}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
+            return []
+
+    def is_extension_enabled(self, name: str) -> bool:
         """
-        Check if django-cfg Knowbase is enabled.
-        
+        Check if an extension is enabled (discovered).
+
+        Args:
+            name: Extension name to check
+
         Returns:
-            True if Knowbase is enabled, False otherwise
+            True if extension is discovered, False otherwise
+
+        Example:
+            if self.is_extension_enabled("leads"):
+                # leads extension is available
         """
-        return self._get_config_key('enable_knowbase', False)
+        extensions = self._get_discovered_extensions()
+        return any(ext.name == name and ext.is_valid for ext in extensions)
+
+    # === Extension check properties (auto-discovered from extensions/apps/) ===
+    is_support_enabled = property(lambda self: self.is_extension_enabled("support"))
+    is_newsletter_enabled = property(lambda self: self.is_extension_enabled("newsletter"))
+    is_leads_enabled = property(lambda self: self.is_extension_enabled("leads"))
+    is_agents_enabled = property(lambda self: self.is_extension_enabled("agents"))
+    is_knowbase_enabled = property(lambda self: self.is_extension_enabled("knowbase"))
+    is_payments_enabled = property(lambda self: self.is_extension_enabled("payments"))
+    is_maintenance_enabled = property(lambda self: self.is_extension_enabled("maintenance"))
+    is_backup_enabled = property(lambda self: self.is_extension_enabled("backup"))
 
     def should_enable_rq(self) -> bool:
         """
@@ -164,30 +177,6 @@ class BaseCfgModule(ABC):
             True if RQ is enabled, False otherwise
         """
         return self.get_config().should_enable_rq()
-
-    def is_maintenance_enabled(self) -> bool:
-        """
-        Check if django-cfg Maintenance is enabled.
-        
-        Returns:
-            True if Maintenance is enabled, False otherwise
-        """
-        return self._get_config_key('enable_maintenance', False)
-
-    def is_payments_enabled(self) -> bool:
-        """
-        Check if django-cfg Payments is enabled.
-
-        Returns:
-            True if Payments is enabled, False otherwise
-        """
-        payments_config = self._get_config_key('payments', None)
-
-        # Only handle PaymentsConfig model
-        if payments_config and hasattr(payments_config, 'enabled'):
-            return payments_config.enabled
-
-        return False
 
     def is_centrifugo_enabled(self) -> bool:
         """
@@ -216,21 +205,6 @@ class BaseCfgModule(ABC):
         # Check if grpc config exists and is enabled
         if grpc_config and hasattr(grpc_config, 'enabled'):
             return grpc_config.enabled
-
-        return False
-
-    def is_backup_enabled(self) -> bool:
-        """
-        Check if django-cfg Database Backup is enabled.
-
-        Returns:
-            True if Backup is enabled, False otherwise
-        """
-        backup_config = self._get_config_key('backup', None)
-
-        # Check if backup config exists and is enabled
-        if backup_config and hasattr(backup_config, 'enabled'):
-            return backup_config.enabled
 
         return False
 
