@@ -1,0 +1,84 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG Hub - Extensions Hub (hub.djangocfg.com)
+# Standard build with standalone output
+# ═════════════════════════════════════════════════════════════════
+
+FROM node:20-alpine AS base
+RUN apk update && apk add --no-cache libc6-compat
+WORKDIR /app
+
+# ─────────────────────────────────────────────────────────────────
+# Installer Stage - Install dependencies and build hub
+# ─────────────────────────────────────────────────────────────────
+
+FROM base AS installer-hub
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# Copy workspace configuration from frontend monorepo
+COPY frontend/package.json ./
+COPY frontend/pnpm-lock.yaml ./
+COPY frontend/pnpm-workspace.yaml ./
+
+# Copy apps, packages and extensions
+COPY frontend/apps ./apps
+COPY frontend/packages ./packages
+COPY frontend/extensions ./extensions
+
+# Install build tools for native modules (node-pty needs Python, make, g++)
+RUN apk add --no-cache python3 make g++
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build packages first (api needed by ext-base, nextjs needed for next.config.ts)
+RUN pnpm --filter "@djangocfg/api" build && \
+    pnpm --filter "@djangocfg/centrifugo" build && \
+    pnpm --filter "@djangocfg/nextjs" build && \
+    pnpm --filter "@djangocfg/ui-core" build && \
+    pnpm --filter "@djangocfg/ui-nextjs" build && \
+    pnpm --filter "@djangocfg/layouts" build
+
+# Build extensions
+RUN pnpm --filter "@djangocfg/ext-base" build && \
+    pnpm --filter "@djangocfg/ext-knowbase" build && \
+    pnpm --filter "@djangocfg/ext-leads" build && \
+    pnpm --filter "@djangocfg/ext-newsletter" build && \
+    pnpm --filter "@djangocfg/ext-payments" build && \
+    pnpm --filter "@djangocfg/ext-support" build
+
+# Build the hub app
+RUN cd apps/hub && pnpm build
+
+# ─────────────────────────────────────────────────────────────────
+# Runner Stage - Hub App (port 3779)
+# ─────────────────────────────────────────────────────────────────
+
+FROM base AS hub
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3779
+ENV HOSTNAME="0.0.0.0"
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy only standalone output
+COPY --from=installer-hub --chown=nextjs:nodejs /app/apps/hub/.next/standalone ./
+COPY --from=installer-hub --chown=nextjs:nodejs /app/apps/hub/.next/static ./apps/hub/.next/static
+COPY --from=installer-hub --chown=nextjs:nodejs /app/apps/hub/public ./apps/hub/public
+
+USER nextjs
+
+EXPOSE 3779
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3779/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Run standalone server
+WORKDIR /app/apps/hub
+CMD ["node", "server.js"]

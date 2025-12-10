@@ -1,0 +1,66 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG Frontend - Solution Admin App (demo.djangocfg.com)
+# Optimized with standalone output
+# ═════════════════════════════════════════════════════════════════
+
+FROM node:20-alpine AS base
+RUN apk update && apk add --no-cache libc6-compat
+WORKDIR /app
+
+# ─────────────────────────────────────────────────────────────────
+# Installer Stage - Install dependencies and build solution admin
+# ─────────────────────────────────────────────────────────────────
+
+FROM base AS installer-demo
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# Copy workspace configuration
+COPY projects/frontend/package.json ./
+COPY projects/frontend/pnpm-lock.yaml ./
+COPY projects/frontend/pnpm-workspace.yaml ./
+
+# Copy apps and packages (github public version has no extensions)
+COPY projects/frontend/apps ./apps
+COPY projects/frontend/packages ./packages
+
+# Install dependencies for admin app only (not frozen to allow new deps)
+RUN pnpm install --filter @djangocfg/admin...
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the admin app
+RUN cd apps/admin && pnpm build:docker
+
+# ─────────────────────────────────────────────────────────────────
+# Runner Stage - Admin App (port 3200)
+# ─────────────────────────────────────────────────────────────────
+
+FROM node:20-alpine AS demo
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3200
+ENV HOSTNAME="0.0.0.0"
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy only standalone output (Next.js automatically generates this)
+COPY --from=installer-demo --chown=nextjs:nodejs /app/apps/admin/.next/standalone ./
+COPY --from=installer-demo --chown=nextjs:nodejs /app/apps/admin/.next/static ./apps/admin/.next/static
+COPY --from=installer-demo --chown=nextjs:nodejs /app/apps/admin/public ./apps/admin/public
+
+USER nextjs
+
+EXPOSE 3200
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3200/api/health/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Run standalone server from workspace subdirectory
+WORKDIR /app/apps/admin
+CMD node server.js
+

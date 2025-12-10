@@ -1,0 +1,74 @@
+# ═════════════════════════════════════════════════════════════════
+# Django-CFG Playground - Component Showcase (playground.djangocfg.com)
+# Optimized with standalone output
+# ═════════════════════════════════════════════════════════════════
+
+FROM node:20-alpine AS base
+RUN apk update && apk add --no-cache libc6-compat
+WORKDIR /app
+
+# ─────────────────────────────────────────────────────────────────
+# Installer Stage - Install dependencies and build playground
+# ─────────────────────────────────────────────────────────────────
+
+FROM base AS installer-playground
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# Copy workspace configuration (context is projects/solution/)
+COPY frontend/package.json ./
+COPY frontend/pnpm-lock.yaml ./
+COPY frontend/pnpm-workspace.yaml ./
+
+# Copy apps, packages and extensions
+COPY frontend/apps ./apps
+COPY frontend/packages ./packages
+COPY frontend/extensions ./extensions
+
+# Install build tools for native modules (node-pty needs Python, make, g++)
+RUN apk add --no-cache python3 make g++
+
+# Install all dependencies (full workspace for linked packages)
+RUN pnpm install
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build packages first (they export from dist/ which must be built)
+RUN pnpm --filter "@djangocfg/api" build && \
+    pnpm --filter "@djangocfg/centrifugo" build && \
+    pnpm --filter "@djangocfg/nextjs" build
+
+# Build the playground app
+RUN cd apps/playground && pnpm build
+
+# ─────────────────────────────────────────────────────────────────
+# Runner Stage - Playground App (port 3003)
+# ─────────────────────────────────────────────────────────────────
+
+FROM node:20-alpine AS playground
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3003
+ENV HOSTNAME="0.0.0.0"
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy only standalone output (Next.js automatically generates this)
+COPY --from=installer-playground --chown=nextjs:nodejs /app/apps/playground/.next/standalone ./
+COPY --from=installer-playground --chown=nextjs:nodejs /app/apps/playground/.next/static ./apps/playground/.next/static
+COPY --from=installer-playground --chown=nextjs:nodejs /app/apps/playground/public ./apps/playground/public
+
+USER nextjs
+
+EXPOSE 3003
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3003/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Run standalone server from workspace subdirectory
+WORKDIR /app/apps/playground
+CMD node server.js
