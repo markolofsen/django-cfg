@@ -191,6 +191,7 @@ class GRPCRequestLogManager(models.Manager):
         self,
         log_instance,
         duration_ms: int | None = None,
+        response_data: dict | None = None,
     ):
         """
         Mark request as successful (ASYNC - Django 5.2).
@@ -198,7 +199,9 @@ class GRPCRequestLogManager(models.Manager):
         Args:
             log_instance: GRPCRequestLog instance
             duration_ms: Duration in milliseconds
+            response_data: Response data (optional, for future use)
         """
+        # NOTE: response_data is accepted but not stored (no field in model yet)
         from ..models import GRPCRequestLog
 
         log_instance.status = GRPCRequestLog.StatusChoices.SUCCESS
@@ -258,6 +261,7 @@ class GRPCRequestLogManager(models.Manager):
         log_instance,
         grpc_status_code: str,
         error_message: str,
+        error_details: dict | None = None,
         duration_ms: int | None = None,
     ):
         """
@@ -267,6 +271,7 @@ class GRPCRequestLogManager(models.Manager):
             log_instance: GRPCRequestLog instance
             grpc_status_code: gRPC status code
             error_message: Error message
+            error_details: Additional error details (JSON)
             duration_ms: Duration in milliseconds
         """
         from ..models import GRPCRequestLog
@@ -274,6 +279,7 @@ class GRPCRequestLogManager(models.Manager):
         log_instance.status = GRPCRequestLog.StatusChoices.ERROR
         log_instance.grpc_status_code = grpc_status_code
         log_instance.error_message = error_message
+        log_instance.error_details = error_details
         log_instance.completed_at = timezone.now()
 
         if duration_ms is not None:
@@ -284,6 +290,7 @@ class GRPCRequestLogManager(models.Manager):
                 "status",
                 "grpc_status_code",
                 "error_message",
+                "error_details",
                 "completed_at",
                 "duration_ms",
             ]

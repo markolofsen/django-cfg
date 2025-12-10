@@ -5,7 +5,7 @@ DRF browsable API views with Tailwind theme support.
 """
 
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -26,9 +26,12 @@ class DRFEndpointsStatusView(APIView):
         - auto_auth: Auto-retry with JWT on 401/403 (default: true)
 
     This endpoint uses DRF Browsable API with Tailwind CSS theme! 🎨
+
+    **IMPORTANT**: Admin-only for security (shows all endpoint statuses).
+    For public health checks, use /cfg/health/ instead.
     """
 
-    permission_classes = [AllowAny]  # Public endpoint
+    permission_classes = [IsAdminUser]  # Admin-only for security
     serializer_class = EndpointsStatusSerializer  # For schema generation
 
     def get(self, request):

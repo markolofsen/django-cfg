@@ -313,7 +313,7 @@ class SecurityBuilder:
         Smart list of dev CSRF origins.
 
         Covers:
-        - Popular dev ports
+        - All dev ports from 3000 to 10000 (covers all common dev servers)
         - localhost and 127.0.0.1
 
         Docker IPs NOT needed - CSRF checks Referer from browser!
@@ -321,19 +321,12 @@ class SecurityBuilder:
         Returns:
             List of dev CSRF origins
         """
-        popular_ports = [
-            3000,  # React/Next.js default
-            3777,  # Next.js Admin default
-            5173,  # Vite default
-            5174,  # Vite preview
-            8080,  # Vue/Spring Boot
-            4200,  # Angular
-            8000,  # Django default
-            8001,  # Django alternative
-        ]
+        # Wide port range for development (3000-10000)
+        # Covers: Next.js, React, Vite, Angular, Vue, Django, Flask, etc.
+        dev_ports = range(3000, 10001)
 
         origins = []
-        for port in popular_ports:
+        for port in dev_ports:
             origins.extend([
                 f"http://localhost:{port}",
                 f"http://127.0.0.1:{port}",
@@ -364,29 +357,20 @@ class SecurityBuilder:
 
     def _get_localhost_csrf_origins(self) -> List[str]:
         """
-        Localhost CSRF origins with common development ports.
+        Localhost CSRF origins with wide port range for development.
 
         CSRF doesn't support regex, so we need to list specific ports.
-        Covers standard development tools and frameworks.
+        Covers all development ports from 3000 to 10000.
 
         Note: CORS uses regex for ALL ports via CORS_ALLOWED_ORIGIN_REGEXES.
-        CSRF is more limited - only these common ports are whitelisted.
+        CSRF needs explicit port list - using same range as dev mode (3000-10000).
 
         Returns:
-            List of localhost origins with common ports for CSRF
+            List of localhost origins with development ports for CSRF
         """
-        # Common development ports (framework defaults)
-        dev_ports = [
-            # Frontend frameworks
-            3000, 3001, 3002,  # React/Next.js
-            5173, 5174,        # Vite
-            8080, 8081,        # Vue/Spring Boot
-            4200,              # Angular
-            # Backend servers
-            8000, 8001, 8002,  # Django
-            5000,              # Flask
-            4000,              # Express
-        ]
+        # Wide port range for development (3000-10000)
+        # Covers: Next.js, React, Vite, Angular, Vue, Django, Flask, etc.
+        dev_ports = range(3000, 10001)
 
         origins = []
         for port in dev_ports:

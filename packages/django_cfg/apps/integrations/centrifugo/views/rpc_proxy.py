@@ -30,24 +30,15 @@ logger = logging.getLogger(__name__)
 
 
 class RPCProxyRequest(BaseModel):
-    """
-    Request from Centrifugo RPC proxy.
+    """Request from Centrifugo RPC proxy."""
 
-    Supports both Centrifugo v5 and v6 formats.
-    V6 sends: {method, data} - minimal format
-    V5 sends: {client, transport, protocol, encoding, user, method, data, meta}
-    """
-
-    # V6 minimal format - these are the main fields
-    method: str = Field("", description="RPC method name")
-    data: dict[str, Any] | str = Field(default_factory=dict, description="RPC params (dict or JSON string)")
-
-    # V5 extended format - optional in v6
     client: str = Field("", description="Client connection ID")
     transport: str = Field("websocket", description="Transport type")
     protocol: str = Field("json", description="Protocol format")
     encoding: str = Field("json", description="Encoding type")
     user: str = Field("", description="User ID from auth")
+    method: str = Field("", description="RPC method name")
+    data: dict[str, Any] = Field(default_factory=dict, description="RPC params")
     meta: dict[str, Any] | None = Field(None, description="Connection metadata")
 
 
@@ -98,19 +89,10 @@ class RPCProxyView(View):
             body = json.loads(request.body)
             rpc_request = RPCProxyRequest(**body)
 
-            client_short = rpc_request.client[:8] if rpc_request.client else "unknown"
             logger.info(
                 f"RPC proxy: method={rpc_request.method} "
-                f"user={rpc_request.user} client={client_short}..."
+                f"user={rpc_request.user} client={rpc_request.client[:8]}..."
             )
-
-            # Parse data if it's a JSON string (Centrifugo v6 sends it this way)
-            rpc_data = rpc_request.data
-            if isinstance(rpc_data, str):
-                try:
-                    rpc_data = json.loads(rpc_data)
-                except json.JSONDecodeError:
-                    rpc_data = {"raw": rpc_data}
 
             # Get router and check if handler exists
             router = get_global_router()
@@ -129,7 +111,7 @@ class RPCProxyView(View):
             handler = router.get_handler(rpc_request.method)
 
             # Try to validate params using handler's type hints
-            params = rpc_data
+            params = rpc_request.data
             try:
                 # Get param type from handler signature
                 import inspect

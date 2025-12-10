@@ -44,6 +44,7 @@ class GRPCRequestLog(models.Model):
     )
     grpc_status_code = models.CharField(max_length=50, null=True, blank=True, db_index=True)
     error_message = models.TextField(null=True, blank=True)
+    error_details = models.JSONField(null=True, blank=True)
 
     # Performance
     duration_ms = models.IntegerField(null=True, blank=True)

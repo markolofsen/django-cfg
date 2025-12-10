@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.urls import URLPattern, URLResolver, get_resolver
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -31,13 +31,24 @@ class DRFURLsListView(APIView):
     - HTTP methods
 
     This endpoint uses DRF Browsable API with Tailwind CSS theme! 🎨
+
+    **IMPORTANT**: Admin-only endpoint for security reasons.
     """
 
-    permission_classes = [AllowAny]  # Public endpoint (can be restricted)
+    permission_classes = [IsAdminUser]  # Admin-only for security
     serializer_class = URLsListSerializer  # For schema generation
 
     def get(self, request):
-        """Return all registered URLs."""
+        """
+        Return registered URLs (API endpoints by default).
+
+        Query Parameters:
+            filter (str): Filter URLs by prefix
+                - omit or 'api': Only API endpoints (/api/*) - DEFAULT
+                - 'all': All URLs (admin, api, cfg, etc.)
+                - 'admin': Only admin endpoints (/admin/*)
+                - 'cfg': Only django-cfg endpoints (/cfg/*)
+        """
         try:
             config = getattr(settings, 'config', None)
 
@@ -46,19 +57,33 @@ class DRFURLsListView(APIView):
             if not base_url:
                 base_url = request.build_absolute_uri('/').rstrip('/')
 
+            # Get filter parameter (default: 'api')
+            url_filter = request.query_params.get('filter', 'api')
+
             urls_data = {
                 "status": "success",
                 "service": config.project_name if config else "Django CFG",
                 "version": get_current_version(),
                 "base_url": base_url,
+                "filter": url_filter,
                 "total_urls": 0,
                 "urls": []
             }
 
             # Extract all URLs
-            url_patterns = self._get_all_urls()
-            urls_data["urls"] = url_patterns
-            urls_data["total_urls"] = len(url_patterns)
+            all_urls = self._get_all_urls()
+
+            # Apply filter (default: api)
+            if url_filter == 'all':
+                # Show all URLs
+                urls_data["urls"] = all_urls
+                urls_data["total_urls"] = len(all_urls)
+            else:
+                # Filter by prefix (api, admin, cfg)
+                filtered_urls = self._filter_urls(all_urls, url_filter)
+                urls_data["urls"] = filtered_urls
+                urls_data["total_urls"] = len(filtered_urls)
+                urls_data["total_urls_unfiltered"] = len(all_urls)
 
             return Response(urls_data, status=status.HTTP_200_OK)
 
@@ -67,6 +92,27 @@ class DRFURLsListView(APIView):
                 "status": "error",
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _filter_urls(self, urls: List[Dict[str, Any]], filter_type: str) -> List[Dict[str, Any]]:
+        """
+        Filter URLs by prefix.
+
+        Args:
+            urls: List of URL dictionaries
+            filter_type: Filter type ('api', 'admin', 'cfg')
+
+        Returns:
+            Filtered list of URLs
+        """
+        if filter_type == 'api':
+            return [url for url in urls if url['pattern'].startswith('api/')]
+        elif filter_type == 'admin':
+            return [url for url in urls if url['pattern'].startswith('admin/')]
+        elif filter_type == 'cfg':
+            return [url for url in urls if url['pattern'].startswith('cfg/')]
+        else:
+            # Unknown filter - return all
+            return urls
 
     def _get_all_urls(self, urlpatterns=None, prefix='', namespace=None) -> List[Dict[str, Any]]:
         """
@@ -187,9 +233,11 @@ class DRFURLsListCompactView(APIView):
     Compact URLs list endpoint - just patterns and names.
 
     This endpoint uses DRF Browsable API with Tailwind CSS theme! 🎨
+
+    **IMPORTANT**: Admin-only endpoint for security reasons.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]  # Admin-only for security
 
     def get(self, request):
         """Return compact URL list."""

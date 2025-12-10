@@ -546,7 +546,13 @@ class ObservabilityInterceptor(grpc.aio.ServerInterceptor):
                 )
 
             try:
-                response = await behavior(request, context)
+                # Handle both async and sync behaviors (Health Check is sync)
+                import inspect
+                if inspect.iscoroutinefunction(behavior):
+                    response = await behavior(request, context)
+                else:
+                    response = behavior(request, context)
+
                 duration_ms = (time.time() - start_time) * 1000
 
                 if self.enable_metrics:
@@ -848,10 +854,6 @@ class ObservabilityInterceptor(grpc.aio.ServerInterceptor):
                 api_key=api_key,
                 is_authenticated=user is not None,
                 client_ip=client_ip,
-                user_agent=user_agent,
-                peer=peer,
-                request_data=self._serialize_message(request) if request else None,
-                status="pending",
             )
             return log_entry
 
