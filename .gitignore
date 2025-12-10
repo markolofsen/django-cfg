@@ -38,3 +38,6 @@ logs/
 Thumbs.db
 
 .ruff_cache
+
+# pnpm
+.pnpm-store/
