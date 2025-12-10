@@ -2,9 +2,9 @@ name: democfg
 
 # DemoCFG - Demo Environment
 # Domain: democfg.com
-# Database: democfg (with auto-reset)
+# Database: democfg (with auto-reset via djangocfg resetter)
 #
-# Services: Django API, RQ Worker, RQ Scheduler, gRPC, Centrifugo, Frontend, Demo Resetter
+# Services: Django API, RQ Worker, RQ Scheduler, gRPC, Centrifugo, Frontend
 #
 # Usage:
 #   docker compose build
@@ -225,67 +225,6 @@ services:
       - "traefik.http.routers.democfg.entrypoints=websecure"
       - "traefik.http.routers.democfg.tls=true"
       - "traefik.http.services.democfg.loadbalancer.server.port=3200"
-
-  # Playground (playground.democfg.com)
-  playground:
-    build:
-      context: ..
-      dockerfile: docker/services/frontend/Dockerfile.playground
-    image: democfg-playground:latest
-    container_name: democfg-playground
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          memory: 128M
-    networks:
-      - dokploy-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.democfg-playground.rule=Host(`playground.democfg.com`)"
-      - "traefik.http.routers.democfg-playground.entrypoints=websecure"
-      - "traefik.http.routers.democfg-playground.tls=true"
-      - "traefik.http.services.democfg-playground.loadbalancer.server.port=3003"
-
-  # Demo Database Auto-Resetter (resets database daily)
-  resetter:
-    build:
-      context: ..
-      dockerfile: docker/services/demo-resetter/Dockerfile
-    image: democfg-resetter:latest
-    container_name: democfg-resetter
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-1440}
-      DJANGO_CONTAINER_NAME: democfg-api
-      DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-admin}
-      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@example.com}
-      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123}
-      DEMO_ADMIN_FIRSTNAME: ${DEMO_ADMIN_FIRSTNAME:-Demo}
-      DEMO_ADMIN_LASTNAME: ${DEMO_ADMIN_LASTNAME:-Admin}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - dokploy-network
-    depends_on:
-      api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "db-reset.sh"]
-      interval: 60s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    profiles:
-      - demo-reset
 
 networks:
   dokploy-network:
