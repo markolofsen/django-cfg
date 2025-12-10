@@ -279,6 +279,28 @@ class UnfoldConfig(BaseModel):
         description="Site dropdown menu items (legacy)"
     )
 
+    # Login configuration
+    login_form: Optional[str] = Field(
+        default=None,
+        description="Custom login form class path"
+    )
+
+    # Development autofill
+    dev_autofill_email: Optional[str] = Field(
+        default=None,
+        description="Email for autofill"
+    )
+
+    dev_autofill_password: Optional[str] = Field(
+        default=None,
+        description="Password for autofill"
+    )
+
+    dev_autofill_force: bool = Field(
+        default=False,
+        description="Force autofill even in production (ignores DEBUG check)"
+    )
+
     @field_validator('theme')
     @classmethod
     def validate_theme(cls, v: Optional[str]) -> Optional[str]:
@@ -516,6 +538,22 @@ class UnfoldConfig(BaseModel):
             "show_history": True,
             "search_callback": None,  # Can be customized per project
         }
+
+        # Development autofill
+        if self.dev_autofill_email:
+            unfold_settings["DEV_AUTOFILL_EMAIL"] = self.dev_autofill_email
+        if self.dev_autofill_password:
+            unfold_settings["DEV_AUTOFILL_PASSWORD"] = self.dev_autofill_password
+        if self.dev_autofill_force:
+            unfold_settings["DEV_AUTOFILL_FORCE"] = self.dev_autofill_force
+
+        # Login configuration - auto-enable DevAuthForm if autofill is set
+        login_form = self.login_form
+        if not login_form and (self.dev_autofill_email or self.dev_autofill_password):
+            login_form = "django_cfg.modules.django_unfold.forms.DevAuthForm"
+
+        if login_form:
+            unfold_settings["LOGIN"] = {"form": login_form}
 
         # Inject universal CSS variables and custom styles
         if "STYLES" not in unfold_settings:

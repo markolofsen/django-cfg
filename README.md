@@ -163,9 +163,6 @@ pip3 install 'django-cfg[grpc,centrifugo,rq]'
 
 **[→ https://djangocfg.com/demo](https://djangocfg.com/demo)**
 
-**Demo credentials:**
-- **Admin:** `admin@example.com` / `admin123`
-
 **Explore:** Modern admin • Next.js dashboard • AI agents • Real-time updates • Support system
 
 ---
