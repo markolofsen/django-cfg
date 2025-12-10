@@ -88,7 +88,7 @@ export const settings = {
 
   // Analytics configuration
   analytics: {
-    googleTrackingId: undefined,
+    googleTrackingId: 'G-3TWHNNC02S',
   },
 
   // Contact information
