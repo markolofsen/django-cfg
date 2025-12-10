@@ -69,11 +69,10 @@ export {
   resetAPI,
   isAPIConfigured
 } from "./api-instance";
-
-// Re-export SWR hooks for React
-export * as Hooks from "./_utils/hooks";
-// Also export all hooks directly for convenience
-export * from "./_utils/hooks";
+// NOTE: SWR hooks are generated in ./_utils/hooks/ but NOT exported here to keep
+// the main bundle server-safe. Import hooks directly from the hooks directory:
+//   import { useUsers } from './_utils/hooks';
+// Or use a separate entry point like '@djangocfg/api/hooks' for client components.
 
 // Re-export core client
 export { APIClient };

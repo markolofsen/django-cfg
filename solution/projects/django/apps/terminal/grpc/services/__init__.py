@@ -1,3 +1,0 @@
-"""
-Terminal gRPC services.
-"""
