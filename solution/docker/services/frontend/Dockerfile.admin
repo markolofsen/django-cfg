@@ -12,7 +12,8 @@ WORKDIR /app
 # ─────────────────────────────────────────────────────────────────
 
 FROM base AS installer-admin
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+RUN apk add --no-cache python3 make g++ && \
+    corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Copy workspace configuration
 COPY projects/frontend/package.json ./

@@ -1,0 +1,292 @@
+name: democfg
+
+# DemoCFG - Demo Environment
+# Domain: democfg.com
+# Database: democfg (with auto-reset)
+#
+# Services: Django API, RQ Worker, RQ Scheduler, gRPC, Centrifugo, Frontend, Demo Resetter
+#
+# Usage:
+#   docker compose build
+#   docker compose up -d
+#
+# Requires Docker Compose v2.20+
+
+services:
+  # Django API (api.democfg.com)
+  api:
+    build:
+      context: ..
+      dockerfile: docker/services/django/Dockerfile
+    image: democfg-api:latest
+    container_name: democfg-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/logs:/app/logs"
+      - "../files/media:/app/media"
+    networks:
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.democfg-api.rule=Host(`api.democfg.com`)"
+      - "traefik.http.routers.democfg-api.entrypoints=websecure"
+      - "traefik.http.routers.democfg-api.tls=true"
+      - "traefik.http.services.democfg-api.loadbalancer.server.port=8000"
+
+  # RQ Worker (Background Tasks Processor)
+  rq-worker:
+    image: democfg-api:latest
+    container_name: democfg-rq-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/logs:/app/logs"
+      - "../files/media:/app/media"
+    depends_on:
+      api:
+        condition: service_healthy
+    command: poetry run python manage.py rqworker high default low knowledge
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - dokploy-network
+
+  # RQ Scheduler (Scheduled Tasks - Cron-like)
+  rq-scheduler:
+    image: democfg-api:latest
+    container_name: democfg-rq-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/logs:/app/logs"
+    depends_on:
+      api:
+        condition: service_healthy
+    command: poetry run python manage.py rqscheduler
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 128M
+    networks:
+      - dokploy-network
+
+  # gRPC Server (grpc.democfg.com)
+  grpc:
+    image: democfg-api:latest
+    container_name: democfg-grpc
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    volumes:
+      - "../files/logs:/app/logs"
+      - "../files/media:/app/media"
+    depends_on:
+      api:
+        condition: service_healthy
+    command: poetry run python manage.py rungrpc
+    ports:
+      - "50051:50051"
+    healthcheck:
+      test: ["CMD", "grpc_health_probe", "-addr=localhost:50051"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.democfg-grpc.rule=Host(`grpc.democfg.com`)"
+      - "traefik.http.routers.democfg-grpc.entrypoints=websecure"
+      - "traefik.http.routers.democfg-grpc.tls=true"
+      - "traefik.http.services.democfg-grpc.loadbalancer.server.port=50051"
+      - "traefik.http.services.democfg-grpc.loadbalancer.server.scheme=h2c"
+
+  # Centrifugo WebSocket Server (ws.democfg.com)
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: democfg-centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    env_file:
+      - .env
+    environment:
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY}
+      CENTRIFUGO_TOKEN_HMAC_SECRET: ${CENTRIFUGO_TOKEN_HMAC_SECRET}
+      CENTRIFUGO_ADMIN_PASSWORD: ${CENTRIFUGO_ADMIN_PASSWORD:-admin}
+      CENTRIFUGO_ADMIN_SECRET: ${CENTRIFUGO_ADMIN_SECRET}
+      CENTRIFUGO_LOG_LEVEL: info
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.democfg-ws.rule=Host(`ws.democfg.com`)"
+      - "traefik.http.routers.democfg-ws.entrypoints=websecure"
+      - "traefik.http.routers.democfg-ws.service=democfg-ws"
+      - "traefik.http.routers.democfg-ws.tls=true"
+      - "traefik.http.services.democfg-ws.loadbalancer.server.port=8000"
+
+  # Frontend Admin (democfg.com)
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/services/frontend/Dockerfile.admin
+    image: democfg-frontend:latest
+    container_name: democfg-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.democfg.rule=Host(`democfg.com`)"
+      - "traefik.http.routers.democfg.entrypoints=websecure"
+      - "traefik.http.routers.democfg.tls=true"
+      - "traefik.http.services.democfg.loadbalancer.server.port=3200"
+
+  # Playground (playground.democfg.com)
+  playground:
+    build:
+      context: ..
+      dockerfile: docker/services/frontend/Dockerfile.playground
+    image: democfg-playground:latest
+    container_name: democfg-playground
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.democfg-playground.rule=Host(`playground.democfg.com`)"
+      - "traefik.http.routers.democfg-playground.entrypoints=websecure"
+      - "traefik.http.routers.democfg-playground.tls=true"
+      - "traefik.http.services.democfg-playground.loadbalancer.server.port=3003"
+
+  # Demo Database Auto-Resetter (resets database daily)
+  resetter:
+    build:
+      context: ..
+      dockerfile: docker/services/demo-resetter/Dockerfile
+    image: democfg-resetter:latest
+    container_name: democfg-resetter
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-1440}
+      DJANGO_CONTAINER_NAME: democfg-api
+      DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-admin}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@example.com}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123}
+      DEMO_ADMIN_FIRSTNAME: ${DEMO_ADMIN_FIRSTNAME:-Demo}
+      DEMO_ADMIN_LASTNAME: ${DEMO_ADMIN_LASTNAME:-Admin}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dokploy-network
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "db-reset.sh"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - demo-reset
+
+networks:
+  dokploy-network:
+    external: true

@@ -1,7 +1,7 @@
-# Django-CFG Docker Management
-# Minimalist Makefile for essential Docker operations
+# DemoCFG Docker Management
+# Domain: democfg.com (Demo environment with auto-reset)
 
-.PHONY: help build up down restart logs status local prod
+.PHONY: help build up down restart logs status deploy createdb migrate
 
 .DEFAULT_GOAL := help
 
@@ -9,131 +9,108 @@
 BLUE := \033[0;34m
 GREEN := \033[0;32m
 YELLOW := \033[1;33m
+RED := \033[0;31m
 NC := \033[0m
 
 ##@ General
 
 help: ## Display this help
-	@echo "$(BLUE)Django-CFG Docker Management$(NC)"
+	@echo "$(BLUE)DemoCFG Docker Management$(NC)"
+	@echo "$(YELLOW)Domain: democfg.com$(NC)"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make $(GREEN)<target>$(NC)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2 } /^##@/ { printf "\n$(YELLOW)%s$(NC)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ Build & Run
+##@ Build
 
-build: ## Build all Docker images (local)
-	@echo "$(BLUE)Building images for local development...$(NC)"
-	@docker compose -f docker-compose-local.yaml --env-file .env.local --env-file .env.local build
+build: ## Build all Docker images
+	@echo "$(BLUE)Building DemoCFG images...$(NC)"
+	@docker compose build
 
-rebuild: down ## Full rebuild without cache (local)
-	@echo "$(BLUE)Rebuilding from scratch...$(NC)"
-	@docker compose -f docker-compose-local.yaml --env-file .env.local --env-file .env.local build --no-cache
-	@docker compose -f docker-compose-local.yaml --env-file .env.local --env-file .env.local up -d
+build-api: ## Build only API image
+	@echo "$(BLUE)Building API image...$(NC)"
+	@docker compose build api
 
-rebuild-frontend: ## Rebuild only frontend (local)
-	@echo "$(BLUE)Rebuilding frontend...$(NC)"
-	@docker compose -f docker-compose-local.yaml --env-file .env.local --env-file .env.local build --no-cache frontend-demo frontend-web
+build-frontend: ## Build frontend images
+	@echo "$(BLUE)Building frontend images...$(NC)"
+	@docker compose build frontend playground
 
-##@ Services (Local)
+##@ Services
 
-local: ## Start local development services
-	@echo "$(BLUE)Starting local development services...$(NC)"
-	@docker compose -f docker-compose-local.yaml --env-file .env.local --env-file .env.local up -d
+up: ## Start all services
+	@echo "$(BLUE)Starting DemoCFG services...$(NC)"
+	@docker compose up -d
 
-up: local ## Alias for 'local'
+up-reset: ## Start all services including resetter
+	@echo "$(BLUE)Starting DemoCFG services with resetter...$(NC)"
+	@docker compose --profile demo-reset up -d
 
 down: ## Stop all services
-	@echo "$(YELLOW)Stopping services...$(NC)"
-	@docker compose -f docker-compose-local.yaml --env-file .env.local down
-	@docker compose -f docker-compose-production.yaml down 2>/dev/null || true
+	@echo "$(YELLOW)Stopping DemoCFG services...$(NC)"
+	@docker compose --profile demo-reset down
 
-restart: ## Restart all services (local)
-	@docker compose -f docker-compose-local.yaml --env-file .env.local --env-file .env.local restart
+restart: ## Restart all services
+	@docker compose restart
 
 status: ## Show service status
-	@docker compose -f docker-compose-local.yaml --env-file .env.local ps
+	@docker compose ps
 
 logs: ## Show logs (all services)
-	@docker compose -f docker-compose-local.yaml --env-file .env.local logs -f --tail=100
+	@docker compose logs -f --tail=100
 
-##@ Services (Production)
+logs-api: ## Show API logs
+	@docker compose logs -f api --tail=100
 
-prod: ## Start production services
-	@echo "$(BLUE)Starting production services...$(NC)"
-	@docker compose -f docker-compose-production.yaml --env-file .env.prod up -d
+logs-rq: ## Show RQ worker logs
+	@docker compose logs -f rq-worker --tail=100
 
-prod-build: ## Build production images
-	@echo "$(BLUE)Building production images...$(NC)"
-	@docker compose -f docker-compose-production.yaml --env-file .env.prod build
+##@ Database
 
-prod-down: ## Stop production services
-	@echo "$(YELLOW)Stopping production services...$(NC)"
-	@docker compose -f docker-compose-production.yaml down
+createdb: ## Create democfg database with pgvector
+	@echo "$(BLUE)Creating democfg database...$(NC)"
+	@docker exec shared-db-postgres psql -U postgres -c "CREATE DATABASE democfg;" 2>/dev/null || echo "$(YELLOW)Database already exists$(NC)"
+	@docker exec shared-db-postgres psql -U postgres -d democfg -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
+	@echo "$(GREEN)Database ready$(NC)"
 
-##@ Quick Start
+dropdb: ## Drop democfg database (DESTRUCTIVE!)
+	@echo "$(RED)Dropping democfg database...$(NC)"
+	@docker exec shared-db-postgres psql -U postgres -c "DROP DATABASE IF EXISTS democfg;"
 
-dev: build local status ## Full dev setup
+migrate: ## Run Django migrations
+	@echo "$(BLUE)Running migrations...$(NC)"
+	@docker exec democfg-api poetry run python manage.py migrate
+
+##@ Deployment
+
+deploy: createdb build up migrate status ## Full deployment
 	@echo ""
-	@echo "$(GREEN)✓ Ready!$(NC)"
+	@echo "$(GREEN)DemoCFG deployed!$(NC)"
 	@echo ""
-	@echo "$(BLUE)Access points:$(NC)"
-	@echo "  • Django API:     http://localhost:7301/cfg/health/"
-	@echo "  • Demo Frontend:  http://localhost:7310/"
-	@echo "  • Centrifugo:     http://localhost:7320/"
-	@echo "  • Traefik:        http://localhost:7332/"
-	@echo ""
-
-quick: local status ## Quick start (no rebuild)
-	@echo "$(GREEN)Services started$(NC)"
-
-##@ Background Services (Redis, Centrifugo, RQ)
-
-services: ## Start background services (Redis, Centrifugo, RQ)
-	@echo "$(BLUE)Starting background services (Redis, Centrifugo, RQ)...$(NC)"
-	@docker compose -f docker-compose-local-services.yml --env-file .env.local up -d
-
-services-down: ## Stop background services
-	@echo "$(YELLOW)Stopping background services...$(NC)"
-	@docker compose -f docker-compose-local-services.yml down
-
-services-restart: ## Restart background services
-	@docker compose -f docker-compose-local-services.yml --env-file .env.local restart
-
-services-logs: ## Show logs for background services
-	@docker compose -f docker-compose-local-services.yml logs -f --tail=100
-
-services-status: ## Show status of background services
-	@docker compose -f docker-compose-local-services.yml ps
-
-services-build: ## Build background services
-	@echo "$(BLUE)Building background services...$(NC)"
-	@docker compose -f docker-compose-local-services.yml --env-file .env.local build
-
-rq: services ## Start RQ (task queue) with services
-	@echo ""
-	@echo "$(GREEN)✓ RQ is ready!$(NC)"
-	@echo ""
-	@echo "$(BLUE)Access points:$(NC)"
-	@echo "  • RQ Dashboard:   https://api.djangocfg.com/cfg/admin/ → RQ tab"
-	@echo "  • Redis:          localhost:7379"
-	@echo "  • Centrifugo:     http://localhost:7320/"
-	@echo ""
-	@echo "$(YELLOW)Workers:$(NC)"
-	@echo "  • RQ Worker:      docker logs djangocfg_rq_worker -f"
-	@echo "  • RQ Scheduler:   docker logs djangocfg_rq_scheduler -f"
+	@echo "$(BLUE)Endpoints:$(NC)"
+	@echo "  API:        https://api.democfg.com"
+	@echo "  Frontend:   https://democfg.com"
+	@echo "  Playground: https://playground.democfg.com"
+	@echo "  WebSocket:  https://ws.democfg.com"
+	@echo "  gRPC:       https://grpc.democfg.com"
 	@echo ""
 
-##@ RQ Management
+deploy-reset: createdb build up-reset migrate status ## Full deployment with resetter
+	@echo ""
+	@echo "$(GREEN)DemoCFG deployed with auto-reset!$(NC)"
 
-rq-worker: ## Show RQ worker logs
-	@docker compose -f docker-compose-local-services.yml logs -f rq_worker
+##@ Maintenance
 
-rq-scheduler: ## Show RQ scheduler logs
-	@docker compose -f docker-compose-local-services.yml logs -f rq_scheduler
+shell: ## Open Django shell
+	@docker exec -it democfg-api poetry run python manage.py shell
 
-rq-stats: ## Show RQ queue statistics
-	@echo "$(BLUE)RQ Queue Statistics:$(NC)"
-	@docker exec djangocfg_rq_worker python manage.py rqstats || echo "$(YELLOW)Worker not running$(NC)"
+bash: ## Open bash in API container
+	@docker exec -it democfg-api bash
 
-rq-empty: ## Empty all RQ queues
-	@echo "$(YELLOW)Emptying all queues...$(NC)"
-	@docker exec djangocfg_rq_worker python manage.py rqempty default high low knowledge || echo "$(YELLOW)Worker not running$(NC)"
+reset-db: ## Manually reset demo database
+	@echo "$(YELLOW)Resetting demo database...$(NC)"
+	@docker exec democfg-api poetry run python manage.py flush --no-input
+	@docker exec democfg-api poetry run python manage.py migrate
+	@docker exec democfg-api poetry run python manage.py createsuperuser --noinput || true
+	@echo "$(GREEN)Database reset complete$(NC)"
+
+collectstatic: ## Collect static files
+	@docker exec democfg-api poetry run python manage.py collectstatic --noinput
