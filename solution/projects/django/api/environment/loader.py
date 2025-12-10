@@ -292,9 +292,9 @@ class EnvironmentConfig(BaseSettings):
     # Security domains
     security_domains: Optional[list[str]] = Field(
         default=[
-            "demo.djangocfg.com",
-            "djangocfg.com",
-            "api.djangocfg.com",
+            "demo.democfg.com",
+            "democfg.com",
+            "api.democfg.com",
             "localhost",
             "127.0.0.1",
             # Docker exposed ports for CSRF (CORS uses regex for all ports)
