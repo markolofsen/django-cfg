@@ -376,6 +376,11 @@ class GRPCConfig(BaseConfig):
         description="Public URL for clients (e.g., 'grpc.djangocfg.com:443'). If None, auto-generated from api_url",
     )
 
+    internal_url: Optional[str] = Field(
+        default=None,
+        description="Internal Docker/Kubernetes URL for container-to-container communication (e.g., 'djangocfg-grpc:50051' or 'localhost:50051')",
+    )
+
     enable_reflection: Optional[bool] = Field(
         default=None,
         description="Enable server reflection for grpcurl/tools. If None, uses server.enable_reflection (True by default)",

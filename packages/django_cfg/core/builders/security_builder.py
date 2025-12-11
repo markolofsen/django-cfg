@@ -219,10 +219,11 @@ class SecurityBuilder:
 
         In production we're strict, but need to allow:
         - Public domains (security_domains)
+        - Docker internal service names (auto-detected)
         - Docker health checks (internal IPs, if needed)
 
         Problem: If we allow all IPs - insecure!
-        Solution: Allow only private IP ranges (RFC 1918).
+        Solution: Allow only private IP ranges (RFC 1918) + internal service names.
 
         Args:
             domain_hosts: List of normalized domain hostnames
@@ -234,6 +235,10 @@ class SecurityBuilder:
 
         # Check if running in Docker
         if self._is_running_in_docker():
+            # Auto-detect internal service names from configuration
+            internal_services = self._get_internal_service_names()
+            allowed_hosts.extend(internal_services)
+
             # Allow Docker/Kubernetes health checks
             # Use regex for private IPs (RFC 1918)
             allowed_hosts.extend([
@@ -249,6 +254,127 @@ class SecurityBuilder:
             ])
 
         return allowed_hosts
+
+    def _get_internal_service_names(self) -> List[str]:
+        """
+        Auto-detect Docker internal service names from configuration.
+
+        Extracts service hostnames from internal URLs:
+        - Centrifugo API URL (centrifugo_api_url)
+        - gRPC internal URL (grpc.internal_url if available)
+        - Any other internal service URLs
+
+        Example:
+            centrifugo_api_url = "http://djangocfg-centrifugo:8000/api"
+            → Extracts: "djangocfg-centrifugo"
+
+        Returns:
+            List of internal service hostnames (without port)
+        """
+        service_names = []
+
+        # Extract from Centrifugo config
+        if hasattr(self.config, 'centrifugo') and self.config.centrifugo:
+            centrifugo_cfg = self.config.centrifugo
+
+            # Extract from centrifugo_api_url (for Django → Centrifugo publishing)
+            if hasattr(centrifugo_cfg, 'centrifugo_api_url'):
+                api_url = centrifugo_cfg.centrifugo_api_url
+                hostname = self._extract_hostname_from_url(api_url)
+                if hostname and self._is_internal_service_name(hostname):
+                    service_names.append(hostname)
+
+        # Extract from gRPC config
+        if hasattr(self.config, 'grpc') and self.config.grpc:
+            grpc_cfg = self.config.grpc
+
+            # Extract from internal_url (for container-to-container gRPC)
+            if hasattr(grpc_cfg, 'internal_url'):
+                internal_url = grpc_cfg.internal_url
+                # Handle formats: "djangocfg-grpc:50051" or "http://djangocfg-grpc:50051"
+                hostname = self._extract_hostname_from_url(internal_url, allow_no_protocol=True)
+                if hostname and self._is_internal_service_name(hostname):
+                    service_names.append(hostname)
+
+        # Deduplicate while preserving order
+        return list(dict.fromkeys(service_names))
+
+    def _extract_hostname_from_url(self, url: str, allow_no_protocol: bool = False) -> str:
+        """
+        Extract hostname from URL.
+
+        Args:
+            url: URL string (e.g., "http://djangocfg-api:8000/path" or "djangocfg-grpc:50051")
+            allow_no_protocol: Allow URLs without protocol (for gRPC addresses)
+
+        Returns:
+            Hostname without port (e.g., "djangocfg-api")
+        """
+        if not url:
+            return ""
+
+        try:
+            # Handle URLs without protocol (e.g., "djangocfg-grpc:50051")
+            if allow_no_protocol and not url.startswith(("http://", "https://")):
+                # Split by : to get hostname:port
+                hostname_port = url.split('/')[0]  # Remove path if any
+                hostname = hostname_port.split(':')[0]  # Remove port
+                return hostname.strip()
+
+            # Standard URL parsing
+            parsed = urlparse(url if url.startswith(("http://", "https://")) else f"http://{url}")
+            hostname = parsed.hostname or parsed.netloc.split(':')[0]
+            return hostname.strip() if hostname else ""
+        except Exception:
+            return ""
+
+    def _is_internal_service_name(self, hostname: str) -> bool:
+        """
+        Check if hostname is an internal Docker/Kubernetes service name.
+
+        Internal service names typically:
+        - Don't contain dots (unlike domains: example.com)
+        - Are not IPs (172.x.x.x, 192.168.x.x)
+        - Are not localhost/127.0.0.1
+
+        Examples:
+            "djangocfg-api" → True (internal service)
+            "djangocfg-grpc" → True (internal service)
+            "api.example.com" → False (external domain)
+            "192.168.1.10" → False (IP address)
+            "localhost" → False (localhost)
+
+        Args:
+            hostname: Hostname to check
+
+        Returns:
+            True if internal service name, False otherwise
+        """
+        if not hostname:
+            return False
+
+        hostname = hostname.lower().strip()
+
+        # Exclude localhost
+        if hostname in ('localhost', '127.0.0.1'):
+            return False
+
+        # Exclude IP addresses (simple check)
+        if hostname.replace('.', '').isdigit():
+            return False
+
+        # Exclude domains with dots (external domains like api.example.com)
+        # Keep Kubernetes service names like service.namespace.svc.cluster.local
+        if '.' in hostname:
+            # Allow .cluster.local and .svc (Kubernetes)
+            if hostname.endswith(('.cluster.local', '.svc')):
+                return True
+            # Otherwise it's an external domain
+            return False
+
+        # If no dots and not excluded - it's an internal service name
+        # Examples: djangocfg-api, djangocfg-grpc, postgres, redis
+        return True
 
     def _is_running_in_docker(self) -> bool:
         """

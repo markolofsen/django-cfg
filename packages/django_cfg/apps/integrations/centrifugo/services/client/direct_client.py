@@ -165,6 +165,10 @@ class DirectCentrifugoClient:
             ...     data={"status": "running", "timestamp": "2025-11-05T09:00:00Z"}
             ... )
         """
+        # Validate channel name and log warnings (development only)
+        from ..channel_validator import log_channel_warnings
+        log_channel_warnings(channel)
+
         message_id = str(uuid4())
         start_time = time.time()
 
