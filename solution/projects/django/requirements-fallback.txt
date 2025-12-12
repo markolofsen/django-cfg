@@ -1,0 +1,10 @@
+# Fallback requirements for pip installation
+# Generated from pyproject.toml for when Poetry is unavailable
+
+django>=5.2.0,<6.0.0
+django-cfg[full]
+Pillow>=10.0.0,<11.0.0
+psutil>=5.9.0,<6.0.0
+faker>=37.5.3,<38.0.0
+markdown>=3.9,<4.0
+uvicorn[standard]>=0.34.0,<1.0.0
