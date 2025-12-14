@@ -3,6 +3,9 @@ Django-CFG modules and utilities registry.
 """
 
 MODULES_REGISTRY = {
+    # Logging utilities
+    "get_logger": ("django_cfg.modules.django_logging", "get_logger"),
+
     # URL integration
     "add_django_cfg_urls": ("django_cfg.core.integration", "add_django_cfg_urls"),
     "get_django_cfg_urls_info": ("django_cfg.core.integration", "get_django_cfg_urls_info"),
@@ -15,6 +18,7 @@ MODULES_REGISTRY = {
 
     # gRPC module (uses flat API - no nested config imports needed)
     "GRPCConfig": ("django_cfg.models.api.grpc", "GRPCConfig"),
+    "GRPCServerConfig": ("django_cfg.models.api.grpc.config", "GRPCServerConfig"),
 
     # Next.js Admin Integration
     "NextJsAdminConfig": ("django_cfg.modules.nextjs_admin", "NextJsAdminConfig"),

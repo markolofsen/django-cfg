@@ -152,7 +152,7 @@ class InstalledAppsBuilder:
             return loader.get_installed_apps()
         except Exception as e:
             # Don't fail if extensions module has issues
-            from django_cfg.modules.django_logging import get_logger
+            from django_cfg.utils import get_logger
             logger = get_logger(__name__)
             logger.debug(f"Extension discovery skipped: {e}")
             return []

@@ -8,7 +8,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from .scanner import DiscoveredExtension, ExtensionScanner
 

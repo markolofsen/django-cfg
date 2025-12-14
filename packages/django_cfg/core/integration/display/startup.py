@@ -59,6 +59,9 @@ class StartupDisplayManager(BaseDisplayManager):
                 info_text.append(f"⚡ {startup_time}", style="green")
 
             self.console.print(info_text)
+
+            # Show logging info
+            self._display_logging_info()
         except Exception as e:
             print(f"❌ ERROR in display_minimal_info: {e}")
             print("🔍 TRACEBACK:")
@@ -97,6 +100,9 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Create columns for essential info
             self._display_essential_columns()
+
+            # Show logging info
+            self._display_logging_info()
 
             # Display AI hints (short mode)
             self._display_ai_hints(mode="short")
@@ -186,6 +192,9 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Management commands
             self._display_commands_info()
+
+            # Show logging info
+            self._display_logging_info()
 
             # Display AI hints (full mode)
             self._display_ai_hints(mode="full")
@@ -882,6 +891,25 @@ class StartupDisplayManager(BaseDisplayManager):
             return get_django_startup_time()
         except ImportError:
             return None
+
+    def _display_logging_info(self):
+        """Display logging paths info."""
+        try:
+            import os
+            tmp_disabled = os.getenv('DJANGO_LOG_TO_TMP', 'true').lower() in ('false', '0', 'no')
+
+            log_info = Text("📝 Logs → ", style="dim")
+            log_info.append("./logs/", style="cyan")
+            if not tmp_disabled:
+                log_info.append(" | ", style="dim")
+                log_info.append("/tmp/djangocfg/", style="green")
+                log_info.append(" (tail -f /tmp/djangocfg/debug.log)", style="bright_blue dim")
+            log_info.append(" • ", style="dim")
+            log_info.append("from django_cfg.utils import get_logger", style="yellow dim")
+
+            self.console.print(log_info)
+        except Exception:
+            pass
 
     def _display_ai_hints(self, mode: str = "short"):
         """

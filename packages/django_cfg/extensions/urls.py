@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 if TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver

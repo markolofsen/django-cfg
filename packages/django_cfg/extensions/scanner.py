@@ -11,7 +11,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from .manifest import ExtensionManifest
 

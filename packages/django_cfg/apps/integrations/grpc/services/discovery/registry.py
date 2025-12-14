@@ -11,7 +11,7 @@ from django.db import models
 from django.db.models import Avg, Count
 
 from ...models import GRPCRequestLog, GRPCServerStatus
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 logger = get_logger("grpc.service_registry")
 

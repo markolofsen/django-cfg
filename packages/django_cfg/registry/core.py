@@ -76,6 +76,10 @@ CORE_REGISTRY = {
     "DynamicRouter": ("django_cfg.routing.routers", "DynamicRouter"),
     "health_callback": ("django_cfg.routing.callbacks", "health_callback"),
 
+    # Testing
+    "SmartTestRunner": ("django_cfg.testing.runners", "SmartTestRunner"),
+    "FastTestRunner": ("django_cfg.testing.runners", "FastTestRunner"),
+
     # Health module
     "HealthService": ("django_cfg.modules.django_health", "HealthService"),
 

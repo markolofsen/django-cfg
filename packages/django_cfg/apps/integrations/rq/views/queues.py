@@ -5,7 +5,7 @@ Provides REST API endpoints for managing RQ queues.
 """
 
 from django_cfg.mixins import AdminAPIMixin
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets

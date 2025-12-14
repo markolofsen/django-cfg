@@ -216,10 +216,12 @@ class ModelsGenerator:
 
             # Sanitize var_name: replace special chars with words/underscores, convert to UPPER_CASE
             # "A+" -> "A_PLUS", "A-" -> "A_MINUS", "TAR.GZ" -> "TAR_DOT_GZ", "TAR GZ" -> "TAR_GZ"
+            # "urn:ietf:params:oauth:grant-type:device_code" -> "URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE"
             sanitized_var_name = (var_name
                 .replace('+', '_PLUS')
                 .replace('-', '_MINUS')
                 .replace('.', '_DOT_')
+                .replace(':', '_')  # Handle URN/URI format (e.g., urn:ietf:params:oauth:grant-type:device_code)
                 .replace(' ', '_')
                 .upper())
 

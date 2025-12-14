@@ -78,6 +78,15 @@ class DjangoLogger(BaseCfgModule):
         Returns:
             True if debug mode is enabled (config.debug or config.is_development), False otherwise
         """
+        # Try Django settings first (most reliable)
+        try:
+            from django.conf import settings
+            if hasattr(settings, 'DEBUG'):
+                return settings.DEBUG
+        except Exception:
+            pass
+
+        # Try config second
         try:
             from django_cfg.core.state import get_current_config
             config = get_current_config()
@@ -85,15 +94,16 @@ class DjangoLogger(BaseCfgModule):
             # Return debug if available, fallback to is_development
             if config:
                 return config.debug if hasattr(config, 'debug') else config.is_development
-            return False
         except Exception:
-            # Fallback to environment variables if config not available
-            import os
-            debug_env = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
-            if debug_env:
-                return True
-            env_mode = os.getenv('ENV_MODE', '').lower()
-            return env_mode == 'development'
+            pass
+
+        # Fallback to environment variables if nothing else works
+        import os
+        debug_env = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
+        if debug_env:
+            return True
+        env_mode = os.getenv('ENV_MODE', '').lower()
+        return env_mode == 'development'
 
     @classmethod
     def get_logger(cls, name: str = "django_cfg") -> logging.Logger:
@@ -139,29 +149,46 @@ class DjangoLogger(BaseCfgModule):
             # In production, still use INFO+ to save disk space
             django_handler.setLevel(logging.DEBUG if debug else logging.INFO)
 
-            # Console handler - configurable noise level
-            # In dev: show DEBUG+ (full visibility)
-            # In production: show WARNING+ only (reduce noise)
+            # /tmp handler - always enabled for easy `tail -f /tmp/djangocfg/debug.log`
+            # Set DJANGO_LOG_TO_TMP=false to disable
+            import os
+            tmp_handler = None
+            if os.getenv('DJANGO_LOG_TO_TMP', 'true').lower() not in ('false', '0', 'no'):
+                try:
+                    # Use /tmp/djangocfg/ directory
+                    tmp_log_dir = Path('/tmp') / 'djangocfg'
+                    tmp_log_dir.mkdir(parents=True, exist_ok=True)
+                    tmp_log_path = tmp_log_dir / 'debug.log'
+                    tmp_handler = logging.FileHandler(tmp_log_path, mode='a', encoding='utf-8')
+                    tmp_handler.setLevel(logging.DEBUG)  # Always capture everything
+                except Exception as e:
+                    print(f"[django-cfg] Failed to create /tmp/djangocfg/debug.log: {e}")
+
+            # Console handler
             console_handler = logging.StreamHandler()
             console_handler.setLevel(logging.DEBUG if debug else logging.WARNING)
 
-            # Set format for handlers
+            # Set format for all handlers
             formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s')
             django_handler.setFormatter(formatter)
             console_handler.setFormatter(formatter)
+            if tmp_handler:
+                tmp_handler.setFormatter(formatter)
 
-            # Configure root logger
-            # CRITICAL: Root logger must be DEBUG in dev mode to allow all messages through
-            # Handlers will filter based on their own levels, but logger must not block
+            # Configure root logger - ALWAYS DEBUG to let handlers filter
             root_logger = logging.getLogger()
-            root_logger.setLevel(logging.DEBUG if debug else logging.INFO)
+            root_logger.setLevel(logging.DEBUG)  # CRITICAL: Always DEBUG, handlers filter
 
             # Clear existing handlers
             root_logger.handlers.clear()
 
             # Add handlers to root logger
             root_logger.addHandler(console_handler)
-            root_logger.addHandler(django_handler)  # All logs go to django.log
+            root_logger.addHandler(django_handler)
+            if tmp_handler:
+                root_logger.addHandler(tmp_handler)
+                # Test log to verify handler works
+                root_logger.info("[django-cfg] Logging initialized")
 
             # print(f"[django-cfg] Modular logging configured successfully! Debug: {debug}")
             cls._configured = True
@@ -191,10 +218,10 @@ class DjangoLogger(BaseCfgModule):
         # Get debug mode (cached - loaded once)
         debug = cls._get_debug_mode()
 
-        # CRITICAL: In dev mode, ALWAYS set DEBUG level on django_cfg loggers
-        # This ensures all messages (DEBUG/INFO/WARNING/ERROR) reach file handlers
-        # Handlers will still filter console output, but files need complete history
-        if debug:
+        # CRITICAL: ALWAYS set DEBUG level on django_cfg loggers
+        # This ensures all messages (DEBUG/INFO/WARNING/ERROR) can reach handlers
+        # Handlers will do the filtering, not the logger itself
+        if name.startswith('django_cfg'):
             logger.setLevel(logging.DEBUG)
 
         # If this is a django-cfg logger, add a specific file handler

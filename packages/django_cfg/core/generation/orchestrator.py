@@ -75,6 +75,7 @@ class SettingsOrchestrator:
             settings.update(self._generate_i18n_settings())
             settings.update(self._generate_limits_settings())
             settings.update(self._generate_session_settings())
+            settings.update(self._generate_testing_settings())
             settings.update(self._generate_third_party_settings())
             settings.update(self._generate_api_settings())
             settings.update(self._generate_oauth_settings())
@@ -197,6 +198,15 @@ class SettingsOrchestrator:
             return generator.generate()
         except Exception as e:
             raise ConfigurationError(f"Failed to generate session settings: {e}") from e
+
+    def _generate_testing_settings(self) -> Dict[str, Any]:
+        """Generate testing settings."""
+        try:
+            from .utility_generators.testing import TestingSettingsGenerator
+            generator = TestingSettingsGenerator(self.config)
+            return generator.generate()
+        except Exception as e:
+            raise ConfigurationError(f"Failed to generate testing settings: {e}") from e
 
     def _generate_third_party_settings(self) -> Dict[str, Any]:
         """Generate third-party integration settings."""

@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from pydantic import BaseModel, Field
 
 from ..services import get_centrifugo_config

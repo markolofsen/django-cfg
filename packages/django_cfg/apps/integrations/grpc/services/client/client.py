@@ -18,7 +18,7 @@ try:
 except ImportError:
     from grpc_reflection.v1 import reflection_pb2, reflection_pb2_grpc
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 logger = get_logger("grpc.dynamic_client")
 

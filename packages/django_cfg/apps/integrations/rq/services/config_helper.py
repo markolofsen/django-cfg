@@ -6,7 +6,7 @@ Provides utilities to get RQ config and check if RQ is enabled.
 
 from typing import Optional
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 logger = get_logger("rq.config")
 

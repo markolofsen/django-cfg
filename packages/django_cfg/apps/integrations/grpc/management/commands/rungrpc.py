@@ -42,7 +42,7 @@ from django.core.management.base import BaseCommand
 from django.utils import autoreload
 
 from django_cfg.core.config import get_current_config
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from django_cfg.apps.integrations.grpc.utils.streaming_logger import (
     setup_streaming_logger,
     log_server_start,

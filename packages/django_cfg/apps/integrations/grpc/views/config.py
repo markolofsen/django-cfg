@@ -7,7 +7,7 @@ Provides REST API endpoints for viewing gRPC server configuration and status.
 from datetime import datetime
 
 from django_cfg.mixins import AdminAPIMixin
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action

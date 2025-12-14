@@ -23,7 +23,7 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import httpx
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from .exceptions import (
     CentrifugoConfigurationError,

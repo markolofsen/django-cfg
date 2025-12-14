@@ -7,7 +7,7 @@ Provides Django endpoints that map to Centrifugo HTTP API methods.
 
 import httpx
 from django.http import JsonResponse
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action

@@ -5,7 +5,7 @@ This module provides a simple heartbeat task for verifying RQ scheduler function
 """
 
 import datetime
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 # Logger for RQ tasks - auto-prefixed to django_cfg.integrations
 # Will write to logs/djangocfg/integrations.log

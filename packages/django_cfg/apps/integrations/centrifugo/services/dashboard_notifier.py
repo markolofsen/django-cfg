@@ -5,7 +5,7 @@ Publishes updates to dashboard WebSocket channel when events occur.
 """
 
 from typing import Any
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 logger = get_logger("centrifugo")
 

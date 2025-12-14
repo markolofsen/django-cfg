@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 from django.db import models
 from django.db.models import Avg, Count, Max
 from django.db.models.functions import TruncDay, TruncHour
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from ...models import GRPCRequestLog, GRPCServerStatus
 from ..management.config_helper import get_grpc_server_config

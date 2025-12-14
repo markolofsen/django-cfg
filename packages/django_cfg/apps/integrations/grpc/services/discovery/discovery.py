@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from django.apps import apps
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from ..management.config_helper import get_enabled_apps, get_grpc_config
 

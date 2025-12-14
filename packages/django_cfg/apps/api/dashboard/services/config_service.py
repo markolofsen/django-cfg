@@ -6,7 +6,7 @@ Service for extracting user's DjangoConfig settings for dashboard display.
 
 from typing import Dict, Any
 from django.conf import settings
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 logger = get_logger(__name__)
 

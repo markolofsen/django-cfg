@@ -29,7 +29,7 @@ from __future__ import annotations
 from datetime import datetime, timezone as tz
 from typing import Any, Dict, Optional
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from ..services.client import (
     CentrifugoClient,

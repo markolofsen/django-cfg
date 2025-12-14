@@ -287,10 +287,10 @@ class MigrationManager:
     def check_database_connection(self, db_name: str) -> bool:
         """
         Check if database connection is working.
-        
+
         Args:
             db_name: Database alias name
-            
+
         Returns:
             True if connection is OK, False otherwise
         """
@@ -301,6 +301,159 @@ class MigrationManager:
         except Exception as e:
             self._log_error(f"  ❌ Connection: FAILED - {e}")
             return False
+
+    def migrate_test_database(self, db_name: str, auto_fix: bool = True):
+        """
+        Migrate test database with automatic error fixing.
+
+        Automatically fixes:
+        - Inconsistent migration history
+        - Missing extensions
+        - Dependency order issues
+
+        Args:
+            db_name: Database alias name
+            auto_fix: Automatically fix migration errors (default: True)
+        """
+        try:
+            self._log_info(f"🧪 Migrating test database {db_name}...")
+
+            # Step 1: Install extensions first
+            ensure_postgresql_extensions(db_name, self.stdout, self.style, self.logger)
+
+            # Step 2: Check for inconsistent migrations
+            has_issues = self.check_migration_consistency(db_name)
+
+            if has_issues and auto_fix:
+                self._log_warning(f"⚠️  Inconsistent migrations detected, auto-fixing...")
+                self.fix_inconsistent_migrations(db_name)
+
+            # Step 3: Run migrations with bypass
+            self._migrate_with_bypass(db_name)
+
+            self._log_success(f"✅ Test database {db_name} migrated successfully!")
+
+        except Exception as e:
+            if auto_fix:
+                self._log_warning(f"⚠️  Migration failed, attempting auto-fix: {e}")
+                try:
+                    self.fix_inconsistent_migrations(db_name)
+                    self._migrate_with_bypass(db_name)
+                    self._log_success(f"✅ Auto-fix successful!")
+                except Exception as fix_error:
+                    self._raise_error(f"Auto-fix failed: {fix_error}")
+            else:
+                self._raise_error(f"Migration failed: {e}")
+
+    def check_migration_consistency(self, db_name: str) -> bool:
+        """
+        Check if migrations are consistent.
+
+        Args:
+            db_name: Database alias name
+
+        Returns:
+            True if issues found, False if consistent
+        """
+        try:
+            from django.db.migrations.loader import MigrationLoader
+
+            connection = connections[db_name]
+            loader = MigrationLoader(connection)
+
+            try:
+                loader.check_consistent_history(connection)
+                return False  # No issues
+            except Exception as e:
+                if 'InconsistentMigrationHistory' in str(type(e).__name__):
+                    self._log_warning(f"⚠️  Found inconsistent migrations: {e}")
+                    return True
+                raise
+
+        except Exception as e:
+            self._log_warning(f"⚠️  Could not check consistency: {e}")
+            return False
+
+    def fix_inconsistent_migrations(self, db_name: str):
+        """
+        Automatically fix inconsistent migration history.
+
+        Fixes:
+        - Removes problematic migration records
+        - Reapplies migrations in correct order
+        - Handles swappable dependency issues
+
+        Args:
+            db_name: Database alias name
+        """
+        try:
+            self._log_info(f"🔧 Fixing inconsistent migrations for {db_name}...")
+
+            connection = connections[db_name]
+            recorder = MigrationRecorder(connection)
+
+            # Get all applied migrations
+            applied = recorder.migration_qs.all().values_list('app', 'name', 'id')
+            applied_list = list(applied)
+
+            if not applied_list:
+                self._log_info("  No migrations to fix")
+                return
+
+            # Find problematic migrations (admin before django_cfg_accounts)
+            admin_migrations = [m for m in applied_list if m[0] == 'admin']
+            auth_migrations = [m for m in applied_list if m[0] == 'django_cfg_accounts']
+
+            if admin_migrations and auth_migrations:
+                admin_min_id = min(m[2] for m in admin_migrations)
+                auth_min_id = min(m[2] for m in auth_migrations)
+
+                if admin_min_id < auth_min_id:
+                    self._log_warning(f"  ⚠️  Detected: admin migrations before django_cfg_accounts")
+                    self._log_info(f"  🔧 Removing admin migration records...")
+
+                    # Remove admin migration records
+                    recorder.migration_qs.filter(app='admin').delete()
+
+                    self._log_success(f"  ✅ Removed problematic admin migrations")
+                    self._log_info(f"  ℹ️  Will be reapplied in correct order during migration")
+
+        except Exception as e:
+            self._log_error(f"  ❌ Could not fix migrations: {e}")
+            raise
+
+    def _migrate_with_bypass(self, db_name: str):
+        """
+        Run migrations with consistency check bypass.
+
+        Args:
+            db_name: Database alias name
+        """
+        from django.db.migrations import loader as migrations_loader
+
+        original_check = migrations_loader.MigrationLoader.check_consistent_history
+
+        def patched_check(self, connection):
+            """Bypass consistency check."""
+            try:
+                return original_check(self, connection)
+            except Exception as e:
+                if 'InconsistentMigrationHistory' in str(type(e).__name__):
+                    # Log but don't fail
+                    if self.stdout:
+                        self.stdout.write(f"⚠️  Bypassed: {e}")
+                    return
+                raise
+
+        # Temporarily patch
+        migrations_loader.MigrationLoader.check_consistent_history = patched_check
+
+        try:
+            # Run migrations
+            call_command("migrate", database=db_name, verbosity=1)
+        finally:
+            # Restore original
+            migrations_loader.MigrationLoader.check_consistent_history = original_check
     
     def _log_info(self, message: str):
         """Log info message."""

@@ -9,7 +9,7 @@ import time
 
 from django.core.management.commands.runserver import Command as RunServerCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from django_cfg.modules.django_ngrok import get_ngrok_service
 
 

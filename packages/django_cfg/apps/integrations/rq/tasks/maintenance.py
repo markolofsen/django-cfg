@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 import django_rq
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from rq.job import Job, JobStatus
 from rq.queue import Queue
 from rq.registry import (

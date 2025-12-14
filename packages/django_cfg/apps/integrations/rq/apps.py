@@ -84,7 +84,7 @@ class RQAppConfig(AppConfig):
             from .services import register_schedules_from_config
             register_schedules_from_config()
         except Exception as e:
-            from django_cfg.modules.django_logging import get_logger
+            from django_cfg.utils import get_logger
             logger = get_logger("rq.apps")
             logger.warning(f"Failed to register schedules: {e}")
 

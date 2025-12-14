@@ -255,8 +255,8 @@ class ObservabilityInterceptor(grpc.aio.ServerInterceptor):
                 self.publish_end = True
                 self.publish_errors = True
                 self.publish_stream_messages = False
-                self.channel_template = "grpc#{service}#{method}#meta"
-                self.error_channel_template = "grpc#{service}#{method}#errors"
+                self.channel_template = "grpc:{service}:{method}:meta"
+                self.error_channel_template = "grpc:{service}:{method}:errors"
                 self.centrifugo_metadata = {}
 
         except Exception as e:

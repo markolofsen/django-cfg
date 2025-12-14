@@ -1,4 +1,3 @@
-import logging
 import traceback
 from typing import Optional
 
@@ -6,13 +5,15 @@ from django.db import transaction
 from django.utils import timezone
 
 from django_cfg.core.utils import get_otp_url
+from django_cfg.core.config import get_current_config
 from django_cfg.modules.django_telegram import DjangoTelegram
+from django_cfg.utils import get_logger
 
 from ..models import CustomUser, OTPSecret
 from ..signals import notify_failed_otp_attempt
 from ..utils.notifications import AccountNotifications
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class OTPService:
@@ -122,6 +123,9 @@ class OTPService:
         email: str, otp_code: str, source_url: Optional[str] = None
     ) -> Optional[CustomUser]:
         """Verify OTP and return user if valid."""
+        print(f"[OTP PRINT TEST] verify_otp called for email: {email}")
+        logger.info(f"[OTP TEST] verify_otp called for email: {email}")
+
         if not email or not otp_code:
             return None
 
@@ -130,6 +134,57 @@ class OTPService:
 
         if not cleaned_email or not cleaned_otp:
             return None
+
+        # Development mode bypass - accept any OTP
+        try:
+            config = get_current_config()
+            logger.info(f"[OTP] Config retrieved: {config is not None}, is_development: {config.is_development if config else 'N/A'}")
+            if config and config.is_development:
+                logger.info(f"[DEV MODE] Bypassing OTP verification for {cleaned_email}")
+
+                # Try to find user by email first (allows testing specific accounts)
+                user = CustomUser.objects.filter(email=cleaned_email).first()
+
+                # If email not found, use first superuser or regular user (convenience login)
+                if not user:
+                    logger.info(f"[DEV MODE] Email {cleaned_email} not found, using default account")
+                    user = CustomUser.objects.filter(is_superuser=True).first()
+                    if not user:
+                        user = CustomUser.objects.filter(is_active=True).first()
+
+                if not user:
+                    logger.error(f"[DEV MODE] No users found in database!")
+                    return None
+
+                logger.info(f"[DEV MODE] Logging in as: {user.email} (superuser: {user.is_superuser})")
+
+                # Link user to source if provided
+                if source_url:
+                    CustomUser.objects._link_user_to_source(
+                        user, source_url, is_new_user=False
+                    )
+
+                # Send Telegram notification for development login
+                try:
+                    verification_data = {
+                        "Email (requested)": cleaned_email,
+                        "Email (actual)": user.email,
+                        "Username": user.username,
+                        "Source URL": source_url or "Direct",
+                        "Login Time": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                        "User ID": user.id,
+                        "Is Superuser": user.is_superuser,
+                        "Mode": "🔧 DEVELOPMENT (OTP Bypassed)"
+                    }
+                    DjangoTelegram.send_info("Development OTP Login", verification_data)
+                except Exception as telegram_error:
+                    logger.error(f"Failed to send Telegram dev login notification: {telegram_error}")
+
+                return user
+
+        except Exception as e:
+            logger.error(f"Error checking development mode: {e}")
+            # Fall through to normal OTP validation
 
         try:
             otp_secret = OTPSecret.objects.filter(

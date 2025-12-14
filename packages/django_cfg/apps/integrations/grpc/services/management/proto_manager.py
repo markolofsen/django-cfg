@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from django.conf import settings
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 from .config_helper import get_grpc_config
 

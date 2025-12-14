@@ -13,7 +13,7 @@ import httpx
 import jwt
 from django.conf import settings
 from django.utils import timezone
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from drf_spectacular.utils import extend_schema
 from pydantic import BaseModel, Field
 from rest_framework import status, viewsets

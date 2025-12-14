@@ -19,7 +19,7 @@ Available Classes:
 
 from django.core.management.base import BaseCommand
 
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 
 class _BaseCommandWithMetadata(BaseCommand):

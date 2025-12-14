@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from django.urls import reverse_lazy, NoReverseMatch
 
 from django_cfg.modules.django_admin.icons import Icons
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from django_cfg.modules.base import BaseCfgModule
 
 from .models.navigation import NavigationItem, NavigationSection

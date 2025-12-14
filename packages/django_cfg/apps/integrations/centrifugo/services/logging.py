@@ -9,7 +9,7 @@ import time
 from typing import Any, Optional
 
 from django.utils import timezone
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 
 logger = get_logger("centrifugo")
 

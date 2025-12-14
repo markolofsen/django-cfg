@@ -10,7 +10,7 @@ from django.db import models
 from django.db.models import Avg, Count, Max
 from django.db.models.functions import TruncHour, TruncDay
 from django_cfg.middleware.pagination import DefaultPagination
-from django_cfg.modules.django_logging import get_logger
+from django_cfg.utils import get_logger
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
