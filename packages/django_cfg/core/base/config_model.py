@@ -262,6 +262,11 @@ class DjangoConfig(BaseModel):
         description="Telegram bot notifications",
     )
 
+    admin_emails: List[str] = Field(
+        default_factory=list,
+        description="Admin email addresses for notifications (email + telegram)",
+    )
+
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                        AUTHENTICATION & OAUTH                             ║
     # ╚══════════════════════════════════════════════════════════════════════════╝

@@ -241,6 +241,17 @@ class DjangoTelegram(BaseCfgModule):
         return self.get_config()
 
     @property
+    def project_prefix(self) -> str:
+        """Get project name prefix for messages."""
+        try:
+            config = self.config
+            if config and hasattr(config, 'project_name') and config.project_name:
+                return f"[{config.project_name}] "
+        except Exception:
+            pass
+        return ""
+
+    @property
     def is_configured(self) -> bool:
         """Check if Telegram is properly configured."""
         if self._is_configured is None:
@@ -372,9 +383,12 @@ class DjangoTelegram(BaseCfgModule):
                 parse_mode_str = None
 
             def _do_send():
+                # Add project prefix to message
+                prefixed_message = f"{self.project_prefix}{message}"
+
                 self.bot.send_message(
                     chat_id=target_chat_id,
-                    text=message,
+                    text=prefixed_message,
                     parse_mode=parse_mode_str,
                     disable_notification=disable_notification,
                     reply_to_message_id=reply_to_message_id,
@@ -448,10 +462,13 @@ class DjangoTelegram(BaseCfgModule):
                 parse_mode_str = None
 
             def _do_send():
+                # Add project prefix to caption if present
+                prefixed_caption = f"{self.project_prefix}{caption}" if caption else self.project_prefix.strip() if self.project_prefix else None
+
                 self.bot.send_photo(
                     chat_id=target_chat_id,
                     photo=photo,
-                    caption=caption,
+                    caption=prefixed_caption,
                     parse_mode=parse_mode_str,
                 )
                 logger.info(f"Telegram photo sent successfully to chat {target_chat_id}")
@@ -523,10 +540,13 @@ class DjangoTelegram(BaseCfgModule):
                 parse_mode_str = None
 
             def _do_send():
+                # Add project prefix to caption if present
+                prefixed_caption = f"{self.project_prefix}{caption}" if caption else self.project_prefix.strip() if self.project_prefix else None
+
                 self.bot.send_document(
                     chat_id=target_chat_id,
                     document=document,
-                    caption=caption,
+                    caption=prefixed_caption,
                     parse_mode=parse_mode_str,
                 )
                 logger.info(f"Telegram document sent successfully to chat {target_chat_id}")

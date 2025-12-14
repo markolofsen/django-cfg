@@ -8,7 +8,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { PublicLayout as BasePublicLayout, type NavigationItem as BaseNavigationItem, type FooterConfig } from '@djangocfg/layouts';
+import { PublicLayout as BasePublicLayout, type NavigationItem as BaseNavigationItem, type UserMenuConfig } from '@djangocfg/layouts';
 import { routes, generatePublicNavigation } from '@routes/index';
 import { settings } from '@core/settings';
 
@@ -36,32 +36,27 @@ function convertNavigationSections(sections: Array<{ title: string; items: Array
  */
 export function PublicLayout({ children }: PublicLayoutProps) {
   const publicNavSections = generatePublicNavigation();
-  
+
   const navigation: BaseNavigationItem[] = convertNavigationSections(publicNavSections);
-  
-  const footer: FooterConfig = {
-    links: {
-      privacy: routes.public.privacy.path,
-      terms: routes.public.terms.path,
-      security: routes.public.security.path,
-      cookies: routes.public.cookies.path,
-      docs: settings.links.docsUrl,
-    },
-    // copyright will be auto-generated from siteName
-  };
-  
-  const userMenu = {
-    profilePath: routes.private.profile.path,
-    dashboardPath: routes.private.home.path,
+
+  const userMenu: UserMenuConfig = {
+    groups: [
+      {
+        title: 'Cabinet',
+        items: [
+          { label: 'Profile', href: routes.private.profile.path },
+          { label: 'Dashboard', href: routes.private.home.path },
+        ],
+      },
+    ],
     authPath: routes.public.auth.path,
   };
-  
+
   return (
     <BasePublicLayout
       logo={settings.app.icons.logoVector}
       siteName={settings.app.name}
       navigation={navigation}
-      footer={footer}
       userMenu={userMenu}
     >
       {children}

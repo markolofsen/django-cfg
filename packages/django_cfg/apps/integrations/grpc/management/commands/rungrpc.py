@@ -97,7 +97,6 @@ class Command(BaseCommand):
         self.logger = get_logger('rungrpc')
         self.streaming_logger = None  # Will be initialized when server starts
         self.server = None
-        self.shutdown_event = None
         self.server_status = None
         self.server_config = None  # Store config for re-registration
 
@@ -205,8 +204,12 @@ class Command(BaseCommand):
                 lambda: asyncio.run(self._async_main(*args, **options))
             )
         else:
-            # Run directly without reloader
-            asyncio.run(self._async_main(*args, **options))
+            # Run directly without reloader - catch KeyboardInterrupt to exit cleanly
+            try:
+                asyncio.run(self._async_main(*args, **options))
+            except KeyboardInterrupt:
+                # Clean exit - shutdown already handled in _async_main
+                pass
 
     async def _async_main(self, *args, **options):
         """Main async server loop."""
@@ -410,8 +413,8 @@ class Command(BaseCommand):
         except Exception as e:
             self.logger.warning(f"Could not display gRPC startup info: {e}")
 
-        # Setup signal handlers for graceful shutdown
-        self._setup_signal_handlers_async(self.server, server_status)
+        # Note: We don't setup custom signal handlers - Python's default
+        # KeyboardInterrupt handling works fine with our try/except block
 
         # Keep server running
         self.stdout.write(self.style.SUCCESS("\n✅ Async gRPC server is running..."))
@@ -463,19 +466,33 @@ class Command(BaseCommand):
 
         shutdown_reason = "Unknown"
         try:
-            await self.server.wait_for_termination()
-            shutdown_reason = "Normal termination"
-        except KeyboardInterrupt:
-            shutdown_reason = "Keyboard interrupt"
-            pass
+            try:
+                await self.server.wait_for_termination()
+                shutdown_reason = "Normal termination"
+            except KeyboardInterrupt:
+                shutdown_reason = "Keyboard interrupt"
+                # Re-raise to be caught by outer handler
+                raise
         finally:
-            # Log shutdown using reusable function
-            log_server_shutdown(
-                self.streaming_logger,
-                start_time,
-                server_type="gRPC Server",
-                reason=shutdown_reason
-            )
+            # Always perform graceful shutdown - even if KeyboardInterrupt
+            self.stdout.write("\n🛑 Shutting down gracefully...")
+
+            # Mark server as stopping
+            if server_status:
+                try:
+                    await server_status.amark_stopping()
+                except Exception as e:
+                    self.logger.warning(f"Could not mark server as stopping: {e}")
+
+            # Stop the server - CRITICAL to do this before event loop closes
+            try:
+                await self.server.stop(grace=5)
+                self.logger.info("Server stopped gracefully")
+            except asyncio.CancelledError:
+                # Expected - gRPC cancels internal tasks during shutdown
+                self.logger.info("Server shutdown completed")
+            except Exception as e:
+                self.logger.error(f"Error stopping server: {e}")
 
             # Cancel heartbeat task
             if heartbeat_task and not heartbeat_task.done():
@@ -484,6 +501,23 @@ class Command(BaseCommand):
                     await heartbeat_task
                 except asyncio.CancelledError:
                     pass
+
+            # Mark server as stopped
+            if server_status:
+                try:
+                    await server_status.amark_stopped()
+                except Exception as e:
+                    self.logger.warning(f"Could not mark server as stopped: {e}")
+
+            # Log shutdown
+            log_server_shutdown(
+                self.streaming_logger,
+                start_time,
+                server_type="gRPC Server",
+                reason=shutdown_reason
+            )
+
+            self.stdout.write(self.style.SUCCESS("✅ Server stopped"))
 
     def _build_grpc_options(self, config: dict) -> list:
         """
@@ -780,51 +814,26 @@ class Command(BaseCommand):
             server_status: GRPCServerStatus instance (optional)
 
         Note:
-            Signal handlers can only be set in the main thread.
-            When running with autoreload, we're in a separate thread,
-            so we skip signal handler setup.
+            We rely on Python's default KeyboardInterrupt handling.
+            Custom signal handler only needed for force-exit on second Ctrl+C.
         """
         # Check if we're in the main thread
         if threading.current_thread() is not threading.main_thread():
-            # In autoreload mode, Django handles signals - we don't need to set them up
+            # In autoreload mode, Django handles signals
             return
 
-        # Flag to prevent multiple shutdown attempts
+        # Track shutdown attempts for force-exit on second signal
         shutdown_initiated = {'value': False}
 
         def handle_signal(sig, frame):
-            # Prevent multiple shutdown attempts
+            """Handle second Ctrl+C with force exit."""
             if shutdown_initiated['value']:
-                return
+                self.stdout.write(self.style.WARNING("\n⚠️  Forcing shutdown..."))
+                sys.exit(1)
+
             shutdown_initiated['value'] = True
-
-            self.stdout.write("\n🛑 Shutting down gracefully...")
-
-            # Mark server as stopping (sync context - signal handlers are sync)
-            if server_status:
-                try:
-                    # ✅ Use Django 5.2+ async ORM instead of sync_to_async
-                    asyncio.create_task(server_status.amark_stopping())
-                except Exception as e:
-                    self.logger.warning(f"Could not mark server as stopping: {e}")
-
-            # Stop async server
-            try:
-                # Create task to stop server
-                loop = asyncio.get_event_loop()
-                loop.create_task(server.stop(grace=5))
-            except Exception as e:
-                self.logger.error(f"Error stopping server: {e}")
-
-            # Mark server as stopped (async-safe, Django 5.2: Native async ORM)
-            if server_status:
-                try:
-                    # Use native async method
-                    asyncio.create_task(server_status.amark_stopped())
-                except Exception as e:
-                    self.logger.warning(f"Could not mark server as stopped: {e}")
-
-            self.stdout.write(self.style.SUCCESS("✅ Server stopped"))
+            # Let KeyboardInterrupt propagate naturally
+            raise KeyboardInterrupt()
 
         signal.signal(signal.SIGINT, handle_signal)
         signal.signal(signal.SIGTERM, handle_signal)

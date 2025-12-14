@@ -15,9 +15,9 @@
 ## CLI
 
 ```bash
-poetry run python manage.py ai_docs search "database configuration"
-poetry run python manage.py ai_docs mcp
-poetry run python manage.py ai_docs hint
+django-cfg search "database configuration"
+django-cfg mcp
+django-cfg hint
 ```
 
 ## API

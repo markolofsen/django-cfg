@@ -9,6 +9,7 @@ API Structure:
 - /api/system/ - System monitoring (health, metrics)
 - /api/activity/ - Activity tracking (recent, actions)
 - /api/config/ - Configuration (DjangoConfig, Django settings)
+- /api/metrics/ - Universal metrics (LLM balances, system health, API stats)
 """
 
 from django.urls import include, path
@@ -23,6 +24,7 @@ from .views import (
     CommandsViewSet,
     APIZonesViewSet,
     ConfigViewSet,
+    MetricsViewSet,
 )
 
 app_name = 'django_cfg_dashboard'
@@ -37,6 +39,7 @@ router.register(r'charts', ChartsViewSet, basename='charts')
 router.register(r'commands', CommandsViewSet, basename='commands')
 router.register(r'zones', APIZonesViewSet, basename='zones')
 router.register(r'config', ConfigViewSet, basename='config')
+router.register(r'metrics', MetricsViewSet, basename='metrics')
 
 urlpatterns = [
     # RESTful API endpoints using ViewSets

@@ -45,7 +45,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   
   const header: HeaderConfig = {
     title: 'Admin Dashboard',
-    profilePath: routes.private.profile.path,
   };
   
   return (

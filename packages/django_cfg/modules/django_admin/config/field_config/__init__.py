@@ -12,6 +12,7 @@ from .counter_badge import CounterBadgeField
 from .currency import CurrencyField
 from .datetime import DateTimeField
 from .decimal import DecimalField
+from .foreignkey import ForeignKeyField
 from .image import ImageField
 from .image_preview import ImagePreviewField
 from .link import LinkField
@@ -36,6 +37,7 @@ __all__ = [
     "MarkdownField",
     "ShortUUIDField",
     "LinkField",
+    "ForeignKeyField",
     "AvatarField",
     "StatusBadgesField",
     "BadgeRule",

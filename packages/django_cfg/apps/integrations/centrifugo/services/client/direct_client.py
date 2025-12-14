@@ -190,6 +190,9 @@ class DirectCentrifugoClient:
                 if response.status_code == 200:
                     result = response.json()
 
+                    # Log successful publish
+                    logger.info(f"Published to channel {channel}: offset={result.get('result', {}).get('offset', 'N/A')}")
+
                     # Check for Centrifugo error
                     if "error" in result and result["error"]:
                         error_msg = result["error"].get("message", "Unknown error")

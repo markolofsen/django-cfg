@@ -76,11 +76,6 @@ class EmailConfig(BaseConfig):
         description="Default 'from' email address"
     )
 
-    admin_email: Optional[str] = Field(
-        default=None,
-        description="Admin email for error notifications"
-    )
-
     # File backend settings
     file_path: str = Field(
         default="emails/",
@@ -96,9 +91,9 @@ class EmailConfig(BaseConfig):
             raise ValueError(f"Email backend must be one of: {valid_backends}")
         return v
 
-    @field_validator('default_from', 'admin_email')
+    @field_validator('default_from')
     @classmethod
-    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+    def validate_email(cls, v: str) -> str:
         """Validate email address format."""
         if v and '@' not in v:
             raise ValueError("Invalid email address format")
@@ -166,10 +161,5 @@ class EmailConfig(BaseConfig):
 
         else:
             raise ValueError(f"Unsupported email backend: {self.backend}")
-
-        # Add admin email if provided
-        if self.admin_email:
-            settings['ADMINS'] = [('Admin', self.admin_email)]
-            settings['MANAGERS'] = [('Manager', self.admin_email)]
 
         return settings

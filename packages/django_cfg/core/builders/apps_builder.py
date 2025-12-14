@@ -109,6 +109,7 @@ class InstalledAppsBuilder:
         apps = [
             # Core apps (always enabled)
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
+            "django_cfg.modules.django_llm_monitoring",  # LLM balance monitoring
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
             "django_cfg.apps.api.dashboard",  # Dashboard API

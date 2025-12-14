@@ -3,22 +3,32 @@
  * Auto-generated thin wrapper - DO NOT EDIT
  */
 
-import { CentrifugoRPCClient } from './rpc-client';
 {% if models %}
 import type {
 {% for model_name in models | unique | sort %}  {{ model_name }},
 {% endfor %}} from './types';
 {% endif %}
 
+// Interface for Centrifugo client with namedRPC
+// Compatible with @djangocfg/centrifugo client
+interface CentrifugoClient {
+  namedRPC<T = any>(method: string, params: any, options?: { timeout?: number }): Promise<T>;
+}
+
 export class APIClient {
-  constructor(private rpc: CentrifugoRPCClient) {}
+  constructor(private client: CentrifugoClient) {}
 
 {% for method in methods %}
   /**
    * {{ method.docstring.split('\n')[0] if method.docstring else 'No description' }}
    */
   async {{ method.name_ts }}(params: {{ method.param_type }}): Promise<{{ method.return_type }}> {
-    return this.rpc.call<{{ method.return_type }}>('{{ method.name }}', params);
+    {% if method.name.startswith('ai_chat.') %}
+    // AI methods use longer timeout (60s) for safety, though RPC returns immediately
+    return this.client.namedRPC<{{ method.return_type }}>('{{ method.name }}', params, { timeout: 60000 });
+    {% else %}
+    return this.client.namedRPC<{{ method.return_type }}>('{{ method.name }}', params);
+    {% endif %}
   }
 
 {% endfor %}

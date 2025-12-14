@@ -82,6 +82,7 @@ class DjangoCfgConfig(DjangoConfig):
     project_version: str = "1.0.0"
     project_description: str = "Demo Project"
     project_logo: str = env.app.logo_url
+    admin_emails: list[str] = env.admin_emails
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                         ENVIRONMENT & DEBUG                              ║
@@ -90,7 +91,6 @@ class DjangoCfgConfig(DjangoConfig):
     env_mode: str = env.env.env_mode
     debug: bool = env.debug
     debug_warnings: bool = True
-    admin_emails: list[str] = ["admin@sample.local"]
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                              SECURITY                                    ║

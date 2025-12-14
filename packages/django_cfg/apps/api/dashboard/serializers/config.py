@@ -42,20 +42,6 @@ class EmailConfigSerializer(serializers.Serializer):
     default_from = serializers.CharField(required=False, allow_null=True)
 
 
-class PaymentsNowPaymentsSerializer(serializers.Serializer):
-    """NowPayments configuration."""
-    api_key = serializers.CharField(required=False, allow_null=True)
-    ipn_secret = serializers.CharField(required=False, allow_null=True)
-    sandbox = serializers.BooleanField(required=False, allow_null=True)
-    enabled = serializers.BooleanField(required=False, allow_null=True)
-
-
-class PaymentsConfigSerializer(serializers.Serializer):
-    """Payments configuration."""
-    enabled = serializers.BooleanField(required=False, allow_null=True)
-    nowpayments = PaymentsNowPaymentsSerializer(required=False, allow_null=True)
-
-
 class GRPCConfigDashboardSerializer(serializers.Serializer):
     """gRPC configuration for dashboard."""
     enabled = serializers.BooleanField(required=False, allow_null=True)
@@ -147,13 +133,6 @@ class SpectacularConfigSerializer(serializers.Serializer):
     version = serializers.CharField(required=False, allow_null=True)
 
 
-class JWTConfigSerializer(serializers.Serializer):
-    """JWT configuration."""
-    access_token_lifetime = serializers.IntegerField(required=False, allow_null=True)
-    refresh_token_lifetime = serializers.IntegerField(required=False, allow_null=True)
-    algorithm = serializers.CharField(required=False, allow_null=True)
-
-
 class ConfigMetaSerializer(serializers.Serializer):
     """Config metadata."""
     config_class = serializers.CharField()
@@ -210,28 +189,6 @@ class NextJSAdminConfigSerializer(serializers.Serializer):
     api_base_url = serializers.CharField(required=False, allow_null=True)
 
 
-class ConstanceConfigSerializer(serializers.Serializer):
-    """Django-Constance dynamic settings configuration."""
-    config = serializers.JSONField(required=False, allow_null=True)
-    config_fieldsets = serializers.JSONField(required=False, allow_null=True)
-    backend = serializers.CharField(required=False, allow_null=True)
-    database_prefix = serializers.CharField(required=False, allow_null=True)
-    database_cache_backend = serializers.CharField(required=False, allow_null=True)
-    additional_config = serializers.JSONField(required=False, allow_null=True)
-
-
-class OpenAPIClientConfigSerializer(serializers.Serializer):
-    """OpenAPI Client generation configuration."""
-    enabled = serializers.BooleanField(required=False, allow_null=True)
-    output_dir = serializers.CharField(required=False, allow_null=True)
-    client_name = serializers.CharField(required=False, allow_null=True)
-    schema_url = serializers.CharField(required=False, allow_null=True)
-    generator = serializers.CharField(required=False, allow_null=True)
-    additional_properties = serializers.JSONField(required=False, allow_null=True)
-    templates = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
-    global_properties = serializers.JSONField(required=False, allow_null=True)
-
-
 class GitHubOAuthConfigSerializer(serializers.Serializer):
     """GitHub OAuth configuration."""
     enabled = serializers.BooleanField(required=False, allow_null=True)
@@ -265,7 +222,6 @@ class DjangoConfigSerializer(serializers.Serializer):
     startup_info_mode = serializers.CharField(required=False, allow_null=True)
 
     # Feature flags
-    enable_support = serializers.BooleanField(required=False, allow_null=True)
     enable_frontend = serializers.BooleanField(required=False, allow_null=True)
     enable_drf_tailwind = serializers.BooleanField(required=False, allow_null=True)
     enable_pool_cleanup = serializers.BooleanField(required=False, allow_null=True)
@@ -282,7 +238,6 @@ class DjangoConfigSerializer(serializers.Serializer):
     # Django settings
     root_urlconf = serializers.CharField(required=False, allow_null=True)
     wsgi_application = serializers.CharField(required=False, allow_null=True)
-    auth_user_model = serializers.CharField(required=False, allow_null=True)
     project_apps = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
 
     # Infrastructure
@@ -298,13 +253,11 @@ class DjangoConfigSerializer(serializers.Serializer):
 
     # Integrations
     email = EmailConfigSerializer(required=False, allow_null=True)
-    payments = PaymentsConfigSerializer(required=False, allow_null=True)
     grpc = GRPCConfigDashboardSerializer(required=False, allow_null=True)
     centrifugo = CentrifugoConfigSerializer(required=False, allow_null=True)
     django_rq = DjangoRQConfigSerializer(required=False, allow_null=True)
     drf = DRFConfigSerializer(required=False, allow_null=True)
     spectacular = SpectacularConfigSerializer(required=False, allow_null=True)
-    jwt = JWTConfigSerializer(required=False, allow_null=True)
 
     # Services & Security (now typed!)
     telegram = TelegramConfigSerializer(required=False, allow_null=True)
@@ -321,8 +274,6 @@ class DjangoConfigSerializer(serializers.Serializer):
     custom_middleware = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     nextjs_admin = NextJSAdminConfigSerializer(required=False, allow_null=True)
     admin_emails = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
-    constance = ConstanceConfigSerializer(required=False, allow_null=True)
-    openapi_client = OpenAPIClientConfigSerializer(required=False, allow_null=True)
     show_ai_hints = serializers.BooleanField(required=False, allow_null=True)
 
     # Metadata

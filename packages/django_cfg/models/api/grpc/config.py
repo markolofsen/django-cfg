@@ -13,7 +13,7 @@ Example:
 """
 
 import warnings
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
@@ -306,6 +306,8 @@ class GRPCObservabilityConfig(BaseConfig):
     Example:
         >>> config = GRPCObservabilityConfig(
         ...     log_to_db=False,  # Disable DB logging in high-traffic production
+        ...     telegram_notifications=True,  # Enable Telegram notifications
+        ...     telegram_exclude_methods=["/grpc.health.v1.Health/Check"],  # Exclude health checks
         ... )
     """
 
@@ -326,6 +328,60 @@ class GRPCObservabilityConfig(BaseConfig):
         description="Heartbeat interval in seconds (default 5 min).",
         ge=30,
         le=3600,
+    )
+
+    # === Telegram Notifications ===
+    telegram_notifications: bool = Field(
+        default=False,
+        description="Send gRPC request notifications to Telegram (requires Telegram integration configured).",
+    )
+
+    telegram_exclude_methods: List[str] = Field(
+        default_factory=lambda: [
+            "/grpc.health.v1.Health/Check",
+            "/grpc.health.v1.Health/Watch",
+            "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo",
+        ],
+        description=(
+            "List of gRPC methods to exclude from Telegram notifications in production. "
+            "In development mode (env_mode=DEVELOPMENT), these methods ARE allowed for debugging."
+        ),
+    )
+
+    # === Centrifugo Integration ===
+    centrifugo_publish_start: bool = Field(
+        default=False,
+        description="Publish gRPC request start events to Centrifugo",
+    )
+
+    centrifugo_publish_end: bool = Field(
+        default=True,
+        description="Publish gRPC request end events to Centrifugo",
+    )
+
+    centrifugo_publish_errors: bool = Field(
+        default=True,
+        description="Publish gRPC errors to Centrifugo",
+    )
+
+    centrifugo_publish_stream_messages: bool = Field(
+        default=False,
+        description="Publish individual streaming messages to Centrifugo (can be verbose)",
+    )
+
+    centrifugo_channel_template: str = Field(
+        default="grpc#{service}#{method}#meta",
+        description="Centrifugo channel template for gRPC events. Supports {service}, {method} placeholders.",
+    )
+
+    centrifugo_error_channel_template: str = Field(
+        default="grpc#{service}#{method}#errors",
+        description="Centrifugo channel template for gRPC errors. Supports {service}, {method} placeholders.",
+    )
+
+    centrifugo_metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata to include in Centrifugo publishes",
     )
 
 

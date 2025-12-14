@@ -53,7 +53,7 @@ def get_user_channels(user) -> List[str]:
 
 def generate_centrifugo_token(
     user,
-    exp_seconds: int = 3600,
+    exp_seconds: int = 86400 * 30,  # 30 days
     additional_channels: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
@@ -61,7 +61,7 @@ def generate_centrifugo_token(
 
     Args:
         user: Django user instance
-        exp_seconds: Token expiration time in seconds (default: 1 hour)
+        exp_seconds: Token expiration time in seconds (default: 30 days)
         additional_channels: Optional additional channels to include
 
     Returns:

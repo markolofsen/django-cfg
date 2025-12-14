@@ -12,6 +12,7 @@ from .charts_views import ChartsViewSet
 from .commands_views import CommandsViewSet
 from .apizones_views import APIZonesViewSet
 from .config_views import ConfigViewSet
+from .metrics_views import MetricsViewSet
 
 __all__ = [
     'OverviewViewSet',
@@ -22,4 +23,5 @@ __all__ = [
     'CommandsViewSet',
     'APIZonesViewSet',
     'ConfigViewSet',
+    'MetricsViewSet',
 ]

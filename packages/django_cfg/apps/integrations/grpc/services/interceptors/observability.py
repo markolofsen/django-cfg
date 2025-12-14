@@ -183,10 +183,18 @@ class ObservabilityInterceptor(grpc.aio.ServerInterceptor):
         if obs_config:
             self.enable_request_logger = obs_config.log_to_db
             self.log_errors_only = obs_config.log_errors_only
+            self.publish_to_telegram = obs_config.telegram_notifications
+            self.telegram_exclude_methods = obs_config.telegram_exclude_methods
         else:
             # Sensible defaults
             self.enable_request_logger = True
             self.log_errors_only = False
+            self.publish_to_telegram = False
+            self.telegram_exclude_methods = [
+                "/grpc.health.v1.Health/Check",
+                "/grpc.health.v1.Health/Watch",
+                "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo",
+            ]
 
         # Never log request/response data by default (too heavy)
         self.log_request_data = False
@@ -201,25 +209,65 @@ class ObservabilityInterceptor(grpc.aio.ServerInterceptor):
         # Centrifugo config
         self._centrifugo_publisher: Optional[Any] = None
         self._telegram_service: Optional[Any] = None
-        self.publish_to_telegram = False
+
+        # Check if we're in development mode (used for filtering Telegram notifications)
+        self.is_development = False
+
         self._init_centrifugo()
 
     def _init_centrifugo(self):
         """Initialize Centrifugo publisher lazily."""
-        if not self.enable_centrifugo:
+        # Get typed config from DjangoConfig
+        try:
+            from django_cfg.core.config import get_current_config
+            config = get_current_config()
+
+            if not config:
+                logger.warning("ObservabilityInterceptor: Config not available")
+                self.is_development = False
+                self.centrifugo_enabled = False
+                return
+
+            # Store development mode
+            self.is_development = config.is_development
+            logger.debug(f"ObservabilityInterceptor: is_development={self.is_development}")
+
+            # Check if centrifugo is enabled
+            if not config.centrifugo or not config.centrifugo.enabled:
+                self.centrifugo_enabled = False
+                return
+
+            self.centrifugo_enabled = True
+
+            # Use typed GRPC observability config for Centrifugo settings
+            obs_cfg = config.grpc.observability if config.grpc else None
+            if obs_cfg:
+                self.publish_start = obs_cfg.centrifugo_publish_start
+                self.publish_end = obs_cfg.centrifugo_publish_end
+                self.publish_errors = obs_cfg.centrifugo_publish_errors
+                self.publish_stream_messages = obs_cfg.centrifugo_publish_stream_messages
+                self.channel_template = obs_cfg.centrifugo_channel_template
+                self.error_channel_template = obs_cfg.centrifugo_error_channel_template
+                self.centrifugo_metadata = obs_cfg.centrifugo_metadata
+            else:
+                # Fallback to defaults if observability config not available
+                self.publish_start = False
+                self.publish_end = True
+                self.publish_errors = True
+                self.publish_stream_messages = False
+                self.channel_template = "grpc#{service}#{method}#meta"
+                self.error_channel_template = "grpc#{service}#{method}#errors"
+                self.centrifugo_metadata = {}
+
+        except Exception as e:
+            logger.warning(f"ObservabilityInterceptor: Failed to get config: {e}")
+            self.is_development = False
             self.centrifugo_enabled = False
             return
 
-        centrifugo_config = getattr(settings, "GRPC_CENTRIFUGO", {})
-        self.centrifugo_enabled = centrifugo_config.get("enabled", True)
-        self.publish_start = centrifugo_config.get("publish_start", False)
-        self.publish_end = centrifugo_config.get("publish_end", True)
-        self.publish_errors = centrifugo_config.get("publish_errors", True)
-        self.publish_stream_messages = centrifugo_config.get("publish_stream_messages", False)
-        self.channel_template = centrifugo_config.get("channel_template", "grpc#{service}#{method}#meta")
-        self.error_channel_template = centrifugo_config.get("error_channel_template", "grpc#{service}#{method}#errors")
-        self.centrifugo_metadata = centrifugo_config.get("metadata", {})
-        # publish_to_telegram is already set from GRPCObservabilityConfig in __init__
+        if not self.enable_centrifugo:
+            self.centrifugo_enabled = False
+            return
 
         if not self.centrifugo_enabled:
             return
@@ -984,6 +1032,16 @@ class ObservabilityInterceptor(grpc.aio.ServerInterceptor):
 
         try:
             method = data.get('method', 'unknown')
+
+            # Skip methods in the exclusion list (e.g., health checks, reflection)
+            # BUT allow them in development mode
+            if method in self.telegram_exclude_methods:
+                if not self.is_development:
+                    logger.debug(f"Skipping Telegram notification for excluded method: {method}")
+                    return
+                else:
+                    logger.debug(f"Allowing {method} in development mode")
+
             duration_ms = data.get('duration_ms', 0.0)
             peer = data.get('peer', 'unknown')
 

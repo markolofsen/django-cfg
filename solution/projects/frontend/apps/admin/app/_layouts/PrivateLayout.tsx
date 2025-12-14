@@ -43,7 +43,6 @@ export function PrivateLayout({ children }: PrivateLayoutProps) {
   
   const header: HeaderConfig = {
     title: 'Dashboard',
-    profilePath: routes.private.profile.path,
   };
   
   return (

@@ -262,7 +262,7 @@ class EnvironmentConfig(BaseSettings):
     debug: bool = Field(default=True, description="Enable debug mode")
 
     # Admin Configuration
-    admin_emails: Optional[list[str]] = Field(default=None, description="Admin email addresses")
+    admin_emails: Optional[list[str]] = Field(default_factory=list, description="Admin email addresses")
 
     # Configuration sections (nested configs)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)

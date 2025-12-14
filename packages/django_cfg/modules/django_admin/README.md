@@ -471,18 +471,27 @@ This example demonstrates **every major feature** of django_admin working togeth
 ```python
 from django_cfg.modules.django_admin import (
     AdminConfig, BadgeField, BooleanField, CurrencyField,
-    DateTimeField, UserField, ShortUUIDField, Icons
+    DateTimeField, ForeignKeyField, UserField, ShortUUIDField, Icons
 )
 
 config = AdminConfig(
     model=Payment,
     list_display=["id", "user", "amount_usd", "status", "created_at"],
+    select_related=["user", "currency"],  # Optimize ForeignKey queries
     display_fields=[
         # Short UUID display
         ShortUUIDField(name="id", title="ID"),
 
         # User with avatar
         UserField(name="user", title="User", header=True),
+
+        # ForeignKey relation with admin link
+        ForeignKeyField(
+            name="currency",
+            display_field="code",
+            subtitle_field="name",
+            link_to_admin=True,
+        ),
 
         # Currency with formatting
         CurrencyField(name="amount_usd", title="Amount", currency="USD", precision=2),
@@ -800,7 +809,47 @@ class BotAdmin(PydanticAdmin):
     # Note: inlines can also be set here if using @admin.register
 ```
 
-### 11. Filters (Standard Django Filters + Unfold)
+### 11. ForeignKey Display (New Field Type)
+
+```python
+from django_cfg.modules.django_admin import ForeignKeyField, Icons
+
+config = AdminConfig(
+    model=Session,
+
+    # Optimize ForeignKey queries
+    select_related=["machine", "workspace", "user"],
+
+    list_display=["id", "machine", "workspace", "status"],
+
+    display_fields=[
+        # Basic FK display with admin link
+        ForeignKeyField(
+            name="machine",
+            display_field="name",
+            link_to_admin=True,
+        ),
+
+        # FK with subtitle
+        ForeignKeyField(
+            name="workspace",
+            display_field="name",
+            subtitle_field="description",
+            link_to_admin=True,
+        ),
+
+        # FK with template subtitle and icon
+        ForeignKeyField(
+            name="user",
+            display_field="username",
+            subtitle_template="{email} • {phone}",
+            link_icon=Icons.OPEN_IN_NEW,
+        ),
+    ],
+)
+```
+
+### 12. Filters (Standard Django Filters + Unfold)
 
 ```python
 from unfold.contrib.filters.admin import AutocompleteSelectFilter

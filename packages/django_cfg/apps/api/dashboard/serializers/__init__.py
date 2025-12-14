@@ -23,6 +23,7 @@ from .commands import (
 )
 from .apizones import APIZoneSerializer, APIZonesSummarySerializer
 from .config import DjangoConfigSerializer, ConfigDataSerializer
+from .metrics import MetricItemSerializer, MetricCategorySerializer, MetricsResponseSerializer
 
 __all__ = [
     # Base
@@ -64,4 +65,9 @@ __all__ = [
     # Config
     'DjangoConfigSerializer',
     'ConfigDataSerializer',
+
+    # Metrics
+    'MetricItemSerializer',
+    'MetricCategorySerializer',
+    'MetricsResponseSerializer',
 ]

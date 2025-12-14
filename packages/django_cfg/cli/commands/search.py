@@ -12,7 +12,8 @@ import click
 @click.argument("query")
 @click.option("--limit", "-l", default=5, help="Maximum number of results (default: 5)")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-def search(query: str, limit: int, as_json: bool):
+@click.option("--full", "-f", is_flag=True, help="Show full content without truncation")
+def search(query: str, limit: int, as_json: bool, full: bool):
     """
     🔍 Search DjangoCFG documentation
 
@@ -60,8 +61,11 @@ def search(query: str, limit: int, as_json: bool):
             for i, r in enumerate(results, 1):
                 click.echo(click.style(f"{i}. {r.title}", fg="green", bold=True))
 
-                # Truncate content to 200 chars
-                content = r.content[:200] + "..." if len(r.content) > 200 else r.content
+                # Truncate content unless --full flag is set
+                if full:
+                    content = r.content
+                else:
+                    content = r.content[:1000] + "..." if len(r.content) > 1000 else r.content
                 click.echo(f"   {content}")
 
                 if r.url:

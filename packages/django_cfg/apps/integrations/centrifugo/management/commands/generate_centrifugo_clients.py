@@ -34,8 +34,9 @@ class Command(AdminCommand):
             "-o",
             "--output",
             type=str,
-            required=True,
-            help="Output directory for generated clients",
+            required=False,
+            default=None,
+            help="Output directory for generated clients (default: ./openapi/centrifuge)",
         )
         parser.add_argument(
             "--python",
@@ -71,7 +72,18 @@ class Command(AdminCommand):
 
     def handle(self, *args, **options):
         """Execute the command."""
-        output_dir = Path(options["output"]).resolve()
+        # Determine output directory
+        if options["output"]:
+            output_dir = Path(options["output"]).resolve()
+        else:
+            # Default to ./openapi/centrifuge in current directory
+            from django.conf import settings
+            base_dir = Path(settings.BASE_DIR)
+            output_dir = base_dir / "openapi" / "centrifuge"
+            self.stdout.write(
+                f"Using default output directory: {output_dir.relative_to(base_dir)}"
+            )
+
         verbose = options["verbose"]
 
         # Configure logging
