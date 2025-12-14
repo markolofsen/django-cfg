@@ -1,6 +1,8 @@
-# Django-CFG
-
 <div align="center">
+
+<img src="https://raw.githubusercontent.com/markolofsen/django-cfg/refs/heads/main/static/logo.png" alt="Django-CFG Logo" width="200" />
+
+# Django-CFG
 
 [![PyPI](https://img.shields.io/pypi/v/django-cfg.svg?style=flat-square&logo=pypi)](https://pypi.org/project/django-cfg/)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
