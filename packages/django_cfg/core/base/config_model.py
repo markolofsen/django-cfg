@@ -504,6 +504,43 @@ class DjangoConfig(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def enforce_production_security(self) -> "DjangoConfig":
+        """
+        Enforce security best practices in production mode.
+
+        SECURITY: Production mode ALWAYS disables debug, regardless of configuration.
+        This prevents:
+        - Sensitive data exposure in tracebacks (SECRET_KEY, credentials, paths)
+        - Memory leaks from SQL query logging
+        - Performance degradation
+        - Accidental deployment with debug enabled
+
+        If debug logging is needed in production, use proper logging configuration
+        instead of DEBUG=True.
+        """
+        if self.is_production and self.debug:
+            import warnings
+            warnings.warn(
+                "⚠️  SECURITY: DEBUG=True is not allowed in production!\n"
+                f"   Environment: {self.env_mode}\n"
+                "   Forcing DEBUG=False to prevent:\n"
+                "   - Sensitive data exposure in error pages\n"
+                "   - Memory leaks from query logging\n"
+                "   - Performance issues\n"
+                "\n"
+                "   For production debugging, use:\n"
+                "   - LOGGING config for detailed logs\n"
+                "   - Sentry/error tracking services\n"
+                "   - Django Debug Toolbar in staging (not production)",
+                UserWarning,
+                stacklevel=2
+            )
+            # Forcefully disable debug in production
+            object.__setattr__(self, 'debug', False)
+
+        return self
+
     def model_post_init(self, _context: Any) -> None:
         """Initialize configuration after Pydantic validation."""
         import os

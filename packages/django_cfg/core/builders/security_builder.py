@@ -49,6 +49,13 @@ class SecurityBuilder:
         """
         Build complete security settings dictionary.
 
+        Security mode priority:
+        1. Production mode (is_production=True) → strict security (whitelist only)
+        2. Development mode (is_development=True) → relaxed security (wide port ranges)
+
+        IMPORTANT: Production mode always uses strict security regardless of debug flag.
+        The debug flag should only affect logging/error pages, NOT security settings.
+
         Returns:
             Dictionary with all security-related Django settings
 
@@ -62,10 +69,12 @@ class SecurityBuilder:
         # Get all security domains including auto-extracted from api_url and site_url
         all_domains = self._get_all_security_domains()
 
-        if self.config.is_development or self.config.debug:
-            return self._dev_mode_universal()
-        else:
+        # Production mode has highest priority for security settings
+        # Debug flag should NOT weaken security in production
+        if self.config.is_production:
             return self._prod_mode_universal(all_domains)
+        else:
+            return self._dev_mode_universal()
 
     def build_allowed_hosts(self) -> List[str]:
         """
