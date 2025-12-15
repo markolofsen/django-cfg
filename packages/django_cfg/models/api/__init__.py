@@ -14,6 +14,7 @@ from .jwt import JWTConfig
 from .keys import ApiKeys
 from .limits import LimitsConfig
 from .oauth import GitHubOAuthConfig, OAuthConfig
+from .webpush import WebPushConfig
 
 __all__ = [
     "APIConfig",
@@ -27,4 +28,5 @@ __all__ = [
     "RedocUISettings",
     "GitHubOAuthConfig",
     "OAuthConfig",
+    "WebPushConfig",
 ]

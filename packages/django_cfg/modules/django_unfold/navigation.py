@@ -242,6 +242,19 @@ class NavigationManager(BaseCfgModule):
                 )
             )
 
+        # Web Push (if enabled)
+        if self.is_webpush_enabled():
+            navigation_sections.append(
+                NavigationSection(
+                    title="Web Push",
+                    separator=True,
+                    collapsible=True,
+                    items=[
+                        NavigationItem(title="Subscriptions", icon=Icons.NOTIFICATIONS, link=str(reverse_lazy("admin:django_cfg_webpush_pushsubscription_changelist"))),
+                    ]
+                )
+            )
+
         # Add Accounts section
         accounts_items = [
             NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),

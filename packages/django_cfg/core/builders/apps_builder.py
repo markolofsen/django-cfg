@@ -125,6 +125,9 @@ class InstalledAppsBuilder:
         if self.config.grpc and self.config.grpc.enabled:
             apps.append("django_cfg.apps.integrations.grpc")
 
+        if self.config.webpush and self.config.webpush.enabled:
+            apps.append("django_cfg.apps.integrations.webpush")
+
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
 

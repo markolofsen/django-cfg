@@ -420,6 +420,13 @@ class Command(AdminCommand):
                     self.stdout.write(self.style.WARNING(f"  ⏭️  Skipping {group_name}: no API operations"))
                     continue
 
+                # Determine if this is a django-cfg group (to avoid triple naming)
+                is_django_cfg_group = group_name.startswith('cfg_') and not group_name.startswith('cfg_ext_')
+
+                # For django-cfg groups, don't use tag_prefix to avoid triple naming (cfg_accounts__accounts__auth)
+                # For other groups, use tag_prefix for proper namespacing
+                tag_prefix_value = "" if is_django_cfg_group else f"{group_name}_"
+
                 # Generate Python client
                 if python:
                     self.stdout.write("  → Generating Python client...")
@@ -430,7 +437,7 @@ class Command(AdminCommand):
                         ir_context,
                         client_structure=service.config.client_structure,
                         openapi_schema=schema_dict,
-                        tag_prefix=f"{group_name}_",
+                        tag_prefix=tag_prefix_value,
                         generate_package_files=service.config.generate_package_files,
                     )
                     py_files = py_generator.generate()
@@ -452,7 +459,7 @@ class Command(AdminCommand):
                         ir_context,
                         client_structure=service.config.client_structure,
                         openapi_schema=schema_dict,
-                        tag_prefix=f"{group_name}_",
+                        tag_prefix=tag_prefix_value,
                         generate_package_files=service.config.generate_package_files,
                         generate_zod_schemas=service.config.generate_zod_schemas,
                         generate_fetchers=service.config.generate_fetchers,
@@ -477,7 +484,7 @@ class Command(AdminCommand):
                         ir_context,
                         client_structure=service.config.client_structure,
                         openapi_schema=schema_dict,
-                        tag_prefix=f"{group_name}_",
+                        tag_prefix=tag_prefix_value,
                         generate_package_files=service.config.generate_package_files,
                         package_config={
                             "name": group_name,
