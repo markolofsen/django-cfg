@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "ai-docs": "djangocfg-docs",
+    "pwa": "djangocfg-pwa",
     "kill-port": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
     "dev": "next dev",
     "build": "pnpm check && next build",

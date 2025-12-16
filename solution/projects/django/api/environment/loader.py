@@ -209,6 +209,20 @@ class CentrifugoConfig(BaseSettings):
     )
 
 
+class WebPushEnvConfig(BaseSettings):
+    """Web Push notifications configuration (VAPID protocol)."""
+
+    enabled: bool = Field(default=True, description="Enable Web Push notifications")
+    vapid_private_key: Optional[str] = Field(default=None, description="VAPID private key for authentication")
+    vapid_public_key: Optional[str] = Field(default=None, description="VAPID public key for client subscription")
+    vapid_mailto: str = Field(default="mailto:noreply@djangocfg.com", description="VAPID mailto claim (RFC 8292)")
+
+    model_config = SettingsConfigDict(
+        env_prefix="WEBPUSH__",
+        env_nested_delimiter="__",
+    )
+
+
 class EnvironmentMode(BaseSettings):
     """
     Environment mode detection via ENV variables.
@@ -274,6 +288,7 @@ class EnvironmentConfig(BaseSettings):
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
     github_oauth: GitHubOAuthEnvConfig = Field(default_factory=GitHubOAuthEnvConfig)
+    webpush: WebPushEnvConfig = Field(default_factory=WebPushEnvConfig)
 
     # gRPC Configuration
     grpc_url: Optional[str] = Field(

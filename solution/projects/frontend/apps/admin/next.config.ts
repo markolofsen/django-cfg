@@ -23,6 +23,12 @@ const config = createBaseNextConfig({
 
   // Check for missing optional packages
   checkPackages: true,
+
+  // PWA Configuration (Serwist)
+  pwa: {
+    swSrc: 'app/sw.ts',
+    disable: process.env.NODE_ENV === 'development', // Disable in dev for faster builds
+  },
 });
 
 export default withBundleAnalyzer(config);

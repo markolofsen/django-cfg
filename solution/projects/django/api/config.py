@@ -47,6 +47,7 @@ from django_cfg import (
     # API
     OpenAPIClientConfig,
     OpenAPIGroupConfig,
+    WebPushConfig,
     # Background Tasks
     DjangoRQConfig,
     RQQueueConfig,
@@ -357,6 +358,17 @@ class DjangoCfgConfig(DjangoConfig):
     ngrok: Optional[NgrokConfig] = (
         NgrokConfig(enabled=True, compression=True)
         if env.debug
+        else None
+    )
+
+    webpush: Optional[WebPushConfig] = (
+        WebPushConfig(
+            enabled=env.webpush.enabled,
+            vapid_private_key=env.webpush.vapid_private_key,
+            vapid_public_key=env.webpush.vapid_public_key,
+            vapid_mailto=env.webpush.vapid_mailto,
+        )
+        if env.webpush.enabled
         else None
     )
 

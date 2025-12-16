@@ -78,6 +78,24 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
         console.error('AppLayout ErrorBoundary caught:', error, errorInfo);
       },
     },
+
+    // PWA install prompt configuration
+    pwaInstall: {
+      enabled: true,
+      showInstallHint: true,
+      logo: settings.app.icons.logo192,
+      delayMs: 5000,
+      resetAfterDays: 7,
+    },
+
+    // Push notifications configuration
+    pushNotifications: {
+      enabled: true,
+      vapidPublicKey: settings.push.vapidPublicKey,
+      requirePWA: false,
+      delayMs: 10000,
+      resetAfterDays: 14,
+    },
   };
 
   return <BaseAppLayout {...appLayoutProps} />;
