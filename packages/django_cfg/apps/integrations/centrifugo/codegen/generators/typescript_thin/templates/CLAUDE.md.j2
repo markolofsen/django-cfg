@@ -1,0 +1,64 @@
+# Generated Centrifugo RPC Client
+
+**DO NOT EDIT** - This file is auto-generated.
+
+## Overview
+
+This directory contains auto-generated TypeScript client code for Centrifugo WebSocket RPC.
+
+## Regeneration
+
+Base command:
+
+```bash
+poetry run python manage.py generate_centrifugo_clients --typescript
+```
+
+**Note**: Check `core/management/commands/` for a project-specific wrapper command (e.g., `generate_centrifuge_web`) or a Makefile target that handles output paths and file copying.
+
+## Documentation
+
+Full documentation: https://djangocfg.com/docs/features/integrations/centrifugo/
+
+## Source
+
+- **Generator**: `django_cfg.apps.integrations.centrifugo.codegen`
+- **Command**: `generate_centrifugo_clients`
+- **Django handlers**: Check your project's Centrifugo RPC handlers decorated with `@websocket_rpc`
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `types.ts` | TypeScript interfaces generated from Pydantic models |
+| `client.ts` | Thin wrapper with typed RPC methods |
+| `index.ts` | Public exports |
+
+## Available Methods
+
+{% if methods %}
+{% for method in methods %}
+- `{{ method.name_ts }}()` - {{ method.docstring }}
+{% endfor %}
+{% else %}
+No RPC methods discovered. Add `@websocket_rpc` decorated handlers.
+{% endif %}
+
+## Usage Example
+
+```typescript
+import { APIClient } from '.';
+
+// With existing Centrifugo client
+const apiClient = new APIClient(centrifugoClient);
+
+// Call RPC methods
+{% if methods %}
+const result = await apiClient.{{ methods[0].name_ts }}(params);
+{% else %}
+const result = await apiClient.someMethod(params);
+{% endif %}
+```
+
+---
+Generated: {{ timestamp }}

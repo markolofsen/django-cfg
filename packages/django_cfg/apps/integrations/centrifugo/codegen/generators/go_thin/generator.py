@@ -5,6 +5,7 @@ Generates Go structs + thin wrapper over CentrifugoRPCClient.
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Type
 from pydantic import BaseModel
@@ -78,6 +79,7 @@ class GoThinGenerator:
         # Generate config files
         self._generate_go_mod()
         self._generate_readme()
+        self._generate_claude_md()
 
         logger.info(f"✅ Generated Go client in {self.output_dir}")
 
@@ -167,6 +169,27 @@ class GoThinGenerator:
         )
 
         output_file = self.output_dir / "README.md"
+        output_file.write_text(content)
+        logger.debug(f"Generated {output_file}")
+
+    def _generate_claude_md(self):
+        """Generate CLAUDE.md documentation file."""
+        template = self.jinja_env.get_template("CLAUDE.md.j2")
+        methods_data = []
+        for method in self.methods:
+            method_name_go = to_go_method_name(method.name)
+            methods_data.append({
+                'name': method.name,
+                'name_go': method_name_go,
+                'docstring': method.docstring or f"Call {method.name} RPC",
+            })
+        content = template.render(
+            package_name=self.package_name,
+            module_path=self.module_path,
+            methods=methods_data,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        output_file = self.output_dir / "CLAUDE.md"
         output_file.write_text(content)
         logger.debug(f"Generated {output_file}")
 

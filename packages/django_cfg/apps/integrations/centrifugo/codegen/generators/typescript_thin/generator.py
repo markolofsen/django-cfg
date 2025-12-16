@@ -3,6 +3,7 @@ TypeScript thin wrapper client generator.
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Type
 from pydantic import BaseModel
@@ -46,6 +47,7 @@ class TypeScriptThinGenerator:
         self._generate_package_json()
         self._generate_tsconfig()
         self._generate_readme()
+        self._generate_claude_md()
 
         logger.info(f"✅ Generated TypeScript client in {self.output_dir}")
 
@@ -119,6 +121,23 @@ class TypeScriptThinGenerator:
         model_names = [m.__name__ for m in self.models]
         content = template.render(methods=methods_data, models=model_names)
         (self.output_dir / "README.md").write_text(content)
+
+    def _generate_claude_md(self):
+        """Generate CLAUDE.md documentation file."""
+        template = self.jinja_env.get_template("CLAUDE.md.j2")
+        methods_data = []
+        for method in self.methods:
+            method_name_ts = to_typescript_method_name(method.name)
+            methods_data.append({
+                'name': method.name,
+                'name_ts': method_name_ts,
+                'docstring': method.docstring or f"Call {method.name} RPC",
+            })
+        content = template.render(
+            methods=methods_data,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        (self.output_dir / "CLAUDE.md").write_text(content)
 
 
 __all__ = ['TypeScriptThinGenerator']

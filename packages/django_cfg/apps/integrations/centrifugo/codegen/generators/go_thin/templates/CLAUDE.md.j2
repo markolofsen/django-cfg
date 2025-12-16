@@ -1,0 +1,77 @@
+# Generated Centrifugo RPC Client
+
+**DO NOT EDIT** - This file is auto-generated.
+
+## Overview
+
+This directory contains auto-generated Go client code for Centrifugo WebSocket RPC.
+
+## Regeneration
+
+Base command:
+
+```bash
+poetry run python manage.py generate_centrifugo_clients --go
+```
+
+**Note**: Check `core/management/commands/` for a project-specific wrapper command or a Makefile target that handles output paths and file copying.
+
+## Documentation
+
+Full documentation: https://djangocfg.com/docs/features/integrations/centrifugo/
+
+## Source
+
+- **Generator**: `django_cfg.apps.integrations.centrifugo.codegen`
+- **Command**: `generate_centrifugo_clients`
+- **Django handlers**: Check your project's Centrifugo RPC handlers decorated with `@websocket_rpc`
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `types.go` | Go struct definitions |
+| `client.go` | Thin wrapper with typed methods |
+| `rpc_client.go` | Base Centrifugo RPC client |
+| `go.mod` | Go module definition |
+
+## Available Methods
+
+{% if methods %}
+{% for method in methods %}
+- `{{ method.name_go }}()` - {{ method.docstring }}
+{% endfor %}
+{% else %}
+No RPC methods discovered. Add `@websocket_rpc` decorated handlers.
+{% endif %}
+
+## Usage Example
+
+```go
+package main
+
+import (
+    client "{{ module_path }}"
+)
+
+func main() {
+    // Create RPC client
+    rpc := client.NewCentrifugoRPCClient(
+        "ws://localhost:8000/connection/websocket",
+        "your-jwt-token",
+    )
+
+    // Create API client
+    api := client.NewAPIClient(rpc)
+
+    // Call RPC methods
+{% if methods %}
+    result, err := api.{{ methods[0].name_go }}(ctx, params)
+{% else %}
+    result, err := api.SomeMethod(ctx, params)
+{% endif %}
+}
+```
+
+---
+Generated: {{ timestamp }}

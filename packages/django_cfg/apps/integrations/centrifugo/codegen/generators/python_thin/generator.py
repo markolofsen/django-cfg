@@ -5,6 +5,7 @@ Generates Pydantic models + thin wrapper over CentrifugoRPCClient.
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Type
 from pydantic import BaseModel
@@ -74,6 +75,7 @@ class PythonThinGenerator:
         # Generate config files
         self._generate_requirements()
         self._generate_readme()
+        self._generate_claude_md()
 
         logger.info(f"✅ Generated Python client in {self.output_dir}")
 
@@ -234,6 +236,25 @@ class PythonThinGenerator:
 
         content = template.render(methods=methods_data, models=model_names)
         output_file = self.output_dir / "README.md"
+        output_file.write_text(content)
+        logger.debug(f"Generated {output_file}")
+
+    def _generate_claude_md(self):
+        """Generate CLAUDE.md documentation file."""
+        template = self.jinja_env.get_template("CLAUDE.md.j2")
+        methods_data = []
+        for method in self.methods:
+            method_name_python = to_python_method_name(method.name)
+            methods_data.append({
+                'name': method.name,
+                'name_python': method_name_python,
+                'docstring': method.docstring or f"Call {method.name} RPC",
+            })
+        content = template.render(
+            methods=methods_data,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        output_file = self.output_dir / "CLAUDE.md"
         output_file.write_text(content)
         logger.debug(f"Generated {output_file}")
 

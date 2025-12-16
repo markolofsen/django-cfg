@@ -2,8 +2,12 @@
 Web Push API ViewSet.
 
 Provides REST API endpoints for Web Push notifications.
+
+Note: DRF ViewSets don't support native async views, so we use sync methods
+with sync ORM operations. For async push sending, use the async service directly.
 """
 
+from asgiref.sync import async_to_sync
 from django.conf import settings
 from django_cfg.utils import get_logger
 from drf_spectacular.utils import extend_schema
@@ -48,7 +52,7 @@ class WebPushViewSet(viewsets.GenericViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="subscribe")
-    async def subscribe(self, request):
+    def subscribe(self, request):
         """Save push subscription for authenticated user."""
         serializer = SubscribeRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -59,8 +63,8 @@ class WebPushViewSet(viewsets.GenericViewSet):
         keys = data["keys"]
 
         try:
-            # Update or create subscription
-            subscription, created = await PushSubscription.objects.aupdate_or_create(
+            # Update or create subscription (sync ORM)
+            subscription, created = PushSubscription.objects.update_or_create(
                 endpoint=endpoint,
                 defaults={
                     "user": request.user,
@@ -102,7 +106,7 @@ class WebPushViewSet(viewsets.GenericViewSet):
         },
     )
     @action(detail=False, methods=["post"], url_path="send")
-    async def send_notification(self, request):
+    def send_notification(self, request):
         """Send push notification to authenticated user's devices."""
         serializer = SendPushRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -111,7 +115,8 @@ class WebPushViewSet(viewsets.GenericViewSet):
         data = serializer.validated_data
 
         try:
-            count = await send_push(
+            # Use async_to_sync wrapper for async send_push function
+            count = async_to_sync(send_push)(
                 user=request.user,
                 title=data["title"],
                 body=data["body"],

@@ -370,12 +370,12 @@ class GRPCObservabilityConfig(BaseConfig):
     )
 
     centrifugo_channel_template: str = Field(
-        default="grpc#{service}#{method}#meta",
+        default="grpc:{service}:{method}:meta",
         description="Centrifugo channel template for gRPC events. Supports {service}, {method} placeholders.",
     )
 
     centrifugo_error_channel_template: str = Field(
-        default="grpc#{service}#{method}#errors",
+        default="grpc:{service}:{method}:errors",
         description="Centrifugo channel template for gRPC errors. Supports {service}, {method} placeholders.",
     )
 

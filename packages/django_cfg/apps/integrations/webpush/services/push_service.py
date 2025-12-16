@@ -182,11 +182,10 @@ async def send_push(
         url=url if url else None,
     )
 
-    # Get active subscriptions for user
-    subscriptions = await PushSubscription.objects.filter(
-        user=user,
-        is_active=True,
-    ).all()
+    # Get active subscriptions for user (async iteration)
+    subscriptions = [
+        s async for s in PushSubscription.objects.filter(user=user, is_active=True)
+    ]
 
     if not subscriptions:
         logger.warning(f"No active subscriptions for user {user.id}")
@@ -242,7 +241,7 @@ async def send_push_to_many(
         >>> print(f"Sent to {result.sent} devices")
     """
     User = get_user_model()
-    users = await User.objects.filter(id__in=user_ids).all()
+    users = [u async for u in User.objects.filter(id__in=user_ids)]
 
     total_sent = 0
     total_failed = 0
