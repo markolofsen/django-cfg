@@ -24,6 +24,7 @@ from typing import Literal
 
 from ..ir import IRContext
 from .base import GeneratedFile
+from .claude_generator import ClaudeGenerator
 from .go import GoGenerator
 from .proto import ProtoGenerator
 from .python import PythonGenerator
@@ -34,6 +35,7 @@ __all__ = [
     "TypeScriptGenerator",
     "GoGenerator",
     "ProtoGenerator",
+    "ClaudeGenerator",
     "GeneratedFile",
     "generate_python",
     "generate_typescript",

@@ -1,5 +1,7 @@
-import { Card, CardContent, Badge } from '@djangocfg/ui-nextjs';
-import { Building2, TrendingUp, Check } from 'lucide-react';
+import { Building2, Check, TrendingUp } from 'lucide-react';
+
+import { Badge, Card, CardContent } from '@djangocfg/ui-nextjs';
+
 import type { Exchange } from '@/api/generated/crypto/_utils/schemas/Exchange.schema';
 
 interface ExchangeCardProps {

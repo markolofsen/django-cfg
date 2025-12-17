@@ -1,5 +1,7 @@
-import { Card, CardContent, Button, Badge } from '@djangocfg/ui-nextjs';
-import { TrendingUp, TrendingDown, X } from 'lucide-react';
+import { TrendingDown, TrendingUp, X } from 'lucide-react';
+
+import { Badge, Button, Card, CardContent } from '@djangocfg/ui-nextjs';
+
 import type { Order } from '@/api/generated/trading/trading__api__trading/models';
 
 interface OrderCardProps {

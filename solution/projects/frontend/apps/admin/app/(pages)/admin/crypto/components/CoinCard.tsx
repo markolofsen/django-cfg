@@ -1,5 +1,7 @@
-import { Card, CardContent, Badge } from '@djangocfg/ui-nextjs';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
+
+import { Badge, Card, CardContent } from '@djangocfg/ui-nextjs';
+
 import type { CoinList } from '@/api/generated/crypto/_utils/schemas/CoinList.schema';
 
 interface CoinCardProps {

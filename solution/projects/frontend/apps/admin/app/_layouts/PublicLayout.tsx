@@ -8,9 +8,12 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { PublicLayout as BasePublicLayout, type NavigationItem as BaseNavigationItem, type UserMenuConfig } from '@djangocfg/layouts';
-import { routes, generatePublicNavigation } from '@routes/index';
+
 import { settings } from '@core/settings';
+import {
+    NavigationItem as BaseNavigationItem, PublicLayout as BasePublicLayout, UserMenuConfig
+} from '@djangocfg/layouts';
+import { generatePublicNavigation, routes } from '@routes/index';
 
 interface PublicLayoutProps {
   children: ReactNode;

@@ -1,5 +1,7 @@
-import { Card, CardContent, Badge } from '@djangocfg/ui-nextjs';
-import { Wallet as WalletIcon, Lock } from 'lucide-react';
+import { Lock, Wallet as WalletIcon } from 'lucide-react';
+
+import { Badge, Card, CardContent } from '@djangocfg/ui-nextjs';
+
 import type { Wallet } from '@/api/generated/crypto/_utils/schemas/Wallet.schema';
 
 interface WalletCardProps {

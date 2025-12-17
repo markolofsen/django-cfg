@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-import { LandingView } from './LandingView';
 import { generateMetadata } from '@core/metadata';
+
+import { LandingView } from './LandingView';
 
 export const metadata: Metadata = generateMetadata({
   title: 'Home',

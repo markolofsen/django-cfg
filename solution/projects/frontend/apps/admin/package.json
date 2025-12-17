@@ -29,7 +29,7 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.545.0",
     "moment": "^2.30.1",
-    "next": "15.5.9",
+    "next": "16.0.10",
     "p-retry": "^7.1.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -40,7 +40,6 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@djangocfg/imgai": "latest",
     "@djangocfg/nextjs": "latest",
     "@djangocfg/typescript-config": "latest",
     "@next/bundle-analyzer": "^16.0.1",

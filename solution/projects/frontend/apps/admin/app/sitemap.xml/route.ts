@@ -8,6 +8,7 @@
  */
 
 import { createSitemapHandler } from '@djangocfg/nextjs/sitemap';
+
 import { settings } from '../_core/settings';
 import { routes } from '../_routes/index';
 

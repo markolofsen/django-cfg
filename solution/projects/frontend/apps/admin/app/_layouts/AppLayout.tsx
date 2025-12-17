@@ -1,12 +1,14 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { AppLayout as BaseAppLayout, type AppLayoutProps } from '@djangocfg/layouts';
+
 import { settings } from '@core/settings';
+import { AppLayout as BaseAppLayout, AppLayoutProps } from '@djangocfg/layouts';
 import { routes } from '@routes/index';
-import { PublicLayout } from './PublicLayout';
-import { PrivateLayout } from './PrivateLayout';
+
 import { AdminLayout } from './AdminLayout';
+import { PrivateLayout } from './PrivateLayout';
+import { PublicLayout } from './PublicLayout';
 
 interface AppLayoutComponentProps {
   children: ReactNode;

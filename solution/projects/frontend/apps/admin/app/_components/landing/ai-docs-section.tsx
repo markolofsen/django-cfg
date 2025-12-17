@@ -1,7 +1,8 @@
 'use client'
 
-import { Card, CardContent, Badge, CopyButton } from '@djangocfg/ui-nextjs'
-import { Bot, Terminal, Globe } from 'lucide-react'
+import { Bot, Globe, Terminal } from 'lucide-react';
+
+import { Badge, Card, CardContent, CopyButton } from '@djangocfg/ui-nextjs';
 
 const options = [
   {

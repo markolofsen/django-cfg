@@ -5,6 +5,7 @@
  */
 
 import { defineRoute, routesToMenuItems } from '@djangocfg/nextjs/navigation';
+
 import type { MenuGroup, RouteDefinition, NavigationSection } from '@djangocfg/nextjs/navigation';
 
 // ─────────────────────────────────────────────────────────────────────────

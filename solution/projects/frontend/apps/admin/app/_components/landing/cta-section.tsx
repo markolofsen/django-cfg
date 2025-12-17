@@ -1,7 +1,7 @@
 'use client'
 
-import { CTASection } from '@djangocfg/ui-nextjs/blocks'
-import { routes } from '@routes/public'
+import { CTASection } from '@djangocfg/ui-nextjs/blocks';
+import { routes } from '@routes/public';
 
 export function CTASectionComponent() {
   return (

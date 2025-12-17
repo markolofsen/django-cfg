@@ -4,42 +4,16 @@
  * Provides cryptocurrency data and wallet management functionality.
  */
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, ReactNode, useContext } from 'react';
+
 import { cryptoClient } from '@/api/BaseClient';
+
 import {
-  useCryptoCoinsList,
-  useCryptoCoinsStatsRetrieve,
-  useCryptoExchangesList,
-  useCryptoWalletsList
-} from '../api/generated/crypto/_utils/hooks';
-import type { API } from '../api/generated/crypto';
-import type { CoinList } from '../api/generated/crypto/_utils/schemas/CoinList.schema';
-import type { CoinStats } from '../api/generated/crypto/_utils/schemas/CoinStats.schema';
-import type { Exchange } from '../api/generated/crypto/_utils/schemas/Exchange.schema';
-import type { Wallet } from '../api/generated/crypto/_utils/schemas/Wallet.schema';
+    useCryptoCoinsList, useCryptoCoinsStatsRetrieve, useCryptoExchangesList, useCryptoWalletsList
+} from '../../api/generated/crypto/_utils/hooks';
 
-interface CryptoContextType {
-  // Coins data
-  coins: CoinList[];
-  coinsLoading: boolean;
-  coinsError: Error | null;
-  coinStats: CoinStats | undefined;
-
-  // Exchanges data
-  exchanges: Exchange[];
-  exchangesLoading: boolean;
-  exchangesError: Error | null;
-
-  // Wallets data
-  wallets: Wallet[];
-  walletsLoading: boolean;
-  walletsError: Error | null;
-
-  // Actions
-  refreshCoins: () => Promise<void>;
-  refreshExchanges: () => Promise<void>;
-  refreshWallets: () => Promise<void>;
-}
+import type { API } from '../../api/generated/crypto';
+import type { CryptoContextType } from './types';
 
 const CryptoContext = createContext<CryptoContextType | undefined>(undefined);
 

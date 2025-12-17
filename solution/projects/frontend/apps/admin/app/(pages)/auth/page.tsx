@@ -1,8 +1,8 @@
 'use client';
 
+import { settings } from '@core/settings';
 import { AuthLayout } from '@djangocfg/layouts';
 import { routes } from '@routes/index';
-import { settings } from '@core/settings';
 
 /**
  * Authentication Page

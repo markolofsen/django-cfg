@@ -439,6 +439,7 @@ class Command(AdminCommand):
                         openapi_schema=schema_dict,
                         tag_prefix=tag_prefix_value,
                         generate_package_files=service.config.generate_package_files,
+                        group_name=group_name,
                     )
                     py_files = py_generator.generate()
 
@@ -464,6 +465,7 @@ class Command(AdminCommand):
                         generate_zod_schemas=service.config.generate_zod_schemas,
                         generate_fetchers=service.config.generate_fetchers,
                         generate_swr_hooks=service.config.generate_swr_hooks,
+                        group_name=group_name,
                     )
                     ts_files = ts_generator.generate()
 
@@ -491,6 +493,7 @@ class Command(AdminCommand):
                             "module_name": group_name,
                             "version": "v1.0.0",
                         },
+                        group_name=group_name,
                     )
                     go_files = go_generator.generate()
 
@@ -511,6 +514,7 @@ class Command(AdminCommand):
                         ir_context,
                         split_files=True,  # Generate separate messages.proto and services.proto
                         package_name=f"{group_name}.v1",
+                        group_name=group_name,
                     )
                     proto_files = proto_generator.generate()
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-import { CryptoView } from './CryptoView';
 import { generateMetadata } from '@core/metadata';
+
+import { CryptoView } from './CryptoView';
 
 export const metadata: Metadata = generateMetadata({
   title: 'Cryptocurrency',

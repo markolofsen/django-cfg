@@ -12,8 +12,9 @@
  * - Responsive mobile/desktop switching via Tabs component
  */
 
-import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+
 import { Tabs, TabsList, TabsTrigger } from '@djangocfg/ui-nextjs';
 import { allRoutes } from '@routes/admin';
 

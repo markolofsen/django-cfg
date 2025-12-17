@@ -5,8 +5,8 @@
  * Configured via @core/settings
  */
 
-import { createManifest, createScreenshots } from '@djangocfg/nextjs/pwa';
 import { settings } from '@core/settings';
+import { createManifest, createScreenshots } from '@djangocfg/nextjs/pwa';
 
 // Forced rebuild for PWA manifest update (gcm_sender_id removal)
 export default createManifest({

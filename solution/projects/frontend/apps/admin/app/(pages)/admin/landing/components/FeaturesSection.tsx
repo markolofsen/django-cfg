@@ -1,12 +1,6 @@
+import { Boxes, Code2, Palette, RefreshCw, Shield, Zap } from 'lucide-react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
-import {
-  Zap,
-  Code2,
-  Palette,
-  Shield,
-  Boxes,
-  RefreshCw
-} from 'lucide-react';
 
 const features = [
   {

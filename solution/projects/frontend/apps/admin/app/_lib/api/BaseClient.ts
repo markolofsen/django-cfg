@@ -11,12 +11,14 @@
  * Uses unified response pattern: { success, boolean; data?: T; error?: string; fieldErrors?: Record<string, string[]> }
  */
 
-import { API as ProfilesAPI, LocalStorageAdapter as ProfilesStorage } from './generated/profiles';
-import { API as TradingAPI, LocalStorageAdapter as TradingStorage } from './generated/trading';
-import { API as CryptoAPI, LocalStorageAdapter as CryptoStorage } from './generated/crypto';
-import { APIError } from './generated/profiles/errors';
-import { settings } from '@core/settings';
 import consola from 'consola';
+
+import { settings } from '@core/settings';
+
+import { API as CryptoAPI, LocalStorageAdapter as CryptoStorage } from './generated/crypto';
+import { API as ProfilesAPI, LocalStorageAdapter as ProfilesStorage } from './generated/profiles';
+import { APIError } from './generated/profiles/errors';
+import { API as TradingAPI, LocalStorageAdapter as TradingStorage } from './generated/trading';
 
 // Get base URL from environment
 const baseUrl = settings.api.baseUrl;

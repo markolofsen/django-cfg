@@ -17,6 +17,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...ir import IROperationObject, IRSchemaObject
 from ..base import BaseGenerator, GeneratedFile
+from ..claude_generator import ClaudeGenerator
 from .client_generator import ClientGenerator
 from .fetchers_generator import FetchersGenerator
 from .files_generator import FilesGenerator
@@ -187,6 +188,14 @@ class TypeScriptGenerator(BaseGenerator):
         if self.generate_package_files:
             files.append(self.files_gen.generate_package_json_file(self.package_config))
             files.append(self.files_gen.generate_tsconfig_file())
+
+        # Generate CLAUDE.md
+        claude_gen = ClaudeGenerator(
+            self.context, "typescript",
+            group_name=self.group_name,
+            generate_swr_hooks=self.generate_swr_hooks,
+        )
+        files.append(claude_gen.generate())
 
         return files
 

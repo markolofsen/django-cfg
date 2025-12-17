@@ -21,9 +21,9 @@
  * ```
  */
 
-import * as publicDomain from './public';
-import * as privateDomain from './private';
 import * as adminDomain from './admin';
+import * as privateDomain from './private';
+import * as publicDomain from './public';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Domain Exports

@@ -9,9 +9,10 @@
  * Note: This route is automatically excluded from static export by createOgImageDynamicRoute
  */
 
+import { settings } from '@core/settings';
 import { createOgImageDynamicRoute } from '@djangocfg/nextjs/og-image';
 import { DefaultTemplate } from '@djangocfg/nextjs/og-image/components';
-import { settings } from '@core/settings';
+
 import type { NextRequest } from 'next/server';
 
 /**

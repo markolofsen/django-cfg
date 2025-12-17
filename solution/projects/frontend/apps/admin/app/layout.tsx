@@ -1,13 +1,13 @@
 import './_core/globals.css';
 
 import { Manrope } from 'next/font/google';
-import type { Metadata } from 'next';
-import { AppLayout } from '@layouts/AppLayout';
-import { settings } from '@core/settings';
+
 import { generateMetadata } from '@core/metadata';
-
+import { settings } from '@core/settings';
 import { AIChatWidget } from '@djangocfg/layouts/snippets';
+import { AppLayout } from '@layouts/AppLayout';
 
+import type { Metadata } from 'next';
 // Base metadata - will be inherited by all pages
 // Pages can override with their own generateMetadata call
 export const metadata: Metadata = generateMetadata({

@@ -1,7 +1,8 @@
-import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
-import { Sparkles, Code2, Zap, Shield, Palette } from 'lucide-react';
-import { routes } from '@routes/index';
+import { Code2, Palette, Shield, Sparkles, Zap } from 'lucide-react';
+
 import { settings } from '@core/settings';
+import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
+import { routes } from '@routes/index';
 
 export function HeroSection() {
   return (

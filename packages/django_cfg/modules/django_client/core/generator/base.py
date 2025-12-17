@@ -52,6 +52,7 @@ class BaseGenerator(ABC):
         generate_zod_schemas: bool = False,
         generate_fetchers: bool = False,
         generate_swr_hooks: bool = False,
+        group_name: str = "",
     ):
         """
         Initialize generator with IR context.
@@ -66,6 +67,7 @@ class BaseGenerator(ABC):
             generate_zod_schemas: Whether to generate Zod schemas (TypeScript only)
             generate_fetchers: Whether to generate typed fetchers (TypeScript only)
             generate_swr_hooks: Whether to generate SWR hooks (TypeScript only, React)
+            group_name: OpenAPI group name for regeneration command
         """
         self.context = context
         self.client_structure = client_structure
@@ -76,6 +78,7 @@ class BaseGenerator(ABC):
         self.generate_zod_schemas = generate_zod_schemas
         self.generate_fetchers = generate_fetchers
         self.generate_swr_hooks = generate_swr_hooks
+        self.group_name = group_name
 
     # ===== Namespaced Structure Helpers =====
 

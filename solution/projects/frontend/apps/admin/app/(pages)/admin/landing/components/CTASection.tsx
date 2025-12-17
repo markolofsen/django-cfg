@@ -1,8 +1,9 @@
-import { ButtonLink, Card } from '@djangocfg/ui-nextjs';
 import { ArrowRight, Github } from 'lucide-react';
-import { routes } from '@routes/index';
-import { settings } from '@core/settings';
 import Link from 'next/link';
+
+import { settings } from '@core/settings';
+import { ButtonLink, Card } from '@djangocfg/ui-nextjs';
+import { routes } from '@routes/index';
 
 export function CTASection() {
   return (

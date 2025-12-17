@@ -8,8 +8,11 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { PrivateLayout as BasePrivateLayout, type SidebarItem, type SidebarConfig, type HeaderConfig } from '@djangocfg/layouts';
-import { routes, menuGroups } from '@routes/index';
+
+import {
+    HeaderConfig, PrivateLayout as BasePrivateLayout, SidebarConfig, SidebarItem
+} from '@djangocfg/layouts';
+import { menuGroups, routes } from '@routes/index';
 
 interface PrivateLayoutProps {
   children: ReactNode;

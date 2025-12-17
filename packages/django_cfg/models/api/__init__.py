@@ -14,6 +14,7 @@ from .jwt import JWTConfig
 from .keys import ApiKeys
 from .limits import LimitsConfig
 from .oauth import GitHubOAuthConfig, OAuthConfig
+from .rate_limiting import RateLimitConfig, RateLimitRule
 from .webpush import WebPushConfig
 
 __all__ = [
@@ -22,6 +23,8 @@ __all__ = [
     "JWTConfig",
     "CORSConfig",
     "LimitsConfig",
+    "RateLimitConfig",
+    "RateLimitRule",
     "DRFConfig",
     "SpectacularConfig",
     "SwaggerUISettings",

@@ -1,80 +1,20 @@
 'use client';
 
+import { AlertCircle, CheckCircle2, Inbox, Info, Rocket, Shield, Zap } from 'lucide-react';
 import { useState } from 'react';
-import type { Metadata } from 'next';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Label,
-  Badge,
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Progress,
-  Switch,
-  Slider,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Separator,
-  Skeleton,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Checkbox,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Spinner,
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-  EmptyContent,
-  EmptyMedia,
-  JsonTree,
-} from '@djangocfg/ui-nextjs';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Info,
-  Inbox,
-  Zap,
-  Shield,
-  Rocket,
-} from 'lucide-react';
 
+import {
+    Accordion, AccordionContent, AccordionItem, AccordionTrigger, Alert, AlertDescription,
+    AlertTitle, Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent,
+    CardDescription, CardFooter, CardHeader, CardTitle, Checkbox, Dialog, DialogContent,
+    DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Empty, EmptyContent,
+    EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle, Input, JsonTree, Label, Progress, Select,
+    SelectContent, SelectItem, SelectTrigger, SelectValue, Separator, Skeleton, Slider, Spinner,
+    Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent,
+    TabsList, TabsTrigger, Textarea, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
+} from '@djangocfg/ui-nextjs';
+
+import type { Metadata } from 'next';
 /**
  * UI Components Demo Page
  *

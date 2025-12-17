@@ -1,8 +1,9 @@
 'use client'
 
-import { SuperHero } from '@djangocfg/ui-nextjs/blocks'
-import { Sparkles, Zap, Bot, Rocket } from 'lucide-react'
-import { routes } from '@routes/public'
+import { Bot, Rocket, Sparkles, Zap } from 'lucide-react';
+
+import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
+import { routes } from '@routes/public';
 
 export function HeroSection() {
   return (

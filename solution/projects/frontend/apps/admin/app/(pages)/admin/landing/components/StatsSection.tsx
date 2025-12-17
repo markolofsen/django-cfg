@@ -1,5 +1,6 @@
+import { Code2, TrendingUp, Users, Zap } from 'lucide-react';
+
 import { Card, CardContent } from '@djangocfg/ui-nextjs';
-import { TrendingUp, Users, Zap, Code2 } from 'lucide-react';
 
 const stats = [
   {

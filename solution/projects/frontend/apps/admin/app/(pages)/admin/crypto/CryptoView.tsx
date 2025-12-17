@@ -1,9 +1,14 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui-nextjs';
 import { RefreshCw } from 'lucide-react';
+
 import { useCrypto } from '@/contexts';
-import { CryptoStats, CoinCard, ExchangeCard, WalletCard } from './components';
+import {
+    Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList,
+    TabsTrigger
+} from '@djangocfg/ui-nextjs';
+
+import { CoinCard, CryptoStats, ExchangeCard, WalletCard } from './components';
 
 export function CryptoView() {
   const {

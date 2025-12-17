@@ -1,8 +1,9 @@
 'use client'
 
-import { Card, CardContent, Badge, ButtonLink } from '@djangocfg/ui-nextjs'
-import { Layout, Lock, Rocket } from 'lucide-react'
-import { routes } from '@routes/public'
+import { Layout, Lock, Rocket } from 'lucide-react';
+
+import { Badge, ButtonLink, Card, CardContent } from '@djangocfg/ui-nextjs';
+import { routes } from '@routes/public';
 
 const demos = [
   {

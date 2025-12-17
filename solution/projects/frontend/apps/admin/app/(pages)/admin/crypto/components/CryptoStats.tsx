@@ -1,5 +1,7 @@
+import { Bitcoin, DollarSign, TrendingUp } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
-import { DollarSign, TrendingUp, Bitcoin } from 'lucide-react';
+
 import type { CoinStats } from '@/api/generated/crypto/_utils/schemas/CoinStats.schema';
 
 interface CryptoStatsProps {

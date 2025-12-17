@@ -1,13 +1,9 @@
-import {
-  HeroSection,
-  FeaturesSection,
-  QuickStartSection,
-  AIDocsSection,
-  CTASectionComponent
-} from './_components/landing'
+import { RedirectPage } from '@djangocfg/layouts/components';
+import { redirectToAuth, routes } from '@routes/index';
 
-import { RedirectPage } from '@djangocfg/layouts/components'
-import { redirectToAuth, routes } from '@routes/index'
+import {
+    AIDocsSection, CTASectionComponent, FeaturesSection, HeroSection, QuickStartSection
+} from './_components/landing';
 
 export default function Page() {
   const useRedirect = false

@@ -1,14 +1,8 @@
 'use client'
 
-import { FeatureSection } from '@djangocfg/ui-nextjs/blocks'
-import {
-  Bot,
-  Zap,
-  Shield,
-  Layout,
-  Sparkles,
-  Rocket
-} from 'lucide-react'
+import { Bot, Layout, Rocket, Shield, Sparkles, Zap } from 'lucide-react';
+
+import { FeatureSection } from '@djangocfg/ui-nextjs/blocks';
 
 const features = [
   {

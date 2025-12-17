@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-import { TradingView } from './TradingView';
 import { generateMetadata } from '@core/metadata';
+
+import { TradingView } from './TradingView';
 
 export const metadata: Metadata = generateMetadata({
   title: 'Trading',

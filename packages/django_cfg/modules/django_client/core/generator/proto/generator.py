@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..base import BaseGenerator, GeneratedFile
+from ..claude_generator import ClaudeGenerator
 from .messages_generator import ProtoMessagesGenerator
 from .services_generator import ProtoServicesGenerator
 from .type_mapper import ProtoTypeMapper
@@ -95,6 +96,9 @@ class ProtoGenerator(BaseGenerator):
         # Generate root README.md with protoc compilation instructions
         readme_file = self._generate_readme_file(ops_by_tag)
         files.append(readme_file)
+
+        # Generate CLAUDE.md
+        files.append(ClaudeGenerator(self.context, "proto", group_name=self.group_name).generate())
 
         return files
 

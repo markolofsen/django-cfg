@@ -7,6 +7,7 @@
 
 import type { Metadata } from 'next';
 import { generateOgImageMetadata } from '@djangocfg/nextjs/og-image';
+
 import { settings } from './settings';
 
 /**

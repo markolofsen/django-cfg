@@ -1,5 +1,6 @@
 import { Separator } from '@djangocfg/ui-nextjs';
-import { HeroSection, FeaturesSection, StatsSection, CTASection } from './components';
+
+import { CTASection, FeaturesSection, HeroSection, StatsSection } from './components';
 
 export function LandingView() {
   return (

@@ -15,9 +15,6 @@ const withBundleAnalyzer = bundleAnalyzer({
 // Create config with base settings
 // Add project-specific overrides here if needed
 const config = createBaseNextConfig({
-  // Automatically open browser in development mode
-  openBrowser: true,
-
   // Check for @djangocfg/* package updates on startup
   checkUpdates: true,
 

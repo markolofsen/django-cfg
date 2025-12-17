@@ -8,8 +8,11 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { AdminLayout as BaseAdminLayout, type SidebarItem, type SidebarConfig, type HeaderConfig } from '@djangocfg/layouts';
-import { routes, adminMenuGroups } from '@routes/index';
+
+import {
+    AdminLayout as BaseAdminLayout, HeaderConfig, SidebarConfig, SidebarItem
+} from '@djangocfg/layouts';
+import { adminMenuGroups, routes } from '@routes/index';
 
 interface AdminLayoutProps {
   children: ReactNode;

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { ProfileLayout } from '@djangocfg/layouts';
 import { generateMetadata } from '@core/metadata';
+import { ProfileLayout } from '@djangocfg/layouts';
 
 export const metadata: Metadata = generateMetadata({
   title: 'Profile',

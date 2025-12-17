@@ -1,26 +1,16 @@
-import { useState, useEffect } from 'react';
-import { events } from '@djangocfg/ui-nextjs/hooks';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@djangocfg/ui-nextjs';
-import { useTrading } from '@/contexts';
-import { TRADING_DIALOG_EVENTS } from '../events';
-import type { OrderCreateRequest } from '@/api/generated/trading/trading__api__trading/models';
-import { OrderCreateRequestSide, OrderCreateRequestOrderType } from '@/api/generated/trading/enums';
+import { useEffect, useState } from 'react';
 
+import { OrderCreateRequestOrderType, OrderCreateRequestSide } from '@/api/generated/trading/enums';
+import { useTrading } from '@/contexts';
+import {
+    Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@djangocfg/ui-nextjs';
+import { events } from '@djangocfg/ui-nextjs/hooks';
+
+import { TRADING_DIALOG_EVENTS } from '../events';
+
+import type { OrderCreateRequest } from '@/api/generated/trading/trading__api__trading/models';
 export function CreateOrderDialogComponent() {
   const { createOrder } = useTrading();
   const [isOpen, setIsOpen] = useState(false);

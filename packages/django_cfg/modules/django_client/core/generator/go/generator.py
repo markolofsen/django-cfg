@@ -16,6 +16,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...ir import IROperationObject, IRSchemaObject
 from ..base import BaseGenerator, GeneratedFile
+from ..claude_generator import ClaudeGenerator
 from .client_generator import ClientGenerator
 from .files_generator import FilesGenerator
 from .models_generator import ModelsGenerator
@@ -117,6 +118,9 @@ class GoGenerator(BaseGenerator):
                 files.append(self.files_gen.generate_go_mod())
                 files.append(self.files_gen.generate_readme())
                 files.append(self.files_gen.generate_makefile())
+
+        # Generate CLAUDE.md
+        files.append(ClaudeGenerator(self.context, "go", group_name=self.group_name).generate())
 
         return files
 

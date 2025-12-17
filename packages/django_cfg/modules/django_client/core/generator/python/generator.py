@@ -17,6 +17,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...ir import IROperationObject, IRSchemaObject
 from ..base import BaseGenerator, GeneratedFile
+from ..claude_generator import ClaudeGenerator
 from .async_client_gen import AsyncClientGenerator
 from .files_generator import FilesGenerator
 from .models_generator import ModelsGenerator
@@ -115,6 +116,9 @@ class PythonGenerator(BaseGenerator):
         # Generate package files if requested
         if self.generate_package_files:
             files.append(self.files_gen.generate_pyproject_toml_file(self.package_config))
+
+        # Generate CLAUDE.md
+        files.append(ClaudeGenerator(self.context, "python", group_name=self.group_name).generate())
 
         return files
 

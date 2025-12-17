@@ -4,41 +4,18 @@
  * Provides trading portfolio and orders management functionality.
  */
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, ReactNode, useContext } from 'react';
+
 import { tradingClient } from '@/api/BaseClient';
+
 import {
-  useTradingPortfoliosMeRetrieve,
-  useTradingPortfoliosStatsRetrieve,
-  useTradingOrdersList,
-  useCreateTradingOrdersCreate,
-  useDeleteTradingOrdersDestroy
-} from '../api/generated/trading/_utils/hooks/trading__api__trading';
-import type { API } from '../api/generated/trading';
-import type {
-  Portfolio,
-  PortfolioStats,
-  Order,
-  OrderCreateRequest
-} from '../api/generated/trading/trading__api__trading/models';
+    useCreateTradingOrdersCreate, useDeleteTradingOrdersDestroy, useTradingOrdersList,
+    useTradingPortfoliosMeRetrieve, useTradingPortfoliosStatsRetrieve
+} from '../../api/generated/trading/_utils/hooks/trading__api__trading';
 
-interface TradingContextType {
-  // Portfolio data
-  portfolio: Portfolio | undefined;
-  portfolioStats: PortfolioStats | undefined;
-  portfolioLoading: boolean;
-  portfolioError: Error | null;
-
-  // Orders data
-  orders: Order[];
-  ordersLoading: boolean;
-  ordersError: Error | null;
-
-  // Actions
-  createOrder: (data: OrderCreateRequest) => Promise<void>;
-  cancelOrder: (orderId: number) => Promise<void>;
-  refreshPortfolio: () => Promise<void>;
-  refreshOrders: () => Promise<void>;
-}
+import type { API } from '../../api/generated/trading';
+import type { OrderCreateRequest } from './types';
+import type { TradingContextType } from './types';
 
 const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
