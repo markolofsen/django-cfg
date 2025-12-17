@@ -88,6 +88,7 @@ class TypeScriptThinGenerator:
                 'param_type': param_type,
                 'return_type': return_type,
                 'docstring': method.docstring or f"Call {method.name} RPC method",
+                'no_wait': method.no_wait,
             })
 
         model_names = [m.__name__ for m in self.models]

@@ -13,7 +13,7 @@ from .registry import get_global_registry
 logger = logging.getLogger(__name__)
 
 
-def websocket_rpc(method_name: str):
+def websocket_rpc(method_name: str, *, no_wait: bool = False):
     """
     Decorator to register WebSocket RPC handler.
 
@@ -22,6 +22,7 @@ def websocket_rpc(method_name: str):
 
     Args:
         method_name: RPC method name (e.g., "tasks.get_stats")
+        no_wait: If True, client won't wait for response (fire-and-forget)
 
     Returns:
         Decorator function
@@ -41,17 +42,27 @@ def websocket_rpc(method_name: str):
         >>> async def get_stats(conn, params: TaskStatsParams) -> TaskStatsResult:
         ...     # Business logic here
         ...     return TaskStatsResult(total=100, completed=50)
+        >>>
+        >>> # Fire-and-forget example:
+        >>> @websocket_rpc("terminal.input", no_wait=True)
+        >>> async def terminal_input(conn, params: TerminalInputParams) -> SuccessResult:
+        ...     # Process input without client waiting
+        ...     return SuccessResult(success=True)
 
     Notes:
         - Handler must be async function
         - Handler signature: async def handler(conn, params: ParamsModel) -> ResultModel
         - ParamsModel and ResultModel must be Pydantic BaseModel subclasses
         - Type hints are required for code generation
+        - Use no_wait=True for methods where client shouldn't wait for response
     """
     def decorator(handler_func: Callable) -> Callable:
         # Validate handler is async
         if not inspect.iscoroutinefunction(handler_func):
             raise TypeError(f"Handler '{method_name}' must be async function")
+
+        # Store no_wait attribute on function for discovery
+        handler_func._no_wait = no_wait  # type: ignore
 
         # Extract type hints
         try:
@@ -104,6 +115,7 @@ def websocket_rpc(method_name: str):
             param_type=param_type,
             return_type=return_type,
             docstring=docstring,
+            no_wait=no_wait,
         )
 
         logger.info(f"✅ Registered WebSocket RPC: {method_name}")

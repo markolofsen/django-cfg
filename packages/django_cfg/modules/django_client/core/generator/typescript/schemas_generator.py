@@ -173,7 +173,8 @@ class SchemasGenerator:
             elif schema_format == "date":
                 base_type = "z.iso.date()"
             elif schema_format in ("uri", "url"):
-                base_type = "z.url()"
+                # URL fields in Django often allow blank strings, so accept both
+                base_type = "z.union([z.url(), z.literal('')])"
             elif schema_format == "uuid":
                 # Use regex instead of z.uuid() for more lenient validation
                 # z.uuid() uses strict RFC 4122 validation that rejects some valid UUIDs
@@ -248,6 +249,14 @@ class SchemasGenerator:
                 # Object with additionalProperties (e.g., Record<string, DatabaseConfig>)
                 if schema.additional_properties.ref:
                     value_type = f"{schema.additional_properties.ref}Schema"
+                elif schema.additional_properties.type == "any":
+                    # additionalProperties: true or {} - allow any values
+                    value_type = "z.any()"
+                elif (schema.additional_properties.type == "object" and
+                      not schema.additional_properties.properties and
+                      not schema.additional_properties.ref):
+                    # Empty object additionalProperties: {} - allow any values
+                    value_type = "z.any()"
                 else:
                     value_type = self._map_type_to_zod(schema.additional_properties)
                     # If DictField() produces additionalProperties with just string type,

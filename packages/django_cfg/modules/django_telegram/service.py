@@ -4,6 +4,7 @@ Django Telegram Service for django_cfg.
 Auto-configuring Telegram notification service that integrates with DjangoConfig.
 """
 
+import itertools
 import queue
 import threading
 import time
@@ -66,6 +67,7 @@ class TelegramMessageQueue:
 
         self._initialized = True
         self._queue = queue.PriorityQueue()  # Priority queue for message ordering
+        self._counter = itertools.count()  # Tie-breaker for same-priority items
         self._worker = threading.Thread(target=self._process_queue, daemon=True, name="TelegramQueueWorker")
         self._dropped_count = 0  # Track dropped messages
         self._last_cleanup_warning = 0  # Timestamp of last warning
@@ -80,8 +82,8 @@ class TelegramMessageQueue:
         """Worker thread that processes queued messages with rate limiting."""
         while True:
             try:
-                # PriorityQueue returns (priority, item)
-                priority, (func, args, kwargs) = self._queue.get(timeout=1)
+                # PriorityQueue returns (priority, count, item)
+                priority, _count, (func, args, kwargs) = self._queue.get(timeout=1)
 
                 try:
                     func(*args, **kwargs)
@@ -151,8 +153,9 @@ class TelegramMessageQueue:
                     self._last_cleanup_warning = time.time()
                 return
 
-        # Queue the message
-        self._queue.put((priority, (func, args, kwargs)))
+        # Queue the message with counter for tie-breaking (avoids comparing functions)
+        count = next(self._counter)
+        self._queue.put((priority, count, (func, args, kwargs)))
         logger.debug(
             f"Telegram message queued with priority {priority} "
             f"(size: {current_size + 1}/{self.MAX_QUEUE_SIZE})"

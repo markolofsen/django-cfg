@@ -23,12 +23,14 @@ class RegisteredHandler:
         param_type: Pydantic model for parameters
         return_type: Pydantic model for return value
         docstring: Handler documentation
+        no_wait: If True, method doesn't wait for response (fire-and-forget)
     """
     name: str
     handler: Callable
     param_type: Optional[Type[BaseModel]]
     return_type: Optional[Type[BaseModel]]
     docstring: Optional[str]
+    no_wait: bool = False
 
 
 class RPCRegistry:
@@ -49,6 +51,7 @@ class RPCRegistry:
         param_type: Optional[Type[BaseModel]] = None,
         return_type: Optional[Type[BaseModel]] = None,
         docstring: Optional[str] = None,
+        no_wait: bool = False,
     ) -> None:
         """
         Register RPC handler.
@@ -59,6 +62,7 @@ class RPCRegistry:
             param_type: Pydantic model for parameters
             return_type: Pydantic model for return value
             docstring: Handler documentation
+            no_wait: If True, method doesn't wait for response (fire-and-forget)
         """
         if name in self._handlers:
             logger.warning(f"Handler '{name}' already registered, overwriting")
@@ -69,6 +73,7 @@ class RPCRegistry:
             param_type=param_type,
             return_type=return_type,
             docstring=docstring,
+            no_wait=no_wait,
         )
 
         logger.debug(f"Registered RPC handler: {name}")

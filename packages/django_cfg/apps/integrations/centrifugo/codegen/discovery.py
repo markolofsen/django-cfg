@@ -30,6 +30,7 @@ class RPCMethodInfo:
         param_type: Pydantic model for parameters (if available)
         return_type: Pydantic model for return value (if available)
         docstring: Method documentation
+        no_wait: If True, method doesn't wait for response (fire-and-forget)
     """
 
     name: str
@@ -37,6 +38,7 @@ class RPCMethodInfo:
     param_type: Optional[Type[BaseModel]]
     return_type: Optional[Type[BaseModel]]
     docstring: Optional[str]
+    no_wait: bool = False
 
 
 def discover_rpc_methods_from_router(router: Any) -> List[RPCMethodInfo]:
@@ -137,12 +139,16 @@ def _extract_method_info(method_name: str, handler_func: Any) -> RPCMethodInfo:
     # Get docstring
     docstring = inspect.getdoc(handler_func)
 
+    # Check for no_wait attribute (fire-and-forget mode)
+    no_wait = getattr(handler_func, '_no_wait', False)
+
     return RPCMethodInfo(
         name=method_name,
         handler_func=handler_func,
         param_type=param_type,
         return_type=return_type,
         docstring=docstring,
+        no_wait=no_wait,
     )
 
 

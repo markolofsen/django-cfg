@@ -13,6 +13,8 @@ import type {
 // Compatible with @djangocfg/centrifugo client
 interface CentrifugoClient {
   namedRPC<T = any>(method: string, params: any, options?: { timeout?: number }): Promise<T>;
+  /** Optional: fire-and-forget RPC (no response expected) */
+  namedRPCNoWait?(method: string, params: any): void;
 }
 
 export class APIClient {
@@ -31,5 +33,19 @@ export class APIClient {
     {% endif %}
   }
 
+  {% if method.no_wait %}
+  /**
+   * {{ method.docstring.split('\n')[0] if method.docstring else 'No description' }} (fire-and-forget)
+   */
+  {{ method.name_ts }}NoWait(params: {{ method.param_type }}): void {
+    // Fire-and-forget: don't wait for response
+    if (this.client.namedRPCNoWait) {
+      this.client.namedRPCNoWait('{{ method.name }}', params);
+    } else {
+      this.client.namedRPC('{{ method.name }}', params).catch(() => {});
+    }
+  }
+
+  {% endif %}
 {% endfor %}
 }
