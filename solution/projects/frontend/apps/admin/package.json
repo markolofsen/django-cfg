@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "ai-docs": "djangocfg-docs",
+    "seo:audit": "pnpm exec djangocfg-seo audit --output @reports/seo",
     "pwa": "djangocfg-pwa",
     "kill-port": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
     "dev": "next dev",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@djangocfg/nextjs": "latest",
+    "@djangocfg/seo": "latest",
     "@djangocfg/typescript-config": "latest",
     "@next/bundle-analyzer": "^16.0.1",
     "@tailwindcss/forms": "^0.5.10",
