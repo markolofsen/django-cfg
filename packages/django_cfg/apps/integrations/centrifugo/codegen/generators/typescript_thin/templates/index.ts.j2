@@ -3,7 +3,7 @@
  * Auto-generated - DO NOT EDIT
  */
 
-export { APIClient } from './client';
+export { APIClient, API_VERSION, GENERATED_AT } from './client';
 {% if models %}
 export type {
 {% for model_name in models | unique | sort %}  {{ model_name }},

@@ -4,6 +4,8 @@ Global registry for RPC handlers.
 Stores metadata about registered handlers for code generation.
 """
 
+import hashlib
+import json
 import logging
 from typing import Dict, List, Any, Callable, Optional, Type
 from pydantic import BaseModel
@@ -93,6 +95,57 @@ class RPCRegistry:
     def clear(self) -> None:
         """Clear all registered handlers (for testing)."""
         self._handlers.clear()
+
+    def compute_api_version(self) -> str:
+        """
+        Compute a stable hash of the API contract.
+
+        The hash is based on:
+        - Method names and signatures
+        - Model field names and types
+
+        Returns a short hex hash (8 chars) that changes when the contract changes.
+        """
+        contract_data = {
+            "methods": [],
+            "models": [],
+        }
+
+        # Collect unique models
+        models_seen = set()
+
+        # Add method signatures
+        for handler in sorted(self._handlers.values(), key=lambda h: h.name):
+            contract_data["methods"].append({
+                "name": handler.name,
+                "param_type": handler.param_type.__name__ if handler.param_type else None,
+                "return_type": handler.return_type.__name__ if handler.return_type else None,
+                "no_wait": handler.no_wait,
+            })
+
+            # Collect models
+            if handler.param_type:
+                models_seen.add(handler.param_type)
+            if handler.return_type:
+                models_seen.add(handler.return_type)
+
+        # Add model schemas
+        for model in sorted(models_seen, key=lambda m: m.__name__):
+            try:
+                schema = model.model_json_schema()
+                contract_data["models"].append({
+                    "name": model.__name__,
+                    "properties": sorted(schema.get("properties", {}).keys()),
+                    "required": sorted(schema.get("required", [])),
+                })
+            except Exception as e:
+                logger.warning(f"Could not get schema for {model.__name__}: {e}")
+
+        # Compute hash
+        contract_json = json.dumps(contract_data, sort_keys=True)
+        full_hash = hashlib.sha256(contract_json.encode()).hexdigest()
+
+        return full_hash[:8]
 
 
 # Global registry instance

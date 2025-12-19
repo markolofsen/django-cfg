@@ -33,6 +33,7 @@ class CentrifugoConfig(AppConfig):
 
         Validates that all required Centrifugo dependencies are installed.
         Registers signal handlers for JWT token customization.
+        Loads built-in RPC handlers.
         """
         from django_cfg.utils import get_logger
 
@@ -40,6 +41,13 @@ class CentrifugoConfig(AppConfig):
 
         # Check dependencies if needed (only when using Centrifugo features)
         self._check_dependencies_if_needed()
+
+        # Register built-in RPC handlers (system.check_version, etc.)
+        try:
+            from . import handlers  # noqa: F401
+            logger.debug("Built-in Centrifugo RPC handlers registered")
+        except ImportError as e:
+            logger.warning(f"Could not load Centrifugo handlers: {e}")
 
         logger.info("Centrifugo app initialized (middleware will inject JWT tokens)")
 

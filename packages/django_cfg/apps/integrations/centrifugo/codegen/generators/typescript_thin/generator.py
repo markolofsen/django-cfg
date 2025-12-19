@@ -2,6 +2,8 @@
 TypeScript thin wrapper client generator.
 """
 
+import hashlib
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +15,47 @@ from ...discovery import RPCMethodInfo
 from ...utils import to_typescript_method_name, pydantic_to_typescript
 
 logger = logging.getLogger(__name__)
+
+
+def compute_api_version(methods: List[RPCMethodInfo], models: List[Type[BaseModel]]) -> str:
+    """
+    Compute a stable hash of the API contract.
+
+    The hash is based on:
+    - Method names and signatures
+    - Model field names and types
+
+    Returns a short hex hash (8 chars) that changes when the contract changes.
+    """
+    contract_data = {
+        "methods": [],
+        "models": [],
+    }
+
+    # Add method signatures
+    for method in sorted(methods, key=lambda m: m.name):
+        contract_data["methods"].append({
+            "name": method.name,
+            "param_type": method.param_type.__name__ if method.param_type else None,
+            "return_type": method.return_type.__name__ if method.return_type else None,
+            "no_wait": method.no_wait,
+        })
+
+    # Add model schemas
+    for model in sorted(models, key=lambda m: m.__name__):
+        schema = model.model_json_schema()
+        # Only include stable parts of schema
+        contract_data["models"].append({
+            "name": model.__name__,
+            "properties": list(schema.get("properties", {}).keys()),
+            "required": schema.get("required", []),
+        })
+
+    # Compute hash
+    contract_json = json.dumps(contract_data, sort_keys=True)
+    full_hash = hashlib.sha256(contract_json.encode()).hexdigest()
+
+    return full_hash[:8]
 
 
 class TypeScriptThinGenerator:
@@ -27,6 +70,7 @@ class TypeScriptThinGenerator:
         self.methods = methods
         self.models = models
         self.output_dir = Path(output_dir)
+        self.api_version = compute_api_version(methods, models)
 
         templates_dir = Path(__file__).parent / "templates"
         self.jinja_env = Environment(
@@ -93,7 +137,12 @@ class TypeScriptThinGenerator:
 
         model_names = [m.__name__ for m in self.models]
 
-        content = template.render(methods=methods_data, models=model_names)
+        content = template.render(
+            methods=methods_data,
+            models=model_names,
+            api_version=self.api_version,
+            generated_at=datetime.now().isoformat(),
+        )
         (self.output_dir / "client.ts").write_text(content)
 
     def _generate_index(self):

@@ -1,6 +1,8 @@
 /**
  * Generated API Client
  * Auto-generated thin wrapper - DO NOT EDIT
+ *
+ * @generated {{ generated_at }}
  */
 
 {% if models %}
@@ -8,6 +10,17 @@ import type {
 {% for model_name in models | unique | sort %}  {{ model_name }},
 {% endfor %}} from './types';
 {% endif %}
+
+/**
+ * API contract version - changes when methods or models change.
+ * Use checkVersion() to verify client/server compatibility.
+ */
+export const API_VERSION = '{{ api_version }}';
+
+/**
+ * Timestamp when this client was generated.
+ */
+export const GENERATED_AT = '{{ generated_at }}';
 
 // Interface for Centrifugo client with namedRPC
 // Compatible with @djangocfg/centrifugo client
@@ -17,8 +30,50 @@ interface CentrifugoClient {
   namedRPCNoWait?(method: string, params: any): void;
 }
 
+// Re-export VersionCheckResult from types (generated from Pydantic model)
+export type { VersionCheckResult } from './types';
+
 export class APIClient {
   constructor(private client: CentrifugoClient) {}
+
+  /**
+   * Check if client API version is compatible with server.
+   * Call this after connecting to ensure contract compatibility.
+   *
+   * @throws Error if versions are incompatible
+   * @returns VersionCheckResult with compatibility info
+   *
+   * @example
+   * const apiClient = new APIClient(client);
+   * const result = await apiClient.checkVersion();
+   * if (!result.compatible) {
+   *   console.error('API version mismatch! Please regenerate client.');
+   * }
+   */
+  async checkVersion(): Promise<VersionCheckResult> {
+    try {
+      const result = await this.client.namedRPC<VersionCheckResult>(
+        'system.check_version',
+        { client_version: API_VERSION }
+      );
+      return result;
+    } catch (error) {
+      // If endpoint doesn't exist, assume compatible (for backwards compatibility)
+      return {
+        compatible: true,
+        client_version: API_VERSION,
+        server_version: 'unknown',
+        message: 'Version check endpoint not available',
+      };
+    }
+  }
+
+  /**
+   * Get the API contract version of this client.
+   */
+  getVersion(): string {
+    return API_VERSION;
+  }
 
 {% for method in methods %}
   /**
