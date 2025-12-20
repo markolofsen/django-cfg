@@ -159,6 +159,10 @@ class DjangoConfig(BaseModel):
             "x-requested-with",
             "x-api-key",
             "x-api-token",
+            # File transfer / chunked upload headers
+            "x-chunk-index",
+            "x-chunk-checksum",
+            "x-is-last",
         ],
         description="CORS allowed headers",
     )

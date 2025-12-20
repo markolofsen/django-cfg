@@ -51,6 +51,12 @@ class OperationsGenerator:
             and operation.request_body.content_type == "multipart/form-data"
         )
 
+        # Check if this is a binary upload operation
+        is_binary = (
+            operation.request_body
+            and operation.request_body.content_type == "application/octet-stream"
+        )
+
         # Add request body parameter
         if operation.request_body:
             # For both JSON and multipart, accept data as typed object
@@ -61,6 +67,8 @@ class OperationsGenerator:
                 # Inline schema
                 if is_multipart:
                     params.append("data: FormData")
+                elif is_binary:
+                    params.append("data: Blob | ArrayBuffer")
                 else:
                     params.append("data: any")
         elif operation.patch_request_body:
@@ -69,6 +77,27 @@ class OperationsGenerator:
                 params.append(f"data?: Models.{schema_name}")
             else:
                 params.append("data?: any")
+
+        # Add header parameters
+        # TypeScript requires: required params first, then optional params
+        header_params_list = []
+        required_header_params = []
+        optional_header_params = []
+
+        for param in operation.header_parameters:
+            param_type = self._map_param_type(param.schema_type)
+            # Convert header name to camelCase for TypeScript (X-Chunk-Index -> xChunkIndex)
+            ts_param_name = self._header_to_param_name(param.name)
+            header_params_list.append((param.name, ts_param_name, param_type, param.required))
+
+            if param.required:
+                required_header_params.append(f"{ts_param_name}: {param_type}")
+            else:
+                optional_header_params.append(f"{ts_param_name}?: {param_type}")
+
+        # Add required first, then optional
+        params.extend(required_header_params)
+        params.extend(optional_header_params)
 
         # Add query parameters (old style - separate params)
         # TypeScript requires: required params first, then optional params
@@ -186,6 +215,15 @@ class OperationsGenerator:
         # Build request options
         request_opts = []
 
+        # Header params
+        if header_params_list:
+            header_items = []
+            for header_name, ts_param_name, _, _ in header_params_list:
+                # Map param name to original header name
+                header_items.append(f"'{header_name}': String({ts_param_name})")
+            body_lines.append(f"const headers = {{ {', '.join(header_items)} }};")
+            request_opts.append("headers")
+
         # Query params
         if query_params_list:
             param_names = [param_name for param_name, _, _ in query_params_list]
@@ -214,7 +252,7 @@ class OperationsGenerator:
 
             request_opts.append("params")
 
-        # Body / FormData
+        # Body / FormData / Binary
         if operation.request_body or operation.patch_request_body:
             if is_multipart and operation.request_body:
                 # Build FormData for multipart upload
@@ -236,6 +274,9 @@ class OperationsGenerator:
                 else:
                     # Inline schema - data is already FormData
                     request_opts.append("formData: data")
+            elif is_binary:
+                # Binary upload - pass raw data with octet-stream content type
+                request_opts.append("binaryBody: data")
             else:
                 # JSON body
                 request_opts.append("body: data")
@@ -325,3 +366,22 @@ class OperationsGenerator:
         """
         components = snake_str.split("_")
         return components[0] + "".join(x.title() for x in components[1:])
+
+    def _header_to_param_name(self, header_name: str) -> str:
+        """
+        Convert HTTP header name to camelCase parameter name.
+
+        Examples:
+            >>> self._header_to_param_name("X-Chunk-Index")
+            'xChunkIndex'
+            >>> self._header_to_param_name("Content-Type")
+            'contentType'
+            >>> self._header_to_param_name("X-Is-Last")
+            'xIsLast'
+        """
+        # Remove leading/trailing whitespace and split by hyphen
+        parts = header_name.strip().split("-")
+        if not parts:
+            return header_name.lower()
+        # First part lowercase, rest title case
+        return parts[0].lower() + "".join(p.title() for p in parts[1:])
