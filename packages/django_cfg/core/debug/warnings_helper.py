@@ -45,6 +45,35 @@ def warning_with_traceback(message, category, filename, lineno, file=None, line=
     log.write(warnings.formatwarning(message, category, filename, lineno, line))
     log.write("="*80 + "\n\n")
 
+    # Add helpful hints for common async issues
+    if 'coroutine' in message_str and 'never awaited' in message_str:
+        hint = """
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  💡 ASYNC VIEW HINT                                                          ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  This error typically occurs when using async def in DRF ViewSets.           ║
+║  Standard DRF doesn't support async views natively!                          ║
+║                                                                              ║
+║  SOLUTIONS:                                                                  ║
+║                                                                              ║
+║  1. Use 'adrf' package for async-enabled ViewSets:                           ║
+║     from adrf.viewsets import ViewSet as AsyncViewSet                        ║
+║                                                                              ║
+║     class MyViewSet(AsyncViewSet):                                           ║
+║         async def list(self, request):                                       ║
+║             items = await Item.objects.aall()                                ║
+║             return Response(items)                                           ║
+║                                                                              ║
+║  2. Make sure you're running with ASGI (uvicorn):                            ║
+║     make asgi   (instead of make dev)                                        ║
+║                                                                              ║
+║  3. Or use sync views with sync_to_async for async operations                ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+"""
+        log.write(hint)
+
 
 def setup_warnings_debug(
     enabled: bool = None,

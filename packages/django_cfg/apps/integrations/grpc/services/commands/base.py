@@ -469,6 +469,18 @@ class StreamingCommandClient(Generic[TCommand], ABC):
     For full stack (ASGI + gRPC + RQ):
     Use:          make run-all
 
+    ASYNC DRF VIEWS:
+    ================
+    DRF ViewSets don't support async views natively!
+    Use 'adrf' package for async-enabled ViewSets:
+        from adrf.viewsets import ViewSet as AsyncViewSet
+
+    Example:
+        class MyViewSet(AsyncViewSet):
+            async def list(self, request):
+                items = await Item.objects.aall()
+                return Response(items)
+
 {'!'*80}
 {'='*80}
 """

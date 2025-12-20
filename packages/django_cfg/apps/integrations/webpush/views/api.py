@@ -3,8 +3,10 @@ Web Push API ViewSet.
 
 Provides REST API endpoints for Web Push notifications.
 
-Note: DRF ViewSets don't support native async views, so we use sync methods
-with sync ORM operations. For async push sending, use the async service directly.
+Note: Standard DRF ViewSets don't support async views. Options:
+1. Use sync methods with sync ORM (current approach)
+2. Use 'adrf' package: from adrf.viewsets import ViewSet as AsyncViewSet
+For async push sending, use the async service directly.
 """
 
 from asgiref.sync import async_to_sync
