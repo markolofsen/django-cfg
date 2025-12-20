@@ -223,6 +223,15 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_totp_enabled(self) -> bool:
+        """
+        Check if django-cfg TOTP is enabled.
+
+        Returns:
+            True if TOTP is enabled, False otherwise
+        """
+        return True
+
     def is_github_oauth_enabled(self) -> bool:
         """
         Check if GitHub OAuth is enabled and configured.

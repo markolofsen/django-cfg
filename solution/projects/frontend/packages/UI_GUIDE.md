@@ -2,7 +2,7 @@
 
 Comprehensive React UI library with 50+ components built with Radix UI, Tailwind CSS v4, and TypeScript
 
-Total Components: 121
+Total Components: 133
 
 ## 📋 Quick Reference - Available Components
 
@@ -10,7 +10,7 @@ Total Components: 121
 Command, Toggle, ToggleGroup
 
 ### Forms (23)
-Button, ButtonGroup, ButtonLink, Checkbox, Combobox, CopyButton, CopyField, DownloadButton, Field, Form, Input, InputGroup, InputOTP, Label, MultiSelect, MultiSelectPro, MultiSelectProAsync, PhoneInput, RadioGroup, Select, Slider, Switch, Textarea
+Button, ButtonGroup, ButtonLink, Checkbox, Combobox, CopyButton, CopyField, DownloadButton, Field, Form, Input, InputGroup, OTPInput, Label, MultiSelect, MultiSelectPro, MultiSelectProAsync, PhoneInput, RadioGroup, Select, Slider, Switch, Textarea
 
 ### Layout (14)
 AspectRatio, Card, ImageWithFallback, Item, Kbd, Portal, Preloader, Resizable, ScrollArea, Section, Separator, Sidebar, Skeleton, Sticky
@@ -24,26 +24,29 @@ AlertDialog, ContextMenu, Dialog, Drawer, DropdownMenu, HoverCard, Popover, Shee
 ### Feedback (4)
 Alert, Badge, Progress, Toast
 
-### Data Display (7)
-Accordion, Calendar, Carousel, Collapsible, SSRPagination, StaticPagination, Table
+### Data Display (9)
+Accordion, Calendar, Carousel, Collapsible, DatePicker, DateRangePicker, SSRPagination, StaticPagination, Table
 
-### Specialized (9)
-ButtonGroup, Empty, InputGroup, Item, Kbd, OgImage, Sidebar, Spinner, Toaster
+### Specialized (4)
+Empty, OgImage, Spinner, Toaster
 
-### Developer Tools (10)
-Interactive JsonSchemaForm, JsonTree, LottiePlayer, MarkdownMessage with Mermaid, MarkdownMessage, Mermaid, OgImageTemplate, OpenapiViewer, PrettyCode, UseQueryParams
+### Developer Tools (11)
+Interactive JsonSchemaForm, JsonTree, LottiePlayer, MarkdownMessage with Mermaid, MarkdownMessage, Mermaid, OgImageTemplate, OpenapiViewer, PrettyCode, UseQueryParams, VideoPlayer
 
-### Blocks (7)
-CTASection, FeatureSection, Hero, NewsletterSection, StatsSection, SuperHero, TestimonialSection
+### Blocks (8)
+CTASection, FeatureSection, Hero, NewsletterSection, SplitHero, StatsSection, SuperHero, TestimonialSection
 
-### Hooks (12)
-useCopy, useCountdown, useDebounce, useDebouncedCallback, useDebugTools, useEventListener, useImageLoader, useIsMobile, useLocalStorage, useMediaQuery, useSessionStorage, useTheme
+### Hooks (15)
+useBrowserDetect, useCopy, useCountdown, useDebounce, useDebouncedCallback, useDebugTools, useDeviceDetect, useEventListener, useHotkey, useImageLoader, useIsMobile, useLocalStorage, useMediaQuery, useSessionStorage, useThemeContext
 
 ### Charts (7)
 Area Chart, Bar Chart, ChartContainer, Donut Chart, Line Chart, Pie Chart, Radial Bar Chart
 
 ### Animations (8)
 Aurora Borealis, Color Schemes, Floating Orbs, Geometric Flow, AnimatedBackground, Liquid Gradient, Mesh Gradient, Spotlight
+
+### Layouts (10)
+AIChatWidget, AdminLayout, Analytics, AppLayout, AuthDialog, AuthLayout, BaseApp, PrivateLayout, PublicFooter, PublicLayout
 
 ---
 
@@ -504,30 +507,54 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@djangocfg/ui-next
 
 ---
 
-### InputOTP
+### OTPInput
 
-One-time password input component
+Smart one-time password input with validation, paste handling, and auto-submit
 
 **Import:**
 ```tsx
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@djangocfg/ui-nextjs';
+import { OTPInput } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-<InputOTP maxLength={6}>
-  <InputOTPGroup>
-    <InputOTPSlot index={0} />
-    <InputOTPSlot index={1} />
-    <InputOTPSlot index={2} />
-    <InputOTPSlot index={3} />
-    <InputOTPSlot index={4} />
-    <InputOTPSlot index={5} />
-  </InputOTPGroup>
-</InputOTP>
+// Basic numeric OTP
+<OTPInput
+  length={6}
+  value={code}
+  onChange={setCode}
+/>
+
+// With separator and alphanumeric
+<OTPInput
+  length={6}
+  validationMode="alphanumeric"
+  showSeparator
+  separatorIndex={3}
+  value={code}
+  onChange={setCode}
+/>
+
+// Custom validation (hex only)
+<OTPInput
+  length={4}
+  validationMode="custom"
+  customValidator={(char) => /[A-F0-9]/i.test(char)}
+  value={code}
+  onChange={setCode}
+/>
+
+// Auto-submit when complete
+<OTPInput
+  length={6}
+  autoSubmit
+  onComplete={(code) => verifyCode(code)}
+  value={code}
+  onChange={setCode}
+/>
 ```
 
-**Tags:** otp, verification, code, pin
+**Tags:** otp, verification, code, pin, validation, smart, paste
 
 ---
 
@@ -915,8 +942,10 @@ import { Kbd, KbdGroup } from '@djangocfg/ui-nextjs';
 
 **Example:**
 ```tsx
-// Single key
-<Kbd>Ctrl</Kbd>
+// Single key with size
+<Kbd size="sm">Ctrl</Kbd>
+<Kbd size="default">Ctrl</Kbd>
+<Kbd size="lg">Ctrl</Kbd>
 
 // Key combination with KbdGroup
 <KbdGroup>
@@ -932,7 +961,7 @@ import { Kbd, KbdGroup } from '@djangocfg/ui-nextjs';
 </KbdGroup>
 ```
 
-**Tags:** keyboard, shortcut, key, hotkey, documentation
+**Tags:** keyboard, shortcut, key, hotkey, documentation, size
 
 ---
 
@@ -1028,9 +1057,9 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@djangocfg
 ```
 
 **Props:**
-- `size`: `"sm" | "md" | "lg"` - Handle size variant - controls hit area
+- `size`: `"sm" | "md" | "lg"` - Handle size variant - controls hit area width
 - `showIndicator`: `boolean` - Show visual pill indicator on hover
-- `indicatorHeight`: `number` - Custom indicator height in pixels
+- `indicatorHeight`: `number` - Custom indicator height in pixels (default: 32)
 - `withHandle`: `boolean` - Show classic dots handle icon
 
 **Tags:** resizable, panel, split, drag, resize
@@ -1739,7 +1768,7 @@ import { Progress } from '@djangocfg/ui-nextjs';
 
 ### Toast
 
-Toast notifications for user feedback
+Toast notifications with auto-dismiss support
 
 **Import:**
 ```tsx
@@ -1757,6 +1786,7 @@ function Component() {
         toast({
           title: "Success!",
           description: "Your changes have been saved.",
+          duration: 5000, // Auto-dismiss after 5s (default)
         });
       }}
     >
@@ -1764,13 +1794,27 @@ function Component() {
     </Button>
   );
 }
+
+// Destructive toast
+toast({
+  variant: "destructive",
+  title: "Error",
+  description: "Something went wrong.",
+});
+
+// Persistent toast (no auto-dismiss)
+toast({
+  title: "Important",
+  description: "This won't auto-dismiss.",
+  duration: 0,
+});
 ```
 
-**Tags:** toast, notification, alert, message
+**Tags:** toast, notification, alert, message, feedback
 
 ---
 
-## Data Display (7)
+## Data Display (9)
 
 Tables, accordions, and data visualization
 
@@ -1807,7 +1851,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@d
 
 ### Calendar
 
-Date picker calendar component
+Base calendar component for date display. For input with popover, use DatePicker.
 
 **Import:**
 ```tsx
@@ -1816,6 +1860,7 @@ import { Calendar } from '@djangocfg/ui-nextjs';
 
 **Example:**
 ```tsx
+// Basic calendar
 const [date, setDate] = useState<Date | undefined>(new Date());
 
 <Calendar
@@ -1824,9 +1869,21 @@ const [date, setDate] = useState<Date | undefined>(new Date());
   onSelect={setDate}
   className="rounded-md border"
 />
+
+// With dropdown year/month navigation
+<Calendar
+  mode="single"
+  captionLayout="dropdown"
+/>
+
+// Multiple months
+<Calendar
+  mode="single"
+  numberOfMonths={2}
+/>
 ```
 
-**Tags:** calendar, date, picker, datepicker
+**Tags:** calendar, date, display
 
 ---
 
@@ -1890,6 +1947,86 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@djangocfg/
 
 ---
 
+### DatePicker
+
+Input field with popover calendar for selecting a single date
+
+**Import:**
+```tsx
+import { DatePicker } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const [date, setDate] = useState<Date | undefined>();
+
+<DatePicker
+  value={date}
+  onChange={setDate}
+  placeholder="Select date"
+/>
+
+// With date limits
+<DatePicker
+  value={date}
+  onChange={setDate}
+  fromDate={new Date()}
+  toDate={addDays(new Date(), 30)}
+/>
+
+// Custom format
+<DatePicker
+  value={date}
+  onChange={setDate}
+  dateFormat="yyyy-MM-dd"
+/>
+```
+
+**Tags:** date, picker, input, popover, form
+
+---
+
+### DateRangePicker
+
+Input field with popover calendar for selecting a date range
+
+**Import:**
+```tsx
+import { DateRangePicker, type DateRange } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+const [range, setRange] = useState<DateRange | undefined>({
+  from: new Date(),
+  to: addDays(new Date(), 7),
+});
+
+<DateRangePicker
+  value={range}
+  onChange={setRange}
+  placeholder="Select dates"
+/>
+
+// With more months
+<DateRangePicker
+  value={range}
+  onChange={setRange}
+  numberOfMonths={3}
+/>
+
+// Custom format
+<DateRangePicker
+  value={range}
+  onChange={setRange}
+  dateFormat="yyyy-MM-dd"
+/>
+```
+
+**Tags:** date, range, picker, input, popover, form
+
+---
+
 ### SSRPagination
 
 Server-side rendered pagination with URL-based navigation for Next.js SSR/SSG
@@ -1948,7 +2085,6 @@ import { StaticPagination, useDRFPagination } from '@djangocfg/ui-nextjs';
 **Example:**
 ```tsx
 // Client component with API calls
-'use client';
 
 import { StaticPagination, useDRFPagination } from '@djangocfg/ui-nextjs';
 import { useQuery } from '@tanstack/react-query';
@@ -2027,31 +2163,9 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 
 ---
 
-## Specialized (9)
+## Specialized (4)
 
 Advanced components like sidebar and image handling
-
-### ButtonGroup
-
-Group buttons together with shared borders
-
-**Import:**
-```tsx
-import { ButtonGroup, Button } from '@djangocfg/ui-nextjs';
-```
-
-**Example:**
-```tsx
-<ButtonGroup orientation="horizontal">
-  <Button variant="outline">Left</Button>
-  <Button variant="outline">Center</Button>
-  <Button variant="outline">Right</Button>
-</ButtonGroup>
-```
-
-**Tags:** button, group, toolbar
-
----
 
 ### Empty
 
@@ -2091,86 +2205,6 @@ import {
 
 ---
 
-### InputGroup
-
-Enhanced input with prefix/suffix addons
-
-**Import:**
-```tsx
-import { InputGroup, Input } from '@djangocfg/ui-nextjs';
-```
-
-**Example:**
-```tsx
-<InputGroup>
-  <InputGroupAddon align="inline-start">
-    <SearchIcon className="size-4" />
-  </InputGroupAddon>
-  <Input placeholder="Search..." />
-  <InputGroupAddon align="inline-end">
-    <Kbd>⌘K</Kbd>
-  </InputGroupAddon>
-</InputGroup>
-```
-
-**Tags:** input, group, addon
-
----
-
-### Item
-
-List item component with variants and layouts
-
-**Import:**
-```tsx
-import { Item, ItemGroup } from '@djangocfg/ui-nextjs';
-```
-
-**Example:**
-```tsx
-<ItemGroup>
-  <Item variant="outline" size="default">
-    <ItemIcon>
-      <FileIcon />
-    </ItemIcon>
-    <ItemContent>
-      <ItemTitle>Document.pdf</ItemTitle>
-      <ItemDescription>Updated 2 hours ago</ItemDescription>
-    </ItemContent>
-    <ItemAction>
-      <Button variant="ghost" size="sm">View</Button>
-    </ItemAction>
-  </Item>
-</ItemGroup>
-```
-
-**Tags:** list, item, row
-
----
-
-### Kbd
-
-Keyboard key display component
-
-**Import:**
-```tsx
-import { Kbd } from '@djangocfg/ui-nextjs';
-```
-
-**Example:**
-```tsx
-<div className="flex gap-2 items-center">
-  <span>Press</span>
-  <Kbd>⌘</Kbd>
-  <Kbd>K</Kbd>
-  <span>to open</span>
-</div>
-```
-
-**Tags:** keyboard, shortcut, key
-
----
-
 ### OgImage
 
 Dynamic Open Graph image component using the OG Image API
@@ -2193,49 +2227,6 @@ import { OgImage } from '@djangocfg/ui-nextjs';
 ```
 
 **Tags:** image, og, seo, meta
-
----
-
-### Sidebar
-
-Full-featured sidebar navigation with collapsible groups, icons, and Next.js router support
-
-**Import:**
-```tsx
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from '@djangocfg/ui-nextjs';
-```
-
-**Example:**
-```tsx
-<Sidebar>
-  <SidebarContent>
-    <SidebarGroup>
-      <SidebarGroupLabel>Main</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton href="/" isActive tooltip="Dashboard">
-              <HomeIcon />
-              <span>Dashboard</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  </SidebarContent>
-</Sidebar>
-```
-
-**Tags:** navigation, menu, layout
 
 ---
 
@@ -2291,7 +2282,7 @@ toast.promise(fetchData(), {
 
 ---
 
-## Developer Tools (10)
+## Developer Tools (11)
 
 JSON viewer, code highlighting, Mermaid diagrams
 
@@ -2630,7 +2621,44 @@ const hasFlow = queryParams.has('flow');
 
 ---
 
-## Blocks (7)
+### VideoPlayer
+
+Professional video player with YouTube, Vimeo, MP4, HLS support
+
+**Import:**
+```tsx
+import { VideoPlayer } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// YouTube video
+<VideoPlayer
+  source={{
+    url: 'youtube/dQw4w9WgXcQ',
+    title: 'Video Title',
+    description: 'Video description',
+  }}
+  aspectRatio={16 / 9}
+  theme="modern"
+/>
+
+// Direct MP4
+<VideoPlayer
+  source={{
+    url: 'https://example.com/video.mp4',
+    poster: 'https://example.com/poster.jpg',
+  }}
+  autoplay
+  muted
+/>
+```
+
+**Tags:** video, player, youtube, vimeo, media, vidstack
+
+---
+
+## Blocks (8)
 
 Pre-built landing page sections
 
@@ -2659,7 +2687,7 @@ import { CTASection } from '@djangocfg/ui-nextjs/blocks';
 
 ### FeatureSection
 
-Grid of features with icons and descriptions
+Grid of features with icons and descriptions. Supports default (cards) and compact (minimal) variants.
 
 **Import:**
 ```tsx
@@ -2668,25 +2696,26 @@ import { FeatureSection } from '@djangocfg/ui-nextjs/blocks';
 
 **Example:**
 ```tsx
+// Default variant - with cards
 <FeatureSection
   title="Everything You Need"
   subtitle="All the tools to build modern applications"
   features={[
-    {
-      icon: <Zap className="w-6 h-6" />,
-      title: "Lightning Fast",
-      description: "Optimized for performance"
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Secure",
-      description: "Built with security in mind"
-    }
+    { icon: <Zap className="w-6 h-6" />, title: "Fast", description: "Optimized" },
+    { icon: <Shield className="w-6 h-6" />, title: "Secure", description: "Protected" }
   ]}
+/>
+
+// Compact variant - minimal, no cards
+<FeatureSection
+  features={features}
+  columns={6}
+  variant="compact"
+  background="none"
 />
 ```
 
-**Tags:** features, grid, landing
+**Tags:** features, grid, landing, compact
 
 ---
 
@@ -2737,6 +2766,46 @@ import { NewsletterSection } from '@djangocfg/ui-nextjs/blocks';
 
 ---
 
+### SplitHero
+
+Split-layout hero with text on one side and image/video/custom component on the other. Supports left/right layouts and responsive mobile ordering.
+
+**Import:**
+```tsx
+import { SplitHero } from '@djangocfg/ui-nextjs/blocks';
+```
+
+**Example:**
+```tsx
+// With image
+<SplitHero
+  badge={{ text: 'New' }}
+  title="Build faster with"
+  titleGradient="modern tools"
+  subtitle="Ship your next project in minutes."
+  primaryAction={{ label: 'Get Started', href: '#' }}
+  media={{ type: 'image', src: '/hero.jpg', alt: 'Hero' }}
+  layout="text-left"
+/>
+
+// With video
+<SplitHero
+  title="See it in action"
+  media={{ type: 'video', url: 'youtube/VIDEO_ID' }}
+  layout="text-right"
+/>
+
+// With custom component
+<SplitHero
+  title="Your product"
+  media={{ type: 'custom', content: <YourComponent /> }}
+/>
+```
+
+**Tags:** hero, split, landing, video, image
+
+---
+
 ### StatsSection
 
 Display key metrics and statistics
@@ -2764,7 +2833,7 @@ import { StatsSection } from '@djangocfg/ui-nextjs/blocks';
 
 ### SuperHero
 
-Enhanced hero with badge, gradient title, features, and stats
+Enhanced hero with badge, gradient title, code commands, features, and stats
 
 **Import:**
 ```tsx
@@ -2778,6 +2847,10 @@ import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
   title="Next-Generation"
   titleGradient="Development Platform"
   subtitle="Build faster with our comprehensive UI library"
+  codeCommands={[
+    "pip install django-cfg",
+    "django-cfg create-project my_app"
+  ]}
   features={[
     { icon: <span>⚛️</span>, text: "React 19" },
     { icon: <span>📘</span>, text: "TypeScript" },
@@ -2792,7 +2865,7 @@ import { SuperHero } from '@djangocfg/ui-nextjs/blocks';
 />
 ```
 
-**Tags:** hero, landing, gradient, animated
+**Tags:** hero, landing, gradient, animated, commands
 
 ---
 
@@ -2825,9 +2898,47 @@ import { TestimonialSection } from '@djangocfg/ui-nextjs/blocks';
 
 ---
 
-## Hooks (12)
+## Hooks (15)
 
 Custom React hooks for common functionality
+
+### useBrowserDetect
+
+Advanced browser detection that correctly identifies Chromium-based browsers (Arc, Brave, Comet, Vivaldi) vs real Safari
+
+**Import:**
+```tsx
+import { useBrowserDetect } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+import { useBrowserDetect } from '@djangocfg/ui-nextjs';
+
+function MyComponent() {
+  const browser = useBrowserDetect();
+
+  // Real Safari (not Chromium browsers like Arc, Comet)
+  if (browser.isSafari && !browser.isChromium) {
+    return <SafariSpecificFeature />;
+  }
+
+  // Any Chromium browser
+  if (browser.isChromium) {
+    return <ChromiumOptimizedView />;
+  }
+
+  // Specific browsers
+  if (browser.isBrave) return <BraveFeature />;
+  if (browser.isArc) return <ArcFeature />;
+
+  return <DefaultView />;
+}
+```
+
+**Tags:** hook, browser, detection, chromium, safari, arc, brave, vivaldi, comet, engine, webkit, blink
+
+---
 
 ### useCopy
 
@@ -2980,6 +3091,50 @@ debug.error('Something went wrong');
 
 ---
 
+### useDeviceDetect
+
+Comprehensive device detection using react-device-detect with SSR support
+
+**Import:**
+```tsx
+import { useDeviceDetect } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+import { useDeviceDetect } from '@djangocfg/ui-nextjs';
+
+function MyComponent() {
+  const device = useDeviceDetect();
+
+  // Device type checks
+  if (device.isMobile) {
+    return <MobileView />;
+  }
+
+  // OS checks
+  if (device.isIOS) {
+    return <IOSSpecificFeature />;
+  }
+
+  // Browser checks
+  if (device.isChrome) {
+    return <ChromeOptimizedView />;
+  }
+
+  // Orientation
+  if (device.isPortrait) {
+    return <PortraitLayout />;
+  }
+
+  return <DefaultView />;
+}
+```
+
+**Tags:** hook, device, detection, mobile, tablet, desktop, browser, os, orientation, react-device-detect, ssr
+
+---
+
 ### useEventListener
 
 Subscribe to custom events with type-safe event bus
@@ -3001,6 +3156,44 @@ events.emit('user-login', { userId: '123' });
 ```
 
 **Tags:** hook, events, pubsub, communication
+
+---
+
+### useHotkey
+
+Keyboard shortcuts hook - wrapper for react-hotkeys-hook
+
+**Import:**
+```tsx
+import { useHotkey } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Simple key (Escape is always safe)
+useHotkey('escape', () => closeModal());
+
+// 'mod' = ⌘ on Mac, Ctrl on Windows
+// Use mod+shift to avoid browser conflicts
+useHotkey('mod+shift+s', (e) => {
+  e.preventDefault();
+  saveDocument();
+});
+
+// Arrow keys are safe
+useHotkey('ArrowUp', () => moveUp());
+
+// Alt combinations are usually safe
+useHotkey('alt+n', () => newItem());
+
+// With options
+useHotkey('/', () => focusSearch(), {
+  preventDefault: true,
+  enableOnFormTags: false,
+});
+```
+
+**Tags:** hook, keyboard, shortcuts, hotkeys, a11y
 
 ---
 
@@ -3121,29 +3314,28 @@ setCart([...cart, newItem]);
 
 ---
 
-### useTheme
+### useThemeContext
 
-Theme management hook for light/dark mode
+Theme hooks: useThemeContext (full control) and useResolvedTheme (read-only)
 
 **Import:**
 ```tsx
-import { useTheme } from '@djangocfg/ui-nextjs';
+import { useThemeContext, useResolvedTheme } from '@djangocfg/ui-nextjs';
 ```
 
 **Example:**
 ```tsx
-const theme = useTheme(); // Returns 'light' | 'dark'
+// Full control (requires ThemeProvider)
+const { theme, setTheme, resolvedTheme, toggleTheme } = useThemeContext();
+setTheme('dark');     // Set to dark
+setTheme('system');   // Use system preference
+toggleTheme();        // Toggle light/dark
 
-// Check current theme
-if (theme === 'dark') {
-  // Dark mode specific logic
-}
-
-// Toggle theme manually
-document.documentElement.classList.toggle('dark');
+// Read-only (standalone, no provider)
+const theme = useResolvedTheme(); // 'light' | 'dark'
 ```
 
-**Tags:** hook, theme, dark-mode, light-mode
+**Tags:** hook, theme, dark-mode, light-mode, system
 
 ---
 
@@ -3639,6 +3831,466 @@ import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
 ```
 
 **Tags:** spotlight, conic, rotating, dramatic, hero
+
+---
+
+## Layouts (10)
+
+Full-page layouts, providers, and layout components from @djangocfg/layouts
+
+### AIChatWidget
+
+MCP-powered AI chat widget with semantic search and documentation assistance
+
+**Import:**
+```tsx
+import { AIChatWidget, AIChatProvider } from '@djangocfg/layouts/snippets';
+```
+
+**Example:**
+```tsx
+// Wrap your app with provider
+<AIChatProvider
+  config={{
+    apiUrl: '/api/ai/chat',
+    welcomeMessage: 'Hi! How can I help you?'
+  }}
+>
+  {children}
+
+  {/* Add widget */}
+  <AIChatWidget position="bottom-right" />
+</AIChatProvider>
+
+// Or use in BaseApp (already included)
+<BaseApp
+  mcpChat={{
+    enabled: true,
+    position: 'bottom-right',
+    config: {
+      apiUrl: '/api/ai/chat',
+      welcomeMessage: 'Hi! How can I help you?'
+    }
+  }}
+>
+  {children}
+</BaseApp>
+
+// Control programmatically
+window.dispatchEvent(new CustomEvent('mcp:chat:open'));
+window.dispatchEvent(new CustomEvent('mcp:chat:close'));
+```
+
+**Tags:** chat, ai, mcp, widget, floating, interactive, documentation, assistant
+
+---
+
+### AdminLayout
+
+Admin dashboard layout with sidebar and monitoring tools
+
+**Import:**
+```tsx
+import { AdminLayout } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<AdminLayout
+  sidebar={{
+    items: [
+      { label: 'Overview', href: '/admin', icon: LayoutDashboard },
+      { label: 'Users', href: '/admin/users', icon: Users }
+    ],
+    homeHref: '/admin'
+  }}
+  header={{
+    title: 'Admin Dashboard',
+    groups: [
+      {
+        title: 'Admin',
+        items: [
+          { label: 'Profile', href: '/profile' },
+          { label: 'Settings', href: '/settings' }
+        ]
+      }
+    ],
+    authPath: '/auth'
+  }}
+>
+  <div>Your admin content</div>
+</AdminLayout>
+```
+
+**Tags:** layout, admin, dashboard, management, sidebar, monitoring
+
+---
+
+### Analytics
+
+Google Analytics 4 integration with auto page tracking
+
+**Import:**
+```tsx
+import { AnalyticsProvider, Analytics, AnalyticsEvent } from '@djangocfg/layouts/snippets';
+```
+
+**Example:**
+```tsx
+// Wrap your app
+<AnalyticsProvider trackingId="G-XXXXXXXXXX">
+  {children}
+</AnalyticsProvider>
+
+// Track events anywhere
+import { Analytics, AnalyticsEvent } from '@djangocfg/layouts/snippets';
+
+// Track page view
+Analytics.pageview('/page-url');
+
+// Track theme change event
+Analytics.event(AnalyticsEvent.THEME_CHANGE, {
+  category: 'engagement',
+  label: 'Theme Button',
+  value: 1
+});
+
+// Track custom event
+Analytics.event('custom_event', {
+  category: 'custom',
+  label: 'Custom Action'
+});
+```
+
+**Tags:** analytics, google-analytics, ga4, tracking, events, pageview
+
+---
+
+### AppLayout
+
+Smart layout router that auto-detects route and applies correct layout
+
+**Import:**
+```tsx
+import { AppLayout } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<AppLayout
+  // Provider configs (passed to BaseApp)
+  theme={{ defaultTheme: 'system' }}
+  auth={{ loginPath: '/auth' }}
+  analytics={{ googleTrackingId: 'G-XXX' }}
+  pwaInstall={{ enabled: true }}
+  pushNotifications={{
+    enabled: true,
+    vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_KEY || ''
+  }}
+
+  // Layout components
+  publicLayout={{
+    component: PublicLayout,
+    enabledPath: ['/']
+  }}
+  privateLayout={{
+    component: PrivateLayout,
+    enabledPath: ['/dashboard', '/profile']
+  }}
+  adminLayout={{
+    component: AdminLayout,
+    enabledPath: '/admin'
+  }}
+
+  // Fullscreen pages without layout wrapper
+  noLayoutPaths={['/private/terminal', '/embed']}
+>
+  {children}
+</AppLayout>
+```
+
+**Tags:** layout, router, smart, auto-detect, public, private, admin, fullscreen, noLayoutPaths
+
+---
+
+### AuthDialog
+
+Event-driven dialog that prompts users to authenticate
+
+**Import:**
+```tsx
+import { AuthDialog, DIALOG_EVENTS } from '@djangocfg/layouts/snippets';
+import { events } from '@djangocfg/ui-nextjs';
+```
+
+**Example:**
+```tsx
+// Add to your layout
+<AuthDialog authPath="/auth" />
+
+// Events - Trigger from anywhere
+import { events } from '@djangocfg/ui-nextjs';
+
+events.publish({
+  type: DIALOG_EVENTS.OPEN_AUTH_DIALOG,
+  payload: { message: 'Please sign in to continue' }
+});
+
+// Close dialog
+events.publish({
+  type: DIALOG_EVENTS.CLOSE_AUTH_DIALOG
+});
+
+// Or use the hook
+import { useAuthDialog } from '@djangocfg/layouts/snippets';
+
+function MyComponent() {
+  const { openAuthDialog } = useAuthDialog();
+
+  return (
+    <button onClick={() => openAuthDialog('Custom message')}>
+      Sign In
+    </button>
+  );
+}
+```
+
+**Tags:** dialog, auth, authentication, modal, overlay, event-driven
+
+---
+
+### AuthLayout
+
+Authentication layout with OTP and OAuth support
+
+**Import:**
+```tsx
+import { AuthLayout } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<AuthLayout
+  sourceUrl="https://example.com"
+  supportUrl="/support"
+  termsUrl="/terms"
+  privacyUrl="/privacy"
+  enablePhoneAuth={false}
+  enableGithubAuth={true}
+  redirectUrl="/dashboard"
+  onOTPSuccess={() => {
+    console.log('OTP authentication successful');
+  }}
+  onOAuthSuccess={(user, isNewUser, provider) => {
+    console.log(provider + ' auth:', user);
+  }}
+  onError={(error) => {
+    console.error('Auth error:', error);
+  }}
+>
+  <div className="text-center mb-8">
+    <h1>Welcome to My App</h1>
+    <p>Sign in to continue</p>
+  </div>
+</AuthLayout>
+```
+
+**Tags:** layout, auth, authentication, login, otp, oauth, github
+
+---
+
+### BaseApp
+
+Core providers wrapper with theme, auth, analytics, PWA, push, and more
+
+**Import:**
+```tsx
+import { BaseApp } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<BaseApp
+  theme={{
+    defaultTheme: 'system',
+    storageKey: 'app-theme'
+  }}
+  auth={{
+    loginPath: '/auth'
+  }}
+  analytics={{
+    googleTrackingId: process.env.NEXT_PUBLIC_GA_ID
+  }}
+  centrifugo={{
+    enabled: true,
+    autoConnect: false,
+    url: process.env.NEXT_PUBLIC_CENTRIFUGO_URL
+  }}
+  pwaInstall={{
+    enabled: true,
+    showInstallHint: true,
+    resetAfterDays: 3,
+    logo: '/logo192.png'
+  }}
+  pushNotifications={{
+    enabled: true,
+    vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_KEY || '',
+    subscribeEndpoint: '/api/push/subscribe',
+    requirePWA: true
+  }}
+  errorBoundary={{
+    enabled: true
+  }}
+  mcpChat={{
+    enabled: true,
+    autoDetectEnvironment: true,
+    position: 'bottom-right'
+  }}
+  swr={{
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
+  }}
+>
+  {children}
+</BaseApp>
+```
+
+**Tags:** layout, provider, theme, auth, analytics, centrifugo, pwa, push, error-boundary, mcp, chat, core
+
+---
+
+### PrivateLayout
+
+Authenticated user layout with sidebar and header
+
+**Import:**
+```tsx
+import { PrivateLayout } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<PrivateLayout
+  sidebar={{
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'Profile', href: '/profile', icon: User }
+    ],
+    homeHref: '/dashboard'
+  }}
+  header={{
+    title: 'Dashboard',
+    groups: [
+      {
+        title: 'Account',
+        items: [
+          { label: 'Profile', href: '/profile' },
+          { label: 'Settings', href: '/settings' }
+        ]
+      }
+    ],
+    authPath: '/auth'
+  }}
+  contentPadding="default"
+>
+  <div>Your protected content</div>
+</PrivateLayout>
+```
+
+**Tags:** layout, private, authenticated, sidebar, dashboard, responsive
+
+---
+
+### PublicFooter
+
+Professional footer for public pages with social links and menu sections
+
+**Import:**
+```tsx
+import { PublicFooter } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<PublicFooter
+  siteName="My App"
+  description="App description"
+  variant="full"
+  badge={{
+    icon: Sparkles,
+    text: 'Open Source'
+  }}
+  socialLinks={{
+    github: 'https://github.com/...',
+    twitter: 'https://twitter.com/...',
+    linkedin: 'https://linkedin.com/...'
+  }}
+  menuSections={[
+    {
+      title: 'Product',
+      items: [
+        { label: 'Features', path: '/features' },
+        { label: 'Pricing', path: '/pricing' }
+      ]
+    }
+  ]}
+  links={[
+    { label: 'Privacy', path: '/privacy' },
+    { label: 'Terms', path: '/terms' }
+  ]}
+  copyright="© 2024 My Company"
+  credits={{
+    text: 'Built with DjangoCFG',
+    url: 'https://djangocfg.com'
+  }}
+/>
+```
+
+**Tags:** footer, navigation, public, social, links, menu, responsive
+
+---
+
+### PublicLayout
+
+Complete public page layout with navigation and footer
+
+**Import:**
+```tsx
+import { PublicLayout, PublicFooter } from '@djangocfg/layouts';
+```
+
+**Example:**
+```tsx
+<PublicLayout
+  siteName="My App"
+  navigation={[
+    { label: 'Home', href: '/' },
+    { label: 'Docs', href: '/docs' }
+  ]}
+>
+  <main>Your content</main>
+</PublicLayout>
+
+<PublicFooter
+  siteName="My App"
+  description="App description"
+  variant="full"
+  socialLinks={{
+    github: 'https://github.com/...',
+    twitter: 'https://twitter.com/...'
+  }}
+  menuSections={[
+    {
+      title: 'Product',
+      items: [
+        { label: 'Features', path: '/features' }
+      ]
+    }
+  ]}
+/>
+```
+
+**Tags:** layout, public, navigation, footer, responsive
 
 ---
 

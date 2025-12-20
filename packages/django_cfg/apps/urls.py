@@ -27,6 +27,7 @@ def get_enabled_cfg_apps() -> List[str]:
 
     # System apps
     enabled_apps.append("django_cfg.apps.system.accounts")
+    enabled_apps.append("django_cfg.apps.system.totp")
 
     # Integration apps
     if base_module.is_centrifugo_enabled():
@@ -107,6 +108,7 @@ urlpatterns = [
     path('cfg/dashboard/', include('django_cfg.apps.api.dashboard.urls')),
     path('cfg/admin/', include('django_cfg.apps.system.frontend.urls')),
     path('cfg/accounts/', include('django_cfg.apps.system.accounts.urls')),
+    path('cfg/2fa/', include('django_cfg.apps.system.totp.urls')),
 ]
 
 # External Next.js Admin Integration (conditional)

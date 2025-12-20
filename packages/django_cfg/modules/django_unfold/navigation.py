@@ -278,6 +278,20 @@ class NavigationManager(BaseCfgModule):
             items=accounts_items
         ))
 
+        if self.is_totp_enabled():
+            navigation_sections.append(
+                NavigationSection(
+                    title="TOTP",
+                    separator=True,
+                    collapsible=True,
+                    items=[
+                        NavigationItem(title="TOTP Devices", icon=Icons.PHONE_ANDROID, link=str(reverse_lazy("admin:django_cfg_totp_totpdevice_changelist"))),
+                        NavigationItem(title="Backup Codes", icon=Icons.SECURITY, link=str(reverse_lazy("admin:django_cfg_totp_backupcode_changelist"))),
+                        NavigationItem(title="2FA Sessions", icon=Icons.VERIFIED_USER, link=str(reverse_lazy("admin:django_cfg_totp_twofactorsession_changelist"))),
+                    ]
+                )
+            )
+
         # Support section - NOW handled via extensions navigation (see _get_extension_navigation)
         # Newsletter section - NOW handled via extensions navigation (see _get_extension_navigation)
         # Leads section - NOW handled via extensions navigation (see _get_extension_navigation)

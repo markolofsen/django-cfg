@@ -95,6 +95,8 @@ class InstalledAppsBuilder:
                 # Insert accounts before admin (for proper migration order)
                 # accounts is always enabled - core django-cfg functionality
                 apps.append("django_cfg.apps.system.accounts")
+                # TOTP 2FA app - always available for security
+                apps.append("django_cfg.apps.system.totp")
             apps.append(app)
 
         return apps
