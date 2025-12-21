@@ -27,6 +27,7 @@ from ...models import (
     LimitsConfig,
     SpectacularConfig,
     TelegramConfig,
+    TwoFactorConfig,
     UnfoldConfig,
 )
 from ...models.api.grpc import GRPCConfig
@@ -159,10 +160,15 @@ class DjangoConfig(BaseModel):
             "x-requested-with",
             "x-api-key",
             "x-api-token",
+
             # File transfer / chunked upload headers
+            # For the django_client module, the typescript generator will add the following headers to the request.
+            # These headers are used to track the progress of the file upload.
             "x-chunk-index",
             "x-chunk-checksum",
             "x-is-last",
+            "x-total-chunks",
+
         ],
         description="CORS allowed headers",
     )
@@ -279,6 +285,11 @@ class DjangoConfig(BaseModel):
     github_oauth: Optional[GitHubOAuthConfig] = Field(
         default=None,
         description="GitHub OAuth for social authentication",
+    )
+
+    two_factor: Optional[TwoFactorConfig] = Field(
+        default=None,
+        description="Two-Factor Authentication (TOTP) configuration",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

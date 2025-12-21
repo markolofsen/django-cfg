@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.5.136"
+version = "1.5.138"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -109,8 +109,6 @@ dependencies = [
     
     # Notifications
     "pyTelegramBotAPI>=4.28.0,<5.0",
-    "twilio>=9.8.0,<10.0",
-    "sendgrid>=6.12.0,<7.0",
     "pywebpush>=2.0.0,<3.0",
     
     # HTTP & Parsing

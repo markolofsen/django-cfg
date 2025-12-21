@@ -51,6 +51,9 @@ CORE_REGISTRY = {
     "GitHubOAuthConfig": ("django_cfg.models.api.oauth", "GitHubOAuthConfig"),
     "OAuthConfig": ("django_cfg.models.api.oauth", "OAuthConfig"),
 
+    # Two-Factor Authentication
+    "TwoFactorConfig": ("django_cfg.models.api.twofactor", "TwoFactorConfig"),
+
     # Django-RQ models
     "DjangoRQConfig": ("django_cfg.models.django.django_rq", "DjangoRQConfig"),
     "RQQueueConfig": ("django_cfg.models.django.django_rq", "RQQueueConfig"),

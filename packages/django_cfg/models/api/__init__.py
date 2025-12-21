@@ -15,6 +15,7 @@ from .keys import ApiKeys
 from .limits import LimitsConfig
 from .oauth import GitHubOAuthConfig, OAuthConfig
 from .rate_limiting import RateLimitConfig, RateLimitRule
+from .twofactor import TwoFactorConfig
 from .webpush import WebPushConfig
 
 __all__ = [
@@ -31,5 +32,6 @@ __all__ = [
     "RedocUISettings",
     "GitHubOAuthConfig",
     "OAuthConfig",
+    "TwoFactorConfig",
     "WebPushConfig",
 ]

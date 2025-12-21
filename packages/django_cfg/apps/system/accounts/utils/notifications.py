@@ -224,41 +224,6 @@ class AccountNotifications:
             logger.info(f"OTP telegram notification sent for {user.email}")
 
     @staticmethod
-    def send_phone_otp_notification(user, otp_code, phone_number, is_new_user=False, source_url=None):
-        """Send OTP notification via SMS to client and system notification to Telegram"""
-        # Import here to avoid circular imports
-        from django_cfg.modules.django_twilio import send_sms
-
-        # Format SMS message for client
-        app_name = config.project_name if config else "App"
-        sms_message = f"Your {app_name} verification code is: {otp_code}. This code expires in 10 minutes."
-
-        # Send SMS to client using the convenience function
-        result = send_sms(
-            to=phone_number,
-            body=sms_message
-        )
-
-        if result:
-            logger.info(f"OTP SMS sent to client {phone_number}")
-
-            # Send SYSTEM notification to Telegram (for admins) - WITHOUT OTP code for security
-            notification_data = {
-                "phone": phone_number,
-                "user_type": "New User" if is_new_user else "Existing User",
-                "source_url": source_url or "Direct",
-                "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
-                "user_id": user.id if user else "Unknown"
-            }
-
-            if is_new_user:
-                DjangoTelegram.send_success("🆕📱 New User Phone OTP Request", notification_data)
-            else:
-                DjangoTelegram.send_info("🔑📱 Phone OTP Login Request", notification_data)
-
-            logger.info(f"Phone OTP system notification sent to Telegram for {phone_number}")
-
-    @staticmethod
     def send_otp_verification_success(user, source_url=None, send_telegram=True):
         """Send successful OTP verification notification"""
         if send_telegram:

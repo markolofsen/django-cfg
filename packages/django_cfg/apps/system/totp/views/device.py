@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 @extend_schema_view(
     list=extend_schema(
         responses={200: DeviceListSerializer(many=True)},
-        tags=["2FA Management"],
+        tags=["TOTP Management"],
     ),
     disable=extend_schema(
         request=DisableSerializer,
@@ -26,7 +26,7 @@ logger = get_logger(__name__)
             200: {"description": "2FA disabled successfully"},
             400: {"description": "Invalid code"},
         },
-        tags=["2FA Management"],
+        tags=["TOTP Management"],
     ),
 )
 class DeviceViewSet(viewsets.GenericViewSet):

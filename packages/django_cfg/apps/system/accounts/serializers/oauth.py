@@ -60,18 +60,47 @@ class OAuthCallbackRequestSerializer(serializers.Serializer):
 
 
 class OAuthTokenResponseSerializer(serializers.Serializer):
-    """Response with JWT tokens after OAuth authentication."""
+    """
+    Response with JWT tokens after OAuth authentication.
+
+    When 2FA is required:
+    - requires_2fa: True
+    - session_id: UUID of 2FA verification session
+    - access/refresh/user: null
+
+    When 2FA is not required:
+    - requires_2fa: False
+    - session_id: null
+    - access/refresh/user: populated
+    """
+
+    requires_2fa = serializers.BooleanField(
+        default=False,
+        help_text="True if 2FA verification is required"
+    )
+
+    session_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text="2FA session ID (only when requires_2fa=True)"
+    )
 
     access = serializers.CharField(
-        help_text="JWT access token"
+        required=False,
+        allow_null=True,
+        help_text="JWT access token (null when requires_2fa=True)"
     )
 
     refresh = serializers.CharField(
-        help_text="JWT refresh token"
+        required=False,
+        allow_null=True,
+        help_text="JWT refresh token (null when requires_2fa=True)"
     )
 
     user = serializers.DictField(
-        help_text="Authenticated user info"
+        required=False,
+        allow_null=True,
+        help_text="Authenticated user info (null when requires_2fa=True)"
     )
 
     is_new_user = serializers.BooleanField(
@@ -80,6 +109,11 @@ class OAuthTokenResponseSerializer(serializers.Serializer):
 
     is_new_connection = serializers.BooleanField(
         help_text="True if a new OAuth connection was created"
+    )
+
+    should_prompt_2fa = serializers.BooleanField(
+        required=False,
+        help_text="True if user should be prompted to enable 2FA"
     )
 
 

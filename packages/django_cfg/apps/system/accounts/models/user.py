@@ -107,6 +107,49 @@ class CustomUser(AbstractUser):
 
         return None
 
+    # === 2FA Properties ===
+
+    @property
+    def has_2fa_enabled(self) -> bool:
+        """
+        Check if user has active 2FA device.
+
+        Returns:
+            True if user has at least one active TOTP device
+        """
+        from django_cfg.apps.system.totp.services import TOTPService
+
+        return TOTPService.has_active_device(self)
+
+    @property
+    def requires_2fa(self) -> bool:
+        """
+        Check if 2FA is required for this user based on global policy.
+
+        Returns:
+            True if 2FA is required for this user
+        """
+        from .settings import TwoFactorSettings
+
+        settings = TwoFactorSettings.get_settings()
+        return settings.user_requires_2fa(self)
+
+    @property
+    def should_prompt_2fa(self) -> bool:
+        """
+        Check if user should be prompted to enable 2FA.
+
+        Returns:
+            True if user should be prompted
+        """
+        from .settings import TwoFactorSettings
+
+        if self.has_2fa_enabled:
+            return False
+
+        settings = TwoFactorSettings.get_settings()
+        return settings.user_should_prompt_2fa(self)
+
     class Meta:
         app_label = 'django_cfg_accounts'
         verbose_name = "User"

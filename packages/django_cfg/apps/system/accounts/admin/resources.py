@@ -11,7 +11,7 @@ from django.utils import timezone
 from import_export import fields, resources
 from import_export.widgets import BooleanWidget, DateTimeWidget, ManyToManyWidget
 
-from ..models import CustomUser, RegistrationSource, TwilioResponse, UserActivity
+from ..models import CustomUser, RegistrationSource, UserActivity
 
 
 class CustomUserResource(resources.ModelResource):
@@ -268,109 +268,3 @@ class RegistrationSourceResource(resources.ModelResource):
             row['name'] = row['name'].strip()
             if len(row['name']) < 2:
                 raise ValueError(f"Registration source name too short: {row['name']}")
-
-
-class TwilioResponseResource(resources.ModelResource):
-    """Enhanced resource for exporting Twilio responses (export only)."""
-
-    otp_recipient = fields.Field(
-        column_name='otp_recipient',
-        attribute='otp_secret__email',
-        readonly=True
-    )
-
-    created_at = fields.Field(
-        column_name='created_at',
-        attribute='created_at',
-        widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
-    )
-
-    updated_at = fields.Field(
-        column_name='updated_at',
-        attribute='updated_at',
-        widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
-    )
-
-    twilio_created_at = fields.Field(
-        column_name='twilio_created_at',
-        attribute='twilio_created_at',
-        widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
-    )
-
-    has_error = fields.Field(
-        column_name='has_error',
-        attribute='has_error',
-        widget=BooleanWidget(),
-        readonly=True
-    )
-
-    is_successful = fields.Field(
-        column_name='is_successful',
-        attribute='is_successful',
-        widget=BooleanWidget(),
-        readonly=True
-    )
-
-    # Additional computed fields
-    response_time_ms = fields.Field(
-        column_name='response_time_ms',
-        readonly=True
-    )
-
-    masked_recipient = fields.Field(
-        column_name='masked_recipient',
-        readonly=True
-    )
-
-    class Meta:
-        model = TwilioResponse
-        fields = (
-            'id',
-            'response_type',
-            'service_type',
-            'status',
-            'message_sid',
-            'verification_sid',
-            'to_number',
-            'masked_recipient',
-            'from_number',
-            'otp_recipient',
-            'error_code',
-            'error_message',
-            'price',
-            'price_unit',
-            'response_time_ms',
-            'has_error',
-            'is_successful',
-            'created_at',
-            'updated_at',
-            'twilio_created_at',
-        )
-        export_order = fields
-        # No import - this is export only
-
-    def dehydrate_response_time_ms(self, twilio_response):
-        """Calculate response time if available."""
-        if twilio_response.twilio_created_at and twilio_response.created_at:
-            delta = twilio_response.twilio_created_at - twilio_response.created_at
-            return int(delta.total_seconds() * 1000)
-        return None
-
-    def dehydrate_masked_recipient(self, twilio_response):
-        """Mask recipient for privacy."""
-        if not twilio_response.to_number:
-            return "—"
-
-        recipient = twilio_response.to_number
-        if '@' in recipient:
-            # Email masking
-            local, domain = recipient.split('@', 1)
-            masked_local = local[:2] + '*' * (len(local) - 2) if len(local) > 2 else local
-            return f"{masked_local}@{domain}"
-        else:
-            # Phone masking
-            return f"***{recipient[-4:]}" if len(recipient) > 4 else "***"
-
-    def get_queryset(self):
-        """Optimize queryset for export."""
-        return super().get_queryset().select_related('otp_secret')

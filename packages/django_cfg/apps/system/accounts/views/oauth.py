@@ -14,6 +14,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
+from django_cfg.modules.base import BaseCfgModule
+
 from ..models.oauth import OAuthConnection
 from ..serializers.oauth import (
     OAuthAuthorizeRequestSerializer,
@@ -231,10 +234,32 @@ class GitHubCallbackView(APIView):
                 source_url=source_url,
             )
 
+            # Check if 2FA is enabled system-wide AND user has TOTP device
+            is_2fa_enabled = BaseCfgModule().is_totp_enabled()
+            has_device = TOTPService.has_active_device(user)
+
+            if is_2fa_enabled and has_device:
+                # Create 2FA session
+                session = TwoFactorSessionService.create_session(user, request)
+                logger.info(f"2FA required for OAuth user {user.email}, session {session.id}")
+
+                return Response({
+                    'requires_2fa': True,
+                    'session_id': str(session.id),
+                    'access': None,
+                    'refresh': None,
+                    'user': None,
+                    'is_new_user': user_created,
+                    'is_new_connection': connection_created,
+                    'should_prompt_2fa': False,
+                })
+
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
 
             return Response({
+                'requires_2fa': False,
+                'session_id': None,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
                 'user': {
@@ -246,6 +271,7 @@ class GitHubCallbackView(APIView):
                 },
                 'is_new_user': user_created,
                 'is_new_connection': connection_created,
+                'should_prompt_2fa': user.should_prompt_2fa,
             })
 
         except GitHubOAuthError as e:

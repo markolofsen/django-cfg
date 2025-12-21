@@ -66,3 +66,7 @@ class ConfirmSetupResponseSerializer(serializers.Serializer):
     backup_codes_warning = serializers.CharField(
         help_text="Warning message about backup codes"
     )
+
+
+
+

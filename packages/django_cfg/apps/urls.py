@@ -108,7 +108,7 @@ urlpatterns = [
     path('cfg/dashboard/', include('django_cfg.apps.api.dashboard.urls')),
     path('cfg/admin/', include('django_cfg.apps.system.frontend.urls')),
     path('cfg/accounts/', include('django_cfg.apps.system.accounts.urls')),
-    path('cfg/2fa/', include('django_cfg.apps.system.totp.urls')),
+    path('cfg/totp/', include('django_cfg.apps.system.totp.urls')),
 ]
 
 # External Next.js Admin Integration (conditional)

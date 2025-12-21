@@ -225,11 +225,18 @@ class BaseCfgModule(ABC):
 
     def is_totp_enabled(self) -> bool:
         """
-        Check if django-cfg TOTP is enabled.
+        Check if django-cfg TOTP/2FA is enabled.
 
         Returns:
-            True if TOTP is enabled, False otherwise
+            True if 2FA is enabled, False otherwise
         """
+        two_factor_config = self._get_config_key('two_factor', None)
+
+        # Check if two_factor config exists and is enabled
+        if two_factor_config and hasattr(two_factor_config, 'enabled'):
+            return two_factor_config.enabled
+
+        # Default: enabled (TOTP app is always available)
         return True
 
     def is_github_oauth_enabled(self) -> bool:

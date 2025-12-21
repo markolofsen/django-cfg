@@ -223,69 +223,9 @@ class Command(SafeCommand):
         self.console.print(info_table)
 
     def show_webhook_info(self):
-        """Show webhook-specific information using reverse."""
+        """Show webhook-specific information."""
         self.console.print()
-
-        webhook_table = Table(title="🔔 Webhook Configuration", show_header=True, header_style="bold yellow")
-        webhook_table.add_column("Service", style="white", width=25)
-        webhook_table.add_column("Local URL", style="cyan", width=60)
-        webhook_table.add_column("Ngrok URL", style="magenta", width=60)
-
-        base_url = self.get_base_url()
-        ngrok_url = self.get_ngrok_url()
-
-        # Get webhook URLs using reverse
-        try:
-            from django.urls import reverse
-
-            # Common webhook endpoints with their URL names
-            webhooks = [
-                ("Twilio Message Status", "cfg_accounts:webhook-message-status"),
-                ("Twilio Verification", "cfg_accounts:webhook-verification-status"),
-            ]
-
-            for service, url_name in webhooks:
-                try:
-                    # Get the reversed URL path
-                    url_path = reverse(url_name)
-
-                    # Build full URLs
-                    local_full = f"{base_url.rstrip('/')}{url_path}"
-                    ngrok_full = f"{ngrok_url.rstrip('/')}{url_path}" if ngrok_url else "—"
-
-                    webhook_table.add_row(service, local_full, ngrok_full)
-
-                except Exception as e:
-                    # Fallback if reverse fails
-                    self.console.print(f"[yellow]⚠️  Could not reverse URL for {service}: {e}[/yellow]")
-                    fallback_path = f"/api/accounts/webhook/{service.lower().replace(' ', '-').replace('twilio ', '')}/"
-                    local_full = f"{base_url.rstrip('/')}{fallback_path}"
-                    ngrok_full = f"{ngrok_url.rstrip('/')}{fallback_path}" if ngrok_url else "—"
-                    webhook_table.add_row(service, local_full, ngrok_full)
-
-        except ImportError:
-            # Fallback if Django is not available
-            webhooks = [
-                ("Twilio Message Status", "/api/accounts/webhook/message-status/"),
-                ("Twilio Verification", "/api/accounts/webhook/verification-status/"),
-            ]
-
-            for service, endpoint in webhooks:
-                local_full = f"{base_url.rstrip('/')}{endpoint}"
-                ngrok_full = f"{ngrok_url.rstrip('/')}{endpoint}" if ngrok_url else "—"
-                webhook_table.add_row(service, local_full, ngrok_full)
-
-        self.console.print(webhook_table)
-
-        # Show tips
-        tips = [
-            "💡 Use ngrok URLs for webhook configuration in production services",
-            "🔒 Always validate webhook signatures in production",
-            "📝 Test webhooks using the test_twilio management command",
-        ]
-
-        for tip in tips:
-            self.console.print(f"[dim]{tip}[/dim]")
+        self.console.print("[dim]No webhook endpoints configured.[/dim]")
 
     def get_base_url(self):
         """Get base URL for the application."""

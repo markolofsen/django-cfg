@@ -10,18 +10,12 @@ SERVICES_REGISTRY = {
     "get_admin_emails": ("django_cfg.modules.django_email", "get_admin_emails"),
     "send_admin_email": ("django_cfg.modules.django_email", "send_admin_email"),
     "send_admin_notification": ("django_cfg.modules.django_email", "send_admin_notification"),
-    "SendGridConfig": ("django_cfg.modules.django_twilio.models", "SendGridConfig"),
 
     # Telegram services
     "TelegramConfig": ("django_cfg.models.services", "TelegramConfig"),
     "DjangoTelegram": ("django_cfg.modules.django_telegram", "DjangoTelegram"),
     "send_telegram_message": ("django_cfg.modules.django_telegram", "send_telegram_message"),
     "send_telegram_photo": ("django_cfg.modules.django_telegram", "send_telegram_photo"),
-
-    # Twilio services
-    "TwilioConfig": ("django_cfg.modules.django_twilio.models", "TwilioConfig"),
-    "TwilioVerifyConfig": ("django_cfg.modules.django_twilio.models", "TwilioVerifyConfig"),
-    "TwilioChannelType": ("django_cfg.modules.django_twilio.models", "TwilioChannelType"),
 
     # Ngrok services (simplified flat config)
     "NgrokConfig": ("django_cfg.models.ngrok", "NgrokConfig"),

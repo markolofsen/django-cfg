@@ -152,8 +152,6 @@ def get_standard_dependencies() -> Dict[str, str]:
         "pydantic-yaml": "pydantic_yaml",
 
         # Services
-        "twilio": "twilio",
-        "sendgrid": "sendgrid",
         "openai": "openai",
         "telegram-bot-api": "telebot",
 

@@ -52,8 +52,8 @@ Downloads the latest django-cfg template from GitHub (https://github.com/markolo
 ## 💡 Features Included
 
 - ✅ Type-safe configuration with Pydantic v2
-- ✅ Twilio integration (WhatsApp, SMS, Email OTP)
-- ✅ Email services with SendGrid
+- ✅ OTP authentication (Email-based)
+- ✅ TOTP 2FA support (Authenticator apps)
 - ✅ Telegram bot integration
 - ✅ Modern Unfold admin interface
 - ✅ Auto-generated API documentation

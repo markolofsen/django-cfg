@@ -1,10 +1,14 @@
 """TOTP Device model for storing authenticator configuration."""
 
-from django.conf import settings
+import uuid
+
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 
 from .choices import DeviceStatus
+
+User = get_user_model()
 
 
 class TOTPDevice(models.Model):
@@ -15,8 +19,14 @@ class TOTPDevice(models.Model):
     Only one device can be primary at a time.
     """
 
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name="totp_devices",
     )

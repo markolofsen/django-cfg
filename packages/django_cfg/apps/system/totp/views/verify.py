@@ -30,7 +30,7 @@ User = get_user_model()
             400: {"description": "Invalid code or session"},
             403: {"description": "Too many attempts"},
         },
-        tags=["2FA Verification"],
+        tags=["TOTP Verification"],
     ),
     verify_backup=extend_schema(
         request=VerifyBackupSerializer,
@@ -38,7 +38,7 @@ User = get_user_model()
             200: VerifyResponseSerializer,
             400: {"description": "Invalid backup code or session"},
         },
-        tags=["2FA Verification"],
+        tags=["TOTP Verification"],
     ),
 )
 class VerifyViewSet(viewsets.GenericViewSet):

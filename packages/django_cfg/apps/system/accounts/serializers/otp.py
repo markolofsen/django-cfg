@@ -115,11 +115,48 @@ class OTPVerifySerializer(serializers.Serializer):
 
 
 class OTPVerifyResponseSerializer(serializers.Serializer):
-    """OTP verification response."""
+    """
+    OTP verification response.
 
-    refresh = serializers.CharField(help_text="JWT refresh token")
-    access = serializers.CharField(help_text="JWT access token")
-    user = UserSerializer(help_text="User information")
+    When 2FA is required:
+    - requires_2fa: True
+    - session_id: UUID of 2FA verification session
+    - refresh/access/user: null
+
+    When 2FA is not required:
+    - requires_2fa: False
+    - session_id: null
+    - refresh/access/user: populated
+    """
+
+    requires_2fa = serializers.BooleanField(
+        default=False,
+        help_text="Whether 2FA verification is required"
+    )
+    session_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text="2FA session ID (if requires_2fa is True)"
+    )
+    refresh = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="JWT refresh token (if requires_2fa is False)"
+    )
+    access = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="JWT access token (if requires_2fa is False)"
+    )
+    user = UserSerializer(
+        required=False,
+        allow_null=True,
+        help_text="User information (if requires_2fa is False)"
+    )
+    should_prompt_2fa = serializers.BooleanField(
+        required=False,
+        help_text="Whether user should be prompted to enable 2FA"
+    )
 
 
 class OTPRequestResponseSerializer(serializers.Serializer):

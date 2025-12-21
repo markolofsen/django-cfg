@@ -95,3 +95,7 @@ def require_2fa_verified(max_age_hours: Optional[int] = None):
             pass
     """
     return require_2fa(max_age_hours=max_age_hours)
+
+
+
+

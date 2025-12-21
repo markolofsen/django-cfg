@@ -71,3 +71,7 @@ urlpatterns = [
 
 # Add router URLs if needed
 # urlpatterns += router.urls
+
+
+
+

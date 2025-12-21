@@ -12,7 +12,6 @@ from .group_admin import GroupAdmin
 from .oauth_admin import OAuthConnectionAdmin, OAuthStateAdmin
 from .otp_admin import OTPSecretAdmin
 from .registration_admin import RegistrationSourceAdmin, UserRegistrationSourceAdmin
-from .twilio_admin import TwilioResponseAdmin, TwilioResponseInline
 
 # Import all admin classes
 from .user_admin import CustomUserAdmin
@@ -41,8 +40,6 @@ __all__ = [
     'RegistrationSourceAdmin',
     'UserRegistrationSourceAdmin',
     'GroupAdmin',
-    'TwilioResponseAdmin',
-    'TwilioResponseInline',
     'OAuthConnectionAdmin',
     'OAuthStateAdmin',
 ]

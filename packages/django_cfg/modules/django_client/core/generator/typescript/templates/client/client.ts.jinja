@@ -90,6 +90,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      binaryBody?: Blob | ArrayBuffer;
       headers?: Record<string, string>;
     }
   ): Promise<T> {
@@ -126,6 +127,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      binaryBody?: Blob | ArrayBuffer;
       headers?: Record<string, string>;
     }
   ): Promise<T> {
@@ -139,8 +141,8 @@ export class APIClient {
       ...(options?.headers || {})
     };
 
-    // Don't set Content-Type for FormData (browser will set it with boundary)
-    if (!options?.formData && !headers['Content-Type']) {
+    // Don't set Content-Type for FormData/binaryBody (browser will set it with boundary)
+    if (!options?.formData && !options?.binaryBody && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 
@@ -177,6 +179,7 @@ export class APIClient {
         params: options?.params,
         body: options?.body,
         formData: options?.formData,
+        binaryBody: options?.binaryBody,
       });
 
       const duration = Date.now() - startTime;
@@ -394,6 +397,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      binaryBody?: Blob | ArrayBuffer;
       headers?: Record<string, string>;
     }
   ): Promise<T> {
@@ -430,6 +434,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      binaryBody?: Blob | ArrayBuffer;
       headers?: Record<string, string>;
     }
   ): Promise<T> {
@@ -443,8 +448,8 @@ export class APIClient {
       ...(options?.headers || {})
     };
 
-    // Don't set Content-Type for FormData (browser will set it with boundary)
-    if (!options?.formData && !headers['Content-Type']) {
+    // Don't set Content-Type for FormData/binaryBody (browser will set it with boundary)
+    if (!options?.formData && !options?.binaryBody && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 
@@ -481,6 +486,7 @@ export class APIClient {
         params: options?.params,
         body: options?.body,
         formData: options?.formData,
+        binaryBody: options?.binaryBody,
       });
 
       const duration = Date.now() - startTime;

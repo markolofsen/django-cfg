@@ -71,7 +71,7 @@ def info(verbose: bool):
     # Group dependencies by category
     categories = {
         "🔧 Core Dependencies": ["django", "pydantic", "pydantic-yaml", "click"],
-        "🌐 Service Integrations": ["twilio", "sendgrid", "openai", "telegram-bot-api"],
+        "🌐 Service Integrations": ["openai", "telegram-bot-api"],
         "🎨 Admin & UI": ["django-unfold", "django-constance"],
         "📊 API & Documentation": ["djangorestframework", "drf-spectacular"],
         "⚡ Background Processing": ["rearq", "redis"],
@@ -117,7 +117,7 @@ def info(verbose: bool):
     click.echo("   django-cfg create-project 'My Awesome Project'")
     click.echo()
     click.echo("   # Install optional dependencies")
-    click.echo("   pip install twilio sendgrid django-unfold")
+    click.echo("   pip install django-unfold")
     click.echo()
     click.echo("📚 Documentation: https://djangocfg.com")
     click.echo("🐙 GitHub: https://github.com/markolofsen/django-cfg")

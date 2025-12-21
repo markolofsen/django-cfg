@@ -27,7 +27,7 @@ logger = get_logger(__name__)
             200: SetupResponseSerializer,
             400: {"description": "2FA already enabled or invalid request"},
         },
-        tags=["2FA Setup"],
+        tags=["TOTP Setup"],
     ),
     confirm=extend_schema(
         request=ConfirmSetupSerializer,
@@ -35,7 +35,7 @@ logger = get_logger(__name__)
             200: ConfirmSetupResponseSerializer,
             400: {"description": "Invalid code or setup expired"},
         },
-        tags=["2FA Setup"],
+        tags=["TOTP Setup"],
     ),
 )
 class SetupViewSet(viewsets.GenericViewSet):
@@ -89,7 +89,9 @@ class SetupViewSet(viewsets.GenericViewSet):
         )
 
         # Generate QR code
-        issuer_name = getattr(request, "_issuer_name", "Django CFG")
+        from django_cfg.core.config import get_current_config
+        config = get_current_config()
+        issuer_name = config.project_name if config else "Django CFG"
         provisioning_uri = TOTPService.get_provisioning_uri(device, issuer=issuer_name)
         qr_code_base64 = TOTPService.generate_qr_code(provisioning_uri)
 
