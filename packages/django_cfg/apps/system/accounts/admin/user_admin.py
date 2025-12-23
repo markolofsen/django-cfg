@@ -59,6 +59,7 @@ customuser_config = AdminConfig(
         "email",
         "full_name",
         "status",
+        "twofa_status",
         "sources_count",
         "activity_count",
         "emails_count",
@@ -232,6 +233,15 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
             variant = "secondary"
 
         return self.html.badge(status, variant=variant, icon=icon)
+
+    @computed_field("2FA")
+    def twofa_status(self, obj):
+        """Display 2FA status with appropriate badge."""
+        if obj.has_2fa_enabled:
+            return self.html.badge("2FA", variant="success", icon=Icons.VERIFIED_USER)
+        elif obj.requires_2fa:
+            return self.html.badge("Required", variant="danger", icon=Icons.WARNING)
+        return None
 
     @computed_field("Sources")
     def sources_count(self, obj):

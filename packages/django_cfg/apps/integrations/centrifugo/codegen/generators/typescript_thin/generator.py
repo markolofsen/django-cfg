@@ -99,13 +99,31 @@ class TypeScriptThinGenerator:
         """Generate types.ts file."""
         template = self.jinja_env.get_template("types.ts.j2")
 
+        # Track generated interfaces to avoid duplicates
+        generated_interfaces = set()
         types_data = []
+
         for model in self.models:
             ts_interface = pydantic_to_typescript(model)
-            types_data.append({
-                'name': model.__name__,
-                'code': ts_interface,
-            })
+
+            # Split into individual interfaces and deduplicate
+            for block in ts_interface.split("\n\nexport interface "):
+                if not block.strip():
+                    continue
+
+                # Add "export interface " back if it was stripped
+                if not block.startswith("export interface "):
+                    block = "export interface " + block
+
+                # Extract interface name
+                name = block.split("{")[0].replace("export interface ", "").strip()
+
+                if name not in generated_interfaces:
+                    generated_interfaces.add(name)
+                    types_data.append({
+                        'name': name,
+                        'code': block,
+                    })
 
         content = template.render(types=types_data)
         (self.output_dir / "types.ts").write_text(content)

@@ -12,19 +12,31 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-def convert_json_schema_to_typescript(field_info: Dict[str, Any]) -> str:
+def convert_json_schema_to_typescript(
+    field_info: Dict[str, Any],
+    defs: Dict[str, Any] | None = None
+) -> str:
     """
     Convert JSON schema field to TypeScript type.
 
     Args:
         field_info: JSON schema field information
+        defs: Schema definitions ($defs) for resolving $ref
 
     Returns:
         str: TypeScript type string
     """
+    # Handle $ref (reference to nested model)
+    if "$ref" in field_info:
+        ref = field_info["$ref"]
+        # Extract type name from "#/$defs/TypeName"
+        if ref.startswith("#/$defs/"):
+            return ref.split("/")[-1]
+        return "any"
+
     # Handle anyOf (union types)
     if "anyOf" in field_info:
-        types = [convert_json_schema_to_typescript(t) for t in field_info["anyOf"]]
+        types = [convert_json_schema_to_typescript(t, defs) for t in field_info["anyOf"]]
         return " | ".join(types)
 
     field_type = field_info.get("type", "any")
@@ -39,7 +51,7 @@ def convert_json_schema_to_typescript(field_info: Dict[str, Any]) -> str:
         return "boolean"
     elif field_type == "array":
         items = field_info.get("items", {})
-        item_type = convert_json_schema_to_typescript(items)
+        item_type = convert_json_schema_to_typescript(items, defs)
         return f"{item_type}[]"
     elif field_type == "object":
         return "Record<string, any>"
@@ -89,7 +101,7 @@ def pydantic_to_typescript(model: Type[BaseModel]) -> str:
         model: Pydantic model class
 
     Returns:
-        str: TypeScript interface definition
+        str: TypeScript interface definition (may include nested interfaces)
     """
     if not issubclass(model, BaseModel):
         return "any"
@@ -98,10 +110,18 @@ def pydantic_to_typescript(model: Type[BaseModel]) -> str:
         schema = model.model_json_schema()
         properties = schema.get('properties', {})
         required = schema.get('required', [])
+        defs = schema.get('$defs', {})
 
+        # First generate nested interfaces from $defs
+        nested_interfaces = []
+        for def_name, def_schema in defs.items():
+            nested_interface = _generate_interface_from_schema(def_name, def_schema, defs)
+            nested_interfaces.append(nested_interface)
+
+        # Generate main interface
         ts_fields = []
         for field_name, field_info in properties.items():
-            ts_type = convert_json_schema_to_typescript(field_info)
+            ts_type = convert_json_schema_to_typescript(field_info, defs)
             optional = '?' if field_name not in required else ''
 
             # Add description as comment if available
@@ -115,11 +135,48 @@ def pydantic_to_typescript(model: Type[BaseModel]) -> str:
         interface_code += "\n".join(ts_fields)
         interface_code += "\n}"
 
+        # Combine nested interfaces with main interface
+        if nested_interfaces:
+            return "\n\n".join(nested_interfaces) + "\n\n" + interface_code
+
         return interface_code
 
     except Exception as e:
         logger.error(f"Failed to convert {model.__name__} to TypeScript: {e}")
         return f"export interface {model.__name__} {{ [key: string]: any; }}"
+
+
+def _generate_interface_from_schema(name: str, schema: Dict[str, Any], defs: Dict[str, Any]) -> str:
+    """
+    Generate TypeScript interface from JSON schema definition.
+
+    Args:
+        name: Interface name
+        schema: JSON schema for the type
+        defs: Schema definitions for resolving nested $ref
+
+    Returns:
+        str: TypeScript interface definition
+    """
+    properties = schema.get('properties', {})
+    required = schema.get('required', [])
+
+    ts_fields = []
+    for field_name, field_info in properties.items():
+        ts_type = convert_json_schema_to_typescript(field_info, defs)
+        optional = '?' if field_name not in required else ''
+
+        description = field_info.get('description')
+        if description:
+            ts_fields.append(f"  /** {description} */")
+
+        ts_fields.append(f"  {field_name}{optional}: {ts_type};")
+
+    interface_code = f"export interface {name} {{\n"
+    interface_code += "\n".join(ts_fields)
+    interface_code += "\n}"
+
+    return interface_code
 
 
 def pydantic_to_python(model: Type[BaseModel]) -> str:

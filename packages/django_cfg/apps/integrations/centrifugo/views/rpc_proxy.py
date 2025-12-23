@@ -141,12 +141,20 @@ class RPCProxyView(View):
                 result = await handler(conn, params)
 
                 # Serialize result
+                # Note: exclude_none=True ensures fields with value 0 (valid enum values)
+                # are included, while only None values are excluded
                 if hasattr(result, 'model_dump'):
-                    result_data = result.model_dump()
+                    result_data = result.model_dump(exclude_none=True)
                 elif isinstance(result, dict):
                     result_data = result
                 else:
                     result_data = {"result": result}
+
+                # DEBUG: Log first entry's load_method for file.list_directory
+                if rpc_request.method == "file.list_directory" and "entries" in result_data:
+                    for e in result_data.get("entries", [])[:3]:
+                        if e.get("size", 0) > 10_000_000:
+                            logger.warning(f"[RPC DEBUG] {e.get('name')}: viewer_type={e.get('viewer_type')}, load_method={e.get('load_method')}")
 
                 logger.info(f"RPC success: {rpc_request.method}")
                 return self._success_response(result_data)

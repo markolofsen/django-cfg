@@ -80,6 +80,13 @@ export class APIClient {
   }
 
   /**
+   * Get the base URL for building streaming/download URLs.
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
    * Make HTTP request with Django CSRF and session handling.
    * Automatically retries on network errors and 5xx server errors.
    */
@@ -384,6 +391,13 @@ export class APIClient {
       return parts.pop()?.split(';').shift() || null;
     }
     return null;
+  }
+
+  /**
+   * Get the base URL for building streaming/download URLs.
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
   }
 
   /**

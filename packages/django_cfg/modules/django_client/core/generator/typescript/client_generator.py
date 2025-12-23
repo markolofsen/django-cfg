@@ -13,11 +13,32 @@ from ..base import GeneratedFile
 class ClientGenerator:
     """Generates TypeScript APIClient classes (flat and namespaced)."""
 
+    # Content types that indicate streaming/binary response (need URL builder method)
+    STREAMING_CONTENT_TYPES = frozenset([
+        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+        'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/flac',
+        'application/octet-stream',
+    ])
+
     def __init__(self, jinja_env: Environment, context, base, operations_gen):
         self.jinja_env = jinja_env
         self.context = context
         self.base = base
         self.operations_gen = operations_gen
+
+    def _is_streaming_operation(self, operation) -> bool:
+        """Check if operation returns streaming/binary content that needs URL builder."""
+        # Check primary success response content type
+        primary_response = operation.primary_success_response
+        if primary_response and primary_response.content_type:
+            content_type = primary_response.content_type.lower()
+            # Check exact match
+            if content_type in self.STREAMING_CONTENT_TYPES:
+                return True
+            # Check prefix match (video/*, audio/*)
+            if content_type.startswith('video/') or content_type.startswith('audio/'):
+                return True
+        return False
 
     def generate_client_file(self):
         """Generate client.ts with APIClient class."""
@@ -51,6 +72,9 @@ class ClientGenerator:
         method_codes = []
         for op_id, operation in self.context.operations.items():
             method_codes.append(self.operations_gen.generate_operation(operation))
+            # Add URL builder method for streaming operations
+            if self._is_streaming_operation(operation):
+                method_codes.append(self.operations_gen.generate_url_method(operation))
 
         template = self.jinja_env.get_template('client/flat_client.ts.jinja')
         return template.render(
@@ -84,6 +108,9 @@ class ClientGenerator:
         method_codes = []
         for operation in operations:
             method_codes.append(self.operations_gen.generate_operation(operation, remove_tag_prefix=True, in_subclient=True))
+            # Add URL builder method for streaming operations
+            if self._is_streaming_operation(operation):
+                method_codes.append(self.operations_gen.generate_url_method(operation, remove_tag_prefix=True, in_subclient=True))
 
         template = self.jinja_env.get_template('client/sub_client.ts.jinja')
         return template.render(
@@ -153,6 +180,9 @@ class ClientGenerator:
         method_codes = []
         for operation in operations:
             method_codes.append(self.operations_gen.generate_operation(operation, remove_tag_prefix=True, in_subclient=True))
+            # Add URL builder method for streaming operations
+            if self._is_streaming_operation(operation):
+                method_codes.append(self.operations_gen.generate_url_method(operation, remove_tag_prefix=True, in_subclient=True))
 
         template = self.jinja_env.get_template('client/app_client.ts.jinja')
         content = template.render(

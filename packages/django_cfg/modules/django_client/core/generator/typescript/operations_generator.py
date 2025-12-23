@@ -21,7 +21,6 @@ class OperationsGenerator:
     def generate_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False, in_subclient: bool = False) -> str:
         """Generate async method for operation."""
 
-
         # Get method name using universal logic
         # For client methods, we use empty prefix to get short names: list, create, retrieve
         operation_id = operation.operation_id
@@ -340,6 +339,92 @@ class OperationsGenerator:
 
         # Add closing brace with indentation
         lines.append("  " + "}")
+
+        return "\n".join(lines)
+
+    def generate_url_method(self, operation: IROperationObject, remove_tag_prefix: bool = False, in_subclient: bool = False) -> str:
+        """Generate URL builder method for streaming/download operations.
+
+        Generates a method like `streamUrl(session_id, path): string` that returns
+        the full URL without making an HTTP request. Useful for:
+        - Audio/video streaming (browser handles Range requests)
+        - File downloads
+        - SSE endpoints
+        """
+        # Get method name
+        operation_id = operation.operation_id
+        if remove_tag_prefix and operation.tags:
+            tag = operation.tags[0]
+            operation_id = self.base.remove_tag_prefix(operation_id, tag)
+
+        base_method_name = operation_to_method_name(operation_id, operation.http_method, '', self.base, operation.path)
+        method_name = f"{base_method_name}Url"
+
+        # Client reference prefix
+        client_prefix = "this.client" if in_subclient else "this"
+
+        # Method parameters (path params + query params)
+        params = []
+
+        # Add path parameters
+        for param in operation.path_parameters:
+            param_type = self._map_param_type(param.schema_type)
+            params.append(f"{param.name}: {param_type}")
+
+        # Add query parameters
+        query_params_list = []
+        required_query_params = []
+        optional_query_params = []
+
+        for param in operation.query_parameters:
+            param_type = self._map_param_type(param.schema_type)
+            query_params_list.append((param.name, param_type, param.required))
+
+            if param.required:
+                required_query_params.append(f"{param.name}: {param_type}")
+            else:
+                optional_query_params.append(f"{param.name}?: {param_type}")
+
+        params.extend(required_query_params)
+        params.extend(optional_query_params)
+
+        # Build path expression
+        path_expr = f'"{operation.path}"'
+        if operation.path_parameters:
+            path_with_vars = operation.path
+            for param in operation.path_parameters:
+                path_with_vars = path_with_vars.replace(f"{{{param.name}}}", f"${{{param.name}}}")
+            path_expr = f'`{path_with_vars}`'
+
+        # Build method
+        lines = []
+
+        # Comment
+        comment = f"/**\n * Get URL for {operation.summary or operation_id}\n *\n * Returns the full URL without making a request.\n * Useful for streaming media or downloads.\n */"
+        for line in comment.split('\n'):
+            lines.append("  " + line)
+
+        # Signature
+        lines.append(f"  {method_name}({', '.join(params)}): string {{")
+
+        # Build URL with query params
+        lines.append(f"    const urlPath = {path_expr};")
+        lines.append(f"    const baseUrl = {client_prefix}.getBaseUrl();")
+
+        if query_params_list:
+            # Build query string
+            lines.append("    const queryParams = new URLSearchParams();")
+            for param_name, _, required in query_params_list:
+                if required:
+                    lines.append(f"    queryParams.set('{param_name}', String({param_name}));")
+                else:
+                    lines.append(f"    if ({param_name} !== undefined) queryParams.set('{param_name}', String({param_name}));")
+            lines.append("    const queryString = queryParams.toString();")
+            lines.append("    return queryString ? `${baseUrl}${urlPath}?${queryString}` : `${baseUrl}${urlPath}`;")
+        else:
+            lines.append("    return `${baseUrl}${urlPath}`;")
+
+        lines.append("  }")
 
         return "\n".join(lines)
 

@@ -7,6 +7,7 @@ from django_cfg.modules.django_admin import (
     DateTimeField,
     FieldsetConfig,
     Icons,
+    ShortUUIDField,
 )
 
 from ..models import BackupCode, TOTPDevice, TwoFactorSession
@@ -33,6 +34,7 @@ totpdevice_config = AdminConfig(
         ),
     ],
     display_fields=[
+        ShortUUIDField(name="id", title="ID", length=8),
         BadgeField(
             name="status",
             title="Status",
@@ -81,6 +83,7 @@ backupcode_config = AdminConfig(
         ),
     ],
     display_fields=[
+        ShortUUIDField(name="id", title="ID", length=8),
         DateTimeField(name="used_at", title="Used At"),
         DateTimeField(name="created_at", title="Created"),
     ],
@@ -112,6 +115,7 @@ twofactorsession_config = AdminConfig(
         ),
     ],
     display_fields=[
+        ShortUUIDField(name="id", title="ID", length=8),
         BadgeField(
             name="status",
             title="Status",

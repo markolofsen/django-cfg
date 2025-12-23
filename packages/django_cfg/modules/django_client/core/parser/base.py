@@ -815,12 +815,14 @@ class BaseParser(ABC):
                 # TODO: Resolve reference
                 continue
 
-            # Extract schema name from content
+            # Extract schema name and content type from content
             schema_name = None
             is_paginated = False
+            content_type = "application/json"
 
             if response_or_ref.content:
-                for media_type in response_or_ref.content.values():
+                for ct, media_type in response_or_ref.content.items():
+                    content_type = ct
                     if media_type.schema_:
                         if isinstance(media_type.schema_, ReferenceObject):
                             schema_name = media_type.schema_.ref_name
@@ -832,6 +834,7 @@ class BaseParser(ABC):
             ir_responses[status_code] = IRResponseObject(
                 status_code=status_code,
                 schema_name=schema_name,
+                content_type=content_type,
                 description=response_or_ref.description,
                 is_paginated=is_paginated,
             )
