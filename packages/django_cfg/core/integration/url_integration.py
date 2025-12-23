@@ -80,8 +80,10 @@ def _get_openapi_group_urls() -> List[URLPattern]:
                     sys.stderr.write(f"✅ Auto-registered URL: /{url_pattern} -> {urls_module}\n")
                     sys.stderr.flush()
 
-                except ImportError:
+                except ImportError as e:
                     # App doesn't have urls.py - skip it
+                    sys.stderr.write(f"⚠️  Skipping {app_name}: {e}\n")
+                    sys.stderr.flush()
                     continue
 
     except Exception as e:

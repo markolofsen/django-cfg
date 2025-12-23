@@ -31,6 +31,7 @@ export class APIClient {
   private httpClient: HttpClientAdapter;
   private logger: APILogger | null = null;
   private retryConfig: RetryConfig | null = null;
+  private tokenGetter: (() => string | null) | null = null;
 
   // Sub-clients
 {% for tag in tags %}
@@ -43,10 +44,12 @@ export class APIClient {
       httpClient?: HttpClientAdapter;
       loggerConfig?: Partial<LoggerConfig>;
       retryConfig?: RetryConfig;
+      tokenGetter?: () => string | null;
     }
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.httpClient = options?.httpClient || new FetchAdapter();
+    this.tokenGetter = options?.tokenGetter || null;
 
     // Initialize logger if config provided
     if (options?.loggerConfig !== undefined) {
@@ -84,6 +87,14 @@ export class APIClient {
    */
   getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  /**
+   * Get JWT token for URL authentication (used in streaming endpoints).
+   * Returns null if no token getter is configured or no token is available.
+   */
+  getToken(): string | null {
+    return this.tokenGetter ? this.tokenGetter() : null;
   }
 
   /**
@@ -357,6 +368,7 @@ export class APIClient {
   private httpClient: HttpClientAdapter;
   private logger: APILogger | null = null;
   private retryConfig: RetryConfig | null = null;
+  private tokenGetter: (() => string | null) | null = null;
 
   constructor(
     baseUrl: string,
@@ -364,10 +376,12 @@ export class APIClient {
       httpClient?: HttpClientAdapter;
       loggerConfig?: Partial<LoggerConfig>;
       retryConfig?: RetryConfig;
+      tokenGetter?: () => string | null;
     }
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.httpClient = options?.httpClient || new FetchAdapter();
+    this.tokenGetter = options?.tokenGetter || null;
 
     // Initialize logger if config provided
     if (options?.loggerConfig !== undefined) {
@@ -398,6 +412,14 @@ export class APIClient {
    */
   getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  /**
+   * Get JWT token for URL authentication (used in streaming endpoints).
+   * Returns null if no token getter is configured or no token is available.
+   */
+  getToken(): string | null {
+    return this.tokenGetter ? this.tokenGetter() : null;
   }
 
   /**

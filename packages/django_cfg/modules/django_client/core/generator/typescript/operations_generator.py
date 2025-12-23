@@ -399,30 +399,39 @@ class OperationsGenerator:
         # Build method
         lines = []
 
+        # Filter out 'token' from query params - we auto-inject it from client
+        filtered_query_params = [(name, type_, req) for name, type_, req in query_params_list if name != 'token']
+        # Also filter 'token' from method signature params
+        filtered_params = [p for p in params if not p.startswith('token')]
+
         # Comment
-        comment = f"/**\n * Get URL for {operation.summary or operation_id}\n *\n * Returns the full URL without making a request.\n * Useful for streaming media or downloads.\n */"
+        comment = f"/**\n * Get URL for {operation.summary or operation_id}\n *\n * Returns the full URL without making a request.\n * Automatically includes JWT token for authentication.\n * Useful for streaming media or downloads.\n */"
         for line in comment.split('\n'):
             lines.append("  " + line)
 
-        # Signature
-        lines.append(f"  {method_name}({', '.join(params)}): string {{")
+        # Signature (without token param - it's auto-injected)
+        lines.append(f"  {method_name}({', '.join(filtered_params)}): string {{")
 
         # Build URL with query params
         lines.append(f"    const urlPath = {path_expr};")
         lines.append(f"    const baseUrl = {client_prefix}.getBaseUrl();")
+        lines.append(f"    const _authToken = {client_prefix}.getToken();")
 
-        if query_params_list:
-            # Build query string
-            lines.append("    const queryParams = new URLSearchParams();")
-            for param_name, _, required in query_params_list:
-                if required:
-                    lines.append(f"    queryParams.set('{param_name}', String({param_name}));")
-                else:
-                    lines.append(f"    if ({param_name} !== undefined) queryParams.set('{param_name}', String({param_name}));")
-            lines.append("    const queryString = queryParams.toString();")
-            lines.append("    return queryString ? `${baseUrl}${urlPath}?${queryString}` : `${baseUrl}${urlPath}`;")
-        else:
-            lines.append("    return `${baseUrl}${urlPath}`;")
+        # Always use URLSearchParams to handle token + other query params
+        lines.append("    const queryParams = new URLSearchParams();")
+
+        # Add explicit query parameters from operation (excluding token)
+        for param_name, _, required in filtered_query_params:
+            if required:
+                lines.append(f"    queryParams.set('{param_name}', String({param_name}));")
+            else:
+                lines.append(f"    if ({param_name} !== undefined) queryParams.set('{param_name}', String({param_name}));")
+
+        # Add auto-injected token if available
+        lines.append("    if (_authToken) queryParams.set('token', _authToken);")
+
+        lines.append("    const queryString = queryParams.toString();")
+        lines.append("    return queryString ? `${baseUrl}${urlPath}?${queryString}` : `${baseUrl}${urlPath}`;")
 
         lines.append("  }")
 

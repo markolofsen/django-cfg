@@ -96,7 +96,7 @@ class ClientGenerator:
         sub_clients_code = "\n\n".join(sub_client_classes)
 
         # Generate main APIClient
-        main_client_code = self._generate_main_client_class(list(ops_by_tag.keys()))
+        main_client_code = self._generate_main_client_class(ops_by_tag)
 
         return f"{sub_clients_code}\n\n{main_client_code}"
 
