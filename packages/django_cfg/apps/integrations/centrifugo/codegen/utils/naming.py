@@ -5,6 +5,82 @@ Provides functions to convert RPC method names to valid identifiers
 in different programming languages.
 """
 
+# Swift/SwiftUI reserved type names that conflict when used as struct names
+# These will be prefixed with "Centrifugo" when generating Swift code
+SWIFT_RESERVED_TYPES = {
+    # SwiftUI types
+    "Environment",
+    "State",
+    "Binding",
+    "ObservableObject",
+    "Published",
+    "View",
+    "App",
+    "Scene",
+    # Swift stdlib types
+    "Error",
+    "Result",
+    "Optional",
+    "Array",
+    "Dictionary",
+    "Set",
+    "String",
+    "Int",
+    "Double",
+    "Float",
+    "Bool",
+    "Data",
+    "Date",
+    "URL",
+    "UUID",
+    # Common conflicts
+    "Type",
+    "Self",
+    "Protocol",
+    "Any",
+    "AnyObject",
+}
+
+
+def get_safe_swift_type_name(name: str, prefix: str = "Centrifugo") -> str:
+    """
+    Get a Swift-safe type name for a struct/class.
+
+    If the name conflicts with Swift/SwiftUI reserved types,
+    it will be prefixed to avoid compilation errors.
+
+    Args:
+        name: The original type name
+        prefix: Prefix to add for conflicting names (default: "Centrifugo")
+
+    Returns:
+        Swift-safe type name
+
+    Examples:
+        >>> get_safe_swift_type_name("Environment")
+        'CentrifugoEnvironment'
+        >>> get_safe_swift_type_name("UserProfile")
+        'UserProfile'
+        >>> get_safe_swift_type_name("State")
+        'CentrifugoState'
+    """
+    if name in SWIFT_RESERVED_TYPES:
+        return f"{prefix}{name}"
+    return name
+
+
+def is_swift_reserved_type(name: str) -> bool:
+    """
+    Check if a name conflicts with Swift/SwiftUI reserved types.
+
+    Examples:
+        >>> is_swift_reserved_type("Environment")
+        True
+        >>> is_swift_reserved_type("UserProfile")
+        False
+    """
+    return name in SWIFT_RESERVED_TYPES
+
 
 def sanitize_method_name(name: str) -> str:
     """
@@ -194,6 +270,9 @@ def to_swift_field_name(field_name: str) -> str:
 
 
 __all__ = [
+    'SWIFT_RESERVED_TYPES',
+    'get_safe_swift_type_name',
+    'is_swift_reserved_type',
     'sanitize_method_name',
     'to_camel_case',
     'to_pascal_case',

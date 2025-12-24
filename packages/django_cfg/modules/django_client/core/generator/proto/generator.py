@@ -416,13 +416,20 @@ class ProtoGenerator(BaseGenerator):
             description="Combined Protocol Buffer definitions",
         )
 
-    def _build_proto_header(self, file_name: str, tag: str | None = None) -> str:
+    def _build_proto_header(
+        self,
+        file_name: str,
+        tag: str | None = None,
+        swift_prefix: str | None = "API",
+    ) -> str:
         """
         Build proto file header with syntax, package, and imports.
 
         Args:
             file_name: Name of the proto file
             tag: Optional service tag for package naming
+            swift_prefix: Prefix for Swift generated types (avoids conflicts with SwiftUI)
+                         Default "API" makes Environment -> APIEnvironment, etc.
 
         Returns:
             Header string with syntax declaration, package, and imports
@@ -438,8 +445,16 @@ class ProtoGenerator(BaseGenerator):
             'syntax = "proto3";',
             '',
             f'package {package_name};',
-            '',
         ]
+
+        # Add Swift-specific option to prefix generated types
+        # This avoids naming conflicts with SwiftUI (e.g., Environment, State, Binding)
+        if swift_prefix:
+            lines.append('')
+            lines.append(f'// Swift type prefix to avoid conflicts with SwiftUI types')
+            lines.append(f'option swift_prefix = "{swift_prefix}";')
+
+        lines.append('')
 
         # Add required imports
         imports = self.type_mapper.get_required_imports()

@@ -6,6 +6,42 @@ Centralized name sanitization and conversion for proto file generation.
 
 import re
 
+# Swift/SwiftUI reserved type names that conflict when used as proto message names
+# These will be prefixed with "Proto" when generating Swift code
+SWIFT_RESERVED_TYPES = {
+    # SwiftUI types
+    "Environment",
+    "State",
+    "Binding",
+    "ObservableObject",
+    "Published",
+    "View",
+    "App",
+    "Scene",
+    # Swift stdlib types
+    "Error",
+    "Result",
+    "Optional",
+    "Array",
+    "Dictionary",
+    "Set",
+    "String",
+    "Int",
+    "Double",
+    "Float",
+    "Bool",
+    "Data",
+    "Date",
+    "URL",
+    "UUID",
+    # Common conflicts
+    "Type",
+    "Self",
+    "Protocol",
+    "Any",
+    "AnyObject",
+}
+
 
 def to_pascal_case(name: str) -> str:
     """
@@ -119,3 +155,42 @@ def get_field_name(name: str) -> str:
         'access_token'
     """
     return to_snake_case(sanitize_proto_name(name))
+
+
+def get_safe_swift_name(name: str, prefix: str = "Proto") -> str:
+    """
+    Get a Swift-safe name for proto message/enum.
+
+    If the name conflicts with Swift/SwiftUI reserved types,
+    it will be prefixed to avoid compilation errors.
+
+    Args:
+        name: The original proto message/enum name
+        prefix: Prefix to add for conflicting names (default: "Proto")
+
+    Examples:
+        >>> get_safe_swift_name("Environment")
+        'ProtoEnvironment'
+        >>> get_safe_swift_name("UserProfile")
+        'UserProfile'
+        >>> get_safe_swift_name("State")
+        'ProtoState'
+        >>> get_safe_swift_name("Error")
+        'ProtoError'
+    """
+    if name in SWIFT_RESERVED_TYPES:
+        return f"{prefix}{name}"
+    return name
+
+
+def is_swift_reserved(name: str) -> bool:
+    """
+    Check if a name conflicts with Swift/SwiftUI reserved types.
+
+    Examples:
+        >>> is_swift_reserved("Environment")
+        True
+        >>> is_swift_reserved("UserProfile")
+        False
+    """
+    return name in SWIFT_RESERVED_TYPES

@@ -17,7 +17,7 @@ from .base import (
     is_optional_anyof,
     extract_ref_name,
 )
-from ..naming import to_camel_case
+from ..naming import to_camel_case, get_safe_swift_type_name
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,9 @@ def convert_json_schema_to_swift(
     """
     # Handle $ref (reference to nested model)
     if "$ref" in field_info:
-        return extract_ref_name(field_info["$ref"])
+        ref_name = extract_ref_name(field_info["$ref"])
+        # Apply Swift-safe naming to avoid conflicts with SwiftUI types
+        return get_safe_swift_type_name(ref_name)
 
     # Handle anyOf (union types) - Swift doesn't have union types
     if "anyOf" in field_info:
@@ -113,6 +115,9 @@ def _schema_to_swift_struct(
     Returns:
         dict: Swift struct information
     """
+    # Apply Swift-safe naming to avoid conflicts with SwiftUI types
+    safe_name = get_safe_swift_type_name(name)
+
     properties = get_schema_properties(schema)
     required = get_schema_required(schema)
 
@@ -137,9 +142,9 @@ def _schema_to_swift_struct(
         })
 
     return {
-        "name": name,
+        "name": safe_name,
         "fields": fields,
-        "doc": schema.get('description', f"{name} struct"),
+        "doc": schema.get('description', f"{safe_name} struct"),
     }
 
 
@@ -176,6 +181,9 @@ def pydantic_to_swift(model: Type[BaseModel]) -> Dict[str, Any]:
         required = get_schema_required(schema)
         defs = get_schema_defs(schema)
 
+        # Apply Swift-safe naming to avoid conflicts with SwiftUI types
+        safe_name = get_safe_swift_type_name(model.__name__)
+
         fields = []
         for field_name, field_info in properties.items():
             swift_type = convert_json_schema_to_swift(field_info, defs)
@@ -199,20 +207,21 @@ def pydantic_to_swift(model: Type[BaseModel]) -> Dict[str, Any]:
                 "is_optional": is_optional,
             })
 
-        doc = model.__doc__ or f"{model.__name__} model"
+        doc = model.__doc__ or f"{safe_name} model"
 
         return {
-            "name": model.__name__,
+            "name": safe_name,
             "fields": fields,
             "doc": doc,
         }
 
     except Exception as e:
         logger.error(f"Failed to convert {model.__name__} to Swift: {e}")
+        safe_name = get_safe_swift_type_name(model.__name__)
         return {
-            "name": model.__name__,
+            "name": safe_name,
             "fields": [],
-            "doc": f"{model.__name__} struct",
+            "doc": f"{safe_name} struct",
         }
 
 
