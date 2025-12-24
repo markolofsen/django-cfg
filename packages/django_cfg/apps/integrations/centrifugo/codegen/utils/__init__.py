@@ -3,6 +3,9 @@ Utilities for code generation.
 """
 
 from .naming import (
+    SWIFT_RESERVED_TYPES,
+    get_safe_swift_type_name,
+    is_swift_reserved_type,
     sanitize_method_name,
     to_camel_case,
     to_pascal_case,
@@ -36,6 +39,9 @@ from .converters import (
 
 __all__ = [
     # Naming
+    "SWIFT_RESERVED_TYPES",
+    "get_safe_swift_type_name",
+    "is_swift_reserved_type",
     "sanitize_method_name",
     "to_camel_case",
     "to_pascal_case",

@@ -39,6 +39,9 @@ SWIFT_RESERVED_TYPES = {
     "Protocol",
     "Any",
     "AnyObject",
+    # Common app type conflicts
+    "SearchResult",
+    "ConnectionState",
 }
 
 

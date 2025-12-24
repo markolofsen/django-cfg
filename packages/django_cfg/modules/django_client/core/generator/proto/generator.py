@@ -428,8 +428,9 @@ class ProtoGenerator(BaseGenerator):
         Args:
             file_name: Name of the proto file
             tag: Optional service tag for package naming
-            swift_prefix: Prefix for Swift generated types (avoids conflicts with SwiftUI)
-                         Default "API" makes Environment -> APIEnvironment, etc.
+            swift_prefix: Base prefix for Swift generated types (avoids conflicts with SwiftUI)
+                         If tag provided, uses tag-specific prefix like "APITerminal"
+                         to ensure unique types across services.
 
         Returns:
             Header string with syntax declaration, package, and imports
@@ -448,11 +449,22 @@ class ProtoGenerator(BaseGenerator):
         ]
 
         # Add Swift-specific option to prefix generated types
-        # This avoids naming conflicts with SwiftUI (e.g., Environment, State, Binding)
+        # Use tag-specific prefix to avoid collisions between services
+        # e.g., "terminal" -> "APITerminal", "shared_terminal" -> "APISharedTerminal"
         if swift_prefix:
+            if tag:
+                # Convert tag to PascalCase and append to base prefix
+                # Handle spaces, underscores, and hyphens
+                import re
+                tag_clean = re.sub(r'[^a-zA-Z0-9]', ' ', tag)
+                tag_pascal = ''.join(word.capitalize() for word in tag_clean.split())
+                service_prefix = f"{swift_prefix}{tag_pascal}"
+            else:
+                service_prefix = swift_prefix
+
             lines.append('')
-            lines.append(f'// Swift type prefix to avoid conflicts with SwiftUI types')
-            lines.append(f'option swift_prefix = "{swift_prefix}";')
+            lines.append(f'// Swift type prefix to avoid conflicts (unique per service)')
+            lines.append(f'option swift_prefix = "{service_prefix}";')
 
         lines.append('')
 

@@ -76,7 +76,8 @@ public enum RPCError: Error, LocalizedError {
 // MARK: - Connection State
 
 /// Centrifugo connection state.
-public enum ConnectionState: Sendable {
+/// Named CentrifugoConnectionState to avoid conflict with app's ConnectionState.
+public enum CentrifugoConnectionState: Sendable {
     case disconnected
     case connecting
     case connected
@@ -114,7 +115,7 @@ public actor CentrifugoRPCClient {
     private var receiveTask: Task<Void, Never>?
 
     /// Current connection state.
-    public private(set) var state: ConnectionState = .disconnected
+    public private(set) var state: CentrifugoConnectionState = .disconnected
 
     // MARK: - Initialization
 

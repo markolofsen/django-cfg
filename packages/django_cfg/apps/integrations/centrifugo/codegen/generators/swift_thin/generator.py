@@ -16,7 +16,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel
 
 from ...discovery import RPCMethodInfo
-from ...utils import to_swift_method_name
+from ...utils import to_swift_method_name, get_safe_swift_type_name
 from ...utils.converters import pydantic_to_swift_with_nested
 
 logger = logging.getLogger(__name__)
@@ -187,8 +187,11 @@ class SwiftThinGenerator:
 
         methods_data = []
         for method in self.methods:
-            param_type = method.param_type.__name__ if method.param_type else "EmptyParams"
-            return_type = method.return_type.__name__ if method.return_type else "EmptyResult"
+            # Apply safe naming to avoid Swift/SwiftUI conflicts
+            param_type_raw = method.param_type.__name__ if method.param_type else "EmptyParams"
+            return_type_raw = method.return_type.__name__ if method.return_type else "EmptyResult"
+            param_type = get_safe_swift_type_name(param_type_raw)
+            return_type = get_safe_swift_type_name(return_type_raw)
             method_name_swift = to_swift_method_name(method.name)
 
             # Extract first line of docstring
