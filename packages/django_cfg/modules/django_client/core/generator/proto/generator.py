@@ -168,19 +168,27 @@ class ProtoGenerator(BaseGenerator):
     def _generate_service_messages_file(
         self, folder_name: str, tag: str, schemas: dict[str, IRSchemaObject]
     ) -> GeneratedFile:
-        """Generate messages.proto file for a specific service."""
+        """Generate messages.proto file for a specific service.
+
+        File naming uses folder_name prefix to ensure unique Swift output files.
+        Example: activity/activity_messages.proto -> activity_messages.pb.swift
+        """
         # Generate message definitions for these schemas
         self.messages_generator.generate_all_messages(schemas)
         messages_content = self.messages_generator.get_all_definitions()
 
+        # Use folder_name as prefix for unique Swift file names
+        file_prefix = folder_name.replace("/", "_")
+        proto_filename = f"{file_prefix}_messages.proto"
+
         # Build proto file content
-        content = self._build_proto_header(f"{folder_name}/messages.proto", tag)
+        content = self._build_proto_header(f"{folder_name}/{proto_filename}", tag)
 
         if messages_content:
             content += "\n\n" + messages_content
 
         return GeneratedFile(
-            path=f"{folder_name}/messages.proto",
+            path=f"{folder_name}/{proto_filename}",
             content=content,
             description=f"Protocol Buffer message definitions for {tag}",
         )
@@ -188,21 +196,30 @@ class ProtoGenerator(BaseGenerator):
     def _generate_service_file(
         self, folder_name: str, tag: str, operations: list[IROperationObject]
     ) -> GeneratedFile:
-        """Generate service.proto file for a specific service."""
+        """Generate service.proto file for a specific service.
+
+        File naming uses folder_name prefix to ensure unique Swift output files.
+        Example: activity/activity_service.proto -> activity_service.pb.swift
+        """
         # Generate service definitions from operations
         service_definitions = self.services_generator.generate_all_services(operations)
 
+        # Use folder_name as prefix for unique Swift file names
+        file_prefix = folder_name.replace("/", "_")
+        messages_filename = f"{file_prefix}_messages.proto"
+        service_filename = f"{file_prefix}_service.proto"
+
         # Build proto file content
-        content = self._build_proto_header(f"{folder_name}/service.proto", tag)
-        # Import messages.proto from the same folder (relative import)
-        content += '\nimport "messages.proto";\n'
+        content = self._build_proto_header(f"{folder_name}/{service_filename}", tag)
+        # Import messages.proto with prefixed name
+        content += f'\nimport "{messages_filename}";\n'
 
         # Add all service definitions
         for service_name, service_def in service_definitions.items():
             content += "\n\n" + service_def
 
         return GeneratedFile(
-            path=f"{folder_name}/service.proto",
+            path=f"{folder_name}/{service_filename}",
             content=content,
             description=f"gRPC service definitions for {tag}",
         )
@@ -216,9 +233,11 @@ class ProtoGenerator(BaseGenerator):
             "",
             "## Structure",
             "",
-            "Each service has its own folder containing:",
-            "- `messages.proto` - Message definitions (models)",
-            "- `service.proto` - Service and RPC definitions",
+            "Each service has its own folder containing prefixed proto files:",
+            "- `{prefix}_messages.proto` - Message definitions (models)",
+            "- `{prefix}_service.proto` - Service and RPC definitions",
+            "",
+            "File names are prefixed with folder name to ensure unique Swift output.",
             "",
             "## Services",
             "",
