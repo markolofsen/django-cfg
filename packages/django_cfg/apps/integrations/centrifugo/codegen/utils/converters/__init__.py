@@ -1,33 +1,39 @@
 """
-Utilities for code generation.
+Type converters for code generation.
+
+This module provides type conversion utilities for generating code in different
+programming languages from Pydantic models.
+
+Supported languages:
+- TypeScript
+- Python
+- Go
+- Swift
 """
 
-from .naming import (
-    sanitize_method_name,
-    to_camel_case,
-    to_pascal_case,
-    to_python_method_name,
-    to_typescript_method_name,
-    to_go_method_name,
-    to_swift_method_name,
-    to_swift_field_name,
-)
-
-# Import from new converters module structure
-from .converters import (
-    # TypeScript
+# TypeScript
+from .typescript import (
     convert_json_schema_to_typescript,
     pydantic_to_typescript,
     generate_typescript_types,
-    # Python
+)
+
+# Python
+from .python import (
     convert_json_schema_to_python,
     pydantic_to_python,
     generate_python_types,
-    # Go
+)
+
+# Go
+from .go import (
     convert_json_schema_to_go,
     pydantic_to_go,
     generate_go_types,
-    # Swift
+)
+
+# Swift
+from .swift import (
     convert_json_schema_to_swift,
     pydantic_to_swift,
     pydantic_to_swift_with_nested,
@@ -35,28 +41,19 @@ from .converters import (
 )
 
 __all__ = [
-    # Naming
-    "sanitize_method_name",
-    "to_camel_case",
-    "to_pascal_case",
-    "to_python_method_name",
-    "to_typescript_method_name",
-    "to_go_method_name",
-    "to_swift_method_name",
-    "to_swift_field_name",
-    # TypeScript converters
+    # TypeScript
     "convert_json_schema_to_typescript",
     "pydantic_to_typescript",
     "generate_typescript_types",
-    # Python converters
+    # Python
     "convert_json_schema_to_python",
     "pydantic_to_python",
     "generate_python_types",
-    # Go converters
+    # Go
     "convert_json_schema_to_go",
     "pydantic_to_go",
     "generate_go_types",
-    # Swift converters
+    # Swift
     "convert_json_schema_to_swift",
     "pydantic_to_swift",
     "pydantic_to_swift_with_nested",

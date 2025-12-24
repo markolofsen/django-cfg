@@ -1,0 +1,378 @@
+// RPCClient.swift
+// Centrifugo RPC Client for Swift
+// Auto-generated - DO NOT EDIT
+
+import Foundation
+
+// MARK: - RPC Types
+
+/// RPC request message sent to Centrifugo.
+public struct RPCRequest: Codable, Sendable {
+    public let method: String
+    public let params: AnyCodable
+    public let correlationId: String
+    public let replyTo: String
+
+    enum CodingKeys: String, CodingKey {
+        case method
+        case params
+        case correlationId = "correlation_id"
+        case replyTo = "reply_to"
+    }
+}
+
+/// RPC response message received from Centrifugo.
+public struct RPCResponse: Codable, Sendable {
+    public let correlationId: String
+    public let result: AnyCodable?
+    public let error: RPCErrorInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case correlationId = "correlation_id"
+        case result
+        case error
+    }
+}
+
+/// RPC error information.
+public struct RPCErrorInfo: Codable, Sendable {
+    public let code: Int
+    public let message: String
+}
+
+/// RPC error type.
+public enum RPCError: Error, LocalizedError {
+    case notConnected
+    case timeout
+    case serverError(code: Int, message: String)
+    case encodingError(Error)
+    case decodingError(Error)
+    case webSocketError(Error)
+    case invalidResponse
+    case connectionClosed
+
+    public var errorDescription: String? {
+        switch self {
+        case .notConnected:
+            return "Not connected to Centrifugo server"
+        case .timeout:
+            return "RPC request timed out"
+        case .serverError(let code, let message):
+            return "Server error (\(code)): \(message)"
+        case .encodingError(let error):
+            return "Failed to encode request: \(error.localizedDescription)"
+        case .decodingError(let error):
+            return "Failed to decode response: \(error.localizedDescription)"
+        case .webSocketError(let error):
+            return "WebSocket error: \(error.localizedDescription)"
+        case .invalidResponse:
+            return "Invalid response from server"
+        case .connectionClosed:
+            return "Connection was closed"
+        }
+    }
+}
+
+// MARK: - Connection State
+
+/// Centrifugo connection state.
+public enum ConnectionState: Sendable {
+    case disconnected
+    case connecting
+    case connected
+}
+
+// MARK: - Centrifugo RPC Client
+
+/// Async RPC client for Centrifugo WebSocket connections.
+///
+/// This client implements the correlation ID pattern to enable RPC-style
+/// communication over Centrifugo's pub/sub infrastructure.
+///
+/// Usage:
+/// ```swift
+/// let client = try CentrifugoRPCClient(
+///     url: "ws://localhost:8000/connection/websocket",
+///     token: "jwt-token",
+///     userId: "user-123"
+/// )
+/// try await client.connect()
+/// let result: MyResult = try await client.call(method: "my.method", params: MyParams(...))
+/// await client.disconnect()
+/// ```
+public actor CentrifugoRPCClient {
+    // MARK: - Properties
+
+    private let url: URL
+    private let token: String
+    private let userId: String
+    private let timeout: TimeInterval
+    private var webSocket: URLSessionWebSocketTask?
+    private var session: URLSession?
+    private var pendingRequests: [String: CheckedContinuation<Data, Error>] = [:]
+    private let replyChannel: String
+    private var receiveTask: Task<Void, Never>?
+
+    /// Current connection state.
+    public private(set) var state: ConnectionState = .disconnected
+
+    // MARK: - Initialization
+
+    /// Create a new Centrifugo RPC client.
+    ///
+    /// - Parameters:
+    ///   - url: WebSocket URL of the Centrifugo server
+    ///   - token: JWT authentication token
+    ///   - userId: User ID for the reply channel
+    ///   - timeout: RPC call timeout in seconds (default: 30)
+    /// - Throws: URLError if the URL is invalid
+    public init(
+        url: String,
+        token: String,
+        userId: String,
+        timeout: TimeInterval = 30
+    ) throws {
+        guard let wsUrl = URL(string: url) else {
+            throw URLError(.badURL)
+        }
+        self.url = wsUrl
+        self.token = token
+        self.userId = userId
+        self.timeout = timeout
+        self.replyChannel = "user#\(userId)"
+    }
+
+    // MARK: - Connection Management
+
+    /// Connect to the Centrifugo server.
+    ///
+    /// Establishes a WebSocket connection and subscribes to the user's reply channel.
+    /// - Throws: Error if connection fails
+    public func connect() async throws {
+        guard state == .disconnected else { return }
+
+        state = .connecting
+
+        // Create URL session with authorization header
+        let config = URLSessionConfiguration.default
+        config.httpAdditionalHeaders = [
+            "Authorization": "Bearer \(token)"
+        ]
+
+        session = URLSession(configuration: config)
+        webSocket = session?.webSocketTask(with: url)
+        webSocket?.resume()
+
+        // Start receiving messages
+        receiveTask = Task { [weak self] in
+            await self?.receiveLoop()
+        }
+
+        // Subscribe to reply channel
+        try await subscribe(channel: replyChannel)
+
+        state = .connected
+    }
+
+    /// Disconnect from the Centrifugo server.
+    ///
+    /// Cancels all pending requests and closes the WebSocket connection.
+    public func disconnect() async {
+        state = .disconnected
+
+        // Cancel receive task
+        receiveTask?.cancel()
+        receiveTask = nil
+
+        // Close WebSocket
+        webSocket?.cancel(with: .goingAway, reason: nil)
+        webSocket = nil
+        session = nil
+
+        // Cancel all pending requests
+        for (_, continuation) in pendingRequests {
+            continuation.resume(throwing: RPCError.connectionClosed)
+        }
+        pendingRequests.removeAll()
+    }
+
+    // MARK: - RPC Methods
+
+    /// Call an RPC method and wait for response.
+    ///
+    /// - Parameters:
+    ///   - method: RPC method name (e.g., "terminal.input")
+    ///   - params: Request parameters (must be Encodable)
+    /// - Returns: Response decoded as the specified type
+    /// - Throws: RPCError if the call fails
+    public func call<P: Encodable, R: Decodable>(
+        method: String,
+        params: P
+    ) async throws -> R {
+        guard state == .connected else {
+            throw RPCError.notConnected
+        }
+
+        let correlationId = UUID().uuidString
+
+        // Encode params to AnyCodable
+        let encoder = JSONEncoder()
+        let paramsData = try encoder.encode(params)
+        let paramsAny = try JSONDecoder().decode(AnyCodable.self, from: paramsData)
+
+        // Create request
+        let request = RPCRequest(
+            method: method,
+            params: paramsAny,
+            correlationId: correlationId,
+            replyTo: replyChannel
+        )
+
+        // Send and wait for response
+        let responseData = try await sendRequest(request, correlationId: correlationId)
+
+        // Decode response
+        do {
+            return try JSONDecoder().decode(R.self, from: responseData)
+        } catch {
+            throw RPCError.decodingError(error)
+        }
+    }
+
+    /// Send a fire-and-forget RPC message (no response expected).
+    ///
+    /// - Parameters:
+    ///   - method: RPC method name
+    ///   - params: Request parameters
+    /// - Throws: RPCError if sending fails
+    public func send<P: Encodable>(method: String, params: P) async throws {
+        guard state == .connected else {
+            throw RPCError.notConnected
+        }
+
+        // Encode params
+        let encoder = JSONEncoder()
+        let paramsData = try encoder.encode(params)
+        let paramsAny = try JSONDecoder().decode(AnyCodable.self, from: paramsData)
+
+        // Create request without reply_to
+        let request = RPCRequest(
+            method: method,
+            params: paramsAny,
+            correlationId: UUID().uuidString,
+            replyTo: ""
+        )
+
+        try await publishToRPC(request)
+    }
+
+    // MARK: - Private Methods
+
+    private func sendRequest(_ request: RPCRequest, correlationId: String) async throws -> Data {
+        // Create continuation for response
+        return try await withCheckedThrowingContinuation { continuation in
+            pendingRequests[correlationId] = continuation
+
+            // Send request
+            Task {
+                do {
+                    try await publishToRPC(request)
+                } catch {
+                    if let pending = pendingRequests.removeValue(forKey: correlationId) {
+                        pending.resume(throwing: error)
+                    }
+                }
+            }
+
+            // Set timeout
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                if let pending = pendingRequests.removeValue(forKey: correlationId) {
+                    pending.resume(throwing: RPCError.timeout)
+                }
+            }
+        }
+    }
+
+    private func publishToRPC(_ request: RPCRequest) async throws {
+        let encoder = JSONEncoder()
+        let requestData = try encoder.encode(request)
+        let requestJson = try JSONSerialization.jsonObject(with: requestData)
+
+        let publishMessage: [String: Any] = [
+            "publish": [
+                "channel": "rpc.requests",
+                "data": requestJson
+            ]
+        ]
+
+        let publishData = try JSONSerialization.data(withJSONObject: publishMessage)
+        try await webSocket?.send(.data(publishData))
+    }
+
+    private func subscribe(channel: String) async throws {
+        let subscribeMessage: [String: Any] = [
+            "subscribe": ["channel": channel]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: subscribeMessage)
+        try await webSocket?.send(.data(data))
+    }
+
+    private func receiveLoop() async {
+        while !Task.isCancelled {
+            do {
+                guard let message = try await webSocket?.receive() else {
+                    continue
+                }
+
+                switch message {
+                case .data(let data):
+                    handleMessage(data)
+                case .string(let string):
+                    if let data = string.data(using: .utf8) {
+                        handleMessage(data)
+                    }
+                @unknown default:
+                    break
+                }
+            } catch {
+                if !Task.isCancelled {
+                    // Connection lost - exit loop
+                    break
+                }
+            }
+        }
+    }
+
+    private func handleMessage(_ data: Data) {
+        do {
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return
+            }
+
+            // Handle publication messages (responses come as publications)
+            if let pub = json["pub"] as? [String: Any],
+               let pubData = pub["data"] as? [String: Any],
+               let correlationId = pubData["correlation_id"] as? String {
+
+                if let continuation = pendingRequests.removeValue(forKey: correlationId) {
+                    // Check for error
+                    if let errorInfo = pubData["error"] as? [String: Any] {
+                        let code = errorInfo["code"] as? Int ?? -1
+                        let message = errorInfo["message"] as? String ?? "Unknown error"
+                        continuation.resume(throwing: RPCError.serverError(code: code, message: message))
+                    } else if let result = pubData["result"] {
+                        // Encode result back to Data for decoding
+                        let resultData = try JSONSerialization.data(withJSONObject: result)
+                        continuation.resume(returning: resultData)
+                    } else {
+                        // Empty result
+                        continuation.resume(returning: Data())
+                    }
+                }
+            }
+        } catch {
+            // Ignore malformed messages
+        }
+    }
+}

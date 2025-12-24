@@ -22,6 +22,7 @@ class ProtoMessagesGenerator:
     - Basic message structure with fields
     - Nested message definitions
     - Enums (from string enums in OpenAPI)
+    - Enum references via $ref
     - Field numbering
     - Proper indentation and formatting
     """
@@ -30,6 +31,20 @@ class ProtoMessagesGenerator:
         self.type_mapper = type_mapper
         self.generated_messages: set[str] = set()  # Track what we've generated
         self.message_definitions: list[str] = []  # Ordered list of definitions
+        self.all_schemas: dict[str, IRSchemaObject] = {}  # All schemas for $ref resolution
+
+    def _is_enum_ref(self, schema: IRSchemaObject) -> bool:
+        """Check if schema is a $ref pointing to an enum schema."""
+        if not schema.ref:
+            return False
+        ref_schema = self.all_schemas.get(schema.ref)
+        return ref_schema is not None and ref_schema.enum is not None
+
+    def _get_ref_schema(self, schema: IRSchemaObject) -> IRSchemaObject | None:
+        """Get the referenced schema if it exists."""
+        if not schema.ref:
+            return None
+        return self.all_schemas.get(schema.ref)
 
     def generate_message(
         self, schema: IRSchemaObject, message_name: str | None = None
@@ -69,9 +84,9 @@ class ProtoMessagesGenerator:
         """Generate a message for an object schema."""
         lines = [f"message {message_name} {{"]
 
-        # Generate nested enums first
+        # Generate nested enums first (inline enums only, not $ref enums)
         for prop_name, prop_schema in (schema.properties or {}).items():
-            if prop_schema.enum:
+            if prop_schema.enum and not prop_schema.ref:
                 enum_name = self.type_mapper.get_message_name(prop_name)
                 nested_enum = self._generate_enum(prop_schema, enum_name, indent=2)
                 if nested_enum:
@@ -79,7 +94,14 @@ class ProtoMessagesGenerator:
                     lines.extend(f"  {line}" for line in nested_enum.split("\n"))
 
         # Generate nested messages (only if not already defined at top level)
+        # Skip $ref fields that point to enums - they don't need nested messages
         for prop_name, prop_schema in (schema.properties or {}).items():
+            # Skip enum refs - they're handled as separate top-level enums
+            if self._is_enum_ref(prop_schema):
+                continue
+            # Skip $ref to existing schemas
+            if prop_schema.ref:
+                continue
             if prop_schema.type == "object" and not prop_schema.enum:
                 nested_name = self.type_mapper.get_message_name(prop_name)
                 # Skip if this message is already generated (it's a top-level schema)
@@ -138,7 +160,13 @@ class ProtoMessagesGenerator:
         if is_repeated:
             # Array field - use items type
             if field_schema.items:
-                if field_schema.items.type == "object":
+                if self._is_enum_ref(field_schema.items):
+                    # Array of enum refs
+                    item_type = self.type_mapper.get_message_name(field_schema.items.ref)
+                elif field_schema.items.ref:
+                    # Array of object refs
+                    item_type = self.type_mapper.get_message_name(field_schema.items.ref)
+                elif field_schema.items.type == "object":
                     # Nested object array
                     item_type = self.type_mapper.get_message_name(field_name + "Item")
                     # Generate the nested message
@@ -161,11 +189,17 @@ class ProtoMessagesGenerator:
             else:
                 item_type = "string"  # Fallback
             field_type = item_type
+        elif self._is_enum_ref(field_schema):
+            # Field is a $ref to an enum schema - use the enum type
+            field_type = self.type_mapper.get_message_name(field_schema.ref)
+        elif field_schema.ref:
+            # Field is a $ref to an object schema - use the referenced type
+            field_type = self.type_mapper.get_message_name(field_schema.ref)
         elif field_schema.type == "object":
-            # Nested object
+            # Inline nested object
             field_type = self.type_mapper.get_message_name(field_name)
         elif field_schema.enum:
-            # Enum field
+            # Inline enum field
             field_type = self.type_mapper.get_message_name(field_name)
         else:
             # Scalar field
@@ -207,7 +241,7 @@ class ProtoMessagesGenerator:
         # Add UNKNOWN/UNSPECIFIED as first value if not present
         enum_values = list(schema.enum)
         if not any(
-            v.upper() in ("UNKNOWN", "UNSPECIFIED", f"{enum_name}_UNKNOWN")
+            str(v).upper() in ("UNKNOWN", "UNSPECIFIED", f"{enum_name}_UNKNOWN")
             for v in enum_values
         ):
             lines.append(f"{indent_str}  {enum_name.upper()}_UNKNOWN = 0;")
@@ -216,15 +250,10 @@ class ProtoMessagesGenerator:
             start_index = 0
 
         # Generate enum values
-        for idx, value in enumerate(enum_values, start=start_index):
-            # Convert to UPPER_SNAKE_CASE
-            enum_value_name = (
-                str(value).replace("-", "_").replace(" ", "_").replace(".", "_").upper()
-            )
-            # Add enum name prefix if not already present
-            if not enum_value_name.startswith(enum_name.upper()):
-                enum_value_name = f"{enum_name.upper()}_{enum_value_name}"
+        from .naming import sanitize_enum_value
 
+        for idx, value in enumerate(enum_values, start=start_index):
+            enum_value_name = sanitize_enum_value(value, enum_name)
             lines.append(f"{indent_str}  {enum_value_name} = {idx};")
 
         lines.append(f"{indent_str}}}")
@@ -243,10 +272,23 @@ class ProtoMessagesGenerator:
         """
         self.generated_messages.clear()
         self.message_definitions.clear()
+        self.all_schemas = schemas  # Store for $ref resolution
 
+        # First pass: generate enums from top-level enum schemas
         for schema_name, schema in schemas.items():
-            message_name = self.type_mapper.get_message_name(schema_name)
-            self.generate_message(schema, message_name)
+            if schema.enum:
+                enum_name = self.type_mapper.get_message_name(schema_name)
+                if enum_name not in self.generated_messages:
+                    self.generated_messages.add(enum_name)
+                    enum_def = self._generate_enum(schema, enum_name)
+                    if enum_def:
+                        self.message_definitions.append(enum_def)
+
+        # Second pass: generate messages
+        for schema_name, schema in schemas.items():
+            if not schema.enum:  # Skip enums (already generated)
+                message_name = self.type_mapper.get_message_name(schema_name)
+                self.generate_message(schema, message_name)
 
         return self.message_definitions
 

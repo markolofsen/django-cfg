@@ -1,0 +1,219 @@
+// AnyCodable.swift
+// Auto-generated - DO NOT EDIT
+
+import Foundation
+
+/// A type-erased Codable value for handling dynamic JSON.
+///
+/// Use this type when you need to work with JSON that has unknown or variable structure.
+/// Supports all JSON primitive types: null, bool, numbers, strings, arrays, and objects.
+public enum AnyCodable: Codable, Sendable, Equatable {
+    case null
+    case bool(Bool)
+    case int(Int64)
+    case double(Double)
+    case string(String)
+    case array([AnyCodable])
+    case object([String: AnyCodable])
+
+    // MARK: - Decodable
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if container.decodeNil() {
+            self = .null
+            return
+        }
+
+        // Try decoding in order of specificity
+        if let boolValue = try? container.decode(Bool.self) {
+            self = .bool(boolValue)
+            return
+        }
+
+        if let intValue = try? container.decode(Int64.self) {
+            self = .int(intValue)
+            return
+        }
+
+        if let doubleValue = try? container.decode(Double.self) {
+            self = .double(doubleValue)
+            return
+        }
+
+        if let stringValue = try? container.decode(String.self) {
+            self = .string(stringValue)
+            return
+        }
+
+        if let arrayValue = try? container.decode([AnyCodable].self) {
+            self = .array(arrayValue)
+            return
+        }
+
+        if let objectValue = try? container.decode([String: AnyCodable].self) {
+            self = .object(objectValue)
+            return
+        }
+
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "Unable to decode AnyCodable value"
+        )
+    }
+
+    // MARK: - Encodable
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch self {
+        case .null:
+            try container.encodeNil()
+        case .bool(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        case .double(let value):
+            try container.encode(value)
+        case .string(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        }
+    }
+
+    // MARK: - Value Accessors
+
+    /// Returns the value as Bool if this is a bool type.
+    public var boolValue: Bool? {
+        if case .bool(let value) = self { return value }
+        return nil
+    }
+
+    /// Returns the value as Int64 if this is an int type.
+    public var intValue: Int64? {
+        if case .int(let value) = self { return value }
+        return nil
+    }
+
+    /// Returns the value as Double if this is a double type.
+    public var doubleValue: Double? {
+        if case .double(let value) = self { return value }
+        if case .int(let value) = self { return Double(value) }
+        return nil
+    }
+
+    /// Returns the value as String if this is a string type.
+    public var stringValue: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+
+    /// Returns the value as an array if this is an array type.
+    public var arrayValue: [AnyCodable]? {
+        if case .array(let value) = self { return value }
+        return nil
+    }
+
+    /// Returns the value as a dictionary if this is an object type.
+    public var objectValue: [String: AnyCodable]? {
+        if case .object(let value) = self { return value }
+        return nil
+    }
+
+    /// Returns true if this value is null.
+    public var isNull: Bool {
+        if case .null = self { return true }
+        return false
+    }
+
+    // MARK: - Subscript
+
+    /// Access array elements by index.
+    public subscript(index: Int) -> AnyCodable? {
+        if case .array(let array) = self, index >= 0, index < array.count {
+            return array[index]
+        }
+        return nil
+    }
+
+    /// Access object values by key.
+    public subscript(key: String) -> AnyCodable? {
+        if case .object(let dict) = self {
+            return dict[key]
+        }
+        return nil
+    }
+}
+
+// MARK: - ExpressibleBy Protocols
+
+extension AnyCodable: ExpressibleByNilLiteral {
+    public init(nilLiteral: ()) {
+        self = .null
+    }
+}
+
+extension AnyCodable: ExpressibleByBooleanLiteral {
+    public init(booleanLiteral value: Bool) {
+        self = .bool(value)
+    }
+}
+
+extension AnyCodable: ExpressibleByIntegerLiteral {
+    public init(integerLiteral value: Int64) {
+        self = .int(value)
+    }
+}
+
+extension AnyCodable: ExpressibleByFloatLiteral {
+    public init(floatLiteral value: Double) {
+        self = .double(value)
+    }
+}
+
+extension AnyCodable: ExpressibleByStringLiteral {
+    public init(stringLiteral value: String) {
+        self = .string(value)
+    }
+}
+
+extension AnyCodable: ExpressibleByArrayLiteral {
+    public init(arrayLiteral elements: AnyCodable...) {
+        self = .array(elements)
+    }
+}
+
+extension AnyCodable: ExpressibleByDictionaryLiteral {
+    public init(dictionaryLiteral elements: (String, AnyCodable)...) {
+        self = .object(Dictionary(uniqueKeysWithValues: elements))
+    }
+}
+
+// MARK: - CustomStringConvertible
+
+extension AnyCodable: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .null:
+            return "null"
+        case .bool(let value):
+            return value ? "true" : "false"
+        case .int(let value):
+            return String(value)
+        case .double(let value):
+            return String(value)
+        case .string(let value):
+            return "\"\(value)\""
+        case .array(let value):
+            return "[\(value.map { $0.description }.joined(separator: ", "))]"
+        case .object(let value):
+            let pairs = value.map { "\"\($0.key)\": \($0.value.description)" }
+            return "{\(pairs.joined(separator: ", "))}"
+        }
+    }
+}

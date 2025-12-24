@@ -15,6 +15,13 @@ if TYPE_CHECKING:
 class ClaudeGenerator:
     """Generates CLAUDE.md documentation for generated API clients."""
 
+    # Content types that trigger URL method generation
+    STREAMING_CONTENT_TYPES = frozenset([
+        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+        'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/flac',
+        'application/octet-stream',
+    ])
+
     def __init__(self, context: "IRContext", language: str, group_name: str = "", **kwargs):
         self.context = context
         self.language = language
@@ -47,6 +54,9 @@ class ClaudeGenerator:
         # Get real usage examples
         usage = self._get_usage_examples(ops_by_tag)
 
+        # Get streaming section (TypeScript only)
+        streaming_section = self._build_streaming_section(ops_by_tag)
+
         # Group name for examples
         grp = self.group_name or "<group>"
 
@@ -73,7 +83,7 @@ Auto-generated. **Do not edit manually.**
 ## Usage
 
 {usage}
-
+{streaming_section}
 ## How It Works
 
 ```
@@ -229,3 +239,72 @@ item, _ := client.{pascal}.Get(ctx, 1)
 // Generated: messages.proto, services.proto
 // Compile: protoc --go_out=. *.proto
 ```"""
+
+    def _is_streaming_operation(self, operation) -> bool:
+        """Check if operation returns streaming/binary content."""
+        primary_response = operation.primary_success_response
+        if primary_response and primary_response.content_type:
+            content_type = primary_response.content_type.lower()
+            if content_type in self.STREAMING_CONTENT_TYPES:
+                return True
+            if content_type.startswith('video/') or content_type.startswith('audio/'):
+                return True
+        return False
+
+    def _get_streaming_operations(self) -> list:
+        """Get list of operations that have URL builder methods."""
+        streaming_ops = []
+        for op in self.context.operations.values():
+            if self._is_streaming_operation(op):
+                streaming_ops.append(op)
+        return streaming_ops
+
+    def _build_streaming_section(self, ops_by_tag: dict) -> str:
+        """Build section about streaming URL methods (TypeScript only)."""
+        if self.language != "typescript":
+            return ""
+
+        streaming_ops = self._get_streaming_operations()
+        if not streaming_ops:
+            return ""
+
+        # Group by tag
+        ops_by_tag_streaming = {}
+        for op in streaming_ops:
+            tag = op.tags[0] if op.tags else "default"
+            if tag not in ops_by_tag_streaming:
+                ops_by_tag_streaming[tag] = []
+            ops_by_tag_streaming[tag].append(op)
+
+        lines = ["\n## Streaming URL Methods\n"]
+        lines.append("For streaming endpoints (video, audio, file downloads), additional `*Url()` methods are generated.")
+        lines.append("These return the full URL with JWT token - use them for `<video>`, `<audio>`, or `fetch()` downloads.\n")
+
+        for tag, ops in sorted(ops_by_tag_streaming.items()):
+            prop = self._to_camel(tag)
+            lines.append(f"**{tag}:**")
+            for op in ops:
+                op_id = op.operation_id
+                # Remove tag prefix for method name
+                if op.tags:
+                    t = op.tags[0].lower().replace("-", "_").replace(" ", "_")
+                    if op_id.lower().startswith(t):
+                        op_id = op_id[len(t):].lstrip("_")
+                # Convert to camelCase
+                parts = op_id.split("_")
+                method_name = parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
+                lines.append(f"- `client.{prop}.{method_name}Url(...)` → streaming URL with token")
+            lines.append("")
+
+        lines.append("```typescript")
+        lines.append("// Example: Video streaming")
+        lines.append("const url = client.terminalMedia.streamStreamRetrieveUrl(sessionId, filePath);")
+        lines.append("<video src={url} controls />")
+        lines.append("")
+        lines.append("// Example: File download")
+        lines.append("const url = client.terminalMedia.streamStreamRetrieveUrl(sessionId, archivePath);")
+        lines.append("const response = await fetch(url);")
+        lines.append("const blob = await response.blob();")
+        lines.append("```")
+
+        return "\n".join(lines)

@@ -145,6 +145,54 @@ def to_go_method_name(rpc_name: str) -> str:
     return to_pascal_case(sanitized)
 
 
+def to_swift_method_name(rpc_name: str) -> str:
+    """
+    Convert RPC method name to valid Swift method name.
+
+    Handles namespaced methods by replacing dots with underscores,
+    then converts to camelCase (Swift convention for methods).
+
+    Args:
+        rpc_name: Original RPC method name (may contain dots)
+
+    Returns:
+        Valid Swift method name in camelCase
+
+    Examples:
+        >>> to_swift_method_name("workspace.file_changed")
+        'workspaceFileChanged'
+        >>> to_swift_method_name("terminal.input")
+        'terminalInput'
+        >>> to_swift_method_name("ai_chat.send_message")
+        'aiChatSendMessage'
+    """
+    sanitized = sanitize_method_name(rpc_name)
+    return to_camel_case(sanitized)
+
+
+def to_swift_field_name(field_name: str) -> str:
+    """
+    Convert field name to valid Swift property name.
+
+    Converts snake_case to camelCase (Swift convention for properties).
+
+    Args:
+        field_name: Original field name in snake_case
+
+    Returns:
+        Valid Swift property name in camelCase
+
+    Examples:
+        >>> to_swift_field_name("user_id")
+        'userId'
+        >>> to_swift_field_name("session_id")
+        'sessionId'
+        >>> to_swift_field_name("is_active")
+        'isActive'
+    """
+    return to_camel_case(field_name)
+
+
 __all__ = [
     'sanitize_method_name',
     'to_camel_case',
@@ -152,4 +200,6 @@ __all__ = [
     'to_typescript_method_name',
     'to_python_method_name',
     'to_go_method_name',
+    'to_swift_method_name',
+    'to_swift_field_name',
 ]

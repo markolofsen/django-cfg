@@ -1,0 +1,64 @@
+// Generated Swift Types
+// Auto-generated from Pydantic models - DO NOT EDIT
+// Generated at: {{ generated_at }}
+
+import Foundation
+
+// MARK: - Generated Models
+
+{% for type in types %}
+/// {{ type.doc }}
+public struct {{ type.name }}: Codable, Sendable {
+{% for field in type.fields %}
+{% if field.description %}
+    /// {{ field.description }}
+{% endif %}
+    public var {{ field.name }}: {{ field.type }}
+{% endfor %}
+
+{% if type.fields %}
+{% set needs_coding_keys = type.fields | selectattr('name') | list | map(attribute='name') | list != type.fields | selectattr('json_key') | list | map(attribute='json_key') | list %}
+{% set has_different_keys = [] %}
+{% for field in type.fields %}
+{% if field.name != field.json_key %}
+{% set _ = has_different_keys.append(True) %}
+{% endif %}
+{% endfor %}
+{% if has_different_keys %}
+    enum CodingKeys: String, CodingKey {
+{% for field in type.fields %}
+{% if field.name != field.json_key %}
+        case {{ field.name }} = "{{ field.json_key }}"
+{% else %}
+        case {{ field.name }}
+{% endif %}
+{% endfor %}
+    }
+{% endif %}
+
+    public init(
+{% for field in type.fields %}
+        {{ field.name }}: {{ field.type }}{% if field.is_optional %} = nil{% endif %}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ) {
+{% for field in type.fields %}
+        self.{{ field.name }} = {{ field.name }}
+{% endfor %}
+    }
+{% endif %}
+}
+
+{% endfor %}
+
+// MARK: - Empty Types
+
+/// Empty parameters for methods that don't require input.
+public struct EmptyParams: Codable, Sendable {
+    public init() {}
+}
+
+/// Empty result for methods that don't return data.
+public struct EmptyResult: Codable, Sendable {
+    public init() {}
+}

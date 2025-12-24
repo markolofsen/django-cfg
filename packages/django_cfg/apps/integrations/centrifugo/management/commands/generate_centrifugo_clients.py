@@ -1,9 +1,9 @@
 """Django management command to generate Centrifugo WebSocket RPC clients.
 
 Usage:
-    python manage.py generate_centrifugo_clients --output ./clients --python --typescript --go
+    python manage.py generate_centrifugo_clients --output ./clients --python --typescript --go --swift
     python manage.py generate_centrifugo_clients -o ./clients --all
-    python manage.py generate_centrifugo_clients -o ./clients --python --verbose
+    python manage.py generate_centrifugo_clients -o ./clients --swift --verbose
 """
 
 import logging
@@ -19,6 +19,7 @@ from django_cfg.apps.integrations.centrifugo.codegen.discovery import discover_r
 from django_cfg.apps.integrations.centrifugo.codegen.generators.python_thin import PythonThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.typescript_thin import TypeScriptThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.go_thin import GoThinGenerator
+from django_cfg.apps.integrations.centrifugo.codegen.generators.swift_thin import SwiftThinGenerator
 from django_cfg.apps.integrations.centrifugo.router import get_global_router
 
 
@@ -54,9 +55,14 @@ class Command(AdminCommand):
             help="Generate Go client",
         )
         parser.add_argument(
+            "--swift",
+            action="store_true",
+            help="Generate Swift client (iOS/macOS)",
+        )
+        parser.add_argument(
             "--all",
             action="store_true",
-            help="Generate all clients (Python, TypeScript, Go)",
+            help="Generate all clients (Python, TypeScript, Go, Swift)",
         )
         parser.add_argument(
             "--router-path",
@@ -96,10 +102,11 @@ class Command(AdminCommand):
         generate_python = options["python"] or options["all"]
         generate_typescript = options["typescript"] or options["all"]
         generate_go = options["go"] or options["all"]
+        generate_swift = options["swift"] or options["all"]
 
-        if not (generate_python or generate_typescript or generate_go):
+        if not (generate_python or generate_typescript or generate_go or generate_swift):
             raise CommandError(
-                "No client languages specified. Use --python, --typescript, --go, or --all"
+                "No client languages specified. Use --python, --typescript, --go, --swift, or --all"
             )
 
         self.stdout.write(
@@ -221,6 +228,27 @@ class Command(AdminCommand):
                 if verbose:
                     logger.exception("Go generation failed")
 
+        if generate_swift:
+            self.stdout.write("\nGenerating Swift client...")
+            try:
+                swift_dir = output_dir / "swift"
+                # Extract all unique models from methods
+                models = set()
+                for method in methods:
+                    if method.param_type:
+                        models.add(method.param_type)
+                    if method.return_type:
+                        models.add(method.return_type)
+
+                generator = SwiftThinGenerator(methods, list(models), swift_dir)
+                generator.generate()
+                generated.append("Swift")
+                self.stdout.write(colorize(f"  ✓ Generated at: {swift_dir}", fg="green"))
+            except Exception as e:
+                self.stdout.write(colorize(f"  ✗ Failed: {e}", fg="red"))
+                if verbose:
+                    logger.exception("Swift generation failed")
+
         # Summary
         self.stdout.write("\n" + "=" * 60)
         if generated:
@@ -238,6 +266,8 @@ class Command(AdminCommand):
                 self.stdout.write(f"  cd {output_dir}/typescript && npm install")
             if "Go" in generated:
                 self.stdout.write(f"  cd {output_dir}/go && go mod tidy")
+            if "Swift" in generated:
+                self.stdout.write(f"  Add {output_dir}/swift as local package in Xcode or Package.swift")
         else:
             self.stdout.write(
                 colorize("No clients were generated", fg="red", opts=["bold"])

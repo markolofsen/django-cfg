@@ -1,0 +1,277 @@
+"""
+Swift thin wrapper client generator.
+
+Generates type-safe Swift clients for Centrifugo RPC methods.
+Supports iOS 13.0+ with native async/await.
+"""
+
+import hashlib
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import List, Type
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pydantic import BaseModel
+
+from ...discovery import RPCMethodInfo
+from ...utils import to_swift_method_name
+from ...utils.converters import pydantic_to_swift_with_nested
+
+logger = logging.getLogger(__name__)
+
+
+def compute_api_version(methods: List[RPCMethodInfo], models: List[Type[BaseModel]]) -> str:
+    """
+    Compute a stable hash of the API contract.
+
+    The hash is based on:
+    - Method names and signatures
+    - Model field names and types
+
+    Returns a short hex hash (8 chars) that changes when the contract changes.
+    """
+    contract_data = {
+        "methods": [],
+        "models": [],
+    }
+
+    # Add method signatures
+    for method in sorted(methods, key=lambda m: m.name):
+        contract_data["methods"].append({
+            "name": method.name,
+            "param_type": method.param_type.__name__ if method.param_type else None,
+            "return_type": method.return_type.__name__ if method.return_type else None,
+            "no_wait": method.no_wait,
+        })
+
+    # Add model schemas
+    for model in sorted(models, key=lambda m: m.__name__):
+        schema = model.model_json_schema()
+        # Only include stable parts of schema
+        contract_data["models"].append({
+            "name": model.__name__,
+            "properties": list(schema.get("properties", {}).keys()),
+            "required": schema.get("required", []),
+        })
+
+    # Compute hash
+    contract_json = json.dumps(contract_data, sort_keys=True)
+    full_hash = hashlib.sha256(contract_json.encode()).hexdigest()
+
+    return full_hash[:8]
+
+
+class SwiftThinGenerator:
+    """
+    Generator for Swift thin wrapper clients.
+
+    Generates:
+    - Package.swift: SPM manifest
+    - Sources/CentrifugoClient/Types.swift: Codable models
+    - Sources/CentrifugoClient/AnyCodable.swift: Dynamic JSON handling
+    - Sources/CentrifugoClient/RPCClient.swift: Base RPC client
+    - Sources/CentrifugoClient/APIClient.swift: Thin wrapper with typed methods
+    - README.md: Usage documentation
+    - CLAUDE.md: AI assistance documentation
+    """
+
+    def __init__(
+        self,
+        methods: List[RPCMethodInfo],
+        models: List[Type[BaseModel]],
+        output_dir: Path,
+        package_name: str = "CentrifugoClient",
+        minimum_ios_version: str = "13.0",
+        minimum_macos_version: str = "10.15",
+    ):
+        """
+        Initialize Swift generator.
+
+        Args:
+            methods: List of RPC method info objects
+            models: List of Pydantic model classes
+            output_dir: Output directory for generated files
+            package_name: Swift package name (default: CentrifugoClient)
+            minimum_ios_version: Minimum iOS version (default: 13.0)
+            minimum_macos_version: Minimum macOS version (default: 10.15)
+        """
+        self.methods = methods
+        self.models = models
+        self.output_dir = Path(output_dir)
+        self.package_name = package_name
+        self.minimum_ios_version = minimum_ios_version
+        self.minimum_macos_version = minimum_macos_version
+        self.api_version = compute_api_version(methods, models)
+
+        templates_dir = Path(__file__).parent / "templates"
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(str(templates_dir)),
+            autoescape=select_autoescape(),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+
+    def generate(self) -> None:
+        """Generate all Swift files."""
+        # Create directory structure
+        sources_dir = self.output_dir / "Sources" / self.package_name
+        sources_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate files
+        self._generate_package_swift()
+        self._generate_types(sources_dir)
+        self._generate_any_codable(sources_dir)
+        self._generate_rpc_client(sources_dir)
+        self._generate_api_client(sources_dir)
+        self._generate_readme()
+        self._generate_claude_md()
+
+        logger.info(f"✅ Generated Swift client in {self.output_dir}")
+
+    def _generate_package_swift(self) -> None:
+        """Generate Package.swift SPM manifest."""
+        template = self.jinja_env.get_template("Package.swift.j2")
+        content = template.render(
+            package_name=self.package_name,
+            minimum_ios_version=self.minimum_ios_version,
+            minimum_macos_version=self.minimum_macos_version,
+        )
+        (self.output_dir / "Package.swift").write_text(content)
+
+    def _generate_types(self, sources_dir: Path) -> None:
+        """Generate Types.swift with Codable models."""
+        template = self.jinja_env.get_template("Types.swift.j2")
+
+        # Collect all types, avoiding duplicates
+        types_data = []
+        generated_names = set()
+
+        for model in self.models:
+            result = pydantic_to_swift_with_nested(model)
+
+            # Add nested types first
+            for nested in result["nested"]:
+                if nested["name"] not in generated_names:
+                    types_data.append(nested)
+                    generated_names.add(nested["name"])
+
+            # Add main type
+            main = result["main"]
+            if main["name"] not in generated_names:
+                types_data.append(main)
+                generated_names.add(main["name"])
+
+        content = template.render(
+            types=types_data,
+            generated_at=datetime.now().isoformat(),
+        )
+        (sources_dir / "Types.swift").write_text(content)
+
+    def _generate_any_codable(self, sources_dir: Path) -> None:
+        """Generate AnyCodable.swift for dynamic JSON handling."""
+        template = self.jinja_env.get_template("AnyCodable.swift.j2")
+        content = template.render()
+        (sources_dir / "AnyCodable.swift").write_text(content)
+
+    def _generate_rpc_client(self, sources_dir: Path) -> None:
+        """Generate RPCClient.swift base class."""
+        template = self.jinja_env.get_template("RPCClient.swift.j2")
+        content = template.render()
+        (sources_dir / "RPCClient.swift").write_text(content)
+
+    def _generate_api_client(self, sources_dir: Path) -> None:
+        """Generate APIClient.swift thin wrapper."""
+        template = self.jinja_env.get_template("APIClient.swift.j2")
+
+        methods_data = []
+        for method in self.methods:
+            param_type = method.param_type.__name__ if method.param_type else "EmptyParams"
+            return_type = method.return_type.__name__ if method.return_type else "EmptyResult"
+            method_name_swift = to_swift_method_name(method.name)
+
+            # Extract first line of docstring
+            docstring = method.docstring or f"Call {method.name} RPC method."
+            docstring_first_line = docstring.split('\n')[0].strip()
+
+            methods_data.append({
+                "rpc_name": method.name,
+                "swift_name": method_name_swift,
+                "param_type": param_type,
+                "return_type": return_type,
+                "docstring": docstring_first_line,
+                "full_docstring": docstring,
+                "no_wait": method.no_wait,
+            })
+
+        model_names = [m.__name__ for m in self.models]
+
+        content = template.render(
+            methods=methods_data,
+            models=model_names,
+            package_name=self.package_name,
+            api_version=self.api_version,
+            generated_at=datetime.now().isoformat(),
+        )
+        (sources_dir / "APIClient.swift").write_text(content)
+
+    def _generate_readme(self) -> None:
+        """Generate README.md file."""
+        template = self.jinja_env.get_template("README.md.j2")
+
+        methods_data = []
+        for method in self.methods[:5]:  # Show first 5 methods as examples
+            method_name_swift = to_swift_method_name(method.name)
+            param_type = method.param_type.__name__ if method.param_type else "EmptyParams"
+            return_type = method.return_type.__name__ if method.return_type else "EmptyResult"
+            methods_data.append({
+                "rpc_name": method.name,
+                "swift_name": method_name_swift,
+                "param_type": param_type,
+                "return_type": return_type,
+            })
+
+        model_names = [m.__name__ for m in self.models]
+
+        content = template.render(
+            package_name=self.package_name,
+            methods=methods_data,
+            total_methods=len(self.methods),
+            models=model_names,
+            minimum_ios_version=self.minimum_ios_version,
+            minimum_macos_version=self.minimum_macos_version,
+        )
+        (self.output_dir / "README.md").write_text(content)
+
+    def _generate_claude_md(self) -> None:
+        """Generate CLAUDE.md documentation file."""
+        template = self.jinja_env.get_template("CLAUDE.md.j2")
+
+        methods_data = []
+        for method in self.methods:
+            method_name_swift = to_swift_method_name(method.name)
+            param_type = method.param_type.__name__ if method.param_type else "EmptyParams"
+            return_type = method.return_type.__name__ if method.return_type else "EmptyResult"
+            methods_data.append({
+                "rpc_name": method.name,
+                "swift_name": method_name_swift,
+                "param_type": param_type,
+                "return_type": return_type,
+                "docstring": method.docstring or f"Call {method.name} RPC",
+                "no_wait": method.no_wait,
+            })
+
+        model_names = [m.__name__ for m in self.models]
+
+        content = template.render(
+            package_name=self.package_name,
+            methods=methods_data,
+            models=model_names,
+            api_version=self.api_version,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        (self.output_dir / "CLAUDE.md").write_text(content)
+
+
+__all__ = ["SwiftThinGenerator"]

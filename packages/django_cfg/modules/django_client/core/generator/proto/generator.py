@@ -194,8 +194,8 @@ class ProtoGenerator(BaseGenerator):
 
         # Build proto file content
         content = self._build_proto_header(f"{folder_name}/service.proto", tag)
-        # Import messages.proto from the same folder
-        content += f'\nimport "{folder_name}/messages.proto";\n'
+        # Import messages.proto from the same folder (relative import)
+        content += '\nimport "messages.proto";\n'
 
         # Add all service definitions
         for service_name, service_def in service_definitions.items():

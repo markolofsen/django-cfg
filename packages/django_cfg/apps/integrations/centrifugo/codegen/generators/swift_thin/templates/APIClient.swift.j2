@@ -1,0 +1,116 @@
+// APIClient.swift
+// Generated Centrifugo API Client
+// Auto-generated - DO NOT EDIT
+// Generated at: {{ generated_at }}
+// API Version: {{ api_version }}
+
+import Foundation
+
+/// Generated API client for Centrifugo RPC methods.
+///
+/// This client provides type-safe access to all RPC methods defined on the server.
+/// It wraps a `CentrifugoRPCClient` and provides strongly-typed method signatures.
+///
+/// Usage:
+/// ```swift
+/// let rpc = try CentrifugoRPCClient(url: "...", token: "...", userId: "...")
+/// let api = APIClient(rpc: rpc)
+/// try await api.connect()
+///
+/// let result = try await api.terminalInput(params: TerminalInputParams(...))
+///
+/// await api.disconnect()
+/// ```
+public actor APIClient {
+    // MARK: - Properties
+
+    private let rpc: CentrifugoRPCClient
+
+    /// API contract version hash.
+    /// Changes when the API contract (methods or types) changes.
+    public static let apiVersion = "{{ api_version }}"
+
+    // MARK: - Initialization
+
+    /// Create a new API client.
+    ///
+    /// - Parameter rpc: The underlying RPC client to use for communication
+    public init(rpc: CentrifugoRPCClient) {
+        self.rpc = rpc
+    }
+
+    /// Create a new API client with connection parameters.
+    ///
+    /// - Parameters:
+    ///   - url: WebSocket URL of the Centrifugo server
+    ///   - token: JWT authentication token
+    ///   - userId: User ID for the reply channel
+    ///   - timeout: RPC call timeout in seconds (default: 30)
+    /// - Throws: URLError if the URL is invalid
+    public init(
+        url: String,
+        token: String,
+        userId: String,
+        timeout: TimeInterval = 30
+    ) throws {
+        self.rpc = try CentrifugoRPCClient(
+            url: url,
+            token: token,
+            userId: userId,
+            timeout: timeout
+        )
+    }
+
+    // MARK: - Connection Management
+
+    /// Connect to the Centrifugo server.
+    public func connect() async throws {
+        try await rpc.connect()
+    }
+
+    /// Disconnect from the Centrifugo server.
+    public func disconnect() async {
+        await rpc.disconnect()
+    }
+
+    /// Current connection state.
+    public var connectionState: ConnectionState {
+        get async { await rpc.state }
+    }
+
+    // MARK: - Generated RPC Methods
+
+{% for method in methods %}
+    /// {{ method.docstring }}
+{% if method.no_wait %}
+    ///
+    /// This is a fire-and-forget method - no response is expected.
+    ///
+    /// - Parameter params: Request parameters
+    /// - Throws: RPCError if sending fails
+    public func {{ method.swift_name }}(params: {{ method.param_type }}) async throws {
+        try await rpc.send(method: "{{ method.rpc_name }}", params: params)
+    }
+{% else %}
+    ///
+    /// - Parameter params: Request parameters
+    /// - Returns: {{ method.return_type }}
+    /// - Throws: RPCError if the call fails
+    public func {{ method.swift_name }}(params: {{ method.param_type }}) async throws -> {{ method.return_type }} {
+        return try await rpc.call(method: "{{ method.rpc_name }}", params: params)
+    }
+{% endif %}
+
+{% endfor %}
+}
+
+// MARK: - Convenience Extensions
+
+extension APIClient {
+    /// Check if connected to the server.
+    public var isConnected: Bool {
+        get async {
+            await connectionState == .connected
+        }
+    }
+}

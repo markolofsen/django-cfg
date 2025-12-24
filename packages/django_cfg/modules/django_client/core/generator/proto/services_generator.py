@@ -160,11 +160,15 @@ class ProtoServicesGenerator:
 
         # Add request body as a single field referencing the schema
         if operation.request_body:
-            # Check if this is multipart/form-data (file upload)
-            is_multipart = operation.request_body.content_type and "multipart" in operation.request_body.content_type
+            content_type = operation.request_body.content_type or ""
+            # Check if this is binary data (file upload, octet-stream, multipart)
+            is_binary = (
+                "multipart" in content_type
+                or "octet-stream" in content_type
+            )
 
-            if is_multipart:
-                # For file uploads, use bytes type directly
+            if is_binary:
+                # For binary/file uploads, use bytes type directly
                 # Note: In real gRPC, file uploads should use streaming (not implemented here)
                 field_name = "file_data"
                 field_type = "bytes"

@@ -51,6 +51,7 @@ class BaseParser(ABC):
         """
         self.spec = spec
         self._schema_cache: dict[str, IRSchemaObject] = {}
+        self._inline_schemas: dict[str, IRSchemaObject] = {}  # For inline request/response schemas
 
     # ===== Main Parse Method =====
 
@@ -75,8 +76,11 @@ class BaseParser(ABC):
         # Parse schemas
         schemas = self._parse_all_schemas()
 
-        # Parse operations
+        # Parse operations (may add inline schemas to self._inline_schemas)
         operations = self._parse_all_operations()
+
+        # Merge inline schemas into main schemas dict
+        schemas.update(self._inline_schemas)
 
         return IRContext(
             openapi_info=openapi_info,
@@ -696,13 +700,14 @@ class BaseParser(ABC):
         # Parse request body
         request_body = None
         patch_request_body = None
+        operation_id = operation.operationId or f"{method.lower()}_{path.replace('/', '_').strip('_')}"
 
         if operation.requestBody:
             if isinstance(operation.requestBody, ReferenceObject):
                 # TODO: Resolve reference
                 pass
             else:
-                body = self._parse_request_body(operation.requestBody)
+                body = self._parse_request_body(operation.requestBody, operation_id)
                 if method == "PATCH":
                     patch_request_body = body
                 else:
@@ -770,8 +775,13 @@ class BaseParser(ABC):
             deprecated=param.deprecated,
         )
 
-    def _parse_request_body(self, body: RequestBodyObject) -> IRRequestBodyObject:
-        """Parse RequestBodyObject to IRRequestBodyObject."""
+    def _parse_request_body(self, body: RequestBodyObject, operation_id: str) -> IRRequestBodyObject:
+        """Parse RequestBodyObject to IRRequestBodyObject.
+
+        Args:
+            body: The request body object from OpenAPI spec
+            operation_id: The operation ID for generating unique inline schema names
+        """
         # Extract schema name from content
         schema_name = None
         content_type = "application/json"
@@ -783,9 +793,14 @@ class BaseParser(ABC):
                     if isinstance(media_type.schema_, ReferenceObject):
                         schema_name = media_type.schema_.ref_name
                     else:
-                        # Inline schema - use operation ID as name
-                        # TODO: Generate proper name
-                        schema_name = "InlineRequestBody"
+                        # Inline schema - create unique name from operation_id
+                        # Convert operation_id to PascalCase and add "Request" suffix
+                        schema_name = self._to_pascal_case(operation_id) + "Request"
+
+                        # Parse the inline schema and register it
+                        inline_schema = self._parse_schema(schema_name, media_type.schema_)
+                        inline_schema.is_request_model = True
+                        self._inline_schemas[schema_name] = inline_schema
                 break
 
         return IRRequestBodyObject(
@@ -794,6 +809,11 @@ class BaseParser(ABC):
             required=body.required,
             description=body.description,
         )
+
+    def _to_pascal_case(self, name: str) -> str:
+        """Convert snake_case or kebab-case to PascalCase."""
+        from ..generator.proto.naming import to_pascal_case
+        return to_pascal_case(name)
 
     def _parse_responses(
         self, responses: dict[str, ResponseObject | ReferenceObject]
