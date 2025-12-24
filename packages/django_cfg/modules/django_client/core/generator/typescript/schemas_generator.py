@@ -58,8 +58,10 @@ class SchemasGenerator:
         elif schema.enum:
             return self._generate_enum_schema(schema)
         else:
-            # Primitive type
-            return self._map_type_to_zod(schema)
+            # Primitive type (string, number, binary, etc.)
+            # Wrap with export const to match template expectations
+            zod_type = self._map_type_to_zod(schema)
+            return f"export const {schema.name}Schema = {zod_type}"
 
     def _generate_object_schema(self, schema: IRSchemaObject) -> str:
         """Generate z.object() schema."""

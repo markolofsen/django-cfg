@@ -82,6 +82,15 @@ class ModelsGenerator:
 
     def generate_schema(self, schema: IRSchemaObject) -> str:
         """Generate TypeScript interface for schema."""
+        # Handle binary types as type aliases (for file uploads)
+        if schema.is_binary:
+            comment = f"/**\n * {schema.description}\n */" if schema.description else None
+            lines = []
+            if comment:
+                lines.append(comment)
+            lines.append(f"export type {schema.name} = File | Blob;")
+            return "\n".join(lines)
+
         if schema.type != "object":
             # For primitive types, skip (they'll be inlined)
             return ""

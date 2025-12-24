@@ -4,7 +4,13 @@
 import * as Enums from "../enums";
 
 {% endif %}
-{% for schema in schemas %}
+{% set non_empty_schemas = schemas | select | list %}
+{% if non_empty_schemas %}
+{% for schema in non_empty_schemas %}
 {{ schema }}
 
 {% endfor %}
+{% else %}
+// No models for this endpoint (all types are primitives or binary)
+export {};
+{% endif %}
