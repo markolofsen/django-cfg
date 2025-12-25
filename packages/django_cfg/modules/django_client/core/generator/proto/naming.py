@@ -101,27 +101,47 @@ def sanitize_proto_name(name: str) -> str:
     return sanitized
 
 
-def sanitize_enum_value(value: str, enum_name: str) -> str:
+def sanitize_enum_value(value: str, enum_name: str, json_compatible: bool = True) -> str:
     """
     Sanitize and format an enum value for proto.
 
-    Proto enum values must be UPPER_SNAKE_CASE and typically prefixed with enum name.
+    Args:
+        value: Original enum value from OpenAPI schema
+        enum_name: Name of the enum (for prefix if needed)
+        json_compatible: If True, preserve original value for JSON serialization.
+                        If False, use UPPER_SNAKE_CASE with prefix (proto convention).
+
+    When json_compatible=True (default):
+        - Preserves original value for JSON serialization compatibility
+        - Only sanitizes invalid proto characters
+        - Django/DRF expects original values like "email", "phone"
+
+    When json_compatible=False:
+        - Uses UPPER_SNAKE_CASE with enum name prefix (proto convention)
+        - Better for pure gRPC usage
 
     Examples:
-        >>> sanitize_enum_value("device_code", "GrantType")
-        'GRANTTYPE_DEVICE_CODE'
-        >>> sanitize_enum_value("urn:ietf:params:oauth:grant_type:device_code", "GrantType")
-        'GRANTTYPE_URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE'
+        >>> sanitize_enum_value("email", "Channel")  # json_compatible=True
+        'email'
+        >>> sanitize_enum_value("phone", "Channel")  # json_compatible=True
+        'phone'
+        >>> sanitize_enum_value("email", "Channel", json_compatible=False)
+        'CHANNEL_EMAIL'
     """
-    # First sanitize the value
-    sanitized = sanitize_proto_name(str(value)).upper()
-
-    # Add enum name prefix if not already present
-    prefix = enum_name.upper()
-    if not sanitized.startswith(prefix):
-        sanitized = f"{prefix}_{sanitized}"
-
-    return sanitized
+    if json_compatible:
+        # Preserve original value, only sanitize invalid characters
+        sanitized = sanitize_proto_name(str(value))
+        # Ensure it's a valid proto identifier (can't start with digit)
+        if sanitized and sanitized[0].isdigit():
+            sanitized = f"_{sanitized}"
+        return sanitized if sanitized else f"{enum_name.lower()}_unknown"
+    else:
+        # Proto convention: UPPER_SNAKE_CASE with prefix
+        sanitized = sanitize_proto_name(str(value)).upper()
+        prefix = enum_name.upper()
+        if not sanitized.startswith(prefix):
+            sanitized = f"{prefix}_{sanitized}"
+        return sanitized
 
 
 def get_message_name(schema_name: str) -> str:

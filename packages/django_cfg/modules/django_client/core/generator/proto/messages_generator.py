@@ -211,11 +211,16 @@ class ProtoMessagesGenerator:
         # Get field label
         label = self.type_mapper.get_field_label(is_required, is_nullable, is_repeated)
 
+        # Add json_name option if field was renamed (for JSON compatibility)
+        json_name_option = ""
+        if proto_field_name != field_name:
+            json_name_option = f' [json_name = "{field_name}"]'
+
         # Build field definition
         if label:
-            return f"{label} {field_type} {proto_field_name} = {field_number};"
+            return f"{label} {field_type} {proto_field_name} = {field_number}{json_name_option};"
         else:
-            return f"{field_type} {proto_field_name} = {field_number};"
+            return f"{field_type} {proto_field_name} = {field_number}{json_name_option};"
 
     def _generate_enum(
         self, schema: IRSchemaObject, enum_name: str, indent: int = 0
@@ -230,6 +235,13 @@ class ProtoMessagesGenerator:
 
         Returns:
             Enum definition string
+
+        Note:
+            Uses json_compatible=True by default for REST API compatibility.
+            Enum values preserve original casing (e.g., "email", "phone")
+            so SwiftProtobuf JSON encoding matches Django expectations.
+            The default "unknown" value is prefixed with the enum name to avoid
+            conflicts when multiple enums are defined in the same message scope.
         """
         if not schema.enum:
             return ""
@@ -238,22 +250,34 @@ class ProtoMessagesGenerator:
         lines = [f"{indent_str}enum {enum_name} {{"]
 
         # Proto enums must start with 0
-        # Add UNKNOWN/UNSPECIFIED as first value if not present
+        # Add "unknown" as first value if not present
         enum_values = list(schema.enum)
-        if not any(
-            str(v).upper() in ("UNKNOWN", "UNSPECIFIED", f"{enum_name}_UNKNOWN")
+        has_unknown = any(
+            str(v).lower() in ("unknown", "unspecified")
             for v in enum_values
-        ):
-            lines.append(f"{indent_str}  {enum_name.upper()}_UNKNOWN = 0;")
+        )
+
+        # Import sanitize_enum_value at the top of the method
+        from .naming import sanitize_enum_value
+
+        if not has_unknown:
+            # Prefix "unknown" with enum name to avoid C++ scoping conflicts
+            # Proto enums in C++ are siblings of their parent message, not children
+            unknown_value_name = sanitize_enum_value("unknown", enum_name, json_compatible=False)
+            lines.append(f"{indent_str}  {unknown_value_name} = 0;")
             start_index = 1
         else:
             start_index = 0
 
         # Generate enum values
-        from .naming import sanitize_enum_value
-
         for idx, value in enumerate(enum_values, start=start_index):
-            enum_value_name = sanitize_enum_value(value, enum_name)
+            # Use prefixed names for "unknown"/"unspecified" to avoid conflicts
+            # Use json_compatible=True for other values to preserve original casing
+            value_str = str(value).lower()
+            if value_str in ("unknown", "unspecified"):
+                enum_value_name = sanitize_enum_value(value, enum_name, json_compatible=False)
+            else:
+                enum_value_name = sanitize_enum_value(value, enum_name, json_compatible=True)
             lines.append(f"{indent_str}  {enum_value_name} = {idx};")
 
         lines.append(f"{indent_str}}}")

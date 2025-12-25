@@ -127,10 +127,11 @@ class ProtoTypeMapper:
         import re
         name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
-        # Reserved proto keywords
+        # Reserved proto keywords that cannot be used as field names
+        # Note: "message", "service", "rpc" CAN be used as field names in proto3
         reserved = {
-            "message", "service", "rpc", "option", "import", "package",
-            "syntax", "enum", "repeated", "optional", "required"
+            "syntax", "import", "package", "option",
+            "repeated", "optional", "required", "enum"
         }
 
         if name in reserved:
