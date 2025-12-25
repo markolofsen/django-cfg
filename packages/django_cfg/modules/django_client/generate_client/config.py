@@ -22,6 +22,7 @@ class LanguageOptions:
     go: bool = True
     proto: bool = True
     swift: bool = False
+    swift_codable: bool = False  # Simple Codable types (no OpenAPIRuntime)
 
     # External generator flags
     external_go: bool = False
@@ -31,22 +32,25 @@ class LanguageOptions:
     def from_options(cls, options: dict) -> "LanguageOptions":
         """Create from Django command options."""
         # Check if a single language is specified
-        single_python = options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("proto") and not options.get("swift")
-        single_typescript = options.get("typescript") and not options.get("python") and not options.get("go") and not options.get("proto") and not options.get("swift")
-        single_go = options.get("go") and not options.get("python") and not options.get("typescript") and not options.get("proto") and not options.get("swift")
-        single_proto = options.get("proto") and not options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("swift")
-        single_swift = options.get("swift") and not options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("proto")
+        single_python = options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("proto") and not options.get("swift") and not options.get("swift_codable")
+        single_typescript = options.get("typescript") and not options.get("python") and not options.get("go") and not options.get("proto") and not options.get("swift") and not options.get("swift_codable")
+        single_go = options.get("go") and not options.get("python") and not options.get("typescript") and not options.get("proto") and not options.get("swift") and not options.get("swift_codable")
+        single_proto = options.get("proto") and not options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("swift") and not options.get("swift_codable")
+        single_swift = options.get("swift") and not options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("proto") and not options.get("swift_codable")
+        single_swift_codable = options.get("swift_codable") and not options.get("python") and not options.get("typescript") and not options.get("go") and not options.get("proto") and not options.get("swift")
 
         if single_python:
-            return cls(python=True, typescript=False, go=False, proto=False, swift=False)
+            return cls(python=True, typescript=False, go=False, proto=False, swift=False, swift_codable=False)
         elif single_typescript:
-            return cls(python=False, typescript=True, go=False, proto=False, swift=False)
+            return cls(python=False, typescript=True, go=False, proto=False, swift=False, swift_codable=False)
         elif single_go:
-            return cls(python=False, typescript=False, go=True, proto=False, swift=False)
+            return cls(python=False, typescript=False, go=True, proto=False, swift=False, swift_codable=False)
         elif single_proto:
-            return cls(python=False, typescript=False, go=False, proto=True, swift=False)
+            return cls(python=False, typescript=False, go=False, proto=True, swift=False, swift_codable=False)
         elif single_swift:
-            return cls(python=False, typescript=False, go=False, proto=False, swift=True)
+            return cls(python=False, typescript=False, go=False, proto=False, swift=True, swift_codable=False)
+        elif single_swift_codable:
+            return cls(python=False, typescript=False, go=False, proto=False, swift=False, swift_codable=True)
         else:
             return cls(
                 python=not options.get("no_python", False),
@@ -54,6 +58,7 @@ class LanguageOptions:
                 go=not options.get("no_go", False),
                 proto=not options.get("no_proto", False),
                 swift=options.get("swift", False),
+                swift_codable=options.get("swift_codable", False),
                 external_go=options.get("external_go", False),
                 external_python=options.get("external_python", False),
             )
@@ -106,6 +111,7 @@ class GenerationResult:
     go_files: int = 0
     proto_files: int = 0
     swift_files: int = 0
+    swift_codable_files: int = 0
 
     # Paths
     schema_path: Path | None = None

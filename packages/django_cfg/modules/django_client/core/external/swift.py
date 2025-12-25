@@ -58,8 +58,8 @@ class SwiftOpenAPIGenerator(ExternalGenerator):
 
     @property
     def version_command(self) -> list[str]:
-        # swift-openapi-generator uses --version
-        return [self.cli_command, "--version"]
+        # swift-openapi-generator doesn't have --version, use --help instead
+        return [self.cli_command, "--help"]
 
     def install_instructions(self) -> str:
         return """
@@ -105,15 +105,11 @@ Documentation:
         if config.swift_access_modifier:
             command.extend(["--access-modifier", config.swift_access_modifier])
 
-        # What to generate
-        generate_modes = []
+        # What to generate (--mode must be specified separately for each mode)
         if config.swift_generate_types:
-            generate_modes.append("types")
+            command.extend(["--mode", "types"])
         if config.swift_generate_client:
-            generate_modes.append("client")
-
-        if generate_modes:
-            command.extend(["--mode", ",".join(generate_modes)])
+            command.extend(["--mode", "client"])
 
         # Extra arguments
         if config.extra_args:

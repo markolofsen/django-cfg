@@ -69,10 +69,10 @@ class SwiftThinGenerator:
 
     Generates:
     - Package.swift: SPM manifest
-    - Sources/CentrifugoClient/Types.swift: Codable models
+    - Sources/CentrifugoClient/CentrifugoTypes.swift: Codable models
     - Sources/CentrifugoClient/AnyCodable.swift: Dynamic JSON handling
-    - Sources/CentrifugoClient/RPCClient.swift: Base RPC client
-    - Sources/CentrifugoClient/APIClient.swift: Thin wrapper with typed methods
+    - Sources/CentrifugoClient/CentrifugoRPCClient.swift: Base RPC client
+    - Sources/CentrifugoClient/CentrifugoClient.swift: Thin wrapper with typed methods
     - README.md: Usage documentation
     - CLAUDE.md: AI assistance documentation
     """
@@ -167,7 +167,7 @@ class SwiftThinGenerator:
             types=types_data,
             generated_at=datetime.now().isoformat(),
         )
-        (sources_dir / "Types.swift").write_text(content)
+        (sources_dir / "CentrifugoTypes.swift").write_text(content)
 
     def _generate_any_codable(self, sources_dir: Path) -> None:
         """Generate AnyCodable.swift for dynamic JSON handling."""
@@ -176,14 +176,14 @@ class SwiftThinGenerator:
         (sources_dir / "AnyCodable.swift").write_text(content)
 
     def _generate_rpc_client(self, sources_dir: Path) -> None:
-        """Generate RPCClient.swift base class."""
+        """Generate CentrifugoRPCClient.swift base class."""
         template = self.jinja_env.get_template("RPCClient.swift.j2")
         content = template.render()
-        (sources_dir / "RPCClient.swift").write_text(content)
+        (sources_dir / "CentrifugoRPCClient.swift").write_text(content)
 
     def _generate_api_client(self, sources_dir: Path) -> None:
-        """Generate APIClient.swift thin wrapper."""
-        template = self.jinja_env.get_template("APIClient.swift.j2")
+        """Generate CentrifugoClient.swift thin wrapper."""
+        template = self.jinja_env.get_template("CentrifugoClient.swift.j2")
 
         methods_data = []
         for method in self.methods:
@@ -217,7 +217,7 @@ class SwiftThinGenerator:
             api_version=self.api_version,
             generated_at=datetime.now().isoformat(),
         )
-        (sources_dir / "APIClient.swift").write_text(content)
+        (sources_dir / "CentrifugoClient.swift").write_text(content)
 
     def _generate_readme(self) -> None:
         """Generate README.md file."""

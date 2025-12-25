@@ -1,12 +1,12 @@
-// APIClient.swift
-// Generated Centrifugo API Client
+// CentrifugoClient.swift
+// Generated Centrifugo RPC Client
 // Auto-generated - DO NOT EDIT
 // Generated at: {{ generated_at }}
 // API Version: {{ api_version }}
 
 import Foundation
 
-/// Generated API client for Centrifugo RPC methods.
+/// Generated client for Centrifugo RPC methods.
 ///
 /// This client provides type-safe access to all RPC methods defined on the server.
 /// It wraps a `CentrifugoRPCClient` and provides strongly-typed method signatures.
@@ -14,14 +14,14 @@ import Foundation
 /// Usage:
 /// ```swift
 /// let rpc = try CentrifugoRPCClient(url: "...", token: "...", userId: "...")
-/// let api = APIClient(rpc: rpc)
-/// try await api.connect()
+/// let client = CentrifugoClient(rpc: rpc)
+/// try await client.connect()
 ///
-/// let result = try await api.terminalInput(params: TerminalInputParams(...))
+/// let result = try await client.terminalInput(params: TerminalInputParams(...))
 ///
-/// await api.disconnect()
+/// await client.disconnect()
 /// ```
-public actor APIClient {
+public actor CentrifugoClient {
     // MARK: - Properties
 
     private let rpc: CentrifugoRPCClient
@@ -32,14 +32,14 @@ public actor APIClient {
 
     // MARK: - Initialization
 
-    /// Create a new API client.
+    /// Create a new Centrifugo client.
     ///
     /// - Parameter rpc: The underlying RPC client to use for communication
     public init(rpc: CentrifugoRPCClient) {
         self.rpc = rpc
     }
 
-    /// Create a new API client with connection parameters.
+    /// Create a new Centrifugo client with connection parameters.
     ///
     /// - Parameters:
     ///   - url: WebSocket URL of the Centrifugo server
@@ -106,7 +106,7 @@ public actor APIClient {
 
 // MARK: - Convenience Extensions
 
-extension APIClient {
+extension CentrifugoClient {
     /// Check if connected to the server.
     public var isConnected: Bool {
         get async {

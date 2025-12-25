@@ -92,6 +92,9 @@ class ClientGenerationOrchestrator:
             result = self._generate_group(group_name)
             results.append(result)
 
+        # Generate shared files (Swift Codable)
+        self._generate_shared_files()
+
         # Post-generation steps
         self._run_post_generation(results)
 
@@ -328,7 +331,7 @@ class ClientGenerationOrchestrator:
             result.proto_files = len(files)
             self.log(f"  ✅ Proto: {output_dir} ({len(files)} files)")
 
-        # Swift (always external)
+        # Swift (always external - uses OpenAPIRuntime)
         if langs.swift:
             if external.is_swift_available():
                 output_dir = clients_dir / "swift" / group_name
@@ -337,6 +340,13 @@ class ClientGenerationOrchestrator:
             else:
                 self.log_warning("  ⚠️  Swift generator not installed")
                 self.log(external.get_swift_install_instructions())
+
+        # Swift Codable (internal - simple Codable types, no OpenAPIRuntime)
+        if langs.swift_codable:
+            output_dir = clients_dir / "swift_codable" / group_name
+            files = internal.generate_swift_codable(output_dir)
+            result.swift_codable_files = len(files)
+            self.log(f"  ✅ Swift Codable: {output_dir} ({len(files)} files)")
 
         # Archive if enabled
         if openapi_config.enable_archive:
@@ -350,6 +360,24 @@ class ClientGenerationOrchestrator:
         archive_manager = ArchiveManager(self.service.config.get_archive_dir())
         # Simplified - just log for now
         self.log("  ✅ Archived")
+
+    def _generate_shared_files(self) -> None:
+        """Generate shared files for Swift Codable (JSONValue, etc.)."""
+        langs = self.config.languages
+
+        if not langs.swift_codable:
+            return
+
+        clients_dir = self.service.config.get_clients_dir()
+        shared_dir = clients_dir / "swift_codable" / "Shared"
+
+        self.log("\n📦 Generating shared Swift Codable files...")
+
+        try:
+            files = InternalGenerators.generate_swift_codable_shared(shared_dir)
+            self.log(f"  ✅ Shared: {shared_dir} ({len(files)} files)")
+        except Exception as e:
+            self.log_error(f"  ❌ Error generating shared files: {e}")
 
     def _run_post_generation(self, results: list[GenerationResult]) -> None:
         """Run post-generation steps."""

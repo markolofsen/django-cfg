@@ -29,18 +29,21 @@ from .go import GoGenerator
 from .proto import ProtoGenerator
 from .python import PythonGenerator
 from .typescript import TypeScriptGenerator
+from .swift_codable import SwiftCodableGenerator
 
 __all__ = [
     "PythonGenerator",
     "TypeScriptGenerator",
     "GoGenerator",
     "ProtoGenerator",
+    "SwiftCodableGenerator",
     "ClaudeGenerator",
     "GeneratedFile",
     "generate_python",
     "generate_typescript",
     "generate_go",
     "generate_proto",
+    "generate_swift_codable",
     "generate_client",
 ]
 
@@ -159,9 +162,41 @@ def generate_proto(context: IRContext, output_dir: Path | None = None, **kwargs)
     return files
 
 
+def generate_swift_codable(context: IRContext, output_dir: Path | None = None, **kwargs) -> list[GeneratedFile]:
+    """
+    Generate Swift Codable types from IR.
+
+    Args:
+        context: IRContext from parser
+        output_dir: Optional output directory (saves files if provided)
+        **kwargs: Additional options (generate_endpoints, generate_models, group_name)
+
+    Returns:
+        List of GeneratedFile objects
+
+    Examples:
+        >>> files = generate_swift_codable(context)
+        >>> # Or save directly
+        >>> files = generate_swift_codable(context, output_dir=Path("./generated/swift"))
+        >>> # With group name
+        >>> files = generate_swift_codable(
+        ...     context,
+        ...     output_dir=Path("./generated/swift"),
+        ...     group_name="workspaces"
+        ... )
+    """
+    generator = SwiftCodableGenerator(context, **kwargs)
+    files = generator.generate()
+
+    if output_dir:
+        generator.save_files(files, output_dir)
+
+    return files
+
+
 def generate_client(
     context: IRContext,
-    language: Literal["python", "typescript", "go", "proto"],
+    language: Literal["python", "typescript", "go", "proto", "swift_codable"],
     output_dir: Path | None = None,
     **kwargs,
 ) -> list[GeneratedFile]:
@@ -170,7 +205,7 @@ def generate_client(
 
     Args:
         context: IRContext from parser
-        language: Target language ('python', 'typescript', 'go', or 'proto')
+        language: Target language ('python', 'typescript', 'go', 'proto', or 'swift_codable')
         output_dir: Optional output directory
         **kwargs: Additional language-specific options
 
@@ -182,6 +217,7 @@ def generate_client(
         >>> files = generate_client(context, "typescript", Path("./generated"))
         >>> files = generate_client(context, "go", Path("./generated"), generate_package_files=True)
         >>> files = generate_client(context, "proto", Path("./generated"), split_files=False)
+        >>> files = generate_client(context, "swift_codable", Path("./generated"))
     """
     if language == "python":
         return generate_python(context, output_dir)
@@ -191,5 +227,7 @@ def generate_client(
         return generate_go(context, output_dir, **kwargs)
     elif language == "proto":
         return generate_proto(context, output_dir, **kwargs)
+    elif language == "swift_codable":
+        return generate_swift_codable(context, output_dir, **kwargs)
     else:
         raise ValueError(f"Unsupported language: {language}")

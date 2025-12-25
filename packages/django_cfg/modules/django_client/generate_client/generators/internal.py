@@ -150,5 +150,51 @@ class InternalGenerators:
 
         return generated_paths
 
+    def generate_swift_codable(self, output_dir: Path) -> list[Path]:
+        """Generate Swift Codable types using built-in generator."""
+        from django_cfg.modules.django_client.core.generator import SwiftCodableGenerator
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        generator = SwiftCodableGenerator(
+            self.ir_context,
+            generate_endpoints=True,
+            generate_models=True,
+            group_name=self.group_name,
+        )
+
+        files = generator.generate()
+        generated_paths = []
+
+        for generated_file in files:
+            full_path = output_dir / generated_file.path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(generated_file.content)
+            generated_paths.append(full_path)
+
+        return generated_paths
+
+    @staticmethod
+    def generate_swift_codable_shared(output_dir: Path) -> list[Path]:
+        """
+        Generate shared Swift Codable files (JSONValue, etc.).
+
+        Should be called once after all groups are generated.
+        """
+        from django_cfg.modules.django_client.core.generator import SwiftCodableGenerator
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        files = SwiftCodableGenerator.generate_shared_files()
+        generated_paths = []
+
+        for generated_file in files:
+            full_path = output_dir / generated_file.path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(generated_file.content)
+            generated_paths.append(full_path)
+
+        return generated_paths
+
 
 __all__ = ["InternalGenerators"]

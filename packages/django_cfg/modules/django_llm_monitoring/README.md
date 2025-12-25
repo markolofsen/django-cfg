@@ -218,8 +218,8 @@ class MyConfig(DjangoConfig):
 
 ```env
 # .env
-TELEGRAM__BOT_TOKEN=6113761847:AAFjhIT0c6PsEq5ke3P6c7Ruuzc5WpLx9wk
-TELEGRAM__CHAT_ID=-796503018
+TELEGRAM__BOT_TOKEN=*********
+TELEGRAM__CHAT_ID=-00000000
 ```
 
 **How to get Telegram credentials:**

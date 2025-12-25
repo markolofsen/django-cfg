@@ -49,6 +49,12 @@ class Command(AdminCommand):
             action="store_true",
             help="Generate Swift client (uses apple/swift-openapi-generator)",
         )
+        lang_group.add_argument(
+            "--swift-codable",
+            action="store_true",
+            dest="swift_codable",
+            help="Generate simple Swift Codable types (no OpenAPIRuntime dependency)",
+        )
 
         # Skip languages
         skip_group = parser.add_argument_group('Skip Languages')
