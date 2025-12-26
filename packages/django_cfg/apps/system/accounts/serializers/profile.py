@@ -30,6 +30,9 @@ class UserSerializer(serializers.ModelSerializer):
     display_username = serializers.ReadOnlyField()
     avatar = serializers.SerializerMethodField()
     centrifugo = serializers.SerializerMethodField()
+    # Explicit nullable fields for proper OpenAPI schema generation
+    last_login = serializers.DateTimeField(read_only=True, allow_null=True)
+    unanswered_messages_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = CustomUser

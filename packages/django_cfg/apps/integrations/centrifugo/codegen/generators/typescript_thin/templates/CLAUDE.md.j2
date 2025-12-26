@@ -44,6 +44,60 @@ Full documentation: https://djangocfg.com/docs/features/integrations/centrifugo/
 No RPC methods discovered. Add `@websocket_rpc` decorated handlers.
 {% endif %}
 
+## CRITICAL: Authentication
+
+### Token Types
+
+| Token Type | Format | Usage |
+|------------|--------|-------|
+| **Centrifugo JWT** | `eyJhbGciOi...` | WebSocket connection - USE THIS! |
+| CLI Token | `clit_xxx...` | REST API only - NOT for Centrifugo! |
+
+### Getting Centrifugo JWT Token
+
+**Option 1: From User Profile (Recommended)**
+
+```json
+// GET /cfg/accounts/profile/
+{
+  "centrifugo": {
+    "token": "eyJhbGciOi...",      // <-- Use for CentrifugoRPCClient
+    "centrifugo_url": "ws://...",
+    "channels": ["user#4"]
+  }
+}
+```
+
+**Option 2: Dedicated Endpoint**
+
+```
+GET /cfg/centrifugo/auth/token/
+Authorization: Bearer <jwt_access_token>
+```
+
+### Common Mistake
+
+❌ **WRONG:** Using CLI token for Centrifugo
+```typescript
+// BAD - Centrifugo won't recognize this token
+const client = new CentrifugoRPCClient({
+  url: 'ws://...',
+  token: 'clit_xxx...',  // WRONG TOKEN TYPE!
+  userId: '4'
+});
+// Result: user="" in server logs, authentication fails
+```
+
+✅ **CORRECT:** Using Centrifugo JWT
+```typescript
+// GOOD - JWT from profile.centrifugo.token
+const client = new CentrifugoRPCClient({
+  url: profile.centrifugo.centrifugo_url,
+  token: profile.centrifugo.token,  // eyJhbGciOi... format
+  userId: String(profile.id)
+});
+```
+
 ## Usage Example
 
 ```typescript
@@ -59,6 +113,11 @@ const result = await apiClient.{{ methods[0].name_ts }}(params);
 const result = await apiClient.someMethod(params);
 {% endif %}
 ```
+
+## Debugging
+
+If Centrifugo server logs show `user: ""` (empty), authentication failed.
+Check that you're using Centrifugo JWT, not CLI token!
 
 ---
 Generated: {{ timestamp }}

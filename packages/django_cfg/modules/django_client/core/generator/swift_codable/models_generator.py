@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .type_mapper import SwiftTypeMapper
-from .naming import to_pascal_case, to_camel_case, swift_property_name, SWIFT_TYPE_CONFLICTS
+from .naming import to_pascal_case, to_camel_case, swift_property_name, SWIFT_TYPE_CONFLICTS, SWIFT_KEYWORDS
 
 if TYPE_CHECKING:
     from django_cfg.modules.django_client.core.ir import IRSchemaObject
@@ -16,8 +16,12 @@ if TYPE_CHECKING:
 class SwiftModelsGenerator:
     """Generates Swift Codable structs from IR schemas."""
 
-    def __init__(self, type_mapper: SwiftTypeMapper):
+    def __init__(
+        self,
+        type_mapper: SwiftTypeMapper,
+    ):
         self.type_mapper = type_mapper
+        # Track generated types within this group to avoid re-generating
         self.generated_types: set[str] = set()
 
     def generate_models(
@@ -131,11 +135,18 @@ class SwiftModelsGenerator:
         ]
 
         for value in schema.enum:
-            case_name = to_camel_case(str(value))
+            str_value = str(value)
+            # Skip empty enum values
+            if not str_value or not str_value.strip():
+                continue
+            case_name = to_camel_case(str_value)
+            # Skip if case_name is empty after conversion
+            if not case_name:
+                continue
             # Swift identifiers can't start with a digit
-            if case_name and case_name[0].isdigit():
+            if case_name[0].isdigit():
                 case_name = f"n{case_name}"
-            if case_name != str(value):
+            if case_name != str_value:
                 lines.append(f'    case {case_name} = "{value}"')
             else:
                 lines.append(f"    case {case_name}")
@@ -184,11 +195,18 @@ class SwiftModelsGenerator:
         for enum_name, prop_name, enum_values in inline_enums:
             lines.append(f"    public enum {enum_name}: String, Codable, Sendable {{")
             for value in enum_values:
-                case_name = to_camel_case(str(value))
+                str_value = str(value)
+                # Skip empty enum values
+                if not str_value or not str_value.strip():
+                    continue
+                case_name = to_camel_case(str_value)
+                # Skip if case_name is empty after conversion
+                if not case_name:
+                    continue
                 # Swift identifiers can't start with a digit
-                if case_name and case_name[0].isdigit():
+                if case_name[0].isdigit():
                     case_name = f"n{case_name}"
-                if case_name != str(value):
+                if case_name != str_value:
                     lines.append(f'        case {case_name} = "{value}"')
                 else:
                     lines.append(f"        case {case_name}")
@@ -205,14 +223,17 @@ class SwiftModelsGenerator:
         for prop_name, prop_schema in sorted(properties.items()):
             swift_name = swift_property_name(prop_name)
             is_required = prop_name in required
+            # Field is optional if: not required OR nullable
+            # A field can be required (must be present in JSON) but still nullable (can have null value)
+            is_optional = not is_required or prop_schema.nullable
 
             # Use nested enum type for inline enums
             if prop_name in enum_map:
                 swift_type = enum_map[prop_name]
-                if not is_required:
+                if is_optional:
                     swift_type = f"{swift_type}?"
             else:
-                swift_type = self.type_mapper.map_type(prop_schema, optional=not is_required)
+                swift_type = self.type_mapper.map_type(prop_schema, optional=is_optional)
 
             lines.append(f"    public let {swift_name}: {swift_type}")
 
@@ -227,10 +248,12 @@ class SwiftModelsGenerator:
             lines.append("    enum CodingKeys: String, CodingKey {")
             for swift_name, json_name in coding_keys:
                 clean_name = swift_name.strip("`")
+                # Use backticks for Swift keywords in CodingKeys
+                case_identifier = f"`{clean_name}`" if clean_name in SWIFT_KEYWORDS else clean_name
                 if clean_name != json_name:
-                    lines.append(f'        case {clean_name} = "{json_name}"')
+                    lines.append(f'        case {case_identifier} = "{json_name}"')
                 else:
-                    lines.append(f"        case {clean_name}")
+                    lines.append(f"        case {case_identifier}")
             lines.append("    }")
 
         lines.append("}")

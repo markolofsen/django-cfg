@@ -46,11 +46,11 @@ def to_pascal_case(name: str) -> str:
         return ""
 
     # If already PascalCase (no separators, starts with uppercase), return as-is
-    if "_" not in name and "-" not in name and " " not in name and name[0].isupper():
+    if "_" not in name and "-" not in name and " " not in name and ":" not in name and name[0].isupper():
         return name
 
-    # Normalize: replace all separators with space
-    normalized = name.replace("-", " ").replace("_", " ")
+    # Normalize: replace all separators with space (including : for URN-style values)
+    normalized = name.replace("-", " ").replace("_", " ").replace(":", " ")
 
     # Split and capitalize first letter of each word (preserve rest)
     parts = normalized.split()

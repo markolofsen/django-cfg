@@ -95,6 +95,9 @@ class ClientGenerationOrchestrator:
         # Generate shared files (Swift Codable)
         self._generate_shared_files()
 
+        # Check for Swift Codable duplicates
+        self._check_swift_codable_duplicates()
+
         # Post-generation steps
         self._run_post_generation(results)
 
@@ -378,6 +381,94 @@ class ClientGenerationOrchestrator:
             self.log(f"  ✅ Shared: {shared_dir} ({len(files)} files)")
         except Exception as e:
             self.log_error(f"  ❌ Error generating shared files: {e}")
+
+    def _check_swift_codable_duplicates(self) -> None:
+        """
+        Check for duplicate type definitions across Swift Codable groups.
+
+        Raises DuplicateTypeError if duplicates are found.
+        """
+        import re
+
+        langs = self.config.languages
+        if not langs.swift_codable:
+            return
+
+        clients_dir = self.service.config.get_clients_dir()
+        swift_codable_dir = clients_dir / "swift_codable"
+
+        if not swift_codable_dir.exists():
+            return
+
+        # Pattern to match type definitions
+        type_pattern = re.compile(
+            r'^public\s+(struct|enum|typealias)\s+(\w+)',
+            re.MULTILINE
+        )
+
+        # Collect all types: {type_name: [(group, file_path, line_num), ...]}
+        type_locations: dict[str, list[tuple[str, Path, int]]] = {}
+
+        for group_dir in swift_codable_dir.iterdir():
+            if not group_dir.is_dir() or group_dir.name == "Shared":
+                continue
+
+            group_name = group_dir.name
+            for swift_file in group_dir.glob("*Types.swift"):
+                content = swift_file.read_text()
+                for match in type_pattern.finditer(content):
+                    type_name = match.group(2)
+                    # Calculate line number
+                    line_num = content[:match.start()].count('\n') + 1
+                    if type_name not in type_locations:
+                        type_locations[type_name] = []
+                    type_locations[type_name].append((group_name, swift_file, line_num))
+
+        # Find duplicates
+        duplicates = {
+            name: locs for name, locs in type_locations.items()
+            if len(locs) > 1
+        }
+
+        if duplicates:
+            self.log_error("\n" + "=" * 60)
+            self.log_error("❌ DUPLICATE TYPE DEFINITIONS DETECTED")
+            self.log_error("=" * 60)
+            self.log_error(
+                "\nThe following types are defined in multiple API groups."
+            )
+            self.log_error(
+                "This will cause Swift compilation errors.\n"
+            )
+
+            for type_name, locations in sorted(duplicates.items()):
+                self.log_error(f"\n  {type_name}:")
+                for group, file_path, line_num in locations:
+                    self.log_error(f"    → {group}/{file_path.name}:{line_num}")
+
+            self.log_error("\n" + "-" * 60)
+            self.log_error("HOW TO FIX:")
+            self.log_error("-" * 60)
+            self.log_error(
+                "\nRename serializers to have unique names across apps."
+            )
+            self.log_error(
+                "Swift types are generated from serializer class names."
+            )
+            self.log_error(
+                "\nExample: Rename 'UserProfileUpdateRequest' to"
+            )
+            self.log_error(
+                "  'ProfilesUserProfileUpdateRequest' or"
+            )
+            self.log_error(
+                "  'AccountsUserProfileUpdateRequest'"
+            )
+            self.log_error("\n" + "=" * 60)
+
+            raise RuntimeError(
+                f"Duplicate Swift types found: {', '.join(sorted(duplicates.keys()))}"
+            )
 
     def _run_post_generation(self, results: list[GenerationResult]) -> None:
         """Run post-generation steps."""

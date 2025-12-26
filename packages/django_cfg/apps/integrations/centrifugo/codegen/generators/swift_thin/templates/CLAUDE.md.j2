@@ -98,24 +98,86 @@ do {
 }
 ```
 
+## CRITICAL: Authentication
+
+### Token Types (DO NOT CONFUSE!)
+
+| Token Type | Format | Usage |
+|------------|--------|-------|
+| **Centrifugo JWT** | `eyJhbGciOi...` | WebSocket connection - USE THIS! |
+| CLI Token | `clit_xxx...` | REST API only - NOT for Centrifugo! |
+| JWT Access Token | `eyJ...` | REST API auth header |
+
+### Getting Centrifugo JWT Token
+
+**Option 1: From User Profile (Recommended)**
+
+Django includes Centrifugo token in profile response:
+
+```json
+// GET /cfg/accounts/profile/
+{
+  "centrifugo": {
+    "token": "eyJhbGciOi...",      // <-- Use THIS for WebSocket
+    "centrifugo_url": "ws://...",
+    "expires_at": "2025-...",
+    "channels": ["user#4"]
+  }
+}
+```
+
+**Option 2: Dedicated Endpoint**
+
+```
+GET /cfg/centrifugo/auth/token/
+Authorization: Bearer <jwt_access_token>
+```
+
+### Common Mistake
+
+❌ **WRONG:** Using CLI token for Centrifugo connection
+```swift
+// BAD - CLI token is NOT a JWT!
+let api = try APIClient(
+    url: "ws://...",
+    token: cliToken,  // clit_xxx format - WRONG!
+    userId: "4"
+)
+// Result: Centrifugo sees user="" (empty), connection rejected
+```
+
+✅ **CORRECT:** Using Centrifugo JWT from profile
+```swift
+// GOOD - Use JWT from profile.centrifugo.token
+let api = try APIClient(
+    url: profile.centrifugo.centrifugoUrl,
+    token: profile.centrifugo.token,  // eyJhbGciOi... format
+    userId: String(profile.id)
+)
+```
+
 ## Important Notes for AI Assistants
 
-1. **Thread Safety:** Both `CentrifugoRPCClient` and `APIClient` are Swift actors - all methods are inherently thread-safe.
+1. **AUTHENTICATION:** Token MUST be a Centrifugo JWT (from profile or `/cfg/centrifugo/auth/token/`), NOT CLI token!
 
-2. **Async/Await:** All RPC methods are async - always use `await` when calling.
+2. **Thread Safety:** Both `CentrifugoRPCClient` and `APIClient` are Swift actors - all methods are inherently thread-safe.
 
-3. **Connection Lifecycle:** Always call `connect()` before making RPC calls, and `disconnect()` when done.
+3. **Async/Await:** All RPC methods are async - always use `await` when calling.
 
-4. **Fire-and-forget Methods:** Methods with `no_wait=True` don't return a response - use `send()` internally.
+4. **Connection Lifecycle:** Always call `connect()` before making RPC calls, and `disconnect()` when done.
 
-5. **Type Safety:** All parameters and return types are strongly typed using generated Codable structs.
+5. **Fire-and-forget Methods:** Methods with `no_wait=True` don't return a response - use `send()` internally.
 
-6. **Error Types:** Use `RPCError` enum for error handling:
+6. **Type Safety:** All parameters and return types are strongly typed using generated Codable structs.
+
+7. **Error Types:** Use `RPCError` enum for error handling:
    - `.notConnected` - Call `connect()` first
    - `.timeout` - Request exceeded timeout
    - `.serverError(code, message)` - Server returned an error
    - `.encodingError` - Failed to encode request
    - `.decodingError` - Failed to decode response
+
+8. **Debugging:** If Centrifugo server logs show `user: ""`, authentication failed - check token type!
 
 ## Regeneration
 

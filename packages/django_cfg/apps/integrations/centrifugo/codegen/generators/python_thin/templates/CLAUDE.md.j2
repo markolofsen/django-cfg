@@ -45,15 +45,44 @@ Full documentation: https://djangocfg.com/docs/features/integrations/centrifugo/
 No RPC methods discovered. Add `@websocket_rpc` decorated handlers.
 {% endif %}
 
+## CRITICAL: Authentication
+
+### Token Types
+
+| Token Type | Format | Usage |
+|------------|--------|-------|
+| **Centrifugo JWT** | `eyJhbGciOi...` | WebSocket connection - USE THIS! |
+| CLI Token | `clit_xxx...` | REST API only - NOT for Centrifugo! |
+
+### Getting Centrifugo JWT Token
+
+```json
+// GET /cfg/accounts/profile/
+{
+  "centrifugo": {
+    "token": "eyJhbGciOi...",      // <-- Use for CentrifugoRPCClient
+    "centrifugo_url": "ws://...",
+    "channels": ["user#4"]
+  }
+}
+```
+
+Or use endpoint: `GET /cfg/centrifugo/auth/token/`
+
+### Debugging
+
+If Centrifugo server logs show `user: ""` (empty), authentication failed.
+Check that you're using Centrifugo JWT, not CLI token!
+
 ## Usage Example
 
 ```python
 from . import APIClient, CentrifugoRPCClient
 
-# Create RPC client
+# Create RPC client with JWT from profile["centrifugo"]["token"]
 rpc = CentrifugoRPCClient(
-    ws_url="ws://localhost:8000/connection/websocket",
-    token="your-jwt-token",
+    ws_url=profile["centrifugo"]["centrifugo_url"],
+    token=profile["centrifugo"]["token"],  # Must be Centrifugo JWT!
 )
 
 # Create API client
