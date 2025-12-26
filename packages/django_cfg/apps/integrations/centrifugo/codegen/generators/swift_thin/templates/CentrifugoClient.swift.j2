@@ -102,6 +102,83 @@ public actor CentrifugoClient {
 {% endif %}
 
 {% endfor %}
+{% if channels %}
+
+    // MARK: - Channel Subscriptions
+
+{% for channel in channels %}
+    /// {{ channel.docstring }}
+    ///
+    /// Channel pattern: `{{ channel.pattern }}`
+    ///
+{% for param in channel.params %}
+    /// - Parameter {{ param }}: {{ param | replace("_", " ") | capitalize }}
+{% endfor %}
+    /// - Parameter onEvent: Callback for channel events
+    /// - Throws: RPCError if subscription fails
+{% if channel.params | length == 1 %}
+    public func subscribeTo{{ channel.swift_name | capitalize }}(
+        {{ channel.params[0] }}: String,
+        onEvent: @escaping ({{ channel.event_enum }}) -> Void
+    ) async throws {
+        let channel = "{{ channel.pattern }}".replacingOccurrences(of: "{{ '{' }}{{ channel.params[0] }}{{ '}' }}", with: {{ channel.params[0] }})
+        try await rpc.subscribe(channel: channel) { data in
+            do {
+                let event = try JSONDecoder().decode({{ channel.event_enum }}.self, from: data)
+                onEvent(event)
+            } catch {
+                // Log decoding error but don't crash
+            }
+        }
+    }
+
+    /// Unsubscribe from {{ channel.name }} channel.
+    ///
+    /// - Parameter {{ channel.params[0] }}: {{ channel.params[0] | replace("_", " ") | capitalize }}
+    public func unsubscribeFrom{{ channel.swift_name | capitalize }}({{ channel.params[0] }}: String) async throws {
+        let channel = "{{ channel.pattern }}".replacingOccurrences(of: "{{ '{' }}{{ channel.params[0] }}{{ '}' }}", with: {{ channel.params[0] }})
+        try await rpc.unsubscribe(channel: channel)
+    }
+
+{% else %}
+    public func subscribeTo{{ channel.swift_name | capitalize }}(
+{% for param in channel.params %}
+        {{ param }}: String{% if not loop.last %},{% endif %}
+
+{% endfor %}
+        onEvent: @escaping ({{ channel.event_enum }}) -> Void
+    ) async throws {
+        var channel = "{{ channel.pattern }}"
+{% for param in channel.params %}
+        channel = channel.replacingOccurrences(of: "{{ '{' }}{{ param }}{{ '}' }}", with: {{ param }})
+{% endfor %}
+        try await rpc.subscribe(channel: channel) { data in
+            do {
+                let event = try JSONDecoder().decode({{ channel.event_enum }}.self, from: data)
+                onEvent(event)
+            } catch {
+                // Log decoding error but don't crash
+            }
+        }
+    }
+
+    /// Unsubscribe from {{ channel.name }} channel.
+    public func unsubscribeFrom{{ channel.swift_name | capitalize }}(
+{% for param in channel.params %}
+        {{ param }}: String{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ) async throws {
+        var channel = "{{ channel.pattern }}"
+{% for param in channel.params %}
+        channel = channel.replacingOccurrences(of: "{{ '{' }}{{ param }}{{ '}' }}", with: {{ param }})
+{% endfor %}
+        try await rpc.unsubscribe(channel: channel)
+    }
+
+{% endif %}
+{% endfor %}
+{% endif %}
 }
 
 // MARK: - Convenience Extensions

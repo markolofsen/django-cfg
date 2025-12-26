@@ -29,19 +29,25 @@ def get_grpc_config() -> Optional["GRPCConfig"]:
         from django_cfg.models.api.grpc.config import GRPCConfig
 
         config = get_current_config()
+        logger.info(f"get_grpc_config: get_current_config() = {type(config)}")
+
         if not config:
+            logger.warning("get_grpc_config: config is None!")
             return None
 
         grpc_config = getattr(config, "grpc", None)
+        logger.info(f"get_grpc_config: grpc_config = {type(grpc_config)}")
 
         # Type validation
         if grpc_config and isinstance(grpc_config, GRPCConfig):
+            logger.info(f"get_grpc_config: handlers_hook = {grpc_config.handlers_hook}")
             return grpc_config
 
+        logger.warning(f"get_grpc_config: grpc_config is not GRPCConfig type: {grpc_config}")
         return None
 
     except Exception as e:
-        logger.debug(f"Failed to get gRPC config: {e}")
+        logger.error(f"Failed to get gRPC config: {e}", exc_info=True)
         return None
 
 

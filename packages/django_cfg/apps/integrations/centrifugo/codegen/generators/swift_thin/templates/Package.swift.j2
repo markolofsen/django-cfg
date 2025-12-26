@@ -7,9 +7,6 @@ let package = Package(
     name: "{{ package_name }}",
     platforms: [
         .iOS(.v13),
-        .macOS(.v10_15),
-        .tvOS(.v13),
-        .watchOS(.v6),
     ],
     products: [
         .library(
@@ -18,12 +15,15 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // No external dependencies - uses only Foundation and URLSession
+        // Centrifugo WebSocket client (official)
+        .package(url: "https://github.com/centrifugal/centrifuge-swift.git", from: "0.6.0"),
     ],
     targets: [
         .target(
             name: "{{ package_name }}",
-            dependencies: [],
+            dependencies: [
+                .product(name: "SwiftCentrifuge", package: "centrifuge-swift"),
+            ],
             path: "Sources/{{ package_name }}"
         ),
     ]

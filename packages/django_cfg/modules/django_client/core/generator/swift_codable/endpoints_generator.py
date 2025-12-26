@@ -69,17 +69,48 @@ class SwiftEndpointsGenerator:
         # Group operations by path pattern
         path_groups = self._group_by_path_pattern(operations)
 
-        for pattern, ops in sorted(path_groups.items()):
-            # Determine if this is a list or detail endpoint
+        # Track used names to avoid duplicates
+        used_names: dict[str, int] = {}  # name -> count of usage
+
+        # First pass: collect all names and detect collisions
+        path_name_map: dict[str, str] = {}
+        for pattern in sorted(path_groups.keys()):
             has_id_param = "{" in pattern
+            params = re.findall(r"\{(\w+)\}", pattern)
+
+            if has_id_param:
+                base_name = self._path_to_function_name(pattern, params)
+            else:
+                base_name = self._path_to_property_name(pattern)
+
+            # Track the signature (name + param count) for functions
+            signature = f"{base_name}_{len(params)}" if has_id_param else base_name
+            used_names[signature] = used_names.get(signature, 0) + 1
+            path_name_map[pattern] = base_name
+
+        # Second pass: generate endpoints with unique names
+        name_counters: dict[str, int] = {}
+        for pattern, ops in sorted(path_groups.items()):
+            has_id_param = "{" in pattern
+            params = re.findall(r"\{(\w+)\}", pattern)
+            base_name = path_name_map[pattern]
+
+            signature = f"{base_name}_{len(params)}" if has_id_param else base_name
+
+            # If this name is used multiple times, make it unique
+            if used_names.get(signature, 0) > 1:
+                # Use parent path segment to disambiguate
+                final_name = self._make_unique_name(pattern, base_name, params)
+            else:
+                final_name = base_name
 
             if has_id_param:
                 # Detail endpoint - generate function
-                func_lines = self._generate_detail_endpoint(pattern, ops)
+                func_lines = self._generate_detail_endpoint(pattern, ops, final_name)
                 lines.extend(func_lines)
             else:
                 # List endpoint - generate static property
-                prop_lines = self._generate_list_endpoint(pattern, ops)
+                prop_lines = self._generate_list_endpoint(pattern, ops, final_name)
                 lines.extend(prop_lines)
 
         lines.append("    }")
@@ -87,14 +118,73 @@ class SwiftEndpointsGenerator:
 
         return lines
 
+    def _make_unique_name(self, path: str, base_name: str, params: list[str]) -> str:
+        """Make a unique name by incorporating parent path segments.
+
+        Distinguishes between:
+        - Nested resources: /machines/{id}/logs/ -> machineLogs (singular parent)
+        - Direct resources: /machines/logs/{id}/ -> machinesLogs (plural parent)
+        """
+        path_parts = path.split("/")
+
+        # Find the index of the first path parameter
+        first_param_idx = None
+        for i, p in enumerate(path_parts):
+            if p.startswith("{"):
+                first_param_idx = i
+                break
+
+        # Find where base_name appears in the path
+        base_name_idx = None
+        for i, p in enumerate(path_parts):
+            normalized = to_camel_case(p.replace("-", "_"))
+            if p == base_name or normalized == base_name:
+                base_name_idx = i
+                break
+
+        if first_param_idx is not None and base_name_idx is not None:
+            if base_name_idx > first_param_idx:
+                # NESTED resource: /machines/{id}/logs/
+                # The resource is after the parameter, so it's nested
+                # Use the parent resource name in singular form
+                parent_idx = first_param_idx - 1
+                if parent_idx >= 0:
+                    parent = path_parts[parent_idx]
+                    # Singularize: machines -> machine
+                    if parent.endswith("s") and len(parent) > 1:
+                        parent = parent[:-1]
+                    return to_camel_case(parent) + to_pascal_case(base_name)
+            else:
+                # DIRECT resource: /machines/logs/{id}/
+                # The resource is before the parameter
+                # Use the group name as prefix (stay plural)
+                parts = [p for p in path.split("/") if p and not p.startswith("{")]
+                if len(parts) >= 2:
+                    # Skip 'api' prefix if present
+                    group_idx = 1 if parts[0] == "api" else 0
+                    if group_idx < len(parts) - 1:
+                        group = parts[group_idx]
+                        return to_camel_case(group) + to_pascal_case(base_name)
+
+        # Fallback: use parent path segment
+        parts = [p for p in path.split("/") if p and not p.startswith("{")]
+        if len(parts) >= 2:
+            parent = parts[-2]
+            if parent != base_name:
+                return to_camel_case(parent) + to_pascal_case(base_name)
+
+        return base_name
+
     def _generate_list_endpoint(
         self,
         path: str,
         operations: list[IROperationObject],
+        prop_name: str | None = None,
     ) -> list[str]:
         """Generate static property for list endpoint."""
-        # Determine property name from path
-        prop_name = self._path_to_property_name(path)
+        # Determine property name from path if not provided
+        if prop_name is None:
+            prop_name = self._path_to_property_name(path)
         clean_path = path.lstrip("/")
 
         # Get HTTP methods supported
@@ -110,13 +200,15 @@ class SwiftEndpointsGenerator:
         self,
         path: str,
         operations: list[IROperationObject],
+        func_name: str | None = None,
     ) -> list[str]:
         """Generate function for detail endpoint with path parameters."""
         # Extract path parameters
         params = re.findall(r"\{(\w+)\}", path)
 
-        # Generate function name
-        func_name = self._path_to_function_name(path, params)
+        # Generate function name if not provided
+        if func_name is None:
+            func_name = self._path_to_function_name(path, params)
 
         # Generate function signature
         param_list = ", ".join(f"_ {p}: String" for p in params)
@@ -152,20 +244,13 @@ class SwiftEndpointsGenerator:
         return groups
 
     def _normalize_path(self, path: str) -> str:
-        """Normalize path to base pattern."""
-        # Remove action suffixes like /update-role/, /activate/, etc.
-        # Keep the main resource path
-        parts = path.rstrip("/").split("/")
+        """Normalize path to base pattern.
 
-        # Find the last path parameter or resource name
-        normalized_parts = []
-        for part in parts:
-            normalized_parts.append(part)
-            # Stop after path parameter (e.g., {id})
-            if part.startswith("{") and part.endswith("}"):
-                break
-
-        return "/".join(normalized_parts) + "/"
+        Keeps the full path including action suffixes like /stream/, /activate/.
+        This ensures each unique endpoint gets its own entry.
+        """
+        # Just ensure trailing slash for consistency
+        return path.rstrip("/") + "/"
 
     def _path_to_property_name(self, path: str) -> str:
         """Convert path to Swift property name."""

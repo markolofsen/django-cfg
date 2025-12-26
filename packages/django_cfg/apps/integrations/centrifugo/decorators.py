@@ -1,14 +1,14 @@
 """
-Decorators for Centrifugo RPC handlers.
+Decorators for Centrifugo RPC handlers and channels.
 """
 
 import logging
 import inspect
-from typing import Callable, Optional, Type, get_type_hints
+from typing import Any, Callable, Optional, Type, get_type_hints
 from pydantic import BaseModel
 
 from .router import get_global_router
-from .registry import get_global_registry
+from .registry import get_global_registry, get_global_channel_registry
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +144,62 @@ def _is_pydantic_model(type_hint) -> bool:
         return False
 
 
+def centrifugo_channel(
+    name: str,
+    pattern: str,
+    event_type: Any,
+    docstring: Optional[str] = None,
+) -> None:
+    """
+    Register a Centrifugo channel for pub/sub.
+
+    This function registers a channel with the global channel registry.
+    The channel info is used by codegen to generate typed subscription methods.
+
+    Args:
+        name: Channel name (e.g., "ai_chat")
+        pattern: Channel pattern with placeholders (e.g., "ai_chat:workspace:{workspace_id}")
+        event_type: Union type of Pydantic event models (e.g., Union[MessageStart, MessageChunk])
+        docstring: Channel documentation
+
+    Example:
+        >>> from typing import Union
+        >>> from pydantic import BaseModel
+        >>>
+        >>> class MessageStart(BaseModel):
+        ...     type: str = "message_start"
+        ...     message_id: str
+        >>>
+        >>> class MessageChunk(BaseModel):
+        ...     type: str = "message_chunk"
+        ...     chunk: str
+        >>>
+        >>> AIChatEvent = Union[MessageStart, MessageChunk]
+        >>>
+        >>> centrifugo_channel(
+        ...     name="ai_chat",
+        ...     pattern="ai_chat:workspace:{workspace_id}",
+        ...     event_type=AIChatEvent,
+        ...     docstring="AI chat streaming events",
+        ... )
+
+    Notes:
+        - Event models must have a 'type' field with a Literal default for discriminated unions
+        - Pattern placeholders (e.g., {workspace_id}) become parameters in generated code
+        - Call this at module load time (e.g., in apps.py ready() or channels.py)
+    """
+    registry = get_global_channel_registry()
+    registry.register(
+        name=name,
+        pattern=pattern,
+        event_type=event_type,
+        docstring=docstring,
+    )
+
+    logger.info(f"✅ Registered Centrifugo channel: {name} ({pattern})")
+
+
 __all__ = [
     "websocket_rpc",
+    "centrifugo_channel",
 ]

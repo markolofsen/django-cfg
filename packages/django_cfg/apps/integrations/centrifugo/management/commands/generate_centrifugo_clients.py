@@ -15,12 +15,13 @@ from django.utils.termcolors import colorize
 
 from django_cfg.management.utils import AdminCommand
 
-from django_cfg.apps.integrations.centrifugo.codegen.discovery import discover_rpc_methods_from_router
+from django_cfg.apps.integrations.centrifugo.codegen.discovery import discover_rpc_methods_from_router, ChannelInfo
 from django_cfg.apps.integrations.centrifugo.codegen.generators.python_thin import PythonThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.typescript_thin import TypeScriptThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.go_thin import GoThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.swift_thin import SwiftThinGenerator
 from django_cfg.apps.integrations.centrifugo.router import get_global_router
+from django_cfg.apps.integrations.centrifugo.registry import get_global_channel_registry
 
 
 class Command(AdminCommand):
@@ -156,6 +157,40 @@ class Command(AdminCommand):
                 )
             )
 
+        # Discover channels for pub/sub subscriptions
+        self.stdout.write("\nDiscovering Centrifugo channels...")
+        try:
+            channel_registry = get_global_channel_registry()
+            registered_channels = channel_registry.get_all_channels()
+
+            # Convert RegisteredChannel to ChannelInfo for generators
+            channels = []
+            for rc in registered_channels:
+                channels.append(ChannelInfo(
+                    name=rc.name,
+                    pattern=rc.pattern,
+                    event_types=rc.event_types,
+                    docstring=rc.docstring,
+                    params=rc.params,
+                ))
+
+            self.stdout.write(
+                colorize(f"Found {len(channels)} channels", fg="green")
+            )
+
+            if verbose and channels:
+                for channel in channels:
+                    event_names = [et.__name__ for et in channel.event_types]
+                    self.stdout.write(
+                        f"  - {channel.name}: {channel.pattern} ({len(event_names)} events)"
+                    )
+
+        except Exception as e:
+            self.stdout.write(
+                colorize(f"⚠️  Failed to discover channels: {e}", fg="yellow")
+            )
+            channels = []
+
         # Create output directory
         output_dir.mkdir(parents=True, exist_ok=True)
         self.stdout.write(f"\nOutput directory: {output_dir}")
@@ -240,14 +275,27 @@ class Command(AdminCommand):
                     if method.return_type:
                         models.add(method.return_type)
 
-                generator = SwiftThinGenerator(methods, list(models), swift_dir)
+                # Also add channel event types to models
+                for channel in channels:
+                    for event_type in channel.event_types:
+                        models.add(event_type)
+
+                generator = SwiftThinGenerator(
+                    methods=methods,
+                    models=list(models),
+                    output_dir=swift_dir,
+                    channels=channels,  # Pass channels for subscription generation
+                )
                 generator.generate()
                 generated.append("Swift")
                 self.stdout.write(colorize(f"  ✓ Generated at: {swift_dir}", fg="green"))
+                if channels:
+                    self.stdout.write(colorize(f"    (includes {len(channels)} channel subscriptions)", fg="cyan"))
             except Exception as e:
                 self.stdout.write(colorize(f"  ✗ Failed: {e}", fg="red"))
                 if verbose:
-                    logger.exception("Swift generation failed")
+                    import traceback
+                    traceback.print_exc()
 
         # Summary
         self.stdout.write("\n" + "=" * 60)

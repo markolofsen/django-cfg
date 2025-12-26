@@ -1,0 +1,59 @@
+// CentrifugoSubscriptions.swift
+// Generated Channel Event Types
+// Auto-generated - DO NOT EDIT
+// Generated at: {{ generated_at }}
+
+import Foundation
+
+{% for channel in channels %}
+// MARK: - {{ channel.enum_name }}
+
+/// {{ channel.docstring }}
+public enum {{ channel.enum_name }}: Codable, Sendable {
+{% for event in channel.event_cases %}
+    case {{ event.case_name }}({{ event.type_name }})
+{% endfor %}
+
+    enum CodingKeys: String, CodingKey {
+        case type
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+
+        switch type {
+{% for event in channel.event_cases %}
+        case "{{ event.type_value }}":
+            self = .{{ event.case_name }}(try {{ event.type_name }}(from: decoder))
+{% endfor %}
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Unknown event type: \(type)"
+            )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+{% for event in channel.event_cases %}
+        case .{{ event.case_name }}(let event):
+            try event.encode(to: encoder)
+{% endfor %}
+        }
+    }
+
+    /// Get the event type string.
+    public var type: String {
+        switch self {
+{% for event in channel.event_cases %}
+        case .{{ event.case_name }}:
+            return "{{ event.type_value }}"
+{% endfor %}
+        }
+    }
+}
+
+{% endfor %}

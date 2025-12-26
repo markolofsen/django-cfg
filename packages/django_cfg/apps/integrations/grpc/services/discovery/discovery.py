@@ -452,11 +452,14 @@ class ServiceDiscovery:
             >>> for hook in handlers_hooks:
             ...     hook(server)
         """
+        logger.info(f"get_handlers_hooks: config={self.config}")
+
         if not self.config:
-            logger.debug("No gRPC config available for handlers_hooks")
+            logger.warning("No gRPC config available for handlers_hooks")
             return []
 
         handlers_hook_paths = self.config.handlers_hook
+        logger.info(f"get_handlers_hooks: handlers_hook_paths={handlers_hook_paths}")
 
         # Convert single string to list
         if isinstance(handlers_hook_paths, str):
@@ -538,6 +541,10 @@ def discover_and_register_services(server: Any) -> Tuple[int, List[str]]:
         server.start()
         ```
     """
+    logger.info("=" * 60)
+    logger.info("discover_and_register_services: STARTING")
+    logger.info("=" * 60)
+
     discovery = ServiceDiscovery()
     count = 0
     service_names: List[str] = []
@@ -546,7 +553,9 @@ def discover_and_register_services(server: Any) -> Tuple[int, List[str]]:
     # Handlers hooks return list of (service_class, add_to_server_func) tuples
     # and may also return service names via grpc_service_name attribute
     handlers_hooks = discovery.get_handlers_hooks()
+    logger.info(f"discover_and_register_services: got {len(handlers_hooks)} handlers_hooks")
     for hook in handlers_hooks:
+        logger.info(f"discover_and_register_services: calling hook {hook}")
         try:
             result = hook(server)
             logger.info(f"Successfully called handlers hook: {hook.__name__}")

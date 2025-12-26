@@ -15,7 +15,7 @@ from typing import List, Type
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel
 
-from ...discovery import RPCMethodInfo
+from ...discovery import RPCMethodInfo, ChannelInfo
 from ...utils import to_swift_method_name, get_safe_swift_type_name
 from ...utils.converters import pydantic_to_swift_with_nested
 
@@ -73,6 +73,7 @@ class SwiftThinGenerator:
     - Sources/CentrifugoClient/AnyCodable.swift: Dynamic JSON handling
     - Sources/CentrifugoClient/CentrifugoRPCClient.swift: Base RPC client
     - Sources/CentrifugoClient/CentrifugoClient.swift: Thin wrapper with typed methods
+    - Sources/CentrifugoClient/CentrifugoSubscriptions.swift: Channel subscription support
     - README.md: Usage documentation
     - CLAUDE.md: AI assistance documentation
     """
@@ -85,6 +86,7 @@ class SwiftThinGenerator:
         package_name: str = "CentrifugoClient",
         minimum_ios_version: str = "13.0",
         minimum_macos_version: str = "10.15",
+        channels: List[ChannelInfo] = None,
     ):
         """
         Initialize Swift generator.
@@ -96,9 +98,11 @@ class SwiftThinGenerator:
             package_name: Swift package name (default: CentrifugoClient)
             minimum_ios_version: Minimum iOS version (default: 13.0)
             minimum_macos_version: Minimum macOS version (default: 10.15)
+            channels: List of channel info for subscription generation
         """
         self.methods = methods
         self.models = models
+        self.channels = channels or []
         self.output_dir = Path(output_dir)
         self.package_name = package_name
         self.minimum_ios_version = minimum_ios_version
@@ -125,6 +129,8 @@ class SwiftThinGenerator:
         self._generate_any_codable(sources_dir)
         self._generate_rpc_client(sources_dir)
         self._generate_api_client(sources_dir)
+        if self.channels:
+            self._generate_subscriptions(sources_dir)
         self._generate_readme()
         self._generate_claude_md()
 
@@ -148,6 +154,7 @@ class SwiftThinGenerator:
         types_data = []
         generated_names = set()
 
+        # Add RPC param/result models
         for model in self.models:
             result = pydantic_to_swift_with_nested(model)
 
@@ -162,6 +169,24 @@ class SwiftThinGenerator:
             if main["name"] not in generated_names:
                 types_data.append(main)
                 generated_names.add(main["name"])
+
+        # Add channel event types
+        for channel in self.channels:
+            for event_type in channel.event_types:
+                if event_type.__name__ not in generated_names:
+                    result = pydantic_to_swift_with_nested(event_type)
+
+                    # Add nested types first
+                    for nested in result["nested"]:
+                        if nested["name"] not in generated_names:
+                            types_data.append(nested)
+                            generated_names.add(nested["name"])
+
+                    # Add main type
+                    main = result["main"]
+                    if main["name"] not in generated_names:
+                        types_data.append(main)
+                        generated_names.add(main["name"])
 
         content = template.render(
             types=types_data,
@@ -210,14 +235,82 @@ class SwiftThinGenerator:
 
         model_names = [m.__name__ for m in self.models]
 
+        # Prepare channel data for template
+        channels_data = []
+        for channel in self.channels:
+            # Convert channel name to Swift method name (e.g., "ai_chat" -> "aiChat")
+            parts = channel.name.split('_')
+            swift_name = parts[0] + ''.join(p.capitalize() for p in parts[1:])
+
+            # Get event type names
+            event_type_names = [et.__name__ for et in channel.event_types]
+
+            # Create enum name for events (e.g., "AIChatEvent")
+            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+
+            channels_data.append({
+                "name": channel.name,
+                "swift_name": swift_name,
+                "pattern": channel.pattern,
+                "params": channel.params,
+                "event_types": event_type_names,
+                "event_enum": enum_name,
+                "docstring": channel.docstring or f"Subscribe to {channel.name} channel.",
+            })
+
         content = template.render(
             methods=methods_data,
             models=model_names,
+            channels=channels_data,
             package_name=self.package_name,
             api_version=self.api_version,
             generated_at=datetime.now().isoformat(),
         )
         (sources_dir / "CentrifugoClient.swift").write_text(content)
+
+    def _generate_subscriptions(self, sources_dir: Path) -> None:
+        """Generate CentrifugoSubscriptions.swift with channel event enums."""
+        template = self.jinja_env.get_template("Subscriptions.swift.j2")
+
+        channels_data = []
+        for channel in self.channels:
+            # Convert channel name to Swift enum name
+            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+
+            # Collect event cases
+            event_cases = []
+            for event_type in channel.event_types:
+                # Get the 'type' field value from the model
+                type_value = None
+                for field_name, field_info in event_type.model_fields.items():
+                    if field_name == 'type':
+                        # Get default value
+                        type_value = field_info.default
+                        break
+
+                if type_value:
+                    # Convert to Swift case name (e.g., "message_start" -> "messageStart")
+                    parts = type_value.split('_')
+                    case_name = parts[0] + ''.join(p.capitalize() for p in parts[1:])
+
+                    event_cases.append({
+                        "case_name": case_name,
+                        "type_value": type_value,
+                        "type_name": event_type.__name__,
+                    })
+
+            channels_data.append({
+                "name": channel.name,
+                "enum_name": enum_name,
+                "event_cases": event_cases,
+                "docstring": channel.docstring or f"Events for {channel.name} channel.",
+            })
+
+        content = template.render(
+            channels=channels_data,
+            generated_at=datetime.now().isoformat(),
+        )
+        (sources_dir / "CentrifugoSubscriptions.swift").write_text(content)
 
     def _generate_readme(self) -> None:
         """Generate README.md file."""
@@ -267,10 +360,27 @@ class SwiftThinGenerator:
 
         model_names = [m.__name__ for m in self.models]
 
+        # Prepare channel data for documentation
+        channels_data = []
+        for channel in self.channels:
+            parts = channel.name.split('_')
+            swift_name = parts[0] + ''.join(p.capitalize() for p in parts[1:])
+            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+
+            channels_data.append({
+                "name": channel.name,
+                "swift_name": swift_name,
+                "pattern": channel.pattern,
+                "params": channel.params,
+                "event_enum": enum_name,
+                "docstring": channel.docstring or f"Subscribe to {channel.name} channel.",
+            })
+
         content = template.render(
             package_name=self.package_name,
             methods=methods_data,
             models=model_names,
+            channels=channels_data,
             api_version=self.api_version,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )

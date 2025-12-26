@@ -34,6 +34,13 @@ from .services.client.exceptions import (
     CentrifugoValidationError,
 )
 from .services.logging import CentrifugoLogContext, CentrifugoLogger
+from .decorators import websocket_rpc, centrifugo_channel
+from .registry import (
+    get_global_registry,
+    get_global_channel_registry,
+    RegisteredHandler,
+    RegisteredChannel,
+)
 
 # Note: CentrifugoLog model is not imported here to avoid AppRegistryNotReady errors
 # Import it directly from .models when needed: from django_cfg.apps.integrations.centrifugo.models import CentrifugoLog
@@ -56,4 +63,12 @@ __all__ = [
     "CentrifugoConnectionError",
     "CentrifugoConfigurationError",
     "CentrifugoValidationError",
+    # Decorators
+    "websocket_rpc",
+    "centrifugo_channel",
+    # Registry
+    "get_global_registry",
+    "get_global_channel_registry",
+    "RegisteredHandler",
+    "RegisteredChannel",
 ]

@@ -1,13 +1,13 @@
 """
-Method discovery for code generation.
+Method and channel discovery for code generation.
 
-Scans registered RPC handlers and extracts type information.
+Scans registered RPC handlers and channels, extracts type information.
 """
 
 import inspect
 import logging
-from dataclasses import dataclass
-from typing import Type, List, Optional, Any, get_type_hints, Dict
+from dataclasses import dataclass, field
+from typing import Type, List, Optional, Any, get_type_hints, Dict, Union, get_args, get_origin
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,45 @@ try:
     from typing import _GenericAlias  # For Dict[str, Any] checks
 except ImportError:
     _GenericAlias = type(None)
+
+
+@dataclass
+class ChannelInfo:
+    """
+    Information about a Centrifugo channel for subscriptions.
+
+    Attributes:
+        name: Channel name pattern (e.g., "ai_chat")
+        pattern: Channel pattern with placeholders (e.g., "ai_chat:workspace:{workspace_id}")
+        event_types: List of Pydantic event model classes
+        docstring: Channel documentation
+        params: List of parameter names from pattern (e.g., ["workspace_id"])
+    """
+
+    name: str
+    pattern: str
+    event_types: List[Type[BaseModel]] = field(default_factory=list)
+    docstring: Optional[str] = None
+    params: List[str] = field(default_factory=list)
+
+    @classmethod
+    def from_pattern(
+        cls,
+        name: str,
+        pattern: str,
+        event_types: List[Type[BaseModel]],
+        docstring: Optional[str] = None,
+    ) -> "ChannelInfo":
+        """Create ChannelInfo extracting params from pattern."""
+        import re
+        params = re.findall(r'\{(\w+)\}', pattern)
+        return cls(
+            name=name,
+            pattern=pattern,
+            event_types=event_types,
+            docstring=docstring,
+            params=params,
+        )
 
 
 @dataclass
@@ -243,10 +282,83 @@ def get_method_summary(methods: List[RPCMethodInfo]) -> str:
 discover_rpc_methods = discover_rpc_methods_from_router
 
 
+def extract_event_types_from_union(union_type: Any) -> List[Type[BaseModel]]:
+    """
+    Extract all Pydantic model types from a Union type.
+
+    Args:
+        union_type: A Union type like Union[EventA, EventB, EventC]
+
+    Returns:
+        List of Pydantic BaseModel subclasses
+    """
+    event_types = []
+
+    # Check if it's a Union type
+    origin = get_origin(union_type)
+    if origin is Union:
+        args = get_args(union_type)
+        for arg in args:
+            if _is_pydantic_model(arg):
+                event_types.append(arg)
+    elif _is_pydantic_model(union_type):
+        event_types.append(union_type)
+
+    return event_types
+
+
+def extract_all_channel_models(channels: List[ChannelInfo]) -> List[Type[BaseModel]]:
+    """
+    Extract all unique Pydantic models from channel event types.
+
+    Args:
+        channels: List of channel information
+
+    Returns:
+        List of unique Pydantic models for events
+    """
+    models = set()
+
+    for channel in channels:
+        for event_type in channel.event_types:
+            models.add(event_type)
+            # Also extract nested models from event fields
+            _extract_nested_models(event_type, models)
+
+    return sorted(list(models), key=lambda m: m.__name__)
+
+
+def _extract_nested_models(model: Type[BaseModel], models: set) -> None:
+    """Recursively extract nested Pydantic models from a model."""
+    try:
+        hints = get_type_hints(model)
+        for field_name, field_type in hints.items():
+            # Handle Optional, List, etc.
+            origin = get_origin(field_type)
+            if origin is Union:
+                for arg in get_args(field_type):
+                    if _is_pydantic_model(arg) and arg not in models:
+                        models.add(arg)
+                        _extract_nested_models(arg, models)
+            elif origin is list:
+                args = get_args(field_type)
+                if args and _is_pydantic_model(args[0]) and args[0] not in models:
+                    models.add(args[0])
+                    _extract_nested_models(args[0], models)
+            elif _is_pydantic_model(field_type) and field_type not in models:
+                models.add(field_type)
+                _extract_nested_models(field_type, models)
+    except Exception:
+        pass  # Ignore type hint extraction errors
+
+
 __all__ = [
     "RPCMethodInfo",
+    "ChannelInfo",
     "discover_rpc_methods_from_router",
     "discover_rpc_methods",
     "extract_all_models",
+    "extract_all_channel_models",
+    "extract_event_types_from_union",
     "get_method_summary",
 ]

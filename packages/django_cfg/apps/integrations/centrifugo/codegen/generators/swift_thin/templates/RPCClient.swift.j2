@@ -1,44 +1,11 @@
 // CentrifugoRPCClient.swift
-// Centrifugo RPC Client for Swift
+// Centrifugo RPC Client using SwiftCentrifuge
 // Auto-generated - DO NOT EDIT
 
 import Foundation
+import SwiftCentrifuge
 
-// MARK: - RPC Types
-
-/// RPC request message sent to Centrifugo.
-public struct RPCRequest: Codable, Sendable {
-    public let method: String
-    public let params: AnyCodable
-    public let correlationId: String
-    public let replyTo: String
-
-    enum CodingKeys: String, CodingKey {
-        case method
-        case params
-        case correlationId = "correlation_id"
-        case replyTo = "reply_to"
-    }
-}
-
-/// RPC response message received from Centrifugo.
-public struct RPCResponse: Codable, Sendable {
-    public let correlationId: String
-    public let result: AnyCodable?
-    public let error: RPCErrorInfo?
-
-    enum CodingKeys: String, CodingKey {
-        case correlationId = "correlation_id"
-        case result
-        case error
-    }
-}
-
-/// RPC error information.
-public struct RPCErrorInfo: Codable, Sendable {
-    public let code: Int
-    public let message: String
-}
+// MARK: - RPC Error Types
 
 /// RPC error type.
 public enum RPCError: Error, LocalizedError {
@@ -48,8 +15,7 @@ public enum RPCError: Error, LocalizedError {
     case encodingError(Error)
     case decodingError(Error)
     case webSocketError(Error)
-    case invalidResponse
-    case connectionClosed
+    case connectionFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -65,10 +31,8 @@ public enum RPCError: Error, LocalizedError {
             return "Failed to decode response: \(error.localizedDescription)"
         case .webSocketError(let error):
             return "WebSocket error: \(error.localizedDescription)"
-        case .invalidResponse:
-            return "Invalid response from server"
-        case .connectionClosed:
-            return "Connection was closed"
+        case .connectionFailed(let reason):
+            return "Connection failed: \(reason)"
         }
     }
 }
@@ -76,24 +40,54 @@ public enum RPCError: Error, LocalizedError {
 // MARK: - Connection State
 
 /// Centrifugo connection state.
-/// Named CentrifugoConnectionState to avoid conflict with app's ConnectionState.
 public enum CentrifugoConnectionState: Sendable {
     case disconnected
     case connecting
     case connected
 }
 
+// MARK: - RPC Client Delegate
+
+/// Internal delegate to capture connection events.
+private class RPCClientDelegate: CentrifugeClientDelegate {
+    var onConnectedHandler: ((CentrifugeConnectedEvent) -> Void)?
+    var onDisconnectedHandler: ((CentrifugeDisconnectedEvent) -> Void)?
+    var onConnectingHandler: ((CentrifugeConnectingEvent) -> Void)?
+    var onErrorHandler: ((CentrifugeErrorEvent) -> Void)?
+
+    func onConnected(_ client: CentrifugeClient, _ event: CentrifugeConnectedEvent) {
+        onConnectedHandler?(event)
+    }
+
+    func onDisconnected(_ client: CentrifugeClient, _ event: CentrifugeDisconnectedEvent) {
+        onDisconnectedHandler?(event)
+    }
+
+    func onConnecting(_ client: CentrifugeClient, _ event: CentrifugeConnectingEvent) {
+        onConnectingHandler?(event)
+    }
+
+    func onError(_ client: CentrifugeClient, _ event: CentrifugeErrorEvent) {
+        onErrorHandler?(event)
+    }
+
+    // Server-side subscription events (optional)
+    func onSubscribed(_ client: CentrifugeClient, _ event: CentrifugeServerSubscribedEvent) {}
+    func onSubscribing(_ client: CentrifugeClient, _ event: CentrifugeServerSubscribingEvent) {}
+    func onUnsubscribed(_ client: CentrifugeClient, _ event: CentrifugeServerUnsubscribedEvent) {}
+    func onPublication(_ client: CentrifugeClient, _ event: CentrifugeServerPublicationEvent) {}
+    func onJoin(_ client: CentrifugeClient, _ event: CentrifugeServerJoinEvent) {}
+    func onLeave(_ client: CentrifugeClient, _ event: CentrifugeServerLeaveEvent) {}
+}
+
 // MARK: - Centrifugo RPC Client
 
-/// Async RPC client for Centrifugo WebSocket connections.
-///
-/// This client implements the correlation ID pattern to enable RPC-style
-/// communication over Centrifugo's pub/sub infrastructure.
+/// Async RPC client for Centrifugo using SwiftCentrifuge library.
 ///
 /// Usage:
 /// ```swift
 /// let client = try CentrifugoRPCClient(
-///     url: "ws://localhost:8000/connection/websocket",
+///     url: "ws://127.0.0.1:8120/connection/websocket",
 ///     token: "jwt-token",
 ///     userId: "user-123"
 /// )
@@ -104,18 +98,18 @@ public enum CentrifugoConnectionState: Sendable {
 public actor CentrifugoRPCClient {
     // MARK: - Properties
 
-    private let url: URL
+    private let url: String
     private let token: String
     private let userId: String
     private let timeout: TimeInterval
-    private var webSocket: URLSessionWebSocketTask?
-    private var session: URLSession?
-    private var pendingRequests: [String: CheckedContinuation<Data, Error>] = [:]
-    private let replyChannel: String
-    private var receiveTask: Task<Void, Never>?
+    private var client: CentrifugeClient?
+    private let delegate: RPCClientDelegate
 
     /// Current connection state.
     public private(set) var state: CentrifugoConnectionState = .disconnected
+
+    // Connection continuations for async/await
+    private var connectionContinuation: CheckedContinuation<Void, Error>?
 
     // MARK: - Initialization
 
@@ -124,77 +118,165 @@ public actor CentrifugoRPCClient {
     /// - Parameters:
     ///   - url: WebSocket URL of the Centrifugo server
     ///   - token: JWT authentication token
-    ///   - userId: User ID for the reply channel
+    ///   - userId: User ID for logging/debugging
     ///   - timeout: RPC call timeout in seconds (default: 30)
-    /// - Throws: URLError if the URL is invalid
     public init(
         url: String,
         token: String,
         userId: String,
         timeout: TimeInterval = 30
     ) throws {
-        guard let wsUrl = URL(string: url) else {
-            throw URLError(.badURL)
-        }
-        self.url = wsUrl
+        self.url = url
         self.token = token
         self.userId = userId
         self.timeout = timeout
-        self.replyChannel = "user#\(userId)"
+        self.delegate = RPCClientDelegate()
     }
 
     // MARK: - Connection Management
 
     /// Connect to the Centrifugo server.
     ///
-    /// Establishes a WebSocket connection and subscribes to the user's reply channel.
-    /// - Throws: Error if connection fails
+    /// Establishes WebSocket connection and authenticates with JWT token.
+    /// - Throws: RPCError if connection fails
     public func connect() async throws {
         guard state == .disconnected else { return }
 
         state = .connecting
 
-        // Create URL session with authorization header
-        let config = URLSessionConfiguration.default
-        config.httpAdditionalHeaders = [
-            "Authorization": "Bearer \(token)"
-        ]
+        // Configure client
+        let config = CentrifugeClientConfig(
+            token: token,
+            useNativeWebSocket: true  // Use URLSessionWebSocketTask
+        )
 
-        session = URLSession(configuration: config)
-        webSocket = session?.webSocketTask(with: url)
-        webSocket?.resume()
+        client = CentrifugeClient(endpoint: url, config: config, delegate: delegate)
 
-        // Start receiving messages
-        receiveTask = Task { [weak self] in
-            await self?.receiveLoop()
+        // Set up delegate handlers
+        setupDelegateHandlers()
+
+        // Wait for connection
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            connectionContinuation = continuation
+            client?.connect()
+
+            // Timeout
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                if state == .connecting {
+                    connectionContinuation?.resume(throwing: RPCError.timeout)
+                    connectionContinuation = nil
+                }
+            }
+        }
+    }
+
+    /// Set up delegate handlers for connection events.
+    private func setupDelegateHandlers() {
+        delegate.onConnectedHandler = { [weak self] event in
+            guard let self = self else { return }
+            Task {
+                await self.handleConnected(event)
+            }
         }
 
-        // Subscribe to reply channel
-        try await subscribe(channel: replyChannel)
+        delegate.onDisconnectedHandler = { [weak self] event in
+            guard let self = self else { return }
+            Task {
+                await self.handleDisconnected(event)
+            }
+        }
 
+        delegate.onErrorHandler = { [weak self] event in
+            guard let self = self else { return }
+            Task {
+                await self.handleError(event)
+            }
+        }
+    }
+
+    private func handleConnected(_ event: CentrifugeConnectedEvent) {
         state = .connected
+        connectionContinuation?.resume(returning: ())
+        connectionContinuation = nil
+    }
+
+    private func handleDisconnected(_ event: CentrifugeDisconnectedEvent) {
+        state = .disconnected
+        if let continuation = connectionContinuation {
+            continuation.resume(throwing: RPCError.connectionFailed("Disconnected: \(event.reason)"))
+            connectionContinuation = nil
+        }
+    }
+
+    private func handleError(_ event: CentrifugeErrorEvent) {
+        if let continuation = connectionContinuation {
+            continuation.resume(throwing: RPCError.webSocketError(event.error))
+            connectionContinuation = nil
+        }
     }
 
     /// Disconnect from the Centrifugo server.
-    ///
-    /// Cancels all pending requests and closes the WebSocket connection.
     public func disconnect() async {
+        client?.disconnect()
+        client = nil
         state = .disconnected
+    }
 
-        // Cancel receive task
-        receiveTask?.cancel()
-        receiveTask = nil
+    // MARK: - Subscriptions
 
-        // Close WebSocket
-        webSocket?.cancel(with: .goingAway, reason: nil)
-        webSocket = nil
-        session = nil
+    private var subscriptions: [String: CentrifugeSubscription] = [:]
 
-        // Cancel all pending requests
-        for (_, continuation) in pendingRequests {
-            continuation.resume(throwing: RPCError.connectionClosed)
+    /// Subscribe to a channel for real-time events.
+    ///
+    /// - Parameters:
+    ///   - channel: Channel name to subscribe to
+    ///   - onPublication: Callback for incoming messages (raw Data)
+    /// - Throws: RPCError if subscription fails
+    public func subscribe(
+        channel: String,
+        onPublication: @escaping @Sendable (Data) -> Void
+    ) async throws {
+        guard state == .connected, let client = client else {
+            throw RPCError.notConnected
         }
-        pendingRequests.removeAll()
+
+        // Create subscription
+        let sub = client.newSubscription(channel)
+
+        // Set up publication handler
+        sub.on(event: .publication) { event in
+            onPublication(event.data)
+        }
+
+        sub.on(event: .subscribed) { _ in
+            // Subscription confirmed
+        }
+
+        sub.on(event: .error) { event in
+            // Log error but don't throw
+        }
+
+        // Store and subscribe
+        subscriptions[channel] = sub
+        try await sub.subscribe()
+    }
+
+    /// Unsubscribe from a channel.
+    ///
+    /// - Parameter channel: Channel name to unsubscribe from
+    public func unsubscribe(channel: String) async throws {
+        guard let sub = subscriptions[channel] else { return }
+        try await sub.unsubscribe()
+        subscriptions.removeValue(forKey: channel)
+    }
+
+    /// Unsubscribe from all channels.
+    public func unsubscribeAll() async {
+        for (_, sub) in subscriptions {
+            try? await sub.unsubscribe()
+        }
+        subscriptions.removeAll()
     }
 
     // MARK: - RPC Methods
@@ -202,7 +284,7 @@ public actor CentrifugoRPCClient {
     /// Call an RPC method and wait for response.
     ///
     /// - Parameters:
-    ///   - method: RPC method name (e.g., "terminal.input")
+    ///   - method: RPC method name (e.g., "file.list_directory")
     ///   - params: Request parameters (must be Encodable)
     /// - Returns: Response decoded as the specified type
     /// - Throws: RPCError if the call fails
@@ -210,33 +292,36 @@ public actor CentrifugoRPCClient {
         method: String,
         params: P
     ) async throws -> R {
-        guard state == .connected else {
+        guard state == .connected, let client = client else {
             throw RPCError.notConnected
         }
 
-        let correlationId = UUID().uuidString
-
-        // Encode params to AnyCodable
+        // Encode params to JSON
         let encoder = JSONEncoder()
-        let paramsData = try encoder.encode(params)
-        let paramsAny = try JSONDecoder().decode(AnyCodable.self, from: paramsData)
-
-        // Create request
-        let request = RPCRequest(
-            method: method,
-            params: paramsAny,
-            correlationId: correlationId,
-            replyTo: replyChannel
-        )
-
-        // Send and wait for response
-        let responseData = try await sendRequest(request, correlationId: correlationId)
-
-        // Decode response
+        let paramsData: Data
         do {
-            return try JSONDecoder().decode(R.self, from: responseData)
+            paramsData = try encoder.encode(params)
         } catch {
-            throw RPCError.decodingError(error)
+            throw RPCError.encodingError(error)
+        }
+
+        // Make RPC call
+        return try await withCheckedThrowingContinuation { continuation in
+            client.rpc(method: method, data: paramsData) { result in
+                switch result {
+                case .success(let rpcResult):
+                    // Decode response
+                    do {
+                        let decoder = JSONDecoder()
+                        let decoded = try decoder.decode(R.self, from: rpcResult.data)
+                        continuation.resume(returning: decoded)
+                    } catch {
+                        continuation.resume(throwing: RPCError.decodingError(error))
+                    }
+                case .failure(let error):
+                    continuation.resume(throwing: RPCError.webSocketError(error))
+                }
+            }
         }
     }
 
@@ -247,133 +332,31 @@ public actor CentrifugoRPCClient {
     ///   - params: Request parameters
     /// - Throws: RPCError if sending fails
     public func send<P: Encodable>(method: String, params: P) async throws {
-        guard state == .connected else {
+        guard state == .connected, let client = client else {
             throw RPCError.notConnected
         }
 
         // Encode params
         let encoder = JSONEncoder()
-        let paramsData = try encoder.encode(params)
-        let paramsAny = try JSONDecoder().decode(AnyCodable.self, from: paramsData)
-
-        // Create request without reply_to
-        let request = RPCRequest(
-            method: method,
-            params: paramsAny,
-            correlationId: UUID().uuidString,
-            replyTo: ""
-        )
-
-        try await publishToRPC(request)
-    }
-
-    // MARK: - Private Methods
-
-    private func sendRequest(_ request: RPCRequest, correlationId: String) async throws -> Data {
-        // Create continuation for response
-        return try await withCheckedThrowingContinuation { continuation in
-            pendingRequests[correlationId] = continuation
-
-            // Send request
-            Task {
-                do {
-                    try await publishToRPC(request)
-                } catch {
-                    if let pending = pendingRequests.removeValue(forKey: correlationId) {
-                        pending.resume(throwing: error)
-                    }
-                }
-            }
-
-            // Set timeout
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                if let pending = pendingRequests.removeValue(forKey: correlationId) {
-                    pending.resume(throwing: RPCError.timeout)
-                }
-            }
-        }
-    }
-
-    private func publishToRPC(_ request: RPCRequest) async throws {
-        let encoder = JSONEncoder()
-        let requestData = try encoder.encode(request)
-        let requestJson = try JSONSerialization.jsonObject(with: requestData)
-
-        let publishMessage: [String: Any] = [
-            "publish": [
-                "channel": "rpc.requests",
-                "data": requestJson
-            ]
-        ]
-
-        let publishData = try JSONSerialization.data(withJSONObject: publishMessage)
-        try await webSocket?.send(.data(publishData))
-    }
-
-    private func subscribe(channel: String) async throws {
-        let subscribeMessage: [String: Any] = [
-            "subscribe": ["channel": channel]
-        ]
-        let data = try JSONSerialization.data(withJSONObject: subscribeMessage)
-        try await webSocket?.send(.data(data))
-    }
-
-    private func receiveLoop() async {
-        while !Task.isCancelled {
-            do {
-                guard let message = try await webSocket?.receive() else {
-                    continue
-                }
-
-                switch message {
-                case .data(let data):
-                    handleMessage(data)
-                case .string(let string):
-                    if let data = string.data(using: .utf8) {
-                        handleMessage(data)
-                    }
-                @unknown default:
-                    break
-                }
-            } catch {
-                if !Task.isCancelled {
-                    // Connection lost - exit loop
-                    break
-                }
-            }
-        }
-    }
-
-    private func handleMessage(_ data: Data) {
+        let paramsData: Data
         do {
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return
-            }
-
-            // Handle publication messages (responses come as publications)
-            if let pub = json["pub"] as? [String: Any],
-               let pubData = pub["data"] as? [String: Any],
-               let correlationId = pubData["correlation_id"] as? String {
-
-                if let continuation = pendingRequests.removeValue(forKey: correlationId) {
-                    // Check for error
-                    if let errorInfo = pubData["error"] as? [String: Any] {
-                        let code = errorInfo["code"] as? Int ?? -1
-                        let message = errorInfo["message"] as? String ?? "Unknown error"
-                        continuation.resume(throwing: RPCError.serverError(code: code, message: message))
-                    } else if let result = pubData["result"] {
-                        // Encode result back to Data for decoding
-                        let resultData = try JSONSerialization.data(withJSONObject: result)
-                        continuation.resume(returning: resultData)
-                    } else {
-                        // Empty result
-                        continuation.resume(returning: Data())
-                    }
-                }
-            }
+            paramsData = try encoder.encode(params)
         } catch {
-            // Ignore malformed messages
+            throw RPCError.encodingError(error)
         }
+
+        // Send without waiting for response
+        client.rpc(method: method, data: paramsData) { _ in
+            // Ignore result for fire-and-forget
+        }
+    }
+}
+
+// MARK: - Convenience Extensions
+
+extension CentrifugoRPCClient {
+    /// Check if connected to the server.
+    public var isConnected: Bool {
+        state == .connected
     }
 }

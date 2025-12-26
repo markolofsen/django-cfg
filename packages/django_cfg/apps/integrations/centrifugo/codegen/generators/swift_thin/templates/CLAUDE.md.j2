@@ -6,17 +6,18 @@ API Version: {{ api_version }}
 ## Overview
 
 This is a generated Swift client for Centrifugo RPC communication.
-It provides type-safe access to server-side RPC methods.
+It provides type-safe access to server-side RPC methods using the official SwiftCentrifuge library.
 
 ## Architecture
 
 ### Components
 
 1. **CentrifugoRPCClient** (`RPCClient.swift`)
-   - Low-level WebSocket communication
-   - Correlation ID pattern for RPC over pub/sub
-   - Connection management
-   - Timeout handling
+   - Uses official SwiftCentrifuge library
+   - Native Centrifugo RPC protocol (`client.rpc(method, data)`)
+   - Async/await wrapper over callback-based library
+   - Connection state management
+   - Auto-reconnect support (via SwiftCentrifuge)
 
 2. **APIClient** (`APIClient.swift`)
    - High-level typed API wrapper
@@ -34,9 +35,20 @@ It provides type-safe access to server-side RPC methods.
 ### Communication Pattern
 
 ```
-Client → publish to "rpc.requests" → Centrifugo → Server
-Server → publish to "user#userId" → Centrifugo → Client
+┌─────────────┐    WebSocket     ┌───────────────┐    RPC Proxy    ┌─────────────┐
+│ iOS Client  │ ───────────────► │  Centrifugo   │ ──────────────► │   Django    │
+│             │                  │               │                 │             │
+│ SwiftCentri │  rpc(method,    │  /api/rpc/    │  HTTP POST to   │  @websocket │
+│ fuge.rpc()  │  data)          │               │  /rpc/proxy     │  _rpc       │
+└─────────────┘ ◄─────────────── └───────────────┘ ◄────────────── └─────────────┘
+                 RpcResult.data                     JSON response
 ```
+
+**Key points:**
+- Uses SwiftCentrifuge's native RPC mechanism (not pub/sub)
+- Centrifugo proxies RPC to Django's `/rpc/proxy` endpoint
+- JWT token authenticates the WebSocket connection
+- RPC method name maps to Django handler
 
 ## Available RPC Methods
 
@@ -56,6 +68,75 @@ Server → publish to "user#userId" → Centrifugo → Client
 {% for model in models %}
 - `{{ model }}`
 {% endfor %}
+{% if channels %}
+
+## Channel Subscriptions (Pub/Sub)
+
+This client supports subscribing to Centrifugo channels for real-time events.
+Unlike RPC calls which are request/response, subscriptions receive continuous event streams.
+
+### Available Channels
+
+{% for channel in channels %}
+#### `{{ channel.swift_name }}`
+
+- **Pattern:** `{{ channel.pattern }}`
+{% for param in channel.params %}
+- **Parameter:** `{{ param }}`
+{% endfor %}
+- **Event Type:** `{{ channel.event_enum }}`
+- **Description:** {{ channel.docstring }}
+{% endfor %}
+
+### Subscription Usage
+
+```swift
+// Subscribe to channel events
+try await client.subscribeToAichat(workspace_id: workspaceId) { event in
+    switch event {
+    case .messageStart(let e):
+        print("AI started: \(e.message_id)")
+    case .messageChunk(let e):
+        // Handle streaming chunks
+        appendText(e.chunk)
+    case .messageComplete(let e):
+        print("Done: \(e.content)")
+    case .toolCallStart(let e):
+        print("Tool: \(e.tool_name)")
+    case .toolCallResult(let e):
+        print("Result: \(e.result)")
+    case .error(let e):
+        showError(e.error)
+    case .status(let e):
+        updateStatus(e.status)
+    case .typing(let e):
+        showTypingIndicator(e.is_typing)
+    }
+}
+
+// Unsubscribe when done
+try await client.unsubscribeFromAichat(workspace_id: workspaceId)
+```
+
+### Event Types (CentrifugoSubscriptions.swift)
+
+Each channel has a discriminated union enum for type-safe event handling:
+
+```swift
+public enum AiChatEvent: Codable, Sendable {
+    case messageStart(MessageStartEvent)
+    case messageChunk(MessageChunkEvent)
+    case messageComplete(MessageCompleteEvent)
+    case toolCallStart(ToolCallStartEvent)
+    case toolCallResult(ToolCallResultEvent)
+    case error(ErrorEvent)
+    case status(StatusEvent)
+    case typing(TypingEvent)
+}
+```
+
+Events are automatically decoded based on the `type` field in JSON.
+{% endif %}
 
 ## Usage Examples
 
@@ -63,10 +144,11 @@ Server → publish to "user#userId" → Centrifugo → Client
 
 ```swift
 import {{ package_name }}
+import SwiftCentrifuge  // Official Centrifugo client
 
 let api = try APIClient(
-    url: "ws://localhost:8000/connection/websocket",
-    token: "jwt-token",
+    url: "ws://127.0.0.1:8120/connection/websocket",
+    token: "jwt-token",  // Must be Centrifugo JWT, NOT CLI token!
     userId: "user-123"
 )
 
@@ -93,6 +175,10 @@ do {
     // Handle timeout
 } catch RPCError.serverError(let code, let message) {
     // Handle server error
+} catch RPCError.webSocketError(let error) {
+    // Handle WebSocket/connection error
+} catch RPCError.connectionFailed(let reason) {
+    // Handle connection failure
 } catch {
     // Handle other errors
 }
@@ -156,39 +242,123 @@ let api = try APIClient(
 )
 ```
 
+## IPv4 vs IPv6 (iOS Simulator)
+
+When running in iOS Simulator, avoid `localhost` - it may resolve to IPv6 (`::1`) while Centrifugo listens on IPv4.
+
+❌ **WRONG:** `ws://localhost:8120/...`
+✅ **CORRECT:** `ws://127.0.0.1:8120/...`
+
+Use the URL from profile (`profile.centrifugo.centrifugoUrl`) which is configured correctly.
+
 ## Important Notes for AI Assistants
 
 1. **AUTHENTICATION:** Token MUST be a Centrifugo JWT (from profile or `/cfg/centrifugo/auth/token/`), NOT CLI token!
 
-2. **Thread Safety:** Both `CentrifugoRPCClient` and `APIClient` are Swift actors - all methods are inherently thread-safe.
+2. **SwiftCentrifuge:** This client uses the official SwiftCentrifuge library for proper Centrifugo protocol support.
 
-3. **Async/Await:** All RPC methods are async - always use `await` when calling.
+3. **Thread Safety:** Both `CentrifugoRPCClient` and `APIClient` are Swift actors - all methods are inherently thread-safe.
 
-4. **Connection Lifecycle:** Always call `connect()` before making RPC calls, and `disconnect()` when done.
+4. **Async/Await:** All RPC methods are async - always use `await` when calling.
 
-5. **Fire-and-forget Methods:** Methods with `no_wait=True` don't return a response - use `send()` internally.
+5. **Connection Lifecycle:** Always call `connect()` before making RPC calls, and `disconnect()` when done.
 
-6. **Type Safety:** All parameters and return types are strongly typed using generated Codable structs.
+6. **Fire-and-forget Methods:** Methods with `no_wait=True` don't return a response - use `send()` internally.
 
-7. **Error Types:** Use `RPCError` enum for error handling:
+7. **Type Safety:** All parameters and return types are strongly typed using generated Codable structs.
+
+8. **Error Types:** Use `RPCError` enum for error handling:
    - `.notConnected` - Call `connect()` first
    - `.timeout` - Request exceeded timeout
    - `.serverError(code, message)` - Server returned an error
    - `.encodingError` - Failed to encode request
    - `.decodingError` - Failed to decode response
+   - `.webSocketError(error)` - SwiftCentrifuge error
+   - `.connectionFailed(reason)` - Connection failed
 
-8. **Debugging:** If Centrifugo server logs show `user: ""`, authentication failed - check token type!
+9. **Debugging:** If Centrifugo server logs show `user: ""`, authentication failed - check token type!
+
+10. **Native WebSocket:** SwiftCentrifuge uses `URLSessionWebSocketTask` (iOS 13+) for native WebSocket support.
+
+## Dependencies
+
+- **SwiftCentrifuge** (0.6.0+) - Official Centrifugo client library
+  - GitHub: https://github.com/centrifugal/centrifuge-swift
+  - Handles Centrifugo protocol, auto-reconnect, token refresh
 
 ## Regeneration
 
 This code is auto-generated. To regenerate:
 
 ```bash
-python manage.py generate_centrifugo_clients --output ./sdk --swift
+cd /projects/solution/django
+poetry run python manage.py generate_centrifuge_swift
 ```
 
 Do not manually edit generated files - changes will be lost on regeneration.
+{% if channels %}
+
+## Adding New Channels (Django)
+
+To add a new channel for code generation:
+
+### 1. Create Pydantic Event Models
+
+Each event must have a `type` field with `Literal` default for discriminated union decoding:
+
+```python
+# apps/my_app/models/events.py
+from typing import Literal, Union
+from pydantic import BaseModel
+
+class MyEvent1(BaseModel):
+    type: Literal["event_1"] = "event_1"  # Required for Swift enum!
+    data: str
+
+class MyEvent2(BaseModel):
+    type: Literal["event_2"] = "event_2"
+    value: int
+
+# Union type for all events
+MyChannelEvent = Union[MyEvent1, MyEvent2]
+```
+
+### 2. Register Channel
+
+```python
+# apps/my_app/channels.py
+from django_cfg.apps.integrations.centrifugo.decorators import centrifugo_channel
+from apps.my_app.models.events import MyChannelEvent
+
+centrifugo_channel(
+    name="my_channel",
+    pattern="my_channel:user:{user_id}",  # {placeholders} become parameters
+    event_type=MyChannelEvent,
+    docstring="My custom events",
+)
+```
+
+### 3. Import in apps.py
+
+```python
+# apps/my_app/apps.py
+class MyAppConfig(AppConfig):
+    def ready(self):
+        from . import channels  # noqa: F401
+```
+
+### 4. Regenerate Swift Client
+
+```bash
+poetry run python manage.py generate_centrifuge_swift
+```
+
+This generates:
+- `CentrifugoSubscriptions.swift` - Event enums with Codable decoding
+- `CentrifugoClient.swift` - subscribe/unsubscribe methods
+- `CentrifugoTypes.swift` - Event model structs
+{% endif %}
 
 ---
 
-*Generated by Centrifugo Codegen for Swift*
+*Generated by Centrifugo Codegen for Swift (using SwiftCentrifuge)*
