@@ -23,7 +23,9 @@ MODULES_REGISTRY = {
 
     # gRPC module (uses flat API - no nested config imports needed)
     "GRPCConfig": ("django_cfg.models.api.grpc", "GRPCConfig"),
-    "GRPCServerConfig": ("django_cfg.models.api.grpc.config", "GRPCServerConfig"),
+    "GRPCServerConfig": ("django_cfg.models.api.grpc", "GRPCServerConfig"),
+    "GRPCKeepaliveConfig": ("django_cfg.models.api.grpc", "GRPCKeepaliveConfig"),
+    "GRPCConnectionLimitsConfig": ("django_cfg.models.api.grpc", "GRPCConnectionLimitsConfig"),
 
     # Next.js Admin Integration
     "NextJsAdminConfig": ("django_cfg.modules.nextjs_admin", "NextJsAdminConfig"),

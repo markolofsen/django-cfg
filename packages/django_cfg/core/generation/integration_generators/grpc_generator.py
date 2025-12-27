@@ -181,8 +181,9 @@ class GRPCSettingsGenerator:
             "enable_health_check": server_config.enable_health_check,
             "max_send_message_length": server_config.max_send_message_length,
             "max_receive_message_length": server_config.max_receive_message_length,
-            "keepalive_time_ms": server_config.keepalive_time_ms,
-            "keepalive_timeout_ms": server_config.keepalive_timeout_ms,
+            # Nested keepalive config (Pydantic2)
+            "keepalive": server_config.keepalive,
+            "connection_limits": server_config.connection_limits,
         }
 
         # Add optional compression

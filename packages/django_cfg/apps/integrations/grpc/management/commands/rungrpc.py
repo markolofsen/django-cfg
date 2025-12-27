@@ -285,8 +285,9 @@ class Command(BaseCommand):
                 "compression": grpc_server_config_obj.compression,
                 "max_send_message_length": grpc_server_config_obj.max_send_message_length,
                 "max_receive_message_length": grpc_server_config_obj.max_receive_message_length,
-                "keepalive_time_ms": grpc_server_config_obj.keepalive_time_ms,
-                "keepalive_timeout_ms": grpc_server_config_obj.keepalive_timeout_ms,
+                # Nested Pydantic2 configs
+                "keepalive": grpc_server_config_obj.keepalive,
+                "connection_limits": grpc_server_config_obj.connection_limits,
             }
 
         # gRPC options
@@ -555,7 +556,7 @@ class Command(BaseCommand):
         Build gRPC server options from configuration.
 
         Args:
-            config: GRPC_SERVER configuration dict
+            config: GRPC_SERVER configuration dict with nested Pydantic2 configs
 
         Returns:
             List of gRPC options tuples
@@ -569,31 +570,34 @@ class Command(BaseCommand):
         options.append(("grpc.max_send_message_length", max_send))
         options.append(("grpc.max_receive_message_length", max_receive))
 
-        # Keep-alive settings (HTTP/2 PING frames for connection health)
-        # Default: 30s ping interval (detect dead connections quickly)
-        # Matches Go client keepalive settings for consistent behavior
-        keepalive_time = config.get("keepalive_time_ms", 30000)  # 30s (was 60s)
-        keepalive_timeout = config.get("keepalive_timeout_ms", 10000)  # 10s (was 20s)
+        # Keepalive settings - use nested Pydantic2 config if available
+        keepalive = config.get("keepalive")
+        if keepalive and hasattr(keepalive, "to_grpc_options"):
+            # Use Pydantic2 config with to_grpc_options() method
+            options.extend(keepalive.to_grpc_options())
+        else:
+            # Fallback for legacy/flat config or settings dict
+            keepalive_time = config.get("keepalive_time_ms", 10000)  # 10s
+            keepalive_timeout = config.get("keepalive_timeout_ms", 5000)  # 5s
+            options.append(("grpc.keepalive_time_ms", keepalive_time))
+            options.append(("grpc.keepalive_timeout_ms", keepalive_timeout))
+            options.append(("grpc.keepalive_permit_without_calls", True))
+            options.append(("grpc.http2.min_time_between_pings_ms", 5000))
+            options.append(("grpc.http2.max_pings_without_data", 0))
 
-        options.append(("grpc.keepalive_time_ms", keepalive_time))
-        options.append(("grpc.keepalive_timeout_ms", keepalive_timeout))
-
-        # Send pings even if no active RPCs (important for idle connections)
-        options.append(("grpc.keepalive_permit_without_calls", True))
-
-        # Anti-abuse protection: min time between successive pings
-        options.append(("grpc.http2.min_time_between_pings_ms", 10000))  # 10s
-        options.append(("grpc.http2.min_ping_interval_without_data_ms", 5000))  # 5s
-        options.append(("grpc.http2.max_pings_without_data", 2))
-
-        # Connection limits
-        max_connection_idle = config.get("max_connection_idle_ms", 7200000)  # 2 hours
-        max_connection_age = config.get("max_connection_age_ms", 86400000)  # 24 hours
-        max_connection_age_grace = config.get("max_connection_age_grace_ms", 300000)  # 5 min
-
-        options.append(("grpc.max_connection_idle_ms", max_connection_idle))
-        options.append(("grpc.max_connection_age_ms", max_connection_age))
-        options.append(("grpc.max_connection_age_grace_ms", max_connection_age_grace))
+        # Connection limits - use nested Pydantic2 config if available
+        connection_limits = config.get("connection_limits")
+        if connection_limits and hasattr(connection_limits, "to_grpc_options"):
+            # Use Pydantic2 config with to_grpc_options() method
+            options.extend(connection_limits.to_grpc_options())
+        else:
+            # Fallback for legacy/flat config or settings dict
+            max_connection_idle = config.get("max_connection_idle_ms", 7200000)  # 2 hours
+            max_connection_age = config.get("max_connection_age_ms", 0)  # Unlimited for streaming
+            max_connection_age_grace = config.get("max_connection_age_grace_ms", 300000)  # 5 min
+            options.append(("grpc.max_connection_idle_ms", max_connection_idle))
+            options.append(("grpc.max_connection_age_ms", max_connection_age))
+            options.append(("grpc.max_connection_age_grace_ms", max_connection_age_grace))
 
         return options
 

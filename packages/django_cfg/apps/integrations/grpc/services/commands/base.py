@@ -482,8 +482,6 @@ class StreamingCommandClient(Generic[TCommand], ABC):
         Returns:
             Address string like "localhost:50051" or "grpc.example.com:50051"
         """
-        import os
-
         # Auto-detect from django-cfg config if not explicitly set
         if self.config.grpc_port is None or self.config.grpc_host == "localhost":
             try:
@@ -517,21 +515,18 @@ class StreamingCommandClient(Generic[TCommand], ABC):
             except Exception as e:
                 logger.debug(f"Auto-detection from config failed: {e}")
 
-        # Fallback to environment variables
+        # Fallback to constants (which use get_current_config internally)
         if self.config.grpc_host == "localhost":
-            env_host = os.getenv('GRPC_HOST')
-            if env_host:
-                self.config.grpc_host = env_host
-                logger.debug(f"Using GRPC_HOST from environment: {self.config.grpc_host}")
+            from django_cfg.apps.integrations.grpc.configs.constants import get_grpc_host
+            config_host = get_grpc_host()
+            if config_host != "localhost":
+                self.config.grpc_host = config_host
+                logger.debug(f"Using gRPC host from config: {self.config.grpc_host}")
 
         if self.config.grpc_port is None:
-            env_port = os.getenv('GRPC_PORT')
-            if env_port:
-                try:
-                    self.config.grpc_port = int(env_port)
-                    logger.debug(f"Using GRPC_PORT from environment: {self.config.grpc_port}")
-                except ValueError:
-                    logger.warning(f"Invalid GRPC_PORT environment variable: {env_port}")
+            from django_cfg.apps.integrations.grpc.configs.constants import get_grpc_port
+            self.config.grpc_port = get_grpc_port()
+            logger.debug(f"Using gRPC port from config: {self.config.grpc_port}")
 
         # Final fallback to default port
         if self.config.grpc_port is None:

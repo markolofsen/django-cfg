@@ -1,212 +1,304 @@
 """
 gRPC Configuration Constants.
 
-All default values are centralized here with environment variable support.
-Import these constants instead of hardcoding values throughout the codebase.
+All values are retrieved from DjangoConfig.grpc with fallback to defaults.
+Uses get_current_config() for type-safe Pydantic configuration.
 
 Usage:
     from django_cfg.apps.integrations.grpc.configs.constants import (
-        GRPC_DEFAULT_PORT,
-        GRPC_DEFAULT_HOST,
-        GRPC_RPC_CALL_TIMEOUT,
+        get_grpc_port,
+        get_grpc_host,
+        get_rpc_call_timeout,
     )
 
-Environment Variables:
-    GRPC_HOST - Default host for client connections
-    GRPC_PORT - Default port for server/client
-    GRPC_CHANNEL_READY_TIMEOUT - Channel ready timeout (seconds)
-    GRPC_RPC_CALL_TIMEOUT - Default RPC call timeout (seconds)
-    GRPC_CONNECT_TIMEOUT - Connection timeout (seconds)
-    GRPC_QUEUE_TIMEOUT - Queue operation timeout (seconds)
-    GRPC_KEEPALIVE_TIME_MS - Keepalive ping interval (milliseconds)
-    GRPC_KEEPALIVE_TIMEOUT_MS - Keepalive ping timeout (milliseconds)
-    GRPC_MAX_CONNECTION_IDLE_MS - Max idle connection time (milliseconds)
-    GRPC_MAX_MESSAGE_LENGTH - Max message size (bytes)
-    GRPC_MAX_RETRIES - Maximum retry attempts
-    GRPC_QUEUE_SIZE - Default queue size
-    GRPC_CB_THRESHOLD - Circuit breaker failure threshold
-    GRPC_CB_TIMEOUT - Circuit breaker recovery timeout (seconds)
-    GRPC_MAX_CONSECUTIVE_ERRORS - Max consecutive errors before disconnect
+Configuration is read from:
+    1. DjangoConfig.grpc (Pydantic config) - preferred
+    2. Hardcoded defaults - fallback
 """
 
 from __future__ import annotations
 
-import os
-from typing import Final
+from functools import lru_cache
+from typing import TYPE_CHECKING, Final, Optional
+
+if TYPE_CHECKING:
+    from django_cfg.models.api.grpc import GRPCConfig
 
 # =============================================================================
-# Network Defaults
+# Default Values (used when config is not available)
 # =============================================================================
 
-GRPC_DEFAULT_HOST: Final[str] = os.getenv("GRPC_HOST", "localhost")
-"""Default host for client connections."""
+# Network defaults
+_DEFAULT_HOST: Final[str] = "localhost"
+_DEFAULT_PORT: Final[int] = 50051
+_BIND_HOST_IPV6: Final[str] = "[::]"
+_BIND_HOST_IPV4: Final[str] = "0.0.0.0"
 
-GRPC_DEFAULT_PORT: Final[int] = int(os.getenv("GRPC_PORT", "50051"))
-"""Default port for gRPC server and client connections."""
+# Timeout defaults (seconds)
+_DEFAULT_CHANNEL_READY_TIMEOUT: Final[float] = 5.0
+_DEFAULT_RPC_CALL_TIMEOUT: Final[float] = 5.0
+_DEFAULT_CONNECT_TIMEOUT: Final[float] = 3.0
+_DEFAULT_QUEUE_TIMEOUT: Final[float] = 10.0
+_DEFAULT_ROUTING_TIMEOUT: Final[float] = 5.0
 
-GRPC_BIND_HOST_IPV6: Final[str] = "[::]"
-"""IPv6 bind address for server (listens on all interfaces)."""
+# Keepalive defaults (milliseconds)
+_DEFAULT_KEEPALIVE_TIME_MS: Final[int] = 10000  # 10 seconds (matches Go client)
+_DEFAULT_KEEPALIVE_TIMEOUT_MS: Final[int] = 5000  # 5 seconds (matches Go client)
+_DEFAULT_MAX_CONNECTION_IDLE_MS: Final[int] = 7200000  # 2 hours
 
-GRPC_BIND_HOST_IPV4: Final[str] = "0.0.0.0"
-"""IPv4 bind address for server (listens on all interfaces)."""
+# Message limits
+_DEFAULT_MAX_MESSAGE_LENGTH: Final[int] = 4 * 1024 * 1024  # 4MB
 
-# =============================================================================
-# Timeout Defaults (seconds)
-# =============================================================================
+# Retry defaults
+_DEFAULT_MAX_RETRIES: Final[int] = 3
 
-GRPC_CHANNEL_READY_TIMEOUT: Final[float] = float(
-    os.getenv("GRPC_CHANNEL_READY_TIMEOUT", "5.0")
-)
-"""Timeout for waiting for channel to become ready."""
+# Queue defaults
+_DEFAULT_QUEUE_SIZE: Final[int] = 1000
 
-GRPC_RPC_CALL_TIMEOUT: Final[float] = float(
-    os.getenv("GRPC_RPC_CALL_TIMEOUT", "5.0")
-)
-"""Default timeout for RPC calls."""
+# Circuit breaker defaults
+_DEFAULT_CB_THRESHOLD: Final[int] = 5
+_DEFAULT_CB_TIMEOUT: Final[float] = 60.0
 
-GRPC_CONNECT_TIMEOUT: Final[float] = float(
-    os.getenv("GRPC_CONNECT_TIMEOUT", "3.0")
-)
-"""Timeout for establishing connection."""
+# Error handling
+_DEFAULT_MAX_CONSECUTIVE_ERRORS: Final[int] = 3
 
-GRPC_QUEUE_TIMEOUT: Final[float] = float(
-    os.getenv("GRPC_QUEUE_TIMEOUT", "10.0")
-)
-"""Timeout for queue operations (same-process commands)."""
-
-GRPC_ROUTING_TIMEOUT: Final[float] = float(
-    os.getenv("GRPC_ROUTING_TIMEOUT", "5.0")
-)
-"""Timeout for cross-process routing calls."""
 
 # =============================================================================
-# Keepalive Defaults (milliseconds)
+# Config Access
 # =============================================================================
 
-GRPC_KEEPALIVE_TIME_MS: Final[int] = int(
-    os.getenv("GRPC_KEEPALIVE_TIME_MS", "30000")
-)
-"""Keepalive ping interval in milliseconds (default: 30 seconds)."""
 
-GRPC_KEEPALIVE_TIMEOUT_MS: Final[int] = int(
-    os.getenv("GRPC_KEEPALIVE_TIMEOUT_MS", "10000")
-)
-"""Keepalive ping timeout in milliseconds (default: 10 seconds)."""
+def _get_grpc_config() -> Optional["GRPCConfig"]:
+    """Get gRPC config from current DjangoConfig."""
+    try:
+        from django_cfg.core.config import get_current_config
 
-GRPC_MAX_CONNECTION_IDLE_MS: Final[int] = int(
-    os.getenv("GRPC_MAX_CONNECTION_IDLE_MS", "7200000")
-)
-"""Maximum idle connection time in milliseconds (default: 2 hours)."""
+        config = get_current_config()
+        if config and hasattr(config, "grpc") and config.grpc:
+            return config.grpc
+    except Exception:
+        pass
+    return None
 
-GRPC_KEEPALIVE_PERMIT_WITHOUT_CALLS: Final[bool] = True
-"""Allow keepalive pings even without active calls."""
 
-GRPC_MAX_PINGS_WITHOUT_DATA: Final[int] = 2
-"""Maximum pings allowed without data before connection is considered dead."""
+# =============================================================================
+# Network Configuration
+# =============================================================================
+
+
+def get_grpc_host() -> str:
+    """Get default host for client connections."""
+    config = _get_grpc_config()
+    if config and config.server:
+        return config.server.host
+    return _DEFAULT_HOST
+
+
+def get_grpc_port() -> int:
+    """Get default port for gRPC server and client connections."""
+    config = _get_grpc_config()
+    if config and config.server:
+        return config.server.port
+    return _DEFAULT_PORT
+
+
+# Static bind addresses (not configurable)
+GRPC_BIND_HOST_IPV6: Final[str] = _BIND_HOST_IPV6
+GRPC_BIND_HOST_IPV4: Final[str] = _BIND_HOST_IPV4
+
+
+# =============================================================================
+# Timeout Configuration
+# =============================================================================
+
+
+def get_channel_ready_timeout() -> float:
+    """Get timeout for waiting for channel to become ready."""
+    return _DEFAULT_CHANNEL_READY_TIMEOUT
+
+
+def get_rpc_call_timeout() -> float:
+    """Get default timeout for RPC calls."""
+    return _DEFAULT_RPC_CALL_TIMEOUT
+
+
+def get_connect_timeout() -> float:
+    """Get timeout for establishing connection."""
+    return _DEFAULT_CONNECT_TIMEOUT
+
+
+def get_queue_timeout() -> float:
+    """Get timeout for queue operations."""
+    return _DEFAULT_QUEUE_TIMEOUT
+
+
+def get_routing_timeout() -> float:
+    """Get timeout for cross-process routing calls."""
+    return _DEFAULT_ROUTING_TIMEOUT
+
+
+# =============================================================================
+# Keepalive Configuration
+# =============================================================================
+
+
+def get_keepalive_time_ms() -> int:
+    """Get keepalive ping interval in milliseconds."""
+    config = _get_grpc_config()
+    if config and config.server and config.server.keepalive:
+        return config.server.keepalive.time_ms
+    return _DEFAULT_KEEPALIVE_TIME_MS
+
+
+def get_keepalive_timeout_ms() -> int:
+    """Get keepalive ping timeout in milliseconds."""
+    config = _get_grpc_config()
+    if config and config.server and config.server.keepalive:
+        return config.server.keepalive.timeout_ms
+    return _DEFAULT_KEEPALIVE_TIMEOUT_MS
+
+
+def get_max_connection_idle_ms() -> int:
+    """Get maximum idle connection time in milliseconds."""
+    config = _get_grpc_config()
+    if config and config.server and config.server.connection_limits:
+        return config.server.connection_limits.max_connection_idle_ms
+    return _DEFAULT_MAX_CONNECTION_IDLE_MS
+
+
+def get_keepalive_permit_without_calls() -> bool:
+    """Allow keepalive pings even without active calls."""
+    config = _get_grpc_config()
+    if config and config.server and config.server.keepalive:
+        return config.server.keepalive.permit_without_calls
+    return True
+
+
+def get_max_pings_without_data() -> int:
+    """Get maximum pings allowed without data."""
+    config = _get_grpc_config()
+    if config and config.server and config.server.keepalive:
+        return config.server.keepalive.max_pings_without_data
+    return 0  # Unlimited for streaming
+
 
 # =============================================================================
 # Message Limits
 # =============================================================================
 
-GRPC_MAX_MESSAGE_LENGTH: Final[int] = int(
-    os.getenv("GRPC_MAX_MESSAGE_LENGTH", str(4 * 1024 * 1024))
-)
-"""Maximum message size in bytes (default: 4MB)."""
 
-GRPC_MAX_SEND_MESSAGE_LENGTH: Final[int] = GRPC_MAX_MESSAGE_LENGTH
-"""Maximum outbound message size (alias for GRPC_MAX_MESSAGE_LENGTH)."""
+def get_max_message_length() -> int:
+    """Get maximum message size in bytes."""
+    config = _get_grpc_config()
+    if config and config.server:
+        return config.server.max_send_message_length
+    return _DEFAULT_MAX_MESSAGE_LENGTH
 
-GRPC_MAX_RECEIVE_MESSAGE_LENGTH: Final[int] = GRPC_MAX_MESSAGE_LENGTH
-"""Maximum inbound message size (alias for GRPC_MAX_MESSAGE_LENGTH)."""
+
+def get_max_send_message_length() -> int:
+    """Get maximum outbound message size."""
+    config = _get_grpc_config()
+    if config and config.server:
+        return config.server.max_send_message_length
+    return _DEFAULT_MAX_MESSAGE_LENGTH
+
+
+def get_max_receive_message_length() -> int:
+    """Get maximum inbound message size."""
+    config = _get_grpc_config()
+    if config and config.server:
+        return config.server.max_receive_message_length
+    return _DEFAULT_MAX_MESSAGE_LENGTH
+
 
 # =============================================================================
-# Retry Defaults
+# Retry Configuration
 # =============================================================================
 
+
+# Static retry settings (not in Pydantic config yet)
 GRPC_ENABLE_RETRIES: Final[bool] = True
-"""Enable automatic retries for failed RPC calls."""
-
-GRPC_MAX_RETRIES: Final[int] = int(os.getenv("GRPC_MAX_RETRIES", "3"))
-"""Maximum number of retry attempts."""
-
 GRPC_RETRY_BACKOFF_INITIAL_MS: Final[int] = 100
-"""Initial backoff delay for retries in milliseconds."""
-
 GRPC_RETRY_BACKOFF_MAX_MS: Final[int] = 1000
-"""Maximum backoff delay for retries in milliseconds."""
-
 GRPC_RETRY_BACKOFF_MULTIPLIER: Final[float] = 2.0
-"""Multiplier for exponential backoff."""
+
+
+def get_max_retries() -> int:
+    """Get maximum number of retry attempts."""
+    return _DEFAULT_MAX_RETRIES
+
 
 # =============================================================================
-# Queue Defaults
+# Queue Configuration
 # =============================================================================
 
-GRPC_DEFAULT_QUEUE_SIZE: Final[int] = int(os.getenv("GRPC_QUEUE_SIZE", "1000"))
-"""Default queue size for streaming operations."""
 
+def get_default_queue_size() -> int:
+    """Get default queue size for streaming operations."""
+    return _DEFAULT_QUEUE_SIZE
+
+
+# Static queue settings
 GRPC_MAX_QUEUE_SIZE: Final[int] = 100000
-"""Maximum allowed queue size."""
+
 
 # =============================================================================
-# Streaming Defaults
+# Streaming Configuration
 # =============================================================================
 
+# Static streaming settings
 GRPC_DEFAULT_PING_INTERVAL: Final[float] = 5.0
-"""Default ping interval for streaming connections (seconds)."""
-
 GRPC_DEFAULT_PING_TIMEOUT: Final[float] = 30.0
-"""Default ping timeout for streaming connections (seconds)."""
-
 GRPC_MAX_PING_INTERVAL: Final[float] = 300.0
-"""Maximum allowed ping interval (seconds)."""
-
 GRPC_MAX_PING_TIMEOUT: Final[float] = 600.0
-"""Maximum allowed ping timeout (seconds)."""
+
 
 # =============================================================================
-# Circuit Breaker Defaults
+# Circuit Breaker Configuration
 # =============================================================================
 
-CIRCUIT_BREAKER_THRESHOLD: Final[int] = int(os.getenv("GRPC_CB_THRESHOLD", "5"))
-"""Number of consecutive failures before circuit opens."""
 
-CIRCUIT_BREAKER_TIMEOUT: Final[float] = float(
-    os.getenv("GRPC_CB_TIMEOUT", "60.0")
-)
-"""Time in seconds before circuit breaker attempts recovery."""
+def get_circuit_breaker_threshold() -> int:
+    """Get number of consecutive failures before circuit opens."""
+    return _DEFAULT_CB_THRESHOLD
 
+
+def get_circuit_breaker_timeout() -> float:
+    """Get time in seconds before circuit breaker attempts recovery."""
+    return _DEFAULT_CB_TIMEOUT
+
+
+# Static circuit breaker settings
 CIRCUIT_BREAKER_SUCCESS_THRESHOLD: Final[int] = 2
-"""Number of successful calls needed to close circuit."""
+
 
 # =============================================================================
 # Error Handling
 # =============================================================================
 
-GRPC_MAX_CONSECUTIVE_ERRORS: Final[int] = int(
-    os.getenv("GRPC_MAX_CONSECUTIVE_ERRORS", "3")
-)
-"""Maximum consecutive errors before disconnecting."""
+
+def get_max_consecutive_errors() -> int:
+    """Get maximum consecutive errors before disconnecting."""
+    return _DEFAULT_MAX_CONSECUTIVE_ERRORS
+
 
 # =============================================================================
-# Centrifugo Defaults
+# Centrifugo Configuration
 # =============================================================================
 
+# Static Centrifugo settings
 CENTRIFUGO_MAX_RETRIES: Final[int] = 3
-"""Maximum retry attempts for Centrifugo publishing."""
-
 CENTRIFUGO_DEFAULT_CHANNEL_PREFIX: Final[str] = "grpc"
-"""Default channel prefix for Centrifugo."""
+
 
 # =============================================================================
-# Server Defaults
+# Server Configuration
 # =============================================================================
 
+# Static server settings
 GRPC_SERVER_MAX_WORKERS: Final[int] = 10
-"""Default maximum worker threads (for sync server)."""
-
 GRPC_HEARTBEAT_INTERVAL: Final[int] = 300
-"""Default heartbeat interval in seconds (5 minutes)."""
+
 
 # =============================================================================
 # Helper Functions
@@ -218,14 +310,14 @@ def get_grpc_address(host: str | None = None, port: int | None = None) -> str:
     Get formatted gRPC address string.
 
     Args:
-        host: Host address (defaults to GRPC_DEFAULT_HOST)
-        port: Port number (defaults to GRPC_DEFAULT_PORT)
+        host: Host address (defaults to config or localhost)
+        port: Port number (defaults to config or 50051)
 
     Returns:
         Formatted address string like "localhost:50051"
     """
-    h = host if host is not None else GRPC_DEFAULT_HOST
-    p = port if port is not None else GRPC_DEFAULT_PORT
+    h = host if host is not None else get_grpc_host()
+    p = port if port is not None else get_grpc_port()
     return f"{h}:{p}"
 
 
@@ -235,11 +327,39 @@ def get_bind_address(host: str | None = None, port: int | None = None) -> str:
 
     Args:
         host: Bind host (defaults to GRPC_BIND_HOST_IPV6)
-        port: Port number (defaults to GRPC_DEFAULT_PORT)
+        port: Port number (defaults to config or 50051)
 
     Returns:
         Formatted bind address like "[::]:50051"
     """
     h = host if host is not None else GRPC_BIND_HOST_IPV6
-    p = port if port is not None else GRPC_DEFAULT_PORT
+    p = port if port is not None else get_grpc_port()
     return f"{h}:{p}"
+
+
+# =============================================================================
+# Backward Compatibility Aliases (deprecated, use functions instead)
+# =============================================================================
+
+# These are evaluated at import time for backward compat
+# New code should use get_* functions instead
+GRPC_DEFAULT_HOST: str = _DEFAULT_HOST
+GRPC_DEFAULT_PORT: int = _DEFAULT_PORT
+GRPC_CHANNEL_READY_TIMEOUT: float = _DEFAULT_CHANNEL_READY_TIMEOUT
+GRPC_RPC_CALL_TIMEOUT: float = _DEFAULT_RPC_CALL_TIMEOUT
+GRPC_CONNECT_TIMEOUT: float = _DEFAULT_CONNECT_TIMEOUT
+GRPC_QUEUE_TIMEOUT: float = _DEFAULT_QUEUE_TIMEOUT
+GRPC_ROUTING_TIMEOUT: float = _DEFAULT_ROUTING_TIMEOUT
+GRPC_KEEPALIVE_TIME_MS: int = _DEFAULT_KEEPALIVE_TIME_MS
+GRPC_KEEPALIVE_TIMEOUT_MS: int = _DEFAULT_KEEPALIVE_TIMEOUT_MS
+GRPC_MAX_CONNECTION_IDLE_MS: int = _DEFAULT_MAX_CONNECTION_IDLE_MS
+GRPC_KEEPALIVE_PERMIT_WITHOUT_CALLS: bool = True
+GRPC_MAX_PINGS_WITHOUT_DATA: int = 0
+GRPC_MAX_MESSAGE_LENGTH: int = _DEFAULT_MAX_MESSAGE_LENGTH
+GRPC_MAX_SEND_MESSAGE_LENGTH: int = _DEFAULT_MAX_MESSAGE_LENGTH
+GRPC_MAX_RECEIVE_MESSAGE_LENGTH: int = _DEFAULT_MAX_MESSAGE_LENGTH
+GRPC_MAX_RETRIES: int = _DEFAULT_MAX_RETRIES
+GRPC_DEFAULT_QUEUE_SIZE: int = _DEFAULT_QUEUE_SIZE
+CIRCUIT_BREAKER_THRESHOLD: int = _DEFAULT_CB_THRESHOLD
+CIRCUIT_BREAKER_TIMEOUT: float = _DEFAULT_CB_TIMEOUT
+GRPC_MAX_CONSECUTIVE_ERRORS: int = _DEFAULT_MAX_CONSECUTIVE_ERRORS

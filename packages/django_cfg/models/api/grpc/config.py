@@ -23,6 +23,147 @@ from django_cfg.models.base import BaseConfig
 from django_cfg.apps.integrations.grpc.configs.tls import TLSConfig
 
 
+class GRPCKeepaliveConfig(BaseConfig):
+    """
+    gRPC HTTP/2 keepalive configuration.
+
+    Controls HTTP/2 PING frames for connection health and dead connection detection.
+    These settings should match between client and server for optimal behavior.
+
+    Recommended settings for long-lived bidirectional streaming:
+    - time_ms: 10000 (10s) - fast dead connection detection
+    - timeout_ms: 5000 (5s) - quick ping acknowledgment
+    - permit_without_calls: True - maintain idle connections
+    - max_pings_without_data: 0 - unlimited pings for streaming
+
+    Example:
+        >>> config = GRPCKeepaliveConfig(
+        ...     time_ms=10000,  # Ping every 10 seconds
+        ...     timeout_ms=5000,  # Wait 5 seconds for ACK
+        ...     permit_without_calls=True,
+        ... )
+    """
+
+    time_ms: int = Field(
+        default=10000,  # 10 seconds (matches Go client)
+        description="Keepalive ping interval in milliseconds. How often to send HTTP/2 PING if no activity.",
+        ge=1000,  # Min 1 second
+        le=7200000,  # Max 2 hours
+    )
+
+    timeout_ms: int = Field(
+        default=5000,  # 5 seconds (matches Go client)
+        description="Keepalive ping timeout in milliseconds. How long to wait for PING ACK.",
+        ge=1000,  # Min 1 second
+        le=60000,  # Max 1 minute
+    )
+
+    permit_without_calls: bool = Field(
+        default=True,
+        description="Allow keepalive pings even without active RPC calls. Essential for idle connections.",
+    )
+
+    min_time_between_pings_ms: int = Field(
+        default=5000,  # 5 seconds
+        description="Minimum time between successive pings (anti-abuse protection).",
+        ge=1000,
+        le=60000,
+    )
+
+    max_pings_without_data: int = Field(
+        default=0,  # 0 = unlimited (important for streaming)
+        description="Maximum pings allowed without data. 0 = unlimited (recommended for streaming).",
+        ge=0,
+        le=100,
+    )
+
+    @classmethod
+    def for_streaming(cls) -> "GRPCKeepaliveConfig":
+        """
+        Factory for long-lived bidirectional streaming connections.
+
+        Optimized for:
+        - Fast dead connection detection (10s ping, 5s timeout = 15s detection)
+        - Stable connections through NAT/firewalls
+        - Unlimited idle pings for streaming
+        """
+        return cls(
+            time_ms=10000,
+            timeout_ms=5000,
+            permit_without_calls=True,
+            min_time_between_pings_ms=5000,
+            max_pings_without_data=0,
+        )
+
+    @classmethod
+    def for_short_lived(cls) -> "GRPCKeepaliveConfig":
+        """
+        Factory for short-lived RPC connections.
+
+        Optimized for:
+        - Less aggressive keepalive
+        - Standard anti-abuse protection
+        """
+        return cls(
+            time_ms=30000,
+            timeout_ms=10000,
+            permit_without_calls=True,
+            min_time_between_pings_ms=10000,
+            max_pings_without_data=2,
+        )
+
+    def to_grpc_options(self) -> list[tuple[str, Any]]:
+        """Convert to gRPC server/channel options."""
+        return [
+            ("grpc.keepalive_time_ms", self.time_ms),
+            ("grpc.keepalive_timeout_ms", self.timeout_ms),
+            ("grpc.keepalive_permit_without_calls", self.permit_without_calls),
+            ("grpc.http2.min_time_between_pings_ms", self.min_time_between_pings_ms),
+            ("grpc.http2.min_ping_interval_without_data_ms", self.min_time_between_pings_ms),
+            ("grpc.http2.max_pings_without_data", self.max_pings_without_data),
+        ]
+
+
+class GRPCConnectionLimitsConfig(BaseConfig):
+    """
+    gRPC connection limits configuration.
+
+    Controls connection lifecycle for server-side connection management.
+
+    Example:
+        >>> config = GRPCConnectionLimitsConfig(
+        ...     max_connection_idle_ms=7200000,  # 2 hours
+        ...     max_connection_age_ms=0,  # Unlimited (for streaming)
+        ... )
+    """
+
+    max_connection_idle_ms: int = Field(
+        default=7200000,  # 2 hours
+        description="Maximum idle connection time in milliseconds before server closes it.",
+        ge=0,  # 0 = unlimited
+    )
+
+    max_connection_age_ms: int = Field(
+        default=0,  # Unlimited (important for long-lived streaming)
+        description="Maximum connection age in milliseconds. 0 = unlimited (recommended for streaming).",
+        ge=0,
+    )
+
+    max_connection_age_grace_ms: int = Field(
+        default=300000,  # 5 minutes
+        description="Grace period for in-flight RPCs when connection age limit is reached.",
+        ge=0,
+    )
+
+    def to_grpc_options(self) -> list[tuple[str, int]]:
+        """Convert to gRPC server options."""
+        return [
+            ("grpc.max_connection_idle_ms", self.max_connection_idle_ms),
+            ("grpc.max_connection_age_ms", self.max_connection_age_ms),
+            ("grpc.max_connection_age_grace_ms", self.max_connection_age_grace_ms),
+        ]
+
+
 class GRPCServerConfig(BaseConfig):
     """
     gRPC server configuration.
@@ -34,8 +175,8 @@ class GRPCServerConfig(BaseConfig):
         >>> config = GRPCServerConfig(
         ...     host="0.0.0.0",
         ...     port=50051,
-        ...     max_workers=10,
-        ...     compression="gzip"
+        ...     compression="gzip",
+        ...     keepalive=GRPCKeepaliveConfig.for_streaming(),
         ... )
     """
 
@@ -102,16 +243,16 @@ class GRPCServerConfig(BaseConfig):
         le=100 * 1024 * 1024,
     )
 
-    keepalive_time_ms: int = Field(
-        default=7200000,  # 2 hours
-        description="Keepalive ping interval in milliseconds",
-        ge=1000,  # Min 1 second
+    # Nested keepalive config (Pydantic2)
+    keepalive: GRPCKeepaliveConfig = Field(
+        default_factory=GRPCKeepaliveConfig,
+        description="HTTP/2 keepalive settings for connection health",
     )
 
-    keepalive_timeout_ms: int = Field(
-        default=20000,  # 20 seconds
-        description="Keepalive ping timeout in milliseconds",
-        ge=1000,
+    # Nested connection limits config (Pydantic2)
+    connection_limits: GRPCConnectionLimitsConfig = Field(
+        default_factory=GRPCConnectionLimitsConfig,
+        description="Connection lifecycle limits",
     )
 
     interceptors: List[str] = Field(

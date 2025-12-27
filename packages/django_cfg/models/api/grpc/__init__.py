@@ -15,22 +15,32 @@ Example:
     ...     package_prefix="api",
     ... )
 
-    Advanced with nested configs (optional):
-    >>> from django_cfg.models.api.grpc.config import GRPCServerConfig, GRPCObservabilityConfig
+    Advanced with nested configs:
+    >>> from django_cfg import GRPCServerConfig, GRPCKeepaliveConfig
     >>> config = GRPCConfig(
     ...     enabled=True,
-    ...     server=GRPCServerConfig(max_workers=50, compression="gzip"),
-    ...     observability=GRPCObservabilityConfig(log_to_db=False, sampling_rate=0.1),
+    ...     server=GRPCServerConfig(
+    ...         keepalive=GRPCKeepaliveConfig.for_streaming(),
+    ...     ),
     ... )
 """
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .config import GRPCConfig, GRPCObservabilityConfig
+    from .config import (
+        GRPCConfig,
+        GRPCServerConfig,
+        GRPCKeepaliveConfig,
+        GRPCConnectionLimitsConfig,
+        GRPCObservabilityConfig,
+    )
 
 __all__ = [
     "GRPCConfig",
+    "GRPCServerConfig",
+    "GRPCKeepaliveConfig",
+    "GRPCConnectionLimitsConfig",
     "GRPCObservabilityConfig",
 ]
 
@@ -39,10 +49,19 @@ def __getattr__(name: str):
     """Lazy import with helpful error message."""
     if name in __all__:
         try:
-            from .config import GRPCConfig, GRPCObservabilityConfig
+            from .config import (
+                GRPCConfig,
+                GRPCServerConfig,
+                GRPCKeepaliveConfig,
+                GRPCConnectionLimitsConfig,
+                GRPCObservabilityConfig,
+            )
 
             return {
                 "GRPCConfig": GRPCConfig,
+                "GRPCServerConfig": GRPCServerConfig,
+                "GRPCKeepaliveConfig": GRPCKeepaliveConfig,
+                "GRPCConnectionLimitsConfig": GRPCConnectionLimitsConfig,
                 "GRPCObservabilityConfig": GRPCObservabilityConfig,
             }[name]
 
