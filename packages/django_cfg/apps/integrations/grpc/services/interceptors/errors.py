@@ -15,6 +15,7 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError as DjangoValidationError,
 )
+from django.db import OperationalError
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,12 @@ class ErrorHandlingInterceptor(grpc.ServerInterceptor):
             PermissionDenied: (
                 grpc.StatusCode.PERMISSION_DENIED,
                 "Permission denied: {message}"
+            ),
+            # Database errors - server temporarily unavailable
+            # Client should retry connection, NOT re-authenticate
+            OperationalError: (
+                grpc.StatusCode.UNAVAILABLE,
+                "Database temporarily unavailable. Please retry."
             ),
             # Python built-in exceptions
             ValueError: (

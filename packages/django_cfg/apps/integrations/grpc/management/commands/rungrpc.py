@@ -245,6 +245,7 @@ class Command(BaseCommand):
         # Import models here to avoid AppRegistryNotReady
         from django_cfg.apps.integrations.grpc.models import GRPCServerStatus
         from django_cfg.apps.integrations.grpc.services.management.config_helper import (
+            get_grpc_config,
             get_grpc_server_config,
         )
 
@@ -314,9 +315,39 @@ class Command(BaseCommand):
         if enable_reflection:
             await self._add_reflection_async(self.server, registered_service_names)
 
-        # Bind server
+        # Bind server with optional TLS
         address = f"{host}:{port}"
-        self.server.add_insecure_port(address)
+
+        # Check for TLS configuration
+        grpc_config = get_grpc_config()
+        tls_config = grpc_config.tls if grpc_config else None
+
+        if tls_config and tls_config.enabled:
+            # TLS enabled - use secure port
+            try:
+                credentials = tls_config.get_server_credentials()
+                if credentials:
+                    self.server.add_secure_port(address, credentials)
+                    self.stdout.write(
+                        self.style.SUCCESS(f"gRPC server with TLS listening on {address}")
+                    )
+                else:
+                    # TLS enabled but no credentials - fall back to insecure with warning
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"TLS enabled but no credentials configured. "
+                            f"Falling back to insecure port on {address}"
+                        )
+                    )
+                    self.server.add_insecure_port(address)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f"Failed to configure TLS: {e}. Using insecure port.")
+                )
+                self.server.add_insecure_port(address)
+        else:
+            # No TLS - use insecure port
+            self.server.add_insecure_port(address)
 
         # Track server status in database
         server_status = None
@@ -539,9 +570,10 @@ class Command(BaseCommand):
         options.append(("grpc.max_receive_message_length", max_receive))
 
         # Keep-alive settings (HTTP/2 PING frames for connection health)
-        # Default: 60s ping interval (detect dead connections quickly)
-        keepalive_time = config.get("keepalive_time_ms", 60000)  # 60s (was 2h)
-        keepalive_timeout = config.get("keepalive_timeout_ms", 20000)  # 20s
+        # Default: 30s ping interval (detect dead connections quickly)
+        # Matches Go client keepalive settings for consistent behavior
+        keepalive_time = config.get("keepalive_time_ms", 30000)  # 30s (was 60s)
+        keepalive_timeout = config.get("keepalive_timeout_ms", 10000)  # 10s (was 20s)
 
         options.append(("grpc.keepalive_time_ms", keepalive_time))
         options.append(("grpc.keepalive_timeout_ms", keepalive_timeout))

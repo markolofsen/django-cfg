@@ -22,7 +22,6 @@ Documentation: See @commands/README.md for complete guide
 import asyncio
 import logging
 from abc import ABC
-from dataclasses import dataclass
 from typing import Generic, Optional, TypeVar, Any
 
 try:
@@ -33,30 +32,13 @@ except ImportError:
 
 from ..streaming.core.registry import ResponseRegistry
 
+# Import CommandClientConfig from centralized configs
+from ...configs.commands import CommandClientConfig
+
 logger = logging.getLogger(__name__)
 
 # Generic type for protobuf command messages
 TCommand = TypeVar('TCommand')
-
-
-@dataclass
-class CommandClientConfig:
-    """Configuration for command client behavior."""
-
-    # Queue timeout for same-process mode (seconds)
-    queue_timeout: float = 5.0
-
-    # gRPC connection timeout for cross-process mode (seconds)
-    connect_timeout: float = 3.0
-
-    # gRPC call timeout (seconds)
-    call_timeout: float = 5.0
-
-    # Default gRPC server address
-    grpc_host: str = "localhost"
-
-    # Default gRPC server port (can be overridden)
-    grpc_port: Optional[int] = None
 
 
 class StreamingCommandClient(Generic[TCommand], ABC):

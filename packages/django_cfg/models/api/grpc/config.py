@@ -19,6 +19,9 @@ from pydantic import Field, field_validator, model_validator
 
 from django_cfg.models.base import BaseConfig
 
+# Import TLSConfig from centralized configs
+from django_cfg.apps.integrations.grpc.configs.tls import TLSConfig
+
 
 class GRPCServerConfig(BaseConfig):
     """
@@ -474,6 +477,27 @@ class GRPCConfig(BaseConfig):
         description="Observability configuration: logging, metrics, DB tracking (optional)",
     )
 
+    tls: TLSConfig = Field(
+        default_factory=TLSConfig,
+        description="TLS/SSL configuration for secure connections (optional)",
+    )
+
+    # === Flatten TLS Config (most common settings) ===
+    tls_enabled: Optional[bool] = Field(
+        default=None,
+        description="Enable TLS/SSL for secure connections. If None, uses tls.enabled (False by default)",
+    )
+
+    tls_cert_path: Optional[str] = Field(
+        default=None,
+        description="Path to server certificate file. If None, uses tls.cert_path",
+    )
+
+    tls_key_path: Optional[str] = Field(
+        default=None,
+        description="Path to server private key file. If None, uses tls.key_path",
+    )
+
     handlers_hook: str | List[str] = Field(
         default="",
         description="Import path(s) to grpc_handlers function (optional, e.g., '{ROOT_URLCONF}.grpc_handlers' or list of paths)",
@@ -524,6 +548,23 @@ class GRPCConfig(BaseConfig):
             self.proto.package_prefix = self.package_prefix
         if self.output_dir is not None:
             self.proto.output_dir = self.output_dir
+
+        # Apply flatten TLS fields to nested tls config
+        # Note: TLSConfig is frozen, so we need to create a new instance
+        if self.tls_enabled is not None or self.tls_cert_path is not None or self.tls_key_path is not None:
+            tls_kwargs = {
+                "enabled": self.tls_enabled if self.tls_enabled is not None else self.tls.enabled,
+                "cert_path": self.tls_cert_path if self.tls_cert_path is not None else self.tls.cert_path,
+                "key_path": self.tls_key_path if self.tls_key_path is not None else self.tls.key_path,
+                "ca_cert_path": self.tls.ca_cert_path,
+                "client_cert_path": self.tls.client_cert_path,
+                "client_key_path": self.tls.client_key_path,
+                "require_client_cert": self.tls.require_client_cert,
+                "verify_server": self.tls.verify_server,
+                "min_version": self.tls.min_version,
+                "ssl_target_name_override": self.tls.ssl_target_name_override,
+            }
+            self.tls = TLSConfig(**tls_kwargs)
 
         # Check dependencies if enabled
         if self.enabled:

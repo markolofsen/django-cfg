@@ -10,6 +10,12 @@ Phase: Phase 1 - Universal Components
 
 from pydantic import BaseModel, Field
 
+from ...configs.constants import (
+    GRPC_DEFAULT_HOST,
+    GRPC_DEFAULT_PORT,
+    GRPC_ROUTING_TIMEOUT,
+)
+
 
 # ============================================================================
 # Configuration
@@ -38,11 +44,12 @@ class CrossProcessConfig(BaseModel):
     """
 
     grpc_host: str = Field(
-        default="localhost",
+        default=GRPC_DEFAULT_HOST,
         description="gRPC server host",
     )
 
     grpc_port: int = Field(
+        default=GRPC_DEFAULT_PORT,
         gt=0,
         le=65535,
         description="gRPC server port (1-65535)",
@@ -54,7 +61,7 @@ class CrossProcessConfig(BaseModel):
     )
 
     timeout: float = Field(
-        default=5.0,
+        default=GRPC_ROUTING_TIMEOUT,
         gt=0.0,
         le=60.0,
         description="Timeout for gRPC calls in seconds",

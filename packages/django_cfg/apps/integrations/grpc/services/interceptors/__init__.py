@@ -26,13 +26,22 @@ Note:
 
 from .errors import ErrorHandlingInterceptor
 from .observability import ObservabilityInterceptor, get_metrics, reset_metrics
+from .metrics import MetricsCollector, get_metrics_collector
+from .wrapped_handler import WrappedHandler
+from .db_logger import RequestLogger
+from .publishers import EventPublisher
 
 __all__ = [
-    # Main interceptor for all gRPC services (supports bidi streaming)
+    # Main interceptors
     "ObservabilityInterceptor",
-    # Error handling for unary RPCs
     "ErrorHandlingInterceptor",
-    # Metrics utilities
+    # Metrics
     "get_metrics",
     "reset_metrics",
+    "MetricsCollector",
+    "get_metrics_collector",
+    # Components (for advanced usage)
+    "WrappedHandler",
+    "RequestLogger",
+    "EventPublisher",
 ]

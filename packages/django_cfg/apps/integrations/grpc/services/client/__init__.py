@@ -4,23 +4,22 @@ gRPC client utilities for django-cfg.
 This package provides tools for creating and managing gRPC client connections.
 
 **Components**:
-- client: GrpcClient for service-to-service communication
+- DynamicGRPCClient: Dynamic client using reflection (no proto files needed)
 
 **Usage Example**:
 ```python
-from django_cfg.apps.integrations.grpc.services.client import GrpcClient
+from django_cfg.apps.integrations.grpc.services.client import DynamicGRPCClient
 
-client = GrpcClient(host="localhost", port=50051)
-# Use client for gRPC calls
+client = DynamicGRPCClient(host="localhost", port=50051)
+response = client.invoke_method("api.Service", "Method", {"key": "value"})
 ```
 
 Created: 2025-11-07
 Status: %%PRODUCTION%%
 """
 
-# Export when client module is refactored
-# from .client import GrpcClient
+from .client import DynamicGRPCClient
 
 __all__ = [
-    # 'GrpcClient',  # Uncomment when ready
+    "DynamicGRPCClient",
 ]

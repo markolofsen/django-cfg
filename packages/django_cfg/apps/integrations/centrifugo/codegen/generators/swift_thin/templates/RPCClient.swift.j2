@@ -46,6 +46,37 @@ public enum CentrifugoConnectionState: Sendable {
     case connected
 }
 
+// MARK: - Subscription Delegate
+
+/// Internal delegate to handle subscription events with callback closures.
+private class SubscriptionDelegate: CentrifugeSubscriptionDelegate {
+    let onPublicationHandler: @Sendable (Data) -> Void
+
+    init(onPublication: @escaping @Sendable (Data) -> Void) {
+        self.onPublicationHandler = onPublication
+    }
+
+    func onPublication(_ sub: CentrifugeSubscription, _ event: CentrifugePublicationEvent) {
+        onPublicationHandler(event.data)
+    }
+
+    func onSubscribed(_ sub: CentrifugeSubscription, _ event: CentrifugeSubscribedEvent) {
+        // Subscription confirmed
+    }
+
+    func onSubscribing(_ sub: CentrifugeSubscription, _ event: CentrifugeSubscribingEvent) {
+        // Subscribing in progress
+    }
+
+    func onUnsubscribed(_ sub: CentrifugeSubscription, _ event: CentrifugeUnsubscribedEvent) {
+        // Unsubscribed
+    }
+
+    func onError(_ sub: CentrifugeSubscription, _ event: CentrifugeSubscriptionErrorEvent) {
+        // Subscription error
+    }
+}
+
 // MARK: - RPC Client Delegate
 
 /// Internal delegate to capture connection events.
@@ -226,6 +257,7 @@ public actor CentrifugoRPCClient {
     // MARK: - Subscriptions
 
     private var subscriptions: [String: CentrifugeSubscription] = [:]
+    private var subscriptionDelegates: [String: SubscriptionDelegate] = [:]
 
     /// Subscribe to a channel for real-time events.
     ///
@@ -241,42 +273,35 @@ public actor CentrifugoRPCClient {
             throw RPCError.notConnected
         }
 
-        // Create subscription
-        let sub = client.newSubscription(channel)
+        // Create delegate to handle events
+        let delegate = SubscriptionDelegate(onPublication: onPublication)
+        subscriptionDelegates[channel] = delegate
 
-        // Set up publication handler
-        sub.on(event: .publication) { event in
-            onPublication(event.data)
-        }
-
-        sub.on(event: .subscribed) { _ in
-            // Subscription confirmed
-        }
-
-        sub.on(event: .error) { event in
-            // Log error but don't throw
-        }
+        // Create subscription with delegate
+        let sub = try client.newSubscription(channel: channel, delegate: delegate)
 
         // Store and subscribe
         subscriptions[channel] = sub
-        try await sub.subscribe()
+        sub.subscribe()
     }
 
     /// Unsubscribe from a channel.
     ///
     /// - Parameter channel: Channel name to unsubscribe from
-    public func unsubscribe(channel: String) async throws {
+    public func unsubscribe(channel: String) {
         guard let sub = subscriptions[channel] else { return }
-        try await sub.unsubscribe()
+        sub.unsubscribe()
         subscriptions.removeValue(forKey: channel)
+        subscriptionDelegates.removeValue(forKey: channel)
     }
 
     /// Unsubscribe from all channels.
-    public func unsubscribeAll() async {
+    public func unsubscribeAll() {
         for (_, sub) in subscriptions {
-            try? await sub.unsubscribe()
+            sub.unsubscribe()
         }
         subscriptions.removeAll()
+        subscriptionDelegates.removeAll()
     }
 
     // MARK: - RPC Methods

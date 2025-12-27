@@ -65,15 +65,15 @@ def __getattr__(name):
 
     # Discovery
     if name == 'ServiceDiscovery':
-        from .discovery.discovery import ServiceDiscovery
+        from .discovery.service_discovery import ServiceDiscovery
         return ServiceDiscovery
 
     if name == 'discover_and_register_services':
-        from .discovery.discovery import discover_and_register_services
+        from .discovery.registration import discover_and_register_services
         return discover_and_register_services
 
     if name == 'ServiceRegistryManager':
-        from .discovery.registry import ServiceRegistryManager
+        from .discovery.service_registry import ServiceRegistryManager
         return ServiceRegistryManager
 
     # Client

@@ -8,7 +8,7 @@ Uses gRPC Server Reflection to discover services and methods dynamically.
 from __future__ import annotations
 
 import grpc
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from google.protobuf import descriptor_pb2, descriptor_pool, json_format, message_factory
 
@@ -19,6 +19,19 @@ except ImportError:
     from grpc_reflection.v1 import reflection_pb2, reflection_pb2_grpc
 
 from django_cfg.utils import get_logger
+
+# Import configuration classes
+from ...configs.channels import ClientChannelConfig
+from ...configs.tls import TLSConfig
+from ...configs.constants import (
+    GRPC_DEFAULT_HOST,
+    GRPC_DEFAULT_PORT,
+    GRPC_CHANNEL_READY_TIMEOUT,
+    GRPC_RPC_CALL_TIMEOUT,
+)
+
+if TYPE_CHECKING:
+    pass
 
 logger = get_logger("grpc.dynamic_client")
 
@@ -32,6 +45,7 @@ class DynamicGRPCClient:
     - Creates protobuf messages from JSON
     - Invokes methods without compiled stubs
     - Handles unary-unary methods (streaming support can be added)
+    - Configurable via ClientChannelConfig and TLSConfig
 
     Usage:
         >>> client = DynamicGRPCClient(host='localhost', port=50051)
@@ -42,59 +56,74 @@ class DynamicGRPCClient:
         ... )
         >>> print(response)
         {'coin': {'symbol': 'BTC', 'price': 50000.0}}
+
+        # With configuration
+        >>> config = ClientChannelConfig(
+        ...     address="grpc.example.com:443",
+        ...     use_tls=True,
+        ...     max_retries=5,
+        ... )
+        >>> client = DynamicGRPCClient(config=config)
     """
 
-    def __init__(self, host: str = "localhost", port: int = 50051, use_tls: bool = False):
+    def __init__(
+        self,
+        host: str = None,
+        port: int = None,
+        use_tls: bool = None,
+        config: ClientChannelConfig = None,
+        tls_config: TLSConfig = None,
+    ):
         """
         Initialize dynamic gRPC client.
 
         Args:
-            host: gRPC server host
-            port: gRPC server port
-            use_tls: Whether to use secure channel
+            host: gRPC server host (deprecated, use config)
+            port: gRPC server port (deprecated, use config)
+            use_tls: Whether to use secure channel (deprecated, use config)
+            config: ClientChannelConfig with all settings
+            tls_config: TLSConfig for TLS settings
 
         Raises:
             ConnectionError: If cannot connect to gRPC server
         """
-        address = f"{host}:{port}"
+        # Build configuration from parameters
+        if config is not None:
+            self._config = config
+            self.host = config.host
+            self.port = config.port
+            self.use_tls = config.use_tls
+        else:
+            # Legacy parameter support
+            self.host = host if host is not None else GRPC_DEFAULT_HOST
+            self.port = port if port is not None else GRPC_DEFAULT_PORT
+            self.use_tls = use_tls if use_tls is not None else False
+            self._config = ClientChannelConfig(
+                address=f"{self.host}:{self.port}",
+                use_tls=self.use_tls,
+            )
 
-        # Client keep-alive options (more aggressive than server)
-        channel_options = [
-            # === Keep-Alive (Client) ===
-            # Send keepalive ping every 30 seconds (detect issues faster)
-            ('grpc.keepalive_time_ms', 30000),
+        self._tls_config = tls_config
+        address = self._config.address
 
-            # Wait 10 seconds for ping response
-            ('grpc.keepalive_timeout_ms', 10000),
-
-            # Send pings even when idle (important for long-lived connections)
-            ('grpc.keepalive_permit_without_calls', True),
-
-            # === Connection Limits ===
-            # Max pings without data (prevents abuse)
-            ('grpc.http2.max_pings_without_data', 2),
-
-            # Max connection idle (align with server)
-            ('grpc.max_connection_idle_ms', 7200000),  # 2 hours
-
-            # === Retry Configuration ===
-            # Enable retry mechanism
-            ('grpc.enable_retries', 1),
-
-            # Max retry attempts
-            ('grpc.max_retry_attempts', 3),
-        ]
+        # Get channel options from config
+        channel_options = self._config.get_channel_options()
 
         try:
-            if use_tls:
-                # TODO: Add TLS certificate handling when needed
-                credentials = grpc.ssl_channel_credentials()
+            if self.use_tls:
+                # Use TLSConfig for credentials if provided
+                if self._tls_config and self._tls_config.enabled:
+                    credentials = self._tls_config.get_channel_credentials()
+                    # Add TLS-specific options
+                    channel_options.extend(self._tls_config.get_channel_options())
+                else:
+                    credentials = grpc.ssl_channel_credentials()
                 self.channel = grpc.secure_channel(address, credentials, options=channel_options)
             else:
                 self.channel = grpc.insecure_channel(address, options=channel_options)
 
             # Test connection
-            grpc.channel_ready_future(self.channel).result(timeout=5)
+            grpc.channel_ready_future(self.channel).result(timeout=GRPC_CHANNEL_READY_TIMEOUT)
 
             self.reflection_stub = reflection_pb2_grpc.ServerReflectionStub(self.channel)
 
@@ -158,7 +187,7 @@ class DynamicGRPCClient:
         """
         # Set default timeout
         if timeout is None:
-            timeout = 5.0
+            timeout = self._config.call_timeout
 
         logger.debug(f"Calling {service_name}.{method_name} with payload: {request_data}")
 
