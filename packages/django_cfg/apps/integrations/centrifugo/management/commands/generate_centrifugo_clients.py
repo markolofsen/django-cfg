@@ -15,7 +15,7 @@ from django.utils.termcolors import colorize
 
 from django_cfg.management.utils import AdminCommand
 
-from django_cfg.apps.integrations.centrifugo.codegen.discovery import discover_rpc_methods_from_router, ChannelInfo
+from django_cfg.apps.integrations.centrifugo.codegen.discovery import discover_rpc_methods_from_router, ChannelInfo, extract_enums_from_models
 from django_cfg.apps.integrations.centrifugo.codegen.generators.python_thin import PythonThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.typescript_thin import TypeScriptThinGenerator
 from django_cfg.apps.integrations.centrifugo.codegen.generators.go_thin import GoThinGenerator
@@ -233,7 +233,15 @@ class Command(AdminCommand):
                     if method.return_type:
                         models.add(method.return_type)
 
-                generator = TypeScriptThinGenerator(methods, list(models), ts_dir)
+                models_list = list(models)
+
+                # Extract IntEnum types from models for TypeScript enum generation
+                enums = extract_enums_from_models(models_list)
+                if enums and verbose:
+                    enum_names = [e.__name__ for e in enums]
+                    self.stdout.write(f"  Found {len(enums)} enums: {', '.join(enum_names)}")
+
+                generator = TypeScriptThinGenerator(methods, models_list, ts_dir, enums=enums)
                 generator.generate()
                 generated.append("TypeScript")
                 self.stdout.write(colorize(f"  ✓ Generated at: {ts_dir}", fg="green"))
@@ -280,11 +288,20 @@ class Command(AdminCommand):
                     for event_type in channel.event_types:
                         models.add(event_type)
 
+                models_list = list(models)
+
+                # Extract enums from models
+                enums = extract_enums_from_models(models_list)
+                if enums and verbose:
+                    enum_names = [e.__name__ for e in enums]
+                    self.stdout.write(f"  Found {len(enums)} enums: {', '.join(enum_names)}")
+
                 generator = SwiftThinGenerator(
                     methods=methods,
-                    models=list(models),
+                    models=models_list,
                     output_dir=swift_dir,
                     channels=channels,  # Pass channels for subscription generation
+                    enums=enums,
                 )
                 generator.generate()
                 generated.append("Swift")

@@ -7,8 +7,9 @@ Strategy: Use full operation_id, remove tag prefix, convert to camelCase/PascalC
 
 
 def to_camel_case(s: str) -> str:
-    """Convert snake_case or kebab-case to camelCase."""
-    s = s.replace('-', '_')
+    """Convert snake_case, kebab-case, or dot.case to camelCase."""
+    # Replace all separators with underscore
+    s = s.replace('-', '_').replace('.', '_')
     parts = s.split('_')
     if not parts:
         return ''
@@ -16,8 +17,9 @@ def to_camel_case(s: str) -> str:
 
 
 def to_pascal_case(s: str) -> str:
-    """Convert snake_case or kebab-case to PascalCase."""
-    s = s.replace('-', '_')
+    """Convert snake_case, kebab-case, or dot.case to PascalCase."""
+    # Replace all separators with underscore
+    s = s.replace('-', '_').replace('.', '_')
     return ''.join(p.capitalize() for p in s.split('_'))
 
 

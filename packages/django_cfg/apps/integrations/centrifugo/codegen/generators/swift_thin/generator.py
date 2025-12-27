@@ -3,12 +3,14 @@ Swift thin wrapper client generator.
 
 Generates type-safe Swift clients for Centrifugo RPC methods.
 Supports iOS 13.0+ with native async/await.
+Supports IntEnum to Swift enum conversion.
 """
 
 import hashlib
 import json
 import logging
 from datetime import datetime
+from enum import IntEnum
 from pathlib import Path
 from typing import List, Type
 
@@ -17,7 +19,7 @@ from pydantic import BaseModel
 
 from ...discovery import RPCMethodInfo, ChannelInfo
 from ...utils import to_swift_method_name, get_safe_swift_type_name
-from ...utils.converters import pydantic_to_swift_with_nested
+from ...utils.converters import pydantic_to_swift_with_nested, int_enum_to_swift
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,7 @@ class SwiftThinGenerator:
         minimum_ios_version: str = "13.0",
         minimum_macos_version: str = "10.15",
         channels: List[ChannelInfo] = None,
+        enums: List[Type[IntEnum]] = None,
     ):
         """
         Initialize Swift generator.
@@ -99,10 +102,12 @@ class SwiftThinGenerator:
             minimum_ios_version: Minimum iOS version (default: 13.0)
             minimum_macos_version: Minimum macOS version (default: 10.15)
             channels: List of channel info for subscription generation
+            enums: List of IntEnum classes to generate Swift enums from
         """
         self.methods = methods
         self.models = models
         self.channels = channels or []
+        self.enums = enums or []
         self.output_dir = Path(output_dir)
         self.package_name = package_name
         self.minimum_ios_version = minimum_ios_version
@@ -147,8 +152,17 @@ class SwiftThinGenerator:
         (self.output_dir / "Package.swift").write_text(content)
 
     def _generate_types(self, sources_dir: Path) -> None:
-        """Generate Types.swift with Codable models."""
+        """Generate Types.swift with Codable models and enums."""
         template = self.jinja_env.get_template("Types.swift.j2")
+
+        # Generate enums first
+        enums_data = []
+        for enum_class in self.enums:
+            enum_code = int_enum_to_swift(enum_class)
+            enums_data.append({
+                'name': enum_class.__name__,
+                'code': enum_code,
+            })
 
         # Collect all types, avoiding duplicates
         types_data = []
@@ -190,6 +204,7 @@ class SwiftThinGenerator:
 
         content = template.render(
             types=types_data,
+            enums=enums_data,
             generated_at=datetime.now().isoformat(),
         )
         (sources_dir / "CentrifugoTypes.swift").write_text(content)

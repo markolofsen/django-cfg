@@ -22,6 +22,9 @@ from .converters import (
     convert_json_schema_to_typescript,
     pydantic_to_typescript,
     generate_typescript_types,
+    is_int_enum,
+    int_enum_to_typescript,
+    generate_typescript_enums,
     # Python
     convert_json_schema_to_python,
     pydantic_to_python,
@@ -54,6 +57,9 @@ __all__ = [
     "convert_json_schema_to_typescript",
     "pydantic_to_typescript",
     "generate_typescript_types",
+    "is_int_enum",
+    "int_enum_to_typescript",
+    "generate_typescript_enums",
     # Python converters
     "convert_json_schema_to_python",
     "pydantic_to_python",

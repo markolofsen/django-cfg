@@ -1,18 +1,23 @@
 """
 TypeScript thin wrapper client generator.
+
+Supports:
+- Interface generation from Pydantic models
+- Enum generation from IntEnum classes
 """
 
 import hashlib
 import json
 import logging
 from datetime import datetime
+from enum import IntEnum
 from pathlib import Path
 from typing import List, Type
 from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...discovery import RPCMethodInfo
-from ...utils import to_typescript_method_name, pydantic_to_typescript
+from ...utils import to_typescript_method_name, pydantic_to_typescript, int_enum_to_typescript
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +71,11 @@ class TypeScriptThinGenerator:
         methods: List[RPCMethodInfo],
         models: List[Type[BaseModel]],
         output_dir: Path,
+        enums: List[Type[IntEnum]] | None = None,
     ):
         self.methods = methods
         self.models = models
+        self.enums = enums or []
         self.output_dir = Path(output_dir)
         self.api_version = compute_api_version(methods, models)
 
@@ -99,6 +106,15 @@ class TypeScriptThinGenerator:
         """Generate types.ts file."""
         template = self.jinja_env.get_template("types.ts.j2")
 
+        # Generate enums first
+        enums_data = []
+        for enum_class in self.enums:
+            enum_code = int_enum_to_typescript(enum_class)
+            enums_data.append({
+                'name': enum_class.__name__,
+                'code': enum_code,
+            })
+
         # Track generated interfaces to avoid duplicates
         generated_interfaces = set()
         types_data = []
@@ -125,7 +141,7 @@ class TypeScriptThinGenerator:
                         'code': block,
                     })
 
-        content = template.render(types=types_data)
+        content = template.render(types=types_data, enums=enums_data)
         (self.output_dir / "types.ts").write_text(content)
 
     def _generate_rpc_client(self):
@@ -167,7 +183,8 @@ class TypeScriptThinGenerator:
         """Generate index.ts file."""
         template = self.jinja_env.get_template("index.ts.j2")
         model_names = [m.__name__ for m in self.models]
-        content = template.render(models=model_names)
+        enum_names = [e.__name__ for e in self.enums]
+        content = template.render(models=model_names, enums=enum_names)
         (self.output_dir / "index.ts").write_text(content)
 
     def _generate_package_json(self):

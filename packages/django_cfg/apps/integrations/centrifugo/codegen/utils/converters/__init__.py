@@ -16,6 +16,10 @@ from .typescript import (
     convert_json_schema_to_typescript,
     pydantic_to_typescript,
     generate_typescript_types,
+    # Enum support
+    is_int_enum,
+    int_enum_to_typescript,
+    generate_typescript_enums,
 )
 
 # Python
@@ -38,6 +42,10 @@ from .swift import (
     pydantic_to_swift,
     pydantic_to_swift_with_nested,
     generate_swift_types,
+    # Enum support
+    is_int_enum as is_int_enum_swift,
+    int_enum_to_swift,
+    generate_swift_enums,
 )
 
 __all__ = [
@@ -45,6 +53,9 @@ __all__ = [
     "convert_json_schema_to_typescript",
     "pydantic_to_typescript",
     "generate_typescript_types",
+    "is_int_enum",
+    "int_enum_to_typescript",
+    "generate_typescript_enums",
     # Python
     "convert_json_schema_to_python",
     "pydantic_to_python",
@@ -58,4 +69,7 @@ __all__ = [
     "pydantic_to_swift",
     "pydantic_to_swift_with_nested",
     "generate_swift_types",
+    "is_int_enum_swift",
+    "int_enum_to_swift",
+    "generate_swift_enums",
 ]

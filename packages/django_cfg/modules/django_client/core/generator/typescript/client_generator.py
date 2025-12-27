@@ -16,8 +16,10 @@ class ClientGenerator:
     # Content types that indicate streaming/binary response (need URL builder method)
     STREAMING_CONTENT_TYPES = frozenset([
         'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+        'video/mp2t',  # HLS segments
         'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/flac',
         'application/octet-stream',
+        'application/vnd.apple.mpegurl',  # HLS playlists (.m3u8)
     ])
 
     def __init__(self, jinja_env: Environment, context, base, operations_gen):

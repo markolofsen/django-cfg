@@ -5,6 +5,14 @@
 
 import Foundation
 
+{% if enums %}
+// MARK: - Enums
+
+{% for enum in enums %}
+{{ enum.code }}
+
+{% endfor %}
+{% endif %}
 // MARK: - Generated Models
 
 {% for type in types %}

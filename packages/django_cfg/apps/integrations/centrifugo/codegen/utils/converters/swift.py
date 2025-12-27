@@ -2,9 +2,12 @@
 Swift type conversion utilities.
 
 Converts Pydantic models and JSON Schema to Swift Codable structs.
+Also supports IntEnum to Swift enum conversion.
 """
 
+import inspect
 import logging
+from enum import IntEnum
 from typing import Any, Dict, Type, List
 
 from pydantic import BaseModel
@@ -20,6 +23,76 @@ from .base import (
 from ..naming import to_camel_case, get_safe_swift_type_name
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# INTENUM TO SWIFT ENUM
+# =============================================================================
+
+def is_int_enum(type_hint: Any) -> bool:
+    """Check if type hint is an IntEnum subclass."""
+    try:
+        return inspect.isclass(type_hint) and issubclass(type_hint, IntEnum)
+    except (TypeError, AttributeError):
+        return False
+
+
+def int_enum_to_swift(enum_class: Type[IntEnum]) -> str:
+    """
+    Convert Python IntEnum to Swift enum with Int raw value.
+
+    Args:
+        enum_class: IntEnum subclass
+
+    Returns:
+        Swift enum definition
+
+    Example:
+        >>> class ViewerType(IntEnum):
+        ...     UNKNOWN = 0
+        ...     CODE = 1
+        >>> int_enum_to_swift(ViewerType)
+        'public enum ViewerType: Int, Codable, Sendable {\n    case unknown = 0\n    case code = 1\n}'
+    """
+    if not is_int_enum(enum_class):
+        raise ValueError(f"{enum_class} is not an IntEnum subclass")
+
+    lines = []
+    lines.append(f"public enum {enum_class.__name__}: Int, Codable, Sendable {{")
+
+    for member in enum_class:
+        # Convert UPPER_CASE to camelCase for Swift convention
+        case_name = to_camel_case(member.name.lower())
+        lines.append(f"    case {case_name} = {member.value}")
+
+    lines.append("}")
+
+    return "\n".join(lines)
+
+
+def generate_swift_enums(enum_classes: List[Type[IntEnum]]) -> str:
+    """
+    Generate Swift enum definitions for multiple IntEnum classes.
+
+    Args:
+        enum_classes: List of IntEnum subclasses
+
+    Returns:
+        Complete Swift enum definitions
+    """
+    if not enum_classes:
+        return ""
+
+    lines = []
+    lines.append("// MARK: - Enums")
+    lines.append("")
+
+    for enum_class in enum_classes:
+        enum_code = int_enum_to_swift(enum_class)
+        lines.append(enum_code)
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def convert_json_schema_to_swift(

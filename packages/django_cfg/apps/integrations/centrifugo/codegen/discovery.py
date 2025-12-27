@@ -2,11 +2,13 @@
 Method and channel discovery for code generation.
 
 Scans registered RPC handlers and channels, extracts type information.
+Supports IntEnum discovery for enum code generation.
 """
 
 import inspect
 import logging
 from dataclasses import dataclass, field
+from enum import IntEnum
 from typing import Type, List, Optional, Any, get_type_hints, Dict, Union, get_args, get_origin
 from pydantic import BaseModel
 
@@ -352,6 +354,105 @@ def _extract_nested_models(model: Type[BaseModel], models: set) -> None:
         pass  # Ignore type hint extraction errors
 
 
+def _is_int_enum(type_hint: Any) -> bool:
+    """Check if type hint is an IntEnum subclass."""
+    try:
+        return inspect.isclass(type_hint) and issubclass(type_hint, IntEnum)
+    except (TypeError, AttributeError):
+        return False
+
+
+def extract_enums_from_module(module: Any) -> List[Type[IntEnum]]:
+    """
+    Extract all IntEnum classes from a module.
+
+    Args:
+        module: Python module to scan
+
+    Returns:
+        List of IntEnum subclasses defined in the module
+    """
+    enums = []
+
+    for name in dir(module):
+        obj = getattr(module, name)
+        if _is_int_enum(obj) and obj.__module__ == module.__name__:
+            enums.append(obj)
+
+    return sorted(enums, key=lambda e: e.__name__)
+
+
+def extract_enums_from_models(models: List[Type[BaseModel]]) -> List[Type[IntEnum]]:
+    """
+    Extract all unique IntEnum types used in Pydantic models.
+
+    Scans model field annotations for IntEnum types, including nested models.
+
+    Args:
+        models: List of Pydantic model classes
+
+    Returns:
+        List of unique IntEnum subclasses
+    """
+    enums = set()
+    visited_models = set()
+
+    def _extract_from_model(model: Type[BaseModel]) -> None:
+        if model in visited_models:
+            return
+        visited_models.add(model)
+
+        try:
+            hints = get_type_hints(model)
+            for field_name, field_type in hints.items():
+                _collect_enums_from_type(field_type, enums)
+                # Also recursively check nested Pydantic models
+                _collect_nested_models_for_enums(field_type, _extract_from_model)
+        except Exception as e:
+            logger.debug(f"Could not get type hints for {model.__name__}: {e}")
+
+    for model in models:
+        _extract_from_model(model)
+
+    return sorted(list(enums), key=lambda e: e.__name__)
+
+
+def _collect_nested_models_for_enums(type_hint: Any, callback) -> None:
+    """Recursively find nested Pydantic models and call callback for enum extraction."""
+    # Direct Pydantic model
+    if _is_pydantic_model(type_hint):
+        callback(type_hint)
+        return
+
+    # Handle Optional, List, Union
+    origin = get_origin(type_hint)
+    if origin is Union:
+        for arg in get_args(type_hint):
+            _collect_nested_models_for_enums(arg, callback)
+    elif origin is list:
+        args = get_args(type_hint)
+        if args:
+            _collect_nested_models_for_enums(args[0], callback)
+
+
+def _collect_enums_from_type(type_hint: Any, enums: set) -> None:
+    """Recursively collect IntEnum types from a type hint."""
+    # Direct IntEnum
+    if _is_int_enum(type_hint):
+        enums.add(type_hint)
+        return
+
+    # Handle Optional, List, Union
+    origin = get_origin(type_hint)
+    if origin is Union:
+        for arg in get_args(type_hint):
+            _collect_enums_from_type(arg, enums)
+    elif origin is list:
+        args = get_args(type_hint)
+        if args:
+            _collect_enums_from_type(args[0], enums)
+
+
 __all__ = [
     "RPCMethodInfo",
     "ChannelInfo",
@@ -360,5 +461,7 @@ __all__ = [
     "extract_all_models",
     "extract_all_channel_models",
     "extract_event_types_from_union",
+    "extract_enums_from_module",
+    "extract_enums_from_models",
     "get_method_summary",
 ]
