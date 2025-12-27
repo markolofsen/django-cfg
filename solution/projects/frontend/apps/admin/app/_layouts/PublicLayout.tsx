@@ -57,7 +57,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
   return (
     <BasePublicLayout
-      logo={settings.app.icons.logoVector}
+      logo={settings.app.media.logoVector}
       siteName={settings.app.name}
       navigation={navigation}
       userMenu={userMenu}

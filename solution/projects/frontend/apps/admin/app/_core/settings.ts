@@ -61,11 +61,13 @@ export const settings = {
     version: '1.0.0',
     description: 'Django CFG Admin Panel',
     siteUrl,
-    icons: {
+    media: {
+      favicon: '/favicon.png',
       logo192: getStaticAssetPath('logos/192x192.png'),
       logo384: getStaticAssetPath('logos/384x384.png'),
       logo512: getStaticAssetPath('logos/512x512.png'),
       logoVector: getStaticAssetPath('logos/vector.svg'),
+      ogimage: getStaticAssetPath('ogimage.png'),
     },
   },
 

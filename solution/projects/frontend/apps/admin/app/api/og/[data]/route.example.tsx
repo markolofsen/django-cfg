@@ -31,7 +31,7 @@ const { GET: handlerGET } = createOgImageDynamicRoute({
   template: DefaultTemplate,
   defaultProps: {
     siteName: settings.app.name,
-    logo: settings.app.icons.logoVector,
+    logo: settings.app.media.logoVector,
     // Customize to match previous OgImageTemplate style
     backgroundType: 'gradient',
     gradientStart: '#0f172a',

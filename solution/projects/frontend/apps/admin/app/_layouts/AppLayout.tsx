@@ -85,7 +85,7 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
     pwaInstall: {
       enabled: true,
       showInstallHint: true,
-      logo: settings.app.icons.logo192,
+      logo: settings.app.media.logo192,
       delayMs: 5000,
       resetAfterDays: 7,
     },

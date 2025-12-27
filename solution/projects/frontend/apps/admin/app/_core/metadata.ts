@@ -6,8 +6,7 @@
  */
 
 import type { Metadata } from 'next';
-import { generateOgImageMetadata } from '@djangocfg/nextjs/og-image';
-
+import { generateAppMetadata as generateAppMetadataBase } from '@djangocfg/nextjs/og-image';
 import { settings } from './settings';
 
 /**
@@ -29,19 +28,20 @@ import { settings } from './settings';
  * ```
  */
 export function generateMetadata(metadata: Metadata): Metadata {
-  // Automatically add OG image (title and description will be auto-extracted from metadata)
+  // Automatically add OG image, favicon, and apple icon
   // Also automatically handles metadataBase if siteUrl is an absolute URL
-  return generateOgImageMetadata(
+  return generateAppMetadataBase(
     metadata,
     undefined, // Auto-extract from metadata
     {
-      // ogImageBaseUrl: 'https://djangocfg.com/api/og', // or '/api/og',
-      siteUrl: settings.app.siteUrl, // Pass siteUrl for metadataBase auto-detection
+      // ogImageBaseUrl: 'https://djangocfg.com/api/og',
+      siteUrl: settings.app.siteUrl,
+      favicon: settings.app.media.favicon,
+      appleIcon: settings.app.media.logo192,
       defaultParams: {
         siteName: settings.app.name,
-        logo: settings.app.icons.logoVector,
+        logo: settings.app.media.logoVector,
       },
     }
   );
 }
-
