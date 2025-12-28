@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import re
 
-from .naming import to_pascal_case, to_camel_case
+from .naming import to_pascal_case, to_camel_case, sanitize_swift_identifier
 
 if TYPE_CHECKING:
     from django_cfg.modules.django_client.core.ir import IROperationObject
@@ -262,18 +262,23 @@ class SwiftEndpointsGenerator:
             last = parts[-1]
             if last == parts[-2]:
                 return "list"
-            return to_camel_case(last)
+            # Sanitize: remove dots, braces, etc. and convert to camelCase
+            sanitized = sanitize_swift_identifier(last)
+            return to_camel_case(sanitized)
         return "list"
 
     def _path_to_function_name(self, path: str, params: list[str]) -> str:
         """Convert path with params to function name."""
         # /api/workspaces/workspaces/{id}/ -> detail
         # /api/workspaces/workspaces/{id}/members/ -> members
+        # /api/terminal/hls/{id}/master.m3u8/ -> masterM3u8
         parts = [p for p in path.split("/") if p and not p.startswith("{")]
         if len(parts) >= 2:
             last = parts[-1]
             second_last = parts[-2] if len(parts) > 1 else ""
             if last == second_last or last == "":
                 return "detail"
-            return to_camel_case(last)
+            # Sanitize: remove dots, braces, etc. and convert to camelCase
+            sanitized = sanitize_swift_identifier(last)
+            return to_camel_case(sanitized)
         return "detail"

@@ -8,7 +8,7 @@ import SwiftCentrifuge
 // MARK: - RPC Error Types
 
 /// RPC error type.
-public enum RPCError: Error, LocalizedError {
+public enum RPCError: Error, LocalizedError, Sendable {
     case notConnected
     case timeout
     case serverError(code: Int, message: String)
@@ -16,6 +16,7 @@ public enum RPCError: Error, LocalizedError {
     case decodingError(Error)
     case webSocketError(Error)
     case connectionFailed(String)
+    case cancelled
 
     public var errorDescription: String? {
         switch self {
@@ -33,6 +34,61 @@ public enum RPCError: Error, LocalizedError {
             return "WebSocket error: \(error.localizedDescription)"
         case .connectionFailed(let reason):
             return "Connection failed: \(reason)"
+        case .cancelled:
+            return "Request was cancelled"
+        }
+    }
+
+    /// Whether this error is retryable.
+    /// Transient errors (timeout, network) are retryable.
+    /// Permanent errors (auth, encoding) are not.
+    public var isRetryable: Bool {
+        switch self {
+        case .timeout, .webSocketError, .connectionFailed:
+            return true
+        case .notConnected:
+            return false  // Need reconnect first
+        case .serverError(let code, _):
+            // Retry 5xx server errors, not 4xx client errors
+            return code >= 500
+        case .encodingError, .decodingError, .cancelled:
+            return false
+        }
+    }
+
+    /// Suggested delay before retry (seconds).
+    public var suggestedRetryDelay: TimeInterval {
+        switch self {
+        case .timeout:
+            return 1.0
+        case .webSocketError:
+            return 2.0
+        case .serverError:
+            return 3.0
+        case .connectionFailed:
+            return 2.0
+        default:
+            return 1.0
+        }
+    }
+
+    /// User-friendly error message.
+    public var userMessage: String {
+        switch self {
+        case .notConnected:
+            return "Not connected. Please check your internet connection."
+        case .timeout:
+            return "Request timed out. Please try again."
+        case .serverError(_, let message):
+            return message.isEmpty ? "Server error. Please try again later." : message
+        case .webSocketError:
+            return "Connection error. Please try again."
+        case .connectionFailed:
+            return "Unable to connect. Please check your internet connection."
+        case .encodingError, .decodingError:
+            return "Data error. Please try again or contact support."
+        case .cancelled:
+            return "Request cancelled."
         }
     }
 }
@@ -306,16 +362,18 @@ public actor CentrifugoRPCClient {
 
     // MARK: - RPC Methods
 
-    /// Call an RPC method and wait for response.
+    /// Call an RPC method and wait for response with timeout.
     ///
     /// - Parameters:
     ///   - method: RPC method name (e.g., "file.list_directory")
     ///   - params: Request parameters (must be Encodable)
+    ///   - timeout: Optional timeout in seconds (defaults to client's timeout)
     /// - Returns: Response decoded as the specified type
-    /// - Throws: RPCError if the call fails
+    /// - Throws: RPCError if the call fails or times out
     public func call<P: Encodable, R: Decodable>(
         method: String,
-        params: P
+        params: P,
+        timeout requestTimeout: TimeInterval? = nil
     ) async throws -> R {
         guard state == .connected, let client = client else {
             throw RPCError.notConnected
@@ -330,23 +388,43 @@ public actor CentrifugoRPCClient {
             throw RPCError.encodingError(error)
         }
 
-        // Make RPC call
-        return try await withCheckedThrowingContinuation { continuation in
-            client.rpc(method: method, data: paramsData) { result in
-                switch result {
-                case .success(let rpcResult):
-                    // Decode response
-                    do {
-                        let decoder = JSONDecoder()
-                        let decoded = try decoder.decode(R.self, from: rpcResult.data)
-                        continuation.resume(returning: decoded)
-                    } catch {
-                        continuation.resume(throwing: RPCError.decodingError(error))
+        // Use provided timeout or fall back to client's default
+        let effectiveTimeout = requestTimeout ?? timeout
+
+        // Race between RPC call and timeout
+        return try await withThrowingTaskGroup(of: R.self) { group in
+            // Task 1: Actual RPC call
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    client.rpc(method: method, data: paramsData) { result in
+                        switch result {
+                        case .success(let rpcResult):
+                            do {
+                                let decoder = JSONDecoder()
+                                let decoded = try decoder.decode(R.self, from: rpcResult.data)
+                                continuation.resume(returning: decoded)
+                            } catch {
+                                continuation.resume(throwing: RPCError.decodingError(error))
+                            }
+                        case .failure(let error):
+                            continuation.resume(throwing: RPCError.webSocketError(error))
+                        }
                     }
-                case .failure(let error):
-                    continuation.resume(throwing: RPCError.webSocketError(error))
                 }
             }
+
+            // Task 2: Timeout
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(effectiveTimeout * 1_000_000_000))
+                throw RPCError.timeout
+            }
+
+            // Return first to complete, cancel the other
+            guard let result = try await group.next() else {
+                throw RPCError.timeout
+            }
+            group.cancelAll()
+            return result
         }
     }
 

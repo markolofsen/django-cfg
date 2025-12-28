@@ -157,16 +157,19 @@ class SwiftThinGenerator:
 
         # Generate enums first
         enums_data = []
+        enum_names = set()
         for enum_class in self.enums:
             enum_code = int_enum_to_swift(enum_class)
             enums_data.append({
                 'name': enum_class.__name__,
                 'code': enum_code,
             })
+            enum_names.add(enum_class.__name__)
 
         # Collect all types, avoiding duplicates
+        # Include enum names to prevent generating them as structs
         types_data = []
-        generated_names = set()
+        generated_names = set(enum_names)
 
         # Add RPC param/result models
         for model in self.models:

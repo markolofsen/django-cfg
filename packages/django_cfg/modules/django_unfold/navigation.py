@@ -238,6 +238,9 @@ class NavigationManager(BaseCfgModule):
                         NavigationItem(title="Request Logs", icon=Icons.LIST_ALT, link=str(reverse_lazy("admin:grpc_grpcrequestlog_changelist"))),
                         NavigationItem(title="API Keys", icon=Icons.KEY, link=str(reverse_lazy("admin:grpc_grpcapikey_changelist"))),
                         NavigationItem(title="Server Status", icon=Icons.HEALTH_AND_SAFETY, link=str(reverse_lazy("admin:grpc_grpcserverstatus_changelist"))),
+                        NavigationItem(title="Agent Connections", icon=Icons.WIFI, link=str(reverse_lazy("admin:grpc_grpcagentconnectionstate_changelist"))),
+                        NavigationItem(title="Connection Events", icon=Icons.TIMELINE, link=str(reverse_lazy("admin:grpc_grpcagentconnectionevent_changelist"))),
+                        NavigationItem(title="Connection Metrics", icon=Icons.ANALYTICS, link=str(reverse_lazy("admin:grpc_grpcagentconnectionmetric_changelist"))),
                     ]
                 )
             )

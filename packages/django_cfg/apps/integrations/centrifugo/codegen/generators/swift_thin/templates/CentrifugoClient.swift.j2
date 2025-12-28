@@ -93,11 +93,16 @@ public actor CentrifugoClient {
     }
 {% else %}
     ///
-    /// - Parameter params: Request parameters
+    /// - Parameters:
+    ///   - params: Request parameters
+    ///   - timeout: Optional timeout in seconds (defaults to client's default)
     /// - Returns: {{ method.return_type }}
-    /// - Throws: RPCError if the call fails
-    public func {{ method.swift_name }}(params: {{ method.param_type }}) async throws -> {{ method.return_type }} {
-        return try await rpc.call(method: "{{ method.rpc_name }}", params: params)
+    /// - Throws: RPCError if the call fails or times out
+    public func {{ method.swift_name }}(
+        params: {{ method.param_type }},
+        timeout: TimeInterval? = nil
+    ) async throws -> {{ method.return_type }} {
+        return try await rpc.call(method: "{{ method.rpc_name }}", params: params, timeout: timeout)
     }
 {% endif %}
 

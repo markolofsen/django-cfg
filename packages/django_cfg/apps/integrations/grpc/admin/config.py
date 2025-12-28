@@ -15,7 +15,14 @@ from django_cfg.modules.django_admin import (
     UserField,
 )
 
-from ..models import GRPCRequestLog, GRPCServerStatus, GrpcApiKey
+from ..models import (
+    GRPCRequestLog,
+    GRPCServerStatus,
+    GrpcApiKey,
+    GrpcAgentConnectionState,
+    GrpcAgentConnectionEvent,
+    GrpcAgentConnectionMetric,
+)
 
 
 # Declarative configuration for GRPCRequestLog
@@ -236,4 +243,253 @@ grpcapikey_config = AdminConfig(
 )
 
 
-__all__ = ["grpcrequestlog_config", "grpcserverstatus_config", "grpcapikey_config"]
+# Declarative configuration for GrpcAgentConnectionState
+grpcagentconnectionstate_config = AdminConfig(
+    model=GrpcAgentConnectionState,
+
+    # List display
+    list_display=[
+        "machine_name",
+        "machine_id",
+        "status",
+        "last_known_ip",
+        "client_version",
+        "current_rtt_ms",
+        "current_packet_loss_percent",
+        "last_connected_at",
+        "consecutive_error_count",
+    ],
+
+    # Auto-generated display methods
+    display_fields=[
+        TextField(name="machine_name", title="Machine", ordering="machine_name"),
+        TextField(name="machine_id", title="Machine ID", ordering="machine_id"),
+        BadgeField(
+            name="status",
+            title="Status",
+            label_map={
+                "connected": "success",
+                "disconnected": "secondary",
+                "reconnecting": "warning",
+                "error": "danger",
+                "unknown": "info",
+            },
+            icon=Icons.WIFI,
+        ),
+        DateTimeField(name="last_connected_at", title="Last Connected", ordering="last_connected_at"),
+        DateTimeField(name="last_disconnected_at", title="Last Disconnected", ordering="last_disconnected_at"),
+        DateTimeField(name="first_connected_at", title="First Connected", ordering="first_connected_at"),
+    ],
+
+    # Filters
+    list_filter=["status", "last_connected_at", "first_connected_at"],
+    search_fields=["machine_id", "machine_name", "last_known_ip", "client_version"],
+
+    # Readonly fields
+    readonly_fields=[
+        "id",
+        "first_connected_at",
+        "created_at",
+        "updated_at",
+    ],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="Machine Identity",
+            fields=["machine_id", "machine_name", "status"],
+        ),
+        FieldsetConfig(
+            title="Network",
+            fields=["last_known_ip", "client_version"],
+        ),
+        FieldsetConfig(
+            title="Connection Times",
+            fields=["first_connected_at", "last_connected_at", "last_disconnected_at"],
+        ),
+        FieldsetConfig(
+            title="Metrics",
+            fields=["current_rtt_ms", "current_packet_loss_percent"],
+        ),
+        FieldsetConfig(
+            title="Errors",
+            fields=["last_error_message", "last_error_at", "consecutive_error_count"],
+            collapsed=True,
+        ),
+    ],
+
+    # Date hierarchy
+    date_hierarchy="last_connected_at",
+
+    # Ordering
+    ordering=["-last_connected_at"],
+
+    # Per page
+    list_per_page=50,
+)
+
+
+# Declarative configuration for GrpcAgentConnectionEvent
+grpcagentconnectionevent_config = AdminConfig(
+    model=GrpcAgentConnectionEvent,
+
+    # Performance optimization
+    select_related=["connection_state"],
+
+    # List display
+    list_display=[
+        "connection_state",
+        "event_type",
+        "timestamp",
+        "ip_address",
+        "client_version",
+        "duration_seconds",
+        "error_message_short",
+    ],
+
+    # Auto-generated display methods
+    display_fields=[
+        BadgeField(
+            name="event_type",
+            title="Event",
+            label_map={
+                "connected": "success",
+                "disconnected": "secondary",
+                "reconnecting": "warning",
+                "error": "danger",
+            },
+            icon=Icons.NOTIFICATIONS,
+        ),
+        DateTimeField(name="timestamp", title="Time", ordering="timestamp"),
+    ],
+
+    # Filters
+    list_filter=["event_type", "timestamp", "connection_state"],
+    search_fields=[
+        "connection_state__machine_id",
+        "connection_state__machine_name",
+        "ip_address",
+        "error_message",
+        "error_code",
+    ],
+
+    # Readonly fields
+    readonly_fields=["id", "timestamp"],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="Event",
+            fields=["connection_state", "event_type", "timestamp"],
+        ),
+        FieldsetConfig(
+            title="Context",
+            fields=["ip_address", "client_version", "duration_seconds"],
+        ),
+        FieldsetConfig(
+            title="Error Details",
+            fields=["error_message", "error_code", "error_details"],
+            collapsed=True,
+        ),
+    ],
+
+    # Date hierarchy
+    date_hierarchy="timestamp",
+
+    # Ordering
+    ordering=["-timestamp"],
+
+    # Per page
+    list_per_page=100,
+)
+
+
+# Declarative configuration for GrpcAgentConnectionMetric
+grpcagentconnectionmetric_config = AdminConfig(
+    model=GrpcAgentConnectionMetric,
+
+    # Performance optimization
+    select_related=["connection_state"],
+
+    # List display
+    list_display=[
+        "connection_state",
+        "timestamp",
+        "health_status",
+        "rtt_mean_ms",
+        "packet_loss_percent",
+        "keepalive_sent",
+        "keepalive_timeout",
+        "active_streams",
+        "failed_streams",
+    ],
+
+    # Auto-generated display methods
+    display_fields=[
+        BadgeField(
+            name="health_status",
+            title="Health",
+            label_map={
+                "healthy": "success",
+                "degraded": "warning",
+                "poor": "danger",
+                "unknown": "secondary",
+            },
+            icon=Icons.HEALTH_AND_SAFETY,
+        ),
+        DateTimeField(name="timestamp", title="Time", ordering="timestamp"),
+    ],
+
+    # Filters
+    list_filter=["health_status", "timestamp", "connection_state"],
+    search_fields=[
+        "connection_state__machine_id",
+        "connection_state__machine_name",
+    ],
+
+    # Readonly fields
+    readonly_fields=["id", "timestamp"],
+
+    # Fieldsets
+    fieldsets=[
+        FieldsetConfig(
+            title="Connection",
+            fields=["connection_state", "timestamp", "health_status", "sample_window_seconds"],
+        ),
+        FieldsetConfig(
+            title="Latency (RTT)",
+            fields=["rtt_min_ms", "rtt_max_ms", "rtt_mean_ms", "rtt_stddev_ms"],
+        ),
+        FieldsetConfig(
+            title="Packet Loss",
+            fields=["packet_loss_percent", "packets_sent", "packets_received"],
+        ),
+        FieldsetConfig(
+            title="Keepalive",
+            fields=["keepalive_sent", "keepalive_ack", "keepalive_timeout"],
+        ),
+        FieldsetConfig(
+            title="Streams",
+            fields=["active_streams", "failed_streams"],
+        ),
+    ],
+
+    # Date hierarchy
+    date_hierarchy="timestamp",
+
+    # Ordering
+    ordering=["-timestamp"],
+
+    # Per page
+    list_per_page=100,
+)
+
+
+__all__ = [
+    "grpcrequestlog_config",
+    "grpcserverstatus_config",
+    "grpcapikey_config",
+    "grpcagentconnectionstate_config",
+    "grpcagentconnectionevent_config",
+    "grpcagentconnectionmetric_config",
+]
