@@ -72,6 +72,15 @@ class WidgetRegistry:
         return getattr(obj, field_name, "—")
 
 
+# Helper to filter out internal keys from config
+def _filter_internal_keys(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Filter out internal keys like 'is_link' before passing to Pydantic models."""
+    if not cfg:
+        return cfg
+    internal_keys = {'is_link'}
+    return {k: v for k, v in cfg.items() if k not in internal_keys}
+
+
 # Register built-in widgets
 
 # User widgets
@@ -79,7 +88,7 @@ WidgetRegistry.register(
     "user_avatar",
     lambda obj, field, cfg: UserDisplay.with_avatar(
         getattr(obj, field),
-        UserDisplayConfig(**cfg) if cfg else None
+        UserDisplayConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )
 
@@ -87,7 +96,7 @@ WidgetRegistry.register(
     "user_simple",
     lambda obj, field, cfg: UserDisplay.simple(
         getattr(obj, field),
-        UserDisplayConfig(**cfg) if cfg else None
+        UserDisplayConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )
 
@@ -96,7 +105,7 @@ WidgetRegistry.register(
     "currency",
     lambda obj, field, cfg: MoneyDisplay.amount(
         getattr(obj, field),
-        MoneyDisplayConfig(**cfg) if cfg else None
+        MoneyDisplayConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )
 
@@ -105,7 +114,7 @@ WidgetRegistry.register(
     lambda obj, field, cfg: MoneyDisplay.with_breakdown(
         getattr(obj, field),
         cfg.get('breakdown_items', []),
-        MoneyDisplayConfig(**{k: v for k, v in cfg.items() if k != 'breakdown_items'}) if cfg else None
+        MoneyDisplayConfig(**{k: v for k, v in _filter_internal_keys(cfg).items() if k != 'breakdown_items'}) if cfg else None
     )
 )
 
@@ -114,7 +123,7 @@ WidgetRegistry.register(
     "badge",
     lambda obj, field, cfg: StatusBadge.auto(
         getattr(obj, field),
-        StatusBadgeConfig(**cfg) if cfg else None
+        StatusBadgeConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )
 
@@ -138,7 +147,7 @@ WidgetRegistry.register(
     "datetime_relative",
     lambda obj, field, cfg: DateTimeDisplay.relative(
         getattr(obj, field),
-        DateTimeDisplayConfig(**cfg) if cfg else None
+        DateTimeDisplayConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )
 
@@ -146,7 +155,7 @@ WidgetRegistry.register(
     "datetime_compact",
     lambda obj, field, cfg: DateTimeDisplay.compact(
         getattr(obj, field),
-        DateTimeDisplayConfig(**cfg) if cfg else None
+        DateTimeDisplayConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )
 

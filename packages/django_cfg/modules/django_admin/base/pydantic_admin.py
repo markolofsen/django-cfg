@@ -139,7 +139,11 @@ class PydanticAdminMixin:
         cls._has_image_preview = has_image_preview
 
         # List display options
-        cls.list_display_links = config.list_display_links or getattr(cls, 'list_display_links', None)
+        # Rename list_display_links to match display method names (field -> field_display)
+        if config.list_display_links:
+            cls.list_display_links = cls._build_list_display_links(config)
+        else:
+            cls.list_display_links = getattr(cls, 'list_display_links', None)
 
         # Pagination
         cls.list_per_page = config.list_per_page
@@ -646,15 +650,19 @@ class PydanticAdminMixin:
     def _build_list_display(cls, config: AdminConfig) -> List[str]:
         """Build list_display with generated display methods."""
         result = []
+        # Get list_display_links for detecting link fields
+        link_fields = config.list_display_links or []
 
         for field_name in config.list_display:
             # Check if we have a FieldConfig for this field
             field_config = config.get_display_field_config(field_name)
 
             if field_config and field_config.ui_widget:
+                # Check if this field is a link field
+                is_link = field_name in link_fields
                 # Generate display method for this field
                 method_name = f"{field_name}_display"
-                display_method = cls._generate_display_method(field_config)
+                display_method = cls._generate_display_method(field_config, is_link=is_link)
                 setattr(cls, method_name, display_method)
                 result.append(method_name)
             else:
@@ -664,7 +672,31 @@ class PydanticAdminMixin:
         return result
 
     @classmethod
-    def _generate_display_method(cls, field_config):
+    def _build_list_display_links(cls, config: AdminConfig) -> List[str]:
+        """
+        Build list_display_links with correct field names.
+
+        If a field has a display_field config with ui_widget, it will be renamed
+        to {field_name}_display in list_display. We need to apply the same
+        transformation to list_display_links so Django can find the matching field.
+        """
+        result = []
+
+        for field_name in config.list_display_links:
+            # Check if we have a FieldConfig for this field
+            field_config = config.get_display_field_config(field_name)
+
+            if field_config and field_config.ui_widget:
+                # Field was renamed to {field_name}_display
+                result.append(f"{field_name}_display")
+            else:
+                # Use field as-is
+                result.append(field_name)
+
+        return result
+
+    @classmethod
+    def _generate_display_method(cls, field_config, is_link: bool = False):
         """Generate display method from FieldConfig."""
 
         def display_method(self, obj):
@@ -681,6 +713,8 @@ class PydanticAdminMixin:
             # Render using widget
             if field_config.ui_widget:
                 widget_config = field_config.get_widget_config()
+                # Add is_link flag for link styling
+                widget_config['is_link'] = is_link
                 rendered = WidgetRegistry.render(
                     field_config.ui_widget,
                     obj,

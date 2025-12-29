@@ -49,6 +49,14 @@ class TextDisplay:
         if monospace:
             classes.append("font-mono")
 
+        # Link styling - use primary colors for clickable fields
+        is_link = config.get('is_link', False)
+        if is_link:
+            classes.append("text-primary-600")
+            classes.append("dark:text-primary-400")
+            classes.append("hover:text-primary-700")
+            classes.append("dark:hover:text-primary-500")
+
         # Build inline styles
         styles = []
         if nowrap:
