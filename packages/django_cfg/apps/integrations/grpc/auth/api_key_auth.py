@@ -163,7 +163,7 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
 
         Checks:
         1. Django SECRET_KEY (if enabled)
-        2. GrpcApiKey model in database
+        2. GrpcApiKey model in database (hash-based validation)
 
         Args:
             api_key: API key string
@@ -193,31 +193,26 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
                 )
                 return None, None
 
-        # Check API key in database
+        # Validate API key using secure hash-based method
         try:
             from django_cfg.apps.integrations.grpc.models import GrpcApiKey
 
-            # Django 5.2: Native async ORM with select_related to avoid sync FK access
-            api_key_obj = await GrpcApiKey.objects.select_related('user').filter(
-                key=api_key, is_active=True
-            ).afirst()
+            # Use the new secure validation method (hash-based with fallback)
+            api_key_obj = await GrpcApiKey.avalidate_key(api_key)
 
-            if api_key_obj and api_key_obj.is_valid:
+            if api_key_obj:
                 # Update usage tracking (async method call)
                 await api_key_obj.amark_used()
-                # User is already loaded via select_related, no sync DB hit
+                # User is already loaded via select_related in avalidate_key
                 user = api_key_obj.user
                 logger.debug(f"✅ [API_KEY_AUTH] Valid API key for user {user.id} ({user.username})")
                 return user, api_key_obj
             else:
-                # Log masked API key for debugging (first 8 and last 4 chars)
-                masked_key = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "***"
+                # Log masked API key for debugging (first 8 chars only for security)
+                masked_key = f"{api_key[:8]}..." if len(api_key) > 8 else "***"
                 logger.warning(
                     f"⚠️ [API_KEY_AUTH] API key validation failed:\n"
-                    f"   - Masked key: {masked_key}\n"
-                    f"   - Key found in DB: {api_key_obj is not None}\n"
-                    f"   - Key is_valid: {api_key_obj.is_valid if api_key_obj else 'N/A'}\n"
-                    f"   - Key is_active: {api_key_obj.is_active if api_key_obj else 'N/A'}"
+                    f"   - Masked key: {masked_key}"
                 )
                 return None, None
 

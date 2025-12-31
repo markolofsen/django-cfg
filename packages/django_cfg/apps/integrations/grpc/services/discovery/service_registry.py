@@ -61,12 +61,6 @@ class ServiceRegistryManager:
 
     def get_all_services(self) -> List[Dict]:
         """Get all registered services."""
-        current_server = self.get_current_server()
-
-        if current_server and current_server.registered_services:
-            return current_server.registered_services
-
-        logger.debug("Server not running - discovering services from filesystem")
         from .service_discovery import ServiceDiscovery
         discovery = ServiceDiscovery()
         return discovery.get_registered_services()

@@ -59,6 +59,12 @@ _DEFAULT_QUEUE_SIZE: Final[int] = 1000
 _DEFAULT_CB_THRESHOLD: Final[int] = 5
 _DEFAULT_CB_TIMEOUT: Final[float] = 60.0
 
+# Connection pool defaults
+_DEFAULT_POOL_MAX_SIZE: Final[int] = 20
+_DEFAULT_POOL_IDLE_TIMEOUT: Final[float] = 120.0
+_DEFAULT_POOL_MIN_IDLE: Final[int] = 2
+_DEFAULT_POOL_MAX_AGE: Final[float] = 3600.0
+
 # Error handling
 _DEFAULT_MAX_CONSECUTIVE_ERRORS: Final[int] = 3
 
@@ -270,6 +276,38 @@ def get_circuit_breaker_timeout() -> float:
 
 # Static circuit breaker settings
 CIRCUIT_BREAKER_SUCCESS_THRESHOLD: Final[int] = 2
+
+
+# =============================================================================
+# Connection Pool Configuration
+# =============================================================================
+
+
+def get_pool_max_size() -> int:
+    """Get maximum number of channels in pool."""
+    return _DEFAULT_POOL_MAX_SIZE
+
+
+def get_pool_idle_timeout() -> float:
+    """Get idle timeout for pooled channels in seconds."""
+    return _DEFAULT_POOL_IDLE_TIMEOUT
+
+
+def get_pool_min_idle() -> int:
+    """Get minimum idle channels to maintain per address."""
+    return _DEFAULT_POOL_MIN_IDLE
+
+
+def get_pool_max_age() -> float:
+    """Get maximum age of a channel in seconds."""
+    return _DEFAULT_POOL_MAX_AGE
+
+
+# Static pool settings
+POOL_MAX_SIZE: Final[int] = _DEFAULT_POOL_MAX_SIZE
+POOL_IDLE_TIMEOUT: Final[float] = _DEFAULT_POOL_IDLE_TIMEOUT
+POOL_MIN_IDLE: Final[int] = _DEFAULT_POOL_MIN_IDLE
+POOL_MAX_AGE: Final[float] = _DEFAULT_POOL_MAX_AGE
 
 
 # =============================================================================

@@ -190,8 +190,6 @@ class MonitoringService:
             "uptime_seconds": current_server.uptime_seconds,
             "uptime_display": current_server.uptime_display,
             "registered_services_count": len(services_list),
-            "enable_reflection": current_server.enable_reflection,
-            "enable_health_check": current_server.enable_health_check,
             "last_heartbeat": current_server.last_heartbeat,
             "services": services_list,
             "services_healthy": services_healthy,

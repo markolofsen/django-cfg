@@ -2,9 +2,15 @@
 gRPC API Key Admin.
 
 PydanticAdmin for GrpcApiKey model with enhanced UI and status tracking.
+
+Security:
+    - API keys are stored as SHA-256 hashes
+    - Full key is shown only ONCE during creation
+    - Only prefix (first 8 chars) is displayed after creation
 """
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.utils.html import format_html
 from django_cfg.modules.django_admin import Icons, computed_field
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
@@ -21,7 +27,8 @@ class GrpcApiKeyAdmin(PydanticAdmin):
     - List view with status indicators
     - Search by name, description, user
     - Filter by status, type, user
-    - Read-only key display (masked)
+    - Secure key storage (SHA-256 hash)
+    - Key shown only once during creation
     - Actions for revoking keys
     - Type-safe configuration via AdminConfig
     """
@@ -51,18 +58,11 @@ class GrpcApiKeyAdmin(PydanticAdmin):
                 icon=Icons.CANCEL
             )
 
-    @computed_field("Masked Key")
-    def masked_key_display(self, obj):
-        """Display masked API key."""
-        return self.html.code(obj.masked_key)
-
-    def key_display(self, obj):
-        """Display full API key (read-only, for copying)."""
-        if obj.pk:
-            return self.html.code(obj.key)
-        return self.html.empty()
-
-    key_display.short_description = "Full API Key"
+    @computed_field("Key Prefix")
+    def key_prefix_display(self, obj):
+        """Display key prefix (first 8 chars) for identification."""
+        prefix = obj.display_prefix
+        return self.html.code(f"{prefix}...")
 
     @computed_field("Requests", ordering="request_count")
     def request_count_display(self, obj):
@@ -107,6 +107,42 @@ class GrpcApiKeyAdmin(PydanticAdmin):
             variant="primary"
         )
 
+    # Override save to use secure generation
+    def save_model(self, request, obj, form, change):
+        """
+        Save model with secure key generation.
+
+        For new keys, uses GrpcApiKey.generate() and shows the key once.
+        """
+        if not change:  # New object
+            # Use secure generation
+            api_key, raw_key = GrpcApiKey.generate(
+                user=obj.user,
+                name=obj.name,
+                description=obj.description or "",
+                expires_at=obj.expires_at,
+            )
+
+            # Copy the ID to obj so Django admin works correctly
+            obj.pk = api_key.pk
+            obj.id = api_key.id
+
+            # Show the key to the user (ONLY ONCE!)
+            self.message_user(
+                request,
+                format_html(
+                    '🔑 <strong>API Key Created!</strong> '
+                    '<span style="background:#1a1a1a; color:#00ff00; padding:4px 8px; '
+                    'font-family:monospace; border-radius:4px; user-select:all;">{}</span> '
+                    '<br><strong>⚠️ Save this key now! It will NOT be shown again.</strong>',
+                    raw_key
+                ),
+                messages.WARNING,
+            )
+        else:
+            # Existing object - just save normally
+            super().save_model(request, obj, form, change)
+
     # Actions
     @admin.action(description="Revoke selected API keys")
     def revoke_selected_keys(self, request, queryset):
@@ -117,6 +153,52 @@ class GrpcApiKeyAdmin(PydanticAdmin):
             request,
             f"Successfully revoked {count} API key(s).",
         )
+
+    @admin.action(description="Regenerate selected API keys")
+    def regenerate_selected_keys(self, request, queryset):
+        """
+        Regenerate selected API keys.
+
+        Creates new keys with the same settings but new key values.
+        Old keys are revoked.
+        """
+        regenerated = 0
+        for old_key in queryset:
+            # Create new key with same settings
+            new_key, raw_key = GrpcApiKey.generate(
+                user=old_key.user,
+                name=f"{old_key.name} (regenerated)",
+                description=old_key.description,
+                expires_at=old_key.expires_at,
+            )
+
+            # Revoke old key
+            old_key.is_active = False
+            old_key.save(update_fields=["is_active"])
+
+            regenerated += 1
+
+            # Show the new key
+            self.message_user(
+                request,
+                format_html(
+                    '🔑 <strong>Regenerated:</strong> {} → '
+                    '<span style="background:#1a1a1a; color:#00ff00; padding:4px 8px; '
+                    'font-family:monospace; border-radius:4px;">{}</span>',
+                    old_key.name,
+                    raw_key
+                ),
+                messages.WARNING,
+            )
+
+        self.message_user(
+            request,
+            f"⚠️ Save the keys above! They will NOT be shown again. "
+            f"Regenerated {regenerated} key(s), old keys revoked.",
+            messages.WARNING,
+        )
+
+    actions = ["revoke_selected_keys", "regenerate_selected_keys"]
 
 
 __all__ = ["GrpcApiKeyAdmin"]

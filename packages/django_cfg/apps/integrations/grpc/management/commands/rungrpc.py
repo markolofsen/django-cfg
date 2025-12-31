@@ -361,30 +361,12 @@ class Command(BaseCommand):
                 'host': host,
                 'port': port,
                 'pid': os.getpid(),
-                'max_workers': 0,
-                'enable_reflection': enable_reflection,
-                'enable_health_check': enable_health_check,
             }
-
-            # Get registered services metadata (run in thread to avoid blocking)
-            discovery = ServiceDiscovery()
-            services_metadata = await asyncio.to_thread(
-                discovery.get_registered_services
-            )
 
             server_status = await GRPCServerStatus.objects.astart_server(
                 host=host,
                 port=port,
                 pid=os.getpid(),
-                max_workers=0,  # Async server - no workers
-                enable_reflection=enable_reflection,
-                enable_health_check=enable_health_check,
-            )
-
-            # Store registered services in database
-            server_status.registered_services = services_metadata
-            await server_status.asave(
-                update_fields=["registered_services"]
             )
 
             # Store in instance for heartbeat
@@ -802,22 +784,9 @@ class Command(BaseCommand):
                             "re-registering..."
                         )
 
-                        # Get services metadata for re-registration
-                        from django_cfg.apps.integrations.grpc.services import ServiceDiscovery
-                        discovery = ServiceDiscovery()
-                        services_metadata = await asyncio.to_thread(
-                            discovery.get_registered_services
-                        )
-
                         # Re-register server (Django 5.2: Native async ORM)
                         new_server_status = await GRPCServerStatus.objects.astart_server(
                             **self.server_config
-                        )
-
-                        # Store registered services
-                        new_server_status.registered_services = services_metadata
-                        await new_server_status.asave(
-                            update_fields=["registered_services"]
                         )
 
                         # Mark as running (Django 5.2: Native async ORM)

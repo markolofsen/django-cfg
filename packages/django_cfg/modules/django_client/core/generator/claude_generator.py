@@ -57,8 +57,8 @@ class ClaudeGenerator:
         # Get streaming section (TypeScript only)
         streaming_section = self._build_streaming_section(ops_by_tag)
 
-        # Group name for examples
-        grp = self.group_name or "<group>"
+        # Get language-specific "How It Works" section
+        how_it_works = self._build_how_it_works_section()
 
         content = f"""# {info.title} - {self.language.title()} Client
 
@@ -84,32 +84,7 @@ Auto-generated. **Do not edit manually.**
 
 {usage}
 {streaming_section}
-## How It Works
-
-```
-DRF ViewSets → drf-spectacular → OpenAPI → IR Parser → Generator → This Client
-```
-
-**Configuration** (`api/config.py`):
-```python
-openapi_client = OpenAPIClientConfig(
-    enabled=True,
-    groups=[OpenAPIGroupConfig(name="{grp}", apps=["..."])],
-    generate_zod_schemas=True,  # → schemas.ts
-    generate_fetchers=True,     # → fetchers.ts
-    generate_swr_hooks=True,    # → hooks.ts
-)
-```
-
-**Copy to Next.js** (if `nextjs_admin` configured):
-```python
-nextjs_admin = NextJsAdminConfig(
-    project_path="../frontend/apps/...",
-    api_output_path="app/_lib/api/generated",
-)
-```
-
-@see https://djangocfg.com/docs/features/api-generation
+{how_it_works}
 """
         return GeneratedFile(
             path="CLAUDE.md",
@@ -239,6 +214,66 @@ item, _ := client.{pascal}.Get(ctx, 1)
 // Generated: messages.proto, services.proto
 // Compile: protoc --go_out=. *.proto
 ```"""
+
+    def _build_how_it_works_section(self) -> str:
+        """Build language-specific 'How It Works' section."""
+        grp = self.group_name or "<group>"
+
+        base = """## How It Works
+
+```
+DRF ViewSets → drf-spectacular → OpenAPI → IR Parser → Generator → This Client
+```
+"""
+        if self.language == "typescript":
+            return base + f"""
+**Configuration** (`api/config.py`):
+```python
+openapi_client = OpenAPIClientConfig(
+    enabled=True,
+    groups=[OpenAPIGroupConfig(name="{grp}", apps=["..."])],
+    generate_zod_schemas=True,  # → schemas.ts
+    generate_fetchers=True,     # → fetchers.ts
+    generate_swr_hooks=True,    # → hooks.ts
+)
+```
+
+@see https://djangocfg.com/docs/features/api-generation
+"""
+        elif self.language == "go":
+            return base + f"""
+**Regenerate:**
+```bash
+make go  # or: python manage.py generate_api_go
+```
+
+**Import paths** are auto-fixed based on target `go.mod`.
+
+@see https://djangocfg.com/docs/features/api-generation
+"""
+        elif self.language == "python":
+            return base + f"""
+**Configuration** (`api/config.py`):
+```python
+openapi_client = OpenAPIClientConfig(
+    enabled=True,
+    groups=[OpenAPIGroupConfig(name="{grp}", apps=["..."])],
+)
+```
+
+@see https://djangocfg.com/docs/features/api-generation
+"""
+        elif self.language == "proto":
+            return base + """
+**Compile for Go:**
+```bash
+protoc --go_out=. --go-grpc_out=. *.proto
+```
+
+@see https://djangocfg.com/docs/features/api-generation
+"""
+        else:
+            return base + "\n@see https://djangocfg.com/docs/features/api-generation\n"
 
     def _is_streaming_operation(self, operation) -> bool:
         """Check if operation returns streaming/binary content."""

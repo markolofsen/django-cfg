@@ -173,7 +173,7 @@ grpcapikey_config = AdminConfig(
         "status_indicator",
         "name",
         "user",
-        "masked_key_display",
+        "key_prefix_display",  # Show prefix only (secure)
         "request_count_display",
         "last_used_at",
         "expires_display",
@@ -190,12 +190,12 @@ grpcapikey_config = AdminConfig(
 
     # Filters
     list_filter=["is_active", "created_at", "expires_at", "user"],
-    search_fields=["name", "description", "user__username", "user__email", "key"],
+    # Search by prefix, not full key (security)
+    search_fields=["name", "description", "user__username", "user__email", "key_prefix"],
 
-    # Readonly fields
+    # Readonly fields (key is never shown after creation)
     readonly_fields=[
-        "key_display",
-        "masked_key",
+        "key_prefix_display",
         "request_count",
         "last_used_at",
         "created_at",
@@ -210,7 +210,8 @@ grpcapikey_config = AdminConfig(
         ),
         FieldsetConfig(
             title="API Key",
-            fields=["key_display", "masked_key"],
+            description="The full API key is shown only once during creation for security.",
+            fields=["key_prefix_display"],
         ),
         FieldsetConfig(
             title="User Association",

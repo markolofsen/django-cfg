@@ -86,6 +86,19 @@ class GRPCServerStatus(models.Model):
         end = self.stopped_at or timezone.now()
         return int((end - self.started_at).total_seconds())
 
+    @property
+    def uptime_display(self) -> str:
+        """Human-readable uptime string."""
+        seconds = self.uptime_seconds
+        if seconds < 60:
+            return f"{seconds}s"
+        elif seconds < 3600:
+            return f"{seconds // 60}m {seconds % 60}s"
+        else:
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            return f"{hours}h {minutes}m"
+
     def mark_running(self):
         """Mark server as running."""
         self.status = self.StatusChoices.RUNNING
