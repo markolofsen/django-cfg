@@ -81,10 +81,15 @@ class EventPublisher:
             self.telegram_enabled = False
 
     async def publish_event(self, **data):
-        """Publish event to Centrifugo."""
+        """Publish event to Centrifugo (fire-and-forget, non-blocking)."""
         if not self._centrifugo_publisher:
             return
 
+        # Fire-and-forget: don't block gRPC response
+        asyncio.create_task(self._publish_event_async(**data))
+
+    async def _publish_event_async(self, **data):
+        """Internal async publish - runs in background."""
         try:
             channel = self.channel_template.format(
                 service=data.get('service', 'unknown'),
@@ -109,13 +114,18 @@ class EventPublisher:
                 await self._send_to_telegram(**data)
 
         except Exception as e:
-            logger.warning(f"Failed to publish Centrifugo event: {e}")
+            logger.debug(f"Centrifugo publish skipped: {e}")
 
     async def publish_error(self, error: Exception, **data):
-        """Publish error to Centrifugo."""
+        """Publish error to Centrifugo (fire-and-forget, non-blocking)."""
         if not self._centrifugo_publisher:
             return
 
+        # Fire-and-forget: don't block gRPC response
+        asyncio.create_task(self._publish_error_async(error, **data))
+
+    async def _publish_error_async(self, error: Exception, **data):
+        """Internal async error publish - runs in background."""
         try:
             channel = self.error_channel_template.format(
                 service=data.get('service', 'unknown'),
@@ -138,7 +148,7 @@ class EventPublisher:
                 },
             )
         except Exception as e:
-            logger.warning(f"Failed to publish Centrifugo error: {e}")
+            logger.debug(f"Centrifugo error publish skipped: {e}")
 
     async def _send_to_telegram(self, **data):
         """Send notification to Telegram."""
