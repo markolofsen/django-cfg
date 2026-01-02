@@ -186,6 +186,40 @@ class OTPService:
             logger.error(f"Error checking development mode: {e}")
             # Fall through to normal OTP validation
 
+        # Test account bypass (for App Store review, API testing, etc.)
+        # If user is marked as test account, accept any OTP code
+        try:
+            user = CustomUser.objects.filter(email=cleaned_email).first()
+
+            if user and user.is_test_account:
+                logger.info(f"[TEST ACCOUNT] OTP bypass for {cleaned_email}")
+
+                # Link user to source if provided
+                if source_url:
+                    CustomUser.objects._link_user_to_source(
+                        user, source_url, is_new_user=False
+                    )
+
+                # Send Telegram notification for test account login
+                try:
+                    verification_data = {
+                        "Email": cleaned_email,
+                        "Username": user.username,
+                        "Source URL": source_url or "Direct",
+                        "Login Time": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                        "User ID": user.id,
+                        "Mode": "🧪 TEST ACCOUNT (OTP Bypassed)"
+                    }
+                    DjangoTelegram.send_warning("Test Account Login", verification_data)
+                except Exception as telegram_error:
+                    logger.error(f"Failed to send Telegram test account notification: {telegram_error}")
+
+                return user
+
+        except Exception as e:
+            logger.error(f"Error checking test account: {e}")
+            # Fall through to normal OTP validation
+
         try:
             otp_secret = OTPSecret.objects.filter(
                 email=cleaned_email,

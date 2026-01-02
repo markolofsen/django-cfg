@@ -59,6 +59,7 @@ customuser_config = AdminConfig(
         "email",
         "full_name",
         "status",
+        "test_account_status",
         "twofa_status",
         "sources_count",
         "activity_count",
@@ -94,7 +95,7 @@ customuser_config = AdminConfig(
     ],
 
     # Filters and search
-    list_filter=[UserStatusFilter, "is_staff", "is_active", "date_joined"],
+    list_filter=[UserStatusFilter, "is_staff", "is_active", "is_test_account", "date_joined"],
     search_fields=["email", "first_name", "last_name"],
 
     # Readonly fields
@@ -154,6 +155,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
             {
                 "fields": (
                     ("is_active", "is_staff", "is_superuser"),
+                    ("is_test_account",),
                     ("groups",),
                     ("user_permissions",),
                 ),
@@ -233,6 +235,13 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
             variant = "secondary"
 
         return self.html.badge(status, variant=variant, icon=icon)
+
+    @computed_field("Test")
+    def test_account_status(self, obj):
+        """Display test account status with badge."""
+        if obj.is_test_account:
+            return self.html.badge("Test", variant="warning", icon=Icons.SCIENCE)
+        return None
 
     @computed_field("2FA")
     def twofa_status(self, obj):

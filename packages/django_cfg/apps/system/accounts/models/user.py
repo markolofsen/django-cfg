@@ -24,6 +24,13 @@ class CustomUser(AbstractUser):
     position = models.CharField(max_length=100, blank=True)
     avatar = models.ImageField(upload_to=user_avatar_path, blank=True, null=True)
 
+    # Test account for App Store review, API testing, etc.
+    # When enabled, OTP verification uses static code from settings.TEST_ACCOUNT_OTP
+    is_test_account = models.BooleanField(
+        default=False,
+        help_text="Test account bypasses OTP with static code (for App Store review, etc.)"
+    )
+
     # Profile metadata
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -35,6 +42,12 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        """Ensure username is generated if empty."""
+        if not self.username:
+            self.username = self.__class__.objects._generate_unique_username()
+        super().save(*args, **kwargs)
 
     @property
     def is_admin(self) -> bool:
