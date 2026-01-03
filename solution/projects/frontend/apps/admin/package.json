@@ -23,6 +23,7 @@
     "@djangocfg/ext-leads": "latest",
     "@djangocfg/layouts": "latest",
     "@djangocfg/ui-core": "latest",
+    "@djangocfg/ui-tools": "latest",
     "@djangocfg/ui-nextjs": "latest",
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",

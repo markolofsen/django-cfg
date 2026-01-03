@@ -8,11 +8,12 @@ import {
     AlertTitle, Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent,
     CardDescription, CardFooter, CardHeader, CardTitle, Checkbox, Dialog, DialogContent,
     DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Empty, EmptyContent,
-    EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle, Input, JsonTree, Label, Progress, Select,
+    EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle, Input, Label, Progress, Select,
     SelectContent, SelectItem, SelectTrigger, SelectValue, Separator, Skeleton, Slider, Spinner,
     Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent,
     TabsList, TabsTrigger, Textarea, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
 } from '@djangocfg/ui-nextjs';
+import { JsonTree } from '@djangocfg/ui-tools';
 
 import type { Metadata } from 'next';
 /**
