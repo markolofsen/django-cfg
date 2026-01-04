@@ -14,6 +14,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
+    BooleanField,
     DateTimeField,
     FieldsetConfig,
     Icons,
@@ -59,7 +60,7 @@ customuser_config = AdminConfig(
         "email",
         "full_name",
         "status",
-        "test_account_status",
+        "is_test_account",
         "twofa_status",
         "sources_count",
         "activity_count",
@@ -81,6 +82,10 @@ customuser_config = AdminConfig(
             title="Email",
             variant="info",
             icon=Icons.EMAIL
+        ),
+        BooleanField(
+            name="is_test_account",
+            title="Test",
         ),
         DateTimeField(
             name="last_login",
@@ -235,13 +240,6 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
             variant = "secondary"
 
         return self.html.badge(status, variant=variant, icon=icon)
-
-    @computed_field("Test")
-    def test_account_status(self, obj):
-        """Display test account status with badge."""
-        if obj.is_test_account:
-            return self.html.badge("Test", variant="warning", icon=Icons.SCIENCE)
-        return None
 
     @computed_field("2FA")
     def twofa_status(self, obj):

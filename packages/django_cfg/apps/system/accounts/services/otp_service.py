@@ -68,6 +68,12 @@ class OTPService:
 
         # Send email using AccountNotifications
         try:
+            # Skip email for test accounts (any OTP is accepted anyway)
+            should_send_email = not user.is_test_account
+
+            if user.is_test_account:
+                logger.info(f"[TEST ACCOUNT] Skipping OTP email for {cleaned_email}")
+
             # Send OTP notification
             AccountNotifications.send_otp_notification(
                 user=user,
@@ -75,12 +81,12 @@ class OTPService:
                 is_new_user=created,
                 source_url=source_url,
                 channel='email',
-                send_email=True,
+                send_email=should_send_email,
                 send_telegram=False  # Telegram notification sent separately below
             )
 
-            # Send welcome email for new users
-            if created:
+            # Send welcome email for new users (skip for test accounts)
+            if created and should_send_email:
                 AccountNotifications.send_welcome_email(
                     user=user,
                     send_email=True,
@@ -89,8 +95,6 @@ class OTPService:
 
             # Send Telegram notification for OTP request
             try:
-
-
                 # Prepare notification data
                 notification_data = {
                     "Email": cleaned_email,
@@ -100,8 +104,14 @@ class OTPService:
                     "Timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
                 }
 
+                # Add test account indicator
+                if user.is_test_account:
+                    notification_data["Mode"] = "🧪 TEST ACCOUNT (Email skipped)"
+
                 if created:
                     DjangoTelegram.send_success("New User OTP Request", notification_data)
+                elif user.is_test_account:
+                    DjangoTelegram.send_warning("Test Account OTP Request", notification_data)
                 else:
                     DjangoTelegram.send_info("OTP Login Request", notification_data)
 

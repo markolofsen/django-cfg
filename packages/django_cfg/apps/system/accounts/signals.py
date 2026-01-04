@@ -33,15 +33,18 @@ def send_user_status_change_emails(sender, instance, **kwargs):
         if instance.pk:
             old_instance = User.objects.get(pk=instance.pk)
 
+            # Skip email for test accounts
+            should_send_email = not getattr(instance, 'is_test_account', False)
+
             # Check if user was activated
             if not old_instance.is_active and instance.is_active:
-                AccountNotifications.send_account_status_change(instance, "activated")
-                logger.info(f"Account activation email sent to {instance.email}")
+                AccountNotifications.send_account_status_change(instance, "activated", send_email=should_send_email)
+                logger.info(f"Account activation {'email' if should_send_email else 'notification'} sent to {instance.email}")
 
             # Check if user was deactivated
             elif old_instance.is_active and not instance.is_active:
-                AccountNotifications.send_account_status_change(instance, "deactivated", reason="Account deactivated by administrator")
-                logger.info(f"Account deactivation email sent to {instance.email}")
+                AccountNotifications.send_account_status_change(instance, "deactivated", reason="Account deactivated by administrator", send_email=should_send_email)
+                logger.info(f"Account deactivation {'email' if should_send_email else 'notification'} sent to {instance.email}")
 
     except User.DoesNotExist:
         # New user, no old instance to compare
@@ -58,6 +61,9 @@ def send_user_profile_update_email(sender, instance, **kwargs):
         if instance.pk:
             old_instance = User.objects.get(pk=instance.pk)
 
+            # Skip email for test accounts
+            should_send_email = not getattr(instance, 'is_test_account', False)
+
             # Check for important changes
             changes = []
 
@@ -72,7 +78,7 @@ def send_user_profile_update_email(sender, instance, **kwargs):
 
             # Send notification if there were important changes
             if changes:
-                AccountNotifications.send_profile_update_notification(instance, changes, send_email=True, send_telegram=True)
+                AccountNotifications.send_profile_update_notification(instance, changes, send_email=should_send_email, send_telegram=True)
                 logger.info(f"Profile update notification sent to {instance.email}")
 
     except User.DoesNotExist:
