@@ -3,14 +3,14 @@
  * Auto-generated - DO NOT EDIT
  */
 
-export { APIClient, API_VERSION, GENERATED_AT } from './client.js';
+export { APIClient, API_VERSION, GENERATED_AT } from './client';
 {% if enums %}
 export {
 {% for enum_name in enums | unique | sort %}  {{ enum_name }},
-{% endfor %}} from './types.js';
+{% endfor %}} from './types';
 {% endif %}
 {% if models %}
 export type {
 {% for model_name in models | unique | sort %}  {{ model_name }},
-{% endfor %}} from './types.js';
+{% endfor %}} from './types';
 {% endif %}
