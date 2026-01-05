@@ -8,7 +8,7 @@
 {% if models %}
 import type {
 {% for model_name in models | unique | sort %}  {{ model_name }},
-{% endfor %}} from './types';
+{% endfor %}} from './types.js';
 {% endif %}
 
 /**
@@ -31,7 +31,7 @@ interface CentrifugoClient {
 }
 
 // Re-export VersionCheckResult from types (generated from Pydantic model)
-export type { VersionCheckResult } from './types';
+export type { VersionCheckResult } from './types.js';
 
 export class APIClient {
   constructor(private client: CentrifugoClient) {}

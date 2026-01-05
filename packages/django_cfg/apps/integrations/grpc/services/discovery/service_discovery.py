@@ -30,7 +30,6 @@ class ServiceDiscovery:
     - Supports custom service registration
     - Configurable discovery paths
     - Lazy loading support
-    - Integration with django-grpc-framework
 
     Example:
         ```python

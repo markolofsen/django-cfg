@@ -9,15 +9,6 @@ from django_cfg.utils import get_logger
 
 logger = get_logger("grpc.discovery.utils")
 
-# Optional django-grpc-framework support
-try:
-    from django_grpc_framework import generics
-    HAS_DJANGO_GRPC_FRAMEWORK = True
-except ImportError:
-    HAS_DJANGO_GRPC_FRAMEWORK = False
-    generics = None
-    logger.debug("django-grpc-framework not installed")
-
 
 def is_grpc_service(obj: Any) -> bool:
     """
@@ -31,18 +22,6 @@ def is_grpc_service(obj: Any) -> bool:
     """
     if not isinstance(obj, type):
         return False
-
-    # Check for django-grpc-framework service
-    if HAS_DJANGO_GRPC_FRAMEWORK and generics:
-        try:
-            if issubclass(obj, (
-                generics.Service,
-                generics.ModelService,
-                generics.ReadOnlyModelService,
-            )):
-                return True
-        except (TypeError, AttributeError):
-            pass
 
     # Check for grpc servicer (has add_to_server method)
     if hasattr(obj, "add_to_server") and callable(getattr(obj, "add_to_server")):
@@ -62,7 +41,6 @@ def get_add_to_server_func(service_class: Any, module_path: str) -> Optional[Any
     Returns:
         add_to_server function or None
     """
-    # For django-grpc-framework services
     if hasattr(service_class, "add_to_server"):
         return getattr(service_class, "add_to_server")
 
@@ -185,5 +163,4 @@ __all__ = [
     "get_add_to_server_func",
     "extract_service_name",
     "extract_service_metadata",
-    "HAS_DJANGO_GRPC_FRAMEWORK",
 ]
