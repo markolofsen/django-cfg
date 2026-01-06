@@ -241,7 +241,7 @@ class Command(AdminCommand):
                     enum_names = [e.__name__ for e in enums]
                     self.stdout.write(f"  Found {len(enums)} enums: {', '.join(enum_names)}")
 
-                generator = TypeScriptThinGenerator(methods, models_list, ts_dir, enums=enums)
+                generator = TypeScriptThinGenerator(methods, models_list, ts_dir, enums=enums, channels=channels)
                 generator.generate()
                 generated.append("TypeScript")
                 self.stdout.write(colorize(f"  ✓ Generated at: {ts_dir}", fg="green"))

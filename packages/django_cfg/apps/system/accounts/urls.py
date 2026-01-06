@@ -12,6 +12,7 @@ from .views.oauth import (
     OAuthProvidersView,
 )
 from .views.profile import (
+    AccountDeleteView,
     UserProfilePartialUpdateView,
     UserProfileUpdateView,
     UserProfileView,
@@ -41,6 +42,7 @@ profile_patterns = [
     path('update/', UserProfileUpdateView.as_view(), name='profile_update'),
     path('partial/', UserProfilePartialUpdateView.as_view(), name='profile_partial_update'),
     path('avatar/', upload_avatar, name='profile_avatar_upload'),
+    path('delete/', AccountDeleteView.as_view(), name='account_delete'),
 ]
 
 # OAuth-related URLs

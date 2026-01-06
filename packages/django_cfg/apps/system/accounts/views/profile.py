@@ -1,15 +1,22 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from django_cfg.mixins import ClientAPIMixin
+from django_cfg.modules.django_telegram import DjangoTelegram
+from django_cfg.utils import get_logger
 from ..serializers.profile import (
+    AccountDeleteResponseSerializer,
     AvatarUploadSerializer,
     UserProfileUpdateSerializer,
     UserSerializer,
 )
+
+logger = get_logger(__name__)
 
 User = get_user_model()
 
@@ -173,3 +180,71 @@ def upload_avatar(request):
     # Return updated user data
     user_serializer = UserSerializer(user, context={'request': request})
     return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    tags=['User Profile'],
+    summary="Delete user account",
+    description="""
+    Permanently delete the current user's account.
+
+    This operation:
+    - Deactivates the account (user cannot log in)
+    - Anonymizes personal data (GDPR compliance)
+    - Frees up the email address for re-registration
+    - Preserves audit trail
+
+    The account can be restored by an administrator if needed.
+    """,
+    responses={
+        200: AccountDeleteResponseSerializer,
+        401: {"description": "Authentication credentials were not provided."},
+        400: {"description": "Account is already deleted."}
+    }
+)
+class AccountDeleteView(ClientAPIMixin, APIView):
+    """
+    Delete (soft delete) the current user's account.
+
+    This deactivates the account and anonymizes personal data.
+    The account can be restored by an administrator.
+    """
+
+    def post(self, request):
+        """Delete the current user's account."""
+        user = request.user
+
+        # Check if already deleted
+        if user.is_deleted:
+            return Response(
+                {'error': 'Account is already deleted.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Store info before deletion for notification
+        original_email = user.email
+        user_id = user.id
+        full_name = user.full_name or "N/A"
+
+        # Perform soft delete
+        user.soft_delete()
+
+        # Send Telegram notification
+        try:
+            DjangoTelegram.send_warning("Account Deleted", {
+                "User ID": user_id,
+                "Email": original_email,
+                "Full Name": full_name,
+                "Deleted At": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "Action": "Self-deletion via API",
+            })
+        except Exception as e:
+            logger.error(f"Failed to send Telegram notification for account deletion: {e}")
+
+        return Response(
+            {
+                'success': True,
+                'message': 'Your account has been successfully deleted.'
+            },
+            status=status.HTTP_200_OK
+        )

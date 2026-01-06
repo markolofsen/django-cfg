@@ -237,6 +237,13 @@ class DirectCentrifugoClient:
 
         # All retries failed
         if last_error:
+            # Log helpful hint for connection errors (likely Docker issue on macOS)
+            if isinstance(last_error, CentrifugoConnectionError):
+                logger.error(
+                    f"Centrifugo connection failed after {self.max_retries} attempts. "
+                    "If running locally with Docker, try restarting Docker Desktop:\n"
+                    '  osascript -e \'quit app "Docker Desktop"\' && sleep 2 && open -a "Docker Desktop"'
+                )
             raise last_error
         else:
             raise CentrifugoPublishError(

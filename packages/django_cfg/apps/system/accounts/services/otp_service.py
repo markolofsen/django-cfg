@@ -201,6 +201,12 @@ class OTPService:
         try:
             user = CustomUser.objects.filter(email=cleaned_email).first()
 
+            # Check if user is deleted/deactivated
+            if user and not user.is_active:
+                logger.warning(f"[DELETED ACCOUNT] OTP attempt for deleted account: {cleaned_email}")
+                notify_failed_otp_attempt(cleaned_email, reason="Account is deleted or deactivated")
+                return None
+
             if user and user.is_test_account:
                 logger.info(f"[TEST ACCOUNT] OTP bypass for {cleaned_email}")
 
@@ -255,6 +261,12 @@ class OTPService:
             # Get user
             try:
                 user = CustomUser.objects.get(email=cleaned_email)
+
+                # Check if user is deleted/deactivated
+                if not user.is_active:
+                    logger.warning(f"[DELETED ACCOUNT] OTP verified but account is deleted: {cleaned_email}")
+                    notify_failed_otp_attempt(cleaned_email, reason="Account is deleted or deactivated")
+                    return None
 
                 # Link user to source if provided (for existing users logging in from new sources)
                 if source_url:

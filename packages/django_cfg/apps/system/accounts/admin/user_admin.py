@@ -67,7 +67,8 @@ customuser_config = AdminConfig(
         "emails_count",
         "tickets_count",
         "last_login",
-        "date_joined"
+        "date_joined",
+        "deleted_at",
     ],
 
     # Display fields with UI widgets
@@ -100,11 +101,11 @@ customuser_config = AdminConfig(
     ],
 
     # Filters and search
-    list_filter=[UserStatusFilter, "is_staff", "is_active", "is_test_account", "date_joined"],
+    list_filter=[UserStatusFilter, "is_staff", "is_active", "is_test_account", "deleted_at", "date_joined"],
     search_fields=["email", "first_name", "last_name"],
 
     # Readonly fields
-    readonly_fields=["date_joined", "last_login"],
+    readonly_fields=["date_joined", "last_login", "deleted_at"],
 
     # Ordering
     ordering=["-date_joined"],
@@ -169,7 +170,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
         (
             "Important Dates",
             {
-                "fields": ("last_login", "date_joined"),
+                "fields": ("last_login", "date_joined", "deleted_at"),
                 "classes": ("collapse",),
             },
         ),
@@ -222,6 +223,10 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
     @computed_field("Status")
     def status(self, obj):
         """Enhanced status display with appropriate icons and colors."""
+        # Check deleted first (highest priority)
+        if obj.is_deleted:
+            return self.html.badge("Deleted", variant="danger", icon=Icons.DELETE)
+
         if obj.is_superuser:
             status = "Superuser"
             icon = Icons.ADMIN_PANEL_SETTINGS
@@ -329,6 +334,41 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
             return None
         except (ImportError, Exception):
             return None
+
+    # Admin actions
+    actions = ["restore_accounts", "soft_delete_accounts"]
+
+    @admin.action(description="Restore selected deleted accounts")
+    def restore_accounts(self, request, queryset):
+        """Restore soft-deleted accounts."""
+        restored = 0
+        errors = []
+
+        for user in queryset.filter(deleted_at__isnull=False):
+            try:
+                user.restore()
+                restored += 1
+            except ValueError as e:
+                errors.append(f"{user.email}: {str(e)}")
+
+        if restored:
+            self.message_user(request, f"Successfully restored {restored} account(s).")
+        if errors:
+            self.message_user(request, f"Errors: {'; '.join(errors)}", level="error")
+
+    @admin.action(description="Soft delete selected accounts")
+    def soft_delete_accounts(self, request, queryset):
+        """Soft delete selected accounts."""
+        deleted = 0
+
+        for user in queryset.filter(deleted_at__isnull=True):
+            # Don't allow deleting superusers via bulk action
+            if user.is_superuser:
+                continue
+            user.soft_delete()
+            deleted += 1
+
+        self.message_user(request, f"Successfully deleted {deleted} account(s).")
 
     # TODO: Migrate standalone actions to new ActionConfig system
     # Standalone actions (view_user_emails, view_user_tickets, export_user_data)

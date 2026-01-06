@@ -9,6 +9,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from rest_framework import exceptions
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,34 @@ class JWTAuthenticationWithLastLogin(JWTAuthentication):
     # Maximum cache size before cleanup (prevents memory leaks)
     MAX_CACHE_SIZE = 1000
     CLEANUP_CACHE_SIZE = 500
+
+    def get_user(self, validated_token):
+        """
+        Override to check if user is active/not deleted.
+
+        Simple JWT by default does NOT check is_active, so we add this check
+        to ensure deleted/deactivated accounts cannot use existing tokens.
+
+        Args:
+            validated_token: Validated JWT token
+
+        Returns:
+            User instance if active, raises AuthenticationFailed otherwise
+        """
+        user = super().get_user(validated_token)
+
+        # Check if user is active (is_active=False means deactivated or deleted)
+        if not user.is_active:
+            logger.warning(
+                f"Authentication attempt with inactive/deleted account: "
+                f"user_id={user.pk}, email={user.email}"
+            )
+            raise exceptions.AuthenticationFailed(
+                'User account is deactivated or deleted.',
+                code='user_inactive'
+            )
+
+        return user
 
     def authenticate(self, request):
         """

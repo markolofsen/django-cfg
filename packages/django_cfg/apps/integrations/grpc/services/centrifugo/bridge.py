@@ -177,7 +177,11 @@ class CentrifugoBridgeMixin:
                 f"Centrifugo bridge enabled with {len(self._centrifugo_mappings)} channels"
             )
         except Exception as e:
-            logger.warning(f"Centrifugo client not available: {e}")
+            logger.warning(
+                f"Centrifugo client not available: {e}. "
+                "If running locally with Docker, try restarting Docker Desktop:\n"
+                '  osascript -e \'quit app "Docker Desktop"\' && sleep 2 && open -a "Docker Desktop"'
+            )
             if not self._centrifugo_graceful:
                 raise
             self._centrifugo_enabled = False

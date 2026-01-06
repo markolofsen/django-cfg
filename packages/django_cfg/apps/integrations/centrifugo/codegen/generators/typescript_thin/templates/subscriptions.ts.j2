@@ -1,0 +1,43 @@
+// subscriptions.ts
+// Generated Channel Event Types
+// Auto-generated - DO NOT EDIT
+// Generated at: {{ generated_at }}
+
+{% if nested_types %}
+// =============================================================================
+// Nested Types
+// =============================================================================
+
+{% for nested in nested_types %}
+export interface {{ nested.name }} {
+{% for field in nested.fields %}
+  {{ field.name }}{% if field.optional %}?{% endif %}: {{ field.ts_type }};
+{% endfor %}
+}
+
+{% endfor %}
+{% endif %}
+{% for channel in channels %}
+// =============================================================================
+// {{ channel.enum_name }} - {{ channel.docstring }}
+// =============================================================================
+
+{% for event in channel.event_cases %}
+export interface {{ event.type_name }} {
+  type: '{{ event.type_value }}';
+  message_id: string;
+  client_message_id?: string;
+{% for field in event.fields %}
+  {{ field.name }}{% if field.optional %}?{% endif %}: {{ field.ts_type }};
+{% endfor %}
+}
+
+{% endfor %}
+/** {{ channel.docstring }} */
+export type {{ channel.enum_name }} =
+{% for event in channel.event_cases %}
+  | {{ event.type_name }}{% if not loop.last %}{% endif %}
+
+{% endfor %};
+
+{% endfor %}

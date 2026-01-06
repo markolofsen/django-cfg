@@ -405,6 +405,14 @@ class CentrifugoClient:
             except Exception as e:
                 logger.warning(f"Failed to update log entry: {e}")
 
+        # Log helpful hint for connection errors (likely Docker issue on macOS)
+        if last_error and isinstance(last_error, CentrifugoConnectionError):
+            logger.error(
+                f"Centrifugo connection failed after {self.max_retries} attempts. "
+                "If running locally with Docker, try restarting Docker Desktop:\n"
+                '  osascript -e \'quit app "Docker Desktop"\' && sleep 2 && open -a "Docker Desktop"'
+            )
+
         raise last_error if last_error else CentrifugoPublishError(
             "All retries failed", channel=channel
         )

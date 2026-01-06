@@ -2,10 +2,12 @@
 User model and related functionality.
 """
 
+import time
 from typing import List, Optional
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 from ..managers.user_manager import UserManager
 from .base import user_avatar_path
@@ -29,6 +31,14 @@ class CustomUser(AbstractUser):
     is_test_account = models.BooleanField(
         default=False,
         help_text="Test account bypasses OTP with static code (for App Store review, etc.)"
+    )
+
+    # Account deletion (soft delete)
+    # When set, account is deactivated and personal data anonymized
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When set, account is considered deleted (soft delete)"
     )
 
     # Profile metadata
@@ -162,6 +172,81 @@ class CustomUser(AbstractUser):
 
         settings = TwoFactorSettings.get_settings()
         return settings.user_should_prompt_2fa(self)
+
+    # === Account Deletion (Soft Delete) ===
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if account is soft-deleted."""
+        return self.deleted_at is not None
+
+    def soft_delete(self) -> None:
+        """
+        Soft delete the account.
+
+        This will:
+        1. Deactivate account (is_active = False)
+        2. Anonymize personal data (GDPR compliance)
+        3. Mark email as deleted (frees up email for re-registration)
+        4. Set deleted_at timestamp
+        5. Delete avatar file
+        """
+        # Store original email in special format for audit
+        unix_timestamp = int(time.time())
+        original_email = self.email
+
+        # 1. Deactivate
+        self.is_active = False
+
+        # 2. Anonymize personal data
+        self.first_name = ""
+        self.last_name = ""
+        self.phone = ""
+        self.company = ""
+        self.position = ""
+
+        # 3. Mark email as deleted (preserves original for audit)
+        self.email = f"deleted__{unix_timestamp}__{original_email}"
+
+        # 4. Set deletion timestamp
+        self.deleted_at = timezone.now()
+
+        # 5. Delete avatar file
+        if self.avatar:
+            self.avatar.delete(save=False)
+
+        self.save()
+
+    def restore(self, new_email: Optional[str] = None) -> None:
+        """
+        Restore a soft-deleted account.
+
+        Args:
+            new_email: New email to use. If not provided, tries to restore original.
+                       Required if original email is now taken by another user.
+        """
+        if not self.is_deleted:
+            return
+
+        # Extract original email from deleted format
+        # Format: deleted__{timestamp}__{original_email}
+        if new_email:
+            restored_email = new_email
+        else:
+            parts = self.email.split("__", 2)
+            if len(parts) == 3:
+                restored_email = parts[2]
+            else:
+                raise ValueError("Cannot restore: original email not found. Provide new_email.")
+
+        # Check if email is available
+        if CustomUser.objects.filter(email=restored_email).exclude(pk=self.pk).exists():
+            raise ValueError(f"Email {restored_email} is already in use. Provide a different email.")
+
+        self.email = restored_email
+        self.is_active = True
+        self.deleted_at = None
+        self.save()
 
     class Meta:
         app_label = 'django_cfg_accounts'

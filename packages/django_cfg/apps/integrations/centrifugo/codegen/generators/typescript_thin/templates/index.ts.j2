@@ -14,3 +14,10 @@ export type {
 {% for model_name in models | unique | sort %}  {{ model_name }},
 {% endfor %}} from './types';
 {% endif %}
+{% if channels %}
+export type {
+{% for channel in channels %}  {{ channel.enum_name }},
+{% for event in channel.event_cases %}  {{ event.type_name }},
+{% endfor %}
+{% endfor %}} from './subscriptions';
+{% endif %}

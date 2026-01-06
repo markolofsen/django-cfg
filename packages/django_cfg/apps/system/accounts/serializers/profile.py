@@ -224,3 +224,13 @@ class UserWithSourcesSerializer(UserSerializer):
         if primary_source:
             return RegistrationSourceSerializer(primary_source).data
         return None
+
+
+class AccountDeleteResponseSerializer(serializers.Serializer):
+    """Response serializer for account deletion."""
+    success = serializers.BooleanField(
+        help_text="Whether the account was successfully deleted"
+    )
+    message = serializers.CharField(
+        help_text="Human-readable message about the deletion"
+    )

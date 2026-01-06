@@ -4,6 +4,7 @@ TypeScript thin wrapper client generator.
 Supports:
 - Interface generation from Pydantic models
 - Enum generation from IntEnum classes
+- Channel subscription event types
 """
 
 import hashlib
@@ -12,11 +13,11 @@ import logging
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
-from typing import List, Type
+from typing import List, Literal, Type, get_type_hints, get_origin, get_args, Union
 from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from ...discovery import RPCMethodInfo
+from ...discovery import RPCMethodInfo, ChannelInfo
 from ...utils import to_typescript_method_name, pydantic_to_typescript, int_enum_to_typescript
 
 logger = logging.getLogger(__name__)
@@ -72,10 +73,12 @@ class TypeScriptThinGenerator:
         models: List[Type[BaseModel]],
         output_dir: Path,
         enums: List[Type[IntEnum]] | None = None,
+        channels: List[ChannelInfo] | None = None,
     ):
         self.methods = methods
         self.models = models
         self.enums = enums or []
+        self.channels = channels or []
         self.output_dir = Path(output_dir)
         self.api_version = compute_api_version(methods, models)
 
@@ -94,6 +97,8 @@ class TypeScriptThinGenerator:
         self._generate_types()
         self._generate_rpc_client()
         self._generate_client()
+        if self.channels:
+            self._generate_subscriptions()
         self._generate_index()
         self._generate_package_json()
         self._generate_tsconfig()
@@ -184,7 +189,26 @@ class TypeScriptThinGenerator:
         template = self.jinja_env.get_template("index.ts.j2")
         model_names = [m.__name__ for m in self.models]
         enum_names = [e.__name__ for e in self.enums]
-        content = template.render(models=model_names, enums=enum_names)
+
+        # Prepare channels data for index exports
+        channels_data = []
+        for channel in self.channels:
+            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+            event_cases = []
+            for event_type in channel.event_types:
+                type_value = None
+                for field_name, field_info in event_type.model_fields.items():
+                    if field_name == 'type':
+                        type_value = field_info.default
+                        break
+                if type_value:
+                    event_cases.append({'type_name': event_type.__name__})
+            channels_data.append({
+                'enum_name': enum_name,
+                'event_cases': event_cases,
+            })
+
+        content = template.render(models=model_names, enums=enum_names, channels=channels_data)
         (self.output_dir / "index.ts").write_text(content)
 
     def _generate_package_json(self):
@@ -223,6 +247,141 @@ class TypeScriptThinGenerator:
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
         (self.output_dir / "CLAUDE.md").write_text(content)
+
+    def _generate_subscriptions(self):
+        """Generate subscriptions.ts with channel event types."""
+        template = self.jinja_env.get_template("subscriptions.ts.j2")
+
+        channels_data = []
+        nested_types = {}  # Collect nested types to generate
+
+        for channel in self.channels:
+            # Convert channel name to TypeScript enum name (e.g., "ai_chat" -> "AiChatEvent")
+            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+
+            # Collect event cases
+            event_cases = []
+            for event_type in channel.event_types:
+                # Get the 'type' field value from the model
+                type_value = None
+                for field_name, field_info in event_type.model_fields.items():
+                    if field_name == 'type':
+                        type_value = field_info.default
+                        break
+
+                if type_value:
+                    # Get additional fields (exclude common ones)
+                    fields = []
+                    for field_name, field_info in event_type.model_fields.items():
+                        if field_name in ('type', 'message_id', 'client_message_id'):
+                            continue
+
+                        # Get TypeScript type and collect nested types
+                        ts_type, nested = self._python_type_to_ts_with_nested(field_info.annotation)
+                        is_optional = not field_info.is_required()
+
+                        for nested_model in nested:
+                            if nested_model.__name__ not in nested_types:
+                                nested_types[nested_model.__name__] = nested_model
+
+                        fields.append({
+                            'name': field_name,
+                            'ts_type': ts_type,
+                            'optional': is_optional,
+                        })
+
+                    event_cases.append({
+                        'type_name': event_type.__name__,
+                        'type_value': type_value,
+                        'fields': fields,
+                    })
+
+            channels_data.append({
+                'name': channel.name,
+                'enum_name': enum_name,
+                'event_cases': event_cases,
+                'docstring': channel.docstring or f"Events for {channel.name} channel.",
+            })
+
+        # Generate nested types as interfaces
+        nested_types_data = []
+        for type_name, model in nested_types.items():
+            fields = []
+            for field_name, field_info in model.model_fields.items():
+                ts_type = self._python_type_to_ts(field_info.annotation)
+                is_optional = not field_info.is_required()
+                fields.append({
+                    'name': field_name,
+                    'ts_type': ts_type,
+                    'optional': is_optional,
+                })
+            nested_types_data.append({
+                'name': type_name,
+                'fields': fields,
+            })
+
+        content = template.render(
+            channels=channels_data,
+            nested_types=nested_types_data,
+            generated_at=datetime.now().isoformat(),
+        )
+        (self.output_dir / "subscriptions.ts").write_text(content)
+
+    def _python_type_to_ts(self, python_type) -> str:
+        """Convert Python type annotation to TypeScript type."""
+        ts_type, _ = self._python_type_to_ts_with_nested(python_type)
+        return ts_type
+
+    def _python_type_to_ts_with_nested(self, python_type) -> tuple[str, list]:
+        """Convert Python type annotation to TypeScript type, returning nested models."""
+        if python_type is None:
+            return 'any', []
+
+        origin = get_origin(python_type)
+        args = get_args(python_type)
+        nested = []
+
+        # Handle Optional (Union with None)
+        if origin is Union:
+            non_none_args = [a for a in args if a is not type(None)]
+            if len(non_none_args) == 1:
+                ts_type, nested = self._python_type_to_ts_with_nested(non_none_args[0])
+                return ts_type, nested
+            types = []
+            for a in non_none_args:
+                ts_type, n = self._python_type_to_ts_with_nested(a)
+                types.append(ts_type)
+                nested.extend(n)
+            return ' | '.join(types), nested
+
+        # Handle List
+        if origin is list:
+            if args:
+                ts_type, nested = self._python_type_to_ts_with_nested(args[0])
+                return f'{ts_type}[]', nested
+            return 'any[]', []
+
+        # Handle Literal (string union)
+        if origin is Literal:
+            string_values = [f"'{v}'" for v in args]
+            return ' | '.join(string_values), []
+
+        # Handle basic types
+        if python_type is str:
+            return 'string', []
+        if python_type is int:
+            return 'number', []
+        if python_type is float:
+            return 'number', []
+        if python_type is bool:
+            return 'boolean', []
+
+        # Handle Pydantic models
+        if isinstance(python_type, type) and issubclass(python_type, BaseModel):
+            return python_type.__name__, [python_type]
+
+        # Fallback
+        return 'any', []
 
 
 __all__ = ['TypeScriptThinGenerator']
