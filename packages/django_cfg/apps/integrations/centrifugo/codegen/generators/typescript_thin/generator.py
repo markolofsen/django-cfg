@@ -5,11 +5,13 @@ Supports:
 - Interface generation from Pydantic models
 - Enum generation from IntEnum classes
 - Channel subscription event types
+- Ws prefix for all types to avoid conflicts with REST API types
 """
 
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
@@ -18,7 +20,7 @@ from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...discovery import RPCMethodInfo, ChannelInfo
-from ...utils import to_typescript_method_name, pydantic_to_typescript, int_enum_to_typescript
+from ...utils import to_typescript_method_name, pydantic_to_typescript, int_enum_to_typescript, WS_TYPE_PREFIX, add_prefix_to_type_name
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +113,17 @@ class TypeScriptThinGenerator:
         """Generate types.ts file."""
         template = self.jinja_env.get_template("types.ts.j2")
 
-        # Generate enums first
-        enums_data = []
+        # Step 1: Collect all type names (models + enums)
+        all_type_names = set()
+        for model in self.models:
+            all_type_names.add(model.__name__)
         for enum_class in self.enums:
-            enum_code = int_enum_to_typescript(enum_class)
-            enums_data.append({
-                'name': enum_class.__name__,
-                'code': enum_code,
-            })
+            all_type_names.add(enum_class.__name__)
 
-        # Track generated interfaces to avoid duplicates
+        # Step 2: Generate all interfaces first (without prefixing)
+        # and collect any additional nested type names
         generated_interfaces = set()
-        types_data = []
+        raw_blocks = []
 
         for model in self.models:
             ts_interface = pydantic_to_typescript(model)
@@ -141,10 +142,41 @@ class TypeScriptThinGenerator:
 
                 if name not in generated_interfaces:
                     generated_interfaces.add(name)
-                    types_data.append({
-                        'name': name,
-                        'code': block,
-                    })
+                    all_type_names.add(name)  # Add nested types to the set
+                    raw_blocks.append((name, block))
+
+        # Step 3: Generate enums (with Ws prefix)
+        enums_data = []
+        for enum_class in self.enums:
+            enum_code = int_enum_to_typescript(enum_class)
+            prefixed_name = add_prefix_to_type_name(enum_class.__name__)
+            enum_code = enum_code.replace(
+                f"enum {enum_class.__name__}",
+                f"enum {prefixed_name}"
+            )
+            enums_data.append({
+                'name': prefixed_name,
+                'code': enum_code,
+            })
+
+        # Step 4: Apply Ws prefix to all interfaces and type references
+        types_data = []
+        for name, block in raw_blocks:
+            prefixed_name = add_prefix_to_type_name(name)
+            prefixed_block = block
+
+            # Replace all type references (including the interface name itself)
+            for type_name in all_type_names:
+                prefixed_block = re.sub(
+                    rf'\b{re.escape(type_name)}\b',
+                    add_prefix_to_type_name(type_name),
+                    prefixed_block
+                )
+
+            types_data.append({
+                'name': prefixed_name,
+                'code': prefixed_block,
+            })
 
         content = template.render(types=types_data, enums=enums_data)
         (self.output_dir / "types.ts").write_text(content)
@@ -161,8 +193,11 @@ class TypeScriptThinGenerator:
 
         methods_data = []
         for method in self.methods:
-            param_type = method.param_type.__name__ if method.param_type else "any"
-            return_type = method.return_type.__name__ if method.return_type else "any"
+            param_type_raw = method.param_type.__name__ if method.param_type else "any"
+            return_type_raw = method.return_type.__name__ if method.return_type else "any"
+            # Add Ws prefix (skip 'any')
+            param_type = add_prefix_to_type_name(param_type_raw) if param_type_raw != "any" else "any"
+            return_type = add_prefix_to_type_name(return_type_raw) if return_type_raw != "any" else "any"
             method_name_ts = to_typescript_method_name(method.name)
 
             methods_data.append({
@@ -174,7 +209,7 @@ class TypeScriptThinGenerator:
                 'no_wait': method.no_wait,
             })
 
-        model_names = [m.__name__ for m in self.models]
+        model_names = [add_prefix_to_type_name(m.__name__) for m in self.models]
 
         content = template.render(
             methods=methods_data,
@@ -187,13 +222,13 @@ class TypeScriptThinGenerator:
     def _generate_index(self):
         """Generate index.ts file."""
         template = self.jinja_env.get_template("index.ts.j2")
-        model_names = [m.__name__ for m in self.models]
-        enum_names = [e.__name__ for e in self.enums]
+        model_names = [add_prefix_to_type_name(m.__name__) for m in self.models]
+        enum_names = [add_prefix_to_type_name(e.__name__) for e in self.enums]
 
         # Prepare channels data for index exports
         channels_data = []
         for channel in self.channels:
-            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+            enum_name = WS_TYPE_PREFIX + ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
             event_cases = []
             for event_type in channel.event_types:
                 type_value = None
@@ -202,7 +237,7 @@ class TypeScriptThinGenerator:
                         type_value = field_info.default
                         break
                 if type_value:
-                    event_cases.append({'type_name': event_type.__name__})
+                    event_cases.append({'type_name': add_prefix_to_type_name(event_type.__name__)})
             channels_data.append({
                 'enum_name': enum_name,
                 'event_cases': event_cases,
@@ -256,8 +291,8 @@ class TypeScriptThinGenerator:
         nested_types = {}  # Collect nested types to generate
 
         for channel in self.channels:
-            # Convert channel name to TypeScript enum name (e.g., "ai_chat" -> "AiChatEvent")
-            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+            # Convert channel name to TypeScript enum name with Ws prefix (e.g., "ai_chat" -> "WsAiChatEvent")
+            enum_name = WS_TYPE_PREFIX + ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
 
             # Collect event cases
             event_cases = []
@@ -291,7 +326,7 @@ class TypeScriptThinGenerator:
                         })
 
                     event_cases.append({
-                        'type_name': event_type.__name__,
+                        'type_name': add_prefix_to_type_name(event_type.__name__),
                         'type_value': type_value,
                         'fields': fields,
                     })
@@ -303,7 +338,7 @@ class TypeScriptThinGenerator:
                 'docstring': channel.docstring or f"Events for {channel.name} channel.",
             })
 
-        # Generate nested types as interfaces
+        # Generate nested types as interfaces (with Ws prefix)
         nested_types_data = []
         for type_name, model in nested_types.items():
             fields = []
@@ -316,7 +351,7 @@ class TypeScriptThinGenerator:
                     'optional': is_optional,
                 })
             nested_types_data.append({
-                'name': type_name,
+                'name': add_prefix_to_type_name(type_name),
                 'fields': fields,
             })
 
@@ -376,9 +411,9 @@ class TypeScriptThinGenerator:
         if python_type is bool:
             return 'boolean', []
 
-        # Handle Pydantic models
+        # Handle Pydantic models - add Ws prefix
         if isinstance(python_type, type) and issubclass(python_type, BaseModel):
-            return python_type.__name__, [python_type]
+            return add_prefix_to_type_name(python_type.__name__), [python_type]
 
         # Fallback
         return 'any', []

@@ -16,6 +16,14 @@ from .naming import (
     to_swift_field_name,
 )
 
+from .prefix import (
+    WS_TYPE_PREFIX,
+    add_prefix_to_type_name,
+    add_prefix_to_field_types,
+    add_prefix_to_type_data,
+    collect_type_names_from_models,
+)
+
 # Import from new converters module structure
 from .converters import (
     # TypeScript
@@ -53,6 +61,12 @@ __all__ = [
     "to_go_method_name",
     "to_swift_method_name",
     "to_swift_field_name",
+    # Prefix utilities
+    "WS_TYPE_PREFIX",
+    "add_prefix_to_type_name",
+    "add_prefix_to_field_types",
+    "add_prefix_to_type_data",
+    "collect_type_names_from_models",
     # TypeScript converters
     "convert_json_schema_to_typescript",
     "pydantic_to_typescript",

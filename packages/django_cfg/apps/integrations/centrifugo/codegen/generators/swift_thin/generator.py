@@ -18,7 +18,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel
 
 from ...discovery import RPCMethodInfo, ChannelInfo
-from ...utils import to_swift_method_name, get_safe_swift_type_name
+from ...utils import to_swift_method_name, get_safe_swift_type_name, WS_TYPE_PREFIX, add_prefix_to_type_data
 from ...utils.converters import pydantic_to_swift_with_nested, int_enum_to_swift
 
 logger = logging.getLogger(__name__)
@@ -155,55 +155,62 @@ class SwiftThinGenerator:
         """Generate Types.swift with Codable models and enums."""
         template = self.jinja_env.get_template("Types.swift.j2")
 
-        # Generate enums first
+        # Generate enums first (with Ws prefix)
         enums_data = []
         enum_names = set()
         for enum_class in self.enums:
             enum_code = int_enum_to_swift(enum_class)
+            prefixed_name = f"{WS_TYPE_PREFIX}{enum_class.__name__}"
+            # Replace original name with prefixed in enum code
+            enum_code = enum_code.replace(
+                f"enum {enum_class.__name__}",
+                f"enum {prefixed_name}"
+            )
             enums_data.append({
-                'name': enum_class.__name__,
+                'name': prefixed_name,
                 'code': enum_code,
             })
             enum_names.add(enum_class.__name__)
 
-        # Collect all types, avoiding duplicates
-        # Include enum names to prevent generating them as structs
-        types_data = []
-        generated_names = set(enum_names)
+        # First pass: collect all type names (to know what needs prefixing)
+        all_type_names = set(enum_names)
+        raw_types = []  # Store (type_data, original_name) tuples
 
-        # Add RPC param/result models
+        # Collect RPC param/result models
         for model in self.models:
             result = pydantic_to_swift_with_nested(model)
 
-            # Add nested types first
             for nested in result["nested"]:
-                if nested["name"] not in generated_names:
-                    types_data.append(nested)
-                    generated_names.add(nested["name"])
+                if nested["name"] not in all_type_names:
+                    raw_types.append(nested)
+                    all_type_names.add(nested["name"])
 
-            # Add main type
             main = result["main"]
-            if main["name"] not in generated_names:
-                types_data.append(main)
-                generated_names.add(main["name"])
+            if main["name"] not in all_type_names:
+                raw_types.append(main)
+                all_type_names.add(main["name"])
 
-        # Add channel event types
+        # Collect channel event types
         for channel in self.channels:
             for event_type in channel.event_types:
-                if event_type.__name__ not in generated_names:
+                if event_type.__name__ not in all_type_names:
                     result = pydantic_to_swift_with_nested(event_type)
 
-                    # Add nested types first
                     for nested in result["nested"]:
-                        if nested["name"] not in generated_names:
-                            types_data.append(nested)
-                            generated_names.add(nested["name"])
+                        if nested["name"] not in all_type_names:
+                            raw_types.append(nested)
+                            all_type_names.add(nested["name"])
 
-                    # Add main type
                     main = result["main"]
-                    if main["name"] not in generated_names:
-                        types_data.append(main)
-                        generated_names.add(main["name"])
+                    if main["name"] not in all_type_names:
+                        raw_types.append(main)
+                        all_type_names.add(main["name"])
+
+        # Second pass: add Ws prefix to all types and update references
+        types_data = [
+            add_prefix_to_type_data(t, all_type_names, field_type_keys=["type", "swift_type"])
+            for t in raw_types
+        ]
 
         content = template.render(
             types=types_data,
@@ -233,8 +240,8 @@ class SwiftThinGenerator:
             # Apply safe naming to avoid Swift/SwiftUI conflicts
             param_type_raw = method.param_type.__name__ if method.param_type else "EmptyParams"
             return_type_raw = method.return_type.__name__ if method.return_type else "EmptyResult"
-            param_type = get_safe_swift_type_name(param_type_raw)
-            return_type = get_safe_swift_type_name(return_type_raw)
+            param_type = f"{WS_TYPE_PREFIX}{get_safe_swift_type_name(param_type_raw)}"
+            return_type = f"{WS_TYPE_PREFIX}{get_safe_swift_type_name(return_type_raw)}"
             method_name_swift = to_swift_method_name(method.name)
 
             # Extract first line of docstring
@@ -251,7 +258,7 @@ class SwiftThinGenerator:
                 "no_wait": method.no_wait,
             })
 
-        model_names = [m.__name__ for m in self.models]
+        model_names = [f"{WS_TYPE_PREFIX}{m.__name__}" for m in self.models]
 
         # Prepare channel data for template
         channels_data = []
@@ -260,11 +267,11 @@ class SwiftThinGenerator:
             parts = channel.name.split('_')
             swift_name = parts[0] + ''.join(p.capitalize() for p in parts[1:])
 
-            # Get event type names
-            event_type_names = [et.__name__ for et in channel.event_types]
+            # Get event type names (with Ws prefix)
+            event_type_names = [f"{WS_TYPE_PREFIX}{et.__name__}" for et in channel.event_types]
 
-            # Create enum name for events (e.g., "AIChatEvent")
-            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+            # Create enum name for events (e.g., "WsAiChatEvent")
+            enum_name = f"{WS_TYPE_PREFIX}" + ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
 
             channels_data.append({
                 "name": channel.name,
@@ -292,8 +299,8 @@ class SwiftThinGenerator:
 
         channels_data = []
         for channel in self.channels:
-            # Convert channel name to Swift enum name
-            enum_name = ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
+            # Convert channel name to Swift enum name (with Ws prefix)
+            enum_name = f"{WS_TYPE_PREFIX}" + ''.join(p.capitalize() for p in channel.name.split('_')) + 'Event'
 
             # Collect event cases
             event_cases = []
@@ -314,7 +321,7 @@ class SwiftThinGenerator:
                     event_cases.append({
                         "case_name": case_name,
                         "type_value": type_value,
-                        "type_name": event_type.__name__,
+                        "type_name": f"{WS_TYPE_PREFIX}{event_type.__name__}",
                     })
 
             channels_data.append({

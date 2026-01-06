@@ -30,8 +30,8 @@ interface CentrifugoClient {
   namedRPCNoWait?(method: string, params: any): void;
 }
 
-// Re-export VersionCheckResult from types (generated from Pydantic model)
-export type { VersionCheckResult } from './types';
+// Re-export WsVersionCheckResult from types (generated from Pydantic model)
+export type { WsVersionCheckResult } from './types';
 
 export class APIClient {
   constructor(private client: CentrifugoClient) {}
@@ -41,7 +41,7 @@ export class APIClient {
    * Call this after connecting to ensure contract compatibility.
    *
    * @throws Error if versions are incompatible
-   * @returns VersionCheckResult with compatibility info
+   * @returns WsVersionCheckResult with compatibility info
    *
    * @example
    * const apiClient = new APIClient(client);
@@ -50,9 +50,9 @@ export class APIClient {
    *   console.error('API version mismatch! Please regenerate client.');
    * }
    */
-  async checkVersion(): Promise<VersionCheckResult> {
+  async checkVersion(): Promise<WsVersionCheckResult> {
     try {
-      const result = await this.client.namedRPC<VersionCheckResult>(
+      const result = await this.client.namedRPC<WsVersionCheckResult>(
         'system.check_version',
         { client_version: API_VERSION }
       );

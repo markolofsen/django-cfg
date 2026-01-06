@@ -2,9 +2,11 @@
 Go thin wrapper client generator.
 
 Generates Go structs + thin wrapper over CentrifugoRPCClient.
+Uses Ws prefix for all types to avoid conflicts with REST API types.
 """
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Type
@@ -12,7 +14,7 @@ from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...discovery import RPCMethodInfo
-from ...utils import to_go_method_name, pydantic_to_go
+from ...utils import to_go_method_name, pydantic_to_go, WS_TYPE_PREFIX, add_prefix_to_type_name
 
 logger = logging.getLogger(__name__)
 
@@ -87,10 +89,25 @@ class GoThinGenerator:
         """Generate types.go file with Go struct definitions."""
         template = self.jinja_env.get_template("types.go.j2")
 
-        # Convert Pydantic models to Go struct info
+        # Collect all type names for prefix replacement
+        all_type_names = {model.__name__ for model in self.models}
+
+        # Convert Pydantic models to Go struct info with Ws prefix
         types_data = []
         for model in self.models:
             struct_info = pydantic_to_go(model)
+            # Add Ws prefix to struct name
+            struct_info['name'] = add_prefix_to_type_name(struct_info['name'])
+            # Update field type references
+            if 'fields' in struct_info:
+                for field in struct_info['fields']:
+                    if 'type' in field:
+                        for type_name in all_type_names:
+                            field['type'] = re.sub(
+                                rf'\b{re.escape(type_name)}\b',
+                                add_prefix_to_type_name(type_name),
+                                field['type']
+                            )
             types_data.append(struct_info)
 
         content = template.render(
@@ -118,8 +135,11 @@ class GoThinGenerator:
         # Prepare methods for template
         methods_data = []
         for method in self.methods:
-            param_type = method.param_type.__name__ if method.param_type else "map[string]interface{}"
-            return_type = method.return_type.__name__ if method.return_type else "map[string]interface{}"
+            param_type_raw = method.param_type.__name__ if method.param_type else None
+            return_type_raw = method.return_type.__name__ if method.return_type else None
+            # Add Ws prefix (skip generic map type)
+            param_type = add_prefix_to_type_name(param_type_raw) if param_type_raw else "map[string]interface{}"
+            return_type = add_prefix_to_type_name(return_type_raw) if return_type_raw else "map[string]interface{}"
 
             # Convert method name to valid Go identifier (PascalCase)
             method_name_go = to_go_method_name(method.name)

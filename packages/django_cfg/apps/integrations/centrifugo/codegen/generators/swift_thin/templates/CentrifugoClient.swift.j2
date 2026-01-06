@@ -195,4 +195,23 @@ extension CentrifugoClient {
             await connectionState == .connected
         }
     }
+
+    /// Make a raw RPC call with custom types.
+    ///
+    /// Use this for RPC methods not covered by generated type-safe methods,
+    /// or when you need custom timeout handling.
+    ///
+    /// - Parameters:
+    ///   - method: RPC method name (e.g., "agent.run_agent")
+    ///   - params: Request parameters (must be Encodable)
+    ///   - timeout: Optional timeout in seconds (defaults to client's default)
+    /// - Returns: Response decoded as the specified type
+    /// - Throws: RPCError if the call fails or times out
+    public func rawRPCCall<P: Encodable, R: Decodable>(
+        method: String,
+        params: P,
+        timeout: TimeInterval? = nil
+    ) async throws -> R {
+        return try await rpc.call(method: method, params: params, timeout: timeout)
+    }
 }

@@ -2,9 +2,11 @@
 Python thin wrapper client generator.
 
 Generates Pydantic models + thin wrapper over CentrifugoRPCClient.
+Uses Ws prefix for all types to avoid conflicts with REST API types.
 """
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Type
@@ -12,7 +14,7 @@ from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ...discovery import RPCMethodInfo
-from ...utils import to_python_method_name
+from ...utils import to_python_method_name, WS_TYPE_PREFIX, add_prefix_to_type_name
 
 logger = logging.getLogger(__name__)
 
@@ -83,12 +85,15 @@ class PythonThinGenerator:
         """Generate models.py file with Pydantic models."""
         template = self.jinja_env.get_template("models.py.j2")
 
-        # Prepare models data
+        # Collect all type names for prefix replacement
+        all_type_names = {model.__name__ for model in self.models}
+
+        # Prepare models data with Ws prefix
         models_data = []
         for model in self.models:
-            model_code = self._generate_model_code(model)
+            model_code = self._generate_model_code(model, all_type_names)
             models_data.append({
-                'name': model.__name__,
+                'name': add_prefix_to_type_name(model.__name__),
                 'code': model_code,
             })
 
@@ -98,8 +103,8 @@ class PythonThinGenerator:
         output_file.write_text(content)
         logger.debug(f"Generated {output_file}")
 
-    def _generate_model_code(self, model: Type[BaseModel]) -> str:
-        """Generate code for a single Pydantic model."""
+    def _generate_model_code(self, model: Type[BaseModel], all_type_names: set) -> str:
+        """Generate code for a single Pydantic model with Ws prefix."""
         schema = model.model_json_schema()
         properties = schema.get('properties', {})
         required = schema.get('required', [])
@@ -107,6 +112,13 @@ class PythonThinGenerator:
         fields = []
         for field_name, field_info in properties.items():
             py_type = self._json_type_to_python(field_info)
+            # Add Ws prefix to type references
+            for type_name in all_type_names:
+                py_type = re.sub(
+                    rf'\b{re.escape(type_name)}\b',
+                    add_prefix_to_type_name(type_name),
+                    py_type
+                )
             description = field_info.get('description', '')
 
             if field_name in required:
@@ -121,8 +133,9 @@ class PythonThinGenerator:
                     fields.append(f"    {field_name}: Optional[{py_type}] = None")
 
         doc = model.__doc__ or f"{model.__name__} model."
+        prefixed_name = add_prefix_to_type_name(model.__name__)
 
-        code = f'class {model.__name__}(BaseModel):\n'
+        code = f'class {prefixed_name}(BaseModel):\n'
         code += f'    """{doc}"""\n'
         if fields:
             code += '\n'.join(fields)
@@ -174,8 +187,11 @@ class PythonThinGenerator:
         # Prepare methods for template
         methods_data = []
         for method in self.methods:
-            param_type = method.param_type.__name__ if method.param_type else "dict"
-            return_type = method.return_type.__name__ if method.return_type else "dict"
+            param_type_raw = method.param_type.__name__ if method.param_type else None
+            return_type_raw = method.return_type.__name__ if method.return_type else None
+            # Add Ws prefix (skip 'dict')
+            param_type = add_prefix_to_type_name(param_type_raw) if param_type_raw else "dict"
+            return_type = add_prefix_to_type_name(return_type_raw) if return_type_raw else "dict"
 
             # Convert method name to valid Python identifier
             method_name_python = to_python_method_name(method.name)
@@ -188,8 +204,8 @@ class PythonThinGenerator:
                 'docstring': method.docstring or f"Call {method.name} RPC method",
             })
 
-        # Prepare model names for imports
-        model_names = [m.__name__ for m in self.models]
+        # Prepare model names for imports (with Ws prefix)
+        model_names = [add_prefix_to_type_name(m.__name__) for m in self.models]
 
         content = template.render(
             methods=methods_data,
@@ -204,7 +220,7 @@ class PythonThinGenerator:
         """Generate __init__.py file."""
         template = self.jinja_env.get_template("__init__.py.j2")
 
-        model_names = [m.__name__ for m in self.models]
+        model_names = [add_prefix_to_type_name(m.__name__) for m in self.models]
 
         content = template.render(models=model_names)
 
