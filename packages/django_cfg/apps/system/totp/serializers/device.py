@@ -55,5 +55,12 @@ class DisableSerializer(serializers.Serializer):
         return value
 
 
+class DeviceListResponseSerializer(serializers.Serializer):
+    """Response serializer for device list endpoint."""
+
+    devices = DeviceListSerializer(many=True)
+    has_2fa_enabled = serializers.BooleanField()
+
+
 
 

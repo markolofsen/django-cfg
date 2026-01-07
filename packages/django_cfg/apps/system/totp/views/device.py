@@ -9,7 +9,12 @@ from rest_framework.response import Response
 from django_cfg.utils import get_logger
 
 from ..models import DeviceStatus, TOTPDevice
-from ..serializers.device import DeviceDeleteSerializer, DeviceListSerializer, DisableSerializer
+from ..serializers.device import (
+    DeviceDeleteSerializer,
+    DeviceListResponseSerializer,
+    DeviceListSerializer,
+    DisableSerializer,
+)
 from ..services import BackupCodeService, TOTPService
 
 logger = get_logger(__name__)
@@ -17,7 +22,7 @@ logger = get_logger(__name__)
 
 @extend_schema_view(
     list=extend_schema(
-        responses={200: DeviceListSerializer(many=True)},
+        responses={200: DeviceListResponseSerializer},
         tags=["TOTP Management"],
     ),
     disable=extend_schema(
