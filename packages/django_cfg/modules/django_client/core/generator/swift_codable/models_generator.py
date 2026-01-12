@@ -256,6 +256,43 @@ class SwiftModelsGenerator:
                     lines.append(f"        case {case_identifier}")
             lines.append("    }")
 
+        # Generate public initializer (Swift memberwise init is internal by default)
+        lines.append("")
+        init_params = []
+        init_assignments = []
+        for prop_name, prop_schema in sorted(properties.items()):
+            swift_name = swift_property_name(prop_name)
+            is_required = prop_name in required
+            is_optional = not is_required or prop_schema.nullable
+
+            # Use nested enum type for inline enums
+            if prop_name in enum_map:
+                swift_type = enum_map[prop_name]
+                if is_optional:
+                    swift_type = f"{swift_type}?"
+            else:
+                swift_type = self.type_mapper.map_type(prop_schema, optional=is_optional)
+
+            # Add default nil for optional parameters
+            if is_optional:
+                init_params.append(f"{swift_name}: {swift_type} = nil")
+            else:
+                init_params.append(f"{swift_name}: {swift_type}")
+            init_assignments.append(f"        self.{swift_name} = {swift_name}")
+
+        # Format init with proper line breaks for readability
+        if len(init_params) <= 3:
+            params_str = ", ".join(init_params)
+            lines.append(f"    public init({params_str}) {{")
+        else:
+            lines.append("    public init(")
+            for i, param in enumerate(init_params):
+                comma = "," if i < len(init_params) - 1 else ""
+                lines.append(f"        {param}{comma}")
+            lines.append("    ) {")
+        lines.extend(init_assignments)
+        lines.append("    }")
+
         lines.append("}")
         lines.append("")
 

@@ -198,7 +198,7 @@ api:
 
 # Start Claude Code with dangerously-skip-permissions flag
 claude:
-	claude --dangerously-skip-permissions
+	claude --dangerously-skip-permissions --chrome
 
 # RQ Workers and Scheduler (macOS optimized - uses SimpleWorker to prevent fork crashes)
 rq: rq-clear

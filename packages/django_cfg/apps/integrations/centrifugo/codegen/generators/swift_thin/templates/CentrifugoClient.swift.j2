@@ -132,7 +132,10 @@ public actor CentrifugoClient {
                 let event = try JSONDecoder().decode({{ channel.event_enum }}.self, from: data)
                 onEvent(event)
             } catch {
-                // Log decoding error but don't crash
+                // Log decoding error for debugging
+                let rawString = String(data: data, encoding: .utf8) ?? "<binary data>"
+                print("[Centrifugo] Failed to decode {{ channel.event_enum }}: \(error)")
+                print("[Centrifugo] Raw data: \(rawString.prefix(500))")
             }
         }
     }
@@ -162,7 +165,10 @@ public actor CentrifugoClient {
                 let event = try JSONDecoder().decode({{ channel.event_enum }}.self, from: data)
                 onEvent(event)
             } catch {
-                // Log decoding error but don't crash
+                // Log decoding error for debugging
+                let rawString = String(data: data, encoding: .utf8) ?? "<binary data>"
+                print("[Centrifugo] Failed to decode {{ channel.event_enum }}: \(error)")
+                print("[Centrifugo] Raw data: \(rawString.prefix(500))")
             }
         }
     }

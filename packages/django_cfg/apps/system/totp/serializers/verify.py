@@ -2,6 +2,16 @@
 
 from rest_framework import serializers
 
+from django_cfg.apps.system.accounts.serializers import UserSerializer
+
+
+# Simplified user serializer without centrifugo to avoid Swift type conflicts
+class TotpVerifyUserSerializer(UserSerializer):
+    """User data returned after 2FA verification."""
+
+    class Meta(UserSerializer.Meta):
+        fields = [f for f in UserSerializer.Meta.fields if f != "centrifugo"]
+
 
 class VerifySerializer(serializers.Serializer):
     """Serializer for TOTP code verification during login."""
@@ -52,7 +62,7 @@ class VerifyResponseSerializer(serializers.Serializer):
     refresh_token = serializers.CharField(
         help_text="JWT refresh token"
     )
-    user = serializers.DictField(
+    user = TotpVerifyUserSerializer(
         help_text="User profile data"
     )
     remaining_backup_codes = serializers.IntegerField(
