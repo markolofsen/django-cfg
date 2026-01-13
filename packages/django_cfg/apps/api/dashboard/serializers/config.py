@@ -51,7 +51,7 @@ class GRPCConfigDashboardSerializer(serializers.Serializer):
     enable_reflection = serializers.BooleanField(required=False, allow_null=True)
     package_prefix = serializers.CharField(required=False, allow_null=True)
     output_dir = serializers.CharField(required=False, allow_null=True)
-    handlers_hook = serializers.CharField(required=False, allow_null=True)
+    handlers_hook = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     auto_register_apps = serializers.BooleanField(required=False, allow_null=True)
     enabled_apps = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
     custom_services = serializers.DictField(required=False, allow_null=True)
