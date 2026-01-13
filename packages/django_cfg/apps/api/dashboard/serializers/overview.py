@@ -10,6 +10,15 @@ from .system import SystemHealthSerializer, SystemMetricsSerializer
 from .activity import QuickActionSerializer, ActivityEntrySerializer
 
 
+class ExtensionInfoSerializer(serializers.Serializer):
+    """Extension information for frontend menu filtering."""
+    name = serializers.CharField(help_text="Extension name (e.g., 'support', 'leads')")
+    type = serializers.CharField(help_text="Extension type: 'app' or 'module'")
+    version = serializers.CharField(allow_null=True, help_text="Extension version")
+    is_valid = serializers.BooleanField(help_text="Whether extension is properly configured")
+    description = serializers.CharField(allow_null=True, help_text="Extension description")
+
+
 class DashboardOverviewSerializer(serializers.Serializer):
     """
     Main serializer for dashboard overview endpoint.
@@ -41,5 +50,10 @@ class DashboardOverviewSerializer(serializers.Serializer):
         many=True,
         required=False,
         help_text="Application statistics"
+    )
+    extensions = ExtensionInfoSerializer(
+        many=True,
+        required=False,
+        help_text="Installed extensions info for menu filtering"
     )
     timestamp = serializers.CharField(help_text="Data timestamp (ISO format)")

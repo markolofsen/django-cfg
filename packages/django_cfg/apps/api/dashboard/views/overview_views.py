@@ -13,6 +13,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 
 from django_cfg.mixins import AdminAPIMixin
+from django_cfg.extensions.loader import get_extension_loader
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -72,6 +73,26 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                 for app_label, app_data in app_stats_dict.get('apps', {}).items()
             ]
 
+            # Get installed extensions
+            try:
+                extension_loader = get_extension_loader()
+                extensions_info = extension_loader.get_extension_info()
+                # Filter to only valid app extensions
+                extensions = [
+                    {
+                        'name': ext['name'],
+                        'type': ext['type'],
+                        'version': ext['version'],
+                        'is_valid': ext['is_valid'],
+                        'description': ext['description'],
+                    }
+                    for ext in extensions_info
+                    if ext['type'] == 'app' and ext['is_valid']
+                ]
+            except Exception as e:
+                logger.warning(f"Failed to get extensions info: {e}")
+                extensions = []
+
             data = {
                 # Statistics
                 'stat_cards': stats_service.get_stat_cards(),
@@ -93,6 +114,9 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     'user_activity': charts_service.get_user_activity_chart(days=7),
                 },
                 'activity_tracker': charts_service.get_activity_tracker(weeks=52),
+
+                # Extensions
+                'extensions': extensions,
 
                 # Meta
                 'timestamp': datetime.now().isoformat(),
