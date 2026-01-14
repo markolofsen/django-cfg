@@ -99,7 +99,7 @@ class SchemasGenerator:
             email: z.email()
             username: z.string().min(1).max(150)
             status: z.nativeEnum(Enums.StatusEnum)  # Reference to TypeScript enum
-            created_at: z.iso.datetime()
+            created_at: z.string().datetime({ offset: true })
         """
         # Check if this field is an enum
         if schema.enum and schema.name:
@@ -146,7 +146,7 @@ class SchemasGenerator:
         Examples:
             string -> z.string()
             string (format: email) -> z.email()
-            string (format: date-time) -> z.iso.datetime()
+            string (format: date-time) -> z.string().datetime({ offset: true })
             string (format: uri) -> z.url()
             integer -> z.int()
             number -> z.number()
@@ -171,7 +171,12 @@ class SchemasGenerator:
             if schema_format == "email":
                 base_type = "z.email()"
             elif schema_format in ("date-time", "datetime"):
-                base_type = "z.iso.datetime()"
+                # Django outputs various ISO formats:
+                # - "2024-01-14T03:51:36Z" (no fractional seconds, Z suffix)
+                # - "2024-01-14T03:55:38.621173+00:00" (microseconds + offset)
+                # offset: true - accepts both Z and +HH:MM timezone formats
+                # No precision param - accepts any number of fractional digits (0-6)
+                base_type = "z.string().datetime({ offset: true })"
             elif schema_format == "date":
                 base_type = "z.iso.date()"
             elif schema_format in ("uri", "url"):
