@@ -6,7 +6,7 @@ import {
     Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
     Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@djangocfg/ui-nextjs';
-import { events } from '@djangocfg/ui-nextjs/hooks';
+import { events } from '@djangocfg/ui-core';
 
 import { TRADING_DIALOG_EVENTS } from '../events';
 

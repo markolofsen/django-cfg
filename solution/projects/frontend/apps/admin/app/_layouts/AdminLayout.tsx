@@ -1,8 +1,8 @@
 /**
  * Admin Layout
- * 
+ *
  * Layout for admin dashboard pages
- * Uses routes from @/_routes
+ * Uses routes from @/_routes with group support
  */
 
 'use client';
@@ -10,7 +10,7 @@
 import { ReactNode } from 'react';
 
 import {
-    AdminLayout as BaseAdminLayout, HeaderConfig, SidebarConfig, SidebarItem
+    AdminLayout as BaseAdminLayout, HeaderConfig, SidebarConfig, SidebarGroupConfig
 } from '@djangocfg/layouts';
 import { adminMenuGroups, routes } from '@routes/index';
 
@@ -19,21 +19,27 @@ interface AdminLayoutProps {
 }
 
 /**
- * Convert MenuGroup[] to SidebarConfig
+ * Convert MenuGroup[] to SidebarConfig with groups
  */
-function convertMenuGroupsToSidebar(menuGroups: Array<{ label: string; items: Array<{ path: string; label: string; icon?: string | any; badge?: string | number }> }>): SidebarConfig {
-  return {
-    homeHref: routes.admin.overview?.path || '/admin',
-    items: menuGroups.flatMap(group => 
-      group.items
-        .filter(item => item.path && item.path !== 'undefined') // Filter out invalid paths
+function convertMenuGroupsToSidebar(menuGroups: Array<{ label: string; items: Array<{ path: string; label: string; icon?: string | any; badge?: string | number }>; dynamic?: boolean }>): SidebarConfig {
+  const groups: SidebarGroupConfig[] = menuGroups
+    .filter(group => group.items.length > 0 || !group.dynamic)
+    .map(group => ({
+      label: group.label,
+      items: group.items
+        .filter(item => item.path && item.path !== 'undefined')
         .map(item => ({
           label: item.label,
-          href: item.path || '#', // Fallback to '#' if path is invalid
+          href: item.path || '#',
           icon: typeof item.icon === 'string' ? item.icon : item.icon?.name || undefined,
           badge: item.badge,
-        }))
-    ),
+        })),
+      dynamic: group.dynamic,
+    }));
+
+  return {
+    homeHref: routes.admin.overview?.path || '/admin',
+    groups,
   };
 }
 

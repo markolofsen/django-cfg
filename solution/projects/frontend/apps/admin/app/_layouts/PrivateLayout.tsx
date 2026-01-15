@@ -1,8 +1,8 @@
 /**
  * Private Layout
- * 
+ *
  * Layout for authenticated user pages
- * Uses routes from @/_routes
+ * Uses routes from @/_routes with group support
  */
 
 'use client';
@@ -10,7 +10,7 @@
 import { ReactNode } from 'react';
 
 import {
-    HeaderConfig, PrivateLayout as BasePrivateLayout, SidebarConfig, SidebarItem
+    HeaderConfig, PrivateLayout as BasePrivateLayout, SidebarConfig, SidebarGroupConfig
 } from '@djangocfg/layouts';
 import { menuGroups, routes } from '@routes/index';
 
@@ -19,19 +19,20 @@ interface PrivateLayoutProps {
 }
 
 /**
- * Convert MenuGroup[] to SidebarConfig
+ * Convert MenuGroup[] to SidebarConfig with groups
  */
 function convertMenuGroupsToSidebar(menuGroups: Array<{ label: string; items: Array<{ path: string; label: string; icon?: string | any; badge?: string | number }> }>): SidebarConfig {
   return {
     homeHref: routes.private.home.path,
-    items: menuGroups.flatMap(group => 
-      group.items.map(item => ({
+    groups: menuGroups.map(group => ({
+      label: group.label,
+      items: group.items.map(item => ({
         label: item.label,
         href: item.path,
         icon: typeof item.icon === 'string' ? item.icon : item.icon?.name || undefined,
         badge: item.badge,
-      }))
-    ),
+      })),
+    })),
   };
 }
 
