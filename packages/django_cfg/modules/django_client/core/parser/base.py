@@ -499,7 +499,7 @@ class BaseParser(ABC):
             required=schema.required or [],
             additional_properties=additional_properties,
             items=items,
-            enum=schema.enum,
+            enum=[v for v in schema.enum if v is not None] if schema.enum else None,
             enum_var_names=schema.x_enum_varnames,
             const=schema.const,
             is_request_model=is_request,
