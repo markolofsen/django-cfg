@@ -144,8 +144,31 @@ class PythonGenerator(BaseGenerator):
         return files
 
     def _get_schemas_for_operations(self, operations: list[IROperationObject]) -> dict[str, IRSchemaObject]:
-        """Get all schemas used by given operations."""
+        """Get all schemas used by given operations, including nested $ref schemas."""
         schemas = {}
+
+        def collect_nested_refs(schema: IRSchemaObject, collected: dict[str, IRSchemaObject]):
+            """Recursively collect all schemas referenced by $ref."""
+            if not schema:
+                return
+
+            # Check properties for nested $ref
+            for prop_name, prop_schema in schema.properties.items():
+                # Direct $ref on property
+                if prop_schema.ref and prop_schema.ref in self.context.schemas:
+                    ref_name = prop_schema.ref
+                    if ref_name not in collected:
+                        collected[ref_name] = self.context.schemas[ref_name]
+                        # Recursively collect refs from nested schema
+                        collect_nested_refs(self.context.schemas[ref_name], collected)
+
+                # Array items with $ref
+                if prop_schema.items and prop_schema.items.ref:
+                    ref_name = prop_schema.items.ref
+                    if ref_name in self.context.schemas and ref_name not in collected:
+                        collected[ref_name] = self.context.schemas[ref_name]
+                        # Recursively collect refs from nested schema
+                        collect_nested_refs(self.context.schemas[ref_name], collected)
 
         for operation in operations:
             # Request body schemas
@@ -153,18 +176,24 @@ class PythonGenerator(BaseGenerator):
                 schema_name = operation.request_body.schema_name
                 if schema_name in self.context.schemas:
                     schemas[schema_name] = self.context.schemas[schema_name]
+                    # Collect nested refs
+                    collect_nested_refs(self.context.schemas[schema_name], schemas)
 
             # Patch request body schemas
             if operation.patch_request_body and operation.patch_request_body.schema_name:
                 schema_name = operation.patch_request_body.schema_name
                 if schema_name in self.context.schemas:
                     schemas[schema_name] = self.context.schemas[schema_name]
+                    # Collect nested refs
+                    collect_nested_refs(self.context.schemas[schema_name], schemas)
 
             # Response schemas
             for status_code, response in operation.responses.items():
                 if response.schema_name:
                     if response.schema_name in self.context.schemas:
                         schemas[response.schema_name] = self.context.schemas[response.schema_name]
+                        # Collect nested refs
+                        collect_nested_refs(self.context.schemas[response.schema_name], schemas)
 
         return schemas
 

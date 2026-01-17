@@ -280,7 +280,22 @@ class IRSchemaObject(BaseModel):
             'Any'
             >>> IRSchemaObject(name="x", type="object", default=[]).python_type
             'list[Any]'
+            >>> # $ref to another schema
+            >>> IRSchemaObject(name="x", type="object", ref="User").python_type
+            'User'
+            >>> # Array with $ref items
+            >>> IRSchemaObject(
+            ...     name="photos",
+            ...     type="array",
+            ...     items=IRSchemaObject(name="Photo", type="object", ref="PhotoInputRequest")
+            ... ).python_type
+            'list[PhotoInputRequest]'
         """
+        # Handle $ref (e.g., User, PhotoInputRequest, etc.)
+        if self.ref:
+            base_type = self.ref
+            return f"{base_type} | None" if self.nullable else base_type
+
         # For read-only string fields, use Any since they often return complex objects
         # from SerializerMethodField in Django (e.g., dicts instead of strings)
         if self.read_only and self.type == "string":
@@ -296,12 +311,24 @@ class IRSchemaObject(BaseModel):
             # SAFETY: Always use Any for values to handle DictField edge cases
             return "dict[str, Any] | None" if self.nullable else "dict[str, Any]"
 
+        # Handle array type with proper item type resolution
+        if self.type == "array":
+            if self.items:
+                # If items is a $ref, use the ref name directly
+                if self.items.ref:
+                    item_type = self.items.ref
+                else:
+                    item_type = self.items.python_type
+                base_type = f"list[{item_type}]"
+            else:
+                base_type = "list[Any]"
+            return f"{base_type} | None" if self.nullable else base_type
+
         type_map = {
             "string": "str",
             "integer": "int",
             "number": "float",
             "boolean": "bool",
-            "array": f"list[{self.items.python_type if self.items else 'Any'}]",
             "object": "dict[str, Any]",
         }
 

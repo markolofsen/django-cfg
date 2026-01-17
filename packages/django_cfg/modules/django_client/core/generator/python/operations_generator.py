@@ -111,10 +111,10 @@ class OperationsGenerator:
         # JSON body
         if operation.request_body:
             # Required body
-            request_kwargs.append("json=data.model_dump()")
+            request_kwargs.append("json=data.model_dump(exclude_unset=True)")
         elif operation.patch_request_body:
             # Optional PATCH body - check for None
-            request_kwargs.append("json=data.model_dump() if data is not None else None")
+            request_kwargs.append("json=data.model_dump(exclude_unset=True) if data is not None else None")
 
         # Make request
         method_lower = operation.http_method.lower()

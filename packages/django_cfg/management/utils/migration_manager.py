@@ -89,12 +89,9 @@ class MigrationManager:
             
             # Get apps for this database
             apps_list = self.get_apps_for_database(db_name)
-            
-            # Debug info
-            self._log_info(f"  📋 Apps for {db_name}: {apps_list}")
-            
+
+            # Silently skip databases without configured apps (e.g., data-only databases)
             if not apps_list:
-                self._log_warning(f"  ⚠️  No apps configured for {db_name}")
                 return
             
             # Create migrations for all apps

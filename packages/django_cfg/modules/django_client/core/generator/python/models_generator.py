@@ -169,6 +169,10 @@ class ModelsGenerator:
         # Check if required
         is_required = name in required_fields
 
+        # If field is optional (not required), add | None if not already nullable
+        if not is_required and not schema.nullable and "| None" not in python_type:
+            python_type = f"{python_type} | None"
+
         # Build Field() kwargs
         field_kwargs = []
 
@@ -260,53 +264,70 @@ class ModelsGenerator:
         # Collect enum names used in these schemas
         enum_names = set()
 
-        # Track seen schema names to avoid duplicates
-        seen_schemas = set()
+        def collect_enums_from_schema(schema: IRSchemaObject):
+            """Helper to collect enum names from schema properties."""
+            if schema.properties:
+                for prop in schema.properties.values():
+                    if prop.enum and prop.name:
+                        enum_names.add(self.base.sanitize_enum_name(prop.name))
+                    elif prop.ref and prop.ref in self.context.schemas:
+                        ref_schema = self.context.schemas[prop.ref]
+                        if ref_schema.enum:
+                            enum_names.add(self.base.sanitize_enum_name(prop.ref))
 
-        # Response models
-        for name, schema in schemas.items():
-            if schema.is_response_model and name not in seen_schemas:
-                schema_codes.append(self.generate_schema(schema))
-                seen_schemas.add(name)
-                # Collect enums from properties
-                if schema.properties:
-                    for prop in schema.properties.values():
-                        if prop.enum and prop.name:
-                            enum_names.add(self.base.sanitize_enum_name(prop.name))
-                        elif prop.ref and prop.ref in self.context.schemas:
-                            ref_schema = self.context.schemas[prop.ref]
-                            if ref_schema.enum:
-                                enum_names.add(self.base.sanitize_enum_name(prop.ref))
+        # Build dependency graph: which schemas reference which
+        def get_dependencies(schema: IRSchemaObject) -> set[str]:
+            """Get all schema names that this schema depends on."""
+            deps = set()
+            if not schema.properties:
+                return deps
+            for prop in schema.properties.values():
+                # Direct $ref
+                if prop.ref and prop.ref in schemas:
+                    deps.add(prop.ref)
+                # Array items with $ref
+                if prop.items and prop.items.ref and prop.items.ref in schemas:
+                    deps.add(prop.items.ref)
+            return deps
 
-        # Request models
-        for name, schema in schemas.items():
-            if schema.is_request_model and name not in seen_schemas:
-                schema_codes.append(self.generate_schema(schema))
-                seen_schemas.add(name)
-                # Collect enums from properties
-                if schema.properties:
-                    for prop in schema.properties.values():
-                        if prop.enum and prop.name:
-                            enum_names.add(self.base.sanitize_enum_name(prop.name))
-                        elif prop.ref and prop.ref in self.context.schemas:
-                            ref_schema = self.context.schemas[prop.ref]
-                            if ref_schema.enum:
-                                enum_names.add(self.base.sanitize_enum_name(prop.ref))
+        # Topological sort: schemas with no dependencies first
+        def topological_sort(schema_dict: dict[str, IRSchemaObject]) -> list[str]:
+            """Sort schemas so dependencies come before dependents."""
+            # Build dependency map
+            deps_map = {name: get_dependencies(schema) for name, schema in schema_dict.items()}
 
-        # Patch models
-        for name, schema in schemas.items():
-            if schema.is_patch_model and name not in seen_schemas:
-                schema_codes.append(self.generate_schema(schema))
-                seen_schemas.add(name)
-                # Collect enums from properties
-                if schema.properties:
-                    for prop in schema.properties.values():
-                        if prop.enum and prop.name:
-                            enum_names.add(self.base.sanitize_enum_name(prop.name))
-                        elif prop.ref and prop.ref in self.context.schemas:
-                            ref_schema = self.context.schemas[prop.ref]
-                            if ref_schema.enum:
-                                enum_names.add(self.base.sanitize_enum_name(prop.ref))
+            result = []
+            visited = set()
+            temp_visited = set()
+
+            def visit(name: str):
+                if name in visited:
+                    return
+                if name in temp_visited:
+                    # Circular dependency - just add it
+                    return
+                temp_visited.add(name)
+                # Visit dependencies first
+                for dep in deps_map.get(name, set()):
+                    if dep in schema_dict:
+                        visit(dep)
+                temp_visited.discard(name)
+                visited.add(name)
+                result.append(name)
+
+            for name in schema_dict:
+                visit(name)
+
+            return result
+
+        # Sort schemas by dependency order
+        sorted_names = topological_sort(schemas)
+
+        # Generate in dependency order
+        for name in sorted_names:
+            schema = schemas[name]
+            schema_codes.append(self.generate_schema(schema))
+            collect_enums_from_schema(schema)
 
         template = self.jinja_env.get_template('models/app_models.py.jinja')
         content = template.render(

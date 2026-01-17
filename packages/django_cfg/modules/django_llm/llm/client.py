@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from toon_python import encode as toon_encode
+
 from ...base import BaseCfgModule
 from .embeddings import MockEmbedder, OpenAIEmbedder
 from .extractor import JSONExtractor
@@ -286,3 +288,9 @@ class LLMClient(BaseCfgModule):
     def clear_models_cache(self):
         """Clear the models cache."""
         self.models_api.clear_models_cache()
+
+    # Token optimization
+    @staticmethod
+    def to_toon(data: Dict | List) -> str:
+        """Convert data to TOON format (saves 30-50% tokens)."""
+        return toon_encode(data)
