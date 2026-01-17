@@ -225,3 +225,19 @@ WidgetRegistry.register(
     "video",
     lambda obj, field, cfg: VideoDisplay.from_field(obj, field, cfg)
 )
+
+# Markdown widget
+from ..utils.html.markdown_integration import MarkdownIntegration
+
+WidgetRegistry.register(
+    "markdown",
+    lambda obj, field, cfg: MarkdownIntegration.markdown_docs(
+        content=getattr(obj, field, "") or "",
+        collapsible=cfg.get('collapsible', True) if cfg else True,
+        title=cfg.get('title', 'Documentation') if cfg else 'Documentation',
+        icon=cfg.get('header_icon', 'description') if cfg else 'description',
+        max_height=cfg.get('max_height', '500px') if cfg else '500px',
+        enable_plugins=cfg.get('enable_plugins', True) if cfg else True,
+        default_open=cfg.get('default_open', False) if cfg else False,
+    )
+)

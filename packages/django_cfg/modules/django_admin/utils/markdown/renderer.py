@@ -314,21 +314,27 @@ class MarkdownRenderer:
         # Wrap in beautiful collapsible section
         open_attr = 'open' if default_open else ''
 
+        # Generate unique ID to scope the style
+        import uuid
+        details_id = f"md-details-{uuid.uuid4().hex[:8]}"
+
         return format_html(
-            '<details class="group border border-base-200 dark:border-base-700 rounded-lg overflow-hidden bg-white dark:bg-base-800 shadow-sm hover:shadow-md transition-shadow" {}>'
-            '<summary class="cursor-pointer px-4 py-3 bg-base-50 dark:bg-base-900 hover:bg-base-100 dark:hover:bg-base-800 transition-colors flex items-center gap-2 select-none">'
-            '<span class="material-symbols-outlined text-base text-primary-600 dark:text-primary-400 group-open:rotate-90 transition-transform">{}</span>'
+            '<style>#{} > summary::after {{ display: none !important; content: none !important; }} #{}[open] > summary .material-symbols-outlined {{ transform: rotate(90deg); }}</style>'
+            '<details id="{}" class="group border border-base-200 dark:border-base-700 rounded-lg overflow-hidden bg-white dark:bg-base-800 shadow-sm hover:shadow-md transition-shadow" {}>'
+            '<summary class="cursor-pointer px-4 py-3 bg-base-50 dark:bg-base-900 hover:bg-base-100 dark:hover:bg-base-800 transition-colors flex items-center gap-3 select-none" style="list-style: none;">'
+            '<span class="material-symbols-outlined text-primary-600 dark:text-primary-400 transition-transform" style="font-size: 18px; line-height: 1;">{}</span>'
             '<span class="font-semibold text-sm text-font-default-light dark:text-font-default-dark">{}</span>'
-            '<span class="text-xs text-font-subtle-light dark:text-font-subtle-dark ml-auto">{}</span>'
             '</summary>'
             '<div class="p-4 bg-white dark:bg-base-800" {}>'
             '{}'
             '</div>'
             '</details>',
+            details_id,
+            details_id,
+            details_id,
             mark_safe(open_attr),
             'chevron_right',  # Arrow icon
             escape(title),
-            'Click to expand' if not default_open else 'Click to collapse',
             mark_safe(f'style="max-height: {max_height}; overflow-y: auto;"') if max_height else '',
             rendered_html
         )

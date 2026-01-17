@@ -54,6 +54,7 @@ class MarkdownField(FieldConfig):
     collapsible: bool = Field(True, description="Wrap in collapsible details/summary")
     default_open: bool = Field(False, description="Open by default if collapsible")
     max_height: Optional[str] = Field("500px", description="Max height with scrolling (e.g., '500px', None for no limit)")
+    full_width: bool = Field(True, description="Span full width of fieldset (default: True)")
 
     # Content source
     source_file: Optional[str] = Field(
@@ -84,6 +85,7 @@ class MarkdownField(FieldConfig):
         config['default_open'] = self.default_open
         config['max_height'] = self.max_height
         config['enable_plugins'] = self.enable_plugins
+        config['full_width'] = self.full_width
 
         if self.source_file is not None:
             config['source_file'] = self.source_file

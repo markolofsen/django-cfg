@@ -9,7 +9,7 @@ Provides **60-80% code reduction** compared to traditional Django admin.
   - [Overview](../../../docs_public/django_admin/overview.md) - Philosophy and architecture
   - [Quick Start](../../../docs_public/django_admin/quick-start.md) - Get started in 5 minutes
   - [Configuration](../../../docs_public/django_admin/configuration.md) - Complete configuration reference
-  - [Field Types](../../../docs_public/django_admin/field-types.md) - All 8 specialized field types
+  - [Field Types](../../../docs_public/django_admin/field-types.md) - All 9 specialized field types
   - [Filters](../../../docs_public/django_admin/filters.md) - Advanced filtering
   - [Examples](../../../docs_public/django_admin/examples.md) - Production-ready examples
   - [API Reference](../../../docs_public/django_admin/api-reference.md) - Complete API documentation
@@ -66,7 +66,9 @@ from django_cfg.modules.django_admin import (
     DocumentationConfig,
     FieldsetConfig,
     Icons,
+    ImageField,
     JSONWidgetConfig,
+    MarkdownField,
     ShortUUIDField,
     UserField,
     computed_field,
@@ -138,8 +140,15 @@ payment_config = AdminConfig(
         BooleanField(name='is_confirmed', title='Confirmed'),
         DateTimeField(name='created_at', title='Created', show_relative=True),
         DateTimeField(name='updated_at', title='Updated', show_relative=True),
-        # ImageField(name='qr_code', title='QR Code', max_height='100px'),  # For image fields
-        # MarkdownField(name='description', title='Description'),  # For markdown content
+        ImageField(name='qr_code', title='QR Code', max_height='100px'),  # For image fields
+        MarkdownField(
+            name='description',
+            title='Description',
+            collapsible=True,
+            default_open=True,
+            full_width=True,  # Span full fieldset width
+            max_height='400px',
+        ),
     ],
 
     # ===== ACTIONS =====
@@ -326,7 +335,7 @@ class PaymentAdmin(PydanticAdmin):
     Full-featured Payment admin using django_admin declarative approach.
 
     Demonstrates ALL capabilities:
-    - Display fields (auto-generated methods) - 7 types used + 2 commented
+    - Display fields (auto-generated methods) - 9 types used
     - Bulk actions (require selection) - 2 examples
     - Changelist actions (buttons above listing) - 2 examples
     - Fieldsets (organized form) - 6 sections with collapsed
@@ -471,7 +480,8 @@ This example demonstrates **every major feature** of django_admin working togeth
 ```python
 from django_cfg.modules.django_admin import (
     AdminConfig, BadgeField, BooleanField, CurrencyField,
-    DateTimeField, ForeignKeyField, UserField, ShortUUIDField, Icons
+    DateTimeField, ForeignKeyField, ImageField, MarkdownField,
+    UserField, ShortUUIDField, Icons
 )
 
 config = AdminConfig(
@@ -513,6 +523,25 @@ config = AdminConfig(
 
         # DateTime with relative time ("2 hours ago")
         DateTimeField(name="created_at", title="Created", show_relative=True),
+
+        # Image with preview and modal zoom
+        ImageField(
+            name="qr_code",
+            title="QR Code",
+            max_height="100px",
+            show_filename=True,
+        ),
+
+        # Markdown content with rendered HTML
+        MarkdownField(
+            name="description",
+            title="Description",
+            collapsible=True,
+            default_open=True,
+            full_width=True,  # Span full fieldset width (default: True)
+            max_height="400px",
+            enable_plugins=True,  # Tables, strikethrough, task lists, Mermaid diagrams
+        ),
     ],
 )
 ```
@@ -849,7 +878,98 @@ config = AdminConfig(
 )
 ```
 
-### 12. Filters (Standard Django Filters + Unfold)
+### 12. ImageField (Image Preview with Modal)
+
+```python
+from django_cfg.modules.django_admin import ImageField
+
+config = AdminConfig(
+    model=Product,
+    list_display=["name", "thumbnail", "price"],
+    display_fields=[
+        # Basic image preview
+        ImageField(
+            name="thumbnail",
+            title="Image",
+            max_height="80px",
+        ),
+
+        # Image with filename and download link
+        ImageField(
+            name="photo",
+            title="Photo",
+            max_height="120px",
+            show_filename=True,
+            link_to_original=True,
+        ),
+
+        # Gallery-style preview (for ImageField in model)
+        ImageField(
+            name="gallery_image",
+            title="Gallery",
+            max_height="200px",
+            css_classes=["rounded-lg", "shadow-md"],
+        ),
+    ],
+)
+```
+
+### 13. MarkdownField (Rendered Markdown Content)
+
+```python
+from django_cfg.modules.django_admin import MarkdownField
+
+config = AdminConfig(
+    model=Article,
+    list_display=["title", "author", "created_at"],
+    readonly_fields=["content"],  # IMPORTANT: Must be in readonly_fields for changeform display
+    display_fields=[
+        # Basic markdown rendering
+        MarkdownField(
+            name="content",
+            title="Article Content",
+        ),
+
+        # Collapsible markdown with full options
+        MarkdownField(
+            name="description",
+            title="AI Description",
+            collapsible=True,
+            default_open=True,
+            full_width=True,  # Span full fieldset width (default: True)
+            max_height="400px",
+            enable_plugins=True,  # Tables, strikethrough, task lists, Mermaid diagrams
+            header_icon="description",  # Material icon for header
+        ),
+
+        # From file path field
+        MarkdownField(
+            name="docs_path",
+            title="Documentation",
+            source_file="docs/api.md",  # Static file relative to app root
+            collapsible=True,
+            default_open=False,
+        ),
+    ],
+    fieldsets=[
+        FieldsetConfig(
+            title="Content",
+            fields=["title", "content"],  # MarkdownField will render as HTML
+        ),
+    ],
+)
+```
+
+**MarkdownField Features:**
+- Renders markdown to beautiful HTML with Tailwind styling
+- Supports all markdown: headers, lists, code blocks, tables, blockquotes
+- **Mermaid diagrams** support when `enable_plugins=True`
+- Collapsible sections with click-to-expand
+- `full_width=True` (default) spans entire fieldset width
+- Can load from file path or model field
+- Dark mode support
+
+### 14. Filters (Standard Django Filters + Unfold)
 
 ```python
 from unfold.contrib.filters.admin import AutocompleteSelectFilter
@@ -887,9 +1007,16 @@ config = AdminConfig(
 
 ### Display Fields vs Widgets
 
-- **Display Fields**: Auto-generate display methods for `list_display` (listing view)
-  - `BadgeField`, `CurrencyField`, `DateTimeField`, `UserField`, etc.
-  - Shows data in changelist table
+- **Display Fields**: Auto-generate display methods for `list_display` and `readonly_fields`
+  - `BadgeField` - Status badges with colors
+  - `BooleanField` - Checkmark/cross icons
+  - `CurrencyField` - Formatted money display
+  - `DateTimeField` - Relative time ("2 hours ago")
+  - `ForeignKeyField` - FK with admin link
+  - `ImageField` - Image preview with modal zoom
+  - `MarkdownField` - Rendered markdown content (for `readonly_fields` in change form)
+  - `ShortUUIDField` - Truncated UUID display
+  - `UserField` - User with avatar
 
 - **Widgets**: Configure form field widgets (detail/edit view)
   - `JSONWidgetConfig`, `TextWidgetConfig`

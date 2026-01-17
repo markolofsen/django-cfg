@@ -47,11 +47,19 @@ class StatusBadge:
         """Auto status badge with color mapping."""
         config = config or StatusBadgeConfig()
 
-        if not status:
+        if status is None or status == '':
             return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
 
+        # Normalize status for lookup (handle booleans)
+        if isinstance(status, bool):
+            lookup_key = 'true' if status else 'false'
+            display_text = 'Yes' if status else 'No'
+        else:
+            lookup_key = str(status)
+            display_text = str(status).replace('_', ' ').title()
+
         # Determine variant
-        status_lower = status.lower().replace('_', '').replace('-', '')
+        status_lower = lookup_key.lower().replace('_', '').replace('-', '')
         variant = BadgeVariant.INFO
 
         for keyword, mapped_variant in cls.STATUS_MAPPINGS.items():
@@ -60,14 +68,14 @@ class StatusBadge:
                 break
 
         # Use custom mapping if provided
-        if config.custom_mappings and status in config.custom_mappings:
-            variant_str = config.custom_mappings[status]
+        if config.custom_mappings and lookup_key in config.custom_mappings:
+            variant_str = config.custom_mappings[lookup_key]
             try:
                 variant = BadgeVariant(variant_str)
             except ValueError:
                 pass
 
-        return cls.create(status.replace('_', ' ').title(), variant, config)
+        return cls.create(display_text, variant, config)
 
     @classmethod
     def create(cls, text: str, variant: Union[BadgeVariant, str] = BadgeVariant.INFO,
