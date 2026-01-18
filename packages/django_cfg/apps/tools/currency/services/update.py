@@ -79,17 +79,21 @@ def update_rates(
     target_currency: Optional[str] = None,
 ) -> dict[str, Any]:
     """
-    Update exchange rates in CurrencyRate table.
+    Update exchange rates in CurrencyRate table using BATCH fetch.
+
+    Fetches ALL rates in ONE API request (much faster than individual requests).
+    Filters to only save currencies that are active in Currency model.
 
     Args:
-        currencies: Currencies to update. None = all from Currency model.
-        target_currency: Target currency. None = from config.
+        currencies: Currencies to update. None = all active from Currency model.
+        target_currency: Target currency. None = from config (usually USD).
 
     Returns:
         Dict with update statistics.
     """
     from datetime import datetime
-    from .converter import get_converter
+    from .clients.hybrid import HybridCurrencyClient
+    from ..models import CurrencyRate
 
     # Get defaults from config
     cfg = get_currency_config()
@@ -100,33 +104,71 @@ def update_rates(
     if target_currency is None:
         target_currency = cfg.target_currency if cfg else "USD"
 
-    converter = get_converter()
+    # Filter out target currency
+    currencies_to_update = set(c.upper() for c in currencies if c.upper() != target_currency.upper())
+
+    if not currencies_to_update:
+        return {
+            "status": "success",
+            "updated": 0,
+            "failed": 0,
+            "rates": [],
+            "errors": [],
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    # BATCH FETCH: One API request gets ALL rates
+    client = HybridCurrencyClient()
     updated = []
     failed = []
 
-    for currency in currencies:
-        if currency == target_currency:
-            continue
+    try:
+        logger.info(f"Batch fetching rates to {target_currency} (need {len(currencies_to_update)} currencies)...")
 
-        try:
-            # Fetch fresh rate from provider
-            rate = converter.refresh_rate(currency, target_currency)
-            updated.append({
-                "pair": f"{currency}/{target_currency}",
-                "rate": str(rate.rate),
-                "source": rate.source,
-            })
-            logger.info(f"Updated {currency}/{target_currency}: {rate.rate}")
+        # ONE request to get ALL rates
+        all_rates = client.fetch_all_rates(target_currency)
+        logger.info(f"Received {len(all_rates)} rates from API")
 
-        except Exception as e:
+        # Filter and save only currencies we need
+        for currency_code in currencies_to_update:
+            if currency_code in all_rates:
+                rate = all_rates[currency_code]
+                try:
+                    # Save to database
+                    CurrencyRate.objects.set_rate(
+                        base_currency=rate.base_currency,
+                        quote_currency=rate.quote_currency,
+                        rate=rate.rate,
+                        provider=rate.source,
+                    )
+                    updated.append({
+                        "pair": f"{rate.base_currency}/{rate.quote_currency}",
+                        "rate": str(rate.rate),
+                        "source": rate.source,
+                    })
+                    logger.debug(f"Saved {rate.base_currency}/{rate.quote_currency}: {rate.rate}")
+                except Exception as e:
+                    failed.append({
+                        "pair": f"{currency_code}/{target_currency}",
+                        "error": f"DB save failed: {e}",
+                    })
+            else:
+                failed.append({
+                    "pair": f"{currency_code}/{target_currency}",
+                    "error": "Not found in API response",
+                })
+
+    except Exception as e:
+        logger.error(f"Batch fetch failed: {e}")
+        # All currencies failed
+        for currency_code in currencies_to_update:
             failed.append({
-                "pair": f"{currency}/{target_currency}",
+                "pair": f"{currency_code}/{target_currency}",
                 "error": str(e),
             })
-            logger.warning(f"Failed to update {currency}/{target_currency}: {e}")
 
     result = {
-        "status": "success" if not failed else "partial",
+        "status": "success" if not failed else ("partial" if updated else "failed"),
         "updated": len(updated),
         "failed": len(failed),
         "rates": updated,
@@ -134,7 +176,7 @@ def update_rates(
         "timestamp": datetime.now().isoformat(),
     }
 
-    logger.info(f"Currency update: {len(updated)} updated, {len(failed)} failed")
+    logger.info(f"Currency update: {len(updated)} updated, {len(failed)} failed (batch mode)")
     return result
 
 

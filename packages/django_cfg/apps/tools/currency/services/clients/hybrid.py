@@ -235,3 +235,154 @@ class HybridCurrencyClient:
         # We assume it can handle common currencies
         common = {"USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "KRW", "CNY", "RUB"}
         return base.upper() in common or quote.upper() in common
+
+    # ========== BATCH FETCH (ONE REQUEST FOR ALL RATES) ==========
+
+    def fetch_all_rates(self, target_currency: str = "USD") -> Dict[str, Rate]:
+        """
+        Fetch ALL rates to target currency in ONE request.
+
+        This is much more efficient than fetching individual rates.
+        Makes 1 API call instead of N calls.
+
+        Args:
+            target_currency: The quote currency (e.g., "USD").
+                            All rates will be X→target_currency.
+
+        Returns:
+            Dict mapping base currency code to Rate object.
+            Example: {"KRW": Rate(KRW→USD), "EUR": Rate(EUR→USD), ...}
+
+        Raises:
+            RateFetchError: If all sources fail.
+        """
+        target = target_currency.upper()
+
+        # Try sources in priority order
+        sources = [
+            ("fawaz_currency", self._fetch_all_from_fawaz),
+            ("exchangerate_api", self._fetch_all_from_exchangerate),
+            ("frankfurter", self._fetch_all_from_frankfurter),
+        ]
+
+        last_error = None
+        for source_name, fetch_method in sources:
+            try:
+                logger.info(f"Batch fetching all rates to {target} from {source_name}")
+                rates = fetch_method(target)
+                logger.info(f"Fetched {len(rates)} rates from {source_name}")
+                return rates
+            except Exception as e:
+                logger.warning(f"Batch fetch from {source_name} failed: {e}")
+                last_error = e
+                continue
+
+        raise RateFetchError(f"All batch sources failed: {last_error}")
+
+    def _fetch_all_from_fawaz(self, target: str) -> Dict[str, Rate]:
+        """
+        Fetch all rates from Fawaz API in one request.
+
+        Fawaz returns rates FROM base TO all quotes.
+        We request target.json and INVERT to get X→target.
+        """
+        target_lower = target.lower()
+        url = f"{self._sources['fawaz_currency']['url']}/{target_lower}.json"
+        response = self._make_request(url, "fawaz_currency")
+        data = response.json()
+
+        if target_lower not in data:
+            raise RateFetchError(f"Fawaz: no data for {target}")
+
+        rates_data = data[target_lower]
+        now = datetime.now()
+        result = {}
+
+        for currency_code, rate_value in rates_data.items():
+            if not isinstance(rate_value, (int, float)) or rate_value <= 0:
+                continue
+
+            base = currency_code.upper()
+            if base == target:
+                continue
+
+            # INVERT: Fawaz gives target→X, we need X→target
+            # target→X = rate_value means 1 target = rate_value X
+            # X→target = 1/rate_value means 1 X = 1/rate_value target
+            inverted_rate = 1.0 / float(rate_value)
+
+            result[base] = Rate(
+                source="fawaz_currency",
+                base_currency=base,
+                quote_currency=target,
+                rate=inverted_rate,
+                timestamp=now,
+            )
+
+        return result
+
+    def _fetch_all_from_exchangerate(self, target: str) -> Dict[str, Rate]:
+        """
+        Fetch all rates from ExchangeRate-API in one request.
+        """
+        url = f"{self._sources['exchangerate_api']['url']}/{target.upper()}"
+        response = self._make_request(url, "exchangerate_api")
+        data = response.json()
+
+        if data.get("result") != "success":
+            raise RateFetchError(f"ExchangeRate-API error: {data.get('error-type')}")
+
+        rates_data = data.get("rates", {})
+        now = datetime.now()
+        result = {}
+
+        for currency_code, rate_value in rates_data.items():
+            base = currency_code.upper()
+            if base == target.upper():
+                continue
+
+            # INVERT: API gives target→X, we need X→target
+            inverted_rate = 1.0 / float(rate_value)
+
+            result[base] = Rate(
+                source="exchangerate_api",
+                base_currency=base,
+                quote_currency=target.upper(),
+                rate=inverted_rate,
+                timestamp=now,
+            )
+
+        return result
+
+    def _fetch_all_from_frankfurter(self, target: str) -> Dict[str, Rate]:
+        """
+        Fetch all rates from Frankfurter API in one request.
+        """
+        url = f"{self._sources['frankfurter']['url']}?from={target.upper()}"
+        response = self._make_request(url, "frankfurter")
+        data = response.json()
+
+        if "rates" not in data:
+            raise RateFetchError("Frankfurter: no rates in response")
+
+        rates_data = data["rates"]
+        now = datetime.now()
+        result = {}
+
+        for currency_code, rate_value in rates_data.items():
+            base = currency_code.upper()
+            if base == target.upper():
+                continue
+
+            # INVERT: API gives target→X, we need X→target
+            inverted_rate = 1.0 / float(rate_value)
+
+            result[base] = Rate(
+                source="frankfurter",
+                base_currency=base,
+                quote_currency=target.upper(),
+                rate=inverted_rate,
+                timestamp=now,
+            )
+
+        return result
