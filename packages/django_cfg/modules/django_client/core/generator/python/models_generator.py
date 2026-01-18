@@ -200,12 +200,14 @@ class ModelsGenerator:
             field_kwargs.append(f"examples=[{schema.example!r}]")
 
         # Default value
-        if is_required:
+        # For Pydantic v2: nullable fields need default=None even if required
+        if is_required and not schema.nullable:
             if field_kwargs:
                 default = f"Field({', '.join(field_kwargs)})"
             else:
                 default = "..."
         else:
+            # Not required OR nullable - needs default None
             if field_kwargs:
                 default = f"Field(None, {', '.join(field_kwargs)})"
             else:

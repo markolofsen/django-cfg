@@ -125,8 +125,13 @@ class OperationsGenerator:
 
         body_lines.append(request_line)
 
-        # Handle response
-        body_lines.append("response.raise_for_status()")
+        # Handle response with detailed error
+        body_lines.append("if not response.is_success:")
+        body_lines.append("    try:")
+        body_lines.append("        error_body = response.json()")
+        body_lines.append("    except Exception:")
+        body_lines.append("        error_body = response.text")
+        body_lines.append('    raise httpx.HTTPStatusError(f"{response.status_code}: {error_body}", request=response.request, response=response)')
 
         if return_type != "None":
             if operation.is_list_operation:
@@ -241,7 +246,14 @@ class OperationsGenerator:
             request_call = f'self._client.{method_lower}(url)'
 
         body_lines.append(f"response = {request_call}")
-        body_lines.append("response.raise_for_status()")
+
+        # Handle response with detailed error
+        body_lines.append("if not response.is_success:")
+        body_lines.append("    try:")
+        body_lines.append("        error_body = response.json()")
+        body_lines.append("    except Exception:")
+        body_lines.append("        error_body = response.text")
+        body_lines.append('    raise httpx.HTTPStatusError(f"{response.status_code}: {error_body}", request=response.request, response=response)')
 
         # Parse response
         if return_type != "None":
