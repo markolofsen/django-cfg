@@ -7,6 +7,7 @@ Provides display classes for various field types.
 from .avatar_display import AvatarDisplay
 from .counter_badge_display import CounterBadgeDisplay
 from .data_displays import BooleanDisplay, DateTimeDisplay, MoneyDisplay, UserDisplay
+from .decimal_display import DecimalDisplay
 from .image_display import ImageDisplay
 from .image_preview import ImagePreviewDisplay
 from .json_display import JSONDisplay
@@ -21,6 +22,7 @@ __all__ = [
     "MoneyDisplay",
     "DateTimeDisplay",
     "BooleanDisplay",
+    "DecimalDisplay",
     "ImageDisplay",
     "ImagePreviewDisplay",
     "JSONDisplay",

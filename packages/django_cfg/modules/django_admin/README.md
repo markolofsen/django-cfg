@@ -1088,6 +1088,72 @@ CurrencyRate model is auto-registered and provides:
 - Import/Export functionality
 - Rate history tracking
 
+### 16. DecimalField (Formatted Decimal Numbers)
+
+`DecimalField` displays decimal numbers with formatting options like precision, prefix/suffix, sign coloring, and thousand separators.
+
+**Basic Usage:**
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, DecimalField
+
+config = AdminConfig(
+    model=CurrencyRate,
+    list_display=["base_currency", "quote_currency", "rate"],
+    display_fields=[
+        # Basic decimal with 8 decimal places
+        DecimalField(
+            name="rate",
+            title="Exchange Rate",
+            decimal_places=8,
+        ),
+        # Percentage with sign coloring (+green, -red)
+        DecimalField(
+            name="change_percent",
+            title="Change",
+            decimal_places=2,
+            suffix="%",
+            show_sign=True,  # Shows +5.25% in green, -3.14% in red
+        ),
+        # Currency prefix
+        DecimalField(
+            name="amount",
+            title="Amount",
+            decimal_places=2,
+            prefix="$",
+            thousand_separator=True,  # 1,234.56
+        ),
+    ],
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `decimal_places` | `int` | `2` | Number of decimal places to display |
+| `prefix` | `str` | `None` | Prefix symbol (e.g., "$", "€") |
+| `suffix` | `str` | `None` | Suffix symbol (e.g., "%", "BTC") |
+| `show_sign` | `bool` | `False` | Show +/- sign with color coding |
+| `thousand_separator` | `bool` | `True` | Use thousand separator (1,234,567) |
+
+**Rendering Examples:**
+
+```
+DecimalField(decimal_places=8)           → "0.00067885"
+DecimalField(decimal_places=2, suffix="%", show_sign=True)
+                                         → "+5.25%" (green) or "-3.14%" (red)
+DecimalField(decimal_places=2, prefix="$") → "$1,234.56"
+DecimalField(decimal_places=4, suffix=" BTC") → "0.0025 BTC"
+```
+
+**When to Use:**
+
+- Exchange rates with high precision
+- Percentage changes with sign indication
+- Crypto amounts with custom units
+- Any numeric value needing formatting
+
 ---
 
 ## Key Concepts

@@ -8,7 +8,7 @@ Single widget that handles both:
 Uses CurrencyRate model from django_cfg.apps.tools.currency for live rate data.
 """
 
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from django import forms
@@ -131,18 +131,63 @@ class DecimalInput(TextInput):
         return str(value)
 
 
-def format_money(amount: Any, currency: str, precision: int = 2) -> str:
-    """Format amount with currency symbol."""
+def get_smart_precision(amount: Any) -> int:
+    """
+    Get smart decimal precision based on amount magnitude.
+
+    Large amounts don't need cents - showing $5,029 instead of $5,029.82
+    is cleaner and easier to read.
+
+    Rules:
+        >= 1000: 0 decimals (e.g., $5,029)
+        >= 100:  1 decimal  (e.g., $562.2)
+        < 100:   2 decimals (e.g., $45.67)
+    """
+    if amount is None:
+        return 2
+    try:
+        abs_amount = abs(float(amount))
+        if abs_amount >= 1000:
+            return 0
+        elif abs_amount >= 100:
+            return 1
+        return 2
+    except (ValueError, TypeError):
+        return 2
+
+
+def format_money(
+    amount: Any,
+    currency: str,
+    precision: int = 2,
+    smart_precision: bool = False,
+) -> str:
+    """
+    Format amount with currency symbol.
+
+    Args:
+        amount: The amount to format
+        currency: Currency code (e.g., "USD", "KRW")
+        precision: Fixed decimal places (default: 2)
+        smart_precision: If True, auto-adjust precision based on amount magnitude
+                        (large amounts show no decimals, small amounts show 2)
+    """
     if amount is None:
         return "—"
     symbol = CURRENCY_SYMBOLS.get(currency.upper(), currency)
+
+    # Use smart precision for cleaner display of large amounts
+    if smart_precision:
+        precision = get_smart_precision(amount)
+
     try:
         if isinstance(amount, Decimal):
             formatted = f"{amount:,.{precision}f}"
         else:
             formatted = f"{float(amount):,.{precision}f}"
-        # Clean trailing zeros
-        if "." in formatted:
+        # Clean trailing zeros only when not using smart precision
+        # (smart precision already sets the right precision)
+        if not smart_precision and "." in formatted:
             formatted = formatted.rstrip("0").rstrip(".")
         return f"{symbol}{formatted}"
     except (ValueError, TypeError):
@@ -334,9 +379,9 @@ class MoneyFieldWidget(MultiWidget):
         display_currency = currency or self.default_currency
         parts = []
 
-        # Target amount
+        # Target amount - use smart precision (no cents for large USD amounts)
         if target_amount:
-            target_str = format_money(target_amount, self.target_currency)
+            target_str = format_money(target_amount, self.target_currency, smart_precision=True)
             parts.append(f'<span class="text-primary-600 dark:text-primary-400 font-medium">→ {target_str}</span>')
 
         # Rate info
@@ -382,8 +427,10 @@ class MoneyFieldWidget(MultiWidget):
         if target_amount is None and rate is None:
             target_amount, rate, rate_at = self._get_live_rate_data(amount, currency)
 
+        # Original amount - keep natural precision (user entered it)
         amount_str = format_money(amount, currency)
-        target_str = format_money(target_amount, self.target_currency) if target_amount else None
+        # Converted amount - use smart precision (no cents for large USD amounts)
+        target_str = format_money(target_amount, self.target_currency, smart_precision=True) if target_amount else None
 
         parts = ['<div class="money-field-display flex flex-col gap-0.5">']
         parts.append('<div class="flex items-center gap-2 text-sm">')

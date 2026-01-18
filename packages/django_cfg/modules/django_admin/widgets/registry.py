@@ -218,6 +218,14 @@ WidgetRegistry.register(
     )
 )
 
+# Decimal widget
+from ..utils.displays import DecimalDisplay
+
+WidgetRegistry.register(
+    "decimal",
+    lambda obj, field, cfg: DecimalDisplay.from_field(obj, field, cfg or {})
+)
+
 
 # Register widgets using Display classes
 # All render logic moved to utils/displays/ and templates/
