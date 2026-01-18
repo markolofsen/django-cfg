@@ -161,6 +161,13 @@ class ViewMixin:
         if extra_context is None:
             extra_context = {}
 
+        # Store object in request for formfield_for_dbfield (MoneyFieldAdminMixin)
+        if object_id:
+            try:
+                request._editing_obj = self.get_object(request, object_id)
+            except Exception:
+                pass
+
         # Add documentation context if configured
         if hasattr(self, 'documentation_config') and self.documentation_config:
             doc_config = self.documentation_config
@@ -195,8 +202,7 @@ class ViewMixin:
         - JSON fields (applies django-json-widget for editable fields only)
         - Encrypted fields from django-crypto-fields
 
-        Respects the show_encrypted_fields_as_plain_text setting from AdminConfig.
-        Uses custom widgets with copy-to-clipboard functionality.
+        Note: MoneyField is handled by MoneyFieldAdminMixin from django_currency module.
         """
         field_class_name = db_field.__class__.__name__
 

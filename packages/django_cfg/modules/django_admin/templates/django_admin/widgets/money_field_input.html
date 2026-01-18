@@ -1,0 +1,157 @@
+{% comment %}
+MoneyField editable widget template.
+
+Shows amount input (2/3) + currency select (1/3) side by side.
+Below inputs: conversion info with live recalculation via Alpine.js.
+Compatible with Unfold admin styling.
+{% endcomment %}
+
+<div class="money-field-widget flex flex-col gap-1 max-w-2xl"
+     x-data="moneyField_{{ widget.name|cut:'-' }}()"
+     x-init="init()">
+
+    {# Hidden field for currency - submitted with form #}
+    <input type="hidden" name="{{ widget.name }}_currency" x-ref="currencyHidden"
+           :value="currency">
+
+    {# Input row: amount + currency #}
+    <div class="flex flex-row gap-2">
+        {# Amount input (2/3 width) #}
+        <div class="w-2/3">
+            {% include widget.subwidgets.0.template_name with widget=widget.subwidgets.0 %}
+        </div>
+
+        {# Currency select (1/3 width) #}
+        <div class="w-1/3">
+            {% include widget.subwidgets.1.template_name with widget=widget.subwidgets.1 %}
+        </div>
+    </div>
+
+    {# Conversion info row - live updated #}
+    <div class="flex items-center gap-3 mt-1 text-xs" x-show="showConversion" x-cloak>
+        <span class="text-primary-600 dark:text-primary-400 font-medium"
+              x-text="'→ ' + formatMoney(targetAmount, targetCurrency)"></span>
+        <span class="text-base-300 dark:text-base-600">|</span>
+        <span class="text-base-400 dark:text-base-500"
+              x-text="'1 ' + currency + ' = ' + formatRate(currentRate) + ' ' + targetCurrency"></span>
+        <template x-if="rateUpdatedAt">
+            <span class="text-base-400 dark:text-base-500">
+                • <span x-text="formatTimeAgo(rateUpdatedAt)"></span>
+            </span>
+        </template>
+        {% if widget.currency_admin_url %}
+        <a href="{{ widget.currency_admin_url }}"
+           class="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 hover:underline"
+           target="_blank">
+            rates ↗
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function() {
+    const fieldName = '{{ widget.name }}';
+    const rates = {{ widget.rates_json|safe }};
+    const symbols = {{ widget.symbols_json|safe }};
+    const targetCurrency = '{{ widget.target_currency }}';
+
+    // Define Alpine component
+    window['moneyField_{{ widget.name|cut:"-" }}'] = function() {
+        return {
+            rates: rates,
+            symbols: symbols,
+            targetCurrency: targetCurrency,
+            amount: '',
+            currency: '',
+            targetAmount: 0,
+            currentRate: 0,
+            rateUpdatedAt: null,
+            showConversion: false,
+
+            init() {
+                // Get elements
+                this.amountInput = document.getElementById('id_' + fieldName + '_0');
+                this.currencySelect = document.getElementById('id_' + fieldName + '_1');
+
+                if (this.amountInput) {
+                    this.amount = this.amountInput.value || '';
+                    this.amountInput.addEventListener('input', () => {
+                        this.amount = this.amountInput.value;
+                        this.recalculate();
+                    });
+                }
+
+                if (this.currencySelect) {
+                    this.currency = this.currencySelect.value || '';
+                    this.currencySelect.addEventListener('change', () => {
+                        this.currency = this.currencySelect.value;
+                        this.recalculate();
+                    });
+                }
+
+                this.recalculate();
+            },
+
+            recalculate() {
+                const amt = parseFloat(this.amount) || 0;
+                const cur = (this.currency || '').toUpperCase();
+
+                if (!cur || cur === this.targetCurrency.toUpperCase()) {
+                    this.showConversion = false;
+                    return;
+                }
+
+                const rateData = this.rates[cur];
+                if (rateData) {
+                    this.currentRate = rateData.rate || 0;
+                    this.rateUpdatedAt = rateData.updated_at;
+                } else {
+                    this.currentRate = 0;
+                    this.rateUpdatedAt = null;
+                }
+
+                if (this.currentRate > 0 && amt > 0) {
+                    this.targetAmount = amt * this.currentRate;
+                    this.showConversion = true;
+                } else {
+                    this.showConversion = false;
+                }
+            },
+
+            formatMoney(amount, currency) {
+                const symbol = this.symbols[currency] || currency;
+                const formatted = amount.toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                });
+                return symbol + formatted;
+            },
+
+            formatRate(rate) {
+                if (!rate) return '0';
+                if (rate < 0.01) {
+                    return rate.toFixed(10).replace(/\.?0+$/, '');
+                }
+                return rate.toFixed(6).replace(/\.?0+$/, '');
+            },
+
+            formatTimeAgo(isoString) {
+                if (!isoString) return '';
+                const date = new Date(isoString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffSec = Math.floor(diffMs / 1000);
+                const diffMin = Math.floor(diffSec / 60);
+                const diffHour = Math.floor(diffMin / 60);
+                const diffDay = Math.floor(diffHour / 24);
+
+                if (diffDay > 0) return diffDay + 'd ago';
+                if (diffHour > 0) return diffHour + 'h ago';
+                if (diffMin > 0) return diffMin + 'm ago';
+                return 'just now';
+            }
+        };
+    };
+})();
+</script>

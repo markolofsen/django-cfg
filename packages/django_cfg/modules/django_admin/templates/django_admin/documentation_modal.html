@@ -158,17 +158,38 @@ function docModal() {
                 this.selectNode(firstNode);
             }
 
-            // Apply syntax highlighting and Mermaid rendering after content is loaded
-            this.$nextTick(() => {
-                if (window.Prism) {
-                    Prism.highlightAll();
-                }
-                if (window.mermaid) {
-                    mermaid.run({
-                        querySelector: '.mermaid',
-                    }).catch(err => console.error('Mermaid render error:', err));
+            // =========================================================================
+            // MERMAID RENDERING FIX:
+            // Mermaid cannot calculate SVG dimensions when parent is hidden.
+            // We must wait for modal to be VISIBLE before calling mermaid.run().
+            // See: https://github.com/mermaid-js/mermaid/issues/1846
+            // =========================================================================
+            this.$watch('open', (isOpen) => {
+                if (isOpen) {
+                    // Wait for DOM update, then render when modal is visible
+                    this.$nextTick(() => {
+                        this.renderMermaidDiagrams();
+                    });
                 }
             });
+        },
+
+        /**
+         * Render Mermaid diagrams and apply Prism syntax highlighting.
+         *
+         * IMPORTANT: Only call when modal is VISIBLE (open === true).
+         * Mermaid needs to measure text to calculate SVG dimensions.
+         * If called while hidden, diagrams will be empty (16x16 viewBox).
+         */
+        renderMermaidDiagrams() {
+            // Call the global renderMermaid function from mermaid_plugin.py
+            if (window.renderMermaid) {
+                window.renderMermaid();
+            }
+            // Apply Prism syntax highlighting for code blocks
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
         },
 
         findFirstContentNode(nodes) {
@@ -203,16 +224,12 @@ function docModal() {
             }
 
             // Apply syntax highlighting and Mermaid rendering after content update
-            this.$nextTick(() => {
-                if (window.Prism) {
-                    Prism.highlightAll();
-                }
-                if (window.mermaid) {
-                    mermaid.run({
-                        querySelector: '.mermaid',
-                    }).catch(err => console.error('Mermaid render error:', err));
-                }
-            });
+            // Only render if modal is open (mermaid needs visible container)
+            if (this.open) {
+                this.$nextTick(() => {
+                    this.renderMermaidDiagrams();
+                });
+            }
         },
 
         toggleExpand(nodeId) {

@@ -258,6 +258,20 @@ class NavigationManager(BaseCfgModule):
                 )
             )
 
+        # Currency (if enabled)
+        if self.is_currency_enabled():
+            navigation_sections.append(
+                NavigationSection(
+                    title="Currency",
+                    separator=True,
+                    collapsible=True,
+                    items=[
+                        NavigationItem(title="Exchange Rates", icon=Icons.CURRENCY_EXCHANGE, link=str(reverse_lazy("admin:cfg_currency_currencyrate_changelist"))),
+                        NavigationItem(title="Currencies", icon=Icons.MONETIZATION_ON, link=str(reverse_lazy("admin:cfg_currency_currency_changelist"))),
+                    ]
+                )
+            )
+
         # Add Accounts section
         accounts_items = [
             NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),

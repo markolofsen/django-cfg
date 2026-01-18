@@ -59,6 +59,9 @@ CORE_REGISTRY = {
     "RQQueueConfig": ("django_cfg.models.django.django_rq", "RQQueueConfig"),
     "RQScheduleConfig": ("django_cfg.models.django.django_rq", "RQScheduleConfig"),
 
+    # Currency models
+    "CurrencyConfig": ("django_cfg.models.django.currency", "CurrencyConfig"),
+
     # Payment system models (BaseCfgAutoModule)
     "PaymentsConfig": ("django_cfg.models.payments.config", "PaymentsConfig"),
     "NowPaymentsConfig": ("django_cfg.models.payments.config", "NowPaymentsConfig"),

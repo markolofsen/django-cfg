@@ -34,7 +34,15 @@ config = AdminConfig(
     list_display=["transaction_id", "user", "amount", "status"],
     display_fields=[
         BadgeField(name="status", label_map={"pending": "warning", "completed": "success"}),
+        # Fixed currency
         CurrencyField(name="amount", currency="USD", precision=2),
+        # Dynamic currency from model field with USD equivalent
+        CurrencyField(
+            name="price",
+            currency_field="currency",  # Get currency from model field
+            secondary_field="price_usd",  # Show USD equivalent
+            secondary_currency="USD",
+        ),
     ],
 )
 
@@ -986,6 +994,100 @@ config = AdminConfig(
 )
 ```
 
+### 15. MoneyField (Currency with Live Conversion)
+
+`MoneyField` is a composite field that stores amount + currency with automatic conversion to a target currency.
+
+**Model Definition:**
+
+```python
+from django.db import models
+from django_cfg.modules.django_currency import MoneyField
+
+class Vehicle(models.Model):
+    # MoneyField automatically creates:
+    # - price (DecimalField) - the amount
+    # - price_currency (CharField) - the currency code
+    # - price_target (DecimalField) - converted amount in target currency
+    # - price_rate (DecimalField) - exchange rate used
+    # - price_rate_at (DateTimeField) - when rate was fetched
+    price = MoneyField(
+        max_digits=15,
+        decimal_places=2,
+        default_currency="USD",
+        target_currency="KRW",  # Auto-convert to Korean Won
+    )
+```
+
+**Admin Integration:**
+
+```python
+from django.contrib import admin
+from django_cfg.modules.django_admin import AdminConfig, MoneyFieldDisplay
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+config = AdminConfig(
+    model=Vehicle,
+    list_display=["name", "price", "price_currency"],
+    display_fields=[
+        # MoneyFieldDisplay auto-detects: price_currency, price_target
+        MoneyFieldDisplay(
+            name="price",
+            title="Price",
+        ),
+    ],
+)
+
+@admin.register(Vehicle)
+class VehicleAdmin(PydanticAdmin):
+    """
+    PydanticAdmin auto-includes MoneyFieldAdminMixin which provides:
+    - Live currency recalculation in edit form (Alpine.js)
+    - Currency dropdown that syncs with the model
+    - Automatic saving of selected currency
+    - Exchange rate display with "rates →" link to CurrencyRate admin
+    """
+    config = config
+```
+
+**Widget Features:**
+
+The `MoneyFieldWidget` in the edit form provides:
+- Amount input (2/3 width) + Currency select (1/3 width)
+- Live conversion display: `→ ₩52,000,000 | 1 USD = 1300 KRW • 2h ago`
+- Link to CurrencyRate admin for rate management
+- Dark mode support
+
+**Currency Configuration:**
+
+```python
+# In your config.py
+from django_cfg import DjangoConfig, CurrencyConfig
+
+class MyConfig(DjangoConfig):
+    currency = CurrencyConfig(
+        enabled=True,
+        target_currency="KRW",       # Default target for conversions
+        update_interval=3600,        # Update rates every hour
+        auto_update_enabled=True,    # Register RQ scheduled task
+        update_on_startup=True,      # Update stale rates on app start
+    )
+```
+
+**Rate Updates:**
+
+- Automatic: RQ scheduler task runs based on `update_interval`
+- Manual: "Update All Rates" button in CurrencyRate admin (actions_list)
+- On save: Rates are applied when saving a model with MoneyField
+
+**CurrencyRate Admin:**
+
+CurrencyRate model is auto-registered and provides:
+- List of all exchange rates with source, rate, and freshness
+- "Update All Rates" action button in actions_list
+- Import/Export functionality
+- Rate history tracking
+
 ---
 
 ## Key Concepts
@@ -1010,13 +1112,18 @@ config = AdminConfig(
 - **Display Fields**: Auto-generate display methods for `list_display` and `readonly_fields`
   - `BadgeField` - Status badges with colors
   - `BooleanField` - Checkmark/cross icons
-  - `CurrencyField` - Formatted money display
+  - `CurrencyField` - Formatted money display (static or dynamic currency)
   - `DateTimeField` - Relative time ("2 hours ago")
   - `ForeignKeyField` - FK with admin link
   - `ImageField` - Image preview with modal zoom
   - `MarkdownField` - Rendered markdown content (for `readonly_fields` in change form)
   - `ShortUUIDField` - Truncated UUID display
   - `UserField` - User with avatar
+
+- **Model Fields** (from `django_cfg.modules.django_currency`):
+  - `MoneyField` - Composite field (amount + currency + target conversion)
+  - `MoneyFieldDisplay` - Display field for admin lists (auto-detects related fields)
+  - Note: `MoneyFieldAdminMixin` is auto-included in `PydanticAdmin`
 
 - **Widgets**: Configure form field widgets (detail/edit view)
   - `JSONWidgetConfig`, `TextWidgetConfig`
@@ -1052,5 +1159,7 @@ apps/
 
 - [Full Documentation](../../../docs_public/django_admin/)
 - [Icons Reference](./icons/constants.py) - All 2234 Material Design Icons
+- [Currency Module](../django_currency/) - MoneyField, CurrencyField, exchange rates
+- [Currency App](../../apps/tools/currency/) - CurrencyRate model, rate providers
 - [Unfold Admin](https://github.com/unfoldadmin/django-unfold) - UI framework
 - [Django Import-Export](https://django-import-export.readthedocs.io/) - Import/Export functionality

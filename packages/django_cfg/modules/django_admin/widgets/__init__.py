@@ -13,6 +13,8 @@ __all__ = [
     "EncryptedFieldWidget",
     "EncryptedPasswordWidget",
     "JSONEditorWidget",
+    "MoneyFieldWidget",
+    "MoneyFieldFormField",
 ]
 
 
@@ -36,4 +38,10 @@ def __getattr__(name):
     elif name == "JSONEditorWidget":
         from .json_editor_widget import JSONEditorWidget
         return JSONEditorWidget
+    elif name == "MoneyFieldWidget":
+        from .money_widget import MoneyFieldWidget
+        return MoneyFieldWidget
+    elif name == "MoneyFieldFormField":
+        from .money_widget import MoneyFieldFormField
+        return MoneyFieldFormField
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

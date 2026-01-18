@@ -6,6 +6,7 @@ Django integrations and extensions.
 
 from .axes import AxesConfig
 from .constance import ConstanceConfig, ConstanceField
+from .currency import CurrencyConfig
 from .django_rq import DjangoRQConfig, RQQueueConfig
 from .environment import EnvironmentConfig
 from .openapi import OpenAPIClientConfig
@@ -14,6 +15,7 @@ __all__ = [
     "EnvironmentConfig",
     "ConstanceConfig",
     "ConstanceField",
+    "CurrencyConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
     "OpenAPIClientConfig",

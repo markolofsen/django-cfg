@@ -445,11 +445,41 @@ class DjangoRQConfig(BaseModel):
                 # Collect schedules from all enabled extensions
                 extension_schedules = self._collect_extension_schedules(config)
                 all_schedules.extend(extension_schedules)
+
+                # Collect schedules from internal modules (currency, etc.)
+                module_schedules = self._collect_module_schedules(config)
+                all_schedules.extend(module_schedules)
         except Exception:
             # Config not available yet or import error - skip extension schedules
             pass
 
         return all_schedules
+
+    def _collect_module_schedules(self, config: Any) -> list["RQScheduleConfig"]:
+        """
+        Collect RQ schedules from internal django-cfg modules.
+
+        Currently supports:
+        - CurrencyConfig: currency rate update task
+
+        Args:
+            config: Current DjangoConfig instance
+
+        Returns:
+            list of RQScheduleConfig from all modules
+        """
+        schedules: list["RQScheduleConfig"] = []
+
+        # Collect from CurrencyConfig if enabled
+        if hasattr(config, 'currency') and config.currency:
+            try:
+                currency_schedules = config.currency.get_rq_schedules()
+                if currency_schedules:
+                    schedules.extend(currency_schedules)
+            except Exception:
+                pass
+
+        return schedules
 
     def _collect_extension_schedules(self, config: Any) -> list["RQScheduleConfig"]:
         """

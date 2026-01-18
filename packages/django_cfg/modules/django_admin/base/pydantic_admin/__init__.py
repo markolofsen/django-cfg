@@ -25,7 +25,19 @@ from .mixin import PydanticAdminMixin
 _get_base_admin_class = get_base_admin_class
 
 
-class PydanticAdmin(PydanticAdminMixin, get_base_admin_class()):
+def _get_money_field_mixin():
+    """Lazy load MoneyFieldAdminMixin to avoid circular imports."""
+    try:
+        from django_cfg.modules.django_currency.admin import MoneyFieldAdminMixin
+        return MoneyFieldAdminMixin
+    except ImportError:
+        # django_currency not available, return empty mixin
+        class EmptyMixin:
+            pass
+        return EmptyMixin
+
+
+class PydanticAdmin(PydanticAdminMixin, _get_money_field_mixin(), get_base_admin_class()):
     """
     Pydantic-driven admin base class with Unfold UI and Import/Export support.
 

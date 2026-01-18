@@ -223,6 +223,21 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_currency_enabled(self) -> bool:
+        """
+        Check if django-cfg Currency is enabled.
+
+        Returns:
+            True if Currency is enabled, False otherwise
+        """
+        currency_config = self._get_config_key('currency', None)
+
+        # Check if currency config exists and is enabled
+        if currency_config and hasattr(currency_config, 'enabled'):
+            return currency_config.enabled
+
+        return False
+
     def is_totp_enabled(self) -> bool:
         """
         Check if django-cfg TOTP/2FA is enabled.

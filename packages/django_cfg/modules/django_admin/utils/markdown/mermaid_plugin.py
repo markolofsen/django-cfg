@@ -157,194 +157,112 @@ def get_mermaid_script(theme: str = "default") -> str:
     """
     Get Mermaid.js initialization script with Unfold semantic colors.
 
+    IMPORTANT - Mermaid rendering gotchas:
+    =====================================
+    1. Mermaid CANNOT calculate SVG dimensions when parent element is hidden (display: none)
+       - Results in viewBox: "-8 -8 16 16" (empty 16x16 diagram)
+       - Solution: Only call mermaid.run() AFTER container is visible
+       - See: https://github.com/mermaid-js/mermaid/issues/1846
+
+    2. For modals/dialogs:
+       - Set startOnLoad: false
+       - Call window.renderMermaid() when modal opens (via $watch in Alpine.js)
+       - Don't use MutationObserver for auto-rendering (fires while hidden)
+
+    3. Dark mode:
+       - Use theme: 'base' with explicit themeVariables
+       - Set visible text colors (nodeTextColor, textColor) for dark backgrounds
+
     Args:
         theme: Mermaid theme ('default', 'dark', 'forest', 'neutral')
 
     Returns:
         HTML script tag with Mermaid.js and initialization
     """
-    return f"""
+    return """
 <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 
     // Make mermaid available globally for Alpine.js components
     window.mermaid = mermaid;
 
-    // Helper to get CSS variable value and convert to hex
-    function getCSSVar(name) {{
-        const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-        // Handle "R, G, B" format (Unfold semantic colors)
-        if (value.includes(',') && !value.includes('(')) {{
-            const [r, g, b] = value.split(',').map(x => parseInt(x.trim()));
-            return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
-        }}
-
-        // Handle rgb(R, G, B) format
-        if (value.startsWith('rgb(')) {{
-            const match = value.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/);
-            if (match) {{
-                const [_, r, g, b] = match;
-                return '#' + [r, g, b].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
-            }}
-        }}
-
-        // Handle oklch() or other unsupported formats - return fallback
-        if (value.includes('oklch') || value.includes('(')) {{
-            return null; // Will use fallback color
-        }}
-
-        // Already hex or other valid format
-        return value;
-    }}
-
-    // Safe color getter with fallback
-    function getColor(varName, fallback) {{
-        const color = getCSSVar(varName);
-        return color || fallback;
-    }}
-
     // Auto-detect dark mode
     const isDarkMode = document.documentElement.classList.contains('dark') ||
                        window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // Get Unfold semantic colors with fallbacks
-    function getThemeColors() {{
-        if (isDarkMode) {{
-            return {{
-                // Primary colors - bright blue for nodes
-                primaryColor: '#60a5fa',
-                primaryTextColor: '#f3f4f6',
-                primaryBorderColor: '#374151',
+    // =========================================================================
+    // IMPORTANT: startOnLoad must be FALSE for modal/dynamic content!
+    // Mermaid cannot calculate SVG size when element is hidden (display: none).
+    // Call window.renderMermaid() manually when container becomes visible.
+    // =========================================================================
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        securityLevel: 'loose',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        themeVariables: isDarkMode ? {
+            // Dark mode - explicit colors for visibility
+            primaryColor: '#3b82f6',
+            primaryTextColor: '#ffffff',
+            primaryBorderColor: '#60a5fa',
+            lineColor: '#94a3b8',
+            secondaryColor: '#10b981',
+            tertiaryColor: '#334155',
+            background: '#1e293b',
+            mainBkg: '#334155',
+            textColor: '#f1f5f9',
+            nodeTextColor: '#f1f5f9',
+            clusterBkg: '#1e293b',
+            clusterBorder: '#475569',
+        } : {
+            // Light mode
+            primaryColor: '#3b82f6',
+            primaryTextColor: '#1e293b',
+            primaryBorderColor: '#3b82f6',
+            lineColor: '#64748b',
+            secondaryColor: '#10b981',
+            tertiaryColor: '#f1f5f9',
+            background: '#ffffff',
+            mainBkg: '#f8fafc',
+            textColor: '#1e293b',
+        }
+    });
 
-                // Line and border colors - lighter for visibility
-                lineColor: '#6b7280',
-                border1: '#4b5563',
-                border2: '#6b7280',
+    /**
+     * Render mermaid diagrams that haven't been processed yet.
+     *
+     * IMPORTANT: Only call this when the container element is VISIBLE!
+     * Mermaid calculates SVG dimensions based on rendered text size.
+     * If container is hidden (display: none), dimensions will be wrong.
+     *
+     * Usage in Alpine.js:
+     *   this.$watch('open', (isOpen) => {
+     *       if (isOpen) {
+     *           this.$nextTick(() => window.renderMermaid());
+     *       }
+     *   });
+     */
+    async function renderMermaid() {
+        const elements = document.querySelectorAll('.mermaid:not([data-processed="true"])');
+        if (elements.length > 0) {
+            console.log('Mermaid: rendering', elements.length, 'diagrams');
+            try {
+                await mermaid.run({ nodes: elements });
+                console.log('Mermaid: render complete');
+            } catch (err) {
+                console.error('Mermaid render error:', err);
+                elements.forEach(el => {
+                    el.innerHTML = '<div style="color: #ef4444; padding: 1rem; border: 1px solid #ef4444; border-radius: 0.5rem;">Mermaid Error: ' + err.message + '</div>';
+                });
+            }
+        }
+    }
 
-                // Background colors - dark semantic
-                background: '#111827',
-                mainBkg: '#1f2937',
-                secondBkg: '#374151',
-                tertiaryColor: '#4b5563',
+    // Expose for Alpine.js components
+    // DO NOT render automatically - let the caller decide when container is visible
+    window.renderMermaid = renderMermaid;
 
-                // Secondary colors - accent
-                secondaryColor: '#10b981',
-
-                // Text colors - high contrast
-                text: '#e5e7eb',
-                textColor: '#e5e7eb',
-                nodeTextColor: '#111827',
-
-                // Note/label colors
-                note: '#374151',
-                noteText: '#f3f4f6',
-                noteBorder: '#6b7280',
-                labelColor: '#111827',
-
-                // State colors
-                critical: '#f87171',
-                done: '#34d399',
-                active: '#60a5fa',
-
-                // Additional contrast
-                edgeLabelBackground: '#1f2937',
-                clusterBkg: '#1f2937',
-                clusterBorder: '#4b5563',
-                defaultLinkColor: '#6b7280',
-                titleColor: '#f3f4f6',
-
-                // Grid
-                gridColor: '#374151',
-
-                // Font
-                fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-            }};
-        }} else {{
-            return {{
-                primaryColor: '#3b82f6',
-                primaryTextColor: '#111827',
-                primaryBorderColor: '#d1d5db',
-                lineColor: '#9ca3af',
-                secondaryColor: '#10b981',
-                tertiaryColor: '#ffffff',
-                background: '#ffffff',
-                mainBkg: '#f9fafb',
-                secondBkg: '#ffffff',
-                border1: '#d1d5db',
-                border2: '#e5e7eb',
-                note: '#fef3c7',
-                noteText: '#111827',
-                noteBorder: '#fbbf24',
-                text: '#111827',
-                critical: '#ef4444',
-                done: '#10b981',
-                active: '#3b82f6',
-                fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-            }};
-        }}
-    }}
-
-    // Initialize Mermaid with Unfold semantic colors and error handling
-    try {{
-        mermaid.initialize({{
-            startOnLoad: true,
-            theme: 'base',
-            securityLevel: 'loose',
-            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-            themeVariables: getThemeColors()
-        }});
-    }} catch (error) {{
-        console.error('Mermaid initialization error:', error);
-        // Fallback to default theme
-        mermaid.initialize({{
-            startOnLoad: true,
-            theme: isDarkMode ? 'dark' : 'default',
-            securityLevel: 'loose',
-            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-        }});
-    }}
-
-    // Listen for dark mode changes and re-render
-    const observer = new MutationObserver((mutations) => {{
-        mutations.forEach((mutation) => {{
-            if (mutation.attributeName === 'class') {{
-                try {{
-                    // Re-initialize with new theme colors
-                    mermaid.initialize({{
-                        startOnLoad: true,
-                        theme: 'base',
-                        securityLevel: 'loose',
-                        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-                        themeVariables: getThemeColors()
-                    }});
-                    // Re-render all diagrams
-                    mermaid.run({{
-                        querySelector: '.mermaid',
-                    }});
-                }} catch (error) {{
-                    console.error('Mermaid re-initialization error:', error);
-                }}
-            }}
-        }});
-    }});
-
-    observer.observe(document.documentElement, {{
-        attributes: true,
-        attributeFilter: ['class'],
-    }});
-
-    // Error handling
-    window.addEventListener('error', (event) => {{
-        if (event.message && event.message.includes('mermaid')) {{
-            console.error('Mermaid error:', event);
-            const mermaidElements = document.querySelectorAll('.mermaid[data-processed="false"]');
-            mermaidElements.forEach(el => {{
-                el.classList.add('error');
-                el.textContent = 'Error rendering diagram. Check console for details.';
-            }});
-        }}
-    }});
+    console.log('Mermaid ready - call window.renderMermaid() when content is visible');
 </script>
 """
 

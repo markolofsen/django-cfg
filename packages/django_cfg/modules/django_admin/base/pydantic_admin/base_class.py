@@ -33,9 +33,12 @@ def get_base_admin_class():
     from import_export.admin import ImportExportModelAdmin as BaseImportExportModelAdmin
     from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
-    class UnfoldImportExportModelAdmin(BaseImportExportModelAdmin, UnfoldModelAdmin):
-        """Combined Import/Export + Unfold admin base class."""
-        # Import/Export should come FIRST in MRO to get its get_urls() method
+    class UnfoldImportExportModelAdmin(UnfoldModelAdmin, BaseImportExportModelAdmin):
+        """Combined Unfold + Import/Export admin base class."""
+        # UnfoldModelAdmin first for UI, BaseImportExportModelAdmin for functionality
+        # BaseImportExportModelAdmin sets change_list_template = 'admin/import_export/change_list_import_export.html'
+        # Django finds unfold.contrib.import_export's version (if in INSTALLED_APPS before import_export)
+        # which extends unfold's change_list.html with list_before_template hooks
         pass
 
     return UnfoldImportExportModelAdmin

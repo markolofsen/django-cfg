@@ -133,6 +133,10 @@ class InstalledAppsBuilder:
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
 
+        # Currency app (exchange rates management)
+        if self.config.currency and self.config.currency.enabled:
+            apps.append("django_cfg.apps.tools.currency")
+
         # Next.js Admin Integration
         if self.config.nextjs_admin:
             apps.append("django_cfg.modules.nextjs_admin")

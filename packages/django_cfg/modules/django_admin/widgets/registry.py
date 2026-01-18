@@ -118,6 +118,50 @@ WidgetRegistry.register(
     )
 )
 
+
+def _render_money_field(obj, field, cfg):
+    """
+    Render MoneyField with compact display format.
+
+    Uses MoneyFieldWidget.format_readonly() for consistent display
+    in list view and readonly forms.
+    """
+    from .money_widget import MoneyFieldWidget
+
+    field_names = cfg.get('field_names', {}) if cfg else {}
+    target_currency = cfg.get('target_currency', 'USD') if cfg else 'USD'
+    default_currency = cfg.get('default_currency', 'USD') if cfg else 'USD'
+
+    # Get field values
+    amount_field = field_names.get('amount', field)
+    currency_field = field_names.get('currency', f'{field}_currency')
+    target_field = field_names.get('target', f'{field}_target')
+    rate_field = field_names.get('rate', f'{field}_rate')
+    rate_at_field = field_names.get('rate_at', f'{field}_rate_at')
+
+    amount = getattr(obj, amount_field, None)
+    currency = getattr(obj, currency_field, None) or default_currency
+    target_amount = getattr(obj, target_field, None)
+    rate = getattr(obj, rate_field, None)
+    rate_at = getattr(obj, rate_at_field, None)
+
+    # Use widget for consistent rendering
+    widget = MoneyFieldWidget(
+        default_currency=default_currency,
+        target_currency=target_currency,
+    )
+
+    return widget.format_readonly(
+        amount=amount,
+        currency=currency,
+        target_amount=target_amount,
+        rate=rate,
+        rate_at=rate_at,
+    )
+
+
+WidgetRegistry.register("money_field", _render_money_field)
+
 # Badge widgets
 WidgetRegistry.register(
     "badge",

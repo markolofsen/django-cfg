@@ -19,6 +19,7 @@ from ...models import (
     AxesConfig,
     CacheConfig,
     CryptoFieldsConfig,
+    CurrencyConfig,
     DatabaseConfig,
     DjangoRQConfig,
     DRFConfig,
@@ -347,6 +348,15 @@ class DjangoConfig(BaseModel):
     django_rq: Optional[DjangoRQConfig] = Field(
         default=None,
         description="Django-RQ task queue and scheduler",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          CURRENCY & MONEY                                 ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    currency: Optional[CurrencyConfig] = Field(
+        default=None,
+        description="Currency conversion and exchange rates",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

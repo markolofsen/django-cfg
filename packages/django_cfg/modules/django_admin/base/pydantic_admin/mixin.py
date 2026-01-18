@@ -116,23 +116,27 @@ class PydanticAdminMixin(ViewMixin):
         # Inlines
         cls.inlines = config.inlines or getattr(cls, 'inlines', [])
 
-        # Combine all field replacements
-        all_replacements = {**jsonfield_replacements, **imagefield_replacements, **markdownfield_replacements}
+        # Combine field replacements for fieldsets
+        fieldset_replacements = {
+            **jsonfield_replacements,
+            **imagefield_replacements,
+            **markdownfield_replacements,
+        }
 
         # Fieldsets - apply field replacements
         if config.fieldsets:
             cls.fieldsets = config.to_django_fieldsets()
             # Apply replacements to fieldsets
-            if all_replacements:
-                cls.fieldsets = apply_replacements_to_fieldsets(cls.fieldsets, all_replacements)
+            if fieldset_replacements:
+                cls.fieldsets = apply_replacements_to_fieldsets(cls.fieldsets, fieldset_replacements)
         # Also convert fieldsets if they're defined directly in the class as FieldsetConfig objects
         elif hasattr(cls, 'fieldsets') and isinstance(cls.fieldsets, list):
             from ...config import FieldsetConfig
             if cls.fieldsets and isinstance(cls.fieldsets[0], FieldsetConfig):
                 cls.fieldsets = tuple(fs.to_django_fieldset() for fs in cls.fieldsets)
                 # Apply replacements to fieldsets
-                if all_replacements:
-                    cls.fieldsets = apply_replacements_to_fieldsets(cls.fieldsets, all_replacements)
+                if fieldset_replacements:
+                    cls.fieldsets = apply_replacements_to_fieldsets(cls.fieldsets, fieldset_replacements)
 
         # Collect widget configurations from AdminConfig.widgets for custom JSON widget configs
         cls._field_widget_configs = {}
