@@ -1,10 +1,36 @@
 """
-RQ tasks for currency rate updates.
+RQ tasks for currency management.
 
-Thin wrappers around services/update.py for RQ scheduler.
+Thin wrappers around services for RQ scheduler.
 """
 
 from typing import Any, List, Optional
+
+
+def sync_all(
+    force_currencies: bool = False,
+    force_rates: bool = False,
+    target_currency: str = "USD",
+) -> dict[str, Any]:
+    """
+    Sync currencies and rates in one call.
+
+    Main task for scheduled execution.
+
+    Args:
+        force_currencies: Force currency sync even if enough exist
+        force_rates: Force rate update even if fresh
+        target_currency: Target currency for rates
+
+    Returns:
+        Combined result dict
+    """
+    from .services import sync_all as _sync_all
+    return _sync_all(
+        force_currencies=force_currencies,
+        force_rates=force_rates,
+        target_currency=target_currency,
+    )
 
 
 def update_all_rates(

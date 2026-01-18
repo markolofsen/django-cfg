@@ -135,9 +135,9 @@ def update_rates(
                 rate = all_rates[currency_code]
                 try:
                     # Save to database
-                    CurrencyRate.objects.set_rate(
-                        base_currency=rate.base_currency,
-                        quote_currency=rate.quote_currency,
+                    CurrencyRate.set_rate(
+                        base=rate.base_currency,
+                        quote=rate.quote_currency,
                         rate=rate.rate,
                         provider=rate.source,
                     )

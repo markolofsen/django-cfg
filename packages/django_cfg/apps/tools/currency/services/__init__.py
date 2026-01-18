@@ -14,6 +14,14 @@ from .update import (
     update_rates,
     update_rates_if_needed,
 )
+from .currencies import (
+    CURRENCIES,
+    sync_currencies,
+    sync_currencies_if_needed,
+    sync_all,
+    get_currency_stats,
+    add_currency,
+)
 
 __all__ = [
     # Converter
@@ -33,4 +41,11 @@ __all__ = [
     "should_update_rates",
     "update_rates",
     "update_rates_if_needed",
+    # Currencies service
+    "CURRENCIES",
+    "sync_currencies",
+    "sync_currencies_if_needed",
+    "sync_all",
+    "get_currency_stats",
+    "add_currency",
 ]

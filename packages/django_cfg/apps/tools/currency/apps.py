@@ -37,21 +37,19 @@ class CurrencyConfig(AppConfig):
 
     def _run_startup_update(self):
         """
-        Run startup update via service in background thread.
+        Run startup sync via service in background thread.
 
         This runs in a DAEMON THREAD - does NOT block Django startup.
-        Django continues serving requests while this updates rates.
+        Django continues serving requests while this syncs.
         """
         import time
         start = time.time()
 
         try:
-            from .services import update_rates_if_needed
-            result = update_rates_if_needed()
+            from .services import sync_all
+            result = sync_all()  # Syncs currencies if needed + rates if needed
+
             elapsed = time.time() - start
-            if result:
-                logger.info(f"Background currency update completed in {elapsed:.1f}s")
-            else:
-                logger.debug(f"Background currency update skipped (rates fresh) in {elapsed:.1f}s")
+            logger.info(f"Background currency sync completed in {elapsed:.1f}s")
         except Exception as e:
-            logger.warning(f"Background currency update failed: {e}")
+            logger.warning(f"Background currency sync failed: {e}")
