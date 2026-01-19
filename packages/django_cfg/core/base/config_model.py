@@ -27,6 +27,7 @@ from ...models import (
     GitHubOAuthConfig,
     LimitsConfig,
     SpectacularConfig,
+    StorageConfig,
     TelegramConfig,
     TwoFactorConfig,
     UnfoldConfig,
@@ -357,6 +358,15 @@ class DjangoConfig(BaseModel):
     currency: Optional[CurrencyConfig] = Field(
         default=None,
         description="Currency conversion and exchange rates",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          STORAGE & FILES                                  ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    storage: Optional[StorageConfig] = Field(
+        default_factory=StorageConfig,
+        description="Storage cleanup configuration for automatic file deletion",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

@@ -32,14 +32,14 @@ class StatusBadge:
         'inactive': BadgeVariant.SECONDARY,
     }
 
-    # Variant classes with semantic colors
+    # Unfold-compatible Tailwind CSS classes
     VARIANT_CLASSES = {
-        BadgeVariant.SUCCESS: 'bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200',
-        BadgeVariant.WARNING: 'bg-warning-100 text-warning-800 dark:bg-warning-900 dark:text-warning-200',
-        BadgeVariant.DANGER: 'bg-danger-100 text-danger-800 dark:bg-danger-900 dark:text-danger-200',
-        BadgeVariant.INFO: 'bg-info-100 text-info-800 dark:bg-info-900 dark:text-info-200',
-        BadgeVariant.PRIMARY: 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200',
-        BadgeVariant.SECONDARY: 'bg-base-100 text-font-default-light dark:bg-base-800 dark:text-font-default-dark',
+        BadgeVariant.SUCCESS: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400',
+        BadgeVariant.WARNING: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+        BadgeVariant.DANGER: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+        BadgeVariant.INFO: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
+        BadgeVariant.PRIMARY: 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400',
+        BadgeVariant.SECONDARY: 'bg-base-100 text-base-700 dark:bg-base-500/20 dark:text-base-200',
     }
 
     @classmethod

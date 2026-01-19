@@ -9,6 +9,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from django_cfg.modules.django_cleanup import delete_file
+
 from ..managers.user_manager import UserManager
 from .base import user_avatar_path
 
@@ -211,9 +213,8 @@ class CustomUser(AbstractUser):
         # 4. Set deletion timestamp
         self.deleted_at = timezone.now()
 
-        # 5. Delete avatar file
-        if self.avatar:
-            self.avatar.delete(save=False)
+        # 5. Delete avatar file (using django_storage module)
+        delete_file(self.avatar)
 
         self.save()
 

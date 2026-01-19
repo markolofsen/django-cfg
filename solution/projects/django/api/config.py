@@ -30,6 +30,8 @@ from django_cfg import (
     BackupRetentionConfig,
     ApiKeys,
     AxesConfig,
+    StorageConfig,
+    CurrencyConfig,
     # Services
     EmailConfig,
     TelegramConfig,
@@ -392,6 +394,27 @@ class DjangoCfgConfig(DjangoConfig):
     #         ),
     #     ],
     # )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          CURRENCY & MONEY                                ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    currency: CurrencyConfig = CurrencyConfig(
+        enabled=True,
+        default_currency="USD",
+        update_on_startup=False,
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          STORAGE & FILES                                 ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    # Automatic file cleanup for FileField/ImageField
+    storage: StorageConfig = StorageConfig(
+        auto_cleanup=True,
+        delete_on_replace=True,
+        log_deletions=env.debug,  # Log deletions in development
+    )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                         DJANGO-CFG SETTINGS                              ║

@@ -160,7 +160,7 @@ class MarkdownRenderer:
         """
         if not MISTUNE_AVAILABLE:
             return format_html(
-                '<div class="text-warning-600 dark:text-warning-400 p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 rounded">'
+                '<div class="text-orange-700 dark:text-orange-400 p-3 bg-orange-50 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/30 rounded">'
                 '<strong>⚠️ Mistune not installed:</strong> Install with: pip install mistune>=3.1.4'
                 '</div>'
             )
@@ -174,7 +174,7 @@ class MarkdownRenderer:
         md = cls._get_markdown_parser(enable_plugins)
         if not md:
             return format_html(
-                '<div class="text-danger-600 dark:text-danger-400">Error: Could not initialize markdown parser</div>'
+                '<div class="text-red-700 dark:text-red-400">Error: Could not initialize markdown parser</div>'
             )
 
         # Render markdown to HTML
@@ -191,7 +191,7 @@ class MarkdownRenderer:
             "prose-p:mb-3 prose-p:leading-relaxed prose-p:text-font-default-light dark:prose-p:text-font-default-dark "
             "prose-a:text-primary-600 dark:prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline prose-a:font-medium "
             "prose-strong:text-font-default-light dark:prose-strong:text-font-default-dark prose-strong:font-semibold "
-            "prose-code:bg-base-100 dark:prose-code:bg-base-800 prose-code:text-danger-600 dark:prose-code:text-danger-400 "
+            "prose-code:bg-base-100 dark:prose-code:bg-base-800 prose-code:text-red-700 dark:prose-code:text-red-400 "
             "prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono "
             "prose-code:before:content-none prose-code:after:content-none "
             "prose-pre:bg-base-50 dark:prose-pre:bg-base-900 prose-pre:border prose-pre:border-base-200 dark:prose-pre:border-base-700 prose-pre:rounded-lg "
@@ -294,7 +294,7 @@ class MarkdownRenderer:
                 is_from_file = True
             else:
                 return format_html(
-                    '<div class="text-warning-600 dark:text-warning-400 p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 rounded">'
+                    '<div class="text-orange-700 dark:text-orange-400 p-3 bg-orange-50 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/30 rounded">'
                     '<strong>⚠️ File not found:</strong> {}'
                     '</div>',
                     escape(content_str)

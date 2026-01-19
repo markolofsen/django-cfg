@@ -39,6 +39,7 @@ from .django.constance import ConstanceConfig, ConstanceField
 from .django.crypto_fields import CryptoFieldsConfig
 from .django.currency import CurrencyConfig
 from .django.django_rq import DjangoRQConfig, RQQueueConfig
+from .django.storage import StorageConfig
 from .django.environment import EnvironmentConfig
 from .django.openapi import OpenAPIClientConfig
 from .infrastructure.cache import CacheConfig
@@ -98,6 +99,7 @@ __all__ = [
     "CurrencyConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
+    "StorageConfig",
     "OpenAPIClientConfig",
     "UnfoldConfig",
     "AxesConfig",

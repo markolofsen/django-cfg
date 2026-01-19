@@ -84,13 +84,13 @@ class BaseElements:
         """
         classes = []
 
-        # Variant colors
+        # Unfold-compatible Tailwind text colors
         if variant:
             variant_classes = {
-                'success': 'text-success-600 dark:text-success-400',
-                'warning': 'text-warning-600 dark:text-warning-400',
-                'danger': 'text-danger-600 dark:text-danger-400',
-                'info': 'text-info-600 dark:text-info-400',
+                'success': 'text-green-700 dark:text-green-400',
+                'warning': 'text-orange-700 dark:text-orange-400',
+                'danger': 'text-red-700 dark:text-red-400',
+                'info': 'text-blue-700 dark:text-blue-400',
                 'primary': 'text-primary-600 dark:text-primary-400',
             }
             classes.append(variant_classes.get(variant, ''))
@@ -165,11 +165,12 @@ class BaseElements:
             classes.append(css_class)
             
         if variant:
+            # Unfold-compatible Tailwind text colors for links
             variant_classes = {
-                'success': 'text-success-600 dark:text-success-400 hover:text-success-700',
-                'warning': 'text-warning-600 dark:text-warning-400 hover:text-warning-700',
-                'danger': 'text-danger-600 dark:text-danger-400 hover:text-danger-700',
-                'info': 'text-info-600 dark:text-info-400 hover:text-info-700',
+                'success': 'text-green-700 dark:text-green-400 hover:text-green-800',
+                'warning': 'text-orange-700 dark:text-orange-400 hover:text-orange-800',
+                'danger': 'text-red-700 dark:text-red-400 hover:text-red-800',
+                'info': 'text-blue-700 dark:text-blue-400 hover:text-blue-800',
                 'primary': 'text-primary-600 dark:text-primary-400 hover:text-primary-700',
             }
             classes.append(variant_classes.get(variant, ''))

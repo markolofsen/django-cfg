@@ -71,7 +71,7 @@ class DecimalDisplay:
             # Already Decimal - use as is
         except Exception:
             return format_html(
-                '<span class="text-danger-600 dark:text-danger-400">{}</span>',
+                '<span class="text-red-700 dark:text-red-400">{}</span>',
                 escape(str(value))
             )
 
@@ -108,13 +108,13 @@ class DecimalDisplay:
         # Build display text
         display_text = f"{sign}{prefix}{formatted}{suffix}"
 
-        # Color based on sign
+        # Color based on sign (Unfold-compatible)
         color_class = ""
         if show_sign or is_negative:
             if is_negative:
-                color_class = "text-danger-600 dark:text-danger-400"
+                color_class = "text-red-700 dark:text-red-400"
             elif value > 0:
-                color_class = "text-success-600 dark:text-success-400"
+                color_class = "text-green-700 dark:text-green-400"
 
         # Build CSS classes
         classes = ["text-sm", "tabular-nums"]

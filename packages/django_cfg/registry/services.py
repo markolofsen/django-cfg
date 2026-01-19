@@ -44,4 +44,7 @@ SERVICES_REGISTRY = {
     "BackupScheduleConfig": ("django_cfg.models.infrastructure.backup", "BackupScheduleConfig"),
     "BackupRetentionConfig": ("django_cfg.models.infrastructure.backup", "BackupRetentionConfig"),
     "BackupDatabaseConfig": ("django_cfg.models.infrastructure.backup", "BackupDatabaseConfig"),
+
+    # Storage/Cleanup services
+    "StorageConfig": ("django_cfg.models.django.storage", "StorageConfig"),
 }

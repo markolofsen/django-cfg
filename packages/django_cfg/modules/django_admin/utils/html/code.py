@@ -56,13 +56,13 @@ class CodeElements:
             html.code_block(stdout, max_height="400px")
             html.code_block(stderr, max_height="400px", variant="warning")
         """
-        # Variant-specific styles
+        # Unfold-compatible Tailwind CSS classes
         variant_classes = {
             'default': 'bg-base-50 dark:bg-base-900 border-base-200 dark:border-base-700',
-            'warning': 'bg-warning-50 dark:bg-warning-900/20 border-warning-200 dark:border-warning-700',
-            'danger': 'bg-danger-50 dark:bg-danger-900/20 border-danger-200 dark:border-danger-700',
-            'success': 'bg-success-50 dark:bg-success-900/20 border-success-200 dark:border-success-700',
-            'info': 'bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-700',
+            'warning': 'bg-orange-50 dark:bg-orange-500/20 border-orange-200 dark:border-orange-500/30',
+            'danger': 'bg-red-50 dark:bg-red-500/20 border-red-200 dark:border-red-500/30',
+            'success': 'bg-green-50 dark:bg-green-500/20 border-green-200 dark:border-green-500/30',
+            'info': 'bg-blue-50 dark:bg-blue-500/20 border-blue-200 dark:border-blue-500/30',
         }
 
         variant_class = variant_classes.get(variant, variant_classes['default'])

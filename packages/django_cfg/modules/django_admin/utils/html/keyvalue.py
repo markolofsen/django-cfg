@@ -162,7 +162,7 @@ class KeyValueElements:
             # With icons and styling
             html.key_value_list([
                 {'key': 'Available', 'value': '60 BTC', 'icon': Icons.CHECK_CIRCLE},
-                {'key': 'Total Value', 'value': '$1,234.56', 'value_class': 'text-success-600 text-lg', 'divider': True},
+                {'key': 'Total Value', 'value': '$1,234.56', 'value_class': 'text-green-700 text-lg', 'divider': True},
             ])
 
         Returns:

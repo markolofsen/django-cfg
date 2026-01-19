@@ -254,12 +254,13 @@ class CompositionElements:
     @staticmethod
     def _get_avatar_classes(variant: str) -> str:
         """Get CSS classes for avatar badge variant."""
+        # Unfold-compatible Tailwind CSS classes
         variant_classes = {
-            'success': 'bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200',
-            'warning': 'bg-warning-100 text-warning-800 dark:bg-warning-900 dark:text-warning-200',
-            'danger': 'bg-danger-100 text-danger-800 dark:bg-danger-900 dark:text-danger-200',
-            'info': 'bg-info-100 text-info-800 dark:bg-info-900 dark:text-info-200',
-            'primary': 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200',
-            'secondary': 'bg-base-100 text-font-default-light dark:bg-base-800 dark:text-font-default-dark',
+            'success': 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400',
+            'warning': 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+            'danger': 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+            'info': 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
+            'primary': 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400',
+            'secondary': 'bg-base-100 text-base-700 dark:bg-base-500/20 dark:text-base-200',
         }
         return variant_classes.get(variant, variant_classes['primary'])
