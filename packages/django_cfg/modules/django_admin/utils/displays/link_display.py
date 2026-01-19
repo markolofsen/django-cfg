@@ -80,15 +80,15 @@ class LinkDisplay:
         """
         config = config or {}
 
-        # Validate field exists
-        if not hasattr(obj, field):
-            return mark_safe(
-                f'<span class="text-red-600 font-bold">'
-                f'LinkField Error: Field "{field}" not found</span>'
-            )
-
-        # Get field values
-        text = getattr(obj, field, '')
+        # Get text: static_text > field value > field name as static text
+        static_text = config.get('static_text')
+        if static_text:
+            text = static_text
+        elif hasattr(obj, field):
+            text = getattr(obj, field, '')
+        else:
+            # Use field name as static text (e.g., name="📍 Map")
+            text = field
         link_field = config.get('link_field')
         link_url = getattr(obj, link_field, '') if link_field else ''
 

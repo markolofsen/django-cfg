@@ -62,6 +62,7 @@ class LinkField(FieldConfig):
     link_field: str = Field(..., description="Model field name containing the URL")
     link_icon: Optional[str] = Field(Icons.OPEN_IN_NEW, description="Material icon to display next to link")
     link_target: str = Field("_blank", description="Link target (_blank, _self, etc.)")
+    static_text: Optional[str] = Field(None, description="Static text to display instead of field value")
 
     # Subtitle configuration (mutually exclusive options)
     subtitle_field: Optional[str] = Field(None, description="Single field for subtitle (e.g., 'phone', 'email')")
@@ -85,6 +86,8 @@ class LinkField(FieldConfig):
 
         if self.link_icon is not None:
             config['link_icon'] = self.link_icon
+        if self.static_text is not None:
+            config['static_text'] = self.static_text
         if self.subtitle_field is not None:
             config['subtitle_field'] = self.subtitle_field
         if self.subtitle_fields is not None:

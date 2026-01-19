@@ -97,7 +97,12 @@ def generate_display_method(field_config, is_link: bool = False):
         # Get field value
         value = getattr(obj, field_config.name, None)
 
-        if value is None:
+        # For LinkField, value comes from link_field, not name - skip early return
+        # Also skip for fields with static_text
+        has_link_field = hasattr(field_config, 'link_field') and field_config.link_field
+        has_static_text = hasattr(field_config, 'static_text') and field_config.static_text
+
+        if value is None and not has_link_field and not has_static_text:
             empty = field_config.empty_value
             # For header fields, return tuple format
             if field_config.header:

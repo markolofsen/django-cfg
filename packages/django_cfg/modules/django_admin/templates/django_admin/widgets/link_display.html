@@ -1,27 +1,24 @@
 {% comment %}
 Link Display Widget
 Shows text with link and optional subtitle.
+Uses Unfold semantic colors for dark/light theme support.
 {% endcomment %}
 
 {% if link_url %}
     {% if subtitle_text %}
     <div>
         <div>
-            <a href="{{ link_url }}" target="{{ link_target }}">
-                {% if link_icon %}
-                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{{ link_icon }}</span>
-                {% endif %}
-                {{ text }}
+            <a href="{{ link_url }}" target="{{ link_target }}" class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400 no-underline">
+                {% if link_icon %}<span class="material-symbols-outlined text-base">{{ link_icon }}</span>{% endif %}
+                <span>{{ text }}</span>
             </a>
         </div>
         <div class="{{ subtitle_css_class }}">{{ subtitle_text }}</div>
     </div>
     {% else %}
-    <a href="{{ link_url }}" target="{{ link_target }}">
-        {% if link_icon %}
-        <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">{{ link_icon }}</span>
-        {% endif %}
-        {{ text }}
+    <a href="{{ link_url }}" target="{{ link_target }}" class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400 no-underline">
+        {% if link_icon %}<span class="material-symbols-outlined text-base">{{ link_icon }}</span>{% endif %}
+        <span>{{ text }}</span>
     </a>
     {% endif %}
 {% else %}
