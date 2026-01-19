@@ -16,6 +16,12 @@ from .update import (
 )
 from .currencies import (
     CURRENCIES,
+    CURRENCY_CODES,
+    FIAT_CODES,
+    CRYPTO_CODES,
+    get_currency_codes,
+    clear_currency_cache,
+    is_valid_currency,
     sync_currencies,
     sync_currencies_if_needed,
     sync_all,
@@ -43,6 +49,12 @@ __all__ = [
     "update_rates_if_needed",
     # Currencies service
     "CURRENCIES",
+    "CURRENCY_CODES",
+    "FIAT_CODES",
+    "CRYPTO_CODES",
+    "get_currency_codes",
+    "clear_currency_cache",
+    "is_valid_currency",
     "sync_currencies",
     "sync_currencies_if_needed",
     "sync_all",

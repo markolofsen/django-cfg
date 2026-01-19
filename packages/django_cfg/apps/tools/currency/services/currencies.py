@@ -89,6 +89,58 @@ CURRENCIES = [
     {"code": "TRX", "name": "Tron", "symbol": "TRX", "currency_type": "crypto", "decimals": 6},
 ]
 
+# Pre-computed sets from static list (fallback)
+_STATIC_CURRENCY_CODES: set[str] = {c["code"] for c in CURRENCIES}
+_STATIC_FIAT_CODES: set[str] = {c["code"] for c in CURRENCIES if c["currency_type"] == "fiat"}
+_STATIC_CRYPTO_CODES: set[str] = {c["code"] for c in CURRENCIES if c["currency_type"] == "crypto"}
+
+# Cache for DB codes
+_db_codes_cache: set[str] | None = None
+
+
+def get_currency_codes(from_db: bool = True) -> set[str]:
+    """
+    Get valid currency codes.
+
+    Args:
+        from_db: If True, fetch from database (cached). If False, use static list.
+
+    Returns:
+        Set of valid currency codes.
+    """
+    global _db_codes_cache
+
+    if not from_db:
+        return _STATIC_CURRENCY_CODES
+
+    if _db_codes_cache is not None:
+        return _db_codes_cache
+
+    try:
+        from ..models import Currency
+        _db_codes_cache = set(Currency.objects.filter(is_active=True).values_list("code", flat=True))
+        return _db_codes_cache
+    except Exception:
+        # Fallback to static if DB not ready
+        return _STATIC_CURRENCY_CODES
+
+
+def clear_currency_cache() -> None:
+    """Clear the currency codes cache (call after adding new currencies)."""
+    global _db_codes_cache
+    _db_codes_cache = None
+
+
+def is_valid_currency(code: str) -> bool:
+    """Check if currency code is valid (from DB)."""
+    return code.upper() in get_currency_codes()
+
+
+# Aliases for backward compatibility
+CURRENCY_CODES = _STATIC_CURRENCY_CODES
+FIAT_CODES = _STATIC_FIAT_CODES
+CRYPTO_CODES = _STATIC_CRYPTO_CODES
+
 
 def sync_currencies(
     update_existing: bool = False,

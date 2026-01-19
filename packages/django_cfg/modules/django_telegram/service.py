@@ -43,6 +43,7 @@ class DjangoTelegram(BaseCfgModule):
         self,
         bot_token: Optional[str] = None,
         chat_id: Optional[Union[int, str]] = None,
+        disable_prefix: bool = False,
     ):
         """
         Initialize Telegram service.
@@ -50,11 +51,13 @@ class DjangoTelegram(BaseCfgModule):
         Args:
             bot_token: Custom bot token (uses config default if not provided)
             chat_id: Custom chat ID (uses config default if not provided)
+            disable_prefix: If True, don't add project name prefix to messages
         """
         self._bot = None
         self._is_configured = None
         self._custom_bot_token = bot_token
         self._custom_chat_id = chat_id
+        self._disable_prefix = disable_prefix
 
     # ========== CONFIG PROPERTIES ==========
 
@@ -66,6 +69,8 @@ class DjangoTelegram(BaseCfgModule):
     @property
     def project_prefix(self) -> str:
         """Get project name prefix for messages."""
+        if self._disable_prefix:
+            return ""
         try:
             config = self.config
             if config and hasattr(config, "project_name") and config.project_name:
