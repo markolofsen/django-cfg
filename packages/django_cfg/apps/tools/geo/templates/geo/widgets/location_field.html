@@ -1,0 +1,372 @@
+{% load i18n %}
+<div class="location-widget max-w-2xl"
+     x-data="locationWidget_{{ widget.name|cut:'-' }}()"
+     x-init="init()">
+
+    <input type="hidden" name="{{ widget.name }}" id="id_{{ widget.name }}" x-ref="hiddenInput" :value="cityId">
+    <input type="hidden" name="{{ widget.address_field }}" :value="address">
+    <input type="hidden" name="{{ widget.latitude_field }}" :value="latInput">
+    <input type="hidden" name="{{ widget.longitude_field }}" :value="lngInput">
+
+    <div class="flex gap-4" :class="{'flex-col': mapExpanded}">
+        {% if widget.show_map %}
+        <div class="flex-shrink-0" :class="{'w-full': mapExpanded}"
+             :style="'position:relative;' + (mapExpanded ? 'width:100%;height:300px' : 'width:200px;height:120px')">
+            <div x-ref="mapContainer"
+                 style="position:absolute;top:0;left:0;right:0;bottom:0;"
+                 class="rounded-default overflow-hidden border border-base-200 dark:border-base-700 shadow-xs"></div>
+            <button type="button" @click.stop="toggleMap()"
+                    style="position:absolute;bottom:4px;right:4px;z-index:9999;width:22px;height:22px;"
+                    class="flex items-center justify-center bg-white/80 hover:bg-white dark:bg-base-900/80 dark:hover:bg-base-900
+                           rounded shadow-sm border border-base-200/50 dark:border-base-700/50
+                           text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 transition-all"
+                    :title="mapExpanded ? 'Collapse' : 'Expand'">
+                <span class="material-symbols-outlined" style="font-size:14px;" x-text="mapExpanded ? 'close_fullscreen' : 'open_in_full'"></span>
+            </button>
+        </div>
+        {% endif %}
+
+        <div class="flex-1 space-y-2">
+            {# City search - container #}
+            <div class="relative">
+                {# Selected display (when city is selected) #}
+                <div x-show="selected && !editing"
+                     @click="startEdit()"
+                     class="flex items-center gap-2 w-full bg-white border border-base-200 rounded-default px-3 py-2 shadow-xs cursor-pointer
+                            dark:bg-base-900 dark:border-base-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors">
+                    <span x-text="selected?.flag" class="text-base"></span>
+                    <span class="text-sm font-medium text-font-default-light dark:text-font-default-dark" x-text="selected?.name"></span>
+                    <span class="text-xs text-base-400 dark:text-base-500" x-text="selected?.region"></span>
+                    <button type="button" @click.stop="clear()"
+                            class="ml-auto text-base-400 hover:text-red-600 dark:text-base-500 dark:hover:text-red-500 transition-colors">
+                        <span class="material-symbols-outlined text-lg">close</span>
+                    </button>
+                </div>
+
+                {# Search input (when no city selected or editing) #}
+                <div x-show="!selected || editing" class="relative">
+                    <input type="text"
+                           x-ref="searchInput"
+                           x-model="searchQuery"
+                           @input.debounce.250ms="search()"
+                           @focus="onFocus()"
+                           @blur="onBlur()"
+                           @keydown.escape="cancelEdit()"
+                           @keydown.enter.prevent="selectFirst()"
+                           @keydown.arrow-down.prevent="nav(1)"
+                           @keydown.arrow-up.prevent="nav(-1)"
+                           class="w-full bg-white border border-base-200 rounded-default px-3 py-2 text-sm font-medium shadow-xs
+                                  text-font-default-light placeholder-base-400
+                                  dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:placeholder-base-500
+                                  focus:outline-2 focus:outline-primary-600 focus:-outline-offset-2"
+                           placeholder="{% trans 'Search city...' %}">
+                    <span x-show="loading" class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary-600 animate-spin">progress_activity</span>
+                </div>
+
+                {# Dropdown #}
+                <div x-show="dropdown && results.length"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     @click.outside="closeDropdown()"
+                     class="absolute z-50 mt-1 w-full bg-white border border-base-200 rounded-default shadow-xs max-h-52 overflow-y-auto
+                            dark:bg-base-900 dark:border-base-700">
+                    <div class="py-1">
+                        <template x-for="(r,i) in results" :key="r.id">
+                            <div @click="select(r)"
+                                 :class="{'bg-base-100 dark:bg-base-800': idx===i}"
+                                 class="mx-1 px-2 py-2 cursor-pointer rounded-default flex items-center gap-2 transition-all
+                                        text-font-default-light dark:text-font-default-dark
+                                        hover:bg-base-100 dark:hover:bg-base-800">
+                                <span x-text="r.flag"></span>
+                                <span class="text-sm font-medium" x-text="r.name"></span>
+                                <span class="text-xs text-base-400 dark:text-base-500" x-text="r.region"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            {# Address + Coords row #}
+            <div class="flex gap-2">
+                <input type="text" x-model="address" placeholder="{% trans 'Address' %}"
+                       class="flex-1 bg-white border border-base-200 rounded-default px-3 py-1.5 text-sm font-medium shadow-xs
+                              text-font-default-light placeholder-base-400
+                              dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:placeholder-base-500
+                              focus:outline-2 focus:outline-primary-600 focus:-outline-offset-2">
+                <input type="text" x-model="latInput" @change="updateMap()" placeholder="Lat"
+                       class="w-20 bg-white border border-base-200 rounded-default px-2 py-1.5 text-xs font-mono shadow-xs
+                              text-font-default-light placeholder-base-400
+                              dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:placeholder-base-500
+                              focus:outline-2 focus:outline-primary-600 focus:-outline-offset-2">
+                <input type="text" x-model="lngInput" @change="updateMap()" placeholder="Lng"
+                       class="w-20 bg-white border border-base-200 rounded-default px-2 py-1.5 text-xs font-mono shadow-xs
+                              text-font-default-light placeholder-base-400
+                              dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:placeholder-base-500
+                              focus:outline-2 focus:outline-primary-600 focus:-outline-offset-2">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const cfg = {
+        searchUrl: '{{ widget.search_url }}',
+        autocompleteUrl: '{{ widget.autocomplete_url }}',
+        nearbyUrl: '{{ widget.nearby_url }}',
+        reverseGeocodeUrl: '{{ widget.reverse_geocode_url }}',
+        zoom: {{ widget.default_zoom }},
+        initial: {{ widget.city_data_json|safe }},
+        showMap: {{ widget.show_map|yesno:'true,false' }},
+        initAddr: '{{ widget.initial_address|default:""|escapejs }}',
+        initLat: '{{ widget.initial_latitude|default:""|escapejs }}',
+        initLng: '{{ widget.initial_longitude|default:""|escapejs }}'
+    };
+
+    window['locationWidget_{{ widget.name|cut:"-" }}'] = () => ({
+        cityId: cfg.initial?.id || null,
+        selected: cfg.initial,
+        searchQuery: '',
+        results: [],
+        dropdown: false,
+        loading: false,
+        editing: false,
+        mapExpanded: false,
+        idx: -1,
+        map: null,
+        marker: null,
+        address: cfg.initAddr,
+        latInput: cfg.initLat || (cfg.initial?.lat?.toString() || ''),
+        lngInput: cfg.initLng || (cfg.initial?.lng?.toString() || ''),
+
+        init() {
+            if (cfg.showMap) this.$nextTick(() => this.initMap());
+        },
+
+        toggleMap() {
+            this.mapExpanded = !this.mapExpanded;
+            // Resize map after container size change
+            this.$nextTick(() => {
+                if (this.map) {
+                    this.map.resize();
+                }
+            });
+        },
+
+        initMap() {
+            if (!this.$refs.mapContainer || typeof maplibregl === 'undefined') return;
+            const hasCoords = this.latInput && this.lngInput;
+            const center = hasCoords ? [parseFloat(this.lngInput), parseFloat(this.latInput)] : [115, -8];
+            this.map = new maplibregl.Map({
+                container: this.$refs.mapContainer,
+                style: 'https://tiles.openfreemap.org/styles/liberty',
+                center, zoom: hasCoords ? cfg.zoom : 4, attributionControl: false
+            });
+            if (hasCoords) this.setMarker(center);
+            this.map.on('click', async (e) => {
+                this.latInput = e.lngLat.lat.toFixed(6);
+                this.lngInput = e.lngLat.lng.toFixed(6);
+                this.setMarker([e.lngLat.lng, e.lngLat.lat]);
+
+                // Reverse geocode to get address and city
+                if (cfg.reverseGeocodeUrl) {
+                    try {
+                        const resp = await fetch(
+                            `${cfg.reverseGeocodeUrl}?lat=${this.latInput}&lng=${this.lngInput}`
+                        );
+                        const data = await resp.json();
+                        if (data.address?.street) {
+                            this.address = data.address.street;
+                        }
+                        if (data.city_id) {
+                            this.fetchDetails(data.city_id);
+                        }
+                    } catch (err) {
+                        console.warn('Reverse geocode failed:', err);
+                    }
+                }
+            });
+        },
+
+        setMarker(lngLat) {
+            if (this.marker) this.marker.remove();
+            this.marker = new maplibregl.Marker({color:'#3b82f6'}).setLngLat(lngLat).addTo(this.map);
+        },
+
+        updateMap() {
+            if (!this.map || !this.latInput || !this.lngInput) return;
+            const c = [parseFloat(this.lngInput), parseFloat(this.latInput)];
+            this.map.flyTo({center: c, zoom: cfg.zoom, duration: 800});
+            this.setMarker(c);
+        },
+
+        startEdit() {
+            this.editing = true;
+            this.searchQuery = '';
+            this.results = [];
+            this.$nextTick(() => {
+                this.$refs.searchInput?.focus();
+            });
+        },
+
+        cancelEdit() {
+            this.editing = false;
+            this.dropdown = false;
+            this.searchQuery = '';
+            this.results = [];
+        },
+
+        onFocus() {
+            if (this.results.length > 0) {
+                this.dropdown = true;
+            }
+        },
+
+        onBlur() {
+            // Delay to allow click on dropdown item
+            setTimeout(() => {
+                if (!this.dropdown) {
+                    this.editing = false;
+                }
+            }, 200);
+        },
+
+        closeDropdown() {
+            this.dropdown = false;
+            if (this.selected) {
+                this.editing = false;
+            }
+        },
+
+        async search() {
+            if (this.searchQuery.length < 2) { this.results = []; this.dropdown = false; return; }
+            this.loading = true; this.idx = -1;
+            try {
+                // Use Photon autocomplete for fast, typo-tolerant search
+                const r = await fetch(cfg.autocompleteUrl + '?q=' + encodeURIComponent(this.searchQuery));
+                const d = await r.json();
+                this.results = d.results.map(x => {
+                    // Extract city id from place_id (e.g., "local:123" -> 123)
+                    const cityId = x.place_id?.startsWith('local:') ? parseInt(x.place_id.split(':')[1]) : null;
+                    const parts = x.text.split(', ');
+                    const countryCode = parts.length > 1 ? parts[parts.length - 1] : '';
+                    return {
+                        id: cityId,
+                        placeId: x.place_id,
+                        name: parts[0],
+                        region: parts.slice(1).join(', '),
+                        flag: this.toFlag(countryCode),
+                        lat: x.latitude,
+                        lng: x.longitude,
+                        type: x.type
+                    };
+                });
+                this.dropdown = this.results.length > 0;
+            } catch(e) { console.error(e); }
+            this.loading = false;
+        },
+
+        toFlag(code) {
+            if (!code || code.length !== 2) return '';
+            return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()));
+        },
+
+        select(r) {
+            this.cityId = r.id;
+            this.selected = r;
+            this.searchQuery = '';
+            this.dropdown = false;
+            this.editing = false;
+            this.results = [];
+
+            if (r.lat != null && r.lng != null) {
+                this.latInput = r.lat.toFixed(6);
+                this.lngInput = r.lng.toFixed(6);
+                if (this.map) {
+                    this.map.flyTo({center: [r.lng, r.lat], zoom: cfg.zoom, duration: 1000});
+                    this.setMarker([r.lng, r.lat]);
+                }
+            }
+
+            // If we have a local city id, fetch details and update hidden input
+            if (r.id) {
+                this.$refs.hiddenInput.value = r.id;
+                this.fetchDetails(r.id);
+            } else {
+                // Photon-only result: try to find nearest city
+                this.$refs.hiddenInput.value = '';
+                if (r.lat != null && r.lng != null && cfg.nearbyUrl) {
+                    this.findNearbyCity(r.lat, r.lng);
+                }
+            }
+        },
+
+        async findNearbyCity(lat, lng) {
+            // Find nearest city to associate with Photon result
+            try {
+                const resp = await fetch(`${cfg.nearbyUrl}?lat=${lat}&lng=${lng}&limit=1`);
+                const data = await resp.json();
+                if (data.results?.length) {
+                    const city = data.results[0];
+                    this.cityId = city.id;
+                    this.$refs.hiddenInput.value = city.id;
+                    // Update selected with city info while keeping original name
+                    this.selected = {
+                        ...this.selected,
+                        id: city.id,
+                        flag: city.flag || this.toFlag(city.country)
+                    };
+                }
+            } catch(e) { console.error('findNearbyCity error:', e); }
+        },
+
+        async fetchDetails(id) {
+            try {
+                const r = await fetch('/cfg/geo/city/' + id + '/');
+                const d = await r.json();
+                if (d.id) {
+                    const stateCode = d.state?.iso2 || d.state_iso2 || '';
+                    const countryCode = d.country?.iso2 || d.country_iso2 || '';
+                    this.selected = {
+                        ...this.selected,
+                        name: d.name,
+                        region: [stateCode, countryCode].filter(Boolean).join(', '),
+                        flag: this.toFlag(countryCode)
+                    };
+                    if (d.latitude != null) this.latInput = d.latitude.toFixed(6);
+                    if (d.longitude != null) this.lngInput = d.longitude.toFixed(6);
+                }
+            } catch(e) { console.error('fetchDetails error:', e); }
+        },
+
+        selectFirst() {
+            if (this.results.length) {
+                this.select(this.results[this.idx >= 0 ? this.idx : 0]);
+            }
+        },
+
+        nav(dir) {
+            if (this.results.length) {
+                this.idx = (this.idx + dir + this.results.length) % this.results.length;
+            }
+        },
+
+        clear() {
+            this.cityId = null;
+            this.selected = null;
+            this.latInput = '';
+            this.lngInput = '';
+            this.editing = false;
+            this.searchQuery = '';
+            this.results = [];
+            this.$refs.hiddenInput.value = '';
+            if (this.marker) { this.marker.remove(); this.marker = null; }
+            if (this.map) this.map.flyTo({center: [115, -8], zoom: 4, duration: 800});
+        }
+    });
+})();
+</script>

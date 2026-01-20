@@ -135,3 +135,7 @@ if base_module.is_grpc_enabled():
 
 if base_module.is_webpush_enabled():
     urlpatterns.append(path('cfg/webpush/', include('django_cfg.apps.integrations.webpush.urls')))
+
+# Geo app (countries, states, cities)
+if base_module.is_geo_enabled():
+    urlpatterns.append(path('cfg/geo/', include('django_cfg.apps.tools.geo.urls')))

@@ -29,12 +29,16 @@ def detect_engine_from_url(url: str) -> str:
 
     # Map URL schemes to Django engines
     scheme_to_engine = {
+        # Standard backends
         "postgresql": "django.db.backends.postgresql",
         "postgres": "django.db.backends.postgresql",
         "mysql": "django.db.backends.mysql",
         "sqlite": "django.db.backends.sqlite3",
         "sqlite3": "django.db.backends.sqlite3",
         "oracle": "django.db.backends.oracle",
+        # PostGIS backends (for spatial queries)
+        "postgis": "django.contrib.gis.db.backends.postgis",
+        "spatialite": "django.contrib.gis.db.backends.spatialite",
     }
 
     if scheme in scheme_to_engine:

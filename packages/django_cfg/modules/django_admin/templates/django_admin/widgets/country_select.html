@@ -1,0 +1,30 @@
+{% comment %}
+Country select widget template.
+
+Uses Select2 with AJAX autocomplete for country search.
+Compatible with Unfold admin styling.
+{% endcomment %}
+
+<div class="country-select-widget">
+    <select name="{{ widget.name }}"
+            id="{{ widget.attrs.id }}"
+            {% if widget.attrs.class %}class="{{ widget.attrs.class }}"{% endif %}
+            {% if widget.attrs.data-theme %}data-theme="{{ widget.attrs.data-theme }}"{% endif %}
+            {% if widget.search_url %}data-ajax-url="{{ widget.search_url }}"{% endif %}
+            data-placeholder="{{ widget.attrs.data-placeholder|default:'Select country' }}"
+            {% if widget.attrs.data-allow-clear %}data-allow-clear="{{ widget.attrs.data-allow-clear }}"{% endif %}
+            {% if widget.required %}required{% endif %}>
+        <option value="">---------</option>
+        {% for option in widget.optgroups %}
+            {% for group_name, group_choices, group_index in option %}
+                {% for option_value, option_label in group_choices %}
+                    <option value="{{ option_value }}"{% if option_value == widget.value %} selected{% endif %}>{{ option_label }}</option>
+                {% endfor %}
+            {% endfor %}
+        {% empty %}
+            {% if widget.value %}
+                <option value="{{ widget.value }}" selected>{{ widget.value }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+</div>

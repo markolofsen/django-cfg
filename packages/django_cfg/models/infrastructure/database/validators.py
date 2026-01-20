@@ -16,28 +16,42 @@ def validate_engine(v: Optional[str]) -> Optional[str]:
     if v is None:
         return v
 
-    if not v.startswith("django.db.backends."):
+    # Allow both django.db.backends.* and django.contrib.gis.db.backends.*
+    valid_prefixes = (
+        "django.db.backends.",
+        "django.contrib.gis.db.backends.",
+    )
+
+    if not v.startswith(valid_prefixes):
         raise ValueError(
             f"Invalid database engine '{v}'. "
-            "Must start with 'django.db.backends.'"
+            "Must start with 'django.db.backends.' or 'django.contrib.gis.db.backends.'"
         )
 
     # Common engines validation
     valid_engines = {
+        # Standard backends
         "django.db.backends.postgresql",
         "django.db.backends.mysql",
         "django.db.backends.sqlite3",
         "django.db.backends.oracle",
+        # PostGIS backends (for spatial queries)
+        "django.contrib.gis.db.backends.postgis",
+        "django.contrib.gis.db.backends.mysql",
+        "django.contrib.gis.db.backends.oracle",
+        "django.contrib.gis.db.backends.spatialite",
     }
 
-    if v not in valid_engines and not v.startswith("django.db.backends."):
+    if v not in valid_engines and not v.startswith(valid_prefixes):
         # Allow custom backends but warn about common typos
         common_typos = {
             "postgresql": "django.db.backends.postgresql",
             "postgres": "django.db.backends.postgresql",
+            "postgis": "django.contrib.gis.db.backends.postgis",
             "mysql": "django.db.backends.mysql",
             "sqlite": "django.db.backends.sqlite3",
             "sqlite3": "django.db.backends.sqlite3",
+            "spatialite": "django.contrib.gis.db.backends.spatialite",
         }
 
         if v in common_typos:
@@ -133,6 +147,11 @@ def validate_connection_after(config: "DatabaseConfig") -> "DatabaseConfig":  # 
     elif config.engine == "django.db.backends.postgresql":
         if not config._is_connection_string and not config.name:
             raise ValueError("PostgreSQL database name is required")
+
+    # Validate PostGIS-specific constraints (same as PostgreSQL)
+    elif config.engine == "django.contrib.gis.db.backends.postgis":
+        if not config._is_connection_string and not config.name:
+            raise ValueError("PostGIS database name is required")
 
     return config
 

@@ -138,6 +138,10 @@ class InstalledAppsBuilder:
         if self.config.currency and self.config.currency.enabled:
             apps.append("django_cfg.apps.tools.currency")
 
+        # Geo app (countries, states, cities database)
+        if self.config.geo and self.config.geo.enabled:
+            apps.append("django_cfg.apps.tools.geo")
+
         # Next.js Admin Integration
         if self.config.nextjs_admin:
             apps.append("django_cfg.modules.nextjs_admin")

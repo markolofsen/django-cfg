@@ -15,6 +15,10 @@ __all__ = [
     "JSONEditorWidget",
     "MoneyFieldWidget",
     "MoneyFieldFormField",
+    # Geo widgets
+    "CountrySelectWidget",
+    "CitySelectWidget",
+    "LocationSelectWidget",
 ]
 
 
@@ -44,4 +48,13 @@ def __getattr__(name):
     elif name == "MoneyFieldFormField":
         from .money_widget import MoneyFieldFormField
         return MoneyFieldFormField
+    elif name == "CountrySelectWidget":
+        from .location_widget import CountrySelectWidget
+        return CountrySelectWidget
+    elif name == "CitySelectWidget":
+        from .location_widget import CitySelectWidget
+        return CitySelectWidget
+    elif name == "LocationSelectWidget":
+        from .location_widget import LocationSelectWidget
+        return LocationSelectWidget
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

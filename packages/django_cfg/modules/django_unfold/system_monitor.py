@@ -148,9 +148,23 @@ class SystemMonitor(BaseCfgModule):
         except Exception as e:
             return {'error': str(e), 'hostname': 'unknown', 'platform': 'unknown'}
 
+    def get_geo_statistics(self) -> Dict[str, Any]:
+        """Get geo database statistics."""
+        try:
+            from django_cfg.apps.tools.geo.models import City, Country, State
+
+            return {
+                'countries': Country.objects.filter(is_active=True).count(),
+                'states': State.objects.filter(is_active=True).count(),
+                'cities': City.objects.filter(is_active=True).count(),
+                'status': 'populated' if Country.objects.exists() else 'empty',
+            }
+        except Exception as e:
+            return {'error': str(e), 'status': 'unavailable'}
+
     def get_all_metrics(self) -> Dict[str, Any]:
         """Get all system metrics in one call."""
-        return {
+        metrics = {
             'cpu': self.get_cpu_metrics(),
             'memory': self.get_memory_metrics(),
             'disk': self.get_disk_metrics(),
@@ -159,6 +173,12 @@ class SystemMonitor(BaseCfgModule):
             'system': self.get_system_info(),
             'timestamp': timezone.now().isoformat(),
         }
+
+        # Add geo stats if geo app is enabled
+        if self.config and hasattr(self.config, 'geo') and self.config.geo and self.config.geo.enabled:
+            metrics['geo'] = self.get_geo_statistics()
+
+        return metrics
 
     def health_check(self) -> Dict[str, Any]:
         """Perform comprehensive health check."""

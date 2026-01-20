@@ -137,13 +137,13 @@ class DatabaseSettingsGenerator:
         # Determine engine
         engine = db_config.engine or ""
 
-        # Special settings for PostgreSQL
-        if 'postgresql' in engine.lower():
+        # Special settings for PostgreSQL / PostGIS
+        if 'postgresql' in engine.lower() or 'postgis' in engine.lower():
             # Get main database name
             db_name = db_config.name
 
             # If connection string - extract database name
-            if db_name.startswith('postgresql://') or db_name.startswith('postgres://'):
+            if any(db_name.startswith(scheme) for scheme in ['postgresql://', 'postgres://', 'postgis://']):
                 # Extract database name from URL (last part after /)
                 try:
                     db_name = db_name.split('/')[-1].split('?')[0]

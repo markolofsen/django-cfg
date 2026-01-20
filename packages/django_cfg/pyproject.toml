@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.5.192"
+version = "1.5.194"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -130,6 +130,9 @@ dependencies = [
     
     # Logging
     "python-json-logger>=3.3.0,<4.0",
+
+    # Geographic
+    "geopy>=2.4.0,<3.0",
     
     # Type Checking
     "mypy>=1.18.2,<2.0.0",
@@ -187,6 +190,15 @@ rq = [
 
 tasks = [
     "redis>=5.0",
+]
+
+geo = [
+    # Geo app dependencies
+    # - geopy already included in main dependencies for distance calculations
+    # - PostGIS support: enabled via Django's GIS backend (no extra Python deps)
+    #   Configure: DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
+    # - Requires: PostgreSQL with PostGIS extension installed
+    # - Django's contrib.gis is included with Django
 ]
 
 docs = [

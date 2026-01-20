@@ -238,6 +238,21 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_geo_enabled(self) -> bool:
+        """
+        Check if django-cfg Geo is enabled.
+
+        Returns:
+            True if Geo is enabled, False otherwise
+        """
+        geo_config = self._get_config_key('geo', None)
+
+        # Check if geo config exists and is enabled
+        if geo_config and hasattr(geo_config, 'enabled'):
+            return geo_config.enabled
+
+        return False
+
     def is_totp_enabled(self) -> bool:
         """
         Check if django-cfg TOTP/2FA is enabled.

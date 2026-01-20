@@ -24,6 +24,7 @@ from ...models import (
     DjangoRQConfig,
     DRFConfig,
     EmailConfig,
+    GeoConfig,
     GitHubOAuthConfig,
     LimitsConfig,
     SpectacularConfig,
@@ -358,6 +359,15 @@ class DjangoConfig(BaseModel):
     currency: Optional[CurrencyConfig] = Field(
         default=None,
         description="Currency conversion and exchange rates",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          GEOGRAPHIC DATA                                  ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    geo: Optional[GeoConfig] = Field(
+        default=None,
+        description="Geographic data (countries, states, cities)",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

@@ -299,3 +299,39 @@ WidgetRegistry.register(
         default_open=cfg.get('default_open', False) if cfg else False,
     )
 )
+
+
+# Geo widgets
+def _render_country_field(obj, field, cfg):
+    """Render CountryField with flag emoji."""
+    from .location_widget import CountrySelectWidget
+
+    code = getattr(obj, field, None)
+    widget = CountrySelectWidget()
+    return widget.format_readonly(code)
+
+
+def _render_city_field(obj, field, cfg):
+    """Render CityField with location display."""
+    from .location_widget import CitySelectWidget
+
+    city_id = getattr(obj, field, None)
+    widget = CitySelectWidget()
+    return widget.format_readonly(city_id)
+
+
+def _render_location_field(obj, field, cfg):
+    """Render LocationField with full location hierarchy."""
+    from .location_widget import CitySelectWidget
+
+    city_id = getattr(obj, field, None)
+    show_flag = cfg.get('show_flag', True) if cfg else True
+    show_coordinates = cfg.get('show_coordinates', False) if cfg else False
+
+    widget = CitySelectWidget()
+    return widget.format_readonly(city_id)
+
+
+WidgetRegistry.register("country", _render_country_field)
+WidgetRegistry.register("city", _render_city_field)
+WidgetRegistry.register("location", _render_location_field)

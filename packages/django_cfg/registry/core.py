@@ -62,6 +62,9 @@ CORE_REGISTRY = {
     # Currency models
     "CurrencyConfig": ("django_cfg.models.django.currency", "CurrencyConfig"),
 
+    # Geo models
+    "GeoConfig": ("django_cfg.models.django.geo", "GeoConfig"),
+
     # Payment system models (BaseCfgAutoModule)
     "PaymentsConfig": ("django_cfg.models.payments.config", "PaymentsConfig"),
     "NowPaymentsConfig": ("django_cfg.models.payments.config", "NowPaymentsConfig"),

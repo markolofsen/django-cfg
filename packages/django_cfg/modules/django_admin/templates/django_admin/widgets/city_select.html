@@ -1,0 +1,68 @@
+{% comment %}
+City select widget template.
+
+Uses Select2 with AJAX autocomplete for city search.
+Supports country-based filtering when country_field is specified.
+Compatible with Unfold admin styling.
+{% endcomment %}
+
+<div class="city-select-widget">
+    <select name="{{ widget.name }}"
+            id="{{ widget.attrs.id }}"
+            {% if widget.attrs.class %}class="{{ widget.attrs.class }}"{% endif %}
+            {% if widget.attrs.data-theme %}data-theme="{{ widget.attrs.data-theme }}"{% endif %}
+            {% if widget.search_url %}data-ajax-url="{{ widget.search_url }}"{% endif %}
+            {% if widget.country_field %}data-country-field="{{ widget.country_field }}"{% endif %}
+            data-placeholder="{{ widget.attrs.data-placeholder|default:'Search city...' }}"
+            data-minimum-input-length="{{ widget.attrs.data-minimum-input-length|default:'2' }}"
+            {% if widget.attrs.data-allow-clear %}data-allow-clear="{{ widget.attrs.data-allow-clear }}"{% endif %}
+            {% if widget.required %}required{% endif %}>
+        {% if widget.value %}
+            <option value="{{ widget.value }}" selected>{{ widget.initial_display|default:widget.value }}</option>
+        {% endif %}
+    </select>
+</div>
+
+{% if widget.country_field %}
+<script>
+(function() {
+    // City-Country cascade filtering
+    const citySelect = document.getElementById('{{ widget.attrs.id }}');
+    const countryFieldName = '{{ widget.country_field }}';
+
+    // Find country field by name pattern (id_country, id_country_id, etc.)
+    const countrySelect = document.getElementById('id_' + countryFieldName) ||
+                          document.querySelector('[name="' + countryFieldName + '"]');
+
+    if (citySelect && countrySelect) {
+        // Update city search params when country changes
+        countrySelect.addEventListener('change', function() {
+            const countryCode = this.value;
+
+            // Update AJAX URL with country filter
+            if (citySelect.dataset.ajaxUrl) {
+                const baseUrl = citySelect.dataset.ajaxUrl.split('?')[0];
+                if (countryCode) {
+                    citySelect.dataset.ajaxUrl = baseUrl + '?country=' + countryCode;
+                } else {
+                    citySelect.dataset.ajaxUrl = baseUrl;
+                }
+            }
+
+            // Clear current selection if country changed
+            if (window.$ && $(citySelect).data('select2')) {
+                $(citySelect).val(null).trigger('change');
+            }
+        });
+
+        // Set initial country filter
+        if (countrySelect.value) {
+            const baseUrl = citySelect.dataset.ajaxUrl;
+            if (baseUrl) {
+                citySelect.dataset.ajaxUrl = baseUrl.split('?')[0] + '?country=' + countrySelect.value;
+            }
+        }
+    }
+})();
+</script>
+{% endif %}

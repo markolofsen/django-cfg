@@ -17,6 +17,7 @@ from .status_badges_display import StatusBadgesDisplay
 from .text_display import TextDisplay
 from .stacked_display import StackedDisplay
 from .video_display import VideoDisplay
+from .geo_displays import CityDisplay, CoordinatesDisplay, CountryDisplay, LocationDisplay
 
 __all__ = [
     "UserDisplay",
@@ -35,4 +36,9 @@ __all__ = [
     "StackedDisplay",
     "TextDisplay",
     "VideoDisplay",
+    # Geo displays
+    "CountryDisplay",
+    "CityDisplay",
+    "LocationDisplay",
+    "CoordinatesDisplay",
 ]

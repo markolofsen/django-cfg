@@ -281,5 +281,27 @@ class ViewMixin:
                 label=db_field.verbose_name if hasattr(db_field, 'verbose_name') else db_field.name.replace('_', ' ').title()
             )
 
+        # Handle LocationField with custom widget
+        if field_class_name == 'LocationField':
+            try:
+                from django_cfg.apps.tools.geo.widgets.location_widget import LocationFieldWidget
+
+                # Get initial values from existing object if editing
+                widget_attrs = {}
+                obj = getattr(request, '_editing_obj', None)
+                if obj:
+                    widget_attrs['initial_address'] = getattr(obj, 'address', '') or ''
+                    widget_attrs['initial_latitude'] = getattr(obj, 'latitude', '') or ''
+                    widget_attrs['initial_longitude'] = getattr(obj, 'longitude', '') or ''
+
+                kwargs['widget'] = LocationFieldWidget(
+                    attrs=widget_attrs,
+                    show_map=True,
+                    map_height="160px",
+                )
+                logger.debug(f"Auto-applied LocationFieldWidget to field '{db_field.name}'")
+            except ImportError:
+                logger.warning("LocationFieldWidget not available, using default widget")
+
         # Fall back to default Django behavior
         return super().formfield_for_dbfield(db_field, request, **kwargs)

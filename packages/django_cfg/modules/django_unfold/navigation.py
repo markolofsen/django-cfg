@@ -272,6 +272,29 @@ class NavigationManager(BaseCfgModule):
                 )
             )
 
+        # Geo (if enabled)
+        if self.is_geo_enabled():
+            geo_items = []
+            countries_item = self._create_nav_item("Countries", Icons.PUBLIC, "admin:cfg_geo_country_changelist")
+            if countries_item:
+                geo_items.append(countries_item)
+            states_item = self._create_nav_item("States", Icons.MAP, "admin:cfg_geo_state_changelist")
+            if states_item:
+                geo_items.append(states_item)
+            cities_item = self._create_nav_item("Cities", Icons.LOCATION_CITY, "admin:cfg_geo_city_changelist")
+            if cities_item:
+                geo_items.append(cities_item)
+
+            if geo_items:
+                navigation_sections.append(
+                    NavigationSection(
+                        title="Geo",
+                        separator=True,
+                        collapsible=True,
+                        items=geo_items
+                    )
+                )
+
         # Add Accounts section
         accounts_items = [
             NavigationItem(title="Users", icon=Icons.PEOPLE, link=str(reverse_lazy("admin:django_cfg_accounts_customuser_changelist"))),

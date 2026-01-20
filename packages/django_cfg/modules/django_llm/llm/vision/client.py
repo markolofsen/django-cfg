@@ -10,14 +10,29 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Literal, Optional, Type, TypeVar, Union
 
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
 
 from ....base import BaseCfgModule
 from .image_encoder import ImageEncoder
-from .models import VisionRequest, VisionResponse, ImageAnalysisResult
+from .image_fetcher import ImageFetcher, ImageFetchError
+from .models import (
+    VisionRequest,
+    VisionResponse,
+    ImageAnalysisResult,
+    VisionAnalyzeResponse,
+    OCRResponse,
+)
+from .presets import (
+    ModelQuality,
+    OCRMode,
+    select_vision_model,
+    select_ocr_model,
+    get_ocr_prompt,
+)
+from .tokens import estimate_image_tokens
 from .vision_models import VisionModelsRegistry
 
 logger = logging.getLogger(__name__)
@@ -69,7 +84,9 @@ class VisionClient(BaseCfgModule):
         self.default_temperature = temperature
 
         self._client: Optional[OpenAI] = None
+        self._async_client: Optional[AsyncOpenAI] = None
         self.image_encoder = ImageEncoder()
+        self.image_fetcher = ImageFetcher()
 
         # Models registry
         self.models_registry = VisionModelsRegistry(
@@ -83,8 +100,12 @@ class VisionClient(BaseCfgModule):
             logger.warning("VisionClient: No API key provided or found in config")
 
     def _init_client(self):
-        """Initialize OpenAI client for OpenRouter."""
+        """Initialize OpenAI clients for OpenRouter."""
         self._client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=self.api_key,
+        )
+        self._async_client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=self.api_key,
         )
@@ -92,10 +113,17 @@ class VisionClient(BaseCfgModule):
 
     @property
     def client(self) -> OpenAI:
-        """Get OpenAI client, raising error if not initialized."""
+        """Get sync OpenAI client, raising error if not initialized."""
         if self._client is None:
             raise RuntimeError("VisionClient not initialized. Provide API key.")
         return self._client
+
+    @property
+    def async_client(self) -> AsyncOpenAI:
+        """Get async OpenAI client, raising error if not initialized."""
+        if self._async_client is None:
+            raise RuntimeError("VisionClient not initialized. Provide API key.")
+        return self._async_client
 
     @property
     def default_model(self) -> str:
@@ -192,6 +220,90 @@ class VisionClient(BaseCfgModule):
 
         except Exception as e:
             logger.error(f"Vision analysis failed: {e}")
+            raise
+
+    async def aanalyze(
+        self,
+        image_source: str,
+        query: str,
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        system_prompt: Optional[str] = None,
+    ) -> VisionResponse:
+        """
+        Async version of analyze().
+
+        Args:
+            image_source: Image URL, base64 data URL, or file path
+            query: Question/prompt about the image
+            model: Vision model to use
+            max_tokens: Maximum tokens in response
+            temperature: Generation temperature
+            system_prompt: Optional system prompt
+
+        Returns:
+            VisionResponse with analysis result
+        """
+        model = model or self.default_model
+        max_tokens = max_tokens or self.default_max_tokens
+        temperature = temperature or self.default_temperature
+
+        # Prepare image URL
+        image_url = self.image_encoder.prepare_image_url(image_source)
+
+        # Build messages
+        messages: List[Dict[str, Any]] = []
+
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": image_url}},
+                {"type": "text", "text": query},
+            ],
+        })
+
+        # Make API call
+        start_time = time.time()
+
+        try:
+            response = await self.async_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            processing_time = (time.time() - start_time) * 1000
+
+            # Extract response data
+            content = response.choices[0].message.content or ""
+            usage = response.usage
+
+            tokens_input = usage.prompt_tokens if usage else 0
+            tokens_output = usage.completion_tokens if usage else 0
+
+            # Calculate cost from registry pricing
+            cost_usd = self._calculate_cost(model, tokens_input, tokens_output)
+
+            return VisionResponse(
+                content=content,
+                model=model,
+                query=query,
+                image_url=image_source[:100] + "..." if len(image_source) > 100 else image_source,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                cost_usd=cost_usd,
+                processing_time_ms=processing_time,
+                cached=False,
+                raw_response=response.model_dump() if hasattr(response, "model_dump") else None,
+            )
+
+        except Exception as e:
+            logger.error(f"Async vision analysis failed: {e}")
             raise
 
     def describe(
@@ -411,6 +523,384 @@ No preamble. No markdown. Just JSON."""
             return loop.run_until_complete(self.fetch_models(force_refresh=force_refresh))
         finally:
             loop.close()
+
+    # =========================================================================
+    # Enhanced Vision API with Model Quality Presets
+    # =========================================================================
+
+    def analyze_with_quality(
+        self,
+        *,
+        image: Optional[str] = None,
+        image_url: Optional[str] = None,
+        prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        model_quality: Optional[ModelQuality] = None,
+        ocr_mode: OCRMode = "base",
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> VisionAnalyzeResponse:
+        """
+        Analyze image with model quality presets.
+
+        Args:
+            image: Base64 encoded image data
+            image_url: URL of image to analyze
+            prompt: Analysis prompt/question (default: describe + OCR)
+            model: Explicit model ID (overrides model_quality)
+            model_quality: Quality preset (fast/balanced/best)
+            ocr_mode: OCR extraction mode (tiny/small/base/gundam)
+            max_tokens: Maximum tokens in response
+            temperature: Generation temperature
+
+        Returns:
+            VisionAnalyzeResponse with description, extracted_text, cost, tokens
+
+        Example:
+            result = client.analyze_with_quality(
+                image_url="https://example.com/image.jpg",
+                model_quality="balanced",
+                ocr_mode="base",
+            )
+            print(result.description)
+            print(result.extracted_text)
+            print(f"Cost: ${result.cost_usd}")
+        """
+        # Validate input
+        if not image and not image_url:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Select model based on quality preset
+        selected_model = select_vision_model(
+            model=model,
+            model_quality=model_quality,
+            models_registry=self.models_registry,
+        )
+
+        # Prepare image source (we know one of them is set due to validation above)
+        image_source: str
+        if image:
+            # Build data URL from base64
+            image_source = self.image_fetcher.build_data_url(image)
+        elif image_url:
+            image_source = image_url
+        else:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Build prompt with OCR mode
+        ocr_prompt = get_ocr_prompt(ocr_mode)
+
+        if prompt:
+            full_prompt = f"""{prompt}
+
+Additionally, {ocr_prompt}
+
+Respond with JSON:
+{{
+  "description": "your analysis based on the prompt",
+  "extracted_text": "all text found in image",
+  "language": "detected language code (en/ru/ko/etc) or null"
+}}"""
+        else:
+            full_prompt = f"""Analyze this image.
+
+1. Provide a brief description of what you see
+2. {ocr_prompt}
+3. Detect the language of any text
+
+Respond with JSON only:
+{{
+  "description": "brief description of image content",
+  "extracted_text": "all text found in image",
+  "language": "detected language code (en/ru/ko/etc) or null"
+}}"""
+
+        # Make request
+        response = self.analyze(
+            image_source=image_source,
+            query=full_prompt,
+            model=selected_model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        # Parse JSON response
+        import re
+        content = response.content.strip()
+
+        # Extract JSON from markdown if present
+        json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+        if json_match:
+            content = json_match.group(1).strip()
+
+        try:
+            data = json.loads(content)
+            return VisionAnalyzeResponse(
+                description=data.get("description", "") or "",
+                extracted_text=data.get("extracted_text", "") or "",
+                language=data.get("language"),
+                model=selected_model,
+                cost_usd=response.cost_usd,
+                tokens_input=response.tokens_input,
+                tokens_output=response.tokens_output,
+            )
+        except json.JSONDecodeError:
+            # Fallback: use raw content as description
+            return VisionAnalyzeResponse(
+                description=content,
+                extracted_text="",
+                language=None,
+                model=selected_model,
+                cost_usd=response.cost_usd,
+                tokens_input=response.tokens_input,
+                tokens_output=response.tokens_output,
+            )
+
+    def ocr(
+        self,
+        *,
+        image: Optional[str] = None,
+        image_url: Optional[str] = None,
+        model: Optional[str] = None,
+        model_quality: Optional[ModelQuality] = None,
+        mode: OCRMode = "base",
+        max_tokens: Optional[int] = None,
+    ) -> OCRResponse:
+        """
+        Extract text from image using OCR.
+
+        Args:
+            image: Base64 encoded image data
+            image_url: URL of image to process
+            model: Explicit model ID (overrides model_quality)
+            model_quality: Quality preset (fast/balanced/best)
+            mode: OCR mode (tiny/small/base/gundam)
+            max_tokens: Maximum tokens in response
+
+        Returns:
+            OCRResponse with extracted text and cost info
+
+        Example:
+            result = client.ocr(
+                image_url="https://example.com/document.png",
+                mode="gundam",
+                model_quality="best",
+            )
+            print(result.text)
+            print(f"Cost: ${result.cost_usd}")
+        """
+        # Validate input
+        if not image and not image_url:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Select model
+        selected_model = select_ocr_model(
+            model=model,
+            model_quality=model_quality,
+            models_registry=self.models_registry,
+        )
+
+        # Prepare image source (we know one of them is set due to validation above)
+        image_source: str
+        if image:
+            image_source = self.image_fetcher.build_data_url(image)
+        elif image_url:
+            image_source = image_url
+        else:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Get OCR prompt for mode
+        ocr_prompt = get_ocr_prompt(mode)
+
+        # Make request
+        response = self.analyze(
+            image_source=image_source,
+            query=ocr_prompt,
+            model=selected_model,
+            max_tokens=max_tokens,
+        )
+
+        return OCRResponse(
+            text=response.content.strip(),
+            model=selected_model,
+            cost_usd=response.cost_usd,
+            tokens_input=response.tokens_input,
+            tokens_output=response.tokens_output,
+        )
+
+    async def aanalyze_with_quality(
+        self,
+        *,
+        image: Optional[str] = None,
+        image_url: Optional[str] = None,
+        prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        model_quality: Optional[ModelQuality] = None,
+        ocr_mode: OCRMode = "base",
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> VisionAnalyzeResponse:
+        """Async version of analyze_with_quality()."""
+        # Validate input
+        if not image and not image_url:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Select model
+        selected_model = select_vision_model(
+            model=model,
+            model_quality=model_quality,
+            models_registry=self.models_registry,
+        )
+
+        # Prepare image source
+        image_source: str
+        if image:
+            image_source = self.image_fetcher.build_data_url(image)
+        elif image_url:
+            image_source = image_url
+        else:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Build prompt
+        ocr_prompt = get_ocr_prompt(ocr_mode)
+        if prompt:
+            full_prompt = f"""{prompt}
+
+Additionally, {ocr_prompt}
+
+Respond with JSON:
+{{
+  "description": "your analysis based on the prompt",
+  "extracted_text": "all text found in image",
+  "language": "detected language code (en/ru/ko/etc) or null"
+}}"""
+        else:
+            full_prompt = f"""Analyze this image.
+
+1. Provide a brief description of what you see
+2. {ocr_prompt}
+3. Detect the language of any text
+
+Respond with JSON only:
+{{
+  "description": "brief description of image content",
+  "extracted_text": "all text found in image",
+  "language": "detected language code (en/ru/ko/etc) or null"
+}}"""
+
+        # Make async request
+        response = await self.aanalyze(
+            image_source=image_source,
+            query=full_prompt,
+            model=selected_model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        # Parse JSON response
+        import re
+        content = response.content.strip()
+        json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+        if json_match:
+            content = json_match.group(1).strip()
+
+        try:
+            data = json.loads(content)
+            return VisionAnalyzeResponse(
+                description=data.get("description", "") or "",
+                extracted_text=data.get("extracted_text", "") or "",
+                language=data.get("language"),
+                model=selected_model,
+                cost_usd=response.cost_usd,
+                tokens_input=response.tokens_input,
+                tokens_output=response.tokens_output,
+            )
+        except json.JSONDecodeError:
+            return VisionAnalyzeResponse(
+                description=content,
+                extracted_text="",
+                language=None,
+                model=selected_model,
+                cost_usd=response.cost_usd,
+                tokens_input=response.tokens_input,
+                tokens_output=response.tokens_output,
+            )
+
+    async def aocr(
+        self,
+        *,
+        image: Optional[str] = None,
+        image_url: Optional[str] = None,
+        model: Optional[str] = None,
+        model_quality: Optional[ModelQuality] = None,
+        mode: OCRMode = "base",
+        max_tokens: Optional[int] = None,
+    ) -> OCRResponse:
+        """Async version of ocr()."""
+        # Validate input
+        if not image and not image_url:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Select model
+        selected_model = select_ocr_model(
+            model=model,
+            model_quality=model_quality,
+            models_registry=self.models_registry,
+        )
+
+        # Prepare image source
+        image_source: str
+        if image:
+            image_source = self.image_fetcher.build_data_url(image)
+        elif image_url:
+            image_source = image_url
+        else:
+            raise ValueError("Either 'image' or 'image_url' must be provided")
+
+        # Get OCR prompt
+        ocr_prompt = get_ocr_prompt(mode)
+
+        # Make async request
+        response = await self.aanalyze(
+            image_source=image_source,
+            query=ocr_prompt,
+            model=selected_model,
+            max_tokens=max_tokens,
+        )
+
+        return OCRResponse(
+            text=response.content.strip(),
+            model=selected_model,
+            cost_usd=response.cost_usd,
+            tokens_input=response.tokens_input,
+            tokens_output=response.tokens_output,
+        )
+
+    def estimate_tokens(
+        self,
+        image_source: str,
+        detail: Literal["low", "high", "auto"] = "high",
+    ) -> int:
+        """
+        Estimate tokens for an image.
+
+        Args:
+            image_source: Image URL, data URL, or file path
+            detail: Detail mode (low/high/auto)
+
+        Returns:
+            Estimated token count
+        """
+        try:
+            info = self.image_encoder.get_image_info(image_source)
+            return estimate_image_tokens(
+                width=info["width"],
+                height=info["height"],
+                detail=detail,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to estimate tokens: {e}, using default")
+            return estimate_image_tokens(detail=detail)
 
     # =========================================================================
     # Django Model Integration

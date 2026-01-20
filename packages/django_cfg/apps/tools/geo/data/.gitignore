@@ -1,0 +1,5 @@
+# Ignore large JSON data files (downloaded on demand from GitHub)
+*.json
+
+# Keep these files
+!.gitignore

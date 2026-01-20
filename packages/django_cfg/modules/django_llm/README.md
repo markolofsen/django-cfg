@@ -1,16 +1,19 @@
-# 🧠 Django LLM Module
+# Django LLM Module
 
 ## Overview
 
-**Django LLM** is a modular, type-safe LLM integration system for Django applications built with `django-cfg`. It provides multi-provider support, intelligent caching, cost tracking, and seamless integration with Django models.
+**Django LLM** is a modular, type-safe LLM integration system for Django applications built with `django-cfg`. It provides multi-provider support, intelligent caching, cost tracking, vision/OCR capabilities, and image generation.
 
 **Key Features:**
-- 🔄 Multi-provider support (OpenAI, OpenRouter)
-- 💰 Automatic cost calculation and tracking
-- 🚀 Intelligent caching with TTL
-- 🔧 Type-safe configuration with Pydantic 2
-- 📊 Token counting and usage analytics
-- 🎯 JSON extraction utilities
+- Multi-provider support (OpenAI, OpenRouter)
+- Vision analysis with model quality presets
+- OCR with multiple extraction modes
+- Image generation (DALL-E, FLUX, etc.)
+- Automatic cost calculation and tracking
+- Intelligent caching with TTL
+- Type-safe configuration with Pydantic 2
+- Token counting and usage analytics
+- JSON extraction utilities
 
 ---
 
@@ -21,13 +24,24 @@
 ```
 django_llm/
 ├── llm/
-│   ├── client.py          # Main LLMClient class
-│   ├── cache.py           # LLM response caching
-│   ├── models_cache.py    # Model pricing cache
-│   ├── costs.py           # Cost calculation utilities
-│   ├── tokenizer.py       # Token counting utilities
-│   └── extractor.py       # JSON extraction utilities
-└── __init__.py            # Public API exports
+│   ├── client.py              # Main LLMClient class
+│   ├── cache.py               # LLM response caching
+│   ├── models_cache.py        # Model pricing cache
+│   ├── costs.py               # Cost calculation utilities
+│   ├── tokenizer.py           # Token counting utilities
+│   ├── extractor.py           # JSON extraction utilities
+│   ├── config.py              # VisionConfig, ImageGenConfig
+│   ├── vision/
+│   │   ├── client.py          # VisionClient for image analysis
+│   │   ├── models.py          # Request/Response models
+│   │   ├── presets.py         # Model quality & OCR mode presets
+│   │   ├── tokens.py          # Image token estimation
+│   │   ├── image_fetcher.py   # URL fetching with validation
+│   │   └── cache.py           # Image caching with TTL
+│   └── image_gen/
+│       ├── client.py          # ImageGenClient
+│       └── models.py          # ImageGenRequest/Response
+└── __init__.py                # Public API exports
 ```
 
 ### Architecture
@@ -39,49 +53,292 @@ graph TD
     A --> D[LLMCache]
     A --> E[ModelsCache]
     A --> F[CostCalculator]
-    
-    B --> G[tiktoken]
-    D --> H[File Cache]
-    E --> I[OpenRouter API]
-    F --> J[Cost Database]
+
+    G[VisionClient] --> H[ImageFetcher]
+    G --> I[ImageCache]
+    G --> J[Presets]
+    G --> K[TokenEstimator]
+
+    L[ImageGenClient] --> M[ImageCache]
+    L --> N[Presets]
+
+    B --> O[tiktoken]
+    D --> P[File Cache]
+    E --> Q[OpenRouter API]
 ```
 
 ---
 
-## APIs
+## Vision & OCR
 
-### LLMClient
+### VisionClient
 
-**Primary interface for LLM operations**
+**Image analysis and OCR with model quality presets**
+
+```python
+from django_cfg.modules.django_llm.llm.vision import VisionClient
+
+# Initialize (API key auto-detected from django config)
+client = VisionClient()
+
+# Simple image analysis
+response = client.analyze(
+    image_url="https://example.com/image.jpg",
+    prompt="Describe this image"
+)
+print(response.content)
+print(f"Cost: ${response.cost_usd:.4f}")
+
+# Analysis with quality preset
+response = client.analyze_with_quality(
+    image_url="https://example.com/image.jpg",
+    prompt="What objects are in this image?",
+    model_quality="balanced"  # fast, balanced, best
+)
+print(response.description)
+```
+
+### Model Quality Presets
+
+| Preset | Model | Use Case |
+|--------|-------|----------|
+| `fast` | Auto-select cheapest | Quick checks, high volume |
+| `balanced` | llama-3.2-11b-vision | General purpose |
+| `best` | gpt-4o | Complex analysis, accuracy critical |
+
+### OCR Methods
+
+```python
+# Simple text extraction
+text = client.extract_text(image_url="https://example.com/document.jpg")
+
+# OCR with mode selection
+response = client.ocr(
+    image_url="https://example.com/receipt.jpg",
+    mode="base"  # tiny, small, base, gundam
+)
+print(response.text)
+
+# Async OCR
+response = await client.aocr(
+    image="base64_encoded_image_data",
+    mode="gundam"  # Most detailed extraction
+)
+```
+
+### OCR Modes
+
+| Mode | Description |
+|------|-------------|
+| `tiny` | Minimal prompt, fastest |
+| `small` | Basic OCR prompt |
+| `base` | Standard detailed extraction |
+| `gundam` | Maximum detail, preserves formatting |
+
+### Async Methods
+
+```python
+# Async analysis
+response = await client.aanalyze(
+    image_url="https://example.com/image.jpg",
+    prompt="Analyze this"
+)
+
+# Async with quality preset
+response = await client.aanalyze_with_quality(
+    image="base64_data",
+    model_quality="best"
+)
+
+# Async OCR
+response = await client.aocr(image_url="https://example.com/doc.jpg")
+```
+
+### Token Estimation
+
+```python
+from django_cfg.modules.django_llm.llm.vision import estimate_image_tokens
+
+# Estimate tokens for image
+tokens = estimate_image_tokens(width=1024, height=1024, detail="high")
+# Returns: 765 (85 base + 170 * 4 tiles)
+
+# Auto-detect optimal detail mode
+from django_cfg.modules.django_llm.llm.vision import get_optimal_detail_mode
+mode = get_optimal_detail_mode(width=512, height=512)  # Returns "low"
+mode = get_optimal_detail_mode(width=2048, height=2048)  # Returns "high"
+```
+
+---
+
+## Image Generation
+
+### ImageGenClient
+
+```python
+from django_cfg.modules.django_llm.llm.image_gen import ImageGenClient
+
+# Initialize (API key auto-detected)
+client = ImageGenClient()
+
+# Generate image
+response = client.generate(
+    prompt="A sunset over mountains, photorealistic",
+    model_quality="best",  # fast, balanced, best
+    size="1024x1024",
+    quality="hd",
+    style="vivid"
+)
+print(response.first_url)
+print(f"Cost: ${response.cost_usd:.4f}")
+
+# Quick generation (returns URL directly)
+url = client.generate_quick("A cute cat wearing a hat")
+
+# Async generation
+response = await client.agenerate(
+    prompt="Abstract art",
+    size="1792x1024"
+)
+```
+
+### Image Generation Presets
+
+| Preset | Model | Best For |
+|--------|-------|----------|
+| `fast` | Auto-select | Quick prototypes |
+| `balanced` | DALL-E 3 | General use |
+| `best` | FLUX Pro | Highest quality |
+
+### Supported Sizes
+
+- `256x256`, `512x512`, `1024x1024`
+- `1792x1024`, `1024x1792` (wide/tall)
+
+---
+
+## Image Fetching
+
+### ImageFetcher
+
+```python
+from django_cfg.modules.django_llm.llm.vision import ImageFetcher
+
+fetcher = ImageFetcher(
+    timeout=30.0,
+    max_size_mb=10,
+    allowed_domains=["example.com", "cdn.example.com"]  # Optional whitelist
+)
+
+# Fetch as bytes
+data, content_type = await fetcher.fetch("https://example.com/image.jpg")
+
+# Fetch as base64 data URL
+data_url = await fetcher.fetch_as_base64_url("https://example.com/image.jpg")
+# Returns: "data:image/jpeg;base64,/9j/4AAQ..."
+
+# Sync versions
+data, content_type = fetcher.fetch_sync("https://example.com/image.jpg")
+data_url = fetcher.fetch_as_base64_url_sync("https://example.com/image.jpg")
+
+# Format detection from base64
+content_type = ImageFetcher.detect_format_from_base64("/9j/4AAQ...")  # "image/jpeg"
+content_type = ImageFetcher.detect_format_from_base64("iVBORw0KGgo...")  # "image/png"
+```
+
+---
+
+## Caching
+
+### Image Cache
+
+```python
+from django_cfg.modules.django_llm.llm.vision import ImageCache, get_image_cache
+
+# Get global cache instance
+cache = get_image_cache(cache_dir=Path("cache/images"), ttl_hours=168)
+
+# Store/retrieve images
+cache.set_image(url, image_bytes, "image/jpeg")
+result = cache.get_image(url)  # Returns (bytes, content_type) or None
+
+# Store/retrieve responses
+cache.set_response(cache_key, {"text": "extracted", "cost": 0.001})
+result = cache.get_response(cache_key)
+
+# Cache management
+stats = cache.get_stats()  # {"enabled": True, "image_count": 10, ...}
+count = cache.clear()  # Returns number of files cleared
+count = cache.cleanup_expired()  # Remove expired entries
+```
+
+---
+
+## Configuration
+
+### VisionConfig
+
+```python
+from django_cfg.modules.django_llm.llm.config import VisionConfig
+
+config = VisionConfig(
+    enabled=True,
+    default_model="openai/gpt-4o",
+    default_model_quality="balanced",
+    default_ocr_mode="base",
+    fetch_enabled=True,
+    fetch_timeout=30.0,
+    max_image_size_mb=10,
+    allowed_domains=None,  # None = all allowed
+    cache_enabled=True,
+    cache_ttl_hours=168,
+)
+```
+
+### ImageGenConfig
+
+```python
+from django_cfg.modules.django_llm.llm.config import ImageGenConfig
+
+config = ImageGenConfig(
+    enabled=True,
+    default_model="openai/dall-e-3",
+    default_size="1024x1024",
+    default_quality="standard",
+    default_style="vivid",
+    cache_enabled=True,
+    cache_ttl_hours=168,
+    cache_max_size_mb=500,
+)
+```
+
+---
+
+## LLM Client (Text)
+
+### Basic Usage
 
 ```python
 from django_cfg.modules.django_llm.llm.client import LLMClient
 
-# Initialize with multiple API keys
 client = LLMClient(
     apikey_openrouter="sk-or-v1-...",
     apikey_openai="sk-proj-...",
     cache_dir=Path("cache/llm"),
-    cache_ttl=3600,
-    max_cache_size=1000
+    cache_ttl=3600
 )
 
 # Chat completion
 response = client.chat_completion(
-    messages=[
-        {"role": "user", "content": "Explain quantum computing"}
-    ],
+    messages=[{"role": "user", "content": "Explain quantum computing"}],
     model="openai/gpt-4o-mini"
 )
 
 # Generate embeddings
 embedding = client.generate_embedding(
-    text="Sample text for embedding",
+    text="Sample text",
     model="text-embedding-ada-002"
 )
-
-# Get client info
-info = client.get_client_info()
 ```
 
 ### Cost Calculation
@@ -89,19 +346,11 @@ info = client.get_client_info()
 ```python
 from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
 
-# Calculate cost for chat completion
 cost = calculate_chat_cost(
     model="openai/gpt-4o-mini",
     input_tokens=100,
     output_tokens=50,
     models_cache=models_cache
-)
-
-# Estimate cost before API call
-estimated = client.estimate_cost(
-    model="openai/gpt-4o-mini",
-    input_tokens=100,
-    output_tokens=50
 )
 ```
 
@@ -111,12 +360,7 @@ estimated = client.estimate_cost(
 from django_cfg.modules.django_llm.llm.tokenizer import Tokenizer
 
 tokenizer = Tokenizer()
-
-# Count tokens in text
 count = tokenizer.count_tokens("Hello world", "gpt-4o-mini")
-
-# Count tokens in messages
-messages = [{"role": "user", "content": "Hello"}]
 count = tokenizer.count_messages_tokens(messages, "gpt-4o-mini")
 ```
 
@@ -126,263 +370,144 @@ count = tokenizer.count_messages_tokens(messages, "gpt-4o-mini")
 from django_cfg.modules.django_llm.llm.extractor import JSONExtractor
 
 extractor = JSONExtractor()
-
-# Extract JSON from LLM response
-response_text = "Here's the data: {'name': 'John', 'age': 30}"
-json_data = extractor.extract_json_from_response(response_text)
+json_data = extractor.extract_json_from_response("Here's the data: {'name': 'John'}")
 ```
 
 ---
 
 ## Data Models
 
-### LLMClient Configuration
+### Vision Models
 
 ```python
-from typing import Optional, Dict, Any
-from pathlib import Path
+from django_cfg.modules.django_llm.llm.vision import (
+    VisionAnalyzeRequest,
+    VisionAnalyzeResponse,
+    OCRRequest,
+    OCRResponse,
+)
 
-class LLMClientConfig:
-    """LLM Client configuration"""
-    
-    def __init__(
-        self,
-        apikey_openrouter: Optional[str] = None,
-        apikey_openai: Optional[str] = None,
-        cache_dir: Optional[Path] = None,
-        cache_ttl: int = 3600,
-        max_cache_size: int = 1000,
-        models_cache_ttl: int = 86400
-    ):
-        self.apikey_openrouter = apikey_openrouter
-        self.apikey_openai = apikey_openai
-        self.cache_dir = cache_dir or Path("cache/llm")
-        self.cache_ttl = cache_ttl
-        self.max_cache_size = max_cache_size
-        self.models_cache_ttl = models_cache_ttl
+# Request with validation
+request = VisionAnalyzeRequest(
+    image_url="https://example.com/image.jpg",
+    prompt="Describe this",
+    model_quality="balanced",
+    ocr_mode="base"
+)
+
+# Response with computed properties
+response = VisionAnalyzeResponse(
+    extracted_text="Hello World",
+    description="A greeting message",
+    model="openai/gpt-4o",
+    cost_usd=0.001,
+    tokens_input=100,
+    tokens_output=50
+)
+print(response.tokens_total)  # 150
 ```
 
-### Response Models
+### Image Generation Models
 
 ```python
-from typing import Dict, Any, List, Optional
+from django_cfg.modules.django_llm.llm.image_gen import (
+    ImageGenRequest,
+    ImageGenResponse,
+    GeneratedImage,
+)
 
-class ChatResponse:
-    """Chat completion response"""
-    content: str
-    usage: Dict[str, int]
-    model: str
-    cost: Optional[float]
-    cached: bool
+request = ImageGenRequest(
+    prompt="A sunset",
+    n=2,
+    size="1024x1024",
+    quality="hd",
+    style="vivid"
+)
 
-class EmbeddingResponse:
-    """Embedding generation response"""
-    embedding: List[float]
-    usage: Dict[str, int]
-    model: str
-    cost: Optional[float]
-    cached: bool
-```
-
-### Cost Models
-
-```python
-from decimal import Decimal
-
-class ModelPricing:
-    """Model pricing information"""
-    input_cost_per_token: Decimal
-    output_cost_per_token: Decimal
-    embedding_cost_per_token: Optional[Decimal]
-    context_length: int
-    
-class UsageStats:
-    """Usage statistics"""
-    total_requests: int
-    total_tokens: int
-    total_cost: Decimal
-    cache_hits: int
-    cache_misses: int
+response = ImageGenResponse(
+    model="openai/dall-e-3",
+    prompt="A sunset",
+    images=[GeneratedImage(url="https://...")],
+    cost_usd=0.08
+)
+print(response.first_url)
+print(response.count)
 ```
 
 ---
 
 ## Flows
 
-### Chat Completion Flow
+### Vision Analysis Flow
 
 ```mermaid
 sequenceDiagram
-    participant App as Application
-    participant Client as LLMClient
-    participant Cache as LLMCache
-    participant Tokenizer as Tokenizer
-    participant Provider as LLM Provider
-    participant Cost as CostCalculator
+    participant App
+    participant VisionClient
+    participant ImageFetcher
+    participant ImageCache
+    participant OpenRouter
 
-    App->>Client: chat_completion(messages, model)
-    Client->>Cache: check_cache(messages, model)
-    
+    App->>VisionClient: analyze_with_quality(image_url, prompt)
+    VisionClient->>ImageCache: check cache
+
     alt Cache Hit
-        Cache-->>Client: cached_response
-        Client-->>App: response (cached=true)
+        ImageCache-->>VisionClient: cached response
     else Cache Miss
-        Client->>Tokenizer: count_messages_tokens(messages)
-        Tokenizer-->>Client: input_tokens
-        
-        Client->>Provider: API call
-        Provider-->>Client: response
-        
-        Client->>Tokenizer: count_tokens(response)
-        Tokenizer-->>Client: output_tokens
-        
-        Client->>Cost: calculate_cost(model, tokens)
-        Cost-->>Client: cost
-        
-        Client->>Cache: store_response(response)
-        Client-->>App: response (cached=false)
+        VisionClient->>ImageFetcher: fetch(image_url)
+        ImageFetcher-->>VisionClient: image bytes
+        VisionClient->>OpenRouter: vision API call
+        OpenRouter-->>VisionClient: response
+        VisionClient->>ImageCache: store response
     end
+
+    VisionClient-->>App: VisionAnalyzeResponse
 ```
 
-### Multi-Provider Selection
+### Image Generation Flow
 
 ```mermaid
-graph TD
-    A[LLMClient Init] --> B{Has OpenRouter Key?}
-    B -->|Yes| C[Primary: OpenRouter]
-    B -->|No| D{Has OpenAI Key?}
-    D -->|Yes| E[Primary: OpenAI]
-    D -->|No| F[Error: No API Keys]
-    
-    C --> G[Initialize OpenRouter Client]
-    E --> H[Initialize OpenAI Client]
-    
-    G --> I[Load Model Pricing]
-    H --> J[Use Default Pricing]
-    
-    I --> K[Ready for Requests]
-    J --> K
-```
+sequenceDiagram
+    participant App
+    participant ImageGenClient
+    participant OpenRouter
 
-### Cost Calculation Flow
-
-```mermaid
-graph TD
-    A[Request] --> B[Count Input Tokens]
-    B --> C[Make API Call]
-    C --> D[Count Output Tokens]
-    D --> E{Model in Cache?}
-    E -->|Yes| F[Use Cached Pricing]
-    E -->|No| G[Use Fallback Pricing]
-    F --> H[Calculate Cost]
-    G --> H
-    H --> I[Update Statistics]
-    I --> J[Return Response + Cost]
+    App->>ImageGenClient: generate(prompt, model_quality)
+    ImageGenClient->>ImageGenClient: select_model(quality)
+    ImageGenClient->>OpenRouter: images.generate()
+    OpenRouter-->>ImageGenClient: image URLs/b64
+    ImageGenClient->>ImageGenClient: calculate cost
+    ImageGenClient-->>App: ImageGenResponse
 ```
 
 ---
 
-## Usage Examples
+## API Keys
 
-### Basic Setup
-
-```python
-# In Django settings (via django-cfg)
-from django_cfg.modules.django_llm.llm.client import LLMClient
-from api.environment import env
-
-# Initialize client
-llm_client = LLMClient(
-    apikey_openrouter=env.api_keys.openrouter,
-    apikey_openai=env.api_keys.openai
-)
-```
-
-### Document Processing
+API keys are automatically detected from `django_config.api_keys`:
 
 ```python
-# In Dramatiq task
-@dramatiq.actor(queue_name="knowledge")
-def process_document_async(document_id: int):
-    document = Document.objects.get(id=document_id)
-    
-    # Initialize LLM client
-    llm_client = LLMClient(
-        apikey_openrouter=env.api_keys.openrouter,
-        apikey_openai=env.api_keys.openai
-    )
-    
-    # Generate embeddings
-    embedding_response = llm_client.generate_embedding(
-        text=document.content,
-        model="text-embedding-ada-002"
-    )
-    
-    # Store embedding
-    document.embedding = embedding_response['embedding']
-    document.embedding_cost = embedding_response.get('cost', 0)
-    document.save(update_fields=['embedding', 'embedding_cost'])
-```
+# VisionClient and ImageGenClient auto-detect keys:
+client = VisionClient()  # Uses django_config.api_keys.get_openrouter_key()
+client = ImageGenClient()  # Uses django_config.api_keys.get_openrouter_key()
 
-### Chat with Context
-
-```python
-def chat_with_context(user_query: str, context_docs: List[str]) -> str:
-    llm_client = LLMClient(
-        apikey_openrouter=env.api_keys.openrouter,
-        apikey_openai=env.api_keys.openai
-    )
-    
-    # Build context
-    context = "\n".join(context_docs)
-    
-    messages = [
-        {
-            "role": "system", 
-            "content": f"Answer based on this context:\n{context}"
-        },
-        {"role": "user", "content": user_query}
-    ]
-    
-    response = llm_client.chat_completion(
-        messages=messages,
-        model="openai/gpt-4o-mini"
-    )
-    
-    return response['content']
-```
-
-### Cost Monitoring
-
-```python
-def get_llm_usage_stats() -> Dict[str, Any]:
-    llm_client = LLMClient(
-        apikey_openrouter=env.api_keys.openrouter,
-        apikey_openai=env.api_keys.openai
-    )
-    
-    stats = llm_client.get_usage_stats()
-    cache_info = llm_client.cache.get_cache_info()
-    
-    return {
-        'total_requests': stats['total_requests'],
-        'total_cost': float(stats['total_cost']),
-        'cache_hit_rate': cache_info['hit_rate'],
-        'models_used': stats['models_used']
-    }
+# Or provide explicitly:
+client = VisionClient(api_key="sk-or-v1-...")
 ```
 
 ---
 
 ## Terms
 
-**LLM Client**: Main interface for interacting with Large Language Models
-**Provider**: External LLM service (OpenAI, OpenRouter, etc.)
-**Token**: Smallest unit of text processing in LLMs
-**Embedding**: Vector representation of text for semantic search
-**Cache Hit**: Request served from local cache without API call
-**Cost Calculation**: Automatic tracking of API usage costs
-**Model Pricing**: Per-token costs for different LLM models
-**Context Length**: Maximum tokens a model can process
-**Usage Stats**: Aggregated metrics about LLM usage
-**JSON Extraction**: Parsing structured data from LLM responses
+| Term | Description |
+|------|-------------|
+| **LLM Client** | Main interface for text-based LLM operations |
+| **VisionClient** | Client for image analysis and OCR |
+| **ImageGenClient** | Client for image generation |
+| **Model Quality** | Preset (fast/balanced/best) for automatic model selection |
+| **OCR Mode** | Extraction intensity (tiny/small/base/gundam) |
+| **Token** | Smallest unit of text processing in LLMs |
+| **Image Tokens** | Estimated tokens for image based on size and detail |
+| **Provider** | External LLM service (OpenAI, OpenRouter) |
+| **Cache Hit** | Request served from local cache |
+| **TTL** | Time-to-live for cached items |
