@@ -28,6 +28,11 @@ from .currencies import (
     get_currency_stats,
     add_currency,
 )
+from .queryset import (
+    get_conversion_rates,
+    annotate_converted_price,
+    filter_by_converted_price,
+)
 
 __all__ = [
     # Converter
@@ -60,4 +65,8 @@ __all__ = [
     "sync_all",
     "get_currency_stats",
     "add_currency",
+    # Queryset helpers
+    "get_conversion_rates",
+    "annotate_converted_price",
+    "filter_by_converted_price",
 ]
