@@ -1,0 +1,28 @@
+{% comment %}
+Stacked Display Widget
+Renders multiple field values in a stacked layout (rows with optional inline items).
+{% endcomment %}
+
+<div class="stacked-display flex flex-col"
+     style="gap: {{ gap }};{% if min_width %} min-width: {{ min_width }};{% endif %}{% if max_width %} max-width: {{ max_width }};{% endif %}"
+>
+    {% for row in rows %}
+        {% if row.html %}
+            {# Single item row #}
+            <div class="stacked-row {% if align == 'center' %}text-center{% elif align == 'right' %}text-right{% endif %}">
+                {{ row.html|safe }}
+            </div>
+        {% else %}
+            {# Inline row (list of items) #}
+            <div class="stacked-row flex flex-wrap items-center {% if align == 'center' %}justify-center{% elif align == 'right' %}justify-end{% endif %}"
+                 style="gap: {{ inline_gap }};"
+            >
+                {% for item in row %}
+                    {{ item.html|safe }}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% empty %}
+        <span class="text-gray-400">—</span>
+    {% endfor %}
+</div>

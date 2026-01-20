@@ -26,6 +26,7 @@ from ..utils import (
     MoneyDisplay,
     ProgressBadge,
     ShortUUIDDisplay,
+    StackedDisplay,
     StatusBadge,
     StatusBadgesDisplay,
     TextDisplay,
@@ -263,6 +264,11 @@ WidgetRegistry.register(
 WidgetRegistry.register(
     "short_uuid",
     lambda obj, field, cfg: ShortUUIDDisplay.from_field(obj, field, cfg)
+)
+
+WidgetRegistry.register(
+    "stacked",
+    lambda obj, field, cfg: StackedDisplay.from_field(obj, field, cfg)
 )
 
 WidgetRegistry.register(

@@ -99,10 +99,12 @@ def generate_display_method(field_config, is_link: bool = False):
 
         # For LinkField, value comes from link_field, not name - skip early return
         # Also skip for fields with static_text
+        # Also skip for composite fields like StackedField that use virtual names
         has_link_field = hasattr(field_config, 'link_field') and field_config.link_field
         has_static_text = hasattr(field_config, 'static_text') and field_config.static_text
+        has_rows = hasattr(field_config, 'rows') and field_config.rows  # StackedField
 
-        if value is None and not has_link_field and not has_static_text:
+        if value is None and not has_link_field and not has_static_text and not has_rows:
             empty = field_config.empty_value
             # For header fields, return tuple format
             if field_config.header:

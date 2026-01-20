@@ -33,6 +33,7 @@ from .displays import (
     LinkDisplay,
     MoneyDisplay,
     ShortUUIDDisplay,
+    StackedDisplay,
     StatusBadgesDisplay,
     TextDisplay,
     UserDisplay,
@@ -71,6 +72,7 @@ __all__ = [
     "StatusBadgesDisplay",
     "CounterBadgeDisplay",
     "ShortUUIDDisplay",
+    "StackedDisplay",
     "TextDisplay",
     "VideoDisplay",
     # Badge utilities

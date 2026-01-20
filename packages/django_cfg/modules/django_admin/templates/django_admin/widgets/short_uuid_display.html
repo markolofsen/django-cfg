@@ -9,5 +9,5 @@ Shows truncated UUID with tooltip and copy-on-click.
     onclick="navigator.clipboard.writeText('{{ full_uuid }}'); this.style.backgroundColor='#e8f5e9'; setTimeout(() => this.style.backgroundColor='', 500);"
     style="cursor: pointer;"
     {% endif %}
-    class="text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded"
+    class="text-xs px-1.5 py-0.5 rounded {% if is_link %}text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30{% else %}bg-base-100 dark:bg-base-800{% endif %}"
 >{{ short_uuid }}</code>

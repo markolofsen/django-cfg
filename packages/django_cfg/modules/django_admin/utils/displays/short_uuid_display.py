@@ -51,6 +51,7 @@ class ShortUUIDDisplay:
         length = config.get('length', 8)
         show_full_on_hover = config.get('show_full_on_hover', True)
         copy_on_click = config.get('copy_on_click', True)
+        is_link = config.get('is_link', False)
 
         # Truncate
         short_uuid = uuid_str[:length]
@@ -60,6 +61,7 @@ class ShortUUIDDisplay:
             'full_uuid': uuid_value,
             'show_full_on_hover': show_full_on_hover,
             'copy_on_click': copy_on_click,
+            'is_link': is_link,
         }
 
         return render_to_string(

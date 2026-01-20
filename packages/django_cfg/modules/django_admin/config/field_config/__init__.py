@@ -19,6 +19,7 @@ from .link import LinkField
 from .markdown import MarkdownField
 from .money import MoneyFieldDisplay
 from .short_uuid import ShortUUIDField
+from .stacked import RowItem, StackedField
 from .status_badges import BadgeRule, StatusBadgesField
 from .text import TextField
 from .user import UserField
@@ -41,6 +42,8 @@ __all__ = [
     "LinkField",
     "ForeignKeyField",
     "AvatarField",
+    "StackedField",
+    "RowItem",
     "StatusBadgesField",
     "BadgeRule",
     "CounterBadgeField",

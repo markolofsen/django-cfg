@@ -14,6 +14,7 @@ class ShortUUIDField(FieldConfig):
     Examples:
         ShortUUIDField(name="id", length=8)
         ShortUUIDField(name="uuid", length=12, copy_on_click=True)
+        ShortUUIDField(name="id", is_link=True)  # Styled as clickable link
     """
 
     ui_widget: Literal["short_uuid"] = "short_uuid"
@@ -21,6 +22,7 @@ class ShortUUIDField(FieldConfig):
     length: int = Field(8, description="Number of characters to display from UUID")
     copy_on_click: bool = Field(True, description="Enable click-to-copy functionality")
     show_full_on_hover: bool = Field(True, description="Show full UUID in tooltip on hover")
+    is_link: bool = Field(False, description="Style as clickable link (for list_display_links)")
 
     def get_widget_config(self) -> Dict[str, Any]:
         """Extract short UUID widget configuration."""
@@ -28,4 +30,5 @@ class ShortUUIDField(FieldConfig):
         config['length'] = self.length
         config['copy_on_click'] = self.copy_on_click
         config['show_full_on_hover'] = self.show_full_on_hover
+        config['is_link'] = self.is_link
         return config

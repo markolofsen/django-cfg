@@ -6,6 +6,7 @@ Single widget that handles both:
 - Readonly mode: compact display with conversion info
 
 Uses CurrencyRate model from django_cfg.apps.tools.currency for live rate data.
+Uses PriceFormatter from django_cfg.modules.django_currency for consistent formatting.
 """
 
 from decimal import Decimal
@@ -15,27 +16,16 @@ from django import forms
 from django.forms.widgets import MultiWidget, Select, TextInput
 from django.utils.safestring import mark_safe
 
+from django_cfg.modules.django_currency.formatter import (
+    price_formatter,
+    CURRENCY_CONFIGS,
+)
+
 if TYPE_CHECKING:
     from django_cfg.apps.tools.currency.models import CurrencyRate
 
-# Currency symbols map (ISO 4217)
-CURRENCY_SYMBOLS = {
-    # Major currencies
-    "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "CNY": "¥",
-    "CHF": "Fr", "AUD": "A$", "CAD": "C$", "NZD": "NZ$", "HKD": "HK$", "SGD": "S$",
-    # Asian
-    "KRW": "₩", "TWD": "NT$", "THB": "฿", "VND": "₫", "IDR": "Rp",
-    "MYR": "RM", "PHP": "₱", "INR": "₹", "PKR": "₨", "BDT": "৳",
-    # European
-    "RUB": "₽", "UAH": "₴", "PLN": "zł", "CZK": "Kč", "HUF": "Ft",
-    "RON": "lei", "SEK": "kr", "NOK": "kr", "DKK": "kr", "TRY": "₺",
-    # Middle East & Africa
-    "ILS": "₪", "AED": "د.إ", "SAR": "﷼", "ZAR": "R", "NGN": "₦", "EGP": "£",
-    # Americas
-    "MXN": "$", "BRL": "R$", "ARS": "$", "CLP": "$", "COP": "$", "PEN": "S/",
-    # Crypto
-    "BTC": "₿", "ETH": "Ξ", "USDT": "₮", "SOL": "◎", "ADA": "₳", "DOGE": "Ð", "LTC": "Ł",
-}
+# Build CURRENCY_SYMBOLS from CURRENCY_CONFIGS for backwards compatibility
+CURRENCY_SYMBOLS = {code: cfg.symbol for code, cfg in CURRENCY_CONFIGS.items()}
 
 # Fallback currency choices (used when Currency model is empty)
 FALLBACK_CURRENCY_CHOICES = [
@@ -131,31 +121,6 @@ class DecimalInput(TextInput):
         return str(value)
 
 
-def get_smart_precision(amount: Any) -> int:
-    """
-    Get smart decimal precision based on amount magnitude.
-
-    Large amounts don't need cents - showing $5,029 instead of $5,029.82
-    is cleaner and easier to read.
-
-    Rules:
-        >= 1000: 0 decimals (e.g., $5,029)
-        >= 100:  1 decimal  (e.g., $562.2)
-        < 100:   2 decimals (e.g., $45.67)
-    """
-    if amount is None:
-        return 2
-    try:
-        abs_amount = abs(float(amount))
-        if abs_amount >= 1000:
-            return 0
-        elif abs_amount >= 100:
-            return 1
-        return 2
-    except (ValueError, TypeError):
-        return 2
-
-
 def format_money(
     amount: Any,
     currency: str,
@@ -165,33 +130,17 @@ def format_money(
     """
     Format amount with currency symbol.
 
+    Uses PriceFormatter for consistent formatting across the app.
+
     Args:
         amount: The amount to format
         currency: Currency code (e.g., "USD", "KRW")
-        precision: Fixed decimal places (default: 2)
-        smart_precision: If True, auto-adjust precision based on amount magnitude
-                        (large amounts show no decimals, small amounts show 2)
+        precision: Ignored (kept for backwards compatibility)
+        smart_precision: Ignored (PriceFormatter always uses smart abbreviations)
     """
     if amount is None:
         return "—"
-    symbol = CURRENCY_SYMBOLS.get(currency.upper(), currency)
-
-    # Use smart precision for cleaner display of large amounts
-    if smart_precision:
-        precision = get_smart_precision(amount)
-
-    try:
-        if isinstance(amount, Decimal):
-            formatted = f"{amount:,.{precision}f}"
-        else:
-            formatted = f"{float(amount):,.{precision}f}"
-        # Clean trailing zeros only when not using smart precision
-        # (smart precision already sets the right precision)
-        if not smart_precision and "." in formatted:
-            formatted = formatted.rstrip("0").rstrip(".")
-        return f"{symbol}{formatted}"
-    except (ValueError, TypeError):
-        return str(amount)
+    return price_formatter.format(amount, currency)
 
 
 class MoneyFieldWidget(MultiWidget):
