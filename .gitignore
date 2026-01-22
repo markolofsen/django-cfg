@@ -41,3 +41,4 @@ Thumbs.db
 
 # pnpm
 .pnpm-store/
+packages/django_cfg/apps/tools/geo/data/

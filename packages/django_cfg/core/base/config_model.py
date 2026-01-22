@@ -33,6 +33,7 @@ from ...models import (
     TwoFactorConfig,
     UnfoldConfig,
 )
+from ..encryption.config import EncryptionConfig
 from ...models.api.grpc import GRPCConfig
 from ...models.api.webpush import WebPushConfig
 from ...models.ngrok import NgrokConfig
@@ -184,6 +185,11 @@ class DjangoConfig(BaseModel):
     crypto_fields: Optional[CryptoFieldsConfig] = Field(
         default=None,
         description="Django Crypto Fields encryption for sensitive data",
+    )
+
+    encryption: Optional[EncryptionConfig] = Field(
+        default=None,
+        description="API response encryption to prevent data scraping (field-level or response-level)",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

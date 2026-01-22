@@ -86,6 +86,11 @@ class MiddlewareBuilder:
         # accounts is always enabled - core django-cfg functionality
         middleware.append("django_cfg.middleware.UserActivityMiddleware")
 
+        # Encryption middleware (API response encryption)
+        # Detects ?encrypt=true or X-Encrypt-Response header
+        if self.config.encryption and self.config.encryption.enabled:
+            middleware.append("django_cfg.core.encryption.middleware.EncryptionMiddleware")
+
         # Extension middleware (from extensions/apps/)
         # Extensions define middleware via middleware_classes or get_middleware_classes()
         middleware.extend(self._get_extension_middleware())

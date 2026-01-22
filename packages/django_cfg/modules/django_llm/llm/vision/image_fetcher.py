@@ -6,14 +6,18 @@ Provides async image downloading with:
 - Content-type validation
 - Size limits
 - Base64 conversion
+- Automatic image resizing for token optimization
 """
 
 import base64
 import logging
-from typing import Optional, Set, Tuple
+from typing import Optional, Set, Tuple, TYPE_CHECKING, cast
 from urllib.parse import urlparse
 
 import httpx
+
+if TYPE_CHECKING:
+    from .image_resizer import DetailMode
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +56,7 @@ class ImageFetcher:
     - Content-type validation
     - Size limits
     - Async support
+    - Automatic image resizing for token optimization
     """
 
     def __init__(
@@ -60,6 +65,8 @@ class ImageFetcher:
         max_size_mb: int = DEFAULT_MAX_SIZE_MB,
         allowed_domains: Optional[list[str]] = None,
         user_agent: Optional[str] = None,
+        resize: bool = True,
+        detail: "DetailMode" = "low",
     ):
         """
         Initialize image fetcher.
@@ -69,11 +76,15 @@ class ImageFetcher:
             max_size_mb: Maximum image size in megabytes
             allowed_domains: Optional list of allowed domains (None = all allowed)
             user_agent: Optional custom User-Agent header
+            resize: Whether to auto-resize images for token optimization (default True)
+            detail: Default detail mode for resizing (low/high/auto)
         """
         self._timeout = timeout
         self._max_size = max_size_mb * 1024 * 1024
         self._allowed_domains = set(allowed_domains) if allowed_domains else None
         self._user_agent = user_agent or "Django-LLM-Vision/1.0"
+        self._resize = resize
+        self._detail = detail
 
     def is_valid_url(self, url: str) -> bool:
         """
@@ -121,12 +132,19 @@ class ImageFetcher:
         if not self.is_valid_url(url):
             raise ImageFetchError("Invalid or disallowed URL", url)
 
-    async def fetch(self, url: str) -> Tuple[bytes, str]:
+    async def fetch(
+        self,
+        url: str,
+        resize: Optional[bool] = None,
+        detail: Optional["DetailMode"] = None,
+    ) -> Tuple[bytes, str]:
         """
         Fetch image from URL.
 
         Args:
             url: Image URL
+            resize: Override default resize setting (None uses instance default)
+            detail: Override default detail mode (None uses instance default)
 
         Returns:
             Tuple of (image_bytes, content_type)
@@ -135,6 +153,10 @@ class ImageFetcher:
             ImageFetchError: On fetch failure
         """
         self.validate_url(url)
+
+        # Use instance defaults if not overridden
+        should_resize = resize if resize is not None else self._resize
+        detail_mode = detail if detail is not None else self._detail
 
         headers = {"User-Agent": self._user_agent}
 
@@ -153,11 +175,18 @@ class ImageFetcher:
 
                 content = response.content
 
-                # Validate size
+                # Validate size (before resize)
                 if len(content) > self._max_size:
                     raise ImageFetchError(
                         f"Image too large: {len(content)} bytes (max {self._max_size})",
                         url,
+                    )
+
+                # Resize if enabled
+                if should_resize:
+                    from .image_resizer import ImageResizer, DetailMode as DM
+                    content, content_type = ImageResizer.resize_bytes(
+                        content, detail=cast(DM, detail_mode)
                     )
 
                 logger.debug(f"Fetched image: {url} ({len(content)} bytes, {content_type})")
@@ -170,17 +199,28 @@ class ImageFetcher:
         except httpx.RequestError as e:
             raise ImageFetchError(f"Request failed: {e}", url) from e
 
-    def fetch_sync(self, url: str) -> Tuple[bytes, str]:
+    def fetch_sync(
+        self,
+        url: str,
+        resize: Optional[bool] = None,
+        detail: Optional["DetailMode"] = None,
+    ) -> Tuple[bytes, str]:
         """
         Synchronous version of fetch().
 
         Args:
             url: Image URL
+            resize: Override default resize setting (None uses instance default)
+            detail: Override default detail mode (None uses instance default)
 
         Returns:
             Tuple of (image_bytes, content_type)
         """
         self.validate_url(url)
+
+        # Use instance defaults if not overridden
+        should_resize = resize if resize is not None else self._resize
+        detail_mode = detail if detail is not None else self._detail
 
         headers = {"User-Agent": self._user_agent}
 
@@ -197,6 +237,13 @@ class ImageFetcher:
                 raise ImageFetchError(
                     f"Image too large: {len(content)} bytes",
                     url,
+                )
+
+            # Resize if enabled
+            if should_resize:
+                from .image_resizer import ImageResizer, DetailMode as DM
+                content, content_type = ImageResizer.resize_bytes(
+                    content, detail=cast(DM, detail_mode)
                 )
 
             return content, content_type
@@ -216,30 +263,44 @@ class ImageFetcher:
         b64 = base64.b64encode(image_bytes).decode()
         return f"data:{content_type};base64,{b64}"
 
-    async def fetch_as_base64_url(self, url: str) -> str:
+    async def fetch_as_base64_url(
+        self,
+        url: str,
+        resize: Optional[bool] = None,
+        detail: Optional["DetailMode"] = None,
+    ) -> str:
         """
         Fetch image and convert to base64 data URL.
 
         Args:
             url: Image URL
+            resize: Override default resize setting (None uses instance default)
+            detail: Override default detail mode (None uses instance default)
 
         Returns:
             Base64 data URL
         """
-        content, content_type = await self.fetch(url)
+        content, content_type = await self.fetch(url, resize=resize, detail=detail)
         return self.to_base64_url(content, content_type)
 
-    def fetch_as_base64_url_sync(self, url: str) -> str:
+    def fetch_as_base64_url_sync(
+        self,
+        url: str,
+        resize: Optional[bool] = None,
+        detail: Optional["DetailMode"] = None,
+    ) -> str:
         """
         Synchronous version of fetch_as_base64_url().
 
         Args:
             url: Image URL
+            resize: Override default resize setting (None uses instance default)
+            detail: Override default detail mode (None uses instance default)
 
         Returns:
             Base64 data URL
         """
-        content, content_type = self.fetch_sync(url)
+        content, content_type = self.fetch_sync(url, resize=resize, detail=detail)
         return self.to_base64_url(content, content_type)
 
     @staticmethod

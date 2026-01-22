@@ -7,6 +7,7 @@
 **Key Features:**
 - Multi-provider support (OpenAI, OpenRouter)
 - Vision analysis with model quality presets
+- **Automatic image resizing** for token optimization (90% cost savings)
 - OCR with multiple extraction modes
 - Image generation (DALL-E, FLUX, etc.)
 - Automatic cost calculation and tracking
@@ -36,8 +37,11 @@ django_llm/
 │   │   ├── models.py          # Request/Response models
 │   │   ├── presets.py         # Model quality & OCR mode presets
 │   │   ├── tokens.py          # Image token estimation
-│   │   ├── image_fetcher.py   # URL fetching with validation
-│   │   └── cache.py           # Image caching with TTL
+│   │   ├── image_encoder.py   # Base64 encoding with resize
+│   │   ├── image_fetcher.py   # URL fetching with validation & resize
+│   │   ├── image_resizer.py   # Image resizing for token optimization
+│   │   ├── cache.py           # Image caching with TTL
+│   │   └── vision_models.py   # Vision models registry
 │   └── image_gen/
 │       ├── client.py          # ImageGenClient
 │       └── models.py          # ImageGenRequest/Response
@@ -58,6 +62,9 @@ graph TD
     G --> I[ImageCache]
     G --> J[Presets]
     G --> K[TokenEstimator]
+    G --> R[ImageResizer]
+
+    H --> R
 
     L[ImageGenClient] --> M[ImageCache]
     L --> N[Presets]
@@ -65,6 +72,106 @@ graph TD
     B --> O[tiktoken]
     D --> P[File Cache]
     E --> Q[OpenRouter API]
+```
+
+---
+
+## Image Auto-Resize (Token Optimization)
+
+### Why Resize?
+
+OpenAI Vision API charges tokens based on image size:
+- **Low detail**: 85 tokens (fixed, image resized to 512x512)
+- **High detail**: 85 base + 170 tokens per 512x512 tile
+
+For high-volume OCR tasks, pre-resizing images can save **90% on token costs**:
+- 15,000 images/day: $1.72 → $0.19
+
+### Usage
+
+```python
+from django_cfg.modules.django_llm.llm.vision import VisionClient
+
+# Default: auto_resize=True, default_detail="low"
+client = VisionClient()
+
+# All images automatically resized to 512x512 (85 tokens each)
+response = client.analyze(
+    image_url="https://example.com/large-image.jpg",
+    query="Extract text from this image"
+)
+
+# Override for specific calls
+response = client.analyze(
+    image_url="https://example.com/detailed-chart.jpg",
+    query="Analyze this chart in detail",
+    resize=True,
+    detail="high"  # 768px short side, more tiles
+)
+
+# Disable resize globally
+client = VisionClient(auto_resize=False)
+```
+
+### Detail Modes
+
+| Mode | Size | Tokens | Use Case |
+|------|------|--------|----------|
+| `low` | 512x512 | 85 (fixed) | OCR, text extraction, quick checks |
+| `high` | 768px short side | 85 + 170/tile | Detailed analysis, charts, diagrams |
+| `auto` | Adaptive | Varies | Auto-select based on image size |
+
+### ImageResizer Class
+
+```python
+from django_cfg.modules.django_llm.llm.vision import ImageResizer
+
+# Resize PIL image
+from PIL import Image
+img = Image.open("photo.jpg")
+resized = ImageResizer.resize_image(img, detail="low")
+
+# Resize bytes directly
+resized_bytes, content_type = ImageResizer.resize_bytes(
+    image_bytes,
+    detail="low",
+    output_format="JPEG",
+    quality=85
+)
+
+# Estimate token savings
+savings = ImageResizer.estimate_savings(4000, 3000, "low")
+print(f"Tokens saved: {savings['tokens_saved']}")
+print(f"Savings: {savings['savings_percent']}%")
+# Output: Tokens saved: 680, Savings: 88.9%
+
+# Get optimal dimensions
+new_w, new_h = ImageResizer.get_optimal_size(2000, 1500, "low")
+# Output: (512, 384)
+```
+
+### ImageFetcher with Resize
+
+```python
+from django_cfg.modules.django_llm.llm.vision import ImageFetcher
+
+# Default: resize=True, detail="low"
+fetcher = ImageFetcher()
+
+# Fetch and auto-resize
+data, content_type = await fetcher.fetch("https://example.com/image.jpg")
+
+# Override resize settings
+data, content_type = await fetcher.fetch(
+    "https://example.com/image.jpg",
+    resize=False  # Disable resize for this call
+)
+
+# Fetch as base64 with resize
+data_url = await fetcher.fetch_as_base64_url(
+    "https://example.com/image.jpg",
+    detail="high"  # Use high detail mode
+)
 ```
 
 ---
@@ -79,12 +186,13 @@ graph TD
 from django_cfg.modules.django_llm.llm.vision import VisionClient
 
 # Initialize (API key auto-detected from django config)
+# Default: auto_resize=True, default_detail="low"
 client = VisionClient()
 
 # Simple image analysis
 response = client.analyze(
-    image_url="https://example.com/image.jpg",
-    prompt="Describe this image"
+    image_source="https://example.com/image.jpg",
+    query="Describe this image"
 )
 print(response.content)
 print(f"Cost: ${response.cost_usd:.4f}")
@@ -140,8 +248,8 @@ response = await client.aocr(
 ```python
 # Async analysis
 response = await client.aanalyze(
-    image_url="https://example.com/image.jpg",
-    prompt="Analyze this"
+    image_source="https://example.com/image.jpg",
+    query="Analyze this"
 )
 
 # Async with quality preset
@@ -227,11 +335,19 @@ from django_cfg.modules.django_llm.llm.vision import ImageFetcher
 fetcher = ImageFetcher(
     timeout=30.0,
     max_size_mb=10,
-    allowed_domains=["example.com", "cdn.example.com"]  # Optional whitelist
+    allowed_domains=["example.com", "cdn.example.com"],  # Optional whitelist
+    resize=True,      # Auto-resize images (default: True)
+    detail="low",     # Detail mode (default: "low")
 )
 
-# Fetch as bytes
+# Fetch as bytes (auto-resized)
 data, content_type = await fetcher.fetch("https://example.com/image.jpg")
+
+# Fetch without resize
+data, content_type = await fetcher.fetch(
+    "https://example.com/image.jpg",
+    resize=False
+)
 
 # Fetch as base64 data URL
 data_url = await fetcher.fetch_as_base64_url("https://example.com/image.jpg")
@@ -292,6 +408,8 @@ config = VisionConfig(
     allowed_domains=None,  # None = all allowed
     cache_enabled=True,
     cache_ttl_hours=168,
+    auto_resize=True,      # NEW: Enable auto-resize
+    default_detail="low",  # NEW: Default detail mode
 )
 ```
 
@@ -385,6 +503,8 @@ from django_cfg.modules.django_llm.llm.vision import (
     VisionAnalyzeResponse,
     OCRRequest,
     OCRResponse,
+    ImageResizer,
+    DetailMode,
 )
 
 # Request with validation
@@ -444,24 +564,27 @@ print(response.count)
 sequenceDiagram
     participant App
     participant VisionClient
+    participant ImageResizer
     participant ImageFetcher
     participant ImageCache
     participant OpenRouter
 
-    App->>VisionClient: analyze_with_quality(image_url, prompt)
+    App->>VisionClient: analyze(image_url, query)
     VisionClient->>ImageCache: check cache
 
     alt Cache Hit
         ImageCache-->>VisionClient: cached response
     else Cache Miss
         VisionClient->>ImageFetcher: fetch(image_url)
-        ImageFetcher-->>VisionClient: image bytes
-        VisionClient->>OpenRouter: vision API call
+        ImageFetcher->>ImageResizer: resize_bytes(detail="low")
+        ImageResizer-->>ImageFetcher: resized image
+        ImageFetcher-->>VisionClient: image bytes (512x512)
+        VisionClient->>OpenRouter: vision API call (85 tokens)
         OpenRouter-->>VisionClient: response
         VisionClient->>ImageCache: store response
     end
 
-    VisionClient-->>App: VisionAnalyzeResponse
+    VisionClient-->>App: VisionResponse
 ```
 
 ### Image Generation Flow
@@ -504,6 +627,8 @@ client = VisionClient(api_key="sk-or-v1-...")
 | **LLM Client** | Main interface for text-based LLM operations |
 | **VisionClient** | Client for image analysis and OCR |
 | **ImageGenClient** | Client for image generation |
+| **ImageResizer** | Pre-processes images for token optimization |
+| **DetailMode** | Image detail level (low/high/auto) |
 | **Model Quality** | Preset (fast/balanced/best) for automatic model selection |
 | **OCR Mode** | Extraction intensity (tiny/small/base/gundam) |
 | **Token** | Smallest unit of text processing in LLMs |

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.5.194"
+version = "1.5.196"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -106,6 +106,7 @@ dependencies = [
     # Authentication & Security
     "pyotp>=2.9.0,<3.0",
     "qrcode>=8.2,<9.0",
+    "cryptography>=44.0.0",  # AES-256-GCM encryption for API responses
     
     # Notifications
     "pyTelegramBotAPI>=4.28.0,<5.0",

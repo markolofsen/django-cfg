@@ -3,6 +3,7 @@ Vision client for image analysis using multimodal LLMs.
 
 Uses OpenRouter API with vision models like Qwen2.5 VL, Gemma 3, NVIDIA Nemotron.
 Supports structured output with Pydantic schemas.
+Includes automatic image resizing for token optimization.
 """
 
 import base64
@@ -10,7 +11,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Literal, Optional, Type, TypeVar, Union, cast
 
 from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ from pydantic import BaseModel
 from ....base import BaseCfgModule
 from .image_encoder import ImageEncoder
 from .image_fetcher import ImageFetcher, ImageFetchError
+from .image_resizer import DetailMode
 from .models import (
     VisionRequest,
     VisionResponse,
@@ -59,6 +61,8 @@ class VisionClient(BaseCfgModule):
         max_tokens: int = 1024,
         temperature: float = 0.2,
         cache_dir: Optional[Path] = None,
+        auto_resize: bool = True,
+        default_detail: DetailMode = "low",
     ):
         """
         Initialize vision client.
@@ -69,6 +73,8 @@ class VisionClient(BaseCfgModule):
             max_tokens: Default max tokens for responses
             temperature: Default temperature for generation
             cache_dir: Directory for models cache
+            auto_resize: Whether to auto-resize images for token optimization (default True)
+            default_detail: Default detail mode for resize (low/high/auto, default "low")
         """
         super().__init__()
 
@@ -82,11 +88,13 @@ class VisionClient(BaseCfgModule):
         self._default_model = default_model
         self.default_max_tokens = max_tokens
         self.default_temperature = temperature
+        self.auto_resize = auto_resize
+        self.default_detail = default_detail
 
         self._client: Optional[OpenAI] = None
         self._async_client: Optional[AsyncOpenAI] = None
         self.image_encoder = ImageEncoder()
-        self.image_fetcher = ImageFetcher()
+        self.image_fetcher = ImageFetcher(resize=auto_resize, detail=default_detail)
 
         # Models registry
         self.models_registry = VisionModelsRegistry(
@@ -146,6 +154,8 @@ class VisionClient(BaseCfgModule):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         system_prompt: Optional[str] = None,
+        resize: Optional[bool] = None,
+        detail: Optional[DetailMode] = None,
     ) -> VisionResponse:
         """
         Analyze an image with a text query.
@@ -157,6 +167,8 @@ class VisionClient(BaseCfgModule):
             max_tokens: Maximum tokens in response
             temperature: Generation temperature
             system_prompt: Optional system prompt
+            resize: Override auto_resize setting (None uses instance default)
+            detail: Override default_detail setting (None uses instance default)
 
         Returns:
             VisionResponse with analysis result
@@ -165,8 +177,14 @@ class VisionClient(BaseCfgModule):
         max_tokens = max_tokens or self.default_max_tokens
         temperature = temperature or self.default_temperature
 
+        # Use instance defaults if not overridden
+        should_resize = resize if resize is not None else self.auto_resize
+        detail_mode = detail if detail is not None else self.default_detail
+
         # Prepare image URL
-        image_url = self.image_encoder.prepare_image_url(image_source)
+        image_url = self.image_encoder.prepare_image_url(
+            image_source, resize=should_resize, detail=cast(DetailMode, detail_mode)
+        )
 
         # Build messages
         messages = []
@@ -230,6 +248,8 @@ class VisionClient(BaseCfgModule):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         system_prompt: Optional[str] = None,
+        resize: Optional[bool] = None,
+        detail: Optional[DetailMode] = None,
     ) -> VisionResponse:
         """
         Async version of analyze().
@@ -241,6 +261,8 @@ class VisionClient(BaseCfgModule):
             max_tokens: Maximum tokens in response
             temperature: Generation temperature
             system_prompt: Optional system prompt
+            resize: Override auto_resize setting (None uses instance default)
+            detail: Override default_detail setting (None uses instance default)
 
         Returns:
             VisionResponse with analysis result
@@ -249,8 +271,14 @@ class VisionClient(BaseCfgModule):
         max_tokens = max_tokens or self.default_max_tokens
         temperature = temperature or self.default_temperature
 
+        # Use instance defaults if not overridden
+        should_resize = resize if resize is not None else self.auto_resize
+        detail_mode = detail if detail is not None else self.default_detail
+
         # Prepare image URL
-        image_url = self.image_encoder.prepare_image_url(image_source)
+        image_url = self.image_encoder.prepare_image_url(
+            image_source, resize=should_resize, detail=cast(DetailMode, detail_mode)
+        )
 
         # Build messages
         messages: List[Dict[str, Any]] = []

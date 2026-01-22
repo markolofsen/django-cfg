@@ -8,11 +8,24 @@ New in v2.0:
 - OCR modes (tiny/small/base/gundam)
 - Image fetcher with URL validation
 - Token estimation for images
+
+New in v2.1:
+- Automatic image resizing for token optimization
+- DetailMode: low (85 tokens), high (85 + 170/tile), auto
+- ImageResizer for pre-processing images before API calls
 """
 
 from .client import VisionClient
 from .image_encoder import ImageEncoder
 from .image_fetcher import ImageFetcher, ImageFetchError
+from .image_resizer import (
+    ImageResizer,
+    DetailMode,
+    LOW_DETAIL_SIZE,
+    HIGH_DETAIL_SHORT_SIDE,
+    HIGH_DETAIL_MAX_DIM,
+    TILE_SIZE,
+)
 from .models import (
     VisionRequest,
     VisionResponse,
@@ -44,10 +57,16 @@ from .vision_models import VisionModel, VisionModelPricing, VisionModelsRegistry
 __all__ = [
     # Client
     "VisionClient",
-    # Encoding
+    # Encoding & Resizing
     "ImageEncoder",
     "ImageFetcher",
     "ImageFetchError",
+    "ImageResizer",
+    "DetailMode",
+    "LOW_DETAIL_SIZE",
+    "HIGH_DETAIL_SHORT_SIDE",
+    "HIGH_DETAIL_MAX_DIM",
+    "TILE_SIZE",
     # Models - Legacy
     "VisionRequest",
     "VisionResponse",

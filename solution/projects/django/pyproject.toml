@@ -45,8 +45,6 @@ django-cfg = {version = "*", extras = ["full"]}
 
 # Image handling for user avatars and product images
 Pillow = "^10.0.0"
-# System monitoring for health checks
-psutil = "^5.9.0"
 # Fake data generation
 faker = "^37.5.3"
 # Markdown support
