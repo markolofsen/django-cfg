@@ -224,6 +224,10 @@ class DjangoModelParser:
                 parsed.related_table_name = field.related_model._meta.db_table
                 parsed.on_delete = self._get_on_delete(field)
                 parsed.related_name = getattr(field, 'related_name', None)
+                # Get the primary key type of the related model
+                related_pk = field.related_model._meta.pk
+                if related_pk:
+                    parsed.related_pk_type = type(related_pk).__name__
                 # Update name to be the FK column name
                 parsed.name = field.attname  # e.g., "user_id" instead of "user"
 
@@ -235,6 +239,10 @@ class DjangoModelParser:
                 parsed.related_table_name = field.related_model._meta.db_table
                 parsed.on_delete = self._get_on_delete(field)
                 parsed.related_name = getattr(field, 'related_name', None)
+                # Get the primary key type of the related model
+                related_pk = field.related_model._meta.pk
+                if related_pk:
+                    parsed.related_pk_type = type(related_pk).__name__
                 parsed.name = field.attname
 
             elif isinstance(field, models.ManyToManyField):

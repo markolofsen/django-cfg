@@ -263,20 +263,37 @@ class MigrationManager:
             app_config = apps.get_app_config(app_label)
             if not app_config:
                 return False
-            
+
+            # First check if the app has any registered models (most reliable)
+            models = app_config.get_models()
+            if len(models) > 0:
+                return True
+
+            app_path = Path(app_config.path)
+
             # Check if models.py exists and has content
-            models_file = Path(app_config.path) / "models.py"
+            models_file = app_path / "models.py"
             if models_file.exists():
                 # Read the file and check if it has model definitions
                 content = models_file.read_text()
-                # Simple check for model definitions
-                if "class " in content and "models.Model" in content:
+                # Check for model definitions (models.Model or any Model inheritance)
+                if "class " in content and ("models.Model" in content or "(Model)" in content):
                     return True
-            
-            # Also check if the app has any registered models
-            models = app_config.get_models()
-            return len(models) > 0
-            
+
+            # Check if models/ directory exists with model files
+            models_dir = app_path / "models"
+            if models_dir.exists() and models_dir.is_dir():
+                # Check all .py files in models/ directory (excluding __init__.py)
+                for py_file in models_dir.glob("*.py"):
+                    if py_file.name == "__init__.py":
+                        continue
+                    content = py_file.read_text()
+                    # Check for model definitions
+                    if "class " in content and ("models.Model" in content or "(Model)" in content or "from django.db import models" in content):
+                        return True
+
+            return False
+
         except Exception:
             # Silently return False for apps that don't exist or have issues
             return False

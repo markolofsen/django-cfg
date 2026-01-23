@@ -262,7 +262,7 @@ class VehicleAdmin(PydanticAdmin):
         return self.html.badge(obj.ownership_type or 'N/A', variant='success')
 ```
 
-**`self.html` methods:** `badge()`, `span()`, `inline()`, `link()`, `image()`, `empty()`
+**`self.html` methods:** `badge()`, `span()`, `inline()`, `stacked()`, `link()`, `image()`, `empty()`
 
 ---
 

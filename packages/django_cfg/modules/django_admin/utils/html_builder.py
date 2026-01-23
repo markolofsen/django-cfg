@@ -45,6 +45,7 @@ class HtmlBuilder:
     # === CompositionElements ===
     inline = staticmethod(CompositionElements.inline)
     join = staticmethod(CompositionElements.join)
+    stacked = staticmethod(CompositionElements.stacked)
     icon_text = staticmethod(CompositionElements.icon_text)
     colored_text = staticmethod(CompositionElements.colored_text)
     header = staticmethod(CompositionElements.header)

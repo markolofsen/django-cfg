@@ -5,7 +5,7 @@ Builds list_display, list_display_links and generates display methods.
 """
 
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, List
 
 from django.utils.safestring import mark_safe
 
@@ -15,6 +15,20 @@ if TYPE_CHECKING:
     from ...config import AdminConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _get_nested_value(obj: Any, field_name: str) -> Any:
+    """Get value from possibly nested field (e.g., 'cdn_file__file')."""
+    if '__' not in field_name:
+        return getattr(obj, field_name, None)
+
+    parts = field_name.split("__")
+    value = obj
+    for part in parts:
+        if value is None:
+            return None
+        value = getattr(value, part, None)
+    return value
 
 
 def build_list_display(cls, config: 'AdminConfig') -> List[str]:
@@ -94,17 +108,19 @@ def generate_display_method(field_config, is_link: bool = False):
     """
 
     def display_method(self, obj):
-        # Get field value
-        value = getattr(obj, field_config.name, None)
+        # Get field value (supports __ notation for FK traversal)
+        value = _get_nested_value(obj, field_config.name)
 
         # For LinkField, value comes from link_field, not name - skip early return
         # Also skip for fields with static_text
         # Also skip for composite fields like StackedField that use virtual names
+        # Also skip for fields with fallback_field (e.g., ImagePreviewField)
         has_link_field = hasattr(field_config, 'link_field') and field_config.link_field
         has_static_text = hasattr(field_config, 'static_text') and field_config.static_text
         has_rows = hasattr(field_config, 'rows') and field_config.rows  # StackedField
+        has_fallback_field = hasattr(field_config, 'fallback_field') and field_config.fallback_field
 
-        if value is None and not has_link_field and not has_static_text and not has_rows:
+        if value is None and not has_link_field and not has_static_text and not has_rows and not has_fallback_field:
             empty = field_config.empty_value
             # For header fields, return tuple format
             if field_config.header:

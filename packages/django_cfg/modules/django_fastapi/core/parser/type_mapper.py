@@ -90,6 +90,8 @@ SQLALCHEMY_COLUMN_TYPES: dict[str, str] = {
     "UUIDField": "UUID",
     "DecimalField": "Numeric",
     "BinaryField": "LargeBinary",
+    "GenericIPAddressField": "INET",
+    "IPAddressField": "INET",
 }
 
 
@@ -140,8 +142,13 @@ class TypeMapper:
         if field.is_relation:
             if field.relation_type == RelationType.MANY_TO_MANY:
                 return f'list["{field.related_model_name}"]'
-            # FK and O2O - return the ID type
-            base_type = "int"
+            # FK and O2O - return the ID type based on related model's PK
+            if field.related_pk_type == "UUIDField":
+                base_type = "UUID"
+            elif field.related_pk_type in ("BigAutoField", "BigIntegerField"):
+                base_type = "int"
+            else:
+                base_type = "int"  # Default to int for AutoField, etc.
         else:
             base_type = DJANGO_TO_PYTHON.get(django_type, "Any")
 
@@ -162,11 +169,18 @@ class TypeMapper:
         return base_type
 
     def get_fk_id_field_type(self, field: ParsedField) -> str:
-        """Get type for FK ID field (e.g., user_id: Optional[int])."""
+        """Get type for FK ID field (e.g., user_id: Optional[UUID])."""
+        # Determine base type from related model's PK
+        if field.related_pk_type == "UUIDField":
+            base_type = "UUID"
+            self._imports.add(("uuid", "UUID"))
+        else:
+            base_type = "int"
+
         if field.nullable:
             self._imports.add(("typing", "Optional"))
-            return "Optional[int]"
-        return "int"
+            return f"Optional[{base_type}]"
+        return base_type
 
     def _collect_import(self, type_str: str) -> None:
         """Collect required imports for a type."""
@@ -235,6 +249,11 @@ class TypeMapper:
         if django_type == "HStoreField":
             self._imports.add(("sqlalchemy.dialects.postgresql", "HSTORE"))
             return "Column(HSTORE)"
+
+        # IP Address fields (GenericIPAddressField, IPAddressField)
+        if django_type in ("GenericIPAddressField", "IPAddressField"):
+            self._imports.add(("sqlalchemy.dialects.postgresql", "INET"))
+            return "Column(INET)"
 
         return None
 

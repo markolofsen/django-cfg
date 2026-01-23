@@ -698,6 +698,11 @@ class DjangoConfig(BaseModel):
                     context={"config": self.model_dump(exclude={"_django_settings"})},
                 ) from e
 
+        # Reload DRF api_settings to pick up REST_FRAMEWORK
+        # Must happen here before settings are applied to Django
+        from ..integration.drf import reload_drf_api_settings
+        reload_drf_api_settings(self._django_settings.get('REST_FRAMEWORK', {}))
+
         return self._django_settings
 
     def invalidate_cache(self) -> None:

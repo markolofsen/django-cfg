@@ -79,6 +79,16 @@ class FastAPIConfig(BaseModel):
     add_docstrings: bool = Field(default=True, description="Add docstrings to generated code")
     add_type_hints: bool = Field(default=True, description="Add comprehensive type hints")
 
+    # Database configuration (for database.py generation)
+    database_env_var: str = Field(
+        default="DATABASE_URL",
+        description="Environment variable name for database URL"
+    )
+    database_default_url: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/postgres",
+        description="Default database URL if env var is not set"
+    )
+
     @field_validator("output_dir")
     @classmethod
     def validate_output_dir(cls, v: str) -> str:

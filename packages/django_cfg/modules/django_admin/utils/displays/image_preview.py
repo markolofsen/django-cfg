@@ -26,7 +26,24 @@ class ImagePreviewDisplay:
             thumbnail_max_width="150px",
             zoom_enabled=True,
         )
+
+        # FK traversal support:
+        ImagePreviewField(
+            name="cdn_file__file",  # Access related model's file field
+            fallback_text="No image",
+        )
     """
+
+    @classmethod
+    def _get_nested_value(cls, obj: Any, field_name: str) -> Any:
+        """Get value from possibly nested field (e.g., 'cdn_file__file')."""
+        parts = field_name.split("__")
+        value = obj
+        for part in parts:
+            if value is None:
+                return None
+            value = getattr(value, part, None)
+        return value
 
     @classmethod
     def render(
@@ -182,13 +199,15 @@ class ImagePreviewDisplay:
                     )
                 return config.get('empty_value', "—")
 
-        # Get image URL - support url_method, direct fields, and methods
+        # Get image URL - support url_method, direct fields, FK traversal, and methods
+        image_url = None
         url_method = config.get('url_method')
         if url_method:
             method = getattr(obj, url_method, None)
             image_url = method() if callable(method) else None
         else:
-            value = getattr(obj, field, None)
+            # Use nested value getter to support FK traversal (e.g., 'cdn_file__file')
+            value = cls._get_nested_value(obj, field)
             if callable(value):
                 image_url = value()
             elif value and hasattr(value, 'url'):
@@ -196,6 +215,18 @@ class ImagePreviewDisplay:
                 image_url = value.url
             else:
                 image_url = value
+
+        # Try fallback field if main field is empty
+        if not image_url:
+            fallback_field = config.get('fallback_field')
+            if fallback_field:
+                fallback_value = cls._get_nested_value(obj, fallback_field)
+                if callable(fallback_value):
+                    image_url = fallback_value()
+                elif fallback_value and hasattr(fallback_value, 'url'):
+                    image_url = fallback_value.url
+                else:
+                    image_url = fallback_value
 
         if not image_url:
             fallback_text = config.get('fallback_text')

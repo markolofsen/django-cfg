@@ -151,6 +151,12 @@ class ImagePreviewField(FieldConfig):
         description="Model method name that returns image URL (e.g., 'get_download_url')"
     )
 
+    # Fallback field - if main field is empty, try this field
+    fallback_field: Optional[str] = Field(
+        None,
+        description="Fallback field name if main field is empty (supports __ notation for FK)"
+    )
+
     # Conditional display
     condition_field: Optional[str] = Field(
         None,
@@ -209,6 +215,10 @@ class ImagePreviewField(FieldConfig):
         # Smart URL resolution
         if self.url_method is not None:
             config['url_method'] = self.url_method
+
+        # Fallback field
+        if self.fallback_field is not None:
+            config['fallback_field'] = self.fallback_field
 
         # Conditional display
         if self.condition_field is not None:

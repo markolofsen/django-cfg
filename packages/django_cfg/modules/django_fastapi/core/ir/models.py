@@ -59,6 +59,7 @@ class ParsedField:
     on_delete: Optional[str] = None  # CASCADE, PROTECT, etc.
     related_name: Optional[str] = None
     through_model: Optional[str] = None  # For M2M with through
+    related_pk_type: Optional[str] = None  # Primary key type of related model (UUIDField, BigAutoField, etc.)
 
     # PostgreSQL-specific
     is_array: bool = False

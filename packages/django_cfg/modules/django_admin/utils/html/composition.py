@@ -264,3 +264,48 @@ class CompositionElements:
             'secondary': 'bg-base-100 text-base-700 dark:bg-base-500/20 dark:text-base-200',
         }
         return variant_classes.get(variant, variant_classes['primary'])
+
+    @staticmethod
+    def stacked(items: list, css_class: str = "") -> SafeString:
+        """
+        Render items stacked vertically (one below another).
+
+        Useful for computed fields that need multi-line display like StackedField.
+
+        Args:
+            items: List of SafeString/str items to stack vertically
+            css_class: Additional CSS classes for container
+
+        Usage:
+            html.stacked([
+                html.text("Line 1", bold=True),
+                html.text("Line 2", muted=True),
+            ])
+
+        Returns:
+            SafeString with stacked layout HTML
+        """
+        from django.utils.safestring import SafeString, mark_safe
+
+        # Filter out None values
+        filtered_items = [item for item in items if item is not None]
+
+        if not filtered_items:
+            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+
+        # Convert items to divs
+        divs = []
+        for item in filtered_items:
+            if isinstance(item, SafeString):
+                divs.append(format_html('<div>{}</div>', item))
+            else:
+                divs.append(format_html('<div>{}</div>', escape(str(item))))
+
+        # Join divs
+        joined = mark_safe(''.join(str(d) for d in divs))
+
+        classes = "flex flex-col"
+        if css_class:
+            classes += f" {css_class}"
+
+        return format_html('<div class="{}">{}</div>', classes, joined)

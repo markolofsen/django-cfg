@@ -1,10 +1,8 @@
-"""
-DRF Serializers for Profiles app.
-"""
+"""DRF Serializers for Profiles app."""
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import UserProfile
+from apps.profiles.models import UserProfile
 from typing import Any, Dict
 
 User = get_user_model()
@@ -12,9 +10,9 @@ User = get_user_model()
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profiles."""
-    
+
     user_info = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = UserProfile
         fields = [
@@ -23,7 +21,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'orders_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'user', 'posts_count', 'comments_count', 'orders_count', 'created_at', 'updated_at']
-    
+
     def get_user_info(self, obj) -> Dict[str, Any]:
         """Get basic user information."""
         return {
@@ -38,7 +36,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profiles."""
-    
+
     class Meta:
         model = UserProfile
         fields = [
@@ -49,7 +47,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
 class UserProfileStatsSerializer(serializers.Serializer):
     """Serializer for profile statistics."""
-    
+
     total_profiles = serializers.IntegerField()
     profiles_with_company = serializers.IntegerField()
     profiles_with_social_links = serializers.IntegerField()
