@@ -85,7 +85,7 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
 
     // PWA install prompt configuration
     pwaInstall: {
-      enabled: true,
+      enabled: false,
       showInstallHint: true,
       logo: settings.app.media.logo192,
       delayMs: 5000,
@@ -94,11 +94,17 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
 
     // Push notifications configuration
     pushNotifications: {
-      enabled: true,
+      enabled: false,
       vapidPublicKey: settings.push.vapidPublicKey,
       requirePWA: false,
       delayMs: 10000,
       resetAfterDays: 14,
+    },
+
+    // MCP Chat configuration
+    mcpChat: {
+      enabled: false,
+      autoDetectEnvironment: false,
     },
 
     // i18n configuration for locale switcher

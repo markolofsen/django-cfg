@@ -7,7 +7,6 @@ import { getMessages } from 'next-intl/server';
 import { generateMetadata } from '@core/metadata';
 import { settings } from '@core/settings';
 import { I18nProvider, routing, generateLocaleParams } from '@djangocfg/nextjs/i18n';
-import { AIChatWidget } from '@djangocfg/layouts/snippets';
 import { AppLayout } from '@layouts/AppLayout';
 
 import type { Messages } from '@djangocfg/nextjs/i18n';
@@ -61,7 +60,6 @@ export default async function LocaleLayout({
             {children}
           </AppLayout>
         </I18nProvider>
-        <AIChatWidget />
       </body>
     </html>
   );
