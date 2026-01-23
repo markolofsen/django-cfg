@@ -66,6 +66,9 @@ class OperationsGenerator:
                 return_type = f"list[{primary_response.schema_name}]"
             else:
                 return_type = primary_response.schema_name
+        elif primary_response and primary_response.is_array and primary_response.items_schema_name:
+            # Array response with items $ref
+            return_type = f"list[{primary_response.items_schema_name}]"
         else:
             return_type = "None"
 
@@ -134,11 +137,17 @@ class OperationsGenerator:
         body_lines.append('    raise httpx.HTTPStatusError(f"{response.status_code}: {error_body}", request=response.request, response=response)')
 
         if return_type != "None":
-            if operation.is_list_operation:
+            if primary_response and primary_response.is_array and primary_response.items_schema_name:
+                # Array response - parse each item
+                item_schema = primary_response.items_schema_name
+                body_lines.append(f"return [{item_schema}.model_validate(item) for item in response.json()]")
+            elif operation.is_list_operation and primary_response and primary_response.schema_name:
                 # Paginated list response - return full paginated object
                 body_lines.append(f"return {primary_response.schema_name}.model_validate(response.json())")
-            else:
+            elif primary_response and primary_response.schema_name:
                 body_lines.append(f"return {primary_response.schema_name}.model_validate(response.json())")
+            else:
+                body_lines.append("return response.json()")
         else:
             body_lines.append("return None")
 
@@ -188,6 +197,9 @@ class OperationsGenerator:
                 return_type = f"list[{primary_response.schema_name}]"
             else:
                 return_type = primary_response.schema_name
+        elif primary_response and primary_response.is_array and primary_response.items_schema_name:
+            # Array response with items $ref
+            return_type = f"list[{primary_response.items_schema_name}]"
         else:
             return_type = "None"
 
@@ -257,13 +269,19 @@ class OperationsGenerator:
 
         # Parse response
         if return_type != "None":
-            if operation.is_list_operation:
+            if primary_response and primary_response.is_array and primary_response.items_schema_name:
+                # Array response - parse each item
+                item_schema = primary_response.items_schema_name
+                body_lines.append(f"return [{item_schema}.model_validate(item) for item in response.json()]")
+            elif operation.is_list_operation and primary_response and primary_response.schema_name:
                 # List response - return full paginated object
                 primary_schema = primary_response.schema_name
                 body_lines.append(f"return {primary_schema}.model_validate(response.json())")
-            else:
+            elif primary_response and primary_response.schema_name:
                 # Single object response
-                body_lines.append(f"return {return_type}.model_validate(response.json())")
+                body_lines.append(f"return {primary_response.schema_name}.model_validate(response.json())")
+            else:
+                body_lines.append("return response.json()")
 
         # Render template
         template = self.jinja_env.get_template('client/sync_operation_method.py.jinja')

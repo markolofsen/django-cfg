@@ -7,10 +7,13 @@
 
 import { createBaseNextConfig } from '@djangocfg/nextjs/config';
 import bundleAnalyzer from '@next/bundle-analyzer';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 // Create config with base settings
 // Add project-specific overrides here if needed
@@ -28,4 +31,4 @@ const config = createBaseNextConfig({
   },
 });
 
-export default withBundleAnalyzer(config);
+export default withBundleAnalyzer(withNextIntl(config));

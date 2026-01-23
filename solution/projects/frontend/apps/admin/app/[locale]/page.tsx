@@ -3,7 +3,7 @@ import { redirectToAuth, routes } from '@routes/index';
 
 import {
     AIDocsSection, CTASectionComponent, FeaturesSection, HeroSection, QuickStartSection
-} from './_components/landing';
+} from '../_components/landing';
 
 export default function Page() {
   const useRedirect = false

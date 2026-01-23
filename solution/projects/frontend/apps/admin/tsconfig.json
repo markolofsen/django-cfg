@@ -13,6 +13,12 @@
       ],
       "@layouts/*": [
         "./app/_layouts/*"
+      ],
+      "@i18n": [
+        "./i18n/index.ts"
+      ],
+      "@i18n/*": [
+        "./i18n/*"
       ]
     },
     "noEmit": true
@@ -20,6 +26,8 @@
   "include": [
     "app/**/*.ts",
     "app/**/*.tsx",
+    "i18n/**/*.ts",
+    "proxy.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

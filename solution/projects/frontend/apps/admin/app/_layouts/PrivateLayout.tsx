@@ -14,8 +14,11 @@ import {
 } from '@djangocfg/layouts';
 import { menuGroups, routes } from '@routes/index';
 
+import type { I18nLayoutConfig } from '@djangocfg/layouts';
+
 interface PrivateLayoutProps {
   children: ReactNode;
+  i18n?: I18nLayoutConfig;
 }
 
 /**
@@ -42,18 +45,19 @@ function convertMenuGroupsToSidebar(menuGroups: Array<{ label: string; items: Ar
  * Wrapper around base PrivateLayout from @djangocfg/layouts
  * Converts routes to layout props
  */
-export function PrivateLayout({ children }: PrivateLayoutProps) {
+export function PrivateLayout({ children, i18n }: PrivateLayoutProps) {
   const sidebarMenu = convertMenuGroupsToSidebar(menuGroups);
-  
+
   const header: HeaderConfig = {
     title: 'Dashboard',
   };
-  
+
   return (
     <BasePrivateLayout
       sidebar={sidebarMenu}
       header={header}
       contentPadding="default"
+      i18n={i18n}
     >
       {children}
     </BasePrivateLayout>

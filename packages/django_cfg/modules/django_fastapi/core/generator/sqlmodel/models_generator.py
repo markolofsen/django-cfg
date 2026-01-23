@@ -292,7 +292,11 @@ class SQLModelGenerator(BaseGenerator):
         return f"{rel.name}: {type_hint} = {rel_def}"
 
     def _generate_table_args(self, model: ParsedModel) -> str:
-        """Generate __table_args__ for constraints."""
+        """Generate __table_args__ for constraints.
+
+        Always includes extend_existing=True to allow table redefinition
+        (needed for pytest test collection and hot reloading).
+        """
         args = []
 
         # Unique together constraints
@@ -324,12 +328,15 @@ class SQLModelGenerator(BaseGenerator):
                     args.append(f'Index("{name}", {field_names})')
                     self._needs_index_import = True
 
+        # Always add extend_existing to allow table redefinition in tests
+        table_opts = '{"extend_existing": True}'
+
         if args:
             if len(args) == 1:
-                return f"({args[0]},)"
-            return f"(\n        {',\n        '.join(args)},\n    )"
+                return f"({args[0]}, {table_opts})"
+            return f"(\n        {',\n        '.join(args)},\n        {table_opts},\n    )"
 
-        return ""
+        return f"({table_opts},)"
 
     def _build_imports(self) -> str:
         """Build imports section based on collected imports."""

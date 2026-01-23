@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@djangocfg/api": "latest",
+    "@djangocfg/i18n": "latest",
     "@djangocfg/centrifugo": "latest",
     "@djangocfg/ext-base": "latest",
     "@djangocfg/ext-leads": "latest",

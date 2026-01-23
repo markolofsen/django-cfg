@@ -18,4 +18,3 @@ export default function Error({
 
   return <ErrorLayout code={500} supportEmail={settings.contact.email} />;
 }
-

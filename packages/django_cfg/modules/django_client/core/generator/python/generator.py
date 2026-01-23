@@ -194,6 +194,12 @@ class PythonGenerator(BaseGenerator):
                         schemas[response.schema_name] = self.context.schemas[response.schema_name]
                         # Collect nested refs
                         collect_nested_refs(self.context.schemas[response.schema_name], schemas)
+                # Array response items schema
+                if response.is_array and response.items_schema_name:
+                    if response.items_schema_name in self.context.schemas:
+                        schemas[response.items_schema_name] = self.context.schemas[response.items_schema_name]
+                        # Collect nested refs
+                        collect_nested_refs(self.context.schemas[response.items_schema_name], schemas)
 
         return schemas
 

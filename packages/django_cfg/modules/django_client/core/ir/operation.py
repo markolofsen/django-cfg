@@ -234,6 +234,14 @@ class IRResponseObject(BaseModel):
         False, description="Is response paginated (PageNumberPagination)"
     )
 
+    # Array response (type: array, items: $ref)
+    is_array: bool = Field(
+        False, description="Is response a simple array (not paginated)"
+    )
+    items_schema_name: str | None = Field(
+        None, description="Schema name for array items (when is_array=True)"
+    )
+
     @property
     def is_success(self) -> bool:
         """Check if response is successful (2xx)."""
@@ -255,6 +263,11 @@ class IRResponseObject(BaseModel):
 
         if self.is_paginated:
             parts.append("is_paginated=True")
+
+        if self.is_array:
+            parts.append("is_array=True")
+            if self.items_schema_name:
+                parts.append(f"items_schema_name={self.items_schema_name!r}")
 
         return ", ".join(parts) + ")"
 
@@ -384,13 +397,15 @@ class IROperationObject(BaseModel):
 
     @property
     def is_list_operation(self) -> bool:
-        """Check if operation is list endpoint (GET with pagination)."""
+        """Check if operation is list endpoint (GET with pagination or array response)."""
         if self.http_method != "GET":
             return False
 
-        # Check if primary success response is paginated
+        # Check if primary success response is paginated or array
         success_response = self.responses.get(200)
-        return success_response is not None and success_response.is_paginated
+        if success_response is None:
+            return False
+        return success_response.is_paginated or success_response.is_array
 
     @property
     def is_retrieve_operation(self) -> bool:

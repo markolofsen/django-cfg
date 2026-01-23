@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 
 import { settings } from '@core/settings';
 import { AppLayout as BaseAppLayout, AppLayoutProps } from '@djangocfg/layouts';
+import { useLocaleSwitcher } from '@djangocfg/nextjs/i18n/client';
 import { routes } from '@routes/index';
 
 import { AdminLayout } from './AdminLayout';
@@ -15,6 +16,7 @@ interface AppLayoutComponentProps {
 }
 
 export function AppLayout({ children }: AppLayoutComponentProps) {
+  const { locale, locales, changeLocale } = useLocaleSwitcher();
   const appLayoutProps: AppLayoutProps = {
     children,
 
@@ -97,6 +99,13 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
       requirePWA: false,
       delayMs: 10000,
       resetAfterDays: 14,
+    },
+
+    // i18n configuration for locale switcher
+    i18n: {
+      locale,
+      locales,
+      onLocaleChange: changeLocale,
     },
   };
 

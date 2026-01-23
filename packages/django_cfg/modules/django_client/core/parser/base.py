@@ -838,6 +838,8 @@ class BaseParser(ABC):
             # Extract schema name and content type from content
             schema_name = None
             is_paginated = False
+            is_array = False
+            items_schema_name = None
             content_type = "application/json"
 
             if response_or_ref.content:
@@ -849,6 +851,17 @@ class BaseParser(ABC):
                             # Detect pagination
                             if "Paginated" in schema_name or "List" in schema_name:
                                 is_paginated = True
+                        elif isinstance(media_type.schema_, SchemaObject):
+                            # Check if it's an array response
+                            schema_type = self._normalize_type(media_type.schema_)
+                            if schema_type == "array" and media_type.schema_.items:
+                                is_array = True
+                                # Extract item schema name
+                                if isinstance(media_type.schema_.items, ReferenceObject):
+                                    items_schema_name = media_type.schema_.items.ref_name
+                                elif isinstance(media_type.schema_.items, SchemaObject):
+                                    # Inline schema - won't have a name
+                                    pass
                     break
 
             ir_responses[status_code] = IRResponseObject(
@@ -857,6 +870,8 @@ class BaseParser(ABC):
                 content_type=content_type,
                 description=response_or_ref.description,
                 is_paginated=is_paginated,
+                is_array=is_array,
+                items_schema_name=items_schema_name,
             )
 
         return ir_responses

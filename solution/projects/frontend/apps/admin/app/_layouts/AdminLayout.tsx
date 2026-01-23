@@ -14,8 +14,11 @@ import {
 } from '@djangocfg/layouts';
 import { adminMenuGroups, routes } from '@routes/index';
 
+import type { I18nLayoutConfig } from '@djangocfg/layouts';
+
 interface AdminLayoutProps {
   children: ReactNode;
+  i18n?: I18nLayoutConfig;
 }
 
 /**
@@ -49,18 +52,19 @@ function convertMenuGroupsToSidebar(menuGroups: Array<{ label: string; items: Ar
  * Wrapper around base AdminLayout from @djangocfg/layouts
  * Converts routes to layout props
  */
-export function AdminLayout({ children }: AdminLayoutProps) {
+export function AdminLayout({ children, i18n }: AdminLayoutProps) {
   const sidebarMenu = convertMenuGroupsToSidebar(adminMenuGroups);
-  
+
   const header: HeaderConfig = {
     title: 'Admin Dashboard',
   };
-  
+
   return (
     <BaseAdminLayout
       sidebar={sidebarMenu}
       header={header}
       contentPadding="default"
+      i18n={i18n}
     >
       {children}
     </BaseAdminLayout>

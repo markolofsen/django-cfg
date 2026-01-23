@@ -15,8 +15,11 @@ import {
 } from '@djangocfg/layouts';
 import { generatePublicNavigation, routes } from '@routes/index';
 
+import type { I18nLayoutConfig } from '@djangocfg/layouts';
+
 interface PublicLayoutProps {
   children: ReactNode;
+  i18n?: I18nLayoutConfig;
 }
 
 /**
@@ -37,7 +40,7 @@ function convertNavigationSections(sections: Array<{ title: string; items: Array
  * Wrapper around base PublicLayout from @djangocfg/layouts
  * Converts routes to layout props
  */
-export function PublicLayout({ children }: PublicLayoutProps) {
+export function PublicLayout({ children, i18n }: PublicLayoutProps) {
   const publicNavSections = generatePublicNavigation();
 
   const navigation: BaseNavigationItem[] = convertNavigationSections(publicNavSections);
@@ -61,6 +64,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       siteName={settings.app.name}
       navigation={navigation}
       userMenu={userMenu}
+      i18n={i18n}
     >
       {children}
     </BasePublicLayout>
