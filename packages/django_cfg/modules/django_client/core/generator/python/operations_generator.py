@@ -6,13 +6,19 @@ Handles:
 - Sync operation methods (def without await)
 - Path parameters, query parameters, request bodies
 - Response parsing and validation
+- Multipart/form-data file uploads
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from jinja2 import Environment
 
 from ...ir import IROperationObject
+
+if TYPE_CHECKING:
+    from ...ir import IRSchemaObject
 
 
 class OperationsGenerator:
@@ -59,18 +65,25 @@ class OperationsGenerator:
                 param_type = f"{param_type} | None = None"
             params.append(f"{param.name}: {param_type}")
 
-        # Return type
+        # Return type - handle multiple response types
+        has_multiple_responses = self._has_multiple_response_types(operation)
         primary_response = operation.primary_success_response
-        if primary_response and primary_response.schema_name:
+
+        if has_multiple_responses:
+            return_type, response_schemas = self._get_response_type_info(operation)
+        elif primary_response and primary_response.schema_name:
             if operation.is_list_operation:
                 return_type = f"list[{primary_response.schema_name}]"
             else:
                 return_type = primary_response.schema_name
+            response_schemas = []
         elif primary_response and primary_response.is_array and primary_response.items_schema_name:
             # Array response with items $ref
             return_type = f"list[{primary_response.items_schema_name}]"
+            response_schemas = []
         else:
             return_type = "None"
+            response_schemas = []
 
         signature = f"async def {method_name}({', '.join(params)}) -> {return_type}:"
 
@@ -111,10 +124,19 @@ class OperationsGenerator:
             query_dict = "{" + ", ".join(query_items) + "}"
             request_kwargs.append(f"params={query_dict}")
 
-        # JSON body
+        # Check if multipart
+        is_multipart = self._is_multipart_operation(operation)
+
+        # Request body
         if operation.request_body:
-            # Required body
-            request_kwargs.append("json=data.model_dump(exclude_unset=True)")
+            if is_multipart:
+                # Multipart form data - add file/data building code
+                body_lines.extend(self._generate_multipart_body_lines(operation))
+                request_kwargs.append("files=_files if _files else None")
+                request_kwargs.append("data=_form_data if _form_data else None")
+            else:
+                # JSON body
+                request_kwargs.append("json=data.model_dump(exclude_unset=True)")
         elif operation.patch_request_body:
             # Optional PATCH body - check for None
             request_kwargs.append("json=data.model_dump(exclude_unset=True) if data is not None else None")
@@ -137,7 +159,18 @@ class OperationsGenerator:
         body_lines.append('    raise httpx.HTTPStatusError(f"{response.status_code}: {error_body}", request=response.request, response=response)')
 
         if return_type != "None":
-            if primary_response and primary_response.is_array and primary_response.items_schema_name:
+            if has_multiple_responses and response_schemas:
+                # Multiple response types - check status code
+                for i, (status_code, schema_name) in enumerate(response_schemas):
+                    if i == 0:
+                        body_lines.append(f"if response.status_code == {status_code}:")
+                    else:
+                        body_lines.append(f"elif response.status_code == {status_code}:")
+                    body_lines.append(f"    return {schema_name}.model_validate(response.json())")
+                # Default fallback to first schema
+                body_lines.append("else:")
+                body_lines.append(f"    return {response_schemas[0][1]}.model_validate(response.json())")
+            elif primary_response and primary_response.is_array and primary_response.items_schema_name:
                 # Array response - parse each item
                 item_schema = primary_response.items_schema_name
                 body_lines.append(f"return [{item_schema}.model_validate(item) for item in response.json()]")
@@ -190,18 +223,25 @@ class OperationsGenerator:
                 param_type = f"{param_type} | None = None"
             params.append(f"{param.name}: {param_type}")
 
-        # Return type
+        # Return type - handle multiple response types
+        has_multiple_responses = self._has_multiple_response_types(operation)
         primary_response = operation.primary_success_response
-        if primary_response and primary_response.schema_name:
+
+        if has_multiple_responses:
+            return_type, response_schemas = self._get_response_type_info(operation)
+        elif primary_response and primary_response.schema_name:
             if operation.is_list_operation:
                 return_type = f"list[{primary_response.schema_name}]"
             else:
                 return_type = primary_response.schema_name
+            response_schemas = []
         elif primary_response and primary_response.is_array and primary_response.items_schema_name:
             # Array response with items $ref
             return_type = f"list[{primary_response.items_schema_name}]"
+            response_schemas = []
         else:
             return_type = "None"
+            response_schemas = []
 
         # Docstring
         docstring_lines = []
@@ -240,10 +280,19 @@ class OperationsGenerator:
             query_dict = "{" + ", ".join(query_items) + "}"
             request_kwargs.append(f"params={query_dict}")
 
-        # JSON body
+        # Check if multipart
+        is_multipart = self._is_multipart_operation(operation)
+
+        # Request body
         if operation.request_body:
-            # Required body
-            request_kwargs.append("json=data.model_dump(exclude_unset=True)")
+            if is_multipart:
+                # Multipart form data - add file/data building code
+                body_lines.extend(self._generate_multipart_body_lines(operation))
+                request_kwargs.append("files=_files if _files else None")
+                request_kwargs.append("data=_form_data if _form_data else None")
+            else:
+                # JSON body
+                request_kwargs.append("json=data.model_dump(exclude_unset=True)")
         elif operation.patch_request_body:
             # Optional PATCH body - check for None
             request_kwargs.append("json=data.model_dump(exclude_unset=True) if data is not None else None")
@@ -269,7 +318,18 @@ class OperationsGenerator:
 
         # Parse response
         if return_type != "None":
-            if primary_response and primary_response.is_array and primary_response.items_schema_name:
+            if has_multiple_responses and response_schemas:
+                # Multiple response types - check status code
+                for i, (status_code, schema_name) in enumerate(response_schemas):
+                    if i == 0:
+                        body_lines.append(f"if response.status_code == {status_code}:")
+                    else:
+                        body_lines.append(f"elif response.status_code == {status_code}:")
+                    body_lines.append(f"    return {schema_name}.model_validate(response.json())")
+                # Default fallback to first schema
+                body_lines.append("else:")
+                body_lines.append(f"    return {response_schemas[0][1]}.model_validate(response.json())")
+            elif primary_response and primary_response.is_array and primary_response.items_schema_name:
                 # Array response - parse each item
                 item_schema = primary_response.items_schema_name
                 body_lines.append(f"return [{item_schema}.model_validate(item) for item in response.json()]")
@@ -304,3 +364,112 @@ class OperationsGenerator:
             "object": "dict",
         }
         return type_map.get(schema_type, "str")
+
+    def _is_multipart_operation(self, operation: IROperationObject) -> bool:
+        """Check if operation uses multipart/form-data content type."""
+        return (
+            operation.request_body is not None
+            and operation.request_body.content_type == "multipart/form-data"
+        )
+
+    def _get_schema_for_operation(self, operation: IROperationObject) -> "IRSchemaObject | None":
+        """Get the request body schema for an operation."""
+        if not operation.request_body or not operation.request_body.schema_name:
+            return None
+        schema_name = operation.request_body.schema_name
+        # Access schemas through base generator's context
+        if hasattr(self.base, 'context') and schema_name in self.base.context.schemas:
+            return self.base.context.schemas[schema_name]
+        return None
+
+    def _has_multiple_response_types(self, operation: IROperationObject) -> bool:
+        """Check if operation has multiple success responses with different schemas."""
+        success_responses = operation.success_responses
+        if len(success_responses) < 2:
+            return False
+        # Check if schemas are different
+        schemas = set()
+        for response in success_responses.values():
+            if response.schema_name:
+                schemas.add(response.schema_name)
+        return len(schemas) > 1
+
+    def _get_response_type_info(self, operation: IROperationObject) -> tuple[str, list[tuple[int, str]]]:
+        """Get return type and list of (status_code, schema_name) for multiple responses.
+
+        Returns:
+            Tuple of (return_type_str, list of (status_code, schema_name) tuples)
+        """
+        success_responses = operation.success_responses
+        response_schemas: list[tuple[int, str]] = []
+
+        for status_code, response in sorted(success_responses.items()):
+            if response.schema_name:
+                response_schemas.append((status_code, response.schema_name))
+
+        if len(response_schemas) > 1:
+            # Union type
+            schema_names = [schema for _, schema in response_schemas]
+            return_type = " | ".join(schema_names)
+            return return_type, response_schemas
+        elif response_schemas:
+            # Single response type
+            return response_schemas[0][1], response_schemas
+        else:
+            return "None", []
+
+    def _generate_multipart_body_lines(self, operation: IROperationObject) -> list[str]:
+        """Generate code for building multipart form data.
+
+        For multipart operations, we need to:
+        1. Separate file fields (format: binary) from data fields
+        2. Build files dict for file fields
+        3. Build data dict for other fields
+        4. Use httpx's files= and data= parameters instead of json=
+
+        Returns:
+            List of Python code lines for building the request.
+        """
+        lines = []
+        schema = self._get_schema_for_operation(operation)
+
+        if not schema:
+            # Fallback: assume 'file' is a file field and rest are data
+            lines.append("# Multipart upload (schema not available)")
+            lines.append("_files = {}")
+            lines.append("_form_data = {}")
+            lines.append("_raw_data = data.model_dump(exclude_unset=True)")
+            lines.append("for key, value in _raw_data.items():")
+            lines.append("    if hasattr(value, 'read'):  # File-like object")
+            lines.append("        _files[key] = value")
+            lines.append("    elif value is not None:")
+            lines.append("        _form_data[key] = value")
+            return lines
+
+        # Collect file fields and data fields
+        file_fields = []
+        data_fields = []
+
+        for prop_name, prop_schema in schema.properties.items():
+            if prop_schema.is_binary:
+                file_fields.append(prop_name)
+            else:
+                data_fields.append(prop_name)
+
+        # Generate code for file fields
+        lines.append("# Build multipart form data")
+        lines.append("_files = {}")
+        lines.append("_form_data = {}")
+        lines.append("_raw_data = data.model_dump(exclude_unset=True)")
+
+        # Handle file fields
+        for field in file_fields:
+            lines.append(f"if '{field}' in _raw_data and _raw_data['{field}'] is not None:")
+            lines.append(f"    _files['{field}'] = _raw_data['{field}']")
+
+        # Handle data fields
+        for field in data_fields:
+            lines.append(f"if '{field}' in _raw_data and _raw_data['{field}'] is not None:")
+            lines.append(f"    _form_data['{field}'] = _raw_data['{field}']")
+
+        return lines

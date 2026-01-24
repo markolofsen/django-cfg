@@ -296,6 +296,10 @@ class IRSchemaObject(BaseModel):
             base_type = self.ref
             return f"{base_type} | None" if self.nullable else base_type
 
+        # Handle binary type (file uploads) - use Any to accept file-like objects
+        if self.is_binary:
+            return "Any | None" if self.nullable else "Any"
+
         # For read-only string fields, use Any since they often return complex objects
         # from SerializerMethodField in Django (e.g., dicts instead of strings)
         if self.read_only and self.type == "string":
