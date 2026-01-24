@@ -1,7 +1,6 @@
 """Currency app configuration."""
 
 import sys
-import threading
 
 from django.apps import AppConfig
 
@@ -17,39 +16,41 @@ class CurrencyConfig(AppConfig):
     label = "cfg_currency"
     verbose_name = "Currency"
     default_auto_field = "django.db.models.BigAutoField"
+    _sync_done = False
 
     def ready(self):
-        """Initialize app on Django startup."""
-        import time
-        start = time.time()
-
-        # Skip in migrations, shell_plus, etc.
+        """Register lazy sync on first request."""
         if any(cmd in sys.argv for cmd in ["migrate", "makemigrations", "collectstatic"]):
             return
 
-        # Run initial rate update in background thread (NON-BLOCKING)
-        thread = threading.Thread(target=self._run_startup_update, daemon=True)
+        from django.core.signals import request_started
+        request_started.connect(self._lazy_sync)
+
+    def _lazy_sync(self, **kwargs):
+        """Run currency sync on first HTTP request."""
+        if CurrencyConfig._sync_done:
+            return
+        CurrencyConfig._sync_done = True
+
+        # Disconnect - run only once
+        from django.core.signals import request_started
+        request_started.disconnect(self._lazy_sync)
+
+        # Run sync in background thread (non-blocking for first request)
+        import threading
+        thread = threading.Thread(target=self._do_sync, daemon=True)
         thread.start()
 
-        # This should return IMMEDIATELY (< 1ms)
-        elapsed = (time.time() - start) * 1000
-        logger.info(f"Currency app ready() completed in {elapsed:.1f}ms (thread spawned)")
-
-    def _run_startup_update(self):
-        """
-        Run startup sync via service in background thread.
-
-        This runs in a DAEMON THREAD - does NOT block Django startup.
-        Django continues serving requests while this syncs.
-        """
+    def _do_sync(self):
+        """Perform currency sync."""
         import time
         start = time.time()
 
         try:
             from .services import sync_all
-            result = sync_all()  # Syncs currencies if needed + rates if needed
+            sync_all()
 
             elapsed = time.time() - start
-            logger.info(f"Background currency sync completed in {elapsed:.1f}s")
+            logger.info(f"Currency sync completed in {elapsed:.1f}s")
         except Exception as e:
-            logger.warning(f"Background currency sync failed: {e}")
+            logger.warning(f"Currency sync failed: {e}")
