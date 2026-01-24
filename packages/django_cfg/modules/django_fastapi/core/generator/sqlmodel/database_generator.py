@@ -28,6 +28,8 @@ class DatabaseConfigGenerator(BaseGenerator):
         """Generate async database configuration."""
         env_var = self.config.database_env_var
         default_url = self.config.database_default_url
+        # Define outside f-string to avoid escaping issues
+        connect_args_async = '{"ssl": False}'
 
         return f'''"""
 Async database configuration for FastAPI.
@@ -70,6 +72,8 @@ elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL
 
 
 # Create async engine
+# Note: connect_args with ssl=False is for asyncpg driver
+# (sslmode=disable in URL only works with psycopg2/libpq, not asyncpg)
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  # Set to True for SQL logging
@@ -77,6 +81,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=5,
     max_overflow=10,
+    connect_args={connect_args_async},  # Disable SSL for local development
 )
 
 # Create async session factory
@@ -147,6 +152,8 @@ class DatabaseSession:
         env_var = self.config.database_env_var
         # For sync mode, use standard postgresql:// instead of asyncpg
         default_url = self.config.database_default_url.replace("+asyncpg", "")
+        # Define outside f-string to avoid escaping issues
+        connect_args_sync = '{"sslmode": "disable"}'
 
         return f'''"""
 Sync database configuration for FastAPI.
@@ -169,12 +176,14 @@ DATABASE_URL = os.getenv(
 )
 
 # Create sync engine
+# Note: For psycopg2, use sslmode in connect_args
 engine = create_engine(
     DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
     pool_size=5,
     max_overflow=10,
+    connect_args={connect_args_sync},  # Disable SSL for local development
 )
 
 # Create session factory
