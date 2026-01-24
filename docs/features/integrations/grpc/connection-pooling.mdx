@@ -1,0 +1,383 @@
+---
+title: Connection Pooling
+description: Efficient channel reuse for high-performance gRPC applications
+sidebar_label: Connection Pooling
+keywords: [grpc, pooling, channels, performance, connection-reuse]
+position: 9
+---
+
+import { Callout } from 'nextra/components';
+
+# Connection Pooling
+
+Django-CFG provides connection pooling for gRPC channels, reducing connection overhead and improving performance for high-traffic applications.
+
+## Why Connection Pooling?
+
+Creating a new gRPC channel for each request is expensive:
+
+| Operation | Without Pool | With Pool |
+|-----------|--------------|-----------|
+| Connection setup | Every request | Once per target |
+| TLS handshake | Every request | Once per target |
+| Channel warmup | Every request | Once per target |
+| **Typical latency** | 50-200ms | 1-5ms |
+
+Connection pooling reuses channels across requests, dramatically reducing latency.
+
+---
+
+## Quick Start
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    get_channel_pool,
+    AsyncResilientGRPCClient,
+)
+
+# Option 1: Use global pool directly
+pool = get_channel_pool()
+async with pool.pooled_channel("localhost:50051") as channel:
+    stub = MyServiceStub(channel)
+    response = await stub.Method(request)
+
+# Option 2: Use resilient client with pooling
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    use_pool=True,
+) as client:
+    result = await client.call_method(...)
+```
+
+---
+
+## GRPCChannelPool (Async)
+
+The async channel pool for `grpc.aio.Channel`.
+
+### Getting the Pool
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    get_channel_pool,
+    PoolConfig,
+)
+
+# Default configuration
+pool = get_channel_pool()
+
+# Custom configuration
+config = PoolConfig(
+    max_size=50,
+    idle_timeout=300.0,
+    min_idle=5,
+)
+pool = get_channel_pool(config)
+```
+
+### Using pooled_channel Context Manager
+
+The recommended way to use pooled channels:
+
+```python
+async with pool.pooled_channel("localhost:50051") as channel:
+    stub = MyServiceStub(channel)
+    response = await stub.Method(request)
+# Channel automatically returned to pool
+```
+
+With TLS:
+
+```python
+async with pool.pooled_channel(
+    "secure-service:50051",
+    use_tls=True,
+) as channel:
+    stub = SecureServiceStub(channel)
+    response = await stub.Method(request)
+```
+
+### Getting Channels Directly
+
+For more control over channel lifecycle:
+
+```python
+# Get channel (creates if needed)
+channel = await pool.get_channel("localhost:50051")
+
+# Use channel
+stub = MyServiceStub(channel)
+response = await stub.Method(request)
+
+# Channel remains in pool for reuse
+```
+
+### Pool Statistics
+
+```python
+stats = pool.get_stats()
+print(f"Total channels: {stats['total_channels']}")
+print(f"In use: {stats['channels_in_use']}")
+print(f"Idle: {stats['channels_idle']}")
+
+# Per-target stats
+for target, target_stats in stats['pools'].items():
+    print(f"  {target}: {target_stats['in_use']}/{target_stats['total']}")
+```
+
+### Closing the Pool
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import close_global_pool
+
+# Close all channels and shutdown pool
+await close_global_pool()
+```
+
+---
+
+## SyncGRPCChannelPool
+
+For synchronous code, use `SyncGRPCChannelPool`:
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    get_sync_channel_pool,
+    close_global_sync_pool,
+)
+
+# Get sync pool
+pool = get_sync_channel_pool()
+
+# Get channel
+channel = pool.get_channel("localhost:50051")
+
+# Use channel
+stub = MyServiceStub(channel)
+response = stub.Method(request)
+
+# Close when done
+close_global_sync_pool()
+```
+
+---
+
+## Configuration
+
+### PoolConfig
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import PoolConfig
+
+config = PoolConfig(
+    max_size=20,        # Maximum channels in pool
+    idle_timeout=120.0, # Close idle channels after (seconds)
+    min_idle=2,         # Keep minimum idle channels
+    max_age=3600.0,     # Maximum channel age (seconds)
+    cleanup_interval=60.0,  # Cleanup check interval
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_size` | int | 20 | Maximum channels (1-100) |
+| `idle_timeout` | float | 120.0 | Close idle after (10-3600s) |
+| `min_idle` | int | 2 | Keep minimum idle (0-10) |
+| `max_age` | float | 3600.0 | Max channel age (60-86400s) |
+| `cleanup_interval` | float | 60.0 | Cleanup interval (10-600s) |
+
+### Pydantic Configuration
+
+For integration with ResilienceConfig:
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import ResilienceConfig
+
+config = ResilienceConfig(
+    pool=PoolConfig(
+        enabled=True,
+        max_size=50,
+        idle_timeout=300.0,
+    ),
+    # ... other resilience settings
+)
+```
+
+---
+
+## Integration with Clients
+
+### AsyncResilientGRPCClient
+
+Enable pooling in the resilient client:
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import AsyncResilientGRPCClient
+
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    use_pool=True,  # Enable pooling
+) as client:
+    # Channels are reused across calls
+    result1 = await client.call_method(...)
+    result2 = await client.call_method(...)
+
+    # Check pool stats
+    print(client.pool_stats)
+```
+
+### Custom Pool Instance
+
+Provide your own pool instance:
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    GRPCChannelPool,
+    PoolConfig,
+    AsyncResilientGRPCClient,
+)
+
+# Create custom pool
+my_pool = GRPCChannelPool(PoolConfig(max_size=100))
+
+# Use with client
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    use_pool=True,
+    pool=my_pool,
+) as client:
+    result = await client.call_method(...)
+
+# Clean up custom pool
+await my_pool.close_all()
+```
+
+---
+
+## Monitoring
+
+### Pool Health Check
+
+```python
+def check_pool_health():
+    pool = get_channel_pool()
+    stats = pool.get_stats()
+
+    # Check utilization
+    utilization = stats['channels_in_use'] / max(stats['total_channels'], 1)
+
+    if utilization > 0.9:
+        print("WARNING: Pool near capacity")
+
+    if pool.is_closed:
+        print("ERROR: Pool is closed")
+
+    return {
+        "healthy": not pool.is_closed and utilization < 0.9,
+        "utilization": utilization,
+        "stats": stats,
+    }
+```
+
+### Metrics to Monitor
+
+| Metric | Description | Alert Threshold |
+|--------|-------------|-----------------|
+| `total_channels` | Channels in pool | Near max_size |
+| `channels_in_use` | Active channels | > 90% of total |
+| `channels_idle` | Available channels | < min_idle |
+| `pool.is_closed` | Pool status | True |
+
+---
+
+## Performance Considerations
+
+### Pool Size Tuning
+
+```python
+# Calculate based on concurrent requests
+# Rule of thumb: max_size = peak_concurrent_requests * 1.2
+
+config = PoolConfig(
+    max_size=int(expected_concurrent * 1.2),
+    min_idle=int(expected_concurrent * 0.2),
+)
+```
+
+### Idle Timeout
+
+```python
+# Short timeout for bursty traffic
+config = PoolConfig(idle_timeout=60.0)
+
+# Long timeout for steady traffic
+config = PoolConfig(idle_timeout=300.0)
+```
+
+### Channel Age
+
+```python
+# Rotate channels periodically for load balancer compatibility
+config = PoolConfig(max_age=1800.0)  # 30 minutes
+```
+
+---
+
+## Troubleshooting
+
+### Pool Exhaustion
+
+**Symptom:** Slow channel acquisition, timeouts.
+
+**Cause:** All channels in use.
+
+**Solution:**
+```python
+# Increase pool size
+config = PoolConfig(max_size=50)
+
+# Check for leaks (unreleased channels)
+stats = pool.get_stats()
+print(f"In use: {stats['channels_in_use']}")
+```
+
+### Stale Channels
+
+**Symptom:** Intermittent connection errors.
+
+**Cause:** Channels kept too long.
+
+**Solution:**
+```python
+# Reduce max age
+config = PoolConfig(max_age=1800.0)
+
+# Reduce idle timeout
+config = PoolConfig(idle_timeout=60.0)
+```
+
+### Memory Usage
+
+**Symptom:** High memory consumption.
+
+**Cause:** Too many idle channels.
+
+**Solution:**
+```python
+# Reduce pool size
+config = PoolConfig(max_size=10)
+
+# Reduce min idle
+config = PoolConfig(min_idle=1)
+```
+
+---
+
+## See Also
+
+- [Resilience Patterns](/features/integrations/grpc/resilience) - Retry and circuit breaker
+- [Configuration](/features/integrations/grpc/configuration) - Full configuration reference
+- [Troubleshooting](/features/integrations/grpc/troubleshooting) - Common issues

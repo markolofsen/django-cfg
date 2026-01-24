@@ -1,0 +1,285 @@
+---
+title: Security Settings
+description: Security, CORS, and SSL configuration in Django-CFG
+sidebar_label: Security Settings
+sidebar_position: 3
+---
+
+
+# Security Settings
+
+
+**Production requirements:** Strong SECRET_KEY (50+ chars), reverse proxy with SSL, specific `security_domains`, environment variables for secrets.
+
+## Environment Modes
+
+| Setting | Development | Production |
+|---------|-------------|------------|
+| `CORS` | All origins allowed | Strict whitelist from `security_domains` |
+| `ALLOWED_HOSTS` | `['*']` | Generated from `security_domains` |
+| `CSRF` | Dev ports (3000, 5173, 8080, etc.) | Trusted origins from domains |
+| `DEBUG` | Enabled | **Forced disabled** |
+| `SSL` | Disabled | Reverse proxy assumed |
+
+## security_domains Field
+
+The `security_domains` field is the foundation of security configuration:
+
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    secret_key: str = "your-secret-key"
+    debug: bool = False
+
+    # Production domains (flexible format - Django-CFG normalizes automatically)
+    security_domains: list = [
+        "myapp.com",              # ✅ No protocol
+        "https://api.myapp.com",  # ✅ With protocol
+        "admin.myapp.com:8443",   # ✅ With port
+    ]
+
+# Development: security_domains optional (CORS fully open by default)
+class DevConfig(DjangoConfig):
+    debug: bool = True
+    # security_domains not needed - auto-configured for development
+```
+
+### Auto-Generated Settings
+
+From `security_domains = ["myapp.com", "api.myapp.com"]`:
+
+```python
+ALLOWED_HOSTS = ['myapp.com', 'api.myapp.com']  # + Docker IPs if detected
+CORS_ALLOWED_ORIGINS = ['https://myapp.com', 'https://api.myapp.com']
+CSRF_TRUSTED_ORIGINS = ['https://myapp.com', 'https://api.myapp.com']
+CORS_ALLOW_CREDENTIALS = True
+```
+
+## SSL/TLS Configuration
+
+SSL termination is handled by reverse proxy (nginx, Cloudflare, traefik). Default settings:
+
+```python
+SECURE_SSL_REDIRECT = False           # Proxy handles redirects
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True          # Production only
+CSRF_COOKIE_SECURE = True             # Production only
+```
+
+Set `ssl_redirect: bool = True` only for bare metal Django without reverse proxy (causes redirect loops with nginx/Cloudflare).
+
+## CORS Configuration
+
+CORS origins are auto-generated from `security_domains`. Add custom headers:
+
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list = ["myapp.com", "api.myapp.com"]
+    cors_allow_headers: list = ['x-api-key', 'x-custom-header']  # Merged with defaults
+```
+
+## Examples
+
+### Production
+
+```python
+class ProductionConfig(DjangoConfig):
+    secret_key: str = os.environ["SECRET_KEY"]
+    debug: bool = False
+    security_domains: list = ["myapp.com", "api.myapp.com"]
+```
+
+### Development
+
+```python
+class DevelopmentConfig(DjangoConfig):
+    secret_key: str = "dev-secret-key-minimum-50-characters-long-string"
+    debug: bool = True
+    # security_domains not needed - auto-configured
+```
+
+## Environment-Specific Security
+
+```yaml
+# config.production.yaml
+secret_key: "${SECRET_KEY}"
+debug: false
+security_domains: [myapp.com, api.myapp.com]
+
+# config.development.yaml
+secret_key: "dev-secret-key-minimum-50-chars"
+debug: true
+```
+
+## Security Best Practices
+
+| Practice | Requirement |
+|----------|-------------|
+| SECRET_KEY | 50+ chars, from `os.environ["SECRET_KEY"]` |
+| Secrets | Never hardcode, use environment variables |
+| SSL | Handle at reverse proxy (nginx/Cloudflare) |
+| ALLOWED_HOSTS | Use `security_domains`, never `['*']` in production |
+| CORS | Auto-configured from `security_domains` |
+
+**Generate SECRET_KEY:**
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+## Security Headers
+
+| Header | Production | Development |
+|--------|------------|-------------|
+| `X_FRAME_OPTIONS` | `DENY` | `SAMEORIGIN` |
+| `SECURE_HSTS_SECONDS` | `31536000` | - |
+| `SECURE_CONTENT_TYPE_NOSNIFF` | `True` | `False` |
+
+## Troubleshooting
+
+### ALLOWED_HOSTS Error
+
+**Error:**
+```
+DisallowedHost at /
+Invalid HTTP_HOST header: 'newdomain.com'
+```
+
+**Solution:**
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list = [
+        "myapp.com",
+        "newdomain.com",  # Add new domain
+    ]
+```
+
+### CORS Error
+
+**Error:**
+```
+Access to fetch at 'https://api.myapp.com' from origin 'https://myapp.com'
+has been blocked by CORS policy
+```
+
+**Solution:**
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list = [
+        "myapp.com",
+        "api.myapp.com",  # Add API domain
+    ]
+```
+
+### SSL Redirect Loop
+
+**Problem:** Infinite redirect loop in production
+
+**Solution:**
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list = ["myapp.com"]
+    ssl_redirect: bool = True
+
+# Add to settings:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+```
+
+## Django-Axes: Brute-Force Protection
+
+Automatic brute-force protection with environment-aware defaults. No configuration required.
+
+| Setting | Development | Production |
+|---------|-------------|------------|
+| `AXES_FAILURE_LIMIT` | 10 | 5 |
+| `AXES_COOLOFF_TIME` | 1 hour | 24 hours |
+| `AXES_VERBOSE` | True | False |
+
+### Custom Configuration
+
+```python
+axes: AxesConfig = AxesConfig(
+    failure_limit=3,
+    cooloff_time=48,
+    lockout_template="account/locked.html",
+)
+```
+
+
+### Configuration Options
+
+#### AxesConfig Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **Basic Settings** | | | |
+| `enabled` | `bool` | `True` | Enable/disable axes protection |
+| `failure_limit` | `int \| None` | `None` | Max failures before lockout (auto: 10 dev, 5 prod) |
+| `cooloff_time` | `int \| None` | `None` | Lockout duration in hours (auto: 1 dev, 24 prod) |
+| `lock_out_at_failure` | `bool` | `True` | Lock out after reaching failure limit |
+| `reset_on_success` | `bool` | `True` | Reset failure count after successful login |
+| **UI/UX Settings** | | | |
+| `lockout_template` | `str \| None` | `None` | Custom lockout template path |
+| `lockout_url` | `str \| None` | `None` | Custom lockout URL redirect |
+| **Logging Settings** | | | |
+| `verbose` | `bool \| None` | `None` | Verbose logging (auto: True dev, False prod) |
+| `enable_access_failure_log` | `bool` | `True` | Log access failures for security audit |
+| **IP Filtering** | | | |
+| `allowed_ips` | `list[str]` | `[]` | IP addresses that bypass axes protection |
+| `denied_ips` | `list[str]` | `[]` | IP addresses that are always blocked |
+| **Proxy Settings** | | | |
+| `ipware_proxy_count` | `int` | `1` | Number of proxies between client and server |
+| `ipware_meta_precedence_order` | `list[str]` | `["HTTP_X_FORWARDED_FOR", ...]` | Order of headers to extract real IP |
+| `cache_name` | `str` | `"default"` | Cache backend to use |
+| `username_form_field` | `str` | `"username"` | Form field to track (e.g., `"email"`) |
+
+### Proxy Configuration
+
+```python
+axes = AxesConfig(
+    ipware_proxy_count=2,  # Number of proxies (1 for Cloudflare, 2 for Cloudflare+nginx)
+    ipware_meta_precedence_order=[
+        'HTTP_CF_CONNECTING_IP',  # Cloudflare
+        'HTTP_X_FORWARDED_FOR',   # nginx/traefik
+        'HTTP_X_REAL_IP',
+        'REMOTE_ADDR',
+    ],
+)
+```
+
+### Custom Lockout
+
+```python
+# Option 1: Template
+axes = AxesConfig(lockout_template="account/locked.html")
+
+# Option 2: URL redirect
+axes = AxesConfig(lockout_url="/account/locked/")
+```
+
+Admin panel includes Access Attempts, Access Logs, and Access Failures for viewing/unlocking accounts.
+
+### Examples
+
+```python
+# Strict: 3 attempts, 72h lockout
+axes = AxesConfig(failure_limit=3, cooloff_time=72)
+
+# With IP whitelist
+axes = AxesConfig(failure_limit=5, allowed_ips=['192.168.1.0/24'])
+```
+
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| False lockouts | Increase `failure_limit` or add `allowed_ips` |
+| All requests from proxy IP | Configure `ipware_proxy_count` and `ipware_meta_precedence_order` |
+| Unlock user | `python manage.py axes_reset username admin` or delete in Admin |
+
+## See Also
+
+- [**DjangoConfig**](../django-settings) - Base configuration class
+- [**Configuration Overview**](./) - Configuration system overview
+- [**Environment**](../environment) - Environment detection

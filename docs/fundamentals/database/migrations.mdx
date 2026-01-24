@@ -1,0 +1,627 @@
+---
+title: Migrations
+description: Multi-database migration commands
+sidebar_label: Migrations
+sidebar_position: 5
+---
+
+# Multi-Database Migrations
+
+Django-CFG provides two powerful commands for managing multi-database migrations.
+
+## migrate_all (Production)
+
+Automatically migrates all databases based on routing configuration.
+
+### Usage
+
+```bash
+# Migrate all databases
+python manage.py migrate_all
+
+# Skip automatic makemigrations
+python manage.py migrate_all --skip-makemigrations
+```
+
+### Features
+
+- ✅ Auto-detects all databases from settings
+- ✅ Creates migrations first (unless --skip-makemigrations)
+- ✅ Migrates each database based on routing rules
+- ✅ Handles constance app automatically
+- ✅ Shows success/failure for each database
+
+### Example Output
+
+```bash
+$ python manage.py migrate_all
+
+🚀 Migrating all databases...
+
+🔄 Migrating database: default
+  📦 Migrating all apps...
+  ✅ Migrations completed for default
+
+🔄 Migrating database: trading_db
+  📦 Migrating app: trading
+  ✅ Migrations completed for trading_db
+
+🔄 Migrating database: wallet_db
+  📦 Migrating app: wallet
+  ✅ Migrations completed for wallet_db
+
+✅ All migrations completed successfully
+```
+
+### When to Use
+
+**Production deployments:**
+```bash
+# CI/CD pipeline
+python manage.py migrate_all
+```
+
+**Docker entrypoint:**
+```dockerfile
+CMD python manage.py migrate_all && gunicorn
+```
+
+## migrator (Development)
+
+Interactive migration tool with auto mode and targeted migrations.
+
+### Usage
+
+```bash
+# Auto mode - migrates all databases without prompts
+python manage.py migrator --auto
+
+# Interactive mode - shows menu
+python manage.py migrator
+
+# Migrate specific database
+python manage.py migrator --database trading_db
+
+# Migrate specific app
+python manage.py migrator --app trading
+
+# Migrate specific app on specific database
+python manage.py migrator --database trading_db --app trading
+```
+
+### Interactive Mode
+
+When run without `--auto`, shows an interactive menu:
+
+```
+🗄️  Django Database Migrator
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Current Configuration:
+   Databases: default, trading_db, wallet_db
+   Apps: accounts, trading, wallet, analytics
+
+What would you like to do?
+> Migrate all databases (recommended)
+  Migrate specific database
+  Show database status
+  View configuration info
+  Exit
+```
+
+### Auto Mode
+
+Runs automatic migration without prompts:
+
+```bash
+$ python manage.py migrator --auto
+
+🚀 Running automatic migration...
+
+📦 Creating migrations for all apps...
+✅ Migrations created successfully
+
+🔄 Migrating database: default
+  📦 Migrating all apps...
+  ✅ Migrations completed for default
+
+🔄 Migrating database: trading_db
+  📦 Migrating app: trading
+  ✅ Migrations completed for trading_db
+
+🔄 Migrating database: wallet_db
+  📦 Migrating app: wallet
+  ✅ Migrations completed for wallet_db
+
+✅ Constance migrated successfully
+```
+
+### Migration Flow
+
+1. **Creates migrations** - Runs `makemigrations` for all apps
+2. **Migrates default database** - Migrates main database first
+3. **Migrates routed databases** - Migrates blog_db, shop_db based on routing rules
+4. **Migrates constance** - Always migrates constance app (required by django-cfg)
+
+### When to Use
+
+**Development:**
+```bash
+# Quick migration during development
+python manage.py migrator --auto
+```
+
+**Testing specific database:**
+```bash
+# Test trading database migrations only
+python manage.py migrator --database trading_db
+```
+
+**Troubleshooting:**
+```bash
+# Interactive mode to explore database status
+python manage.py migrator
+# Select "Show database status" from menu
+```
+
+## Comparison
+
+| Feature | `migrate_all` | `migrator --auto` |
+|---------|---------------|-------------------|
+| Interactive menu | ❌ No | ✅ Yes (without --auto) |
+| Auto makemigrations | ✅ Yes (unless --skip-makemigrations) | ✅ Yes |
+| Respects routing rules | ✅ Yes | ✅ Yes |
+| Specific database | ❌ Migrates all | ✅ --database flag |
+| Specific app | ❌ Migrates all apps | ✅ --app flag |
+| Constance handling | ✅ Automatic | ✅ Automatic |
+| Best for | Production, CI/CD | Development, targeted migrations |
+
+## Standard Django Migrations
+
+You can still use standard Django migration commands:
+
+```bash
+# Create migrations
+python manage.py makemigrations
+python manage.py makemigrations trading
+
+# Migrate specific database
+python manage.py migrate --database=trading_db
+python manage.py migrate trading --database=trading_db
+
+# Migrate all databases (respects routing)
+python manage.py migrate
+
+# Show migration status
+python manage.py showmigrations
+python manage.py showmigrations --database=trading_db
+
+# Fake migration
+python manage.py migrate --fake trading_db
+
+# Rollback migration
+python manage.py migrate trading 0001
+```
+
+## Migration Strategies
+
+### Initial Setup
+
+```bash
+# 1. Create migrations
+python manage.py makemigrations
+
+# 2. Migrate all databases
+python manage.py migrate_all
+
+# 3. Verify
+python manage.py showmigrations
+```
+
+### Adding New Model
+
+```bash
+# 1. Add model to apps/trading/models.py
+# 2. Create migration
+python manage.py makemigrations trading
+
+# 3. Migrate trading database only
+python manage.py migrator --database trading_db
+```
+
+### Production Deployment
+
+```bash
+# Pre-deployment check
+python manage.py migrate_all --dry-run
+
+# Deploy migrations
+python manage.py migrate_all
+
+# Verify
+python manage.py showmigrations
+```
+
+## Routing and Migrations
+
+### How Routing Affects Migrations
+
+```python
+# settings.py
+DATABASE_ROUTING_RULES = {
+    'trading': 'trading_db',
+    'wallet': 'wallet_db',
+}
+```
+
+**Migration behavior:**
+- Trading app migrations → run on `trading_db` only
+- Wallet app migrations → run on `wallet_db` only
+- Other apps → run on `default` database
+
+### Migration Storage
+
+Migrations are tracked in the `django_migrations` table in each database:
+
+```bash
+# Check migrations on specific database
+python manage.py dbshell --database=trading_db
+```
+
+```sql
+SELECT * FROM django_migrations WHERE app = 'trading';
+```
+
+## Troubleshooting
+
+### Migration Already Applied
+
+```bash
+# Fake the migration
+python manage.py migrate --fake trading 0001 --database=trading_db
+```
+
+### Migration Conflicts
+
+```bash
+# Check for conflicts
+python manage.py makemigrations --check
+
+# Merge migrations
+python manage.py makemigrations --merge
+```
+
+### Reset Migrations (Development Only)
+
+```bash
+# Delete migration files (keep __init__.py)
+find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
+find . -path "*/migrations/*.pyc" -delete
+
+# Drop and recreate databases
+python manage.py migrate_all --fake-initial
+```
+
+### Cross-Database Migration Errors
+
+If you get `relation does not exist` errors:
+
+```python
+# models.py - Add db_constraint=False for cross-database ForeignKeys
+author = models.ForeignKey(
+    User,
+    on_delete=models.CASCADE,
+    db_constraint=False  # REQUIRED for cross-database FK
+)
+```
+
+See: [Cross-Database Relations](../cross-database-relations)
+
+## Migration Auto-Fix
+
+Django-CFG includes **intelligent migration management** that automatically detects and fixes common migration issues.
+
+### Automatic Inconsistency Detection
+
+The MigrationManager automatically detects migration inconsistencies:
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+manager = MigrationManager()
+
+# Check for migration consistency issues
+has_issues = manager.check_migration_consistency('default')
+
+if has_issues:
+    print("Found inconsistent migration history")
+```
+
+### Django-CFG CustomUser Standard
+
+**Built-in Configuration:**
+
+Django-CFG automatically configures CustomUser as a **core feature**:
+
+```python
+# Auto-configured in core/generation/core_generators/settings.py (line 75):
+AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
+
+# App configuration in apps.py:
+# name = "django_cfg.apps.system.accounts"
+# label = "django_cfg_accounts"  # This is the app label used everywhere
+
+# No manual setup needed - works out of the box!
+```
+
+**Automatic Migration Order Fix:**
+
+SmartTestRunner automatically handles migration order issues:
+
+```python
+# During test database setup:
+# 1. Detects inconsistent migration history
+# 2. Removes problematic migration records
+# 3. Reapplies migrations in correct dependency order
+# 4. Tests run successfully
+
+# For production/manual use:
+manager.fix_inconsistent_migrations('default')
+```
+
+**Note:** CustomUser (`django_cfg_accounts.CustomUser`) is **automatically configured** by django-cfg - no manual AUTH_USER_MODEL setup needed!
+
+### Test Database Auto-Fix
+
+During testing, SmartTestRunner automatically handles migration issues:
+
+```bash
+$ python manage.py test
+
+Creating test database for alias 'default'...
+⚠️  Using smart migration manager to fix: InconsistentMigrationHistory
+✅ Migrations applied successfully
+```
+
+No manual intervention needed - tests just work!
+
+### Manual Fix for Production
+
+For production databases, use MigrationManager programmatically:
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+# Initialize manager
+manager = MigrationManager(
+    stdout=sys.stdout,
+    style=self.style,
+    logger=logger
+)
+
+# Migrate test database with auto-fix
+manager.migrate_test_database('default', auto_fix=True)
+```
+
+**What it does:**
+
+1. **Install Extensions** - Ensures PostgreSQL extensions are installed first
+2. **Check Consistency** - Detects inconsistent migration history
+3. **Auto-Fix** - Removes problematic migration records
+4. **Migrate with Bypass** - Applies migrations with consistency check bypass
+5. **Verify** - Confirms successful migration
+
+### Fix Specific Issues
+
+**Remove problematic migration records:**
+
+```python
+# Example: Fix admin migrations applied before custom user
+from django.db.migrations.recorder import MigrationRecorder
+from django.db import connections
+
+connection = connections['default']
+recorder = MigrationRecorder(connection)
+
+# Remove admin migrations (will be reapplied correctly)
+recorder.migration_qs.filter(app='admin').delete()
+
+# Run migrations again
+python manage.py migrate
+```
+
+**Bypass consistency check temporarily:**
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+manager = MigrationManager()
+
+# Migrate with consistency check bypass
+manager._migrate_with_bypass('default')
+```
+
+### When Auto-Fix Runs
+
+Auto-fix is triggered in these scenarios:
+
+**1. Test Database Creation:**
+```bash
+python manage.py test
+# Auto-fixes migration issues automatically
+```
+
+**2. Manual Test DB Management:**
+```bash
+python manage.py test_db reset
+# Recreates database and fixes migrations
+```
+
+**3. Programmatic Usage:**
+```python
+manager.migrate_test_database('default', auto_fix=True)
+# Explicitly enables auto-fix
+```
+
+### Debugging Migration Issues
+
+**Check migration status:**
+
+```bash
+# Show all migrations
+python manage.py showmigrations
+
+# Show specific app
+python manage.py showmigrations accounts
+
+# Show for specific database
+python manage.py showmigrations --database blog_db
+```
+
+**Check migration records in database:**
+
+```sql
+-- PostgreSQL
+SELECT app, name, applied
+FROM django_migrations
+ORDER BY id;
+
+-- Check if admin is before accounts
+SELECT
+  (SELECT MIN(id) FROM django_migrations WHERE app = 'admin') as admin_min,
+  (SELECT MIN(id) FROM django_migrations WHERE app = 'accounts') as accounts_min;
+```
+
+**Check migration dependencies:**
+
+```python
+from django.db.migrations.loader import MigrationLoader
+from django.db import connections
+
+loader = MigrationLoader(connections['default'])
+
+# Get migration
+migration = loader.get_migration('admin', '0001_initial')
+
+# Check dependencies
+print(migration.dependencies)
+# [('auth', '0011_update_proxy_permissions'), ('accounts', '0001_initial')]
+```
+
+### Advanced Auto-Fix Configuration
+
+Customize auto-fix behavior:
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+class CustomMigrationManager(MigrationManager):
+    def fix_inconsistent_migrations(self, db_name: str):
+        """Custom fix logic."""
+        super().fix_inconsistent_migrations(db_name)
+
+        # Additional custom fixes
+        self._fix_custom_app_migrations(db_name)
+
+    def _fix_custom_app_migrations(self, db_name: str):
+        """Fix custom app specific issues."""
+        from django.db.migrations.recorder import MigrationRecorder
+        from django.db import connections
+
+        recorder = MigrationRecorder(connections[db_name])
+
+        # Remove problematic migrations for custom app
+        recorder.migration_qs.filter(app='my_custom_app').delete()
+
+        self._log_success("Fixed custom app migrations")
+```
+
+### Prevention Tips
+
+**1. Django-CFG handles CustomUser automatically:**
+
+```python
+# Django-CFG automatically configures:
+# - AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
+# - Adds 'django_cfg.apps.system.accounts' to INSTALLED_APPS
+# - Sets app label = "django_cfg_accounts"
+
+# No manual configuration needed!
+# This is core django-cfg functionality.
+```
+
+**2. Run migrations in order:**
+
+```bash
+# Django-CFG migrations are already created
+# Just run migrate command:
+python manage.py migrate
+
+# Or use django-cfg commands:
+python manage.py migrator --auto
+python manage.py migrate_all
+```
+
+**3. Use --fake-initial for existing databases:**
+
+```bash
+# For databases with existing tables
+python manage.py migrate --fake-initial
+```
+
+**4. Keep migration order in version control:**
+
+```bash
+# Commit migrations in order
+git add apps/accounts/migrations/0001_initial.py
+git commit -m "Add initial user migration"
+
+git add apps/trading/migrations/
+git commit -m "Add trading migrations"
+```
+
+See [Test Database Management](/docs/fundamentals/database/testing) for testing-specific auto-fix features.
+
+---
+
+## Best Practices
+
+### 1. Always Create Migrations First
+
+```bash
+# ✅ Good
+python manage.py makemigrations
+python manage.py migrate_all
+
+# ❌ Bad
+python manage.py migrate_all  # May fail if migrations don't exist
+```
+
+### 2. Test Migrations Locally
+
+```bash
+# Test before production
+python manage.py migrate_all --dry-run
+```
+
+### 3. Use migrate_all in CI/CD
+
+```yaml
+# .github/workflows/deploy.yml
+- name: Run migrations
+  run: python manage.py migrate_all
+```
+
+### 4. Keep Migration History Clean
+
+```bash
+# Squash migrations periodically
+python manage.py squashmigrations trading 0001 0010
+```
+
+## See Also
+
+- [**Core Commands**](/docs/cli/commands/core-commands#migrate_all) - migrate_all documentation
+- [**Core Commands**](/docs/cli/commands/core-commands#migrator) - migrator documentation
+- [**Routing**](../routing) - Database routing details
+- [**Multi-Database**](../multi-database) - Multi-database setup

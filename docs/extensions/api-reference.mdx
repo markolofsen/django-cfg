@@ -1,0 +1,505 @@
+---
+title: "API Reference"
+description: "Configuration reference for Django-CFG extension settings"
+---
+
+import { Cards } from 'nextra/components'
+
+# Extension Configuration Reference
+
+Quick reference guide for configuring extensions in your Django-CFG project. This page documents the settings you can customize in your extension `__cfg__.py` files.
+
+<Callout type="info">
+**User Reference**
+This is a practical guide for **configuring** extensions, not for building them.
+</Callout>
+
+---
+
+## Core Extension Settings
+
+All extensions support these base settings:
+
+### enabled
+
+**Type:** `bool`
+**Default:** `True`
+
+Enable or disable the extension.
+
+```python
+class PaymentsSettings(BasePaymentsSettings):
+    enabled: bool = True  # Extension active
+```
+
+**Usage:**
+```python
+# Disable temporarily
+enabled: bool = False
+```
+
+---
+
+### admin_enabled
+
+**Type:** `bool`
+**Default:** `True`
+
+Show extension in Django admin interface.
+
+```python
+class SupportSettings(BaseSupportSettings):
+    admin_enabled: bool = True  # Shows in admin sidebar
+```
+
+**Usage:**
+```python
+# Hide from admin (but keep extension enabled)
+admin_enabled: bool = False
+```
+
+---
+
+## Common Extension Configurations
+
+### Payments Extension
+
+**File:** `extensions/apps/payments/__cfg__.py`
+
+```python
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    # NowPayments API Configuration
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+
+    # Feature flags
+    enabled: bool = True
+    admin_enabled: bool = True
+
+settings = PaymentsSettings()
+```
+
+**Environment Variables:**
+```bash
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-api-key
+PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+```
+
+---
+
+### Leads Extension
+
+**File:** `extensions/apps/leads/__cfg__.py`
+
+```python
+from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+
+class LeadsSettings(BaseLeadsSettings):
+    # Notification settings
+    telegram_enabled: bool = True
+    email_enabled: bool = True
+
+    # Telegram configuration
+    telegram_bot_token: str = env.telegram.bot_token
+
+    # Email configuration
+    notification_email: str = env.leads.notification_email
+
+settings = LeadsSettings()
+```
+
+**Available Settings:**
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `telegram_enabled` | `bool` | `True` | Send Telegram notifications |
+| `email_enabled` | `bool` | `True` | Send email notifications |
+| `telegram_bot_token` | `str` | Required | Telegram bot token |
+| `notification_email` | `str` | Required | Email for lead notifications |
+
+**Environment Variables:**
+```bash
+TELEGRAM__BOT_TOKEN=your-telegram-bot-token
+LEADS__NOTIFICATION_EMAIL=leads@yourcompany.com
+```
+
+---
+
+### Support Extension
+
+**File:** `extensions/apps/support/__cfg__.py`
+
+```python
+from django_cfg.extensions.configs.apps.support import BaseSupportSettings
+
+class SupportSettings(BaseSupportSettings):
+    # Ticket management
+    ticket_auto_assign: bool = True
+    sla_tracking_enabled: bool = True
+    sla_hours: int = 24
+
+    # Features
+    live_chat_enabled: bool = False
+    knowledge_base_integration: bool = True
+
+settings = SupportSettings()
+```
+
+**Available Settings:**
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `ticket_auto_assign` | `bool` | `True` | Auto-assign tickets to team members |
+| `sla_tracking_enabled` | `bool` | `True` | Track SLA compliance |
+| `sla_hours` | `int` | `24` | SLA response time in hours |
+| `live_chat_enabled` | `bool` | `False` | Enable live chat widget |
+| `knowledge_base_integration` | `bool` | `True` | Integrate with knowledge base |
+
+---
+
+### Newsletter Extension
+
+**File:** `extensions/apps/newsletter/__cfg__.py`
+
+```python
+from django_cfg.extensions.configs.apps.newsletter import BaseNewsletterSettings
+
+class NewsletterSettings(BaseNewsletterSettings):
+    # Default settings
+    from_email: str = "newsletter@yourcompany.com"
+    from_name: str = "Your Company Newsletter"
+
+    # Features
+    double_opt_in: bool = True
+    unsubscribe_link_required: bool = True
+
+settings = NewsletterSettings()
+```
+
+**Available Settings:**
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `from_email` | `str` | Required | Sender email address |
+| `from_name` | `str` | Required | Sender display name |
+| `double_opt_in` | `bool` | `True` | Require email confirmation |
+| `unsubscribe_link_required` | `bool` | `True` | Include unsubscribe link |
+
+---
+
+## Environment Variables
+
+### Naming Convention
+
+Extension settings load from environment variables using **nested structure with double underscores**:
+
+**Pattern:** `{SECTION}__{SUBSECTION}__{VARIABLE}`
+
+**Examples:**
+```bash
+# Payments
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=key
+
+# Leads
+LEADS__NOTIFICATION_EMAIL=email@company.com
+
+# Support
+SUPPORT__SLA_HOURS=24
+
+# Newsletter
+NEWSLETTER__FROM_EMAIL=newsletter@company.com
+```
+
+### Loading from .env
+
+Create a `.env` file in your project root:
+
+```bash
+# .env
+
+# Payments Extension
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-nowpayments-key
+PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+
+# Leads Extension
+TELEGRAM__BOT_TOKEN=your-telegram-bot-token
+LEADS__NOTIFICATION_EMAIL=leads@company.com
+
+# Support Extension
+SUPPORT__SLA_HOURS=48
+
+# Newsletter Extension
+NEWSLETTER__FROM_EMAIL=newsletter@company.com
+NEWSLETTER__FROM_NAME=Your Company Newsletter
+```
+
+### Accessing in Code
+
+```python
+# extensions/apps/payments/__cfg__.py
+from core.environment import env
+
+class PaymentsSettings(BasePaymentsSettings):
+    # Auto-loads from ENV > .env > defaults
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+```
+
+---
+
+## Feature Flags
+
+Extensions support feature flags for toggling functionality:
+
+### Example: Toggle Features
+
+```python
+# extensions/apps/support/__cfg__.py
+class SupportSettings(BaseSupportSettings):
+    # Core features
+    ticket_system_enabled: bool = True        # ✅ Enabled
+    live_chat_enabled: bool = False           # ❌ Disabled
+    sla_tracking_enabled: bool = True         # ✅ Enabled
+
+    # Integrations
+    telegram_notifications: bool = True        # ✅ Enabled
+    slack_notifications: bool = False          # ❌ Disabled
+```
+
+### Environment-Based Flags
+
+Toggle features per environment:
+
+```python
+import os
+
+class SupportSettings(BaseSupportSettings):
+    # Enable live chat only in production
+    live_chat_enabled: bool = (
+        os.getenv('ENVIRONMENT') == 'production'
+    )
+
+    # Enable SLA tracking only in production
+    sla_tracking_enabled: bool = (
+        os.getenv('ENVIRONMENT') != 'development'
+    )
+```
+
+---
+
+## Extension URL Configuration
+
+Extensions auto-register URLs, but you can verify the patterns:
+
+### Default URL Patterns
+
+Extensions are available at `/cfg/{extension-name}/`:
+
+| Extension | URL Pattern | Example |
+|-----------|-------------|---------|
+| Payments | `/cfg/payments/` | `http://localhost:8000/cfg/payments/api/` |
+| Leads | `/cfg/leads/` | `http://localhost:8000/cfg/leads/api/` |
+| Support | `/cfg/support/` | `http://localhost:8000/cfg/support/api/` |
+| Newsletter | `/cfg/newsletter/` | `http://localhost:8000/cfg/newsletter/api/` |
+
+### Testing URLs
+
+```bash
+# Payments API
+curl http://localhost:8000/cfg/payments/api/
+
+# Leads API
+curl http://localhost:8000/cfg/leads/api/
+
+# Support API
+curl http://localhost:8000/cfg/support/api/tickets/
+```
+
+---
+
+## Admin Navigation
+
+Extensions can add custom admin navigation:
+
+### How It Works
+
+Extensions with `admin_enabled: bool = True` automatically appear in admin sidebar.
+
+### Navigation Structure
+
+The extension's navigation is defined in its base settings (you don't need to configure this):
+
+```python
+# This is defined in BasePaymentsSettings (you inherit it)
+navigation = NavigationSection(
+    title="Payments",
+    icon=Icons.PAYMENT,
+    items=[
+        NavigationItem(
+            title="Transactions",
+            app="payments",
+            model="transaction",
+        ),
+    ],
+)
+```
+
+### Hiding from Admin
+
+To hide an extension from admin navigation:
+
+```python
+class PaymentsSettings(BasePaymentsSettings):
+    admin_enabled: bool = False  # Won't show in sidebar
+```
+
+---
+
+## Common Patterns
+
+### Pattern 1: API Keys from Environment
+
+```python
+class PaymentsSettings(BasePaymentsSettings):
+    # Load from .env
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+
+    # With fallback
+    backup_api_key: str = env.payments.backup_key or "default-key"
+```
+
+### Pattern 2: Environment-Specific Config
+
+```python
+import os
+
+class PaymentsSettings(BasePaymentsSettings):
+    # Production vs Development
+    nowpayments_api_key: str = (
+        env.payments.prod_key
+        if os.getenv('ENVIRONMENT') == 'production'
+        else env.payments.sandbox_key
+    )
+
+    # Debug mode
+    debug_payments: bool = (os.getenv('DEBUG', 'False') == 'True')
+```
+
+### Pattern 3: Feature Toggles
+
+```python
+class SupportSettings(BaseSupportSettings):
+    # Enable/disable features
+    live_chat: bool = False          # Coming soon
+    ticket_system: bool = True       # Production ready
+    knowledge_base: bool = True      # Production ready
+    ai_assistant: bool = False       # Beta testing
+```
+
+### Pattern 4: Validation
+
+```python
+from pydantic import field_validator
+
+class PaymentsSettings(BasePaymentsSettings):
+    sla_hours: int = 24
+
+    @field_validator('sla_hours')
+    def validate_sla(cls, v):
+        if v < 1 or v > 168:  # 1 hour to 1 week
+            raise ValueError('SLA must be between 1 and 168 hours')
+        return v
+```
+
+---
+
+## Troubleshooting Settings
+
+### Setting Not Applied
+
+**Problem:** Changed setting but no effect
+
+**Solution:**
+```bash
+# 1. Restart Django (settings load at startup)
+python manage.py runserver
+
+# 2. Verify in shell
+python manage.py shell
+>>> from extensions.apps.payments.__cfg__ import settings
+>>> settings.nowpayments_api_key
+'your-expected-key'
+```
+
+### Environment Variable Not Loading
+
+**Problem:** `env.something` not found
+
+**Solution:**
+```bash
+# 1. Check .env exists
+ls -la .env
+
+# 2. Check variable name (use double underscores)
+cat .env | grep PAYMENTS
+
+# 3. Restart Django after .env changes
+```
+
+### Type Error
+
+**Problem:** `TypeError: expected str, got None`
+
+**Solution:**
+```python
+# Provide defaults or make optional
+class PaymentsSettings(BasePaymentsSettings):
+    # With default
+    api_timeout: int = 30
+
+    # Optional (can be None)
+    backup_key: Optional[str] = None
+```
+
+---
+
+## Quick Reference
+
+### Common Extension Settings
+
+| Extension | Key Settings | Environment Variables |
+|-----------|-------------|----------------------|
+| **Payments** | `nowpayments_api_key` | `PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY` |
+| **Leads** | `telegram_enabled`, `email_enabled` | `TELEGRAM__BOT_TOKEN`, `LEADS__NOTIFICATION_EMAIL` |
+| **Support** | `sla_hours`, `ticket_auto_assign` | `SUPPORT__SLA_HOURS` |
+| **Newsletter** | `from_email`, `from_name` | `NEWSLETTER__FROM_EMAIL` |
+
+### All Extensions Support
+
+- ✅ `enabled: bool` - Enable/disable extension
+- ✅ `admin_enabled: bool` - Show in admin
+- ✅ Environment variable loading
+- ✅ Type validation with Pydantic
+- ✅ Auto-discovery and registration
+
+---
+
+## Next Steps
+
+<Cards>
+  <Cards.Card title="Backend Extensions" href="/docs/extensions/backend-extensions" />
+  <Cards.Card title="Migration Guide" href="/docs/extensions/migration-guide" />
+  <Cards.Card title="Troubleshooting" href="/docs/extensions/backend-extensions#troubleshooting" />
+</Cards>
+
+---
+
+<Callout type="tip">
+**Pro Tip: Documentation in Code**
+Each extension's base settings class has detailed docstrings. Check the source code for complete field documentation:
+```python
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+help(BasePaymentsSettings)
+```
+</Callout>

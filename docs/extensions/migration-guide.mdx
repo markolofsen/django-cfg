@@ -1,0 +1,641 @@
+---
+title: "Migration Guide"
+description: "Migrate from legacy monolithic config to the new extensions architecture"
+---
+
+# Migration Guide: Legacy to Extensions
+
+This guide helps you migrate from the old monolithic `DjangoConfig` to the new modular extensions architecture.
+
+<Callout type="info">
+**Who Should Read This?**
+If your `DjangoConfig` has extension-specific fields like `payments`, `leads`, `support`, etc., you should migrate to the new architecture.
+</Callout>
+
+---
+
+## Why Migrate?
+
+### Benefits of Extensions Architecture
+
+1. **Simpler Configuration** - Your `DjangoConfig` becomes 70% smaller
+2. **Better Separation** - Extension config lives with the extension code
+3. **Easier Maintenance** - Update extensions independently
+4. **Type Safety** - Full Pydantic validation for all settings
+5. **Reusability** - Share extensions across projects
+6. **Auto-Discovery** - No manual `INSTALLED_APPS` management
+
+### Before vs After
+
+**Before (Legacy - Monolithic):**
+```python
+# api/config.py - 500+ lines ❌
+class MyProjectConfig(DjangoConfig):
+    # Payments
+    payments: PaymentsConfig = PaymentsConfig(
+        nowpayments_api_key="...",
+        nowpayments_ipn_secret="...",
+        enabled=True
+    )
+
+    # Leads
+    leads: LeadsConfig = LeadsConfig(
+        telegram_enabled=True,
+        email_enabled=True
+    )
+
+    # Support
+    support: SupportConfig = SupportConfig(
+        ticket_auto_assign=True,
+        sla_hours=24
+    )
+
+    # Manual app registration
+    project_apps: list[str] = [
+        "extensions.apps.payments",
+        "extensions.apps.leads",
+        "extensions.apps.support",
+    ]
+```
+
+**After (Modern - Modular):**
+```python
+# api/config.py - 50 lines ✅
+class MyProjectConfig(DjangoConfig):
+    project_name: str = "My SaaS"
+    databases: Dict[str, DatabaseConfig] = {...}
+
+    # Your custom apps only
+    project_apps: list[str] = ["core", "apps.profiles"]
+
+    # Extensions auto-discovered! ✨
+```
+
+```python
+# extensions/apps/payments/__cfg__.py - Self-contained ✅
+settings = PaymentsSettings(
+    nowpayments_api_key=env.payments.api_key,
+    nowpayments_ipn_secret=env.payments.secret,
+)
+```
+
+---
+
+## Prerequisites
+
+Before starting migration:
+
+- [ ] **Backup your project** (git commit or full backup)
+- [ ] **Django-CFG 2.0+** installed
+- [ ] **Extensions directory exists:** `extensions/apps/`
+- [ ] **Test environment ready** for validation
+
+---
+
+## Migration Steps
+
+### Step 1: Identify Extensions in Your Config
+
+Find all extension-specific fields in your `DjangoConfig`:
+
+```python
+# api/config.py
+class MyProjectConfig(DjangoConfig):
+    # ❌ Extension fields (need to migrate)
+    payments: Optional[PaymentsConfig] = PaymentsConfig(...)
+    leads: Optional[LeadsConfig] = LeadsConfig(...)
+    support: Optional[SupportConfig] = SupportConfig(...)
+
+    # ✅ Core fields (keep in DjangoConfig)
+    project_name: str = "My Project"
+    databases: Dict[str, DatabaseConfig] = {...}
+    email: Optional[EmailConfig] = EmailConfig(...)
+```
+
+**Common extension fields to migrate:**
+- `payments` → Payment processing
+- `leads` → Lead management
+- `support` → Support tickets
+- `newsletter` → Email campaigns
+- `knowbase` → Knowledge base
+- `backup` → Database backups
+
+---
+
+### Step 2: Create Extension Config Files
+
+For each extension, create a `__cfg__.py` file:
+
+#### Example: Migrate Payments Extension
+
+**Before (in api/config.py):**
+```python
+class MyProjectConfig(DjangoConfig):
+    payments: PaymentsConfig = PaymentsConfig(
+        nowpayments_api_key="your-api-key",
+        nowpayments_ipn_secret="your-secret",
+        enabled=True
+    )
+```
+
+**After (create extensions/apps/payments/__cfg__.py):**
+```python
+# extensions/apps/payments/__cfg__.py
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    # Move settings here
+    enabled: bool = True
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+
+# This line enables the extension!
+settings = PaymentsSettings()
+```
+
+---
+
+### Step 3: Move Environment Variables
+
+Update your `.env` file to match new structure:
+
+**Before:**
+```bash
+# Old flat structure
+NOWPAYMENTS_API_KEY=your-key
+NOWPAYMENTS_IPN_SECRET=your-secret
+```
+
+**After:**
+```bash
+# New nested structure (double underscores)
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-key
+PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+```
+
+<Callout type="tip">
+**Nested ENV Variables**
+Use `__` (double underscore) for nesting:
+- `PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY` → `payments_api_keys.nowpayments_api_key`
+</Callout>
+
+---
+
+### Step 4: Remove from DjangoConfig
+
+Remove the extension field from your main config:
+
+```python
+# api/config.py
+class MyProjectConfig(DjangoConfig):
+    # ❌ REMOVE THIS
+    # payments: PaymentsConfig = PaymentsConfig(...)
+
+    # ✅ Keep core config only
+    project_name: str = "My SaaS"
+    databases: Dict[str, DatabaseConfig] = {...}
+```
+
+---
+
+### Step 5: Update INSTALLED_APPS
+
+Remove manual extension registration:
+
+**Before:**
+```python
+class MyProjectConfig(DjangoConfig):
+    project_apps: list[str] = [
+        "extensions.apps.payments",  # ❌ Remove
+        "extensions.apps.leads",     # ❌ Remove
+        "core",                      # ✅ Keep your apps
+        "apps.profiles",             # ✅ Keep your apps
+    ]
+```
+
+**After:**
+```python
+class MyProjectConfig(DjangoConfig):
+    project_apps: list[str] = [
+        "core",           # ✅ Your apps only
+        "apps.profiles",  # ✅ Your apps only
+    ]
+    # Extensions auto-added! ✨
+```
+
+---
+
+### Step 6: Test Extension Discovery
+
+Verify the extension was discovered:
+
+```bash
+# Start Django
+python manage.py runserver
+
+# Check in shell
+python manage.py shell
+>>> from extensions.apps.payments.__cfg__ import settings
+>>> settings.enabled
+True
+>>> settings.nowpayments_api_key
+'your-api-key'
+```
+
+---
+
+### Step 7: Run Migrations
+
+Extensions use the `cfg_` prefix for app labels:
+
+```bash
+# Run migrations for extension
+python manage.py migrate cfg_payments
+
+# Or migrate all
+python manage.py migrate
+```
+
+---
+
+### Step 8: Verify URLs
+
+Extensions auto-register URLs at `/cfg/{prefix}/`:
+
+```bash
+# Test extension endpoints
+curl http://localhost:8000/cfg/payments/api/
+curl http://localhost:8000/cfg/leads/api/
+curl http://localhost:8000/cfg/support/api/
+```
+
+---
+
+## Complete Migration Example
+
+### Before: Monolithic Config
+
+```python
+# api/config.py (OLD - 300 lines)
+from django_cfg import DjangoConfig
+from django_cfg.models import DatabaseConfig
+
+class MyProjectConfig(DjangoConfig):
+    project_name: str = "My SaaS Platform"
+    secret_key: str = env.secret_key
+
+    databases: Dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig.from_url(url=env.database.url)
+    }
+
+    # Extension configs (to be migrated)
+    payments: PaymentsConfig = PaymentsConfig(
+        nowpayments_api_key=env.nowpayments_api_key,
+        nowpayments_ipn_secret=env.nowpayments_ipn_secret,
+        enabled=True
+    )
+
+    leads: LeadsConfig = LeadsConfig(
+        telegram_enabled=True,
+        email_enabled=True,
+        telegram_bot_token=env.telegram_bot_token,
+        notification_email=env.leads_email,
+    )
+
+    support: SupportConfig = SupportConfig(
+        ticket_auto_assign=True,
+        sla_hours=24,
+        sla_tracking_enabled=True,
+    )
+
+    # Manual app registration
+    project_apps: list[str] = [
+        "extensions.apps.payments",
+        "extensions.apps.leads",
+        "extensions.apps.support",
+        "core",
+        "apps.profiles",
+    ]
+```
+
+### After: Modular Config
+
+```python
+# api/config.py (NEW - 50 lines)
+from django_cfg import DjangoConfig
+from django_cfg.models import DatabaseConfig
+
+class MyProjectConfig(DjangoConfig):
+    project_name: str = "My SaaS Platform"
+    secret_key: str = env.secret_key
+
+    databases: Dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig.from_url(url=env.database.url)
+    }
+
+    # Your custom apps only
+    project_apps: list[str] = [
+        "core",
+        "apps.profiles",
+    ]
+
+    # Extensions auto-discovered! ✨
+```
+
+```python
+# extensions/apps/payments/__cfg__.py (NEW)
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    enabled: bool = True
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+
+settings = PaymentsSettings()
+```
+
+```python
+# extensions/apps/leads/__cfg__.py (NEW)
+from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+
+class LeadsSettings(BaseLeadsSettings):
+    telegram_enabled: bool = True
+    email_enabled: bool = True
+    telegram_bot_token: str = env.telegram.bot_token
+    notification_email: str = env.leads.notification_email
+
+settings = LeadsSettings()
+```
+
+```python
+# extensions/apps/support/__cfg__.py (NEW)
+from django_cfg.extensions.configs.apps.support import BaseSupportSettings
+
+class SupportSettings(BaseSupportSettings):
+    ticket_auto_assign: bool = True
+    sla_hours: int = 24
+    sla_tracking_enabled: bool = True
+
+settings = SupportSettings()
+```
+
+---
+
+## Migration Checklist
+
+Use this checklist for each extension you migrate:
+
+### Per Extension:
+
+- [ ] Create `extensions/apps/{name}/__cfg__.py`
+- [ ] Copy settings from old config to new `__cfg__.py`
+- [ ] Add `settings = {Extension}Settings()` line
+- [ ] Update `.env` with new nested variable names
+- [ ] Remove extension field from `DjangoConfig`
+- [ ] Remove from `project_apps` list (if present)
+- [ ] Test extension discovery: `python manage.py shell`
+- [ ] Run migrations: `python manage.py migrate cfg_{name}`
+- [ ] Test URLs: `curl http://localhost:8000/cfg/{name}/api/`
+- [ ] Verify admin navigation appears
+- [ ] Test extension functionality
+
+### Overall:
+
+- [ ] All extensions migrated
+- [ ] `DjangoConfig` only has core fields
+- [ ] `project_apps` only has your custom apps
+- [ ] All `.env` variables updated
+- [ ] All migrations run successfully
+- [ ] All tests passing
+- [ ] No import errors or warnings
+
+---
+
+## Troubleshooting Migration
+
+### Extension Not Discovered
+
+**Problem:** Extension doesn't appear after creating `__cfg__.py`
+
+**Solutions:**
+
+1. **Check `settings` variable:**
+   ```python
+   # Must have this line!
+   settings = PaymentsSettings()
+   ```
+
+2. **Restart Django:**
+   ```bash
+   # Extensions load at startup
+   python manage.py runserver
+   ```
+
+3. **Check for Python errors:**
+   ```bash
+   python manage.py shell
+   >>> from extensions.apps.payments.__cfg__ import settings
+   # Fix any import errors
+   ```
+
+---
+
+### Environment Variables Not Loading
+
+**Problem:** `env.payments.api_key` raises error
+
+**Solutions:**
+
+1. **Check nesting syntax:**
+   ```bash
+   # ✅ Correct
+   PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=key
+
+   # ❌ Wrong
+   PAYMENTS.API_KEYS.NOWPAYMENTS_API_KEY=key
+   ```
+
+2. **Verify .env location:**
+   ```bash
+   # Must be in project root or environment/
+   ls -la .env
+   ```
+
+3. **Restart Django after .env changes**
+
+---
+
+### Migration Conflicts
+
+**Problem:** Database migrations fail
+
+**Solutions:**
+
+1. **Use new app label:**
+   ```bash
+   # Extensions use cfg_ prefix
+   python manage.py migrate cfg_payments
+   ```
+
+2. **Check for model conflicts:**
+   ```bash
+   python manage.py showmigrations
+   # Look for duplicate migrations
+   ```
+
+3. **Fake initial if needed:**
+   ```bash
+   # If tables already exist
+   python manage.py migrate cfg_payments --fake-initial
+   ```
+
+---
+
+### Settings Not Applied
+
+**Problem:** Extension is enabled but settings don't work
+
+**Solutions:**
+
+1. **Verify settings loaded:**
+   ```python
+   from extensions.apps.payments.__cfg__ import settings
+   print(settings.nowpayments_api_key)  # Should show key
+   ```
+
+2. **Check base class:**
+   ```python
+   # Must inherit from Base{Extension}Settings
+   class PaymentsSettings(BasePaymentsSettings):  # ✅ Correct
+   ```
+
+3. **Clear Python cache:**
+   ```bash
+   find . -type d -name __pycache__ -exec rm -r {} +
+   ```
+
+---
+
+## Rollback Procedure
+
+If migration causes issues, you can rollback:
+
+### Quick Rollback
+
+1. **Comment out `settings` line:**
+   ```python
+   # extensions/apps/payments/__cfg__.py
+   # settings = PaymentsSettings()  # Disabled
+   ```
+
+2. **Restore old config temporarily:**
+   ```python
+   # api/config.py
+   payments: PaymentsConfig = PaymentsConfig(...)  # Temporary
+   ```
+
+3. **Restart Django**
+
+### Full Rollback
+
+```bash
+# Restore from git
+git checkout HEAD -- api/config.py
+git checkout HEAD -- extensions/apps/*/\_\_cfg\_\_.py
+
+# Restore .env
+git checkout HEAD -- .env
+
+# Restart
+python manage.py runserver
+```
+
+---
+
+## Best Practices
+
+### 1. **Migrate One Extension at a Time**
+
+✅ **Good approach:**
+- Migrate `payments` → test → commit
+- Migrate `leads` → test → commit
+- Migrate `support` → test → commit
+
+❌ **Risky approach:**
+- Migrate all extensions at once
+- Hope everything works
+
+### 2. **Test After Each Migration**
+
+```bash
+# After migrating each extension
+python manage.py test
+python manage.py runserver
+# Manual testing in browser
+git commit -m "Migrated {extension} to new architecture"
+```
+
+### 3. **Keep Old Config Commented**
+
+```python
+# api/config.py
+class MyProjectConfig(DjangoConfig):
+    # Migrated to extensions/apps/payments/__cfg__.py
+    # payments: PaymentsConfig = PaymentsConfig(...)
+```
+
+### 4. **Document Custom Settings**
+
+```python
+# extensions/apps/support/__cfg__.py
+class SupportSettings(BaseSupportSettings):
+    # Custom: We use 48-hour SLA (not default 24)
+    sla_hours: int = 48
+
+    # Custom: Auto-assign disabled per team request
+    ticket_auto_assign: bool = False
+```
+
+---
+
+## FAQ
+
+### Q: Do I have to migrate all extensions at once?
+
+**A:** No! Migrate one at a time. You can have some extensions in old config and some in new `__cfg__.py` during transition.
+
+### Q: Will this break my production site?
+
+**A:** If done correctly, no. Test thoroughly in development/staging first. The migration is backwards compatible during transition.
+
+### Q: Can I keep some config in DjangoConfig?
+
+**A:** Yes! Core infrastructure config (email, database, cache) stays in `DjangoConfig`. Only extension-specific config moves to `__cfg__.py`.
+
+### Q: What about custom extensions I built?
+
+**A:** Same process - create `__cfg__.py` with your settings class inheriting from `BaseExtensionSettings`.
+
+### Q: How long does migration take?
+
+**A:** Typically:
+- 1 extension: 15-30 minutes
+- 3-5 extensions: 1-2 hours
+- 10+ extensions: Half day
+
+---
+
+## Next Steps
+
+<Cards>
+  <Cards.Card title="Backend Extensions" href="/docs/extensions/backend-extensions" />
+  <Cards.Card title="API Reference" href="/docs/extensions/api-reference" />
+  <Cards.Card title="Troubleshooting" href="/docs/extensions/backend-extensions#troubleshooting" />
+</Cards>
+
+---
+
+<Callout type="success">
+**Migration Support**
+Need help with migration? Join our Discord community or check the troubleshooting section above!
+</Callout>

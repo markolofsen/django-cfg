@@ -1,0 +1,176 @@
+---
+title: LLM Integration Overview
+description: Django-CFG LLM module overview. Production-ready LLM integration with vision, OCR, image generation, auto-resize optimization, and cost tracking.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg llm
+  - django llm integration
+  - openai django
+  - vision api
+  - ocr
+---
+
+# LLM Integration Module
+
+Django-CFG includes a **comprehensive LLM integration module** that provides multi-provider support, intelligent caching, cost tracking, and seamless Django integration.
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-provider** | OpenAI, OpenRouter support |
+| **Vision & OCR** | Image analysis with model presets |
+| **Image Resizing** | Auto-resize for 90% token savings |
+| **Image Generation** | DALL-E, FLUX support |
+| **Cost Tracking** | Automatic cost calculation |
+| **Caching** | Intelligent caching with TTL |
+| **Type-safe** | Pydantic 2 configuration |
+| **Token Analytics** | Usage tracking and estimation |
+
+## Quick Start
+
+```python
+from django_cfg.modules.django_llm.llm.client import LLMClient
+from django_cfg.modules.django_llm.llm.vision import VisionClient
+from django_cfg.modules.django_llm.llm.image_gen import ImageGenClient
+
+# Text completion
+llm = LLMClient()
+response = llm.chat_completion(
+    messages=[{"role": "user", "content": "Hello!"}],
+    model="openai/gpt-4o-mini"
+)
+
+# Vision analysis (auto-resize enabled by default)
+vision = VisionClient()
+result = vision.analyze(
+    image_source="https://example.com/image.jpg",
+    query="Describe this image"
+)
+print(f"Cost: ${result.cost_usd:.4f}")
+
+# Image generation
+gen = ImageGenClient()
+image = gen.generate(prompt="A sunset over mountains")
+print(image.first_url)
+```
+
+## Architecture
+
+```
+django_llm/
+├── llm/
+│   ├── client.py           # LLMClient for text
+│   ├── vision/
+│   │   ├── client.py       # VisionClient
+│   │   ├── image_resizer.py # Token optimization
+│   │   └── ...
+│   └── image_gen/
+│       └── client.py       # ImageGenClient
+└── __init__.py
+```
+
+## Module Overview
+
+### Vision & OCR
+
+Image analysis with automatic resizing for cost optimization.
+
+```python
+# Default: 512x512 resize = 85 tokens per image
+client = VisionClient()  # auto_resize=True, default_detail="low"
+
+# OCR extraction
+response = client.ocr(
+    image_url="https://example.com/document.jpg",
+    mode="base"
+)
+print(response.text)
+```
+
+**Key features:**
+- Auto-resize (90% cost savings)
+- Model quality presets (fast/balanced/best)
+- OCR modes (tiny/small/base/gundam)
+- Async support
+
+[Learn more about Vision & OCR](/docs/features/modules/llm/vision)
+
+### Image Generation
+
+Generate images with quality presets.
+
+```python
+client = ImageGenClient()
+response = client.generate(
+    prompt="A futuristic city",
+    model_quality="best",
+    size="1024x1024"
+)
+```
+
+[Learn more about Image Generation](/docs/features/modules/llm/image-generation)
+
+### Text Client
+
+Chat completions, embeddings, and JSON extraction.
+
+```python
+client = LLMClient()
+
+# Chat
+response = client.chat_completion(
+    messages=[{"role": "user", "content": "Explain AI"}],
+    model="openai/gpt-4o-mini"
+)
+
+# Embeddings
+embedding = client.generate_embedding(
+    text="Sample text",
+    model="text-embedding-ada-002"
+)
+```
+
+[Learn more about Text Client](/docs/features/modules/llm/text-client)
+
+### Cost Tracking
+
+Automatic cost calculation and monitoring.
+
+```python
+from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+
+cost = calculate_chat_cost(
+    model="openai/gpt-4o-mini",
+    input_tokens=100,
+    output_tokens=50,
+    models_cache=models_cache
+)
+```
+
+[Learn more about Cost Tracking](/docs/features/modules/llm/cost-tracking)
+
+## API Keys
+
+API keys are auto-detected from Django config:
+
+```python
+# Auto-detection
+client = VisionClient()  # Uses django_config.api_keys.get_openrouter_key()
+
+# Explicit
+client = VisionClient(api_key="sk-or-v1-...")
+```
+
+## Related Documentation
+
+- [Vision & OCR](/docs/features/modules/llm/vision)
+- [Image Generation](/docs/features/modules/llm/image-generation)
+- [Text Client](/docs/features/modules/llm/text-client)
+- [Caching](/docs/features/modules/llm/caching)
+- [Cost Tracking](/docs/features/modules/llm/cost-tracking)
+- [Balance Monitoring](/docs/features/modules/llm/balance-monitoring)
+
+TAGS: llm, ai, openai, vision, ocr, image-generation
+DEPENDS_ON: [configuration, api-keys]

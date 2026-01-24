@@ -1,0 +1,249 @@
+---
+title: API Encryption Overview
+description: Django-CFG encryption module - anti-scraping API protection with seamless client-side decryption.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg encryption
+  - api encryption
+  - aes-256-gcm
+  - anti-scraping
+  - field encryption
+---
+
+# Encryption Module
+
+Django-CFG's **Encryption Module** provides optional API encryption to protect sensitive data from automated scraping while maintaining a seamless experience for legitimate users.
+
+## Features
+
+- **Field-Level Encryption** - Encrypt specific serializer fields
+- **Response-Level Encryption** - Encrypt entire API responses
+- **AES-256-GCM** - Authenticated encryption with integrity verification
+- **Per-User Keys** - Unique derived keys per user for isolation
+- **Request Toggle** - Enable encryption per-request via query param or header
+- **Frontend Client** - [`@djangocfg/crypto`](https://npmjs.com/package/@djangocfg/crypto) for browser decryption
+
+## How It Works
+
+```
+Client Request          Django Backend              Response
+─────────────────────────────────────────────────────────────
+GET /api/products/?encrypt=true
+        │
+        ▼
+┌───────────────────┐
+│EncryptionMiddleware│──► Detects encryption request
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│ DRF Serializer    │
+│ + EncryptMixin    │──► Encrypts specified fields
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│ Encrypted JSON    │──► {"price": {"encrypted": true, ...}}
+└───────────────────┘
+```
+
+The client decrypts data using [`@djangocfg/crypto`](https://npmjs.com/package/@djangocfg/crypto) with Web Crypto API.
+
+## Public API
+
+### Serializer Mixin
+
+```python
+from django_cfg.core.encryption import EncryptableSerializerMixin
+```
+
+| Class | Description |
+|-------|-------------|
+| `EncryptableSerializerMixin` | Adds field-level encryption to DRF serializers |
+
+### Configuration
+
+```python
+from django_cfg.core.encryption import EncryptionConfig
+```
+
+| Model | Description |
+|-------|-------------|
+| `EncryptionConfig` | Pydantic configuration for encryption settings |
+| `KeyDerivationConfig` | PBKDF2 key derivation settings |
+| `FieldEncryptionConfig` | Field-level encryption options |
+
+### Utilities
+
+```python
+from django_cfg.core.encryption import (
+    encryption_enabled,     # Check if request wants encryption
+    AES256GCMCipher,       # Direct cipher access
+    get_key_manager,       # Key management
+)
+```
+
+## Quick Start
+
+### 1. Enable Encryption
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.core.encryption import EncryptionConfig
+
+config = DjangoConfig(
+    project_name="myproject",
+    encryption=EncryptionConfig(
+        enabled=True,
+        level="field",  # or "response"
+    ),
+)
+```
+
+### 2. Add Mixin to Serializers
+
+```python
+from rest_framework import serializers
+from django_cfg.core.encryption import EncryptableSerializerMixin
+
+class ProductSerializer(EncryptableSerializerMixin, serializers.ModelSerializer):
+    encrypted_fields = ['price', 'cost', 'supplier_price']
+
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'price', 'cost', 'supplier_price']
+```
+
+### 3. Request Encrypted Data
+
+```bash
+# Via query parameter
+GET /api/products/?encrypt=true
+
+# Via header
+GET /api/products/
+X-Encrypt-Response: true
+```
+
+### 4. Decrypt in Frontend
+
+```typescript
+import { createDecryptionClient } from '@djangocfg/crypto';
+
+const crypto = await createDecryptionClient({
+  secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+  userId: user.id,
+});
+
+const response = await fetch('/api/products/?encrypt=true');
+const encrypted = await response.json();
+const products = await crypto.decryptObject(encrypted);
+```
+
+## Encrypted Field Format
+
+When encryption is enabled, sensitive fields are replaced with:
+
+```json
+{
+  "id": 1,
+  "name": "Widget",
+  "price": {
+    "encrypted": true,
+    "field": "price",
+    "algorithm": "AES-256-GCM",
+    "iv": "base64...",
+    "data": "base64...",
+    "auth_tag": "base64..."
+  }
+}
+```
+
+## Configuration Options
+
+```python
+from django_cfg.core.encryption import (
+    EncryptionConfig,
+    KeyDerivationConfig,
+    FieldEncryptionConfig,
+)
+
+encryption = EncryptionConfig(
+    # Master switch
+    enabled=True,
+
+    # Allow per-request toggle
+    optional=True,
+
+    # Encryption level: "field" or "response"
+    level="field",
+
+    # Algorithm: "AES-256-GCM" or "AES-256-CBC"
+    algorithm="AES-256-GCM",
+
+    # Key derivation settings
+    key_derivation=KeyDerivationConfig(
+        algorithm="PBKDF2",
+        iterations=100_000,
+        salt_length=16,
+        hash_function="SHA-256",
+    ),
+
+    # Field encryption settings
+    field_encryption=FieldEncryptionConfig(
+        default_fields=[],      # Global default fields
+        exclude_fields=['id'],  # Never encrypt these
+    ),
+
+    # Per-endpoint overrides
+    endpoint_overrides={
+        r'/api/admin/.*': 'none',  # No encryption for admin
+    },
+)
+```
+
+## Security Considerations
+
+### What it protects against:
+
+- **Automated scraping** - Scrapers cannot read data without the decryption key
+- **Data tampering** - GCM authentication tag verifies integrity
+- **Casual inspection** - Network traffic shows encrypted values
+
+### What it does NOT protect against:
+
+- **Browser DevTools** - Key is accessible in browser memory
+- **Authenticated scrapers** - Users with valid sessions can decrypt
+- **Server-side attacks** - Data is decrypted on the server
+
+### Recommendations:
+
+```python
+# Use a dedicated decryption key, not SECRET_KEY
+DECRYPT_KEY = env('DECRYPT_KEY')
+
+# Enable per-user key derivation
+encryption = EncryptionConfig(
+    enabled=True,
+    # Keys are derived per user_id automatically
+)
+```
+
+## Frontend Client
+
+Install the decryption client:
+
+```bash
+pnpm add @djangocfg/crypto
+```
+
+See **[Frontend Decryption](./frontend)** for React hooks and detailed usage.
+
+**NPM Package:** [`@djangocfg/crypto`](https://npmjs.com/package/@djangocfg/crypto)
+
+## See Also
+
+- **[Frontend Decryption](./frontend)** - React hooks and browser decryption
+- **[Configuration Guide](/docs/fundamentals/configuration)** - DjangoConfig setup
+- **[API Generation](/docs/features/api-generation)** - DRF integration

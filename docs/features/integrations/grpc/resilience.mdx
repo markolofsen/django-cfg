@@ -1,0 +1,517 @@
+---
+title: Resilience Patterns
+description: Production-grade retry, circuit breaker, and structured logging for gRPC services
+sidebar_label: Resilience
+keywords: [grpc, retry, circuit-breaker, resilience, logging, stamina, aiobreaker, structlog]
+position: 5
+---
+
+import { Callout } from 'nextra/components';
+
+# Resilience Patterns
+
+Django-CFG provides production-grade resilience patterns for gRPC operations, including automatic retry with exponential backoff, circuit breaker protection, and structured logging.
+
+## Overview
+
+The resilience layer wraps gRPC calls with three key patterns:
+
+```
+┌─────────────────────┐
+│   Application       │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   Retry Layer       │  @retry_grpc (stamina)
+│   5 attempts, 30s   │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Circuit Breaker    │  GRPCCircuitBreaker (aiobreaker)
+│  5 failures = open  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Structured Logging │  structlog with context
+└──────────┬──────────┘
+           │
+           ▼
+    gRPC Channel
+```
+
+## Quick Start
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import AsyncResilientGRPCClient
+
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    enable_retry=True,
+    enable_circuit_breaker=True,
+) as client:
+    result = await client.call_method(
+        service_name="myservice.MyService",
+        method_name="GetData",
+        request_data={"id": "123"},
+        request_class=MyRequest,
+        response_class=MyResponse,
+    )
+```
+
+---
+
+## Retry Decorators
+
+### Pre-configured Decorators
+
+Django-CFG provides three pre-configured retry decorators for common use cases:
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import (
+    retry_grpc,
+    retry_connection,
+    retry_streaming,
+)
+
+# Standard gRPC calls: 5 attempts, 30s timeout
+@retry_grpc
+async def call_service():
+    return await stub.SendCommand(request)
+
+# Connection establishment: 3 attempts, 10s timeout
+@retry_connection
+async def establish_connection():
+    return await channel.channel_ready()
+
+# Streaming operations: 10 attempts, 60s timeout
+@retry_streaming
+async def stream_data():
+    async for response in stub.StreamData(request):
+        yield response
+```
+
+### Configurable Retry
+
+For custom retry behavior, use `@with_retry`:
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import with_retry
+
+@with_retry(
+    attempts=3,
+    timeout=10.0,
+    wait_initial=0.5,
+    wait_max=5.0,
+    wait_jitter=0.2,
+)
+async def quick_call():
+    return await stub.FastMethod(request)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `attempts` | int | 5 | Maximum retry attempts |
+| `timeout` | float | 30.0 | Total timeout in seconds |
+| `wait_initial` | float | 0.1 | Initial backoff in seconds |
+| `wait_max` | float | 10.0 | Maximum backoff in seconds |
+| `wait_jitter` | float | 0.1 | Jitter factor (0.0 to 1.0) |
+
+### Retryable Status Codes
+
+The following gRPC status codes trigger automatic retry:
+
+| Status Code | Description |
+|-------------|-------------|
+| `UNAVAILABLE` | Service temporarily unavailable |
+| `DEADLINE_EXCEEDED` | Request timeout |
+| `RESOURCE_EXHAUSTED` | Rate limited |
+| `ABORTED` | Operation aborted by server |
+| `INTERNAL` | Internal server error (sometimes transient) |
+
+Network errors (`OSError`, `ConnectionError`, `TimeoutError`) are also retried automatically.
+
+### Checking Retryability
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import is_retryable_error
+
+try:
+    result = await stub.Method(request)
+except Exception as e:
+    if is_retryable_error(e):
+        print("This error would be retried")
+    else:
+        print("Non-retryable error")
+```
+
+---
+
+## Circuit Breaker
+
+The circuit breaker prevents cascading failures by temporarily blocking calls to unhealthy services.
+
+### States
+
+```
+     ┌─────────┐
+     │ CLOSED  │ ← Normal operation
+     └────┬────┘
+          │ 5 failures
+          ▼
+     ┌─────────┐
+     │  OPEN   │ ← Blocking calls
+     └────┬────┘
+          │ 60s timeout
+          ▼
+     ┌─────────┐
+     │HALF_OPEN│ ← Testing recovery
+     └────┬────┘
+          │ 2 successes
+          ▼
+     ┌─────────┐
+     │ CLOSED  │
+     └─────────┘
+```
+
+### Basic Usage
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import (
+    GRPCCircuitBreaker,
+    CircuitOpenError,
+)
+
+# Get or create circuit breaker for target
+breaker = await GRPCCircuitBreaker.get_or_create(
+    target_id="service-001",
+    fail_max=5,
+    reset_timeout=60.0,
+)
+
+# Check before calling
+if breaker.can_execute():
+    try:
+        result = await stub.Method(request)
+        breaker.record_success()
+    except Exception as e:
+        breaker.record_failure(e)
+        raise
+else:
+    raise CircuitOpenError("service-001", breaker.time_until_retry())
+```
+
+### Using as Decorator
+
+```python
+breaker = GRPCCircuitBreaker.get_or_create_sync("service-002")
+
+@breaker
+async def protected_call():
+    return await stub.Method(request)
+
+# Calls are automatically protected
+try:
+    result = await protected_call()
+except CircuitOpenError as e:
+    print(f"Circuit open, retry in {e.time_until_retry}s")
+```
+
+### Monitoring Status
+
+```python
+# Get stats for single breaker
+stats = breaker.get_stats()
+print(f"State: {stats['state']}")           # closed, open, half_open
+print(f"Failures: {stats['failure_count']}")
+print(f"Success rate: {stats['success_rate']}")
+
+# Get stats for all breakers
+all_stats = GRPCCircuitBreaker.get_all_stats()
+for target_id, stats in all_stats.items():
+    print(f"{target_id}: {stats['state']}")
+
+# Reset a breaker manually
+breaker.reset()
+
+# Reset all breakers
+await GRPCCircuitBreaker.reset_all()
+```
+
+### Handling CircuitOpenError
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import CircuitOpenError
+
+try:
+    result = await client.call_method(...)
+except CircuitOpenError as e:
+    print(f"Service {e.target_id} is unavailable")
+    print(f"Retry in {e.time_until_retry:.1f} seconds")
+
+    # Option 1: Return cached/fallback data
+    return get_cached_response()
+
+    # Option 2: Re-raise for caller to handle
+    raise
+```
+
+---
+
+## Structured Logging
+
+Django-CFG uses structlog for JSON-structured logging with async context propagation.
+
+### Configuration
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import configure_grpc_logging
+
+# Production: JSON output
+configure_grpc_logging(
+    json_output=True,
+    log_level="INFO",
+)
+
+# Development: Console output with colors
+configure_grpc_logging(
+    json_output=False,
+    log_level="DEBUG",
+)
+```
+
+### Getting a Logger
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import get_grpc_logger
+
+logger = get_grpc_logger("my_service")
+
+logger.info("processing_request", user_id="123")
+logger.warning("slow_response", duration_ms=1500)
+logger.error("request_failed", error="Connection refused")
+```
+
+### Context Propagation
+
+Bind context that flows through all async calls:
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import (
+    bind_context,
+    clear_context,
+    get_grpc_logger,
+)
+
+logger = get_grpc_logger("handler")
+
+async def handle_request(request_id: str, user_id: str):
+    # Bind context for all subsequent logs
+    bind_context(request_id=request_id, user_id=user_id)
+
+    try:
+        logger.info("request_started")  # Includes request_id, user_id
+
+        result = await process_request()
+
+        logger.info("request_completed", result_count=len(result))
+        return result
+
+    except Exception as e:
+        logger.error("request_failed", error=str(e))
+        raise
+
+    finally:
+        clear_context()
+```
+
+### Log Format
+
+**JSON output (production):**
+```json
+{
+  "timestamp": "2025-12-31T12:00:00.000Z",
+  "level": "info",
+  "component": "grpc_client",
+  "request_id": "req-123",
+  "service": "MyService",
+  "method": "GetData",
+  "duration_ms": 45.2,
+  "message": "grpc_call_completed"
+}
+```
+
+### Logging gRPC Calls
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import log_grpc_call
+
+log_grpc_call(
+    logger,
+    service="MyService",
+    method="GetData",
+    success=True,
+    duration_ms=45.2,
+    response_size=1024,
+)
+```
+
+---
+
+## Configuration
+
+### Pydantic Models
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import (
+    RetryConfig,
+    CircuitBreakerConfig,
+    LoggingConfig,
+    ResilienceConfig,
+)
+
+# Individual configs
+retry = RetryConfig(
+    enabled=True,
+    attempts=5,
+    timeout=30.0,
+    wait_initial=0.1,
+    wait_max=10.0,
+)
+
+circuit_breaker = CircuitBreakerConfig(
+    enabled=True,
+    fail_max=5,
+    reset_timeout=60.0,
+    success_threshold=2,
+)
+
+logging = LoggingConfig(
+    enabled=True,
+    json_output=True,
+    log_level="INFO",
+)
+
+# Combined config
+config = ResilienceConfig(
+    retry=retry,
+    circuit_breaker=circuit_breaker,
+    logging=logging,
+)
+```
+
+### Configuration Reference
+
+#### RetryConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | True | Enable retry |
+| `attempts` | int | 5 | Max attempts (1-20) |
+| `timeout` | float | 30.0 | Total timeout (1-300s) |
+| `wait_initial` | float | 0.1 | Initial backoff (0.01-10s) |
+| `wait_max` | float | 10.0 | Max backoff (1-60s) |
+| `wait_jitter` | float | 0.1 | Jitter factor (0-1) |
+
+#### CircuitBreakerConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | True | Enable circuit breaker |
+| `fail_max` | int | 5 | Failures before open (1-100) |
+| `reset_timeout` | float | 60.0 | Seconds before half-open (1-3600) |
+| `success_threshold` | int | 2 | Successes to close (1-10) |
+
+#### LoggingConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | True | Enable structured logging |
+| `json_output` | bool | True | JSON format (False = console) |
+| `log_level` | str | "INFO" | Minimum level |
+
+---
+
+## Best Practices
+
+### 1. Use Resilient Clients
+
+Always use `ResilientGRPCClient` or `AsyncResilientGRPCClient` in production:
+
+```python
+# Good: Built-in resilience
+async with AsyncResilientGRPCClient(host="localhost") as client:
+    result = await client.call_method(...)
+
+# Avoid: No resilience
+channel = grpc.aio.insecure_channel("localhost:50051")
+```
+
+### 2. Set Appropriate Timeouts
+
+Match timeouts to your SLA requirements:
+
+```python
+# Fast operations
+@with_retry(attempts=3, timeout=5.0)
+async def quick_lookup():
+    ...
+
+# Long-running operations
+@with_retry(attempts=5, timeout=60.0)
+async def batch_process():
+    ...
+```
+
+### 3. Use Per-Target Circuit Breakers
+
+Create separate circuit breakers for different services:
+
+```python
+# Good: Isolated failure domains
+auth_breaker = await GRPCCircuitBreaker.get_or_create("auth-service")
+data_breaker = await GRPCCircuitBreaker.get_or_create("data-service")
+
+# Avoid: Single breaker for all services
+global_breaker = await GRPCCircuitBreaker.get_or_create("all-services")
+```
+
+### 4. Always Clear Context
+
+Prevent context leakage between requests:
+
+```python
+async def handle_request():
+    bind_context(request_id="123")
+    try:
+        # ... process request
+    finally:
+        clear_context()  # Always clean up!
+```
+
+### 5. Monitor Circuit Breaker State
+
+Expose circuit breaker metrics for monitoring:
+
+```python
+# In health check endpoint
+def get_health_status():
+    stats = GRPCCircuitBreaker.get_all_stats()
+    open_circuits = [t for t, s in stats.items() if s['state'] == 'open']
+
+    return {
+        "healthy": len(open_circuits) == 0,
+        "open_circuits": open_circuits,
+    }
+```
+
+---
+
+## See Also
+
+- [Configuration](/features/integrations/grpc/configuration) - Full configuration reference
+- [Connection Pooling](/features/integrations/grpc/connection-pooling) - Channel reuse
+- [Troubleshooting](/features/integrations/grpc/troubleshooting) - Resilience issues

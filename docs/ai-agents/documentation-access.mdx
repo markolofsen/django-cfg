@@ -1,0 +1,208 @@
+---
+title: Documentation Access for AI
+description: How AI assistants can access DjangoCFG documentation via MCP server and CLI
+---
+
+import { Callout, Steps, Tabs, Cards } from 'nextra/components'
+
+# Documentation Access for AI
+
+DjangoCFG provides multiple ways for AI assistants to access documentation, enabling seamless integration with Claude, GPT, Cursor, and other AI coding assistants.
+
+## MCP Server
+
+<Callout type="info">
+**Recommended for AI Assistants**
+
+The MCP (Model Context Protocol) server provides the best integration for AI assistants, allowing them to search and retrieve documentation contextually.
+</Callout>
+
+### Configuration
+
+Add the MCP server to your AI assistant:
+
+```json
+{
+  "mcpServers": {
+    "djangocfg-docs": {
+      "url": "https://mcp.djangocfg.com/mcp"
+    }
+  }
+}
+```
+
+### Claude Desktop Setup
+
+<Steps>
+### Open Claude Desktop config
+
+```bash
+# macOS
+open ~/Library/Application\ Support/Claude/claude_desktop_config.json
+
+# Windows
+notepad %APPDATA%\Claude\claude_desktop_config.json
+```
+
+### Add MCP server
+
+```json
+{
+  "mcpServers": {
+    "djangocfg-docs": {
+      "url": "https://mcp.djangocfg.com/mcp"
+    }
+  }
+}
+```
+
+### Restart Claude Desktop
+
+The MCP server will now be available in your conversations.
+</Steps>
+
+## CLI Search
+
+<Callout type="tip">
+**Fast CLI Search**
+
+The `django-cfg search` command is fast and doesn't require loading Django. It works anywhere django-cfg is installed.
+</Callout>
+
+```bash
+# Search documentation (fast, no Django required)
+django-cfg search "database configuration"
+django-cfg search "redis cache" --limit 3
+django-cfg search "email smtp" --json
+```
+
+## Programmatic Access
+
+### Python
+
+```python
+from django_cfg.modules.django_ai import search, get_docs
+
+# Search
+results = search("database configuration")
+for r in results:
+    print(f"{r.title}: {r.url}")
+
+# Get formatted docs
+docs = get_docs("How to configure PostgreSQL?")
+print(docs)
+```
+
+### TypeScript
+
+```typescript
+import { search, getDocs } from '@djangocfg/nextjs/ai';
+
+// Search
+const results = await search('database configuration');
+results.forEach(r => console.log(r.title, r.url));
+
+// Get formatted docs
+const docs = await getDocs('How to configure PostgreSQL?');
+console.log(docs);
+```
+
+## Direct API
+
+The documentation API is publicly accessible:
+
+```bash
+# Search
+curl 'https://mcp.djangocfg.com/api/search?q=database+configuration&limit=5'
+```
+
+### Response Format
+
+```json
+{
+  "results": [
+    {
+      "title": "Database Configuration",
+      "content": "How to configure PostgreSQL...",
+      "url": "https://djangocfg.com/docs/fundamentals/configuration/database",
+      "score": 0.95
+    }
+  ]
+}
+```
+
+## CLAUDE.md Files
+
+DjangoCFG projects include `CLAUDE.md` files that Claude Code automatically reads. These files provide quick reference for AI assistants:
+
+```markdown
+# DjangoCFG AI Documentation
+
+## MCP Server
+{
+  "mcpServers": {
+    "djangocfg-docs": {
+      "url": "https://mcp.djangocfg.com/mcp"
+    }
+  }
+}
+
+## CLI
+django-cfg search "query"
+```
+
+## Startup Hints
+
+When running Django development server, DjangoCFG displays AI documentation hints:
+
+```
+🤖 AI Docs: MCP https://mcp.djangocfg.com/mcp | django-cfg search "query"
+```
+
+## Best Practices for AI Assistants
+
+<Callout type="tip">
+**Tips for AI Coding Assistants**
+
+1. Use the MCP server for contextual documentation lookup
+2. Search for specific topics like "DatabaseConfig" or "CacheConfig"
+3. Include example queries in your prompts
+4. Reference `CLAUDE.md` for quick access patterns
+</Callout>
+
+### Effective Queries
+
+| Query | Use Case |
+|-------|----------|
+| `DatabaseConfig` | Database configuration options |
+| `How to configure PostgreSQL?` | Step-by-step database setup |
+| `Redis cache setup` | Caching configuration |
+| `Email SMTP configuration` | Email sending setup |
+| `CORS configuration` | Cross-origin settings |
+| `Background tasks RQ` | Task queue setup |
+| `Multi-database routing` | Multiple databases |
+| `JWT authentication` | Auth configuration |
+
+## Integration Examples
+
+### In AI Prompts
+
+```
+I'm working on a DjangoCFG project and need help with database configuration.
+You can search the documentation using the MCP server at https://mcp.djangocfg.com/mcp
+or the command: django-cfg search "database"
+```
+
+### In Code Comments
+
+```python
+# AI: Search DjangoCFG docs for "database configuration"
+# or use: django-cfg search "database"
+from django_cfg.models import DatabaseConfig
+```
+
+## See Also
+
+- [CLI Reference](/docs/cli) - CLI commands
+- [Introduction to AI Agents](/docs/ai-agents/introduction) - Building AI agents
+- [Django Integration](/docs/ai-agents/django-integration) - AI + Django patterns

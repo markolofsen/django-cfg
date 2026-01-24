@@ -1,0 +1,537 @@
+---
+title: Job Cancellation
+description: Cooperative job cancellation for long-running RQ tasks
+sidebar_position: 5
+tags:
+  - django-rq
+  - cancellation
+  - tasks
+  - async
+---
+
+# Job Cancellation
+
+Cooperative cancellation support for long-running async tasks. Users can cancel jobs that are either queued or currently running.
+
+---
+
+## Overview
+
+### The Problem
+
+RQ's built-in `job.cancel()` only works for **queued** jobs (not yet started). Running jobs cannot be stopped gracefully without killing the entire worker process.
+
+### The Solution
+
+Django-CFG provides a two-layer cancellation system:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Application Layer                         │
+│  (apps/search, apps/cleaner - user-facing endpoints)        │
+├─────────────────────────────────────────────────────────────┤
+│  POST /api/search/{uuid}/cancel/                            │
+│  POST /api/cleaner/{uuid}/cancel/                           │
+│                                                              │
+│  1. Update DB status → "cancelled"                          │
+│  2. Call RQ cancel helper                                   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   django_cfg RQ Layer                        │
+│  (django_cfg/apps/integrations/rq - infrastructure)         │
+├─────────────────────────────────────────────────────────────┤
+│  Helper: request_cancellation(job_id)                       │
+│                                                              │
+│  • Queued → job.cancel()                                    │
+│  • Running → set cancellation flag in Redis                 │
+│  • force=True → send_stop_job_command() (kills worker)      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       Task Layer                             │
+│  (application tasks check cancellation flag)                │
+├─────────────────────────────────────────────────────────────┤
+│  @job("default")                                            │
+│  def my_long_task():                                        │
+│      for step in steps:                                     │
+│          if is_cancellation_requested():                    │
+│              return {"cancelled": True}                     │
+│          process_step()                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## API Reference
+
+### Services
+
+Import from `django_cfg.apps.integrations.rq.services`:
+
+```python
+from django_cfg.apps.integrations.rq.services import (
+    request_cancellation,
+    force_stop_job,
+    is_cancellation_requested,
+    clear_cancellation_flag,
+    get_job_status,
+)
+```
+
+#### `request_cancellation(job_id: str) -> bool`
+
+Request cancellation of a job.
+
+- **Queued jobs**: Cancels immediately via RQ
+- **Running jobs**: Sets cancellation flag in Redis
+
+```python
+from django_cfg.apps.integrations.rq.services import request_cancellation
+
+# In your view or service
+success = request_cancellation(job_id)
+if success:
+    print("Cancellation requested")
+else:
+    print("Job not found or already finished")
+```
+
+#### `is_cancellation_requested(job_id: str | None = None) -> bool`
+
+Check if cancellation was requested. Call this periodically in long-running tasks.
+
+```python
+from django_cfg.apps.integrations.rq.services import is_cancellation_requested
+
+@job("default")
+def my_long_task():
+    for item in items:
+        if is_cancellation_requested():
+            return {"cancelled": True}
+        process(item)
+```
+
+#### `force_stop_job(job_id: str) -> bool`
+
+Force stop a running job by sending SIGTERM to the worker.
+
+:::warning
+This will kill **ALL jobs** on the same worker! Use only as a last resort.
+:::
+
+```python
+from django_cfg.apps.integrations.rq.services import force_stop_job
+
+# Emergency stop
+force_stop_job(job_id)
+```
+
+#### `get_job_status(job_id: str) -> str | None`
+
+Get current status of a job.
+
+```python
+from django_cfg.apps.integrations.rq.services import get_job_status
+
+status = get_job_status(job_id)
+# Returns: "queued", "started", "finished", "failed", "canceled", or None
+```
+
+#### `clear_cancellation_flag(job_id: str) -> None`
+
+Clear cancellation flag after job handles cancellation. Usually not needed as flags expire automatically (1 hour TTL).
+
+---
+
+## REST API Endpoints
+
+### Infrastructure Level
+
+```
+POST /api/rq/jobs/{job_id}/cancel/
+```
+
+Query parameters:
+- `force=true` - Send SIGTERM to worker (dangerous)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Job abc123 cancel requested",
+  "job_id": "abc123",
+  "action": "cancel"
+}
+```
+
+**Response (404):**
+```json
+{
+  "error": "Job abc123 not found or already finished"
+}
+```
+
+### Application Level (Example)
+
+```
+POST /api/search/{uuid}/cancel/
+POST /api/cleaner/{uuid}/cancel/
+```
+
+**Response (200):**
+```json
+{
+  "status": "cancelled",
+  "uuid": "abc123-def456..."
+}
+```
+
+**Response (400):**
+```json
+{
+  "error": "Job already success"
+}
+```
+
+---
+
+## Usage Examples
+
+### Basic Task with Cancellation
+
+```python
+# apps/myapp/tasks.py
+from django_rq import job
+from django_cfg.apps.integrations.rq.services import is_cancellation_requested
+
+@job("default", timeout=300)
+def process_items(items: list) -> dict:
+    """Task with cancellation support."""
+    processed = []
+
+    for item in items:
+        # Check for cancellation before each item
+        if is_cancellation_requested():
+            return {
+                "cancelled": True,
+                "processed": len(processed),
+                "total": len(items),
+            }
+
+        # Process item
+        result = do_work(item)
+        processed.append(result)
+
+    return {
+        "success": True,
+        "processed": len(processed),
+    }
+```
+
+### Task with Cleanup on Cancel
+
+```python
+@job("default", timeout=600)
+def import_data(file_path: str) -> dict:
+    """Task that cleans up on cancellation."""
+    temp_files = []
+
+    try:
+        for chunk in read_chunks(file_path):
+            if is_cancellation_requested():
+                # Cleanup before returning
+                for f in temp_files:
+                    os.remove(f)
+                return {"cancelled": True, "cleaned_up": True}
+
+            temp_file = process_chunk(chunk)
+            temp_files.append(temp_file)
+
+        # Success - merge temp files
+        merge_files(temp_files)
+        return {"success": True}
+
+    except Exception as e:
+        # Cleanup on error too
+        for f in temp_files:
+            os.remove(f)
+        raise
+```
+
+### View with Cancel Endpoint
+
+```python
+# apps/myapp/api/views.py
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
+from django_cfg.apps.integrations.rq.services import request_cancellation
+
+class MyJobViewSet(viewsets.GenericViewSet):
+
+    @action(detail=True, methods=["post"], url_path="cancel")
+    def cancel(self, request, uuid=None):
+        """Cancel async job."""
+        job_request = self.get_object()
+
+        # Check if already finished
+        if job_request.status in ["success", "error", "cancelled"]:
+            return Response(
+                {"error": f"Job already {job_request.status}"},
+                status=400,
+            )
+
+        # Request RQ cancellation
+        if job_request.job_id:
+            request_cancellation(job_request.job_id)
+
+        # Update DB status
+        job_request.status = "cancelled"
+        job_request.completed_at = timezone.now()
+        job_request.save(update_fields=["status", "completed_at"])
+
+        return Response({
+            "status": "cancelled",
+            "uuid": str(job_request.uuid),
+        })
+```
+
+### Service Layer Pattern
+
+```python
+# apps/myapp/services/async_service.py
+from dataclasses import dataclass
+from django.utils import timezone
+from django_cfg.apps.integrations.rq.services import request_cancellation
+
+@dataclass
+class CancelJobResult:
+    success: bool
+    uuid: str
+    status: str
+    error: str | None = None
+
+class AsyncJobService:
+
+    def cancel_job(self, job_request) -> CancelJobResult:
+        """Cancel a job with proper error handling."""
+        # Check terminal states
+        if job_request.status in ["success", "error", "cancelled"]:
+            return CancelJobResult(
+                success=False,
+                uuid=str(job_request.uuid),
+                status=job_request.status,
+                error=f"Job already in terminal state: {job_request.status}",
+            )
+
+        # Request cancellation from RQ
+        if job_request.job_id:
+            request_cancellation(job_request.job_id)
+
+        # Update database
+        job_request.status = "cancelled"
+        job_request.completed_at = timezone.now()
+        job_request.save(update_fields=["status", "completed_at"])
+
+        return CancelJobResult(
+            success=True,
+            uuid=str(job_request.uuid),
+            status="cancelled",
+        )
+```
+
+### Check Cancellation at Intervals
+
+For CPU-intensive tasks where checking every iteration is expensive:
+
+```python
+import time
+
+@job("default", timeout=3600)
+def cpu_intensive_task(data: list) -> dict:
+    """Check cancellation every N seconds, not every iteration."""
+    last_check = time.time()
+    CHECK_INTERVAL = 5.0  # Check every 5 seconds
+
+    for i, item in enumerate(data):
+        # Time-based cancellation check
+        now = time.time()
+        if now - last_check >= CHECK_INTERVAL:
+            if is_cancellation_requested():
+                return {"cancelled": True, "processed": i}
+            last_check = now
+
+        # Heavy computation
+        process_item(item)
+
+    return {"success": True, "processed": len(data)}
+```
+
+---
+
+## Model Integration
+
+Add `CANCELLED` status to your models:
+
+```python
+# apps/myapp/models.py
+from django.db import models
+
+class JobStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    QUEUED = "queued", "Queued"
+    PROCESSING = "processing", "Processing"
+    SUCCESS = "success", "Success"
+    ERROR = "error", "Error"
+    CANCELLED = "cancelled", "Cancelled"
+
+class JobRequest(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True)
+    status = models.CharField(
+        max_length=20,
+        choices=JobStatus.choices,
+        default=JobStatus.PENDING,
+    )
+    job_id = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+```
+
+---
+
+## Best Practices
+
+### 1. Check Cancellation at Safe Points
+
+Don't check mid-transaction or in an inconsistent state:
+
+```python
+# Good: Check between logical units of work
+for batch in batches:
+    if is_cancellation_requested():
+        return {"cancelled": True}
+
+    with transaction.atomic():
+        process_batch(batch)  # Complete transaction before next check
+
+# Bad: Check inside transaction
+with transaction.atomic():
+    for item in items:
+        if is_cancellation_requested():  # Don't do this!
+            return  # Leaves transaction in bad state
+        process(item)
+```
+
+### 2. Always Update Database Status
+
+When handling cancellation in tasks, update the database:
+
+```python
+@job("default")
+def my_task(request_uuid: str):
+    request = MyRequest.objects.get(uuid=request_uuid)
+
+    try:
+        for step in steps:
+            if is_cancellation_requested():
+                # Always update DB
+                request.status = "cancelled"
+                request.completed_at = timezone.now()
+                request.save()
+                return {"cancelled": True}
+
+            process(step)
+
+        request.status = "success"
+        request.save()
+
+    except Exception as e:
+        request.status = "error"
+        request.error_message = str(e)
+        request.save()
+        raise
+```
+
+### 3. Use Force Stop Sparingly
+
+`force_stop_job()` kills the entire worker process, affecting all jobs on that worker:
+
+```python
+# Only use for emergency situations
+if user.is_superuser and request.data.get("force"):
+    force_stop_job(job_id)
+```
+
+### 4. Consider Cancellation Granularity
+
+For multi-step jobs, consider allowing partial cancellation:
+
+```python
+@job("default")
+def multi_step_job(request_uuid: str):
+    steps = ["download", "process", "upload"]
+    completed_steps = []
+
+    for step in steps:
+        if is_cancellation_requested():
+            return {
+                "cancelled": True,
+                "completed_steps": completed_steps,
+                "pending_steps": steps[len(completed_steps):],
+            }
+
+        execute_step(step)
+        completed_steps.append(step)
+
+    return {"success": True, "completed_steps": steps}
+```
+
+---
+
+## Troubleshooting
+
+### Cancellation Not Working
+
+1. **Check if flag is being set:**
+   ```python
+   from django_cfg.apps.integrations.rq.services import get_job_status
+   print(get_job_status(job_id))  # Should be "started"
+   ```
+
+2. **Check if task is checking for cancellation:**
+   ```python
+   # Add logging to your task
+   if is_cancellation_requested():
+       logger.info(f"Cancellation detected for job {job_id}")
+       return {"cancelled": True}
+   ```
+
+3. **Check Redis connection:**
+   ```python
+   import django_rq
+   queue = django_rq.get_queue("default")
+   print(queue.connection.ping())  # Should return True
+   ```
+
+### Job Stuck After Cancel Request
+
+If cooperative cancellation isn't working, use force stop as last resort:
+
+```python
+from django_cfg.apps.integrations.rq.services import force_stop_job
+
+# This will kill the worker process
+force_stop_job(job_id)
+```
+
+### Cancellation Flag Not Cleared
+
+Flags have 1-hour TTL and auto-expire. To manually clear:
+
+```python
+from django_cfg.apps.integrations.rq.services import clear_cancellation_flag
+clear_cancellation_flag(job_id)
+```

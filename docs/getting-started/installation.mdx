@@ -1,0 +1,257 @@
+---
+title: Installation
+description: Install Django-CFG with our interactive installer or manual setup
+sidebar_label: Installation
+sidebar_position: 2
+keywords:
+  - install django-cfg
+  - django-cfg setup
+  - quick install
+  - one-line install
+---
+
+# Installation
+
+<Callout type="info">
+Choose your path: **Quick** (download ready project), **Full** (complete setup), or **Manual** (fork & customize).
+</Callout>
+
+## Quick Start
+
+```bash
+curl -L https://djangocfg.com/install.sh | sh
+```
+
+## Interactive Installer
+
+<InstallerMDX />
+
+The installer offers three installation types:
+
+1. **Quick Install** - Download ready-to-use project (no setup required)
+2. **Full Install** - Complete setup with all dependencies
+3. **Manual Install** - Instructions to fork and clone the repository
+
+---
+
+## Requirements
+
+| Tool | Version | Note |
+|------|---------|------|
+| Python | 3.12+ | Required |
+| Poetry or pip | Latest | Poetry preferred, pip fallback available |
+| Node.js | 20+ | For frontend (pnpm will be needed) |
+| Docker | Latest | Optional - for local services (Redis, PostgreSQL, Centrifugo) |
+
+<Callout type="tip">
+Docker is **optional**. If not available, the installer will skip local services and you can set them up manually later.
+</Callout>
+
+---
+
+## Installation Options
+
+### Quick Install
+
+Run the installer script (auto-detects your OS and architecture):
+
+<Tabs items={['macOS / Linux', 'Windows']}>
+  <Tabs.Tab>
+```bash
+curl -L https://djangocfg.com/install.sh | sh
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```powershell
+iwr https://djangocfg.com/install.ps1 -UseBasicParsing | iex
+```
+  </Tabs.Tab>
+</Tabs>
+
+The installer will guide you through:
+- Installation type selection
+- Project name input
+- Dependency installation (Python + Frontend)
+- Database migrations
+- Optional Docker services setup
+
+---
+
+### Manual Installation
+
+Prefer to do it manually? Here's the step-by-step process:
+
+<Tabs items={['With Poetry', 'With pip']}>
+  <Tabs.Tab>
+```bash
+# 1. Fork & clone the repository
+git clone git@github.com:YOUR_USERNAME/django-cfg.git
+cd django-cfg/solution/projects/django
+
+# 2. Install Python dependencies
+poetry install
+
+# 3. Configure environment
+# Edit settings in ./api/environment/.env
+
+# 4. Run migrations (if using local PostgreSQL)
+poetry run python manage.py migrate
+
+# 5. Run Django server
+poetry run python manage.py runserver
+
+# 6. Install frontend dependencies
+cd ../../frontend/apps/admin
+pnpm install
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```bash
+# 1. Fork & clone the repository
+git clone git@github.com:YOUR_USERNAME/django-cfg.git
+cd django-cfg/solution/projects/django
+
+# 2. Install Python dependencies (pip fallback)
+pip3 install -r requirements-fallback.txt
+
+# 3. Configure environment
+# Edit settings in ./api/environment/.env
+
+# 4. Run migrations (if using local PostgreSQL)
+python manage.py migrate
+
+# 5. Run Django server
+python manage.py runserver
+
+# 6. Install frontend dependencies
+cd ../../frontend/apps/admin
+pnpm install
+```
+  </Tabs.Tab>
+</Tabs>
+
+---
+
+## Headless Mode (CI/CD)
+
+For automation and CI/CD pipelines:
+
+```bash
+./djangocfg-installer --headless --config '{"project_name":"my-app","install_type":"full"}'
+```
+
+### Configuration Options
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `project_name` | required | Project directory name |
+| `install_type` | `quick` | Installation type: `quick` or `full` |
+| `db_name` | `djangocfg` | PostgreSQL database name |
+| `db_user` | `postgres` | PostgreSQL user |
+| `db_password` | `password` | PostgreSQL password |
+
+### Simulation Mode
+
+Preview what will happen without making changes:
+
+```bash
+./djangocfg-installer --simulate
+```
+
+---
+
+## What Gets Installed
+
+### Full Install Mode
+
+1. ✅ Downloads project template
+2. ✅ Generates `.env` configuration files
+3. ✅ Installs Python dependencies (Poetry or pip fallback)
+4. ✅ Installs Frontend dependencies (pnpm)
+5. ✅ Optionally starts Docker services (PostgreSQL, Redis, Centrifugo, RQ)
+6. ✅ Runs database migrations (after services start)
+
+### Quick Install Mode
+
+1. ✅ Downloads ready-to-use project ZIP
+2. ✅ Extracts to your chosen directory
+3. ℹ️  Dependencies NOT installed (you run `poetry install` and `pnpm install` manually)
+
+---
+
+## Troubleshooting
+
+<Tabs items={['Docker Not Running', 'Poetry Issues', 'Python Version']}>
+  <Tabs.Tab>
+```bash
+# If you get "Docker is not running" warning:
+# 1. Start Docker Desktop, or
+# 2. Skip services and use SQLite for development:
+
+# In .env file:
+DATABASE__URL=sqlite:///db.sqlite3
+```
+
+<Callout type="info">
+The installer **does not fail** if Docker is unavailable. Services are optional.
+</Callout>
+  </Tabs.Tab>
+  <Tabs.Tab>
+```bash
+# If Poetry fails, installer automatically falls back to pip
+# Using requirements-fallback.txt
+
+# To manually use pip:
+cd projects/django
+pip3 install -r requirements-fallback.txt
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```bash
+# macOS
+brew install python@3.12
+
+# Ubuntu/Debian
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt install python3.12 python3.12-venv
+
+# Windows
+winget install Python.Python.3.12
+```
+  </Tabs.Tab>
+</Tabs>
+
+---
+
+## Verify Installation
+
+Check the installer version:
+
+```bash
+./djangocfg-installer --version
+```
+
+Start your Django server:
+
+```bash
+cd my-project/projects/django
+poetry run python manage.py runserver
+# Visit http://localhost:8000
+```
+
+---
+
+## Support the Project
+
+⭐ **Star and Fork** the repository on GitHub:
+[github.com/markolofsen/django-cfg](https://github.com/markolofsen/django-cfg)
+
+Help us grow the community!
+
+---
+
+## Next Steps
+
+- **[First Project](../first-project)** - Build your first Django-CFG app
+- **[Configuration](../configuration)** - Learn about settings and environment
+- **[Sample Project](../../guides/sample-project/overview)** - Explore a production example

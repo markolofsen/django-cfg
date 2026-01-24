@@ -88,15 +88,29 @@ BINARY_PATH="$TMP_DIR/$BINARY_NAME"
 
 # Download binary
 if command_exists curl; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$BINARY_PATH"
+    curl -fsSL "$DOWNLOAD_URL" -o "$BINARY_PATH" || {
+        echo "❌ Failed to download installer"
+        echo "💡 Try downloading manually:"
+        echo "   curl -L $DOWNLOAD_URL -o djangocfg-installer"
+        echo "   chmod +x djangocfg-installer"
+        echo "   ./djangocfg-installer"
+        exit 1
+    }
 elif command_exists wget; then
-    wget -q "$DOWNLOAD_URL" -O "$BINARY_PATH"
+    wget -q "$DOWNLOAD_URL" -O "$BINARY_PATH" || {
+        echo "❌ Failed to download installer"
+        exit 1
+    }
 else
     echo "❌ Error: curl or wget is required."
     exit 1
 fi
 
-chmod +x "$BINARY_PATH"
+# Make binary executable
+chmod +x "$BINARY_PATH" || {
+    echo "⚠️  Warning: Failed to set execute permissions"
+    echo "💡 You may need to run: chmod +x $BINARY_PATH"
+}
 
 echo "🚀 Running installer..."
 

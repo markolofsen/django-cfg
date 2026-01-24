@@ -1,0 +1,551 @@
+---
+title: Rate Limiting
+description: Django-CFG rate limiting for API protection. Universal decorators for Django views, DRF endpoints, and async WebSocket handlers with Redis-backed distributed limiting.
+sidebar_label: Rate Limiting
+sidebar_position: 10
+keywords:
+  - django-cfg rate limiting
+  - django throttling
+  - drf rate limit
+  - api rate limiting
+  - redis rate limit
+  - websocket rate limit
+---
+
+# Rate Limiting
+
+Django-CFG provides **universal rate limiting** that works across Django views, DRF endpoints, and async WebSocket handlers with Redis-backed distributed limiting.
+
+## Concept
+
+Rate limiting protects your API from abuse by restricting the number of requests a client can make within a time window. Django-CFG's implementation:
+
+- **Universal** - One decorator works everywhere (Django, DRF, WebSocket)
+- **Distributed** - Redis backend for multi-worker/multi-server deployments
+- **Flexible** - Multiple key strategies (IP, user, custom)
+- **Observable** - Standard rate limit headers in responses
+
+## Architecture
+
+```mermaid
+graph TB
+    Request[Request] --> Decorator[@rate_limit]
+    Decorator --> KeyGen[Generate Cache Key]
+    KeyGen --> Redis[(Redis)]
+    Redis --> Check{Limit Exceeded?}
+    Check -->|No| View[Execute View]
+    Check -->|Yes| Block[429 Response]
+
+    View --> Headers[Add X-RateLimit Headers]
+
+    subgraph Key Types
+        IP[IP Address]
+        User[User ID]
+        Custom[Custom Key]
+    end
+
+    KeyGen -.-> IP
+    KeyGen -.-> User
+    KeyGen -.-> Custom
+
+    style Request fill:#3b82f6
+    style View fill:#22c55e
+    style Block fill:#ef4444
+```
+
+**Key components:**
+- `@rate_limit` decorator - Universal rate limiting for any view type
+- `RateLimitConfig` - Pydantic model for configuration
+- `RateLimitRule` - Endpoint-specific rules
+- Redis backend - Distributed sliding window algorithm
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from django_cfg.core.decorators import rate_limit
+
+# Django view
+@rate_limit(key='ip', rate='100/hour')
+def my_view(request):
+    return JsonResponse({'success': True})
+
+# DRF ViewSet action
+@action(detail=True, methods=['post'])
+@rate_limit(key='user', rate='60/minute')
+def update_metrics(self, request, pk=None):
+    ...
+
+# Async WebSocket handler
+@websocket_rpc("ai_chat.send_message")
+@rate_limit(key='user', rate='20/minute')
+async def ai_chat_send_message(conn, params):
+    ...
+```
+
+### Convenience Aliases
+
+```python
+from django_cfg.core.decorators import ip_rate_limit, user_rate_limit
+
+@ip_rate_limit('10/minute')
+def login_view(request):
+    ...
+
+@user_rate_limit('100/hour')
+def api_endpoint(request):
+    ...
+```
+
+## Configuration
+
+### RateLimitConfig Model
+
+Configure rate limiting globally via Pydantic model:
+
+```python
+from django_cfg.models.api import RateLimitConfig, RateLimitRule
+
+rate_limit_config = RateLimitConfig(
+    enabled=True,
+    default_anon_rate="100/hour",
+    default_user_rate="1000/hour",
+    backend="redis",
+    key_prefix="ratelimit",
+    custom_rules=[
+        RateLimitRule(
+            path_pattern="/api/auth/login/",
+            rate="10/minute",
+            key="ip",
+        ),
+        RateLimitRule(
+            path_pattern="/api/ai/*",
+            rate="20/minute",
+            key="user",
+        ),
+    ],
+)
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable rate limiting globally |
+| `default_anon_rate` | `str` | `"100/hour"` | Default rate for anonymous users |
+| `default_user_rate` | `str` | `"1000/hour"` | Default rate for authenticated users |
+| `backend` | `str` | `"redis"` | Storage backend: `redis`, `cache`, `memory` |
+| `key_prefix` | `str` | `"ratelimit"` | Prefix for cache keys |
+| `block_on_exceed` | `bool` | `True` | Return 429 when exceeded |
+| `include_headers` | `bool` | `True` | Add X-RateLimit headers |
+| `log_exceeded` | `bool` | `True` | Log rate limit violations |
+
+### Rate Format
+
+Rate strings follow the format `limit/period`:
+
+| Format | Equivalent |
+|--------|------------|
+| `10/second`, `10/sec`, `10/s` | 10 requests per second |
+| `60/minute`, `60/min`, `60/m` | 60 requests per minute |
+| `100/hour`, `100/hr`, `100/h` | 100 requests per hour |
+| `1000/day`, `1000/d` | 1000 requests per day |
+
+## Decorator Reference
+
+### @rate_limit
+
+```python
+@rate_limit(
+    key: Literal["ip", "user", "user_or_ip", "custom"] = "user_or_ip",
+    rate: str = "100/hour",
+    custom_key: Optional[str] = None,
+    block: bool = True,
+    on_exceed: Optional[Callable] = None,
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `key` | `str` | `"user_or_ip"` | Key type for rate limiting |
+| `rate` | `str` | `"100/hour"` | Rate limit string |
+| `custom_key` | `str` | `None` | Custom key (required if `key="custom"`) |
+| `block` | `bool` | `True` | Block request when exceeded |
+| `on_exceed` | `Callable` | `None` | Callback on rate limit exceeded |
+
+### Key Types
+
+| Key | Description | Use Case |
+|-----|-------------|----------|
+| `ip` | Client IP address | Login, registration, public endpoints |
+| `user` | User ID (falls back to IP for anonymous) | Authenticated API endpoints |
+| `user_or_ip` | User ID if authenticated, IP otherwise | General purpose |
+| `custom` | Custom key value | Complex scenarios |
+
+### Response Headers
+
+Rate limited responses include standard headers:
+
+```http
+HTTP/1.1 429 Too Many Requests
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 3600
+Retry-After: 3600
+Content-Type: application/json
+
+{"error": "Rate limit exceeded", "detail": "Too many requests. Try again in 3600 seconds.", "retry_after": 3600}
+```
+
+Successful requests also include rate limit info:
+
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: 3600
+```
+
+## Usage Patterns
+
+### Login Protection
+
+Protect against brute force attacks:
+
+```python
+from django_cfg.core.decorators import rate_limit
+
+@rate_limit(key='ip', rate='5/minute')
+def login_view(request):
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+    # ... authentication logic
+```
+
+### AI/LLM Endpoints
+
+Protect expensive AI operations:
+
+```python
+from django_cfg.core.decorators import rate_limit
+
+@rate_limit(key='user', rate='20/minute')
+async def ai_chat(request):
+    """Rate limited AI chat - 20 messages per minute per user."""
+    prompt = request.data.get('prompt')
+    response = await llm.generate(prompt)
+    return Response({'response': response})
+```
+
+### WebSocket RPC
+
+Rate limit real-time operations:
+
+```python
+from django_cfg.core.decorators import rate_limit, RateLimitExceeded
+
+@websocket_rpc("game.action")
+@rate_limit(key='user', rate='10/second')
+async def game_action(conn, params):
+    try:
+        # Process game action
+        return {"success": True}
+    except RateLimitExceeded as e:
+        return {
+            "error": "rate_limited",
+            "retry_after": e.reset_in,
+        }
+```
+
+### Non-Blocking Mode
+
+Allow request but mark as rate limited:
+
+```python
+@rate_limit(key='user', rate='100/hour', block=False)
+def flexible_endpoint(request):
+    if getattr(request, 'rate_limited', False):
+        # Log or handle differently
+        logger.warning(f"Rate limited request from {request.user}")
+        # Could return partial data, skip expensive operations, etc.
+
+    return JsonResponse({'data': 'full response'})
+```
+
+### Custom Callback
+
+Execute custom logic when limit exceeded:
+
+```python
+def on_rate_exceeded(request, limit, remaining, reset_in):
+    # Send alert, log to monitoring, etc.
+    slack_alert(f"Rate limit exceeded: {request.path}")
+    metrics.increment('rate_limit_exceeded')
+
+@rate_limit(
+    key='ip',
+    rate='100/hour',
+    on_exceed=on_rate_exceeded,
+)
+def monitored_endpoint(request):
+    ...
+```
+
+### Custom Key
+
+Rate limit by custom identifier:
+
+```python
+@rate_limit(key='custom', custom_key='api_key:abc123', rate='1000/hour')
+def api_endpoint(request):
+    ...
+
+# Dynamic custom key
+def get_rate_limit_key(request):
+    api_key = request.headers.get('X-API-Key')
+    return f"api:{api_key}"
+
+@rate_limit(key='custom', custom_key=get_rate_limit_key(request), rate='1000/hour')
+def dynamic_endpoint(request):
+    ...
+```
+
+## Integration with DRF Throttling
+
+Django-CFG rate limiting can work alongside DRF's built-in throttling:
+
+```python
+from django_cfg.models.api import RateLimitConfig
+
+config = RateLimitConfig(
+    enabled=True,
+    default_anon_rate="100/hour",
+    default_user_rate="1000/hour",
+)
+
+# Apply to DRF settings
+REST_FRAMEWORK = {
+    **config.to_drf_throttle_settings(),
+    # ... other DRF settings
+}
+```
+
+This generates:
+
+```python
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+    },
+}
+```
+
+## Redis Configuration
+
+Rate limiting uses Redis via Django cache:
+
+```python
+# settings.py
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Optional: custom key prefix
+RATE_LIMIT_KEY_PREFIX = 'myapp:ratelimit'
+```
+
+### Sliding Window Algorithm
+
+Django-CFG uses a sliding window algorithm with Redis sorted sets:
+
+```
+1. Remove entries outside time window
+2. Count current entries
+3. If under limit, add new entry
+4. Set key expiration
+```
+
+This provides accurate rate limiting without the burst issues of fixed windows.
+
+## Troubleshooting
+
+### Rate limit not working
+
+**Check Redis connection:**
+
+```python
+from django.core.cache import cache
+
+# Test cache connection
+cache.set('test', 'value', 60)
+assert cache.get('test') == 'value'
+```
+
+**Verify Redis backend:**
+
+```python
+# Check if using django-redis
+from django.core.cache import cache
+print(hasattr(cache, 'client'))  # Should be True for django-redis
+```
+
+### In-memory fallback warning
+
+If you see:
+```
+WARNING: Redis not available for rate limiting. Using in-memory fallback.
+```
+
+This means Redis is not configured. In-memory fallback:
+- Does NOT work across multiple workers
+- Does NOT persist across restarts
+- Only suitable for single-worker development
+
+**Fix:** Configure Redis cache backend.
+
+### Headers not appearing
+
+Ensure `include_headers=True` in config:
+
+```python
+config = RateLimitConfig(include_headers=True)
+```
+
+For custom responses, headers are added automatically if response supports `__setitem__`.
+
+### WebSocket rate limit not working
+
+Ensure the decorator is **after** the RPC decorator:
+
+```python
+# CORRECT
+@websocket_rpc("method")
+@rate_limit(key='user', rate='10/minute')
+async def handler(conn, params):
+    ...
+
+# INCORRECT - rate_limit won't see connection
+@rate_limit(key='user', rate='10/minute')
+@websocket_rpc("method")
+async def handler(conn, params):
+    ...
+```
+
+### User ID not detected
+
+For user-based rate limiting, ensure:
+
+1. **Django views:** Request has authenticated user
+2. **DRF:** Authentication classes are configured
+3. **WebSocket:** Connection has `user_id` attribute
+
+If user not detected, falls back to IP-based limiting.
+
+## Best Practices
+
+### 1. Use appropriate key types
+
+```python
+# Public endpoints (login, registration) - use IP
+@rate_limit(key='ip', rate='10/minute')
+def login(request): ...
+
+# Authenticated API - use user
+@rate_limit(key='user', rate='1000/hour')
+def api_endpoint(request): ...
+
+# Mixed access - use user_or_ip
+@rate_limit(key='user_or_ip', rate='100/hour')
+def general_endpoint(request): ...
+```
+
+### 2. Set realistic limits
+
+```python
+# Too restrictive - frustrates users
+@rate_limit(rate='1/minute')  # Bad
+
+# Too permissive - no protection
+@rate_limit(rate='10000/second')  # Bad
+
+# Balanced - protects while allowing normal use
+@rate_limit(rate='60/minute')  # Good
+```
+
+### 3. Use Redis in production
+
+```python
+config = RateLimitConfig(
+    backend="redis",  # Never "memory" in production
+)
+```
+
+### 4. Monitor rate limit events
+
+```python
+def alert_on_abuse(request, limit, remaining, reset_in):
+    if limit > 1000:  # High limit endpoint
+        alert_ops_team(f"High-volume abuse: {request.path}")
+
+@rate_limit(key='ip', rate='1000/hour', on_exceed=alert_on_abuse)
+def high_value_endpoint(request): ...
+```
+
+### 5. Document limits for API users
+
+Include rate limits in API documentation:
+
+```python
+class MyViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for resources.
+
+    Rate limits:
+    - Anonymous: 100 requests/hour
+    - Authenticated: 1000 requests/hour
+    """
+```
+
+## Handling RateLimitExceeded
+
+For async handlers, catch the exception:
+
+```python
+from django_cfg.core.decorators import rate_limit, RateLimitExceeded
+
+@websocket_rpc("api.call")
+@rate_limit(key='user', rate='10/minute')
+async def api_call(conn, params):
+    try:
+        return await process(params)
+    except RateLimitExceeded as e:
+        return {
+            "error": "rate_limited",
+            "message": f"Too many requests. Try again in {e.reset_in} seconds.",
+            "retry_after": e.reset_in,
+            "limit": e.limit,
+        }
+```
+
+## Related Documentation
+
+- [Security Guide](/docs/deployment/security)
+- [Configuration Guide](/docs/fundamentals/configuration)
+
+TAGS: rate-limiting, throttling, api-protection, redis, security
+DEPENDS_ON: [django-redis, rest-framework]
+USED_BY: [api-endpoints, websocket-handlers, authentication]

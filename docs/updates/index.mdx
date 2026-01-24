@@ -1,0 +1,82 @@
+---
+title: Updates
+description: Latest news, releases, and security advisories for DjangoCFG
+---
+
+import { ArticleList } from '@djangocfg/ui-nextjs/blocks'
+import { Tabs } from 'nextra/components'
+
+# Updates
+
+Stay up to date with the latest changes, security advisories, and announcements.
+
+<Tabs items={['All', 'Security', 'Releases', 'Announcements']}>
+  <Tabs.Tab>
+    <ArticleList
+      articles={[
+        {
+          title: 'CVE-2025-66478: Critical Next.js RCE Vulnerability',
+          description: 'Critical vulnerability in React Server Components allowing remote code execution. Immediate update required.',
+          date: '2024-12-04',
+          type: 'security',
+          href: '/docs/updates/security/nextjs-cve-2025-66478',
+          author: 'DjangoCFG Team',
+          tags: ['nextjs', 'critical'],
+          featured: true,
+        },
+        {
+          title: 'Release v1.4.42',
+          description: 'Security update with Next.js 15.5.7 and synchronized package versions.',
+          date: '2024-12-04',
+          type: 'release',
+          href: '/docs/updates/releases/v1-4-42',
+          author: 'DjangoCFG Team',
+          tags: ['security'],
+        },
+      ]}
+      columns={1}
+    />
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+    <ArticleList
+      articles={[
+        {
+          title: 'CVE-2025-66478: Critical Next.js RCE Vulnerability',
+          description: 'Critical vulnerability in React Server Components allowing remote code execution. Immediate update required.',
+          date: '2024-12-04',
+          type: 'security',
+          href: '/docs/updates/security/nextjs-cve-2025-66478',
+          author: 'DjangoCFG Team',
+          tags: ['nextjs', 'critical'],
+        },
+      ]}
+      columns={1}
+      showFeatured={false}
+    />
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+    <ArticleList
+      articles={[
+        {
+          title: 'Release v1.4.42',
+          description: 'Security update with Next.js 15.5.7 and synchronized package versions.',
+          date: '2024-12-04',
+          type: 'release',
+          href: '/docs/updates/releases/v1-4-42',
+          author: 'DjangoCFG Team',
+          tags: ['security'],
+        },
+      ]}
+      columns={1}
+      showFeatured={false}
+    />
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+    <div className="text-center py-12 text-muted-foreground">
+      No announcements yet. Check back soon!
+    </div>
+  </Tabs.Tab>
+</Tabs>

@@ -1,0 +1,370 @@
+---
+title: OAuth Configuration
+description: Complete reference for Django-CFG OAuth configuration options. GitHubOAuthConfig, environment variables, and advanced settings.
+sidebar_label: Configuration
+sidebar_position: 2
+keywords:
+  - django oauth config
+  - github oauth settings
+  - oauth configuration
+  - django-cfg oauth
+---
+
+# OAuth Configuration Reference
+
+Complete reference for all OAuth configuration options in Django-CFG.
+
+## GitHubOAuthConfig
+
+The main configuration class for GitHub OAuth.
+
+### Basic Configuration
+
+```python
+from django_cfg import GitHubOAuthConfig
+
+github_oauth = GitHubOAuthConfig(
+    # Required
+    enabled=True,
+    client_id="your-client-id",
+    client_secret="your-client-secret",
+)
+```
+
+### All Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **Required** | | | |
+| `enabled` | `bool` | `False` | Enable/disable GitHub OAuth |
+| `client_id` | `str` | `""` | GitHub OAuth App Client ID |
+| `client_secret` | `str` | `""` | GitHub OAuth App Client Secret |
+| **OAuth URLs** | | | |
+| `authorize_url` | `str` | `"https://github.com/login/oauth/authorize"` | GitHub authorization URL |
+| `token_url` | `str` | `"https://github.com/login/oauth/access_token"` | Token exchange URL |
+| `user_api_url` | `str` | `"https://api.github.com/user"` | User profile API URL |
+| `emails_api_url` | `str` | `"https://api.github.com/user/emails"` | User emails API URL |
+| **Scopes** | | | |
+| `scope` | `list[str]` | `["user:email", "read:user"]` | OAuth scopes to request |
+| **Behavior** | | | |
+| `auto_create_user` | `bool` | `True` | Create Django user on first OAuth login |
+| `allow_account_linking` | `bool` | `True` | Link OAuth to existing user by email |
+| `state_timeout_seconds` | `int` | `300` | OAuth state token validity (5 minutes) |
+
+### Configuration Options Explained
+
+#### `enabled`
+
+Enable or disable GitHub OAuth.
+
+```python
+enabled=True  # OAuth endpoints available
+enabled=False # OAuth endpoints return 404
+```
+
+#### `client_id` / `client_secret`
+
+GitHub OAuth App credentials.
+
+```python
+# From environment variables (recommended)
+client_id=os.environ.get("GITHUB_CLIENT_ID", "")
+client_secret=os.environ.get("GITHUB_CLIENT_SECRET", "")
+```
+
+#### `scope`
+
+OAuth scopes to request from GitHub.
+
+```python
+# Default scopes
+scope=["user:email", "read:user"]
+
+# Extended scopes (access repos, orgs, etc.)
+scope=["user:email", "read:user", "read:org", "repo"]
+```
+
+Available GitHub scopes:
+| Scope | Access |
+|-------|--------|
+| `user:email` | Read user's email addresses |
+| `read:user` | Read user profile data |
+| `user` | Read and write user profile |
+| `read:org` | Read organization membership |
+| `repo` | Full repository access |
+
+#### `auto_create_user`
+
+Automatically create Django user on first OAuth login.
+
+```python
+auto_create_user=True   # Create new user if not found
+auto_create_user=False  # Require existing account, return error
+```
+
+When `False`, only users with existing `OAuthConnection` or matching email can login.
+
+#### `allow_account_linking`
+
+Link OAuth to existing user account by email match.
+
+```python
+allow_account_linking=True   # Link to user with same email
+allow_account_linking=False  # Always create new user
+```
+
+{/* prettier-ignore */}
+<Callout type="info">
+Account linking only works when the GitHub email matches an existing user's email in your database.
+</Callout>
+
+#### `state_timeout_seconds`
+
+How long OAuth state tokens remain valid.
+
+```python
+state_timeout_seconds=300   # 5 minutes (default)
+state_timeout_seconds=600   # 10 minutes
+state_timeout_seconds=120   # 2 minutes (more secure)
+```
+
+Shorter timeouts are more secure but may cause issues for slow users.
+
+## Environment Variables
+
+### Standard Pattern
+
+Django-CFG supports environment variable configuration with `__` delimiter:
+
+```bash
+# .env file
+GITHUB_OAUTH__CLIENT_ID=Iv1.abc123def456
+GITHUB_OAUTH__CLIENT_SECRET=your-secret-key-here
+```
+
+### Using with Environment Loader
+
+If you use Django-CFG's environment loader pattern:
+
+```python
+# api/environment/loader.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class GitHubOAuthEnvConfig(BaseSettings):
+    """GitHub OAuth configuration from environment."""
+
+    client_id: str = Field(
+        default="",
+        description="GitHub OAuth App Client ID"
+    )
+    client_secret: str = Field(
+        default="",
+        description="GitHub OAuth App Client Secret"
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="GITHUB_OAUTH__",
+        env_nested_delimiter="__",
+    )
+```
+
+```python
+# api/environment/loader.py (add to EnvironmentConfig)
+class EnvironmentConfig(BaseSettings):
+    # ... other fields ...
+    github_oauth: GitHubOAuthEnvConfig = Field(
+        default_factory=GitHubOAuthEnvConfig
+    )
+```
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, GitHubOAuthConfig
+from .environment import env
+
+class MyConfig(DjangoConfig):
+    github_oauth = (
+        GitHubOAuthConfig(
+            enabled=True,
+            client_id=env.github_oauth.client_id,
+            client_secret=env.github_oauth.client_secret,
+        )
+        if env.github_oauth.client_id and env.github_oauth.client_secret
+        else None
+    )
+```
+
+## Conditional Configuration
+
+### Enable Only in Production
+
+```python
+import os
+
+github_oauth = GitHubOAuthConfig(
+    enabled=os.environ.get("ENV") == "production",
+    client_id=os.environ.get("GITHUB_CLIENT_ID", ""),
+    client_secret=os.environ.get("GITHUB_CLIENT_SECRET", ""),
+)
+```
+
+### Enable Only If Configured
+
+```python
+_github_client_id = os.environ.get("GITHUB_CLIENT_ID", "")
+_github_client_secret = os.environ.get("GITHUB_CLIENT_SECRET", "")
+
+github_oauth = (
+    GitHubOAuthConfig(
+        enabled=True,
+        client_id=_github_client_id,
+        client_secret=_github_client_secret,
+    )
+    if _github_client_id and _github_client_secret
+    else None
+)
+```
+
+### Different Scopes per Environment
+
+```python
+import os
+
+is_production = os.environ.get("ENV") == "production"
+
+github_oauth = GitHubOAuthConfig(
+    enabled=True,
+    client_id=os.environ.get("GITHUB_CLIENT_ID", ""),
+    client_secret=os.environ.get("GITHUB_CLIENT_SECRET", ""),
+    # Production: minimal scopes
+    # Development: extended scopes for testing
+    scope=["user:email", "read:user"] if is_production else ["user:email", "read:user", "read:org"],
+)
+```
+
+## Settings Generation
+
+Django-CFG automatically generates Django settings from your configuration:
+
+```python
+# Auto-generated in Django settings
+GITHUB_OAUTH_CONFIG = GitHubOAuthConfig(
+    enabled=True,
+    client_id="...",
+    client_secret="...",
+    # ... all your config options
+)
+```
+
+### Accessing in Code
+
+```python
+from django.conf import settings
+
+# Check if GitHub OAuth is configured
+if hasattr(settings, 'GITHUB_OAUTH_CONFIG'):
+    config = settings.GITHUB_OAUTH_CONFIG
+    if config and config.is_configured():
+        print(f"GitHub OAuth enabled with client: {config.client_id[:8]}...")
+```
+
+### Helper Methods
+
+The `GitHubOAuthConfig` class provides helper methods:
+
+```python
+config = settings.GITHUB_OAUTH_CONFIG
+
+# Check if fully configured
+config.is_configured()  # True if enabled and has credentials
+
+# Get scope as string (for OAuth URL)
+config.get_scope_string()  # "user:email read:user"
+```
+
+## Validation
+
+Django-CFG validates configuration at startup:
+
+### Missing Credentials
+
+```python
+github_oauth = GitHubOAuthConfig(
+    enabled=True,
+    client_id="",  # Empty!
+    client_secret="",  # Empty!
+)
+# Warning: GitHub OAuth enabled but missing credentials
+```
+
+### Invalid Scope
+
+```python
+github_oauth = GitHubOAuthConfig(
+    enabled=True,
+    client_id="...",
+    client_secret="...",
+    scope=[],  # Empty scope list
+)
+# Warning: Empty scope list, defaults will be used
+```
+
+## Complete Example
+
+```python
+# api/config.py
+import os
+from typing import Optional
+from django_cfg import (
+    DjangoConfig,
+    GitHubOAuthConfig,
+    JWTConfig,
+    TelegramConfig,
+)
+from .environment import env
+
+class MyConfig(DjangoConfig):
+    # Project settings
+    project_name: str = "MyApp"
+    enable_accounts: bool = True
+
+    # JWT Configuration (works with OAuth)
+    jwt: JWTConfig = JWTConfig(
+        access_token_lifetime_hours=24,
+        refresh_token_lifetime_days=30,
+    )
+
+    # Telegram (for OAuth notifications)
+    telegram: Optional[TelegramConfig] = (
+        TelegramConfig(
+            bot_token=env.telegram.bot_token,
+            chat_id=env.telegram.chat_id,
+        )
+        if env.telegram.bot_token
+        else None
+    )
+
+    # GitHub OAuth
+    github_oauth: Optional[GitHubOAuthConfig] = (
+        GitHubOAuthConfig(
+            enabled=True,
+            client_id=env.github_oauth.client_id,
+            client_secret=env.github_oauth.client_secret,
+            scope=["user:email", "read:user"],
+            auto_create_user=True,
+            allow_account_linking=True,
+            state_timeout_seconds=300,
+        )
+        if env.github_oauth.client_id and env.github_oauth.client_secret
+        else None
+    )
+
+config = MyConfig()
+```
+
+## Next Steps
+
+- [GitHub OAuth Guide](/docs/features/integrations/oauth/github) - Setup walkthrough
+- [Frontend Integration](/docs/features/integrations/oauth/frontend) - React/Next.js code
+- [Security Best Practices](/docs/features/integrations/oauth/security) - Production security

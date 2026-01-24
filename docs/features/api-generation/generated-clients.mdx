@@ -1,0 +1,1076 @@
+---
+title: Using Generated Clients
+sidebar_position: 4
+keywords:
+  - django-cfg generated clients
+  - django generated clients
+  - generated clients django-cfg
+  - swift api client
+  - ios api client
+description: Generated API client examples for TypeScript, Python, Swift, Go, and JavaScript. Type-safe client libraries with automatic validation and error handling.
+---
+
+# Using Generated Clients
+
+After generating clients with `python manage.py generate_client`, you'll have type-safe TypeScript, Python, Go, Swift, and Protocol Buffer clients ready to use in your applications.
+
+## TypeScript Clients
+
+### Installation
+
+Generated TypeScript clients are organized by group:
+
+```
+openapi/clients/typescript/{group_name}/
+```
+
+Example:
+- `openapi/clients/typescript/core/` - Core API group
+- `openapi/clients/typescript/shop/` - Shop API group
+
+
+<Callout type="info">
+**Group Organization**
+
+Each group defined in `OpenAPIConfig.groups` gets its own client directory with all generated files (client, models, enums, fetchers, hooks, schemas).
+
+</Callout>
+
+#### Copy to Your Project
+
+```bash
+# Copy specific group
+cp -r openapi/clients/typescript/core src/api/
+
+# Or copy all groups
+cp -r openapi/clients/typescript/* src/api/
+```
+
+#### Install as NPM Package
+
+Create a package:
+
+```json
+// package.json
+{
+  "name": "@myorg/api-client",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts"
+}
+```
+
+Then install locally or publish to NPM.
+
+### Basic Usage
+
+```typescript
+import { APIClient } from './api/core';
+
+// Initialize client
+const client = new APIClient({ baseUrl: 'https://api.example.com', token: 'access-token' });
+
+// Make API calls (all methods are fully typed)
+const users = await client.users.list();
+const user = await client.users.retrieve({ id: 1 });
+const newUser = await client.users.create({
+  email: 'user@example.com',
+  name: 'John Doe'
+});
+```
+
+### Authentication
+
+#### Bearer Token
+
+```typescript
+// Set access and refresh tokens
+api.setToken('access-token', 'refresh-token');
+
+// Check if authenticated
+if (api.isAuthenticated()) {
+  console.log('User is logged in');
+}
+
+// Clear tokens
+api.clearToken();
+```
+
+#### API Key
+
+```typescript
+// Set API key
+api.setApiKey('your-api-key');
+```
+
+#### Custom Headers
+
+```typescript
+// Add custom headers
+api.setHeaders({
+  'X-Custom-Header': 'value',
+  'X-Request-ID': 'unique-id'
+});
+```
+
+### Multiple Groups
+
+Use clients from different groups together:
+
+```typescript
+// Import clients from different groups
+import { APIClient as CoreClient } from './api/core';
+import { APIClient as TradingClient } from './api/trading';
+import { APIClient as MarketClient } from './api/market';
+
+// Initialize with shared authentication
+const token = 'access-token';
+const baseUrl = 'https://api.cryptoplatform.com';
+
+const core = new CoreClient({ baseUrl, token });
+const trading = new TradingClient({ baseUrl, token });
+const market = new MarketClient({ baseUrl, token });
+
+// Use each client independently
+const user = await core.users.retrieve({ id: 1 });
+const wallets = await trading.wallets.list();
+const prices = await market.prices.list({ symbols: ['BTC', 'ETH'] });
+```
+
+### React Integration
+
+```typescript
+import { useState, useEffect } from 'react';
+import { APIClient } from './api/trading';
+
+function WalletList() {
+  const [wallets, setWallets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const client = new APIClient({
+      baseUrl: process.env.REACT_APP_API_URL,
+      token: localStorage.getItem('access_token')
+    });
+
+    client.wallets.list()
+      .then(data => {
+        setWallets(data.results);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Failed to load wallets:', error);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <ul>
+      {wallets.map(wallet => (
+        <li key={wallet.id}>{wallet.currency}: {wallet.balance}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Vue Integration
+
+```vue
+<template>
+  <div>
+    <div v-if="loading">Loading...</div>
+    <ul v-else>
+      <li v-for="wallet in wallets" :key="wallet.id">
+        {{ wallet.currency }}: {{ wallet.balance }}
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script>
+import { APIClient } from './api/trading';
+
+export default {
+  data() {
+    return {
+      wallets: [],
+      loading: true,
+    };
+  },
+  async mounted() {
+    const client = new APIClient({
+      baseUrl: process.env.VUE_APP_API_URL,
+      token: localStorage.getItem('access_token')
+    });
+
+    try {
+      const data = await client.wallets.list();
+      this.wallets = data.results;
+    } catch (error) {
+      console.error('Failed to load wallets:', error);
+    } finally {
+      this.loading = false;
+    }
+  },
+};
+</script>
+```
+
+### Error Handling
+
+```typescript
+try {
+  const order = await client.orders.create({
+    symbol: 'BTC/USDT',
+    side: 'buy',
+    amount: 0.1,
+    price: 45000
+  });
+  console.log('Order created:', order.id);
+} catch (error) {
+  if (error.response) {
+    // API error response
+    console.error('Status:', error.response.status);
+    console.error('Data:', error.response.data);
+  } else if (error.request) {
+    // No response received
+    console.error('No response from server');
+  } else {
+    // Other errors
+    console.error('Error:', error.message);
+  }
+}
+```
+
+## Python Clients
+
+### Installation
+
+Generated Python clients are organized by group:
+
+```
+openapi/clients/python/{group_name}/
+```
+
+Example:
+- `openapi/clients/python/core/` - Core API group
+- `openapi/clients/python/trading/` - Trading API group
+
+
+<Callout type="info">
+**Group Organization**
+
+Each group defined in `OpenAPIConfig.groups` gets its own Python package with models, subclients, and async support.
+
+</Callout>
+
+#### Install Locally
+
+```bash
+# Install specific group
+pip install -e openapi/clients/python/core
+
+# Or add to requirements.txt
+echo "-e openapi/clients/python/core" >> requirements.txt
+echo "-e openapi/clients/python/trading" >> requirements.txt
+```
+
+#### Publish to PyPI
+
+Package and publish:
+
+```bash
+cd openapi/clients/python/trading
+python -m build
+python -m twine upload dist/*
+```
+
+### Basic Usage
+
+```python
+from trading import Client
+from trading.api.default import (
+    list_wallets,
+    get_wallet,
+    create_order
+)
+from trading.models import OrderCreate
+
+# Initialize client
+client = Client(base_url="https://api.cryptoplatform.com")
+client = client.with_headers({
+    "Authorization": "Bearer access-token"
+})
+
+# Synchronous API calls
+wallets = list_wallets.sync(client=client)
+print(f"Found {len(wallets.results)} wallets")
+
+wallet = get_wallet.sync(id="btc-wallet-123", client=client)
+print(f"Wallet: {wallet.currency} - {wallet.balance}")
+
+# Create order
+order_data = OrderCreate(
+    symbol="BTC/USDT",
+    side="buy",
+    amount=0.1,
+    price=45000
+)
+new_order = create_order.sync(
+    client=client,
+    json_body=order_data
+)
+print(f"Created order: {new_order.id}")
+```
+
+### Async Usage
+
+```python
+import asyncio
+from trading import Client
+from trading.api.default import (
+    list_wallets,
+    create_order
+)
+
+async def main():
+    client = Client(base_url="https://api.cryptoplatform.com")
+    client = client.with_headers({
+        "Authorization": "Bearer access-token"
+    })
+
+    # Async API calls
+    wallets = await list_wallets.asyncio(client=client)
+    print(f"Found {len(wallets.results)} wallets")
+
+    new_order = await create_order.asyncio(
+        client=client,
+        json_body={"symbol": "ETH/USDT", "side": "buy", "amount": 1}
+    )
+    print(f"Created: {new_order.id}")
+
+# Run async code
+asyncio.run(main())
+```
+
+### Authentication
+
+```python
+# Bearer token
+client = client.with_headers({
+    "Authorization": f"Bearer {access_token}"
+})
+
+# API key
+client = client.with_headers({
+    "X-API-Key": "your-api-key"
+})
+
+# Custom headers
+client = client.with_headers({
+    "X-Custom-Header": "value",
+    "X-Request-ID": "unique-id"
+})
+```
+
+### Multiple Groups
+
+```python
+# Import clients from different groups
+from core import Client as CoreClient
+from trading import Client as TradingClient
+from market import Client as MarketClient
+
+# Initialize clients with shared authentication
+base_url = "https://api.cryptoplatform.com"
+headers = {"Authorization": "Bearer access-token"}
+
+core = CoreClient(base_url=base_url).with_headers(headers)
+trading = TradingClient(base_url=base_url).with_headers(headers)
+market = MarketClient(base_url=base_url).with_headers(headers)
+
+# Use each client
+from core.api.default import list_users, get_user
+from trading.api.default import list_wallets, list_orders
+from market.api.default import get_prices
+
+users = list_users.sync(client=core)
+wallets = list_wallets.sync(client=trading)
+orders = list_orders.sync(client=trading, status="open")
+prices = get_prices.sync(client=market, symbols=["BTC", "ETH"])
+```
+
+### Django Integration
+
+```python
+# views.py
+from django.http import JsonResponse
+from trading import Client
+from trading.api.default import list_wallets
+
+def get_user_wallets(request):
+    """Get wallets for current user"""
+    # Create API client
+    client = Client(base_url="https://api.cryptoplatform.com")
+    client = client.with_headers({
+        "Authorization": f"Bearer {request.user.access_token}"
+    })
+
+    # Fetch wallets
+    try:
+        wallets = list_wallets.sync(
+            client=client,
+            user_id=request.user.id
+        )
+        return JsonResponse({
+            'wallets': [wallet.dict() for wallet in wallets.results]
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+```
+
+### FastAPI Integration
+
+```python
+from fastapi import FastAPI, Depends
+from trading import Client
+from trading.api.default import list_wallets, list_orders
+
+app = FastAPI()
+
+def get_api_client():
+    """Dependency to get API client"""
+    client = Client(base_url="https://api.cryptoplatform.com")
+    return client.with_headers({
+        "Authorization": "Bearer service-token"
+    })
+
+@app.get("/wallets")
+async def get_wallets(client: Client = Depends(get_api_client)):
+    """Get all wallets"""
+    wallets = await list_wallets.asyncio(client=client)
+    return {"wallets": [wallet.dict() for wallet in wallets.results]}
+
+@app.get("/orders")
+async def get_orders(status: str = "open", client: Client = Depends(get_api_client)):
+    """Get orders by status"""
+    orders = await list_orders.asyncio(client=client, status=status)
+    return {"orders": [order.dict() for order in orders.results]}
+```
+
+### Error Handling
+
+```python
+from httpx import HTTPStatusError
+
+try:
+    order = create_order.sync(
+        client=client,
+        json_body={"symbol": "BTC/USDT", "side": "buy", "amount": 0.1}
+    )
+except HTTPStatusError as e:
+    print(f"HTTP {e.response.status_code}: {e.response.text}")
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+## Swift Clients (iOS/macOS)
+
+Django-CFG generates Swift clients using Apple's official `swift-openapi-generator`. This produces native Swift code with async/await support.
+
+<Callout type="info">
+**External Generator**
+
+Swift generation requires `swift-openapi-generator` to be installed:
+```bash
+brew install swift-openapi-generator
+```
+</Callout>
+
+### Installation
+
+Generated Swift clients are in:
+
+```
+openapi/clients/swift/{group_name}/
+```
+
+#### Add to Xcode Project
+
+1. Copy the generated directory to your iOS project
+2. Add files to your target in Xcode
+3. Install OpenAPIRuntime via SPM:
+
+```swift
+// Package.swift or Xcode SPM
+dependencies: [
+    .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.0.0"),
+    .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.0.0"),
+]
+```
+
+### Basic Usage
+
+```swift
+import OpenAPIRuntime
+import OpenAPIURLSession
+import TradingAPI  // Generated client
+
+// Initialize client
+let client = Client(
+    serverURL: URL(string: "https://api.cryptoplatform.com")!,
+    transport: URLSessionTransport()
+)
+
+// List wallets (async/await)
+Task {
+    do {
+        let response = try await client.walletsList()
+        switch response {
+        case .ok(let okResponse):
+            let wallets = try okResponse.body.json
+            for wallet in wallets.results {
+                print("\(wallet.currency): \(wallet.balance)")
+            }
+        case .undocumented(let statusCode, _):
+            print("Unexpected status: \(statusCode)")
+        }
+    } catch {
+        print("Error: \(error)")
+    }
+}
+```
+
+### Authentication
+
+```swift
+// Add Bearer token via middleware
+struct AuthMiddleware: ClientMiddleware {
+    let token: String
+
+    func intercept(
+        _ request: HTTPRequest,
+        body: HTTPBody?,
+        baseURL: URL,
+        operationID: String,
+        next: (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
+    ) async throws -> (HTTPResponse, HTTPBody?) {
+        var modifiedRequest = request
+        modifiedRequest.headerFields[.authorization] = "Bearer \(token)"
+        return try await next(modifiedRequest, body, baseURL)
+    }
+}
+
+// Use with client
+let client = Client(
+    serverURL: URL(string: "https://api.cryptoplatform.com")!,
+    transport: URLSessionTransport(),
+    middlewares: [AuthMiddleware(token: accessToken)]
+)
+```
+
+### SwiftUI Integration
+
+```swift
+import SwiftUI
+
+struct WalletListView: View {
+    @State private var wallets: [Wallet] = []
+    @State private var isLoading = true
+    @State private var error: Error?
+
+    private let client = Client(
+        serverURL: URL(string: "https://api.cryptoplatform.com")!,
+        transport: URLSessionTransport()
+    )
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+            } else if let error = error {
+                Text("Error: \(error.localizedDescription)")
+            } else {
+                List(wallets, id: \.id) { wallet in
+                    HStack {
+                        Text(wallet.currency)
+                        Spacer()
+                        Text(wallet.balance)
+                    }
+                }
+            }
+        }
+        .task {
+            await loadWallets()
+        }
+    }
+
+    private func loadWallets() async {
+        do {
+            let response = try await client.walletsList()
+            if case .ok(let okResponse) = response {
+                wallets = try okResponse.body.json.results
+            }
+            isLoading = false
+        } catch {
+            self.error = error
+            isLoading = false
+        }
+    }
+}
+```
+
+### Error Handling
+
+```swift
+do {
+    let response = try await client.ordersCreate(
+        body: .json(.init(
+            symbol: "BTC/USDT",
+            side: .buy,
+            amount: 0.1,
+            price: 45000
+        ))
+    )
+
+    switch response {
+    case .ok(let okResponse):
+        let order = try okResponse.body.json
+        print("Order created: \(order.id)")
+    case .badRequest(let errorResponse):
+        let error = try errorResponse.body.json
+        print("Validation error: \(error.detail)")
+    case .unauthorized:
+        print("Not authenticated")
+    case .undocumented(let statusCode, _):
+        print("Unexpected status: \(statusCode)")
+    }
+} catch {
+    print("Network error: \(error)")
+}
+```
+
+### Features
+
+- ✅ **Native Swift types** - Structs, enums, optionals
+- ✅ **Async/await** - Modern concurrency support
+- ✅ **Type-safe responses** - Exhaustive switch on response types
+- ✅ **Middleware support** - Authentication, logging, retry
+- ✅ **Combine compatible** - Works with publishers
+- ✅ **SwiftUI ready** - Use with @State, @StateObject
+
+## Protocol Buffer/gRPC Clients
+
+Django-CFG can generate Protocol Buffer definitions and gRPC service definitions from your OpenAPI specification. This is useful when you need high-performance RPC communication or want to use gRPC instead of REST.
+
+
+<Callout type="info">
+**Compilation Required**
+
+Proto files must be compiled with `protoc` before use. Each generated group includes a README.md with detailed compilation instructions for Python, Go, TypeScript, and other languages.
+
+</Callout>
+
+### Installation
+
+Install gRPC tools for your language:
+
+#### Python
+```bash
+pip install grpcio grpcio-tools
+```
+
+#### Go
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+```
+
+#### TypeScript
+```bash
+npm install ts-proto
+```
+
+### Generating Proto Files
+
+```bash
+# Generate Protocol Buffers for specific group
+python manage.py generate_client --groups trading --proto
+
+# Or generate all clients including proto
+python manage.py generate_client  # Proto enabled by default
+```
+
+### Compilation
+
+Proto files must be compiled to your target language:
+
+#### Python
+```bash
+cd openapi/clients/proto/trading
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. api__trading/*.proto
+```
+
+#### Go
+```bash
+cd openapi/clients/proto/trading
+protoc -I. --go_out=. --go-grpc_out=. api__trading/*.proto
+```
+
+#### TypeScript
+```bash
+cd openapi/clients/proto/trading
+protoc -I. --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=. api__trading/*.proto
+```
+
+See the generated `README.md` in each proto group for complete compilation instructions.
+
+### Basic Usage (Python)
+
+```python
+import grpc
+from trading.api__trading import service_pb2, service_pb2_grpc
+
+# Create insecure channel (for development)
+channel = grpc.insecure_channel('localhost:50051')
+
+# Create service stub
+stub = service_pb2_grpc.TradingServiceStub(channel)
+
+# List wallets
+request = service_pb2.WalletsListRequest(
+    page=1,
+    page_size=10
+)
+response = stub.WalletsList(request)
+
+print(f"Found {response.data.count} wallets")
+for wallet in response.data.results:
+    print(f"- {wallet.currency}: {wallet.balance}")
+
+# Create order
+create_request = service_pb2.OrdersCreateRequest(
+    body=service_pb2.OrderCreate(
+        symbol="BTC/USDT",
+        side="buy",
+        amount=0.1,
+        price=45000
+    )
+)
+new_order = stub.OrdersCreate(create_request)
+print(f"Created order: {new_order.data.id}")
+```
+
+### Basic Usage (Go)
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "google.golang.org/grpc"
+    pb "your-module/trading/api__trading"
+)
+
+func main() {
+    // Create connection
+    conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+    if err != nil {
+        log.Fatalf("did not connect: %v", err)
+    }
+    defer conn.Close()
+
+    // Create client
+    client := pb.NewTradingServiceClient(conn)
+
+    // List wallets
+    resp, err := client.WalletsList(context.Background(), &pb.WalletsListRequest{
+        Page:     proto.Int64(1),
+        PageSize: proto.Int64(10),
+    })
+    if err != nil {
+        log.Fatalf("could not list: %v", err)
+    }
+
+    fmt.Printf("Found %d wallets\n", resp.Data.Count)
+    for _, wallet := range resp.Data.Results {
+        fmt.Printf("- %s: %s\n", wallet.Currency, wallet.Balance)
+    }
+}
+```
+
+### Authentication
+
+gRPC uses interceptors for authentication instead of HTTP headers:
+
+```python
+import grpc
+
+# Create credentials interceptor
+class AuthInterceptor(grpc.UnaryUnaryClientInterceptor):
+    def __init__(self, token):
+        self._token = token
+
+    def intercept_unary_unary(self, continuation, client_call_details, request):
+        metadata = []
+        if client_call_details.metadata is not None:
+            metadata = list(client_call_details.metadata)
+        metadata.append(('authorization', f'Bearer {self._token}'))
+
+        new_details = client_call_details._replace(metadata=metadata)
+        return continuation(new_details, request)
+
+# Use interceptor
+channel = grpc.insecure_channel('localhost:50051')
+intercepted_channel = grpc.intercept_channel(channel, AuthInterceptor('your-token'))
+stub = service_pb2_grpc.TradingServiceStub(intercepted_channel)
+```
+
+### Error Handling
+
+gRPC uses status codes instead of HTTP status codes:
+
+```python
+import grpc
+
+try:
+    response = stub.WalletsRetrieve(request)
+except grpc.RpcError as e:
+    if e.code() == grpc.StatusCode.NOT_FOUND:
+        print("Wallet not found")
+    elif e.code() == grpc.StatusCode.PERMISSION_DENIED:
+        print("Permission denied")
+    else:
+        print(f"RPC failed: {e.code()}: {e.details()}")
+```
+
+### Features
+
+- ✅ **Type-safe messages** - Proto3 message definitions with full type safety
+- ✅ **gRPC services** - Complete gRPC service definitions with all operations
+- ✅ **Multi-language support** - Compile to Python, Go, TypeScript, C++, Java, Rust, etc.
+- ✅ **Binary serialization** - Efficient Protocol Buffer encoding
+- ✅ **Cross-platform** - Works with any gRPC implementation
+- ✅ **All OpenAPI features** - Enums, arrays, nested objects, pagination
+
+### Generated Files
+
+For each service, the proto generator creates:
+
+```
+openapi/clients/proto/profiles/
+├── api__profiles/
+│   ├── messages.proto          # Message definitions (models, enums)
+│   ├── service.proto           # gRPC service and RPC methods
+│   ├── messages_pb2.py         # Compiled Python messages
+│   ├── messages_pb2_grpc.py    # Empty (no services in messages)
+│   ├── service_pb2.py          # Request/Response message classes
+│   └── service_pb2_grpc.py     # gRPC client stubs and server servicers
+└── README.md                    # Compilation instructions
+```
+
+### Limitations
+
+Proto generation has some limitations compared to REST clients:
+
+- **File uploads**: Multipart/form-data is converted to `bytes` fields (streaming not auto-generated)
+- **Authentication**: Must be implemented via gRPC interceptors (not auto-generated)
+- **Error codes**: Uses gRPC status codes instead of HTTP status codes
+- **No hooks/fetchers**: Proto clients require manual integration (no SWR hooks equivalent)
+- **Compilation step**: Proto files must be compiled with `protoc` before use
+
+### When to Use gRPC vs REST
+
+**Use gRPC/Proto when:**
+- ✅ You need high performance and low latency
+- ✅ Building microservices that communicate internally
+- ✅ Need bi-directional streaming
+- ✅ Working with polyglot services (multiple languages)
+- ✅ Binary efficiency is important
+
+**Use REST when:**
+- ✅ Building web/mobile applications with HTTP clients
+- ✅ Need browser compatibility without extra tooling
+- ✅ Want simpler debugging with HTTP tools
+- ✅ Working with third-party integrations
+- ✅ Need standard HTTP features (caching, CDN, etc.)
+
+## Type Safety
+
+### TypeScript Types
+
+All request and response types are automatically generated:
+
+```typescript
+// Types are inferred automatically
+const ticket = await api.getTicket({ id: '123' });
+// ticket.id: string
+// ticket.title: string
+// ticket.description: string
+// ticket.priority: 'low' | 'medium' | 'high' | 'critical'
+// ticket.status: 'open' | 'in_progress' | 'resolved' | 'closed'
+// ticket.created_at: string
+
+// TypeScript will catch errors
+const newTicket = await api.createTicket({
+  title: 'Test',
+  description: 'Test ticket',
+  priority: 'invalid'  // ❌ Type error: not assignable
+});
+```
+
+### Python Types
+
+Generated Python clients use `attrs` classes for type safety:
+
+```python
+from cfg_support.models import Ticket, TicketCreate
+
+# Type hints work in IDEs
+def process_ticket(ticket: Ticket) -> None:
+    print(ticket.id)        # ✓ Valid
+    print(ticket.title)     # ✓ Valid
+    print(ticket.invalid)   # ❌ IDE error
+
+# Pydantic-style validation
+new_ticket = TicketCreate(
+    title="Test",
+    description="Test ticket",
+    priority="high"
+)
+# Invalid data raises validation error
+invalid = TicketCreate(priority="invalid")  # ❌ ValidationError
+```
+
+## Best Practices
+
+### 1. Centralize Client Configuration
+
+Create a client factory:
+
+```typescript
+// api/client.ts
+import SupportAPI from './cfg_support';
+import AccountsAPI from './cfg_accounts';
+
+export class APIClient {
+  private baseUrl: string;
+  private token: string | null = null;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  setToken(token: string) {
+    this.token = token;
+  }
+
+  get support() {
+    const client = new SupportAPI(this.baseUrl);
+    if (this.token) client.setToken(this.token);
+    return client;
+  }
+
+  get accounts() {
+    const client = new AccountsAPI(this.baseUrl);
+    if (this.token) client.setToken(this.token);
+    return client;
+  }
+}
+
+// Usage
+const api = new APIClient(process.env.API_URL);
+api.setToken(localStorage.getItem('token'));
+const tickets = await api.support.listTickets();
+```
+
+### 2. Handle Token Refresh
+
+```typescript
+class AuthenticatedAPI {
+  private api: API;
+  private refreshToken: string | null = null;
+
+  constructor(baseUrl: string) {
+    this.api = new API(baseUrl);
+  }
+
+  async call<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.response?.status === 401 && this.refreshToken) {
+        // Refresh token and retry
+        await this.refresh();
+        return await fn();
+      }
+      throw error;
+    }
+  }
+
+  async refresh() {
+    const newToken = await this.api.refreshToken({
+      refresh: this.refreshToken
+    });
+    this.api.setToken(newToken.access);
+  }
+}
+```
+
+### 3. Environment-Specific Configuration
+
+```typescript
+// config.ts
+const API_URLS = {
+  development: 'http://localhost:8000',
+  staging: 'https://staging.api.example.com',
+  production: 'https://api.example.com'
+};
+
+export const getApiUrl = () => {
+  const env = process.env.NODE_ENV || 'development';
+  return API_URLS[env];
+};
+
+// Usage
+const api = new API(getApiUrl());
+```
+
+### 4. Retry Logic
+
+```python
+import backoff
+from httpx import HTTPStatusError
+
+@backoff.on_exception(
+    backoff.expo,
+    HTTPStatusError,
+    max_tries=3,
+    giveup=lambda e: e.response.status_code < 500
+)
+def fetch_tickets(client):
+    """Fetch tickets with retry logic"""
+    return list_tickets.sync(client=client)
+```
+
+## Next Steps
+
+- [**Overview**](../overview) - Learn about Django-CFG API Client Generation
+- [**CLI Usage**](../cli-usage) - Generate updated clients
+- [**Group Configuration**](../groups) - Configure API groups
+
+
+<Callout type="info">
+**Regenerate After API Changes**
+
+After modifying your Django REST Framework API, regenerate clients to get updated types:
+```bash
+python manage.py generate_client
+```
+
+</Callout>

@@ -1,0 +1,1495 @@
+---
+title: Display Field Types
+description: Reference for display-focused field types including AvatarField, UserField, LinkField, ImageField, and ImagePreviewField for rich visual presentations in Django Admin.
+sidebar_label: Display Fields
+sidebar_position: 3
+keywords:
+  - AvatarField
+  - UserField
+  - LinkField
+  - ImageField
+  - ImagePreviewField
+  - VideoField
+  - display fields
+  - django admin display
+  - image preview
+  - modal zoom
+  - video thumbnail
+  - youtube
+---
+
+
+# Display Field Types
+
+Display-focused field types for rich visual presentations in Django Admin, including user avatars, profile displays, external links, images, and image previews with modal zoom.
+
+## Overview
+
+Display field types specialize in presenting visual and interactive content:
+
+| Field Type | Purpose | Common Use Cases |
+|------------|---------|------------------|
+| **AvatarField** | User avatars with initials fallback | Profile pictures, user identity |
+| **UserField** | User display with avatar | Authors, assignees, owners |
+| **ForeignKeyField** | Related object with admin link and subtitle | Machine, workspace, category relations |
+| **LinkField** | Text with external link and subtitle | Usernames, titles, external resources |
+| **ImageField** | Images with captions | QR codes, photos, avatars |
+| **ImagePreviewField** | Image preview with modal zoom/pan | Photos, thumbnails, media galleries |
+| **VideoField** | Video thumbnail with platform detection | YouTube, Vimeo, direct videos |
+
+## AvatarField
+
+Display user avatars with automatic fallback to colored initials badge.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `photo_field` | `str` | *required* | Model field for photo/avatar image |
+| `name_field` | `str` | *required* | Model field for display name |
+| `initials_field` | `str` | *required* | Field for extracting initials |
+| `subtitle_field` | `str \| None` | `None` | Optional subtitle (email, user_id) |
+| `avatar_size` | `int` | `40` | Avatar size in pixels |
+| `show_as_card` | `bool` | `False` | Show as user card layout |
+| `variant_field` | `str \| None` | `None` | Field to determine badge variant |
+| `variant_map` | `dict[str, str] \| None` | `None` | Map field values to badge variants |
+| `default_variant` | `str` | `"secondary"` | Default badge variant |
+| `initials_max_length` | `int` | `2` | Maximum initials (1-3) |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import AvatarField
+
+# Basic avatar - IMPORTANT: name must be a real model field!
+AvatarField(
+    name="first_name",  # Real model field, not virtual
+    photo_field="photo_file",
+    name_field="display_name",
+    initials_field="first_name",
+)
+
+# Avatar with subtitle
+AvatarField(
+    name="username",  # Real model field
+    photo_field="avatar",
+    name_field="full_name",
+    initials_field="username",
+    subtitle_field="email",
+    show_as_card=True,
+)
+
+# Avatar with custom sizing and variant mapping
+AvatarField(
+    name="first_name",  # Real model field
+    photo_field="profile_picture",
+    name_field="name",
+    initials_field="first_name",
+    avatar_size=48,
+    variant_field="user_type",
+    variant_map={
+        "admin": "success",
+        "user": "secondary",
+        "bot": "info",
+    },
+)
+```
+
+### Examples
+
+### Basic Avatar
+
+```python
+display_fields=[
+    AvatarField(
+        name="username",  # Real model field
+        photo_field="photo",
+        name_field="username",
+        initials_field="first_name",
+    ),
+]
+```
+
+**Renders as:**
+- Photo if available
+- Colored badge with initials if no photo
+
+### User Card
+
+```python
+display_fields=[
+    AvatarField(
+        name="first_name",  # Real model field
+        photo_field="avatar",
+        name_field="full_name",
+        initials_field="first_name",
+        subtitle_field="email",
+        show_as_card=True,
+        avatar_size=48,
+    ),
+]
+```
+
+**Renders as:** User card with avatar/initials, name, and email
+
+### Dynamic Colors
+
+```python
+display_fields=[
+    AvatarField(
+        name="username",  # Real model field
+        photo_field="photo",
+        name_field="name",
+        initials_field="username",
+        variant_field="role",
+        variant_map={
+            "admin": "success",
+            "moderator": "primary",
+            "user": "secondary",
+            "bot": "info",
+        },
+        default_variant="secondary",
+    ),
+]
+```
+
+**Renders as:** Initials badge color changes based on user role
+
+
+
+<Callout type="warning">
+**IMPORTANT: Use Real Model Fields**
+The `name` parameter **MUST** be a real model field, not a virtual field or `@property`!
+
+**❌ Wrong:**
+```python
+AvatarField(
+    name="user_avatar",  # Virtual field - doesn't exist in model
+    ...
+)
+```
+
+**✅ Correct:**
+```python
+AvatarField(
+    name="first_name",  # Real CharField in model
+    photo_field="photo_file",
+    name_field="display_name",  # Can be @property
+    initials_field="first_name",
+    ...
+)
+```
+
+The `name` field is used by Django's queryset system. Other fields like `name_field`, `initials_field`, `subtitle_field` can be properties or methods.
+
+</Callout>
+
+
+<Callout type="info">
+**Automatic Fallback**
+AvatarField automatically:
+- Shows photo if `photo_field` has value
+- Falls back to colored initials badge if no photo
+- Extracts initials from `initials_field` (e.g., "John Doe" → "JD")
+- Uses variant mapping for dynamic badge colors
+
+</Callout>
+
+
+<Callout type="info">
+**Use Cases**
+Perfect for:
+- User lists (authors, assignees, owners)
+- Profile displays
+- Activity feeds
+- Comment sections
+- Any user-related display where visual identity matters
+
+</Callout>
+
+## UserField
+
+Display user information with avatar and optional header styling.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name (must be ForeignKey to User) |
+| `title` | `str \| None` | `None` | Display title |
+| `header` | `bool` | `False` | Show with avatar |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field (e.g., `"user__username"`) |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import UserField
+
+# Simple user display
+UserField(
+    name="author",
+    title="Author",
+    ordering="author__username",
+)
+
+# User with avatar header
+UserField(
+    name="owner",
+    title="Owner",
+    header=True,
+    ordering="owner__username",
+)
+```
+
+### Examples
+
+### Basic User
+
+```python
+display_fields=[
+    UserField(
+        name="author",
+        title="Author",
+        ordering="author__username",
+    ),
+]
+```
+
+**Renders as:** Username only
+
+### User with Avatar
+
+```python
+display_fields=[
+    UserField(
+        name="owner",
+        title="Owner",
+        header=True,
+        ordering="owner__username",
+    ),
+]
+```
+
+**Renders as:** Avatar + Username in header style
+
+### Multiple Users
+
+```python
+display_fields=[
+    UserField(name="created_by", title="Created By", header=True),
+    UserField(name="assigned_to", title="Assigned To"),
+    UserField(name="approved_by", title="Approved By"),
+]
+```
+
+
+
+<Callout type="warning">
+**Requires User Relation**
+UserField only works with ForeignKey fields pointing to the User model. Ensure `select_related` includes the user field for optimal performance.
+
+</Callout>
+
+## ForeignKeyField
+
+Display ForeignKey relations with customizable display and optional link to related object's admin page.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | ForeignKey field name |
+| `title` | `str \| None` | `None` | Display title |
+| `link_field` | `str` | `"id"` | Field for link (usually `'id'` or `'pk'`) |
+| `display_field` | `str` | *required* | Field to display (e.g., `'name'`, `'title'`) |
+| `link_to_admin` | `bool` | `True` | Create link to admin page |
+| `link_icon` | `str \| None` | `None` | Material icon next to link |
+| `link_target` | `str` | `"_self"` | Link target (`_blank`, `_self`) |
+| `subtitle_field` | `str \| None` | `None` | Single field for subtitle |
+| `subtitle_fields` | `list[str] \| None` | `None` | Multiple fields for subtitle |
+| `subtitle_template` | `str \| None` | `None` | Template with `{field_name}` placeholders |
+| `subtitle_separator` | `str` | `" • "` | Separator for multiple fields |
+| `show_null_as_empty` | `bool` | `True` | Show empty value when FK is null |
+| `null_display` | `str` | `"—"` | Value to display when FK is null |
+| `subtitle_css_class` | `str` | `"text-sm text-gray-500"` | CSS classes for subtitle |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import ForeignKeyField, Icons
+
+# Basic FK display
+ForeignKeyField(
+    name="machine",
+    display_field="name",
+)
+
+# FK with custom link field
+ForeignKeyField(
+    name="workspace",
+    link_field="id",
+    display_field="name",
+)
+
+# FK with admin link and icon
+ForeignKeyField(
+    name="category",
+    display_field="name",
+    link_to_admin=True,
+    link_icon=Icons.OPEN_IN_NEW,
+)
+
+# FK with subtitle (single field)
+ForeignKeyField(
+    name="machine",
+    display_field="name",
+    subtitle_field="hostname",
+    link_to_admin=True,
+)
+
+# FK with subtitle template
+ForeignKeyField(
+    name="workspace",
+    display_field="name",
+    subtitle_template="{description} • {member_count} members",
+)
+```
+
+### Examples
+
+### Basic FK Display
+
+```python
+display_fields=[
+    ForeignKeyField(
+        name="machine",
+        display_field="name",
+        title="Machine",
+    ),
+]
+```
+
+**Renders as:** Machine name with link to machine admin page
+
+### FK with Subtitle
+
+```python
+display_fields=[
+    ForeignKeyField(
+        name="machine",
+        display_field="name",
+        subtitle_field="hostname",
+        title="Machine",
+        ordering="machine__name",
+    ),
+]
+```
+
+**Renders as:**
+```
+Machine Name ↗
+machine.example.com
+```
+
+### FK with Multiple Subtitle Fields
+
+```python
+display_fields=[
+    ForeignKeyField(
+        name="workspace",
+        display_field="name",
+        subtitle_fields=["description", "member_count"],
+        subtitle_separator=" • ",
+        title="Workspace",
+    ),
+]
+```
+
+**Renders as:**
+```
+My Workspace ↗
+Team workspace • 5 members
+```
+
+### FK with Template Subtitle
+
+```python
+display_fields=[
+    ForeignKeyField(
+        name="workspace",
+        display_field="name",
+        subtitle_template="{description} • {member_count} members",
+        title="Workspace",
+    ),
+]
+```
+
+**Renders as:**
+```
+Development Team ↗
+Development workspace • 12 members
+```
+
+### FK with External Link Icon
+
+```python
+from django_cfg.modules.django_admin import Icons
+
+display_fields=[
+    ForeignKeyField(
+        name="user",
+        display_field="username",
+        subtitle_field="email",
+        link_to_admin=True,
+        link_icon=Icons.OPEN_IN_NEW,
+        title="User",
+    ),
+]
+```
+
+**Renders as:**
+```
+john_doe 🔗
+john@example.com
+```
+
+### FK Without Link
+
+```python
+display_fields=[
+    ForeignKeyField(
+        name="category",
+        display_field="name",
+        link_to_admin=False,  # No link
+        title="Category",
+    ),
+]
+```
+
+**Renders as:** Plain text without link
+
+
+<Callout type="info">
+**Automatic Admin Link**
+By default (`link_to_admin=True`), ForeignKeyField automatically creates a link to the related object's admin change page using the format `/admin/{app_label}/{model_name}/{pk}/change/`.
+
+</Callout>
+
+
+<Callout type="warning">
+**Optimize with select_related**
+Always use `select_related` for ForeignKey fields to avoid N+1 queries:
+
+```python
+config = AdminConfig(
+    model=Session,
+    select_related=["machine", "workspace", "user"],  # Important!
+    display_fields=[
+        ForeignKeyField(name="machine", display_field="name"),
+        ForeignKeyField(name="workspace", display_field="name"),
+    ]
+)
+```
+
+</Callout>
+
+### Subtitle Options
+
+ForeignKeyField supports three mutually exclusive subtitle options:
+
+```python
+# Option 1: Single field
+ForeignKeyField(
+    name="machine",
+    display_field="name",
+    subtitle_field="hostname",  # Shows hostname below name
+)
+
+# Option 2: Multiple fields with separator
+ForeignKeyField(
+    name="workspace",
+    display_field="name",
+    subtitle_fields=["description", "member_count"],
+    subtitle_separator=" • ",  # Joins with " • "
+)
+
+# Option 3: Template with placeholders
+ForeignKeyField(
+    name="workspace",
+    display_field="name",
+    subtitle_template="{description} • {member_count} members",
+)
+```
+
+### Use Cases
+
+ForeignKeyField is perfect for:
+
+- **Related objects**: Machine, workspace, category, product
+- **Entity relations**: User assignments, parent-child relationships
+- **Navigation**: Quick access to related object admin pages
+- **Context display**: Show additional info about related object
+
+### Real-World Example
+
+```python
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    ForeignKeyField,
+    BadgeField,
+    DateTimeField,
+    Icons,
+)
+
+session_config = AdminConfig(
+    model=Session,
+
+    # Optimize queries
+    select_related=["machine", "workspace", "user"],
+
+    list_display=["id", "machine", "workspace", "status", "created_at"],
+
+    display_fields=[
+        ForeignKeyField(
+            name="machine",
+            display_field="name",
+            subtitle_field="hostname",
+            link_to_admin=True,
+            link_icon=Icons.COMPUTER,
+            title="Machine",
+            ordering="machine__name",
+        ),
+        ForeignKeyField(
+            name="workspace",
+            display_field="name",
+            subtitle_template="{description} • {member_count} members",
+            link_to_admin=True,
+            title="Workspace",
+        ),
+        BadgeField(name="status", label_map={...}),
+        DateTimeField(name="created_at", show_relative=True),
+    ],
+)
+```
+
+
+<Callout type="info">
+**vs LinkField**
+- **ForeignKeyField**: For Django ForeignKey relations with automatic admin links
+- **LinkField**: For external URLs and custom links
+
+Use ForeignKeyField when working with Django model relations.
+
+</Callout>
+
+## LinkField
+
+Display text as clickable link with optional icon and subtitle.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name (text to display) |
+| `title` | `str \| None` | `None` | Display title |
+| `link_field` | `str` | *required* | Model field containing the URL |
+| `link_icon` | `str \| None` | `None` | Material icon to display next to link |
+| `link_target` | `str` | `"_blank"` | Link target (`_blank`, `_self`, etc.) |
+| `subtitle_field` | `str \| None` | `None` | Single field for subtitle |
+| `subtitle_fields` | `list[str] \| None` | `None` | Multiple fields for subtitle |
+| `subtitle_template` | `str \| None` | `None` | Template with `{field_name}` placeholders |
+| `subtitle_separator` | `str` | `" • "` | Separator for multiple fields |
+| `subtitle_css_class` | `str` | `"text-sm text-gray-500"` | CSS for subtitle |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import LinkField, Icons
+
+# Basic link
+LinkField(
+    name="username",
+    title="Username",
+    link_field="profile_url",
+)
+
+# Link with icon
+LinkField(
+    name="display_name",
+    title="User",
+    link_field="telegram_link",
+    link_icon=Icons.OPEN_IN_NEW,
+)
+
+# Link with subtitle from single field
+LinkField(
+    name="title",
+    title="Article",
+    link_field="url",
+    link_icon=Icons.ARTICLE,
+    subtitle_field="author",
+)
+
+# Link with subtitle from multiple fields
+LinkField(
+    name="display_name",
+    title="User Info",
+    link_field="telegram_link",
+    link_icon=Icons.OPEN_IN_NEW,
+    subtitle_fields=["full_name", "phone"],
+    ordering="username",
+)
+```
+
+### Examples
+
+### Basic Link
+
+```python
+display_fields=[
+    LinkField(
+        name="website_url",
+        title="Website",
+        link_field="website_url",  # Can link to itself
+        link_icon=Icons.OPEN_IN_NEW,
+    ),
+]
+```
+
+**Renders as:**
+```
+https://example.com 🔗
+```
+
+### Telegram User
+
+```python
+# Real-world example: Telegram user with link
+# NOTE: display_name is a @property, use a real model field instead!
+display_fields=[
+    LinkField(
+        name="username",  # Real model field
+        title="User Info",
+        link_field="telegram_link",
+        link_icon=Icons.OPEN_IN_NEW,
+        subtitle_fields=["full_name", "phone"],
+        subtitle_separator=" • ",
+        ordering="username",
+    ),
+]
+```
+
+**Renders as:**
+```
+@username 🔗
+John Doe • +1234567890
+```
+
+### Template Subtitle
+
+```python
+display_fields=[
+    LinkField(
+        name="channel_title",
+        title="Channel",
+        link_field="channel_url",
+        link_icon=Icons.OPEN_IN_NEW,
+        subtitle_template="ID: {channel_id} • Subscribers: {subscriber_count}",
+    ),
+]
+```
+
+**Renders as:**
+```
+My Channel 🔗
+ID: 123456 • Subscribers: 1,234
+```
+
+
+### Subtitle Options
+
+LinkField supports three mutually exclusive subtitle options:
+
+```python
+# Option 1: Single field
+LinkField(
+    name="username",
+    link_field="profile_url",
+    subtitle_field="email",  # Shows email below username
+)
+
+# Option 2: Multiple fields with separator
+LinkField(
+    name="display_name",
+    link_field="telegram_link",
+    subtitle_fields=["full_name", "phone", "email"],
+    subtitle_separator=" • ",  # Joins with " • "
+)
+
+# Option 3: Template with placeholders
+LinkField(
+    name="product_name",
+    link_field="product_url",
+    subtitle_template="Price: ${price} | Stock: {stock_count}",
+)
+```
+
+### Use Cases
+
+LinkField is perfect for:
+
+- **External links**: Links to external websites, profiles, resources
+- **User profiles**: Telegram users, social media profiles
+- **Resources**: Articles, documents, API endpoints
+- **Channel/Group links**: Telegram channels, Discord servers
+
+### Real-World Example
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, LinkField, Icons
+
+telegram_user_config = AdminConfig(
+    model=TelegramUser,
+
+    list_display=["first_name", "username", "status_badges", "messages_badge"],
+
+    display_fields=[
+        LinkField(
+            name="username",  # Real model field
+            title="User Info",
+            link_field="telegram_link",
+            link_icon=Icons.OPEN_IN_NEW,
+            subtitle_fields=["full_name", "phone"],
+            ordering="username",
+        ),
+    ],
+)
+```
+
+
+<Callout type="info">
+**Declarative Approach**
+LinkField eliminates the need for `@computed_field` with raw HTML. Everything is configured declaratively with type-safe parameters.
+
+</Callout>
+
+
+<Callout type="info">
+**No Raw HTML Required**
+Unlike manual `@computed_field` implementations, LinkField handles all HTML generation internally. You just configure the fields and it renders properly.
+
+</Callout>
+
+## ImageField
+
+Display images from URLs with optional captions and styling.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name (or method name) |
+| `title` | `str \| None` | `None` | Display title |
+| `width` | `str \| None` | `None` | Image width (e.g., `"200px"`) |
+| `height` | `str \| None` | `None` | Image height (e.g., `"200px"`) |
+| `max_width` | `str` | `"200px"` | Maximum width |
+| `max_height` | `str \| None` | `None` | Maximum height |
+| `border_radius` | `str \| None` | `None` | Border radius (e.g., `"50%"`, `"8px"`) |
+| `caption` | `str \| None` | `None` | Static caption text |
+| `caption_field` | `str \| None` | `None` | Model field to use as caption |
+| `caption_template` | `str \| None` | `None` | Template with `{field_name}` placeholders |
+| `alt_text` | `str` | `"Image"` | Alt text for image |
+| `empty_value` | `str` | `"—"` | Value when None |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import ImageField
+
+# Simple image
+ImageField(
+    name="photo_url",
+    title="Photo",
+    max_width="200px",
+)
+
+# Image with static caption
+ImageField(
+    name="thumbnail",
+    title="Thumbnail",
+    max_width="100px",
+    caption="Product Image",
+)
+
+# Image with caption from field
+ImageField(
+    name="avatar_url",
+    title="Avatar",
+    width="50px",
+    height="50px",
+    border_radius="50%",
+    caption_field="username",
+)
+```
+
+### Examples
+
+### QR Code
+
+```python
+# QR code with template caption
+display_fields=[
+    ImageField(
+        name="get_qr_code_url",  # Can be a method
+        title="QR Code",
+        max_width="200px",
+        caption_template="Scan to pay: <code>{pay_address}</code>",
+    ),
+]
+```
+
+**Result:**
+```html
+<img src="https://api.qrserver.com/..." alt="Image" style="max-width: 200px;">
+<br><small>Scan to pay: <code>0x1234...5678</code></small>
+```
+
+### Circular Avatar
+
+```python
+# Circular avatar with username
+display_fields=[
+    ImageField(
+        name="profile_picture",
+        title="Avatar",
+        width="50px",
+        height="50px",
+        border_radius="50%",
+        caption_field="full_name",
+    ),
+]
+```
+
+**Result:**
+```html
+<img src="/media/avatars/john.jpg" alt="Image"
+     style="width: 50px; height: 50px; border-radius: 50%;">
+<br><small>John Doe</small>
+```
+
+### Product Photo
+
+```python
+# Product photo with multiple fields in caption
+display_fields=[
+    ImageField(
+        name="image_url",
+        title="Product",
+        max_width="150px",
+        max_height="150px",
+        caption_template="{name} - ${price}",
+    ),
+]
+```
+
+**Result:**
+```html
+<img src="/media/products/laptop.jpg" alt="Image"
+     style="max-width: 150px; max-height: 150px;">
+<br><small>Laptop Pro - $1299</small>
+```
+
+
+### Method Support
+
+ImageField supports both model fields and methods:
+
+```python
+class Payment(models.Model):
+    pay_address = models.CharField(max_length=100)
+
+    def get_qr_code_url(self, size=200):
+        """Generate QR code URL dynamically."""
+        from urllib.parse import quote
+        data = quote(self.pay_address)
+        return f"https://api.qrserver.com/v1/create-qr-code/?size={size}x{size}&data={data}"
+
+# Use method in ImageField
+ImageField(
+    name="get_qr_code_url",  # Method will be called automatically
+    title="Payment QR",
+    max_width="200px",
+    caption_template="Address: <code>{pay_address}</code>",
+)
+```
+
+### Caption Templates
+
+Use `{field_name}` placeholders in `caption_template`:
+
+```python
+# Single field
+caption_template="Scan: {address}"
+
+# Multiple fields
+caption_template="User: {username} | ID: {user_id}"
+
+# With HTML
+caption_template="Pay to: <code>{wallet_address}</code>"
+```
+
+### Styling
+
+Control image appearance with CSS properties:
+
+```python
+# Fixed size
+ImageField(width="100px", height="100px")
+
+# Maximum constraints
+ImageField(max_width="300px", max_height="200px")
+
+# Circular/rounded
+ImageField(border_radius="50%")    # Circle
+ImageField(border_radius="8px")    # Rounded corners
+
+# Combined
+ImageField(
+    width="80px",
+    height="80px",
+    border_radius="50%",
+    max_width="100px",
+)
+```
+
+## ImagePreviewField
+
+Display images with clickable thumbnails that open a fullscreen modal with zoom and pan capabilities.
+
+### Features
+
+- **Click to preview** - Thumbnail opens fullscreen modal
+- **Mouse wheel zoom** - Scroll to zoom in/out
+- **Drag to pan** - Click and drag to move zoomed image
+- **Image info panel** - Shows dimensions, filename, format
+- **Keyboard support** - Escape to close
+- **Smart conditions** - Show preview only when condition is met
+- **Global modal** - Single modal instance per page (not duplicated)
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name (ImageField/FileField/URL) |
+| `title` | `str \| None` | `None` | Display title |
+| `thumbnail_max_width` | `int` | `200` | Max thumbnail width in pixels |
+| `thumbnail_max_height` | `int` | `150` | Max thumbnail height in pixels |
+| `border_radius` | `int` | `8` | Border radius in pixels |
+| `show_info` | `bool` | `True` | Show image info in modal |
+| `zoom_enabled` | `bool` | `True` | Enable mouse wheel zoom |
+| `zoom_min` | `float` | `0.5` | Minimum zoom level |
+| `zoom_max` | `float` | `5.0` | Maximum zoom level |
+| `zoom_step` | `float` | `0.1` | Zoom step per scroll |
+| `pan_enabled` | `bool` | `True` | Enable drag to pan |
+| `caption` | `str \| None` | `None` | Static caption text |
+| `caption_field` | `str \| None` | `None` | Model field for caption |
+| `caption_template` | `str \| None` | `None` | Template with `{field}` placeholders |
+| `url_method` | `str \| None` | `None` | Model method that returns URL |
+| `condition_field` | `str \| None` | `None` | Field to check for showing preview |
+| `condition_value` | `Any` | `True` | Expected value for condition |
+| `fallback_text` | `str \| None` | `None` | Text when condition not met |
+| `empty_value` | `str` | `"—"` | Value when None |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import ImagePreviewField
+
+# Simple preview for ImageField
+ImagePreviewField(
+    name="photo",
+    title="Photo",
+    thumbnail_max_width=150,
+)
+
+# Smaller thumbnails
+ImagePreviewField(
+    name="thumbnail",
+    title="Preview",
+    thumbnail_max_width=100,
+    thumbnail_max_height=100,
+)
+
+# Circular preview (avatar style)
+ImagePreviewField(
+    name="avatar",
+    title="Avatar",
+    thumbnail_max_width=80,
+    thumbnail_max_height=80,
+    border_radius=40,  # Half of width for circle
+)
+```
+
+### Smart Preview with Conditions
+
+Show preview only for images, fallback for other file types:
+
+```python
+# Preview only for images, show badge for other files
+ImagePreviewField(
+    name="file",
+    title="Media",
+    url_method="get_download_url",  # Use method to get URL
+    condition_field="is_image",      # Only show preview if is_image=True
+    fallback_text="Not an image",    # Badge text for non-images
+)
+
+# Preview only for specific media types
+ImagePreviewField(
+    name="media_file",
+    title="Preview",
+    condition_field="media_type",
+    condition_value="photo",         # Only for photos
+    fallback_text="No preview",
+)
+```
+
+### Examples
+
+### Basic Preview
+
+```python
+display_fields=[
+    ImagePreviewField(
+        name="photo",
+        title="Photo",
+        thumbnail_max_width=150,
+        thumbnail_max_height=150,
+    ),
+]
+```
+
+**Renders as:** Clickable thumbnail → fullscreen modal with zoom/pan
+
+### Smart Preview
+
+```python
+# TelegramMedia admin - preview only for images
+display_fields=[
+    ImagePreviewField(
+        name="file",
+        title="Preview",
+        thumbnail_max_width=100,
+        thumbnail_max_height=100,
+        url_method="get_download_url",
+        condition_field="is_image",
+        fallback_text="Not image",
+    ),
+]
+```
+
+**Renders as:**
+- For images: Clickable thumbnail with preview
+- For videos/docs: Badge "Not image"
+
+### With Caption
+
+```python
+display_fields=[
+    ImagePreviewField(
+        name="product_image",
+        title="Product",
+        thumbnail_max_width=200,
+        caption_field="product_name",
+    ),
+]
+```
+
+**Renders as:** Thumbnail with product name below
+
+
+### Auto-Preview for ImageField in Fieldsets
+
+ImageField and FileField in `readonly_fields` automatically get preview functionality:
+
+```python
+config = AdminConfig(
+    model=Product,
+    readonly_fields=["id", "photo", "created_at"],  # photo gets auto-preview!
+    fieldsets=[
+        FieldsetConfig(
+            title="Media",
+            fields=["photo"],  # Will show clickable preview with modal
+        ),
+    ],
+)
+```
+
+
+<Callout type="info">
+**Automatic for readonly_fields**
+Any `ImageField` or `FileField` in `readonly_fields` automatically gets the preview modal. No configuration needed!
+
+</Callout>
+
+### URL Resolution
+
+ImagePreviewField supports multiple ways to get the image URL:
+
+```python
+# 1. Direct ImageField/FileField
+ImagePreviewField(name="photo")  # Uses photo.url
+
+# 2. URL CharField
+ImagePreviewField(name="image_url")  # Uses field value directly
+
+# 3. Model method
+ImagePreviewField(
+    name="file",
+    url_method="get_download_url",  # Calls obj.get_download_url()
+)
+
+# 4. Property
+ImagePreviewField(name="thumbnail_url")  # Uses @property value
+```
+
+### Real-World Example
+
+```python
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    ImagePreviewField,
+    ShortUUIDField,
+    BadgeField,
+    DateTimeField,
+)
+
+telegram_media_config = AdminConfig(
+    model=TelegramMedia,
+
+    list_display=["id", "file", "media_type", "storage_status", "created_at"],
+
+    display_fields=[
+        ShortUUIDField(name="id"),
+        ImagePreviewField(
+            name="file",
+            title="Preview",
+            thumbnail_max_width=100,
+            thumbnail_max_height=100,
+            url_method="get_download_url",
+            condition_field="is_image",
+            fallback_text="Not image",
+        ),
+        BadgeField(name="media_type", label_map={...}),
+        DateTimeField(name="created_at", show_relative=True),
+    ],
+
+    readonly_fields=["id", "file", "created_at"],  # file gets auto-preview in fieldsets!
+)
+```
+
+### Modal Features
+
+The preview modal includes:
+
+- **Zoom controls**: +/- buttons and percentage display
+- **Reset zoom**: Click percentage to reset to 100%
+- **Pan**: Drag image when zoomed in
+- **Image info**: Filename, dimensions (WxH), format
+- **Keyboard**: Escape to close
+- **Hint**: "Scroll to zoom • Drag to pan • Esc to close"
+
+### Styling
+
+```python
+# Small thumbnails for list view
+ImagePreviewField(
+    thumbnail_max_width=80,
+    thumbnail_max_height=80,
+    border_radius=4,
+)
+
+# Larger preview
+ImagePreviewField(
+    thumbnail_max_width=200,
+    thumbnail_max_height=150,
+    border_radius=8,
+)
+
+# Circular (avatar style)
+ImagePreviewField(
+    thumbnail_max_width=60,
+    thumbnail_max_height=60,
+    border_radius=30,  # Half for circle
+)
+```
+
+
+<Callout type="info">
+**vs ImageField**
+- **ImageField**: Simple display, no interactivity
+- **ImagePreviewField**: Clickable with fullscreen modal, zoom, pan, info panel
+
+Use ImagePreviewField when users need to examine images in detail.
+
+</Callout>
+
+### Advanced: ImagePreviewDisplay in computed_field
+
+For custom logic use `ImagePreviewDisplay.render()`:
+
+```python
+from django_cfg.modules.django_admin import ImagePreviewDisplay, computed_field
+
+@computed_field("Preview")
+def custom_preview(self, obj):
+    if not obj.is_image:
+        return self.html.badge("No preview", variant="secondary")
+
+    return ImagePreviewDisplay.render(
+        obj.get_download_url(),
+        config={'thumbnail_max_width': '100px', 'thumbnail_max_height': '100px'}
+    )
+```
+
+## VideoField
+
+Display video thumbnails with automatic platform detection for YouTube, Vimeo, and direct video URLs.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name containing video URL |
+| `title` | `str \| None` | `None` | Display title |
+| `thumbnail_width` | `int` | `200` | Thumbnail width in pixels |
+| `thumbnail_height` | `int` | `112` | Thumbnail height (16:9 ratio) |
+| `border_radius` | `int` | `8` | Border radius in pixels |
+| `show_inline` | `bool` | `False` | Show inline player instead of thumbnail |
+| `show_platform` | `bool` | `True` | Show platform badge (YT, Vimeo) |
+| `fallback_text` | `str \| None` | `None` | Text for invalid URLs |
+| `empty_value` | `str` | `"—"` | Value when None |
+
+### Supported Platforms
+
+- **YouTube**: youtube.com, youtu.be, youtube.com/shorts
+- **Vimeo**: vimeo.com
+- **Direct**: .mp4, .webm, .ogg, .mov files
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import VideoField
+
+# Simple video thumbnail
+VideoField(name="video_url")
+
+# Custom size
+VideoField(
+    name="promo_video",
+    thumbnail_width=320,
+    thumbnail_height=180,
+)
+
+# Inline player (embedded)
+VideoField(
+    name="tutorial_video",
+    show_inline=True,
+)
+```
+
+### Examples
+
+```python
+display_fields=[
+    VideoField(
+        name="youtube_url",
+        title="Video",
+        thumbnail_width=200,
+    ),
+]
+```
+
+**Renders as:**
+- YouTube thumbnail with play button overlay
+- Platform badge "YT" in corner
+- Click opens video in new tab
+
+### Advanced: VideoDisplay in computed_field
+
+```python
+from django_cfg.modules.django_admin import VideoDisplay, computed_field
+
+@computed_field("Media")
+def media_preview(self, obj):
+    if obj.media_type == 'video':
+        return VideoDisplay.render(obj.media_url)
+    return self.html.badge("Not video", variant="secondary")
+```
+
+## Combining Display Fields
+
+Mix display field types for rich admin displays:
+
+```python
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    AvatarField,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    Icons,
+    LinkField,
+    UserField,
+)
+
+config = AdminConfig(
+    model=Order,
+    select_related=["user", "product"],
+
+    list_display=["order_number", "user", "product", "total", "status", "created_at"],
+
+    display_fields=[
+        AvatarField(
+            name="user",  # In this case, user is a ForeignKey field, which is valid
+            title="Customer",
+            photo_field="profile_picture",
+            name_field="username",
+            initials_field="first_name",
+            subtitle_field="email",
+            show_as_card=True,
+            ordering="user__username",
+        ),
+        UserField(
+            name="assigned_to",
+            title="Assigned To",
+            header=True,
+            ordering="assigned_to__username",
+        ),
+        LinkField(
+            name="product_name",
+            title="Product",
+            link_field="product_url",
+            link_icon=Icons.OPEN_IN_NEW,
+            subtitle_template="SKU: {product_sku}",
+        ),
+        BadgeField(
+            name="status",
+            title="Status",
+            label_map={
+                "pending": "warning",
+                "shipped": "primary",
+                "delivered": "success",
+            },
+            icon=Icons.SHOPPING_CART,
+        ),
+    ],
+)
+```
+
+## Best Practices
+
+### 1. Use Real Model Fields for `name`
+
+```python
+# ✅ Good - Real model field
+AvatarField(
+    name="first_name",  # CharField in model
+    photo_field="photo",
+    name_field="display_name",  # Can be @property
+    initials_field="first_name",
+)
+
+# ❌ Bad - Virtual field
+AvatarField(
+    name="user_avatar",  # Doesn't exist in model
+    ...
+)
+```
+
+### 2. Optimize User Fields with select_related
+
+```python
+# ✅ Good - Include ForeignKey relations
+config = AdminConfig(
+    model=Order,
+    select_related=["user", "assigned_to"],  # Important!
+    display_fields=[
+        UserField(name="user", header=True),
+        UserField(name="assigned_to"),
+    ],
+)
+```
+
+### 3. Use Appropriate Link Targets
+
+```python
+# ✅ Good - External links open in new tab
+LinkField(
+    name="website",
+    link_field="url",
+    link_target="_blank",  # Default
+)
+
+# ✅ Good - Internal links stay in same tab
+LinkField(
+    name="related_order",
+    link_field="order_admin_url",
+    link_target="_self",
+)
+```
+
+### 4. Choose the Right Avatar Strategy
+
+```python
+# For user listings - use AvatarField
+AvatarField(
+    name="username",
+    photo_field="photo",
+    name_field="full_name",
+    initials_field="first_name",
+    show_as_card=True,  # Rich display
+)
+
+# For ForeignKey relations - use UserField
+UserField(
+    name="author",  # ForeignKey to User
+    header=True,  # Show avatar
+)
+```
+
+### 5. Image Caption Best Practices
+
+```python
+# ✅ Good - Informative captions
+ImageField(
+    name="qr_code",
+    caption_template="Scan to pay: <code>{address}</code>",
+)
+
+# ✅ Good - Field-based captions
+ImageField(
+    name="photo",
+    caption_field="description",
+)
+
+# ⚠️ OK - Static captions
+ImageField(
+    name="thumbnail",
+    caption="Product Image",
+)
+```
+
+## Next Steps
+
+- **[Badge Fields](../basic-fields)** - BadgeField, StatusBadgesField, CounterBadgeField
+- **[Data Fields](../formatting-fields)** - CurrencyField, DateTimeField, TextField, ShortUUIDField
+- **[Configuration Guide](../)** - AdminConfig options

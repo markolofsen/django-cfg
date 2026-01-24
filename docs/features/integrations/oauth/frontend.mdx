@@ -1,0 +1,681 @@
+---
+title: Frontend Integration
+description: Complete frontend implementation for Django-CFG OAuth. React, Next.js, and vanilla JavaScript examples with TypeScript support.
+sidebar_label: Frontend Integration
+sidebar_position: 3
+keywords:
+  - react oauth
+  - nextjs oauth
+  - github login react
+  - oauth frontend
+---
+
+# Frontend Integration
+
+Complete examples for integrating Django-CFG OAuth in your frontend application.
+
+## Using @djangocfg/layouts (Recommended)
+
+If you're using the `@djangocfg/layouts` package, OAuth is built-in and requires minimal setup:
+
+```tsx
+// app/auth/page.tsx
+import { AuthLayout } from '@djangocfg/layouts';
+
+export default function AuthPage() {
+  return (
+    <AuthLayout
+      enableGithubAuth={true}
+      redirectUrl="/dashboard"
+    >
+      <h1>Sign In</h1>
+    </AuthLayout>
+  );
+}
+```
+
+That's it! `AuthLayout` automatically:
+- Shows the "Continue with GitHub" button
+- Handles OAuth callback when redirected from GitHub
+- Exchanges code for JWT tokens
+- Saves tokens and redirects to `redirectUrl`
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `enableGithubAuth` | `boolean` | Enable GitHub OAuth button |
+| `redirectUrl` | `string` | Where to redirect after successful auth (default: `/dashboard`) |
+| `onOAuthSuccess` | `(user, isNewUser, provider) => void` | Success callback |
+| `onError` | `(error: string) => void` | Error callback |
+
+### Using the Hook Directly
+
+For custom implementations, use the `useGithubAuth` hook:
+
+```tsx
+import { useGithubAuth } from '@djangocfg/layouts';
+
+function CustomGithubButton() {
+  const { isLoading, startGithubAuth } = useGithubAuth({
+    redirectUrl: '/dashboard',
+    onSuccess: (user) => console.log('Logged in!', user),
+  });
+
+  return (
+    <button onClick={startGithubAuth} disabled={isLoading}>
+      {isLoading ? 'Connecting...' : 'Login with GitHub'}
+    </button>
+  );
+}
+```
+
+---
+
+## Manual Implementation
+
+If you're not using `@djangocfg/layouts`, here's how to implement OAuth manually.
+
+## Next.js App Router
+
+### Project Structure
+
+```
+app/
+├── auth/
+│   ├── login/
+│   │   └── page.tsx       # Login page with OAuth buttons
+│   └── callback/
+│       └── page.tsx       # OAuth callback handler
+├── dashboard/
+│   └── page.tsx           # Protected page
+└── _lib/
+    └── auth.ts            # Auth utilities
+```
+
+### Auth Utilities
+
+```typescript
+// app/_lib/auth.ts
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface AuthTokens {
+  access: string;
+  refresh: string;
+}
+
+export interface OAuthCallbackResponse {
+  access: string;
+  refresh: string;
+  user: User;
+  is_new_user: boolean;
+  connection_created: boolean;
+}
+
+export interface OAuthProvider {
+  name: string;
+  display_name: string;
+  enabled: boolean;
+}
+
+// Get enabled OAuth providers
+export async function getOAuthProviders(): Promise<OAuthProvider[]> {
+  const response = await fetch(`${API_URL}/cfg/accounts/oauth/providers/`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch OAuth providers');
+  }
+  const data = await response.json();
+  return data.providers;
+}
+
+// Start GitHub OAuth flow
+export async function startGitHubOAuth(redirectUri: string): Promise<string> {
+  const response = await fetch(`${API_URL}/cfg/accounts/oauth/github/authorize/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ redirect_uri: redirectUri }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to start OAuth');
+  }
+
+  const data = await response.json();
+  return data.authorization_url;
+}
+
+// Exchange OAuth code for tokens
+export async function exchangeOAuthCode(
+  code: string,
+  state: string,
+  redirectUri: string
+): Promise<OAuthCallbackResponse> {
+  const response = await fetch(`${API_URL}/cfg/accounts/oauth/github/callback/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, state, redirect_uri: redirectUri }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'OAuth callback failed');
+  }
+
+  return response.json();
+}
+
+// Token storage
+export function saveTokens(tokens: AuthTokens): void {
+  localStorage.setItem('access_token', tokens.access);
+  localStorage.setItem('refresh_token', tokens.refresh);
+}
+
+export function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('access_token');
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+}
+
+export function isAuthenticated(): boolean {
+  return !!getAccessToken();
+}
+```
+
+### Login Page
+
+```tsx
+// app/auth/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { startGitHubOAuth, isAuthenticated } from '@/app/_lib/auth';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Redirect if already authenticated
+  if (typeof window !== 'undefined' && isAuthenticated()) {
+    router.push('/dashboard');
+    return null;
+  }
+
+  const handleGitHubLogin = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Callback URL must match what's configured in GitHub OAuth App
+      const redirectUri = `${window.location.origin}/auth/callback`;
+      const authorizationUrl = await startGitHubOAuth(redirectUri);
+
+      // Redirect to GitHub
+      window.location.href = authorizationUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start OAuth');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900">Sign in</h2>
+          <p className="mt-2 text-gray-600">
+            Sign in to your account to continue
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-md">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleGitHubLogin}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3
+                     border border-gray-300 rounded-md shadow-sm
+                     text-gray-700 bg-white hover:bg-gray-50
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          {loading ? 'Connecting...' : 'Continue with GitHub'}
+        </button>
+
+        <div className="text-center text-sm text-gray-500">
+          By signing in, you agree to our{' '}
+          <a href="/terms" className="text-blue-600 hover:underline">Terms</a>
+          {' '}and{' '}
+          <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### OAuth Callback Page
+
+```tsx
+// app/auth/callback/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { exchangeOAuthCode, saveTokens } from '@/app/_lib/auth';
+
+export default function OAuthCallbackPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('Processing...');
+
+  useEffect(() => {
+    const handleCallback = async () => {
+      const code = searchParams.get('code');
+      const state = searchParams.get('state');
+      const errorParam = searchParams.get('error');
+
+      // Handle GitHub error
+      if (errorParam) {
+        const errorDescription = searchParams.get('error_description');
+        setError(errorDescription || errorParam);
+        return;
+      }
+
+      // Validate parameters
+      if (!code || !state) {
+        setError('Missing OAuth parameters');
+        return;
+      }
+
+      try {
+        setStatus('Exchanging authorization code...');
+
+        const redirectUri = `${window.location.origin}/auth/callback`;
+        const response = await exchangeOAuthCode(code, state, redirectUri);
+
+        // Save tokens
+        saveTokens({
+          access: response.access,
+          refresh: response.refresh,
+        });
+
+        setStatus('Login successful! Redirecting...');
+
+        // Redirect based on user status
+        if (response.is_new_user) {
+          // New user - maybe show onboarding
+          router.push('/onboarding');
+        } else {
+          // Existing user - go to dashboard
+          router.push('/dashboard');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Authentication failed');
+      }
+    };
+
+    handleCallback();
+  }, [searchParams, router]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full p-8 bg-white rounded-lg shadow">
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Authentication Failed
+            </h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button
+              onClick={() => router.push('/auth/login')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+        <p className="text-gray-600">{status}</p>
+      </div>
+    </div>
+  );
+}
+```
+
+## React (Vite/CRA)
+
+### Custom Hook
+
+```tsx
+// hooks/useGitHubOAuth.ts
+import { useState, useCallback } from 'react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+interface UseGitHubOAuthReturn {
+  login: () => Promise<void>;
+  handleCallback: (code: string, state: string) => Promise<void>;
+  loading: boolean;
+  error: string | null;
+}
+
+export function useGitHubOAuth(): UseGitHubOAuthReturn {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const login = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const redirectUri = `${window.location.origin}/auth/callback`;
+
+      const response = await fetch(`${API_URL}/cfg/accounts/oauth/github/authorize/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ redirect_uri: redirectUri }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start OAuth');
+      }
+
+      const { authorization_url } = await response.json();
+      window.location.href = authorization_url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setLoading(false);
+    }
+  }, []);
+
+  const handleCallback = useCallback(async (code: string, state: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const redirectUri = `${window.location.origin}/auth/callback`;
+
+      const response = await fetch(`${API_URL}/cfg/accounts/oauth/github/callback/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, state, redirect_uri: redirectUri }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'OAuth failed');
+      }
+
+      const data = await response.json();
+
+      // Save tokens
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+
+      // Redirect to app
+      window.location.href = '/dashboard';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setLoading(false);
+    }
+  }, []);
+
+  return { login, handleCallback, loading, error };
+}
+```
+
+### Login Button Component
+
+```tsx
+// components/GitHubLoginButton.tsx
+import { useGitHubOAuth } from '../hooks/useGitHubOAuth';
+
+export function GitHubLoginButton() {
+  const { login, loading, error } = useGitHubOAuth();
+
+  return (
+    <div>
+      <button
+        onClick={login}
+        disabled={loading}
+        className="github-login-button"
+      >
+        {loading ? 'Connecting...' : 'Sign in with GitHub'}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
+```
+
+## Vanilla JavaScript
+
+### Simple Implementation
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+</head>
+<body>
+  <button id="github-login">Sign in with GitHub</button>
+  <p id="error" style="color: red; display: none;"></p>
+
+  <script>
+    const API_URL = 'http://localhost:8000';
+
+    document.getElementById('github-login').addEventListener('click', async () => {
+      try {
+        const redirectUri = `${window.location.origin}/callback.html`;
+
+        const response = await fetch(`${API_URL}/cfg/accounts/oauth/github/authorize/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ redirect_uri: redirectUri }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to start OAuth');
+        }
+
+        const { authorization_url } = await response.json();
+        window.location.href = authorization_url;
+      } catch (error) {
+        document.getElementById('error').textContent = error.message;
+        document.getElementById('error').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
+```
+
+### Callback Page
+
+```html
+<!-- callback.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Authenticating...</title>
+</head>
+<body>
+  <p id="status">Processing authentication...</p>
+
+  <script>
+    const API_URL = 'http://localhost:8000';
+
+    async function handleCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const error = params.get('error');
+
+      if (error) {
+        document.getElementById('status').textContent =
+          'Error: ' + (params.get('error_description') || error);
+        return;
+      }
+
+      if (!code || !state) {
+        document.getElementById('status').textContent = 'Missing OAuth parameters';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/cfg/accounts/oauth/github/callback/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code,
+            state,
+            redirect_uri: window.location.origin + '/callback.html',
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || 'Authentication failed');
+        }
+
+        const data = await response.json();
+
+        // Save tokens
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+
+        // Redirect to app
+        window.location.href = '/dashboard.html';
+      } catch (error) {
+        document.getElementById('status').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    handleCallback();
+  </script>
+</body>
+</html>
+```
+
+## TypeScript Types
+
+```typescript
+// types/oauth.ts
+
+export interface OAuthProvider {
+  name: string;
+  display_name: string;
+  enabled: boolean;
+}
+
+export interface OAuthAuthorizeRequest {
+  redirect_uri: string;
+  source_url?: string;
+}
+
+export interface OAuthAuthorizeResponse {
+  authorization_url: string;
+  state: string;
+}
+
+export interface OAuthCallbackRequest {
+  code: string;
+  state: string;
+  redirect_uri: string;
+}
+
+export interface OAuthCallbackResponse {
+  access: string;
+  refresh: string;
+  user: {
+    id: number;
+    email: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+  };
+  is_new_user: boolean;
+  connection_created: boolean;
+}
+
+export interface OAuthConnection {
+  id: number;
+  provider: string;
+  provider_username: string;
+  provider_email: string;
+  connected_at: string;
+}
+
+export interface OAuthErrorResponse {
+  error: string;
+  message: string;
+}
+```
+
+## Testing OAuth Locally
+
+### 1. Configure GitHub OAuth App for localhost
+
+In your GitHub OAuth App settings:
+- **Homepage URL**: `http://localhost:3000`
+- **Callback URL**: `http://localhost:3000/auth/callback`
+
+### 2. Environment Variables
+
+```bash
+# .env.local (Next.js)
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# .env (Vite)
+VITE_API_URL=http://localhost:8000
+```
+
+### 3. CORS Configuration
+
+Ensure your Django-CFG has localhost in security domains:
+
+```python
+security_domains = [
+    "localhost",
+    "localhost:3000",
+    "127.0.0.1",
+    "127.0.0.1:3000",
+]
+```
+
+## Next Steps
+
+- [Configuration Reference](/docs/features/integrations/oauth/configuration) - All config options
+- [Security Best Practices](/docs/features/integrations/oauth/security) - Production security
+- [GitHub OAuth Guide](/docs/features/integrations/oauth/github) - Backend setup

@@ -1,0 +1,52 @@
+---
+title: "Release v1.4.42"
+description: "Security update with Next.js 15.5.7 and dependency updates"
+date: 2024-12-04
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v1.4.42
+
+**Released:** December 4, 2024
+
+<Callout type="warning">
+This is a **security release**. Please update immediately.
+</Callout>
+
+## Highlights
+
+- **Security Fix:** Updated Next.js peer dependency to 15.5.7 to address [CVE-2025-66478](/docs/updates/security/nextjs-cve-2025-66478)
+- Synchronized versions across all `@djangocfg/*` packages
+
+## Updated Packages
+
+| Package | Version | Changes |
+|---------|---------|---------|
+| `@djangocfg/api` | 1.4.42 | Version sync |
+| `@djangocfg/ui` | 1.4.42 | Next.js ^15.5.7 |
+| `@djangocfg/layouts` | 2.0.12 | Compatible |
+| `@djangocfg/centrifugo` | 1.4.42 | Version sync |
+| `@djangocfg/nextjs` | 1.0.12 | Next.js ^15.5.7 |
+| `@djangocfg/eslint-config` | 1.4.42 | Version sync |
+| `@djangocfg/typescript-config` | 1.4.42 | Version sync |
+
+## Upgrade
+
+```bash
+pnpm update @djangocfg/api @djangocfg/ui @djangocfg/layouts @djangocfg/centrifugo @djangocfg/nextjs
+```
+
+Then update Next.js in your app:
+
+```bash
+pnpm add next@15.5.7
+```
+
+## Breaking Changes
+
+None.
+
+## Full Changelog
+
+See the [GitHub release](https://github.com/markolofsen/django-cfg/releases/tag/v1.4.42) for the complete list of changes.

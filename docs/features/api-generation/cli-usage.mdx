@@ -1,0 +1,746 @@
+---
+title: CLI Usage
+sidebar_position: 2
+keywords:
+  - django-cfg cli
+  - api client generation commands
+  - generate api clients
+  - validate openapi
+description: Django-CFG management commands for generating type-safe API clients. Command-line interface for creating TypeScript, Python, Go, Swift, and Protocol Buffer client libraries.
+---
+
+# CLI Usage
+
+Django-CFG provides management commands to generate type-safe API clients from your Django REST Framework API. This guide covers all available commands and common workflows.
+
+## Available Commands
+
+### `generate_client`
+
+Generate API clients defined in your `openapi.groups` configuration.
+
+```bash
+python manage.py generate_client
+```
+
+This command:
+1. Reads groups from your Django-CFG `openapi` configuration
+2. Generates OpenAPI schemas for each group
+3. Parses schemas to IR (Intermediate Representation)
+4. Creates TypeScript, Python, Go, Swift, and Proto clients for each group
+5. Outputs clients to the configured directory
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| **Language Selection** | |
+| `--typescript` | Generate TypeScript client only |
+| `--python` | Generate Python client only |
+| `--go` | Generate Go client only |
+| `--proto` | Generate Protocol Buffer definitions only |
+| `--swift` | Generate Swift client (uses apple/swift-openapi-generator) |
+| **Skip Languages** | |
+| `--no-typescript` | Skip TypeScript generation |
+| `--no-python` | Skip Python generation |
+| `--no-go` | Skip Go generation |
+| `--no-proto` | Skip Protocol Buffer generation |
+| **External Generators** | |
+| `--external-go` | Use oapi-codegen instead of built-in Go generator |
+| `--external-python` | Use openapi-python-client instead of built-in Python generator |
+| `--check-external` | Check which external generators are installed |
+| **Group Selection** | |
+| `--groups NAME [NAME]` | Generate specific groups (default: all) |
+| **Utility** | |
+| `--dry-run` | Validate without generating files |
+| `--list-groups` | List configured groups and exit |
+| `--validate` | Validate configuration and exit |
+| `--interactive`, `-i` | Run in interactive mode (requires click) |
+| `--no-build` | Skip Next.js admin build |
+| `--skip-nextjs-copy` | Skip copying to Next.js admin project |
+| `--copy-cfg-clients` | Copy cfg_* clients to Next.js admin |
+| `--verbose` | Show detailed error messages with full tracebacks |
+
+**Examples:**
+```bash
+# Generate all clients for all groups
+python manage.py generate_client
+
+# Generate TypeScript only
+python manage.py generate_client --typescript
+
+# Generate for specific groups
+python manage.py generate_client --groups core shop
+
+# Generate Proto files only for one group
+python manage.py generate_client --groups profiles --proto
+
+# Generate Swift client
+python manage.py generate_client --swift
+
+# Validate configuration without generating
+python manage.py generate_client --validate
+
+# List all configured groups
+python manage.py generate_client --list-groups
+
+# Check external generator availability
+python manage.py generate_client --check-external
+
+# Use external Go generator (oapi-codegen)
+python manage.py generate_client --external-go
+```
+
+### `validate_openapi`
+
+Validate DRF serializers and OpenAPI schemas before generation.
+
+```bash
+python manage.py validate_openapi
+```
+
+This command analyzes your serializers for common issues that affect code generation quality.
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| **Scope** | |
+| `--app APP` | Validate specific Django app |
+| `--file FILE` | Validate specific file |
+| `--pattern PATTERN` | File pattern to match (default: `*serializers.py`) |
+| **Actions** | |
+| `--fix` | Auto-fix issues where possible |
+| `--dry-run` | Show what would be fixed without changing files |
+| `--no-confirm` | Don't ask for confirmation before fixing |
+| **Reporting** | |
+| `--report {console,json,html}` | Output format (default: console) |
+| `--output FILE` | Write report to file |
+| `--summary` | Show summary only (compact output) |
+| **Filtering** | |
+| `--severity {error,warning,info}` | Minimum severity to show |
+| `--rule RULE_ID` | Show only specific rule |
+| `--fixable-only` | Show only auto-fixable issues |
+| **Info** | |
+| `--list-rules` | List all available validation rules |
+| `--verbose` | Show detailed output |
+
+**Examples:**
+```bash
+# Validate all serializers
+python manage.py validate_openapi
+
+# Validate specific app
+python manage.py validate_openapi --app accounts
+
+# Auto-fix issues
+python manage.py validate_openapi --fix
+
+# Generate HTML report
+python manage.py validate_openapi --report html --output report.html
+
+# List available rules
+python manage.py validate_openapi --list-rules
+
+# Show only errors
+python manage.py validate_openapi --severity error
+```
+
+**Validation Rules:**
+
+| Rule ID | Description |
+|---------|-------------|
+| `type-hint-missing` | Field missing type hint |
+| `type-hint-any` | Field uses `Any` type |
+| `dict-field-no-model` | DictField without `nested_model_class` |
+| `dict-field-json` | DictField should use JSONField |
+
+## Quick Start
+
+### Generate All Clients from Groups
+
+The simplest approach - generate all clients defined in your configuration:
+
+```bash
+python manage.py generate_client
+```
+
+This uses your `openapi.groups` configuration:
+
+```python
+# api/config.py
+openapi: OpenAPIConfig = OpenAPIConfig(
+    enabled=True,
+    groups=[
+        OpenAPIGroupConfig(name="core", apps=["users", "accounts", "api_keys"], title="Core API"),
+        OpenAPIGroupConfig(name="trading", apps=["wallets", "orders", "transactions"], title="Trading API"),
+    ],
+)
+```
+
+### Generate Single Language
+
+For more control, generate specific languages:
+
+```bash
+# TypeScript only
+python manage.py generate_client --typescript
+
+# Python only
+python manage.py generate_client --python
+
+# Go only
+python manage.py generate_client --go
+
+# Proto only
+python manage.py generate_client --proto
+
+# Swift only (external generator)
+python manage.py generate_client --swift
+```
+
+### Generate for Specific Groups
+
+```bash
+# Generate only core group
+python manage.py generate_client --groups core
+
+# Generate core and trading groups
+python manage.py generate_client --groups core trading
+```
+
+## Common Workflows
+
+### Development Workflow
+
+During active development, regenerate clients frequently:
+
+```bash
+# Quick regeneration (all languages, all groups)
+python manage.py generate_client
+
+# Skip Next.js build for faster iteration
+python manage.py generate_client --no-build
+
+# Validate before generating
+python manage.py generate_client --validate
+```
+
+### Frontend-Only Workflow
+
+If you only need TypeScript clients:
+
+```bash
+# Generate TypeScript only, skip others
+python manage.py generate_client --typescript
+```
+
+Generation options (fetchers, hooks, zod schemas) are configured in `OpenAPIConfig`:
+
+```python
+openapi: OpenAPIConfig = OpenAPIConfig(
+    enabled=True,
+    generate_zod_schemas=True,   # Runtime validation
+    generate_fetchers=True,       # Typed fetch functions
+    generate_swr_hooks=True,      # React SWR hooks
+    generate_package_files=True,  # package.json, tsconfig.json
+    groups=[...],
+)
+```
+
+### Backend-Only Workflow
+
+For Python microservices needing to call your API:
+
+```bash
+# Generate Python only
+python manage.py generate_client --python
+```
+
+### Mobile (Swift) Workflow
+
+For iOS apps using Swift:
+
+```bash
+# Generate Swift clients
+python manage.py generate_client --swift
+
+# Or generate proto for Swift gRPC
+python manage.py generate_client --proto
+```
+
+<Callout type="info">
+**Swift Generator**
+
+Swift generation uses Apple's official `swift-openapi-generator`. Install with:
+```bash
+brew install swift-openapi-generator
+```
+</Callout>
+
+### Multi-Group Workflow
+
+Generate separate clients for different API groups:
+
+```bash
+# Generate all languages for specific groups
+python manage.py generate_client --groups core shop
+
+# Generate TypeScript only for core group
+python manage.py generate_client --groups core --typescript
+
+# List available groups
+python manage.py generate_client --list-groups
+```
+
+## Output Examples
+
+### Successful Generation
+
+```bash
+$ python manage.py generate_client
+
+🧹 Cleaning schemas: openapi/schemas
+🧹 Cleaning clients: openapi/clients
+
+Generating clients for 3 group(s):
+
+  • core (Core API)
+  • trading (Trading API)
+  • market (Market API)
+
+Languages:
+  → Python (built-in)
+  → TypeScript (built-in)
+  → Go (built-in)
+  → Protocol Buffers (built-in)
+
+============================================================
+
+📦 Processing group: core
+  Apps: users, accounts, api_keys
+  → Generating OpenAPI schema...
+  ✅ Schema saved: openapi/schemas/core.yaml
+  → Parsing to IR...
+  ✅ Parsed: 15 schemas, 32 operations
+  ✅ Python: openapi/clients/python/core (12 files)
+  ✅ TypeScript: openapi/clients/typescript/core (28 files)
+  ✅ Go: openapi/clients/go/core (8 files)
+  ✅ Proto: openapi/clients/proto/core (6 files)
+  → Archiving...
+  ✅ Archived
+
+📦 Processing group: trading
+  ...
+
+============================================================
+
+✅ Successfully generated clients for 3 group(s)!
+
+Output directory: openapi/
+  Python:     openapi/clients/python/
+  TypeScript: openapi/clients/typescript/
+  Go:         openapi/clients/go/
+```
+
+### Validation Output
+
+```bash
+$ python manage.py validate_openapi
+
+🔍 Validating OpenAPI schemas...
+
+Checking app: accounts
+  ✅ UserSerializer - OK
+  ⚠️  ProfileSerializer - 2 issues
+    → type-hint-missing: Field 'metadata' missing type hint (line 45)
+    → dict-field-no-model: DictField 'settings' without nested_model_class (line 52)
+
+Checking app: payments
+  ✅ PaymentSerializer - OK
+  ✅ TransactionSerializer - OK
+
+============================================================
+
+Summary:
+  ✅ Passed: 3 serializers
+  ⚠️ Warnings: 1 serializer (2 issues)
+  ❌ Errors: 0 serializers
+
+Run with --fix to auto-fix 1 issue(s)
+```
+
+## Compiling Proto Files
+
+After generation, compile proto files for your target language:
+
+### Python (grpcio-tools)
+```bash
+# Install dependencies
+pip install grpcio grpcio-tools
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+python -m grpc_tools.protoc -I. \
+  --python_out=. \
+  --grpc_python_out=. \
+  api__profiles/*.proto
+```
+
+### Go
+```bash
+# Install dependencies
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+protoc -I. \
+  --go_out=. \
+  --go-grpc_out=. \
+  api__profiles/*.proto
+```
+
+### TypeScript (ts-proto)
+```bash
+# Install dependencies
+npm install ts-proto
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+protoc -I. \
+  --plugin=./node_modules/.bin/protoc-gen-ts_proto \
+  --ts_proto_out=. \
+  api__profiles/*.proto
+```
+
+### Swift
+```bash
+# Install dependencies
+brew install protobuf swift-protobuf grpc-swift
+
+# Compile proto files
+cd openapi/clients/proto/profiles
+protoc -I. \
+  --swift_out=. \
+  --swift_opt=Visibility=Public \
+  api__profiles/*.proto
+```
+
+<Callout type="info">
+**Auto-Generated README**
+
+Each generated proto group includes a README.md with detailed compilation commands for all supported languages.
+</Callout>
+
+## Troubleshooting
+
+### No Operations Found
+
+If generation succeeds but creates empty clients:
+
+**1. Check ViewSets are registered:**
+```python
+# users/api/views.py
+from rest_framework import viewsets
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+```
+
+**2. Verify URL patterns:**
+```python
+# users/urls.py
+from rest_framework.routers import DefaultRouter
+
+router = DefaultRouter()
+router.register('users', UserViewSet)
+urlpatterns = router.urls
+```
+
+**3. Validate OpenAPI schema:**
+```bash
+python manage.py generate_client --validate
+```
+
+### TypeScript Compilation Errors
+
+If generated TypeScript has errors:
+
+**1. Install dependencies:**
+```bash
+cd frontend
+npm install zod swr
+```
+
+**2. Check TypeScript configuration:**
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  }
+}
+```
+
+**3. Run validation before generation:**
+```bash
+python manage.py validate_openapi
+python manage.py generate_client
+```
+
+### Python Import Errors
+
+If Python client can't be imported:
+
+**1. Ensure output directory is in Python path:**
+```python
+import sys
+sys.path.append('/path/to/backend')
+
+from api_client import APIClient
+```
+
+**2. Install dependencies:**
+```bash
+pip install pydantic>=2.0 httpx>=0.24
+```
+
+**3. Verify __init__.py files exist:**
+```bash
+ls -la backend/api_client/__init__.py
+```
+
+### Schema Generation Fails
+
+Common issues with drf-spectacular:
+
+**1. Install drf-spectacular:**
+```bash
+pip install drf-spectacular>=0.26.5
+```
+
+**2. Configure Django settings:**
+```python
+INSTALLED_APPS = [
+    # ...
+    'rest_framework',
+    'drf_spectacular',
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+```
+
+**3. Check for validation errors:**
+```bash
+python manage.py validate_openapi --verbose
+```
+
+### External Generator Not Found
+
+If Swift or external generators fail:
+
+**1. Check installation:**
+```bash
+python manage.py generate_client --check-external
+```
+
+**2. Install missing generators:**
+```bash
+# Swift
+brew install swift-openapi-generator
+
+# Go (oapi-codegen)
+go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@latest
+
+# Python (openapi-python-client)
+pip install openapi-python-client
+```
+
+## Advanced Usage
+
+### Custom Output Directories
+
+Configure output directory in `OpenAPIConfig`:
+
+```python
+openapi: OpenAPIConfig = OpenAPIConfig(
+    enabled=True,
+    output_dir="openapi",  # Base output directory
+    groups=[...],
+)
+```
+
+This creates:
+- `openapi/schemas/` - OpenAPI schema files
+- `openapi/clients/python/` - Python clients
+- `openapi/clients/typescript/` - TypeScript clients
+- `openapi/clients/go/` - Go clients
+- `openapi/clients/proto/` - Protocol Buffer files
+- `openapi/clients/swift/` - Swift clients (when --swift used)
+- `openapi/archive/` - Archived versions (when enabled)
+
+### Archive System
+
+Django-CFG maintains version history of generated clients:
+
+```python
+openapi: OpenAPIConfig = OpenAPIConfig(
+    enable_archive=True,           # Enable archiving
+    archive_retention_days=30,     # Keep for 30 days
+    groups=[...],
+)
+```
+
+Archives are stored in `openapi/archive/YYYYMMDD_HHMMSS/`.
+
+### CI/CD Integration
+
+Example GitHub Actions workflow:
+
+```yaml
+name: Generate API Clients
+
+on:
+  push:
+    paths:
+      - 'api/**'
+      - 'config/**'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Validate schemas
+        run: |
+          python manage.py validate_openapi
+
+      - name: Generate API clients
+        run: |
+          python manage.py generate_client --no-build
+
+      - name: Commit generated clients
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add openapi/
+          git commit -m "chore: update API clients [skip ci]" || true
+          git push
+```
+
+### Docker Integration
+
+Generate clients in Docker:
+
+```dockerfile
+FROM python:3.12
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+# Validate and generate clients on build
+RUN python manage.py validate_openapi
+RUN python manage.py generate_client --no-build
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+```
+
+### Pre-commit Hook
+
+Auto-generate clients on commit:
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+python manage.py validate_openapi || exit 1
+python manage.py generate_client --no-build
+git add openapi/
+```
+
+## Best Practices
+
+### 1. Version Control Generated Code
+
+Always commit generated clients:
+
+```bash
+git add openapi/
+git commit -m "Update API clients"
+```
+
+### 2. Validate Before Generating
+
+Run validation to catch issues early:
+
+```bash
+python manage.py validate_openapi
+python manage.py generate_client
+```
+
+### 3. Use Groups for Organization
+
+Configure logical groups in Django-CFG:
+
+```python
+groups=[
+    OpenAPIGroupConfig(name="core", apps=["users", "accounts", "api_keys"], title="Core API"),
+    OpenAPIGroupConfig(name="trading", apps=["wallets", "orders", "transactions"], title="Trading API"),
+]
+```
+
+### 4. Enable All Type Safety Features
+
+Configure all features in `OpenAPIConfig`:
+
+```python
+openapi: OpenAPIConfig = OpenAPIConfig(
+    enabled=True,
+    generate_zod_schemas=True,        # Runtime validation
+    generate_package_files=True,      # Proper TypeScript setup
+    generate_fetchers=True,           # Universal fetch functions
+    generate_swr_hooks=True,          # React integration
+    groups=[...],
+)
+```
+
+### 5. Use Verbose Mode for Debugging
+
+When issues occur, use verbose mode:
+
+```bash
+python manage.py generate_client --verbose
+```
+
+## Next Steps
+
+- **[Group Configuration](../groups)** - Configure API groups
+- **[Generated Clients](../generated-clients)** - Use generated clients
+- **[Django Client Module](../../modules/django-client/overview)** - Deep dive
+
+<Callout type="info">
+**Pro Tip**
+
+Add validation and generation to your deployment script:
+```bash
+python manage.py validate_openapi
+python manage.py generate_client --no-build
+```
+</Callout>

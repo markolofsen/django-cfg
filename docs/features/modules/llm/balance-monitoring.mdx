@@ -1,0 +1,805 @@
+---
+title: LLM Balance Monitoring
+description: Professional monitoring of OpenAI and OpenRouter account balances with automatic email and Telegram notifications
+sidebar_label: Balance Monitoring
+sidebar_position: 2
+keywords:
+  - llm monitoring
+  - openai balance
+  - openrouter balance
+  - api monitoring
+  - cost monitoring
+  - pydantic models
+---
+
+# LLM Balance Monitoring
+
+<Callout type="info">
+**Production-Ready Balance Monitoring**
+
+Django-CFG provides **enterprise-grade LLM balance monitoring** with modular provider architecture, type-safe Pydantic models, and multi-channel notifications (Email + Telegram). Prevent service interruptions by monitoring OpenAI API keys and OpenRouter prepaid balances automatically.
+</Callout>
+
+Monitor your LLM provider account balances automatically to avoid service interruptions. The system uses a modular provider architecture, checks balances hourly, caches results efficiently, and sends multi-channel notifications when balance drops below configurable thresholds.
+
+## Features
+
+- ✅ **Modular Architecture** - Provider-based design for easy extensibility
+- ✅ **Type-Safe** - Pydantic v2 models for all responses
+- ✅ **Multi-Provider Support** - OpenAI (key validation), OpenRouter (balance tracking)
+- ✅ **Smart Balance Checking**:
+  - OpenAI: API key validation (no public balance API)
+  - OpenRouter: Real prepaid balance via `/api/v1/credits`
+- ✅ **Intelligent Caching** - 1-hour TTL for balances, 24-hour for notifications
+- ✅ **Multi-Channel Notifications** - Email + Telegram with async queue
+- ✅ **Two-Tier Thresholds** - Warning ($10) and Critical ($5) levels
+- ✅ **Anti-Spam Protection** - One notification per level per 24 hours
+- ✅ **API Error Alerts** - Automatic notifications for invalid keys, quota exceeded
+- ✅ **Dashboard API** - REST endpoint for frontend integration
+- ✅ **Management Command** - Easy testing and cron integration
+
+## Quick Start
+
+### 1. Configure API Keys
+
+Set your LLM provider API keys in `config.py`:
+
+```python
+from django_cfg import DjangoConfig, ApiKeys
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+
+    # API Keys
+    api_keys: ApiKeys = ApiKeys(
+        openai=env.api_keys.openai,
+        openrouter=env.api_keys.openrouter,
+    )
+
+    # Admin Notifications
+    admin_emails: list[str] = [
+        "admin@example.com",
+        "devops@example.com",
+    ]
+
+    # Telegram (optional but recommended)
+    telegram: TelegramConfig = TelegramConfig(
+        bot_token=env.telegram.bot_token,
+        chat_id=env.telegram.chat_id,
+    )
+```
+
+In your `.env` or `.env.secrets` file:
+
+```bash
+# API Keys
+API_KEYS__OPENAI=sk-proj-...
+API_KEYS__OPENROUTER=sk-or-v1-...
+
+# Admin Emails
+ADMIN_EMAILS=["admin@example.com","devops@example.com"]
+
+# Telegram
+TELEGRAM__BOT_TOKEN=123456:ABC-DEF...
+TELEGRAM__CHAT_ID=-1001234567890
+```
+
+### 2. Run Manual Check
+
+Test the monitoring system:
+
+```bash
+python manage.py check_llm_balance
+```
+
+**Example output:**
+
+```
+======================================================================
+LLM BALANCE CHECK
+======================================================================
+
+Checking balances...
+
+  Openai: API Key Valid ✓ (Balance check not available via API...)
+  Openrouter: $0.69 USD 🚨 CRITICAL [limit: $217.50, usage: $216.81]
+
+Checking notification thresholds...
+  🚨 Sent CRITICAL notification: Openrouter
+
+======================================================================
+CHECK COMPLETE
+======================================================================
+Total balance across all providers: $0.69 USD
+
+⚠️ Low balance alerts were sent to administrators
+
+Waiting for notification delivery...
+✓ Notifications delivered
+```
+
+### 3. Setup Cron
+
+Add to crontab for automatic hourly checks:
+
+```bash
+# Check LLM balances every hour
+0 * * * * cd /path/to/project && /path/to/venv/bin/python manage.py check_llm_balance
+```
+
+## Configuration
+
+### Admin Emails
+
+Admin emails are configured at the root `DjangoConfig` level:
+
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+
+    # Admin emails - used for LLM balance alerts, error notifications, etc.
+    admin_emails: list[str] = [
+        "admin@example.com",
+        "devops@example.com",
+    ]
+```
+
+<Callout type="info">
+**Why Root Level?**
+
+`admin_emails` is at the root `DjangoConfig` level because:
+- Used for **multiple notification types** (email + Telegram)
+- **Application-level concept** (not email-specific)
+- Simpler access: `config.admin_emails` vs `config.email.admin_emails`
+</Callout>
+
+### Telegram Configuration
+
+For Telegram notifications:
+
+```python
+from django_cfg import TelegramConfig
+
+class MyConfig(DjangoConfig):
+    telegram: TelegramConfig = TelegramConfig(
+        bot_token=env.telegram.bot_token,
+        chat_id=env.telegram.chat_id,
+    )
+```
+
+**How to get Telegram credentials:**
+
+1. **Bot Token**: Create bot via [@BotFather](https://t.me/botfather)
+   - Send `/newbot` command
+   - Follow instructions
+   - Copy token (format: `123456:ABC-DEF...`)
+
+2. **Chat ID**:
+   - For private chat: Use [@userinfobot](https://t.me/userinfobot)
+   - For group chat: Add [@raw_data_bot](https://t.me/raw_data_bot), get `chat.id`
+   - For channel: Channel ID (starts with `-100`)
+
+### Environment Variables
+
+```bash
+# .env or .env.secrets
+
+# API Keys
+API_KEYS__OPENAI=sk-proj-your-openai-key
+API_KEYS__OPENROUTER=sk-or-v1-your-openrouter-key
+
+# Admin Emails
+ADMIN_EMAILS=["admin@example.com","devops@example.com"]
+
+# Email Configuration (for sending alerts)
+EMAIL__BACKEND=smtp
+EMAIL__HOST=smtp.gmail.com
+EMAIL__PORT=587
+EMAIL__USERNAME=your-email@gmail.com
+EMAIL__PASSWORD=your-app-password
+EMAIL__USE_TLS=True
+EMAIL__DEFAULT_FROM=noreply@myapp.com
+
+# Telegram Configuration (for sending alerts)
+TELEGRAM__BOT_TOKEN=6113761847:AAFjhIT0c6PsEq5ke3P6c7Ruuzc5WpLx9wk
+TELEGRAM__CHAT_ID=-796503018
+```
+
+### Notification Thresholds
+
+Default thresholds can be customized:
+
+```python
+from django_cfg.modules.django_llm_monitoring import LLMBalanceNotifier
+
+# Customize thresholds
+LLMBalanceNotifier.THRESHOLD_WARNING = 20.0   # $20 USD
+LLMBalanceNotifier.THRESHOLD_CRITICAL = 10.0  # $10 USD
+```
+
+Or modify in source:
+
+```python
+# django_cfg/modules/django_llm_monitoring/notifier.py
+
+class LLMBalanceNotifier:
+    THRESHOLD_WARNING = 20.0   # Default: 10.0
+    THRESHOLD_CRITICAL = 10.0  # Default: 5.0
+```
+
+## Management Command
+
+### Basic Usage
+
+```bash
+# Normal check (with caching)
+python manage.py check_llm_balance
+
+# Force fresh API calls (bypass balance cache)
+python manage.py check_llm_balance --force
+
+# Force send notifications (bypass notification cache)
+python manage.py check_llm_balance --force-notify
+```
+
+### Command Options
+
+| Option | Description |
+|--------|-------------|
+| `--force` | Bypass 1-hour balance cache and fetch fresh data from provider APIs |
+| `--force-notify` | Send notifications even if already sent in last 24 hours |
+
+### Output Examples
+
+**Healthy balances:**
+
+```
+  Openai: API Key Valid ✓ (Balance check not available via API...)
+  Openrouter: $85.50 USD ✓ OK [limit: $217.50, usage: $132.00]
+
+Checking notification thresholds...
+  ✓ No notifications needed
+```
+
+**Low balance (warning):**
+
+```
+  Openai: API Key Valid ✓
+  Openrouter: $8.50 USD ⚠️ WARNING [limit: $217.50, usage: $209.00]
+
+Checking notification thresholds...
+  ⚠️ Sent WARNING notification: Openrouter
+```
+
+**Critical balance:**
+
+```
+  Openai: API Key Valid ✓
+  Openrouter: $3.20 USD 🚨 CRITICAL [limit: $217.50, usage: $214.30]
+
+Checking notification thresholds...
+  🚨 Sent CRITICAL notification: Openrouter
+
+⚠️ Low balance alerts were sent to administrators
+
+Waiting for notification delivery...
+✓ Notifications delivered
+```
+
+**API errors:**
+
+```
+  ✗ Openai: Incorrect API key provided
+  ✗ Openrouter: OpenRouter API HTTP error: 401
+
+Checking notification thresholds...
+  🔴 Sent API error notification: Openai
+  🔴 Sent API error notification: Openrouter
+```
+
+## Notification Format
+
+### Email Notification
+
+**Subject:** `🚨 CRITICAL: Openrouter Balance Low`
+
+**Body:**
+```
+🚨 Openrouter API Balance Alert
+
+Current Balance: $0.69 USD
+Threshold: $5.00 USD
+
+Please add funds to your Openrouter account to avoid service interruption.
+
+---
+This is an automated alert from LLM Balance Monitoring.
+You will receive this notification once per 24 hours until the balance is restored.
+```
+
+### Telegram Notification
+
+Same message sent to configured Telegram chat with Markdown formatting.
+
+### API Error Notifications
+
+When API key errors occur:
+
+**Subject:** `🔴 CRITICAL: OpenAI API Key Error`
+
+**Body:**
+```
+🔴 OpenAI API Key Error
+
+Error: Incorrect API key provided
+
+This is a critical issue that requires immediate attention:
+- Check if the API key is valid and correctly configured
+- Verify the API key has not expired
+- Ensure sufficient funds are available in the account
+
+Configuration location:
+- Check .env or .env.secrets file
+- Verify API_KEYS__OPENAI environment variable
+
+---
+This is an automated alert from LLM Balance Monitoring.
+You will receive this notification once per 24 hours until the issue is resolved.
+```
+
+## Programmatic Usage
+
+### Type-Safe Balance Checking
+
+Use Pydantic models for type-safe access:
+
+```python
+from django_cfg.modules.django_llm_monitoring import BalanceChecker, LLMBalanceNotifier
+
+# Check balances
+checker = BalanceChecker()
+balances = checker.check_all_balances(force=False)
+
+# Access balance data (Pydantic models)
+for provider, balance_data in balances.items():
+    print(f"{provider}:")
+    print(f"  Balance: ${balance_data.balance}")
+    print(f"  Status: {balance_data.status}")
+    print(f"  Error: {balance_data.error}")
+    print(f"  Note: {balance_data.note}")
+
+# Send notifications if thresholds exceeded
+notifier = LLMBalanceNotifier()
+results = notifier.check_all_and_notify(balances, force=False)
+
+# Check what was sent
+for provider, level in results.items():
+    if level:
+        print(f"Sent {level} notification for {provider}")
+```
+
+### Using Individual Providers
+
+```python
+from django_cfg.modules.django_llm_monitoring.providers import (
+    OpenAIProvider,
+    OpenRouterProvider,
+)
+
+# OpenAI - validates API key
+openai_provider = OpenAIProvider()
+result = openai_provider.check_balance(force=True)
+
+if result.status == "valid":
+    print("OpenAI API key is valid")
+else:
+    print(f"OpenAI error: {result.error}")
+
+# OpenRouter - checks real prepaid balance
+openrouter_provider = OpenRouterProvider()
+result = openrouter_provider.check_balance(force=True)
+
+print(f"Balance: ${result.balance}")
+print(f"Total credits: ${result.limit}")
+print(f"Total usage: ${result.usage}")
+```
+
+### Force Fresh Check
+
+```python
+# Bypass cache
+balances = checker.check_all_balances(force=True)
+
+# Force notifications
+results = notifier.check_all_and_notify(balances, force=True)
+```
+
+## How It Works
+
+### Provider Architecture
+
+The module uses a **modular provider architecture**:
+
+```
+django_llm_monitoring/
+├── providers/
+│   ├── base.py          # BaseLLMProvider (caching, error handling)
+│   ├── openai.py        # OpenAIProvider (key validation)
+│   └── openrouter.py    # OpenRouterProvider (balance check)
+├── models.py            # Pydantic v2 models
+├── balance_checker.py   # Main checker
+└── notifier.py         # Notifications
+```
+
+### Balance Checking Flow
+
+1. **BalanceChecker** iterates through all providers
+2. Each **Provider** (OpenAI, OpenRouter) implements:
+   - `get_provider_name()` - Returns provider name
+   - `_fetch_balance()` - Fetches balance from API
+   - `check_balance()` - Adds caching and error handling
+3. Returns **BalanceResponse** (Pydantic model)
+
+### Pydantic Models
+
+All responses use type-safe Pydantic models:
+
+```python
+from typing import Optional, Literal
+from pydantic import BaseModel, Field
+
+class BalanceResponse(BaseModel):
+    balance: Optional[float] = None      # USD balance (None if unavailable)
+    currency: str = "usd"                # Currency code
+    usage: Optional[float] = None        # Total usage
+    limit: Optional[float] = None        # Total limit/credits
+    status: Optional[Literal["valid", "invalid", "error", "unavailable"]] = None
+    note: Optional[str] = None           # Additional information
+    error: Optional[str] = None          # Error message if check failed
+```
+
+### API Endpoints
+
+#### OpenAI
+
+**Status:** No public balance API available
+
+**Implementation:** Validate API key via test request
+
+```python
+from openai import OpenAI
+
+client = OpenAI(api_key=api_key)
+models = client.models.list()  # Validates key
+
+# Returns:
+BalanceResponse(
+    balance=None,  # Not available
+    status="valid",
+    note="Balance check not available via API. Check manually at: ..."
+)
+```
+
+**Manual Check:** https://platform.openai.com/settings/organization/billing/overview
+
+#### OpenRouter
+
+**Endpoint:** `GET https://openrouter.ai/api/v1/credits`
+
+**Headers:**
+```
+Authorization: Bearer YOUR_OPENROUTER_KEY
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "total_credits": 217.50,
+    "total_usage": 216.81
+  }
+}
+```
+
+**Calculated Balance:**
+```python
+balance = total_credits - total_usage  # $0.69 (real prepaid balance)
+```
+
+### Notification Logic
+
+1. **Threshold Check** - Compare balance against $10 (warning) and $5 (critical)
+2. **Cache Check** - Skip if notification sent in last 24 hours (unless `force=True`)
+3. **Multi-Channel Send** - Via `send_admin_notification()`:
+   - Email: `send_admin_email()`
+   - Telegram: `send_telegram_message()` → Async queue
+4. **Mark Sent** - Cache for 24 hours to prevent spam
+
+### Telegram Async Queue
+
+Telegram notifications use an **asynchronous queue with rate limiting**:
+
+- **Singleton Queue**: Global instance shared across Django processes
+- **Worker Thread**: Background daemon processes messages continuously
+- **Rate Limiting**: Max 20 messages/second (0.05s delay)
+- **Priority Support**: CRITICAL (1) > HIGH (2) > NORMAL (3) > LOW (4)
+- **Management Command Wait**: 2-second delay ensures delivery before exit
+
+<Callout type="info">
+**Why the Delay?**
+
+Management commands exit immediately after execution. The 2-second wait in `check_llm_balance` ensures the Telegram worker thread has time to process the queue before the Python process terminates.
+</Callout>
+
+## Dashboard API
+
+The module provides a REST API endpoint for dashboard integration:
+
+```http
+GET /cfg/dashboard/api/metrics/llm-balances/
+```
+
+**Response:**
+```json
+{
+  "name": "LLM Provider Balances",
+  "description": "API key status and account balances for LLM providers",
+  "status": "critical",
+  "items": [
+    {
+      "provider": "openai",
+      "provider_display": "Openai",
+      "balance": null,
+      "currency": "usd",
+      "status": "valid",
+      "status_level": "info",
+      "note": "Balance check not available via API..."
+    },
+    {
+      "provider": "openrouter",
+      "provider_display": "Openrouter",
+      "balance": 0.69,
+      "currency": "usd",
+      "usage": 216.81,
+      "limit": 217.50,
+      "status": null,
+      "status_level": "critical"
+    }
+  ],
+  "summary": {
+    "total_providers": 2,
+    "total_balance": 0.69,
+    "providers_with_errors": 0,
+    "providers_critical": 1
+  }
+}
+```
+
+## Caching
+
+### Balance Cache
+
+- **TTL:** 1 hour (3600 seconds)
+- **Key Pattern:** `llm_monitoring:openai_balance`, `llm_monitoring:openrouter_balance`
+- **Bypass:** Use `--force` flag or `force=True` parameter
+
+### Notification Cache
+
+- **TTL:** 24 hours (86400 seconds)
+- **Key Pattern:** `llm_monitoring:notification_sent:{provider}:{level}`
+- **Purpose:** Prevent spam (max 1 notification per day per provider per level)
+- **Bypass:** Use `--force-notify` flag or `force=True` parameter
+
+## Troubleshooting
+
+### Notifications Not Arriving in Telegram
+
+**Symptoms:** Command shows "Sent notification" but no Telegram message
+
+**Solutions:**
+
+1. **Check Bot Token & Chat ID:**
+   ```bash
+   python manage.py shell -c "
+   from django_cfg.core.config import get_current_config
+   config = get_current_config()
+   print('Telegram config:', config.telegram)
+   "
+   ```
+
+2. **Test Direct Send:**
+   ```bash
+   python manage.py shell -c "
+   from django_cfg.modules.django_telegram import send_telegram_message
+   result = send_telegram_message('Test message')
+   print('Sent:', result)
+   import time; time.sleep(2)  # Wait for queue
+   "
+   ```
+
+3. **Verify Bot Has Access:**
+   - For groups: Bot must be added as member
+   - For channels: Bot must be admin
+   - Check bot is not blocked
+
+### Notifications Cached (Not Sending)
+
+**Symptoms:** Balance is low but no notifications sent
+
+**Cause:** Notifications were sent in last 24 hours
+
+**Solutions:**
+
+1. **Force Send:**
+   ```bash
+   python manage.py check_llm_balance --force-notify
+   ```
+
+2. **Clear Cache Manually:**
+   ```python
+   from django.core.cache import cache
+   for provider in ['openai', 'openrouter']:
+       for level in ['warning', 'critical', 'api_error']:
+           cache.delete(f'llm_monitoring:notification_sent:{provider}:{level}')
+   ```
+
+### OpenAI Shows $0.00 Balance
+
+**This is expected!** OpenAI does not provide a public balance API.
+
+The module validates the API key and returns:
+```python
+BalanceResponse(
+    balance=None,  # Not $0.00, but None
+    status="valid",
+    note="Balance check not available via API..."
+)
+```
+
+**To check real balance:** Visit https://platform.openai.com/settings/organization/billing/overview
+
+### API Key Errors
+
+**Error:** `Incorrect API key provided`
+
+**Solutions:**
+1. Verify key in `.env` file
+2. Check key format (OpenAI: `sk-proj-...`, OpenRouter: `sk-or-v1-...`)
+3. Ensure key has not expired
+4. Test key manually via provider's dashboard
+
+## Security
+
+<Callout type="warning">
+**API Key Security**
+
+LLM provider API keys are **high-value credentials**:
+- ❌ Never commit to version control
+- ✅ Store in `.env.secrets` (gitignored)
+- ✅ Use environment variables in production
+- ✅ Rotate keys regularly
+- ✅ Monitor usage for anomalies
+- ✅ Use Pydantic SecretStr for sensitive values
+</Callout>
+
+## Best Practices
+
+### Production Deployment
+
+1. **Use Secrets File** - Store API keys in `.env.secrets` (git-ignored)
+2. **Set Up Cron** - Run checks hourly with proper logging
+3. **Monitor Notifications** - Test Telegram/email delivery monthly
+4. **Configure Thresholds** - Adjust based on your usage patterns
+5. **Enable Logging** - Set up log aggregation (Sentry, CloudWatch)
+
+### Cron Setup
+
+```bash
+# /etc/cron.d/llm-monitoring
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Check LLM balances every hour
+0 * * * * app cd /app && /app/.venv/bin/python manage.py check_llm_balance >> /var/log/llm-balance.log 2>&1
+```
+
+### Monitoring Recommendations
+
+1. **Set Realistic Thresholds** - Adjust based on your usage patterns
+2. **Monitor Multiple Channels** - Enable both email and Telegram
+3. **Test Regularly** - Run manual checks to verify setup
+4. **Review Logs** - Check for API errors or notification failures
+5. **Add Buffer** - Top up accounts before hitting thresholds
+6. **Track Usage Trends** - Monitor spending patterns over time
+
+## Adding New Providers
+
+The modular architecture makes it easy to add new providers.
+
+### Example: Adding Anthropic
+
+#### 1. Create Provider Class
+
+```python
+# providers/anthropic.py
+import httpx
+from .base import BaseLLMProvider
+from ..models import BalanceResponse
+
+class AnthropicProvider(BaseLLMProvider):
+    """Anthropic Claude balance checker."""
+
+    API_URL = "https://api.anthropic.com/v1/organization/balance"
+
+    def get_provider_name(self) -> str:
+        return "anthropic"
+
+    def _fetch_balance(self) -> BalanceResponse:
+        """Fetch balance from Anthropic API."""
+        from django_cfg.core.config import get_current_config
+
+        config = get_current_config()
+        api_key = config.api_keys.anthropic
+
+        if hasattr(api_key, 'get_secret_value'):
+            api_key = api_key.get_secret_value()
+
+        client = httpx.Client()
+        response = client.get(
+            self.API_URL,
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01"
+            },
+            timeout=10.0
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return BalanceResponse(
+            balance=data.get("balance"),
+            currency="usd",
+            limit=data.get("limit"),
+            usage=data.get("usage")
+        )
+```
+
+#### 2. Update Balance Checker
+
+```python
+# balance_checker.py
+from .providers import OpenAIProvider, OpenRouterProvider, AnthropicProvider
+
+class BalanceChecker:
+    def check_all_balances(self, force: bool = False) -> Dict[str, BalanceResponse]:
+        providers = {
+            "openai": OpenAIProvider(),
+            "openrouter": OpenRouterProvider(),
+            "anthropic": AnthropicProvider(),  # New
+        }
+
+        balances = {}
+        for name, provider in providers.items():
+            balances[name] = provider.check_balance(force=force)
+
+        return balances
+```
+
+#### 3. Add API Key to Config
+
+```python
+# django_cfg/core/base/config_model.py
+class ApiKeys(BaseModel):
+    openai: SecretStr = Field(default=SecretStr(""))
+    openrouter: SecretStr = Field(default=SecretStr(""))
+    anthropic: SecretStr = Field(default=SecretStr(""))  # New
+```
+
+Done! The new provider will be automatically checked.
+
+## See Also
+
+- [**Configuration Guide**](/docs/fundamentals/configuration) - Environment and settings
+- [**Modules Overview**](/docs/features/modules) - Available modules

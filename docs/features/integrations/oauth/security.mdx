@@ -1,0 +1,345 @@
+---
+title: Security Best Practices
+description: Security guidelines for Django-CFG OAuth implementation. CSRF protection, token handling, and production hardening.
+sidebar_label: Security
+sidebar_position: 4
+keywords:
+  - oauth security
+  - csrf protection
+  - oauth best practices
+  - secure authentication
+---
+
+# Security Best Practices
+
+Essential security guidelines for production OAuth implementations.
+
+## CSRF Protection
+
+### State Token Verification
+
+Django-CFG stores OAuth state tokens in the database (not cache) for reliable CSRF protection.
+
+```python
+# How state verification works internally
+class OAuthState(models.Model):
+    state = models.CharField(max_length=64, primary_key=True)
+    provider = models.CharField(max_length=20)
+    redirect_uri = models.URLField()
+    expires_at = models.DateTimeField()
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() > self.expires_at
+```
+
+### State Token Flow
+
+1. **Generation**: Cryptographically secure random token (32 bytes, URL-safe)
+2. **Storage**: Stored in database with expiration time
+3. **Verification**: Checked on callback, deleted after use
+4. **Expiration**: Automatic cleanup of expired states
+
+### Best Practices
+
+```python
+# Shorter state timeout for higher security
+github_oauth = GitHubOAuthConfig(
+    # ...
+    state_timeout_seconds=120,  # 2 minutes instead of default 5
+)
+```
+
+## Token Storage
+
+### Frontend Token Handling
+
+{/* prettier-ignore */}
+<Callout type="warning">
+**Never store tokens in cookies without proper security flags.** Use localStorage for SPAs with proper XSS protection, or httpOnly cookies set by your backend.
+</Callout>
+
+#### Option 1: localStorage (SPA)
+
+```typescript
+// Simple but requires XSS protection
+localStorage.setItem('access_token', tokens.access);
+localStorage.setItem('refresh_token', tokens.refresh);
+```
+
+Pros:
+- Simple implementation
+- Survives page refreshes
+
+Cons:
+- Vulnerable to XSS attacks
+- Requires strict CSP
+
+#### Option 2: httpOnly Cookies (Recommended for Production)
+
+```typescript
+// Frontend: Let backend set cookies
+const response = await fetch('/api/oauth/callback/', {
+  method: 'POST',
+  credentials: 'include',  // Important!
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ code, state, redirect_uri }),
+});
+
+// Backend sets httpOnly cookie in response
+// No token handling needed in frontend
+```
+
+```python
+# Backend modification (in views/oauth.py)
+response = Response(data)
+response.set_cookie(
+    'access_token',
+    tokens['access'],
+    httponly=True,
+    secure=True,  # HTTPS only
+    samesite='Lax',
+    max_age=3600 * 24,  # 1 day
+)
+return response
+```
+
+### Token Refresh
+
+Always implement token refresh to avoid long-lived access tokens:
+
+```typescript
+async function refreshTokens(): Promise<boolean> {
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_URL}/cfg/accounts/token/refresh/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (!response.ok) {
+      // Refresh token expired, logout user
+      clearTokens();
+      window.location.href = '/auth/login';
+      return false;
+    }
+
+    const { access } = await response.json();
+    localStorage.setItem('access_token', access);
+    return true;
+  } catch {
+    return false;
+  }
+}
+```
+
+## Redirect URI Validation
+
+### Backend Validation
+
+Django-CFG validates redirect URIs on both authorize and callback:
+
+```python
+# Internal validation
+def verify_state(cls, state: str, redirect_uri: str) -> Optional[OAuthState]:
+    oauth_state = OAuthState.objects.get(state=state)
+
+    # Verify redirect_uri matches what was stored
+    if oauth_state.redirect_uri != redirect_uri:
+        logger.warning("OAuth redirect_uri mismatch")
+        return None
+
+    return oauth_state
+```
+
+### Allowed Redirect URIs
+
+For production, consider validating against a whitelist:
+
+```python
+# In your config or settings
+ALLOWED_OAUTH_REDIRECT_URIS = [
+    "https://myapp.com/auth/callback",
+    "https://www.myapp.com/auth/callback",
+    # Development (remove in production)
+    # "http://localhost:3000/auth/callback",
+]
+```
+
+## Rate Limiting
+
+### Protect OAuth Endpoints
+
+Use Django-CFG's rate limiting or django-axes:
+
+```python
+# In DjangoConfig
+axes = AxesConfig(
+    failure_limit=5,
+    cooloff_time=1,  # 1 hour lockout
+)
+```
+
+### API-Level Rate Limiting
+
+```python
+# In DRF throttle settings
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10/minute',  # 10 OAuth attempts per minute
+    }
+}
+```
+
+## Secure Configuration
+
+### Environment Variables
+
+Never commit secrets to version control:
+
+```bash
+# .env (gitignored!)
+GITHUB_OAUTH__CLIENT_ID=your-client-id
+GITHUB_OAUTH__CLIENT_SECRET=your-secret-key
+
+# Rotate secrets regularly
+# Use secret management in production (AWS Secrets Manager, Vault, etc.)
+```
+
+### Minimal Scopes
+
+Request only the scopes you need:
+
+```python
+# Good: Minimal scopes
+github_oauth = GitHubOAuthConfig(
+    scope=["user:email", "read:user"],
+)
+
+# Avoid: Overly broad scopes
+github_oauth = GitHubOAuthConfig(
+    scope=["user", "repo", "admin:org"],  # Too much access!
+)
+```
+
+## Account Linking Security
+
+### Email Verification
+
+When linking accounts by email, consider:
+
+```python
+# Option 1: Only link to verified emails
+github_oauth = GitHubOAuthConfig(
+    allow_account_linking=True,
+    # Internal check: only link if user.email_verified is True
+)
+
+# Option 2: Disable auto-linking, require manual linking
+github_oauth = GitHubOAuthConfig(
+    allow_account_linking=False,
+    auto_create_user=True,
+    # Users must explicitly link accounts in settings
+)
+```
+
+### Multiple OAuth Connections
+
+Allow users to manage their OAuth connections:
+
+```typescript
+// Frontend: List user's OAuth connections
+const connections = await fetch(`${API_URL}/cfg/accounts/oauth/connections/`, {
+  headers: { 'Authorization': `Bearer ${accessToken}` },
+});
+
+// Frontend: Disconnect a provider
+await fetch(`${API_URL}/cfg/accounts/oauth/disconnect/`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ provider: 'github' }),
+});
+```
+
+## HTTPS Requirements
+
+### Production Checklist
+
+- [ ] All OAuth endpoints served over HTTPS
+- [ ] `Secure` flag on all cookies
+- [ ] HSTS header configured
+- [ ] GitHub OAuth App uses HTTPS callback URL
+
+```python
+# Django settings (auto-configured by Django-CFG in production)
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+```
+
+## Monitoring & Logging
+
+### Enable Telegram Notifications
+
+```python
+# Get notified of OAuth events
+telegram = TelegramConfig(
+    bot_token="your-bot-token",
+    chat_id=123456789,
+)
+
+# Automatic notifications:
+# - New user registrations via OAuth
+# - Suspicious login patterns (if implemented)
+```
+
+### Log OAuth Events
+
+```python
+# Already included in GitHubOAuthService
+logger.info(f"GitHub OAuth login for: {user.email}")
+logger.warning(f"OAuth state expired: {state[:8]}...")
+logger.error(f"GitHub token exchange failed: {status_code}")
+```
+
+## Checklist: Production Readiness
+
+### Configuration
+- [ ] Using environment variables for secrets
+- [ ] Minimal OAuth scopes requested
+- [ ] State timeout set appropriately (2-5 minutes)
+- [ ] Production callback URLs configured in GitHub
+
+### Security
+- [ ] HTTPS enforced
+- [ ] Rate limiting configured
+- [ ] CORS properly configured
+- [ ] CSP headers set (if using localStorage)
+
+### Monitoring
+- [ ] Telegram notifications enabled
+- [ ] Logging configured
+- [ ] Error tracking set up (Sentry, etc.)
+
+### Frontend
+- [ ] Tokens stored securely
+- [ ] Token refresh implemented
+- [ ] Error handling for all OAuth states
+- [ ] Logout clears all tokens
+
+## Next Steps
+
+- [GitHub OAuth Guide](/docs/features/integrations/oauth/github) - Setup walkthrough
+- [Configuration Reference](/docs/features/integrations/oauth/configuration) - All options
+- [Frontend Integration](/docs/features/integrations/oauth/frontend) - Code examples

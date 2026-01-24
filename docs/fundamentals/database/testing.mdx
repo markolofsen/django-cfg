@@ -1,0 +1,697 @@
+---
+title: Test Database Management
+description: Zero-configuration test database management with automatic setup, cleanup, and migration fixes.
+sidebar_label: Testing
+sidebar_position: 6
+keywords:
+  - django test database
+  - test runner
+  - smart test runner
+  - postgresql test database
+  - migration testing
+---
+
+# Test Database Management
+
+Django-CFG provides **zero-configuration test database management** that automatically handles database creation, cleanup, and migration issues.
+
+## Overview
+
+Testing Django applications with multiple databases or PostgreSQL extensions can be challenging. Django-CFG solves these problems automatically:
+
+- ✅ **Automatic test database cleanup** - No more EOFError prompts in CI/CD
+- ✅ **PostgreSQL extension installation** - Auto-installs pgvector, pg_trgm, unaccent
+- ✅ **Migration consistency fixes** - Automatically handles migration order issues
+- ✅ **CustomUser out of the box** - AUTH_USER_MODEL pre-configured
+- ✅ **Zero configuration** - Works out of the box, no setup required
+- ✅ **Fast testing** - SQLite in-memory option for unit tests
+
+## SmartTestRunner
+
+The default test runner that automatically handles all test database complexities.
+
+### Automatic Configuration
+
+Django-CFG automatically configures SmartTestRunner in your settings:
+
+```python
+# Auto-generated in settings.py
+TEST_RUNNER = 'django_cfg.testing.runners.SmartTestRunner'
+```
+
+No manual configuration needed - it just works!
+
+### Features
+
+**1. Automatic Database Cleanup**
+
+Removes old test databases without prompting (fixes CI/CD EOFError):
+
+```bash
+# Old behavior (fails in CI):
+python manage.py test
+# Type 'yes' to destroy the 'test_mydb' database? [y/N]
+# ^ Hangs in CI/CD pipelines
+
+# SmartTestRunner behavior:
+python manage.py test
+# Automatically removes old test database
+# Tests run immediately
+```
+
+**2. PostgreSQL Extension Installation**
+
+Automatically installs required extensions in test databases:
+
+```python
+# In your models.py
+from pgvector.django import VectorField
+
+class Document(models.Model):
+    embedding = VectorField(dimensions=1536)  # Requires pgvector extension
+```
+
+```bash
+# SmartTestRunner automatically:
+# 1. Detects pgvector usage
+# 2. Creates test database
+# 3. Installs: vector, pg_trgm, unaccent extensions
+# 4. Runs migrations
+# 5. Executes tests
+```
+
+**3. Migration Consistency Fixes**
+
+Django-CFG automatically configures CustomUser from the box:
+
+```python
+# Django-CFG automatically sets (no configuration needed):
+AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
+
+# SmartTestRunner handles any migration order issues:
+# 1. Detects inconsistent migration history
+# 2. Removes problematic migration records
+# 3. Reapplies migrations in correct order
+# 4. Tests run successfully
+```
+
+**Zero configuration required** - CustomUser is a core django-cfg feature!
+
+### Usage
+
+Simply run your tests normally:
+
+```bash
+# Standard Django test command
+python manage.py test
+
+# With specific app
+python manage.py test apps.trading
+
+# With verbosity
+python manage.py test --verbosity=2
+
+# Keep test database
+python manage.py test --keepdb
+```
+
+SmartTestRunner works transparently with all standard Django test options.
+
+### Console Output
+
+SmartTestRunner provides clear feedback during test setup:
+
+```bash
+$ python manage.py test
+
+Creating test database for alias 'default'...
+Removed old test database: test_crypto_platform
+Installed PostgreSQL extensions for test database 'default'
+Running migrations...
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, sessions, accounts, trading, wallet
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying accounts.0001_initial... OK
+  Applying admin.0001_initial... OK
+  ...
+System check identified no issues (0 silenced).
+..................................................
+----------------------------------------------------------------------
+Ran 50 tests in 2.34s
+
+OK
+Destroying test database for alias 'default'...
+```
+
+## FastTestRunner
+
+For **ultra-fast unit tests** that don't require PostgreSQL features, use FastTestRunner with SQLite in-memory.
+
+### When to Use
+
+FastTestRunner is ideal for:
+
+- Unit tests that don't use database-specific features
+- CI/CD pipelines where speed is critical
+- Quick local test runs during development
+- Tests that don't require pgvector or other PostgreSQL extensions
+
+**Not suitable for:**
+
+- Integration tests requiring PostgreSQL features
+- Tests using vector fields or full-text search
+- Tests requiring specific database behaviors
+
+### Usage
+
+**Option 1: Command line flag**
+
+```bash
+python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+```
+
+**Option 2: Environment variable**
+
+```bash
+# .env.test
+TEST_RUNNER=django_cfg.testing.runners.FastTestRunner
+
+# Run tests
+python manage.py test
+```
+
+**Option 3: Settings override**
+
+```python
+# settings_test.py
+from .settings import *
+
+TEST_RUNNER = 'django_cfg.testing.runners.FastTestRunner'
+```
+
+```bash
+python manage.py test --settings=api.settings_test
+```
+
+### Performance Comparison
+
+```bash
+# SmartTestRunner (PostgreSQL)
+$ time python manage.py test
+Ran 50 tests in 12.45s
+real    0m15.234s
+
+# FastTestRunner (SQLite in-memory)
+$ time python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+Switched to SQLite in-memory for fast testing
+Ran 50 tests in 2.34s
+real    0m3.456s
+```
+
+Up to **5x faster** for unit tests!
+
+## Test Database Configuration
+
+### Automatic TEST Settings
+
+Django-CFG automatically generates TEST configuration for all databases:
+
+```python
+# Auto-generated for PostgreSQL
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mydb',
+        'HOST': 'localhost',
+        'PORT': 5432,
+        # Auto-generated TEST settings:
+        'TEST': {
+            'NAME': 'test_mydb',
+            'TEMPLATE': 'template0',  # Clean template
+            'CHARSET': 'UTF8',
+            'CREATE_DB': True,
+            'MIGRATE': True,
+        }
+    }
+}
+```
+
+### Custom Test Database Names
+
+Override test database names if needed:
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(
+            url=env.database.url,
+            test_name="custom_test_db"  # Custom test DB name
+        )
+    }
+```
+
+### Parallel Testing
+
+SmartTestRunner works with Django's parallel testing:
+
+```bash
+# Run tests in parallel (4 processes)
+python manage.py test --parallel 4
+
+# Each process gets its own test database:
+# test_mydb_1, test_mydb_2, test_mydb_3, test_mydb_4
+```
+
+SmartTestRunner automatically:
+- Creates all parallel test databases
+- Installs extensions in each
+- Cleans up all databases after tests
+
+## Manual Test Database Management
+
+Use the `test_db` command for manual database operations.
+
+### Basic Commands
+
+```bash
+# Show test database information
+python manage.py test_db info
+
+# Clean up old test databases
+python manage.py test_db cleanup
+
+# Reset test database (drop and recreate)
+python manage.py test_db reset
+
+# Check installed PostgreSQL extensions
+python manage.py test_db check-extensions
+```
+
+See [Test Database Command](/docs/cli/commands/testing-monitoring#test_db) for detailed documentation.
+
+## Migration Auto-Fix
+
+SmartTestRunner includes intelligent migration management that automatically fixes common issues.
+
+### Inconsistent Migration History
+
+**Django-CFG Standard:**
+```python
+# Django-CFG automatically configures (in core/generation/core_generators/settings.py):
+AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
+
+# App label in apps.py:
+label = "django_cfg_accounts"
+
+# This is CORE django-cfg functionality - always enabled!
+```
+
+**Solution:**
+
+SmartTestRunner automatically:
+
+1. Detects inconsistent migration history
+2. Identifies problematic migrations (e.g., admin before custom user)
+3. Removes incorrect migration records
+4. Reapplies migrations in correct dependency order
+5. Tests proceed normally
+
+**No manual intervention required!**
+
+### How It Works
+
+```python
+# Automatic bypass during test database setup
+def setup_databases(self, **kwargs):
+    # Step 1: Clean up old test databases
+    self._cleanup_old_test_databases()
+
+    # Step 2: Bypass consistency check with smart handling
+    # Automatically detects and fixes migration order issues
+
+    # Step 3: Install PostgreSQL extensions
+    self._install_extensions()
+
+    return old_config
+```
+
+### Manual Migration Fixes
+
+For production databases, use MigrationManager:
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+manager = MigrationManager()
+
+# Check for migration consistency issues
+has_issues = manager.check_migration_consistency('default')
+
+if has_issues:
+    # Automatically fix inconsistent migrations
+    manager.fix_inconsistent_migrations('default')
+
+    # Migrate with bypass
+    manager.migrate_test_database('default', auto_fix=True)
+```
+
+See [Migrations](/docs/fundamentals/database/migrations#migration-auto-fix) for details.
+
+## Troubleshooting
+
+### Test Database Not Cleaned Up
+
+**Problem:**
+```bash
+ERROR: database "test_mydb" already exists
+```
+
+**Solution:**
+
+```bash
+# Manual cleanup
+python manage.py test_db cleanup
+
+# Or force cleanup before tests
+python manage.py test_db cleanup --force
+
+# Then run tests
+python manage.py test
+```
+
+### Extension Installation Fails
+
+**Problem:**
+```bash
+ERROR: type "vector" does not exist
+```
+
+**Solution:**
+
+1. **Check PostgreSQL extensions are installed:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install postgresql-15-pgvector
+
+# macOS
+brew install pgvector
+```
+
+2. **Verify extension availability:**
+```sql
+-- In PostgreSQL
+SELECT * FROM pg_available_extensions WHERE name IN ('vector', 'pg_trgm', 'unaccent');
+```
+
+3. **Manual installation in test DB:**
+```bash
+python manage.py test_db reset
+python manage.py test_db check-extensions
+```
+
+### Migration Inconsistency Persists
+
+**Problem:**
+```bash
+InconsistentMigrationHistory still occurs despite SmartTestRunner
+```
+
+**Solution:**
+
+1. **Check migration files:**
+```bash
+# Ensure all migration files are committed
+git status apps/*/migrations/
+
+# Verify no conflicting migrations
+python manage.py makemigrations --check
+```
+
+2. **Reset test database:**
+```bash
+# Drop and recreate test database
+python manage.py test_db reset --force
+python manage.py test
+```
+
+3. **Verify django-cfg accounts app:**
+```python
+# Django-CFG automatically includes:
+# INSTALLED_APPS = [
+#     'django_cfg.apps.system.accounts',  # label='django_cfg_accounts'
+#     ...
+# ]
+# AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
+
+# No manual configuration needed!
+```
+
+### Slow Test Database Creation
+
+**Problem:**
+```bash
+Test database creation takes too long
+```
+
+**Solutions:**
+
+**1. Use --keepdb flag:**
+```bash
+# Keep test database between runs
+python manage.py test --keepdb
+```
+
+**2. Use FastTestRunner for unit tests:**
+```bash
+# Switch to SQLite in-memory
+python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+```
+
+**3. Reduce test data:**
+```python
+# Use factories instead of fixtures
+from factory import Factory
+
+class UserFactory(Factory):
+    class Meta:
+        model = User
+
+    email = factory.Faker('email')
+```
+
+### Parallel Testing Issues
+
+**Problem:**
+```bash
+Tests fail when using --parallel
+```
+
+**Solution:**
+
+1. **Ensure tests are isolated:**
+```python
+from django.test import TestCase, TransactionTestCase
+
+class MyTest(TestCase):  # Not TransactionTestCase
+    def test_something(self):
+        # Use TestCase for better parallel support
+        pass
+```
+
+2. **Check for shared state:**
+```python
+# Bad: Global state
+cache = {}
+
+class MyTest(TestCase):
+    def test_one(self):
+        cache['key'] = 'value'  # Breaks parallel tests
+
+# Good: Test isolation
+class MyTest(TestCase):
+    def setUp(self):
+        self.cache = {}  # Each test gets own cache
+```
+
+3. **Use --parallel-keepdb:**
+```bash
+# Faster parallel testing
+python manage.py test --parallel 4 --parallel-keepdb
+```
+
+## Best Practices
+
+### 1. Use SmartTestRunner by Default
+
+SmartTestRunner is configured automatically - no changes needed:
+
+```python
+# No manual configuration required
+# Django-CFG sets TEST_RUNNER automatically
+```
+
+### 2. FastTestRunner for CI/CD
+
+Speed up CI pipelines with FastTestRunner for unit tests:
+
+```yaml
+# .github/workflows/test.yml
+- name: Run unit tests
+  run: |
+    python manage.py test \
+      --testrunner=django_cfg.testing.runners.FastTestRunner \
+      --parallel 4
+```
+
+### 3. Keep Test Database Locally
+
+Faster local development with --keepdb:
+
+```bash
+# First run: creates database
+python manage.py test --keepdb
+
+# Subsequent runs: reuses database
+python manage.py test --keepdb  # Much faster!
+```
+
+### 4. Separate Integration Tests
+
+Use tags to separate fast unit tests from slow integration tests:
+
+```python
+from django.test import tag, TestCase
+
+@tag('unit')
+class FastTest(TestCase):
+    def test_logic(self):
+        # Fast unit test
+        pass
+
+@tag('integration')
+class SlowTest(TestCase):
+    def test_database(self):
+        # Slow integration test
+        pass
+```
+
+```bash
+# Run only fast tests
+python manage.py test --tag=unit
+
+# Run only integration tests (use PostgreSQL)
+python manage.py test --tag=integration
+```
+
+### 5. Clean Up After CI
+
+Clean test databases after CI runs:
+
+```yaml
+# .github/workflows/test.yml
+- name: Cleanup
+  if: always()
+  run: python manage.py test_db cleanup --all --force
+```
+
+## Advanced Usage
+
+### Custom Test Runner
+
+Extend SmartTestRunner for custom behavior:
+
+```python
+# apps/testing/runners.py
+from django_cfg.testing.runners import SmartTestRunner
+
+class MyCustomTestRunner(SmartTestRunner):
+    def setup_databases(self, **kwargs):
+        # Custom setup logic
+        print("Setting up custom test environment...")
+
+        # Call parent
+        config = super().setup_databases(**kwargs)
+
+        # Additional setup
+        self._load_test_data()
+
+        return config
+
+    def _load_test_data(self):
+        """Load custom test data."""
+        from apps.wallet.models import Transaction
+
+        Transaction.objects.create(
+            amount=100.00,
+            currency="BTC",
+            status="completed"
+        )
+```
+
+```python
+# settings.py
+TEST_RUNNER = 'apps.testing.runners.MyCustomTestRunner'
+```
+
+### Programmatic Database Management
+
+Use MigrationManager programmatically:
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+import sys
+
+manager = MigrationManager(
+    stdout=sys.stdout,
+    style=None,
+    logger=None
+)
+
+# Migrate test database with auto-fix
+manager.migrate_test_database('default', auto_fix=True)
+
+# Check consistency
+has_issues = manager.check_migration_consistency('default')
+
+if has_issues:
+    manager.fix_inconsistent_migrations('default')
+```
+
+### Environment-Specific Test Settings
+
+```python
+# api/config.py
+import os
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    @property
+    def databases(self):
+        # Use SQLite in CI for speed
+        if os.getenv('CI'):
+            return {
+                "default": DatabaseConfig.from_url(
+                    url="sqlite:///:memory:"
+                )
+            }
+
+        # Use PostgreSQL locally for full feature testing
+        return {
+            "default": DatabaseConfig.from_url(
+                url=self.env.database.url
+            )
+        }
+```
+
+## See Also
+
+- [**Test Database Command**](/docs/cli/commands/testing-monitoring#test_db) - Manual database management
+- [**Database Overview**](/docs/fundamentals/database) - Database setup guide
+
+---
+
+**Zero-configuration testing - it just works!** 🧪✅

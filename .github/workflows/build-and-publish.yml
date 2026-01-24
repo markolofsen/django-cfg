@@ -1,195 +1,36 @@
-name: Build and Publish
+name: Test Package
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'testpypi'
-        type: choice
-        options:
-          - testpypi
-          - pypi
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  security-gate:
-    runs-on: ubuntu-latest
-    outputs:
-      security-passed: ${{ steps.security-check.outputs.passed }}
-      
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Install security tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install safety bandit detect-secrets
-        
-    - name: Run comprehensive security scan
-      id: security-check
-      run: |
-        cd devops
-        
-        # Run security scan and capture exit code
-        if python scripts/security_scan.py --json --output ../security-report.json; then
-          echo "passed=true" >> $GITHUB_OUTPUT
-          echo "✅ Security scan passed"
-        else
-          echo "passed=false" >> $GITHUB_OUTPUT
-          echo "❌ Security scan failed"
-          
-          # Show the security report
-          echo "Security issues found:"
-          cat ../security-report.json | jq -r '.blocking_issues[]' || echo "Could not parse blocking issues"
-          
-          exit 1
-        fi
-        
-    - name: Upload security report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-report
-        path: security-report.json
-
-  build:
-    needs: security-gate
-    if: needs.security-gate.outputs.security-passed == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
-        pip install -r requirements-dev.txt
-        
-    - name: Build package
-      run: |
-        cd devops
-        python scripts/build_package.py --no-security-scan  # Security already checked
-        
-    - name: Verify build
-      run: |
-        twine check dist/*
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist/
-
-  test-install:
-    needs: build
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
-        
-    steps:
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
-        path: dist/
-        
-    - name: Test installation
-      run: |
-        pip install dist/*.whl
-        python -c "import django_cfg; print('✅ Package imported successfully')"
+        python: ['3.10', '3.11', '3.12']
 
-  publish-testpypi:
-    needs: [security-gate, build, test-install]
-    if: |
-      needs.security-gate.outputs.security-passed == 'true' && 
-      (github.event.inputs.environment == 'testpypi' || 
-       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')))
-    runs-on: ubuntu-latest
-    environment: testpypi
-    
     steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
-        path: dist/
-        
-    - name: Publish to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        
-    - name: Test installation from TestPyPI
-      run: |
-        sleep 60  # Wait for package to be available
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ django-cfg
-        python -c "import django_cfg; print('✅ Package installed from TestPyPI successfully')"
+      - uses: actions/checkout@v4
 
-  publish-pypi:
-    needs: [security-gate, build, test-install, publish-testpypi]
-    if: |
-      needs.security-gate.outputs.security-passed == 'true' && 
-      github.event.inputs.environment == 'pypi' && 
-      github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    environment: pypi
-    
-    steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
-        path: dist/
-        
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/v')
-      with:
-        files: dist/*
-        generate_release_notes: true
-        
-  notify-failure:
-    needs: [security-gate, build, test-install]
-    if: failure()
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Notify on failure
-      run: |
-        echo "🚨 Build or security check failed!"
-        echo "Security passed: ${{ needs.security-gate.outputs.security-passed }}"
-        
-        if [ "${{ needs.security-gate.outputs.security-passed }}" != "true" ]; then
-          echo "❌ Security gate failed - publication blocked"
-          echo "Please review and fix security issues before publishing"
-        fi
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install package
+        run: pip install packages/django_cfg/
+
+      - name: Test import
+        run: |
+          python -c "import django_cfg; print(f'OK: django_cfg {django_cfg.__version__}')"
+
+      - name: Basic sanity check
+        run: |
+          python -c "
+          from django_cfg.core.settings import DjangoCfgSettings
+          print('OK: Settings class imported')
+          "

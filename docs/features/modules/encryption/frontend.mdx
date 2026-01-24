@@ -1,0 +1,317 @@
+---
+title: Frontend Decryption
+description: Client-side decryption with @djangocfg/crypto - React hooks and Web Crypto API integration.
+sidebar_label: Frontend Decryption
+sidebar_position: 2
+keywords:
+  - djangocfg crypto
+  - frontend decryption
+  - react hooks
+  - web crypto api
+  - aes-256-gcm decryption
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components'
+
+# Frontend Decryption
+
+The [`@djangocfg/crypto`](https://npmjs.com/package/@djangocfg/crypto) package provides client-side decryption for Django-CFG encrypted API responses.
+
+<Callout type="info">
+**NPM Package:** [`@djangocfg/crypto`](https://npmjs.com/package/@djangocfg/crypto)
+</Callout>
+
+## Installation
+
+```bash
+pnpm add @djangocfg/crypto
+```
+
+## Features
+
+- **Web Crypto API** - Native browser encryption, zero dependencies
+- **TypeScript** - Full type coverage
+- **React Hooks** - Declarative decryption patterns
+- **Tree-Shakeable** - Only imports what you use
+
+## Basic Usage
+
+### Create Decryption Client
+
+```typescript
+import { createDecryptionClient } from '@djangocfg/crypto';
+
+const crypto = await createDecryptionClient({
+  secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+  userId: user.id,           // Optional, for per-user keys
+  iterations: 100_000,       // Must match backend (default: 100,000)
+});
+```
+
+### Decrypt API Response
+
+```typescript
+const response = await fetch('/api/products/?encrypt=true');
+const encrypted = await response.json();
+
+// Recursively decrypts all encrypted fields
+const products = await crypto.decryptObject(encrypted);
+console.log(products[0].price); // Decrypted value
+```
+
+### Decrypt Single Field
+
+```typescript
+if (crypto.isEncryptedField(product.price)) {
+  const price = await crypto.decryptField<number>(product.price);
+  console.log(price); // 99.99
+}
+```
+
+## React Hooks
+
+### useDecrypt
+
+Automatically decrypt data on mount:
+
+```tsx
+import { useDecrypt } from '@djangocfg/crypto/react';
+
+function ProductCard({ product }: { product: EncryptedProduct }) {
+  const { data, isLoading, error } = useDecrypt(product, {
+    secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+    userId: user.id,
+  });
+
+  if (isLoading) return <Skeleton />;
+  if (error) return <Error message={error.message} />;
+
+  return (
+    <div>
+      <h2>{data.name}</h2>
+      <span>${data.price}</span>
+    </div>
+  );
+}
+```
+
+### useLazyDecrypt
+
+Decrypt on demand with manual trigger:
+
+```tsx
+import { useLazyDecrypt } from '@djangocfg/crypto/react';
+
+function ProductPrice({ product }: { product: EncryptedProduct }) {
+  const { decrypt, data, isLoading } = useLazyDecrypt({
+    secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+  });
+
+  return (
+    <div>
+      <button onClick={() => decrypt(product)} disabled={isLoading}>
+        {isLoading ? 'Decrypting...' : 'Show Price'}
+      </button>
+      {data && <span>${data.price}</span>}
+    </div>
+  );
+}
+```
+
+### useDecryptionClient
+
+Create a memoized client for multiple decryptions:
+
+```tsx
+import { useDecryptionClient } from '@djangocfg/crypto/react';
+
+function ProductList({ products }: { products: EncryptedProduct[] }) {
+  const { client, isReady, error } = useDecryptionClient({
+    secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+    userId: user.id,
+  });
+
+  if (!isReady) return <Loading />;
+
+  return (
+    <ul>
+      {products.map(product => (
+        <ProductItem key={product.id} product={product} client={client!} />
+      ))}
+    </ul>
+  );
+}
+```
+
+### useIsEncrypted
+
+Check if a value is encrypted:
+
+```tsx
+import { useIsEncrypted } from '@djangocfg/crypto/react';
+
+function PriceDisplay({ value }: { value: unknown }) {
+  const isEncrypted = useIsEncrypted(value);
+
+  if (isEncrypted) {
+    return <EncryptedBadge />;
+  }
+
+  return <span>{value}</span>;
+}
+```
+
+## Integration Examples
+
+### With TanStack Query
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { useDecryptionClient } from '@djangocfg/crypto/react';
+
+function useProducts() {
+  const { client } = useDecryptionClient({
+    secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+  });
+
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const res = await fetch('/api/products/?encrypt=true');
+      const encrypted = await res.json();
+      return client?.decryptObject(encrypted);
+    },
+    enabled: !!client,
+  });
+}
+```
+
+### With SWR
+
+```typescript
+import useSWR from 'swr';
+import { createDecryptionClient } from '@djangocfg/crypto';
+
+// Create client once at module level
+let cryptoClient: Awaited<ReturnType<typeof createDecryptionClient>> | null = null;
+
+async function getClient() {
+  if (!cryptoClient) {
+    cryptoClient = await createDecryptionClient({
+      secretKey: process.env.NEXT_PUBLIC_DECRYPT_KEY!,
+    });
+  }
+  return cryptoClient;
+}
+
+const fetcher = async (url: string) => {
+  const client = await getClient();
+  const res = await fetch(url);
+  const encrypted = await res.json();
+  return client.decryptObject(encrypted);
+};
+
+function ProductList() {
+  const { data } = useSWR('/api/products/?encrypt=true', fetcher);
+  // ...
+}
+```
+
+## TypeScript Types
+
+```typescript
+// Encrypted field envelope
+interface EncryptedField {
+  encrypted: true;
+  field?: string;
+  algorithm: 'AES-256-GCM' | 'AES-256-CBC';
+  iv: string;        // base64
+  data: string;      // base64
+  auth_tag: string;  // base64
+}
+
+// Configuration
+interface DecryptionConfig {
+  secretKey: string;
+  userId?: string | number;
+  sessionId?: string;
+  iterations?: number;      // default: 100,000
+  keyPrefix?: string;       // default: "djangocfg_encryption"
+}
+
+// Result type for safe decryption
+type DecryptionResult<T> =
+  | { success: true; data: T }
+  | { success: false; message: string; code: DecryptionErrorCode };
+
+type DecryptionErrorCode =
+  | 'INVALID_FORMAT'
+  | 'KEY_ERROR'
+  | 'AUTH_FAILED'
+  | 'DECRYPTION_FAILED';
+```
+
+## API Reference
+
+### Core Functions
+
+| Function | Description |
+|----------|-------------|
+| `createDecryptionClient(config)` | Create client with cached key |
+| `decryptField<T>(field, key)` | Decrypt single field |
+| `decryptObject<T>(data, key)` | Recursively decrypt object |
+| `isEncryptedField(value)` | Type guard for encrypted fields |
+| `safeDecrypt<T>(fn)` | Error-handled decryption |
+
+### Key Derivation
+
+| Function | Description |
+|----------|-------------|
+| `deriveKeyFromConfig(config)` | Derive key from config (PBKDF2) |
+| `deriveKey(password, salt, iterations)` | Derive key from password + salt |
+| `buildSalt(keyPrefix, userId, sessionId)` | Generate salt from components |
+
+## Error Handling
+
+Use `safeDecrypt` for error handling:
+
+```typescript
+import { safeDecrypt, createDecryptionClient } from '@djangocfg/crypto';
+
+const crypto = await createDecryptionClient({ secretKey: '...' });
+
+const result = await safeDecrypt(() => crypto.decryptObject(data));
+
+if (result.success) {
+  console.log(result.data);
+} else {
+  console.error(result.code, result.message);
+  // Handle: 'INVALID_FORMAT' | 'KEY_ERROR' | 'AUTH_FAILED' | 'DECRYPTION_FAILED'
+}
+```
+
+## Browser Compatibility
+
+| Browser | Version |
+|---------|---------|
+| Chrome | 37+ |
+| Firefox | 34+ |
+| Safari | 11+ |
+| Edge | 12+ |
+| Node.js | 15+ (with Web Crypto) |
+
+## Security Notes
+
+<Callout type="warning">
+**Important Security Considerations**
+</Callout>
+
+1. **Environment Variables** - Store `secretKey` in env variables, never hardcode
+2. **Per-User Keys** - Use `userId` for user isolation
+3. **HTTPS Required** - Key derivation happens in browser memory
+4. **Iterations Match** - `iterations` must match backend (default: 100,000)
+
+## See Also
+
+- **[Encryption Overview](./overview)** - Backend configuration
+- **[Configuration Guide](/docs/fundamentals/configuration)** - DjangoConfig setup

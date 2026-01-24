@@ -1,0 +1,696 @@
+---
+title: Troubleshooting
+description: Common gRPC issues and solutions, including the critical connection_timeout bug
+sidebar_label: Troubleshooting
+sidebar_position: 11
+keywords:
+  - grpc troubleshooting
+  - grpc debugging
+  - connection timeout
+  - StopAsyncIteration
+  - grpc python bugs
+---
+
+# gRPC Troubleshooting
+
+Common issues and solutions for gRPC streaming.
+
+## Critical: connection_timeout Bug
+
+<Callout type="error">
+**Severity: Critical**
+
+This bug affects grpcio 1.76.0+ with async bidirectional streaming. It causes streams to close after only 3-15 messages.
+</Callout>
+
+### Symptoms
+
+1. Client connects and sends initial messages (register, config_schema, etc.)
+2. Server receives 3-15 messages correctly
+3. Server's input loop suddenly receives `StopAsyncIteration`
+4. Client continues sending messages (no errors on client side)
+5. Server logs show: `"Client stream ended"` but client is still active
+
+**Server Logs (Before Fix):**
+```
+17:57:20 | INFO     | Client 513ba65b... stream ended
+17:57:20 | INFO     | _process_anext while loop exited, context.cancelled()=False
+17:57:23 | DEBUG    | Sent PING #1  <-- Server continues but client stream is "dead"
+```
+
+### Root Cause
+
+Setting `connection_timeout` on `anext()` calls causes grpcio to interpret timeout as stream closure.
+
+```python
+# InputProcessor._process_anext() - PROBLEMATIC CODE
+try:
+    message = await asyncio.wait_for(
+        request_iterator.__anext__(),
+        timeout=config.connection_timeout  # PROBLEM: was 0.5 seconds
+    )
+except asyncio.TimeoutError:
+    continue  # But gRPC already marked stream as closed!
+```
+
+### Race Condition Timeline
+
+| Time | Event |
+|------|-------|
+| 0.0s | Client connects, sends: register, config_schema, command_ack |
+| 0.3s | Client's generator blocks on: `await queue.get()` (waiting) |
+| 0.5s | Server's `anext()` timeout fires - `asyncio.TimeoutError` |
+| 0.5s | grpcio interprets timeout as stream closure |
+| 0.5s | Next `anext()` returns `StopAsyncIteration` |
+
+**Result:** Server thinks client disconnected, but client is still alive!
+
+### Why This Happens
+
+In grpcio's async implementation, calling `anext()` with a timeout that fires **before the underlying async generator yields** corrupts the generator's state machine. The timeout is caught at the Python level, but grpcio's internal `_MessageReceiver` has already transitioned to a "stream closed" state.
+
+### Solution
+
+**Remove `connection_timeout` from config:**
+
+```python
+# BEFORE (WRONG):
+BotStreamingConfig = BidirectionalStreamingConfig(
+    connection_timeout=0.5,  # BAD: Causes StopAsyncIteration bug
+    ...
+)
+
+# AFTER (CORRECT):
+BotStreamingConfig = BidirectionalStreamingConfig(
+    connection_timeout=None,  # OK: Rely on ping/keepalive instead
+    ...
+)
+```
+
+**Use ping/keepalive for liveness detection:**
+
+```python
+BotStreamingConfig = BidirectionalStreamingConfig(
+    # Ping strategy for liveness detection
+    ping_strategy=PingStrategy.INTERVAL,
+    ping_interval=5.0,      # Send PING every 5 seconds
+    ping_timeout=180.0,     # Disconnect if no response in 180 seconds
+
+    # CRITICAL: No timeout on anext()
+    connection_timeout=None,
+
+    # Other settings
+    max_queue_size=1000,
+    enable_sleep_zero=True,
+)
+```
+
+### Key Insight
+
+> **Message read timeouts and connection liveness detection are separate concerns.**
+>
+> - Use `ping/keepalive` for checking if connection is alive
+> - Do NOT use timeouts on `anext()` - it corrupts grpcio stream state
+
+### Results After Fix
+
+| Metric | Before Fix | After Fix |
+|--------|------------|-----------|
+| Stream duration | ~0.5 seconds | Indefinite |
+| Messages received | 3-15 | Unlimited |
+| PING cycles | 0-1 | All succeed |
+| StopAsyncIteration | After 3 messages | Only on actual disconnect |
+
+### How to Check if You Have This Bug
+
+1. Enable debug logging:
+   ```python
+   enable_logging=True,
+   logger_name="grpc_streaming",
+   ```
+
+2. Look for this pattern in logs:
+   ```
+   Client XXX stream ended
+   _process_anext while loop exited, context.cancelled()=False
+   Sent PING #1  <-- PINGs sent AFTER stream "ended"
+   ```
+
+3. If you see PINGs being sent after "stream ended", you have the bug.
+
+---
+
+## Stream Closes Unexpectedly
+
+### Symptom
+Stream closes after a few seconds without any error on client side.
+
+### Possible Causes
+
+1. **Client not sending heartbeats**
+   - Solution: Send periodic heartbeats or keepalive messages
+
+2. **Server ping timeout too short**
+   - Solution: Increase `ping_timeout` value
+
+3. **Network issues / firewall**
+   - Solution: Check network connectivity, configure keepalive at channel level
+
+### Client-Side Fix
+
+```python
+async def _request_generator(self):
+    # Initial messages
+    yield create_register_message()
+
+    while self._running:
+        try:
+            message = await asyncio.wait_for(
+                self._send_queue.get(),
+                timeout=5.0  # Local timeout, OK here
+            )
+            yield message
+        except asyncio.TimeoutError:
+            # Yield heartbeat to keep stream active
+            yield create_heartbeat_message()
+```
+
+---
+
+## "RuntimeError: no running event loop"
+
+### Symptom
+```
+RuntimeError: no running event loop
+```
+
+### Cause
+Trying to use `await` in synchronous context.
+
+### Solution
+Make the method `async def`:
+
+```python
+# Before (wrong)
+def GetUser(self, request, context):
+    user = await something()  # Error!
+
+# After (correct)
+async def GetUser(self, request, context):
+    user = await something()  # Works
+```
+
+---
+
+## "This query is synchronous"
+
+### Symptom
+```
+django.core.exceptions.SynchronousOnlyOperation:
+You cannot call this from an async context
+```
+
+### Cause
+Using Django ORM directly with `await`.
+
+### Solution
+Wrap ORM calls in `asyncio.to_thread()`:
+
+```python
+# Before (wrong)
+user = await User.objects.get(id=1)  # Error!
+
+# After (correct)
+user = await asyncio.to_thread(User.objects.get, id=1)  # Works
+```
+
+Or use Django async ORM methods:
+
+```python
+# Using Django's async ORM (Django 4.1+)
+user = await User.objects.aget(id=1)  # Works
+users = await User.objects.filter(active=True).aiterator()  # Works
+```
+
+---
+
+## Client Receives Empty Responses
+
+### Symptom
+Client receives empty protobuf messages.
+
+### Possible Causes
+
+1. **Handler not returning response**
+   ```python
+   # Wrong - no return
+   async def handle_message(service, client_id, message, context):
+       process_message(message)
+       # Missing return!
+
+   # Correct
+   async def handle_message(service, client_id, message, context):
+       process_message(message)
+       return {"status": "ok"}  # OK
+   ```
+
+2. **Response serialization error**
+   - Check protobuf message definition matches response data
+
+---
+
+## Commands Not Reaching Client
+
+### Symptom
+Server sends commands but client never receives them.
+
+### Checklist
+
+1. **Check client is listening for responses**
+   ```python
+   async for response in response_stream:
+       await self._handle_response(response)  # Must be running
+   ```
+
+2. **Check command queue is not full**
+   ```python
+   BidirectionalStreamingConfig(
+       max_queue_size=1000,  # Increase if needed
+   )
+   ```
+
+3. **Check client is registered**
+   ```python
+   # Server side
+   if not service.is_client_registered(client_id):
+       logger.warning(f"Client {client_id} not registered")
+   ```
+
+---
+
+## PONG Not Received
+
+### Symptom
+Server logs: `PONG timeout for client X`
+
+### Causes
+
+1. **Client not responding to PING**
+   ```python
+   # Client must handle PING messages
+   async def _handle_response(self, response):
+       if response.type == "PING":
+           await self.send_message(self._create_pong_message(
+               ping_id=response.ping_id
+           ))
+   ```
+
+2. **Network latency**
+   - Increase `ping_timeout` value
+
+3. **Client processing blocking**
+   - Make sure handlers are async and don't block
+
+---
+
+## High Memory Usage
+
+### Symptom
+Memory usage grows over time with streaming connections.
+
+### Solutions
+
+1. **Check queue sizes**
+   ```python
+   BidirectionalStreamingConfig(
+       max_queue_size=100,  # Reduce from default 1000
+   )
+   ```
+
+2. **Check for memory leaks in handlers**
+   - Make sure to clean up resources after handling
+
+3. **Enable connection cleanup**
+   ```python
+   async def on_client_disconnected(self, client_id, context):
+       await self.cleanup_client_resources(client_id)
+   ```
+
+---
+
+## gRPC Server Won't Start
+
+### Symptom
+```
+OSError: [Errno 48] Address already in use
+```
+
+### Solution
+
+1. **Check if port is in use**
+   ```bash
+   lsof -i :50051
+   ```
+
+2. **Kill existing process**
+   ```bash
+   pkill -f "python manage.py rungrpc"
+   ```
+
+3. **Use different port**
+   ```python
+   GRPCServerConfig(
+       port=50052,  # Use different port
+   )
+   ```
+
+---
+
+## Debugging Tips
+
+### Enable Verbose Logging
+
+```python
+BidirectionalStreamingConfig(
+    enable_logging=True,
+    logger_name="grpc_streaming",
+)
+```
+
+In settings:
+
+```python
+LOGGING = {
+    'loggers': {
+        'grpc_streaming': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        },
+    },
+}
+```
+
+### Use grpcurl for Testing
+
+```bash
+# List services
+grpcurl -plaintext localhost:50051 list
+
+# Describe service
+grpcurl -plaintext localhost:50051 describe api.bots.BotService
+
+# Call method
+grpcurl -plaintext -d '{"bot_uuid": "test"}' \
+    localhost:50051 api.bots.BotService/GetBot
+```
+
+### Monitor Connections
+
+```python
+# Get active connections count
+active_count = await service.get_active_connections_count()
+
+# Get specific client info
+client_info = await service.get_client_info(client_id)
+print(f"Client {client_id}: {client_info}")
+```
+
+---
+
+## Pydantic Settings Validation Errors (Bot Client)
+
+<Callout type="warning">
+**Common Issue:** Bot clients using Pydantic settings may fail to parse CONFIG_UPDATE commands from Django due to JSON serialization differences.
+</Callout>
+
+### Symptom: Decimal Validation Error
+
+```
+pydantic_core._pydantic_core.ValidationError: 1 validation error for ScalperSettings
+position_size_usdt
+  Input should be a valid decimal [type=decimal_type, input_value='100', input_type=str]
+```
+
+### Cause
+
+Django serializes `Decimal` fields as strings in JSON, but Pydantic expects `Decimal` type with constraints like `ge=10, le=10000`.
+
+### Solution
+
+Add a `field_validator` with `mode="before"` to convert strings to Decimal:
+
+```python
+from decimal import Decimal
+from pydantic import Field, field_validator
+
+class BotSettings(BaseSettings):
+    position_size_usdt: Decimal = Field(
+        default=Decimal("100"),
+        ge=10,
+        le=10000,
+        description="Position size in USDT",
+    )
+
+    @field_validator("position_size_usdt", mode="before")
+    @classmethod
+    def convert_position_size(cls, v):
+        """Convert string to Decimal (Django sends strings via JSON)."""
+        if isinstance(v, str):
+            return Decimal(v)
+        return v
+```
+
+---
+
+### Symptom: List Contains None Values
+
+```
+pydantic_core._pydantic_core.ValidationError: 1 validation error for ScalperSettings
+symbols.2
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+```
+
+### Cause
+
+Django admin may send lists with `None` values: `['BTCUSDT', 'ETHUSDT', None]`.
+
+### Solution
+
+Add a `field_validator` to filter out `None` values:
+
+```python
+from pydantic import Field, field_validator
+
+class BotSettings(BaseSettings):
+    symbols: list[str] = Field(
+        default=["BTCUSDT", "ETHUSDT"],
+        description="Allowed trading symbols",
+    )
+
+    @field_validator("symbols", mode="before")
+    @classmethod
+    def filter_none_symbols(cls, v):
+        """Filter out None values from symbols list."""
+        if isinstance(v, list):
+            return [s for s in v if s is not None]
+        return v
+```
+
+---
+
+### Complete Example
+
+```python
+from decimal import Decimal
+from pydantic import Field, field_validator
+from stockapis_bot import BotSettings
+
+class ScalperSettings(BotSettings):
+    """Bot settings with Django JSON compatibility."""
+
+    min_confidence: float = Field(default=0.7, ge=0, le=1)
+
+    position_size_usdt: Decimal = Field(
+        default=Decimal("100"),
+        ge=10,
+        le=10000,
+    )
+
+    @field_validator("position_size_usdt", mode="before")
+    @classmethod
+    def convert_position_size(cls, v):
+        if isinstance(v, str):
+            return Decimal(v)
+        return v
+
+    dry_run: bool = Field(default=True)
+
+    symbols: list[str] = Field(default=["BTCUSDT", "ETHUSDT"])
+
+    @field_validator("symbols", mode="before")
+    @classmethod
+    def filter_none_symbols(cls, v):
+        if isinstance(v, list):
+            return [s for s in v if s is not None]
+        return v
+```
+
+### Key Insight
+
+> **Django JSON serialization differs from Python types.**
+>
+> - `Decimal` → `str` (JSON has no decimal type)
+> - Lists may contain `null` from admin forms
+> - Always add `mode="before"` validators for type conversion
+
+---
+
+## Resilience Issues
+
+### CircuitOpenError
+
+**Symptom:** Calls fail immediately with `CircuitOpenError`.
+
+**Cause:** Circuit breaker is open due to repeated failures.
+
+**Solution:**
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import CircuitOpenError
+
+try:
+    result = await client.call_method(...)
+except CircuitOpenError as e:
+    print(f"Circuit open for {e.target_id}")
+    print(f"Retry in {e.time_until_retry:.1f} seconds")
+
+    # Option 1: Return cached/fallback data
+    return get_cached_response()
+
+    # Option 2: Wait and retry
+    await asyncio.sleep(e.time_until_retry)
+    result = await client.call_method(...)
+```
+
+**Check circuit breaker status:**
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import GRPCCircuitBreaker
+
+# Get all circuit breaker stats
+stats = GRPCCircuitBreaker.get_all_stats()
+for target_id, stat in stats.items():
+    print(f"{target_id}: {stat['state']}")
+
+# Reset a specific breaker
+breaker = await GRPCCircuitBreaker.get_or_create("service-001")
+breaker.reset()
+```
+
+### Retry Exhaustion
+
+**Symptom:** `stamina.RetryExhausted` exception after multiple failures.
+
+**Cause:** All retry attempts failed.
+
+**Solution:**
+
+1. Check if the target service is available
+2. Increase retry attempts or timeout
+3. Check for non-retryable errors
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import is_retryable_error
+
+try:
+    result = await client.call_method(...)
+except Exception as e:
+    if is_retryable_error(e):
+        print("Service temporarily unavailable")
+    else:
+        print(f"Non-retryable error: {e}")
+```
+
+### Pool Exhaustion
+
+**Symptom:** Slow channel acquisition, connection timeouts.
+
+**Cause:** All channels in pool are in use.
+
+**Solution:**
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import get_channel_pool
+
+# Check pool stats
+pool = get_channel_pool()
+stats = pool.get_stats()
+print(f"Total: {stats['total_channels']}")
+print(f"In use: {stats['channels_in_use']}")
+print(f"Idle: {stats['channels_idle']}")
+
+# Increase pool size if needed
+from django_cfg.apps.integrations.grpc.services.client import PoolConfig
+config = PoolConfig(max_size=50)  # Increase from default 20
+```
+
+---
+
+## Too Many Interceptor Layers (StopAsyncIteration Bug)
+
+<Callout type="error">
+**Severity: Critical**
+
+Having more than 2 interceptor layers causes the same `StopAsyncIteration` bug as `connection_timeout`.
+</Callout>
+
+### Symptom
+
+Same as connection_timeout bug: stream closes after ~15 messages with `StopAsyncIteration`.
+
+### Cause
+
+Each interceptor wraps `request_iterator` in an async generator:
+
+```
+Interceptor 1 → wraps iterator
+  Interceptor 2 → wraps wrapped iterator
+    Interceptor 3 → wraps double-wrapped iterator
+      Interceptor 4 → wraps triple-wrapped iterator
+        Interceptor 5 → 5 layers of async generators!
+```
+
+With 5 layers, buffer backpressure causes grpcio to fire `StopAsyncIteration` prematurely.
+
+### Solution
+
+Use `ObservabilityInterceptor` which consolidates metrics, logging, DB logging, and Centrifugo into a single interceptor:
+
+```python
+# OLD (5 layers - BROKEN):
+interceptors = [
+    MetricsInterceptor(),
+    LoggingInterceptor(),
+    RequestLoggerInterceptor(),
+    CentrifugoInterceptor(),
+    ApiKeyAuthInterceptor(),
+]
+
+# NEW (2 layers - WORKS):
+interceptors = [
+    ApiKeyAuthInterceptor(),
+    ObservabilityInterceptor(),  # Combines all 4 interceptors!
+]
+```
+
+See [Architecture](../architecture#1-interceptors-pipeline) for details.
+
+---
+
+## Related Documentation
+
+- **[Resilience Patterns](../resilience)** - Retry, circuit breaker, logging
+- **[Connection Pooling](../connection-pooling)** - Channel reuse
+- **[Architecture](../architecture)** - ObservabilityInterceptor architecture
+- **[Streaming Patterns](../streaming-patterns)** - Best practices for streaming
+- **[Configuration](../configuration)** - Configuration options

@@ -1,0 +1,299 @@
+---
+title: Caching
+description: Intelligent caching for LLM responses and images with TTL management.
+sidebar_label: Caching
+sidebar_position: 6
+keywords:
+  - llm cache
+  - response caching
+  - image cache
+  - ttl
+---
+
+# Caching
+
+Intelligent caching for LLM responses and images with TTL management.
+
+## Overview
+
+Django LLM provides multiple caching layers:
+
+| Cache | Purpose | Default TTL |
+|-------|---------|-------------|
+| LLM Cache | Text responses | 1 hour |
+| Image Cache | Images & vision responses | 168 hours (7 days) |
+| Models Cache | Model pricing | 24 hours |
+
+## LLM Response Cache
+
+### Configuration
+
+```python
+from django_cfg.modules.django_llm.llm.client import LLMClient
+from pathlib import Path
+
+client = LLMClient(
+    cache_dir=Path("cache/llm"),
+    cache_ttl=3600,        # 1 hour
+    max_cache_size=1000    # Max entries
+)
+```
+
+### Direct Access
+
+```python
+from django_cfg.modules.django_llm.llm.cache import LLMCache
+
+cache = LLMCache(
+    cache_dir=Path("cache/llm"),
+    ttl=3600,
+    max_size=1000
+)
+
+# Store response
+cache.set(cache_key, response_data)
+
+# Retrieve
+result = cache.get(cache_key)  # Returns None if expired/missing
+
+# Cache info
+info = cache.get_cache_info()
+print(f"Size: {info['size']}")
+print(f"Hit rate: {info['hit_rate']:.2%}")
+
+# Clear
+cache.clear_cache()
+cache.clear_cache(model="gpt-4o-mini")  # Model-specific
+```
+
+### Custom Key Strategy
+
+```python
+def cached_completion(prompt, model="gpt-4o-mini", use_cache=True):
+    cache_key = f"{model}:{hash(prompt)}"
+
+    if use_cache:
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+    response = client.chat_completion(
+        messages=[{"role": "user", "content": prompt}],
+        model=model
+    )
+
+    if use_cache:
+        cache.set(cache_key, response, ttl=3600)
+
+    return response
+```
+
+### Conditional Caching
+
+```python
+def smart_cache(prompt, model):
+    """Cache expensive requests only."""
+    input_tokens = tokenizer.count_tokens(prompt, model)
+    estimated_cost = calculate_cost(model, input_tokens, 100)
+
+    # Cache if cost > $0.01
+    use_cache = estimated_cost > 0.01
+
+    return cached_completion(prompt, model, use_cache)
+```
+
+## Image Cache
+
+### Configuration
+
+```python
+from django_cfg.modules.django_llm.llm.vision import ImageCache, get_image_cache
+from pathlib import Path
+
+cache = get_image_cache(
+    cache_dir=Path("cache/images"),
+    ttl_hours=168  # 7 days
+)
+```
+
+### Store & Retrieve Images
+
+```python
+# Store image
+cache.set_image(url, image_bytes, "image/jpeg")
+
+# Retrieve
+result = cache.get_image(url)
+if result:
+    image_bytes, content_type = result
+```
+
+### Store & Retrieve Responses
+
+```python
+# Store vision response
+cache.set_response(cache_key, {
+    "text": "extracted text",
+    "cost": 0.001
+})
+
+# Retrieve
+result = cache.get_response(cache_key)
+```
+
+### Cache Management
+
+```python
+# Get stats
+stats = cache.get_stats()
+print(f"Enabled: {stats['enabled']}")
+print(f"Images: {stats['image_count']}")
+print(f"Responses: {stats['response_count']}")
+
+# Clear all
+count = cache.clear()
+print(f"Cleared {count} entries")
+
+# Cleanup expired only
+count = cache.cleanup_expired()
+print(f"Removed {count} expired entries")
+```
+
+## Models Pricing Cache
+
+```python
+from django_cfg.modules.django_llm.llm.vision import VisionModelsRegistry
+
+registry = VisionModelsRegistry(
+    api_key=api_key,
+    cache_dir=Path("cache/models")
+)
+
+# Fetch (uses cache if valid)
+await registry.fetch()
+
+# Force refresh
+await registry.fetch(force_refresh=True)
+
+# Check if loaded
+if registry.is_loaded:
+    model = registry.get("openai/gpt-4o")
+```
+
+## Cache Strategies
+
+### Time-Based TTL
+
+```python
+# Short TTL for dynamic data
+cache = LLMCache(ttl=300)  # 5 minutes
+
+# Long TTL for stable data
+cache = ImageCache(ttl_hours=720)  # 30 days
+```
+
+### Size-Based Eviction
+
+```python
+# Limit cache size
+cache = LLMCache(max_size=500)  # 500 entries max
+# Oldest entries evicted when full
+```
+
+### Content-Based
+
+```python
+def should_cache(response):
+    """Cache successful, non-empty responses."""
+    return (
+        response.get('content') and
+        len(response['content']) > 10 and
+        not response.get('error')
+    )
+```
+
+## Best Practices
+
+### Cache Keys
+
+```python
+import hashlib
+
+def make_cache_key(model, messages, temperature):
+    """Deterministic cache key."""
+    content = f"{model}:{messages}:{temperature}"
+    return hashlib.sha256(content.encode()).hexdigest()
+```
+
+### Cache Invalidation
+
+```python
+# Clear specific model
+cache.clear_cache(model="gpt-4o")
+
+# Clear by pattern
+for key in cache.keys():
+    if "outdated" in key:
+        cache.delete(key)
+```
+
+### Monitoring
+
+```python
+class CacheMonitor:
+    def __init__(self, cache):
+        self.cache = cache
+        self.hits = 0
+        self.misses = 0
+
+    def get(self, key):
+        result = self.cache.get(key)
+        if result:
+            self.hits += 1
+        else:
+            self.misses += 1
+        return result
+
+    @property
+    def hit_rate(self):
+        total = self.hits + self.misses
+        return self.hits / total if total else 0
+```
+
+## Disabling Cache
+
+```python
+# Disable for specific call
+response = client.chat_completion(
+    messages=[...],
+    use_cache=False
+)
+
+# Disable globally
+client = LLMClient(cache_dir=None)
+```
+
+## File Structure
+
+```
+cache/
+├── llm/
+│   ├── gpt-4o-mini/
+│   │   └── {hash}.json
+│   └── gpt-4o/
+│       └── {hash}.json
+├── images/
+│   ├── images/
+│   │   └── {url_hash}.{ext}
+│   └── responses/
+│       └── {key_hash}.json
+└── models/
+    └── vision_models.json
+```
+
+## Related
+
+- [Cost Tracking](/docs/features/modules/llm/cost-tracking) - Caching reduces costs
+- [Vision & OCR](/docs/features/modules/llm/vision) - Image caching
+
+TAGS: caching, ttl, performance, storage

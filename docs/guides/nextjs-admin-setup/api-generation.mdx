@@ -1,0 +1,306 @@
+---
+title: API Generation
+description: Generate TypeScript clients from Django REST Framework endpoints
+---
+
+import { Callout, Tabs, FileTree } from 'nextra/components'
+
+# API Generation
+
+Django-CFG automatically generates typed API clients from your Django REST Framework endpoints.
+
+## Generate Clients
+
+Run the generation command from your Django project directory:
+
+<Tabs items={['Makefile', 'Direct Command']}>
+  <Tabs.Tab>
+```bash
+cd solution/projects/django
+make api
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```bash
+cd solution/projects/django
+poetry run python manage.py generate_client
+```
+  </Tabs.Tab>
+</Tabs>
+
+## What Gets Generated
+
+The command generates multiple client types based on your `OpenAPIConfig`:
+
+<FileTree>
+  <FileTree.Folder name="app/_lib/api/generated" defaultOpen>
+    <FileTree.Folder name="custom" defaultOpen>
+      <FileTree.File name="index.ts" />
+      <FileTree.File name="client.ts" />
+      <FileTree.File name="models.ts" />
+      <FileTree.Folder name="_utils">
+        <FileTree.Folder name="hooks">
+          <FileTree.File name="index.ts" />
+          <FileTree.File name="useMyappItemsList.ts" />
+          <FileTree.File name="useMyappItemsRetrieve.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="fetchers">
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="schemas">
+          <FileTree.File name="index.ts" />
+          <FileTree.File name="itemSchema.ts" />
+        </FileTree.Folder>
+      </FileTree.Folder>
+      <FileTree.Folder name="myapp__api">
+        <FileTree.File name="client.ts" />
+        <FileTree.File name="models.ts" />
+      </FileTree.Folder>
+    </FileTree.Folder>
+  </FileTree.Folder>
+</FileTree>
+
+## Generated Artifacts
+
+### TypeScript Models
+
+```typescript filename="generated/custom/models.ts"
+export interface Item {
+  id: number;
+  name: string;
+  description: string;
+  price: string;  // Decimal as string
+  is_active: boolean;
+  created_at: string;  // ISO datetime
+}
+
+export interface PaginatedItemList {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Item[];
+}
+```
+
+### Zod Schemas
+
+```typescript filename="generated/custom/_utils/schemas/itemSchema.ts"
+import { z } from 'zod';
+
+export const itemSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  description: z.string(),
+  price: z.string(),
+  is_active: z.boolean(),
+  created_at: z.string(),
+});
+
+export type ItemSchema = z.infer<typeof itemSchema>;
+```
+
+### SWR Hooks
+
+```typescript filename="generated/custom/_utils/hooks/useMyappItemsList.ts"
+import useSWR from 'swr';
+import { apiClient } from '@/app/_lib/api/BaseClient';
+import type { PaginatedItemList } from '../../models';
+
+export function useMyappItemsList(params?: {
+  page?: number;
+  page_size?: number;
+}) {
+  const queryString = params
+    ? '?' + new URLSearchParams(params as any).toString()
+    : '';
+
+  return useSWR<PaginatedItemList>(
+    `/api/myapp/items/${queryString}`,
+    (url) => apiClient.fetch(url)
+  );
+}
+```
+
+### Fetcher Functions
+
+```typescript filename="generated/custom/_utils/fetchers/index.ts"
+import { apiClient } from '@/app/_lib/api/BaseClient';
+import type { Item, PaginatedItemList } from '../../models';
+
+export async function fetchMyappItemsList(params?: {
+  page?: number;
+}): Promise<PaginatedItemList> {
+  const queryString = params
+    ? '?' + new URLSearchParams(params as any).toString()
+    : '';
+  return apiClient.fetch(`/api/myapp/items/${queryString}`);
+}
+
+export async function fetchMyappItemsCreate(
+  data: Omit<Item, 'id' | 'created_at'>
+): Promise<Item> {
+  return apiClient.fetch('/api/myapp/items/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchMyappItemsRetrieve(id: number): Promise<Item> {
+  return apiClient.fetch(`/api/myapp/items/${id}/`);
+}
+
+export async function fetchMyappItemsUpdate(
+  id: number,
+  data: Partial<Item>
+): Promise<Item> {
+  return apiClient.fetch(`/api/myapp/items/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchMyappItemsDestroy(id: number): Promise<void> {
+  return apiClient.fetch(`/api/myapp/items/${id}/`, {
+    method: 'DELETE',
+  });
+}
+```
+
+## Using Generated Clients
+
+### With SWR Hooks (Recommended)
+
+```tsx
+import { useMyappItemsList } from '@/app/_lib/api/generated/custom/_utils/hooks';
+
+export function ItemsList() {
+  const { data, error, isLoading, mutate } = useMyappItemsList();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <ul>
+      {data?.results.map((item) => (
+        <li key={item.id}>
+          {item.name} - ${item.price}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### With Fetchers (For Mutations)
+
+```tsx
+import { useState } from 'react';
+import { useMyappItemsList } from '@/app/_lib/api/generated/custom/_utils/hooks';
+import {
+  fetchMyappItemsCreate,
+  fetchMyappItemsDestroy,
+} from '@/app/_lib/api/generated/custom/_utils/fetchers';
+
+export function ItemsManager() {
+  const { data, mutate } = useMyappItemsList();
+  const [name, setName] = useState('');
+
+  const handleCreate = async () => {
+    await fetchMyappItemsCreate({
+      name,
+      description: '',
+      price: '0.00',
+      is_active: true,
+    });
+    mutate(); // Refresh the list
+    setName('');
+  };
+
+  const handleDelete = async (id: number) => {
+    await fetchMyappItemsDestroy(id);
+    mutate(); // Refresh the list
+  };
+
+  return (
+    <div>
+      <div>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Item name"
+        />
+        <button onClick={handleCreate}>Add Item</button>
+      </div>
+      <ul>
+        {data?.results.map((item) => (
+          <li key={item.id}>
+            {item.name}
+            <button onClick={() => handleDelete(item.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### With Zod Validation
+
+```tsx
+import { itemSchema } from '@/app/_lib/api/generated/custom/_utils/schemas';
+
+async function handleSubmit(formData: unknown) {
+  // Validate form data before sending to API
+  const result = itemSchema.safeParse(formData);
+
+  if (!result.success) {
+    console.error('Validation errors:', result.error.issues);
+    return;
+  }
+
+  // Data is now typed and validated
+  const validData = result.data;
+  await fetchMyappItemsCreate(validData);
+}
+```
+
+## Regeneration
+
+<Callout type="info">
+Run `make api` whenever you:
+- Add new Django models or serializers
+- Modify existing API endpoints
+- Change ViewSet actions
+- Update URL routing
+</Callout>
+
+The command will:
+1. Generate OpenAPI schema from DRF
+2. Create TypeScript clients with types
+3. Generate Zod schemas for validation
+4. Create SWR hooks for React
+5. Copy all generated files to your Next.js project
+
+## Configuration Options
+
+Control what gets generated via `OpenAPIConfig`:
+
+```python
+OpenAPIConfig(
+    enabled=True,
+    groups=[
+        OpenAPIGroupConfig(
+            name="custom",
+            apps=["myapp"],
+            title="Custom API",
+            version="v1",
+        ),
+    ],
+    # Choose what to generate
+    generate_python=True,       # Python client
+    generate_typescript=True,   # TypeScript client
+    generate_zod_schemas=True,  # Zod validation schemas
+    generate_fetchers=True,     # Fetcher functions
+    generate_swr_hooks=True,    # SWR React hooks
+)
+```

@@ -1,0 +1,389 @@
+---
+title: Development Commands
+description: Django-CFG CLI development commands. Command-line interface for development commands with examples, options, and production workflows.
+sidebar_label: Development
+sidebar_position: 8
+keywords:
+  - django-cfg development
+  - django-cfg command development
+  - cli development
+---
+
+# Development Commands
+
+Commands for development, testing, and debugging Django-CFG projects.
+
+## Development Server
+
+### `runserver_ngrok`
+
+Run development server with ngrok tunnel for webhook testing.
+
+```bash
+python manage.py runserver_ngrok [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--domain` | `TEXT` | Custom ngrok domain |
+| `--no-ngrok` | `flag` | Disable ngrok for this session |
+| `[address:port]` | `str` | Custom address and port |
+
+**Examples:**
+
+```bash
+# Start server with ngrok tunnel
+python manage.py runserver_ngrok
+
+# Use custom ngrok domain
+python manage.py runserver_ngrok --domain myapp
+
+# Custom port
+python manage.py runserver_ngrok 0.0.0.0:8080
+
+# Disable ngrok for this session
+python manage.py runserver_ngrok --no-ngrok
+```
+
+**Features:**
+- ✅ Automatic ngrok tunnel creation
+- ✅ Public URL for webhooks
+- ✅ ALLOWED_HOSTS auto-configuration
+- ✅ Tunnel status monitoring
+
+**Output:**
+```
+✅ Ngrok tunnel ready: https://abc123.ngrok.io
+Django development server is running at http://127.0.0.1:8000/
+Public URL: https://abc123.ngrok.io
+```
+
+---
+
+## Testing Commands
+
+### `test_email`
+
+Test email configuration and send test messages.
+
+```bash
+python manage.py test_email [OPTIONS]
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--to` | `TEXT` | - | Recipient email address |
+| `--subject` | `TEXT` | `"Django-CFG Test Email"` | Email subject |
+| `--backend` | `TEXT` | - | Email backend to test |
+
+**Examples:**
+
+```bash
+# Test email to specific address
+python manage.py test_email --to admin@example.com
+
+# Custom subject
+python manage.py test_email --to test@test.com --subject "Configuration Test"
+
+# Test specific backend
+python manage.py test_email --to admin@test.com --backend smtp
+```
+
+---
+
+### `test_telegram`
+
+Test Telegram bot configuration.
+
+```bash
+python manage.py test_telegram [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--message` | `TEXT` | Test message to send |
+| `--chat-id` | `TEXT` | Target chat ID (optional) |
+
+**Examples:**
+
+```bash
+# Send test message
+python manage.py test_telegram --message "Hello from Django-CFG!"
+
+# Send to specific chat
+python manage.py test_telegram --message "Test" --chat-id "-1001234567890"
+```
+
+---
+
+### `test_otp`
+
+Test OTP authentication system.
+
+```bash
+python manage.py test_otp [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--email` | `TEXT` | Email address to test |
+
+**Examples:**
+
+```bash
+# Test email OTP
+python manage.py test_otp --email user@example.com
+```
+
+---
+
+## Script Execution
+
+### `script`
+
+Run custom scripts with full Django context.
+
+```bash
+python manage.py script SCRIPT_PATH [SCRIPT_ARGS]
+```
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `SCRIPT_PATH` | `PATH` | Path to Python script |
+| `SCRIPT_ARGS` | `...` | Arguments to pass to script |
+
+**Examples:**
+
+```bash
+# Run Python script with Django context
+python manage.py script my_script.py
+
+# Pass arguments to script
+python manage.py script data_import.py --file data.csv
+
+# Run with specific settings
+python manage.py script --settings myproject.settings.dev cleanup.py
+```
+
+**Script Example:**
+
+```python
+# my_script.py
+import sys
+from myapp.models import User
+
+def main():
+    print(f"Total users: {User.objects.count()}")
+
+    if len(sys.argv) > 1:
+        username = sys.argv[1]
+        user = User.objects.get(username=username)
+        print(f"Found user: {user.email}")
+
+if __name__ == "__main__":
+    main()
+```
+
+**Usage:**
+```bash
+python manage.py script my_script.py admin
+```
+
+---
+
+## Project Structure
+
+### `tree`
+
+Display Django project structure with documentation.
+
+```bash
+python manage.py tree [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--depth` | `INTEGER` | Limit depth |
+| `--include-docs` | `flag` | Include documentation files |
+| `--python-only` | `flag` | Show only Python files |
+
+**Examples:**
+
+```bash
+# Show project structure
+python manage.py tree
+
+# Limit depth
+python manage.py tree --depth 3
+
+# Include documentation files
+python manage.py tree --include-docs
+
+# Show only Python files
+python manage.py tree --python-only
+```
+
+**Output:**
+```
+📁 myproject/
+├── 📄 manage.py
+├── 📁 myproject/
+│   ├── 📄 __init__.py
+│   ├── 📄 config.py
+│   ├── 📄 settings.py
+│   ├── 📄 urls.py
+│   └── 📄 wsgi.py
+├── 📁 apps/
+│   ├── 📁 blog/
+│   ├── 📁 shop/
+│   └── 📁 profiles/
+└── 📁 static/
+```
+
+---
+
+## Code Generation
+
+### `generate`
+
+Generate Django components (models, views, serializers).
+
+```bash
+python manage.py generate TYPE NAME [FIELDS]
+```
+
+| Type | Description |
+|------|-------------|
+| `model` | Generate model |
+| `crud` | Generate complete CRUD |
+| `api` | Generate API views |
+
+**Examples:**
+
+```bash
+# Generate model
+python manage.py generate model Product name:str price:decimal
+
+# Generate complete CRUD
+python manage.py generate crud Product
+
+# Generate API views
+python manage.py generate api Product --viewset
+```
+
+---
+
+## Development Workflows
+
+### Complete Development Setup
+
+```bash
+# 1. Create project
+django-cfg create-project my_project
+cd my_project/projects/django
+
+# 2. Install dependencies
+poetry install
+
+# 3. Setup database
+poetry run python manage.py migrate
+
+# 4. Create superuser
+poetry run python manage.py createsuperuser
+
+# 5. Start development server with ngrok
+python manage.py runserver_ngrok
+```
+
+---
+
+### Webhook Development Workflow
+
+```bash
+# 1. Start server with ngrok
+python manage.py runserver_ngrok
+
+# Output: Public URL: https://abc123.ngrok.io
+
+# 2. Configure webhook in external service
+# Use: https://abc123.ngrok.io/api/webhooks/stripe/
+
+# 3. Monitor webhook events
+# Check Django admin: /admin/payments/webhook/
+
+# 4. Test webhook
+curl -X POST https://abc123.ngrok.io/api/webhooks/stripe/ \
+  -H "Content-Type: application/json" \
+  -d '{"event": "test"}'
+```
+
+---
+
+### Testing Workflow
+
+```bash
+# 1. Test email configuration
+python manage.py test_email --to admin@test.com
+
+# 2. Test Telegram bot
+python manage.py test_telegram --message "Deploy test"
+
+# 3. Test OTP system
+python manage.py test_otp --email user@test.com
+
+# 4. Run unit tests
+python manage.py test
+```
+
+---
+
+### Script Development Workflow
+
+```bash
+# 1. Create script
+cat > scripts/import_users.py << EOF
+from myapp.models import User
+import csv
+
+def main():
+    with open('users.csv') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            User.objects.create(
+                username=row['username'],
+                email=row['email']
+            )
+    print("Import complete!")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# 2. Run script
+python manage.py script scripts/import_users.py
+
+# 3. Check results
+python manage.py shell -c "from myapp.models import User; print(User.objects.count())"
+```
+
+---
+
+## Tips
+
+- Use `runserver_ngrok` for webhook development
+- Use `script` command for reusable data operations (not one-off shell commands)
+- Use `generate` command for consistent code patterns
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Ngrok not starting | Check: `which ngrok`, `show_config --section ngrok` |
+| Email test failing | Check: `check_settings --email-test`, `show_config --section email` |
+| Script errors | Run: `script my_script.py --verbosity 2` |
+
+## See Also
+
+- [Quick Reference](../quick-reference)
+- [Ngrok Integration](/docs/features/integrations/ngrok/overview)
+- [Core Commands](../core-commands)

@@ -1,0 +1,191 @@
+---
+title: Search Command
+description: Search DjangoCFG documentation from the command line
+---
+
+import { Callout, Tabs } from 'nextra/components'
+
+# Search Command
+
+The `django-cfg search` command provides fast access to DjangoCFG documentation without loading Django.
+
+## Overview
+
+<Callout type="info">
+**MCP Server Available**
+
+DjangoCFG documentation is also available via MCP (Model Context Protocol) server at `https://mcp.djangocfg.com/mcp`. Add it to your AI assistant configuration for seamless documentation access.
+</Callout>
+
+## Usage
+
+```bash
+# Search documentation
+django-cfg search "database configuration"
+
+# Limit results
+django-cfg search "redis cache" --limit 3
+
+# JSON output for programmatic use
+django-cfg search "email smtp" --json
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--limit, -l` | Maximum number of results (default: 5) |
+| `--full, -f` | Show full content without truncation (default: truncate to 1000 chars) |
+| `--json` | Output results as JSON |
+
+## Examples
+
+### Basic Search
+
+```bash
+django-cfg search "database configuration"
+```
+
+Output:
+```
+🔍 Searching: database configuration
+
+1. Database Configuration
+   How to configure PostgreSQL, MySQL, SQLite...
+   → https://djangocfg.com/docs/fundamentals/database
+
+2. URL-Based Configuration
+   Database connection strings...
+   → https://djangocfg.com/docs/fundamentals/database/url-configuration
+```
+
+### Limit Results
+
+```bash
+django-cfg search "redis cache" --limit 3
+```
+
+### Full Content (No Truncation)
+
+By default, search results are truncated to 1000 characters for quick scanning. Use `--full` or `-f` to show complete content:
+
+```bash
+# Truncated output (default) - quick overview
+django-cfg search "database configuration"
+
+# Full content - detailed documentation
+django-cfg search "database configuration" --full
+django-cfg search "database configuration" -f
+```
+
+<Callout type="tip">
+**Use `--full` when:**
+- You need complete code examples
+- Reading detailed documentation sections
+- Copying configuration snippets
+
+**Use default (truncated) when:**
+- Quickly scanning for relevant topics
+- Finding the right documentation page
+- Getting an overview of available options
+</Callout>
+
+### JSON Output
+
+```bash
+django-cfg search "email" --json
+```
+
+Output:
+```json
+{
+  "query": "email",
+  "results": [
+    {
+      "title": "Email Configuration",
+      "content": "How to configure SMTP...",
+      "url": "https://djangocfg.com/docs/features/modules/email",
+      "score": 0.95
+    }
+  ]
+}
+```
+
+## MCP Server Configuration
+
+Add the MCP server to your AI assistant configuration:
+
+```json
+{
+  "mcpServers": {
+    "djangocfg-docs": {
+      "url": "https://mcp.djangocfg.com/mcp"
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "djangocfg-docs": {
+      "url": "https://mcp.djangocfg.com/mcp"
+    }
+  }
+}
+```
+
+## Python API
+
+You can also use the AI documentation module directly in Python:
+
+```python
+from django_cfg.modules.django_ai import search, get_docs
+
+# Search documentation
+results = search("database configuration")
+for r in results:
+    print(r.title, r.url)
+
+# Get formatted documentation
+docs = get_docs("How to configure PostgreSQL?")
+print(docs)
+```
+
+## Direct API Access
+
+You can also access the documentation API directly:
+
+```bash
+curl 'https://mcp.djangocfg.com/api/search?q=database+configuration&limit=5'
+```
+
+## Common Topics
+
+| Topic | Description |
+|-------|-------------|
+| `DatabaseConfig` | PostgreSQL, MySQL, SQLite configuration |
+| `CacheConfig` | Redis, Memcached caching |
+| `EmailConfig` | SMTP email configuration |
+| `LoggingConfig` | Logging configuration |
+| `SecurityConfig` | CORS, CSRF, security settings |
+| `DRFConfig` | Django REST Framework settings |
+| `NgrokConfig` | Ngrok tunnel configuration |
+| `PaymentsConfig` | Payment providers setup |
+
+## Example Queries
+
+Here are some useful queries:
+
+- "How to configure PostgreSQL database?"
+- "What is DatabaseConfig?"
+- "How to setup Redis cache?"
+- "Email configuration with SMTP"
+- "CORS configuration"
+- "JWT authentication setup"
+- "Background tasks with RQ"
+- "Multi-database routing"

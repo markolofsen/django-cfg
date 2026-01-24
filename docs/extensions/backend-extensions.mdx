@@ -1,0 +1,579 @@
+---
+title: "Using Extensions"
+description: "How to install, configure, and use Django-CFG extensions in your project"
+---
+
+# Using Extensions in Your Project
+
+Extensions are pre-built, reusable Django apps that add functionality to your project. This guide shows you how to use them as a **Django-CFG user**.
+
+<Callout type="info">
+**For Users, Not Developers**
+This guide is about **using** existing extensions in your project. If you want to create your own extensions, see the advanced documentation.
+</Callout>
+
+---
+
+## Concept: How Extensions Work
+
+### What Are Extensions?
+
+Extensions are **plug-and-play Django apps** that:
+- ✅ Configure themselves automatically
+- ✅ Don't clutter your main `DjangoConfig`
+- ✅ Can be enabled/disabled with one line
+- ✅ Work across multiple projects
+
+Think of them like **WordPress plugins** or **VS Code extensions** - install once, configure simply, use everywhere.
+
+### Available Extensions
+
+Your Django-CFG project comes with several built-in extensions:
+
+**Business Features:**
+- `payments` - Payment processing (NowPayments, Stripe)
+- `leads` - Lead management and contact forms
+- `support` - Support ticket system
+- `newsletter` - Email campaigns
+- `knowbase` - Knowledge base articles
+
+**Developer Tools:**
+- `backup` - Automated database backups
+- `maintenance` - Maintenance mode
+- `agents` - AI workflow automation
+
+**Utilities:**
+- `currency` - Multi-currency support
+- `analytics` - Analytics tracking
+
+---
+
+## Quick Start: Enable Your First Extension
+
+### Step 1: Check Available Extensions
+
+List what's already in your project:
+
+```bash
+ls extensions/apps/
+```
+
+You'll see directories like `payments`, `leads`, `support`, etc.
+
+### Step 2: Enable an Extension
+
+To enable the **Payments** extension, edit its config file:
+
+```python
+# extensions/apps/payments/__cfg__.py
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    # Override default settings
+    enabled: bool = True
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+
+# This line enables the extension! ✨
+settings = PaymentsSettings()
+```
+
+### Step 3: Run Migrations
+
+```bash
+python manage.py migrate
+```
+
+### Step 4: That's It! 🎉
+
+The extension is now:
+- ✅ Added to `INSTALLED_APPS`
+- ✅ URLs registered at `/cfg/payments/`
+- ✅ Admin navigation added
+- ✅ Background tasks scheduled
+- ✅ Ready to use
+
+---
+
+## Configuring Extensions
+
+### Understanding Extension Settings
+
+Each extension has a `__cfg__.py` file in its directory:
+
+```
+extensions/apps/payments/
+├── __cfg__.py          ← Configuration file
+├── models.py
+├── views.py
+└── ...
+```
+
+The `__cfg__.py` file looks like this:
+
+```python
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    # Your project-specific settings here
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+
+settings = PaymentsSettings()  # Enable extension
+```
+
+### Common Configuration Patterns
+
+#### Pattern 1: Enable/Disable Extension
+
+```python
+# Enable
+settings = PaymentsSettings()
+
+# Disable (comment out or remove)
+# settings = PaymentsSettings()
+```
+
+#### Pattern 2: Environment Variables
+
+```python
+class PaymentsSettings(BasePaymentsSettings):
+    # Load from environment
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+```
+
+Then in your `.env`:
+```bash
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-api-key
+PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+```
+
+#### Pattern 3: Override Defaults
+
+```python
+class LeadsSettings(BaseLeadsSettings):
+    # Override base settings
+    telegram_enabled: bool = False  # Disable Telegram notifications
+    email_enabled: bool = True      # Keep email enabled
+```
+
+#### Pattern 4: Feature Flags
+
+```python
+class SupportSettings(BaseSupportSettings):
+    # Toggle features
+    ticket_auto_assign: bool = True
+    live_chat_enabled: bool = False
+    sla_tracking_enabled: bool = True
+```
+
+---
+
+## Extension Configuration Reference
+
+### Core Settings
+
+Every extension supports these settings:
+
+```python
+class MyExtensionSettings(BaseExtensionSettings):
+    # Core settings
+    enabled: bool = True              # Enable/disable extension
+    admin_enabled: bool = True        # Show in admin interface
+
+    # Your custom settings
+    api_key: str = env.my_ext.api_key
+    feature_x_enabled: bool = True
+```
+
+### Accessing Settings in Code
+
+Settings are available via the extension's `settings` object:
+
+```python
+from extensions.apps.payments.__cfg__ import settings
+
+if settings.enabled:
+    # Use payments extension
+    api_key = settings.nowpayments_api_key
+```
+
+---
+
+## Environment Configuration
+
+### Using .env Files
+
+Extensions load settings from environment variables:
+
+**1. Define in `__cfg__.py`:**
+```python
+class PaymentsSettings(BasePaymentsSettings):
+    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+```
+
+**2. Set in `.env`:**
+```bash
+# Nested structure: payments_api_keys.nowpayments_api_key
+PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-key-here
+PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret-here
+```
+
+**3. Verify it works:**
+```bash
+python manage.py shell
+>>> from extensions.apps.payments.__cfg__ import settings
+>>> settings.nowpayments_api_key
+'your-key-here'
+```
+
+### Environment-Specific Configs
+
+Use different settings per environment:
+
+```python
+# extensions/apps/payments/__cfg__.py
+import os
+
+class PaymentsSettings(BasePaymentsSettings):
+    # Production: use real API
+    # Development: use sandbox
+    nowpayments_api_key: str = (
+        env.payments.prod_key
+        if os.getenv('ENVIRONMENT') == 'production'
+        else env.payments.sandbox_key
+    )
+```
+
+---
+
+## Troubleshooting
+
+### Extension Not Appearing
+
+**Problem:** Extension doesn't show up in admin or URLs don't work
+
+**Solutions:**
+
+1. **Check `settings` variable exists:**
+   ```python
+   # extensions/apps/myext/__cfg__.py
+   settings = MyExtensionSettings()  # ← Must be present!
+   ```
+
+2. **Check for import errors:**
+   ```bash
+   python manage.py shell
+   >>> from extensions.apps.myext.__cfg__ import settings
+   # If this errors, fix the import
+   ```
+
+3. **Restart Django:**
+   ```bash
+   # Extensions are discovered at startup
+   python manage.py runserver
+   ```
+
+---
+
+### Extension Enabled But Not Working
+
+**Problem:** Extension is enabled but features don't work
+
+**Solutions:**
+
+1. **Run migrations:**
+   ```bash
+   python manage.py migrate
+   ```
+
+2. **Check extension settings:**
+   ```python
+   from extensions.apps.myext.__cfg__ import settings
+   print(settings.enabled)  # Should be True
+   print(settings.admin_enabled)  # Should be True
+   ```
+
+3. **Check dependencies:**
+   ```bash
+   # Install required pip packages
+   pip install -r requirements.txt
+   ```
+
+---
+
+### Environment Variables Not Loading
+
+**Problem:** `env.something` returns error or wrong value
+
+**Solutions:**
+
+1. **Check .env file location:**
+   ```bash
+   # Must be in project root
+   ls -la .env
+   ```
+
+2. **Check variable naming:**
+   ```bash
+   # Use double underscores for nesting
+   PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=key  # ✅ Correct
+   PAYMENTS_API_KEYS.NOWPAYMENTS_API_KEY=key   # ❌ Wrong
+   ```
+
+3. **Reload environment:**
+   ```bash
+   # Restart Django after .env changes
+   python manage.py runserver
+   ```
+
+---
+
+### URL Conflicts
+
+**Problem:** Extension URLs conflict with your app's URLs
+
+**Solution:** Extensions use `/cfg/` prefix by default:
+
+```
+/cfg/payments/      ← Extension URLs
+/cfg/leads/         ← Extension URLs
+/cfg/support/       ← Extension URLs
+
+/api/               ← Your app URLs (no conflict)
+/admin/             ← Django admin (no conflict)
+```
+
+If you need to change the prefix, it's configured in extension settings (advanced use case).
+
+---
+
+### Migration Errors
+
+**Problem:** `python manage.py migrate` fails for extension
+
+**Solutions:**
+
+1. **Check app label:**
+   ```bash
+   # Extensions use cfg_ prefix
+   python manage.py migrate cfg_payments
+   python manage.py migrate cfg_leads
+   ```
+
+2. **Make migrations first:**
+   ```bash
+   python manage.py makemigrations
+   python manage.py migrate
+   ```
+
+3. **Check for conflicts:**
+   ```bash
+   # List all migrations
+   python manage.py showmigrations
+   ```
+
+---
+
+## Best Practices
+
+### 1. **Keep Extension Configs in `__cfg__.py`**
+
+✅ **Good:**
+```python
+# extensions/apps/payments/__cfg__.py
+class PaymentsSettings(BasePaymentsSettings):
+    nowpayments_api_key: str = env.payments.api_key
+```
+
+❌ **Bad:**
+```python
+# api/config.py
+class MyConfig(DjangoConfig):
+    payments: PaymentsConfig = PaymentsConfig(...)  # Old way!
+```
+
+### 2. **Use Environment Variables for Secrets**
+
+✅ **Good:**
+```python
+api_key: str = env.payments.api_key  # Load from .env
+```
+
+❌ **Bad:**
+```python
+api_key: str = "hardcoded-secret-key"  # Never do this!
+```
+
+### 3. **Enable Only What You Need**
+
+```python
+# If not using Telegram notifications
+class LeadsSettings(BaseLeadsSettings):
+    telegram_enabled: bool = False  # Disable unused features
+```
+
+### 4. **Document Your Customizations**
+
+```python
+class SupportSettings(BaseSupportSettings):
+    # Custom: We use 48-hour SLA instead of 24
+    sla_hours: int = 48
+
+    # Custom: Auto-assign disabled per team request
+    ticket_auto_assign: bool = False
+```
+
+---
+
+## Common Use Cases
+
+### Use Case 1: Payment Processing
+
+**Goal:** Accept cryptocurrency payments
+
+**Solution:**
+
+1. Enable payments extension:
+   ```python
+   # extensions/apps/payments/__cfg__.py
+   settings = PaymentsSettings()
+   ```
+
+2. Configure API keys:
+   ```bash
+   # .env
+   PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-key
+   PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+   ```
+
+3. Done! Use at `/cfg/payments/`
+
+---
+
+### Use Case 2: Lead Capture Forms
+
+**Goal:** Add contact forms to your site
+
+**Solution:**
+
+1. Enable leads extension:
+   ```python
+   # extensions/apps/leads/__cfg__.py
+   settings = LeadsSettings()
+   ```
+
+2. Configure notifications:
+   ```python
+   class LeadsSettings(BaseLeadsSettings):
+       email_enabled: bool = True
+       telegram_enabled: bool = True  # Get Telegram alerts
+   ```
+
+3. Forms available in admin + API endpoints ready
+
+---
+
+### Use Case 3: Support Tickets
+
+**Goal:** Add customer support system
+
+**Solution:**
+
+1. Enable support extension:
+   ```python
+   # extensions/apps/support/__cfg__.py
+   settings = SupportSettings()
+   ```
+
+2. Configure SLA tracking:
+   ```python
+   class SupportSettings(BaseSupportSettings):
+       sla_tracking_enabled: bool = True
+       sla_hours: int = 24
+       ticket_auto_assign: bool = True
+   ```
+
+3. Support dashboard appears in admin
+
+---
+
+## FAQ
+
+### Q: How do I know which extensions are available?
+
+**A:** Check your `extensions/apps/` directory:
+```bash
+ls extensions/apps/
+```
+
+Or check the Hub at `/hub` in your project.
+
+### Q: Can I use multiple extensions together?
+
+**A:** Yes! Extensions work independently. Enable as many as you need:
+```python
+# extensions/apps/payments/__cfg__.py
+settings = PaymentsSettings()
+
+# extensions/apps/leads/__cfg__.py
+settings = LeadsSettings()
+
+# extensions/apps/support/__cfg__.py
+settings = SupportSettings()
+```
+
+### Q: How do I disable an extension temporarily?
+
+**A:** Comment out the `settings` line:
+```python
+# extensions/apps/payments/__cfg__.py
+# settings = PaymentsSettings()  # Disabled
+```
+
+Or set `enabled = False`:
+```python
+class PaymentsSettings(BasePaymentsSettings):
+    enabled: bool = False
+```
+
+### Q: Do I need to restart Django after changing extension settings?
+
+**A:** Yes, extensions are loaded at startup. After changing `__cfg__.py`:
+```bash
+# Restart Django
+python manage.py runserver
+```
+
+### Q: Where can I find extension documentation?
+
+**A:** Each extension has:
+1. Comments in its `__cfg__.py` file
+2. Documentation in the Hub (`/hub/{name}`)
+3. README in the extension directory (if available)
+
+### Q: Can I modify extension code?
+
+**A:** Yes, but better to:
+1. Override settings in `__cfg__.py` (preferred)
+2. Use extension hooks/signals (if provided)
+3. Extend extension classes in your project apps
+
+Modifying extension code directly makes updates harder.
+
+---
+
+## Next Steps
+
+<Cards>
+  <Cards.Card title="Frontend Extensions" href="/docs/extensions/frontend-extensions" />
+  <Cards.Card title="Migration Guide" href="/docs/extensions/migration-guide" />
+  <Cards.Card title="Browse Extensions" href="/hub" />
+</Cards>
+
+---
+
+<Callout type="success">
+**Need Help?**
+Join our Discord community or check the troubleshooting guide above for common issues.
+</Callout>

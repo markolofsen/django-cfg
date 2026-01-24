@@ -1,0 +1,418 @@
+---
+title: Configuration
+description: Complete guide to configuring BackupConfig for database backups
+sidebar_label: Configuration
+sidebar_position: 2
+keywords:
+  - backup configuration
+  - BackupConfig
+  - backup schedule
+  - retention policy
+---
+
+# Backup Configuration
+
+This guide covers all configuration options for Django-CFG's database backup module.
+
+---
+
+## Configuration Models
+
+The backup system uses a hierarchy of Pydantic models:
+
+```
+BackupConfig
+├── BackupStorageConfig      # Where to store backups
+├── BackupScheduleConfig     # When to run backups
+├── BackupRetentionConfig    # How long to keep backups
+└── BackupDatabaseConfig[]   # Per-database overrides
+```
+
+---
+
+## BackupConfig
+
+Main configuration model that enables and configures the backup module.
+
+```python
+from django_cfg import (
+    DjangoConfig,
+    BackupConfig,
+    BackupStorageConfig,
+    BackupScheduleConfig,
+    BackupRetentionConfig,
+)
+
+class MyConfig(DjangoConfig):
+    backup: BackupConfig = BackupConfig(
+        # Enable/disable the entire module
+        enabled=True,
+
+        # Storage configuration
+        storage=BackupStorageConfig(...),
+
+        # Schedule configuration
+        schedule=BackupScheduleConfig(...),
+
+        # Retention policy
+        retention=BackupRetentionConfig(...),
+
+        # Per-database configurations (optional)
+        databases=[...],
+
+        # Compression algorithm
+        compression="gzip",  # gzip | bz2 | xz | none
+
+        # Optional encryption key (GPG-compatible)
+        encryption_key=None,
+
+        # Notifications
+        notify_on_success=False,
+        notify_on_failure=True,
+
+        # Filename template
+        filename_template="{database}_{timestamp}_{env}",
+    )
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Enable backup module |
+| `storage` | `BackupStorageConfig` | Local | Storage backend configuration |
+| `schedule` | `BackupScheduleConfig` | Daily 2 AM | Backup schedule |
+| `retention` | `BackupRetentionConfig` | 7/4/3 | Retention policy |
+| `databases` | `List[BackupDatabaseConfig]` | `[]` | Per-database overrides |
+| `compression` | `str` | `"gzip"` | Compression: gzip, bz2, xz, none |
+| `encryption_key` | `str \| None` | `None` | GPG encryption key |
+| `notify_on_success` | `bool` | `False` | Notify on successful backup |
+| `notify_on_failure` | `bool` | `True` | Notify on failed backup |
+| `filename_template` | `str` | See above | Backup filename pattern |
+
+### Filename Template Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{database}` | Database alias | `default` |
+| `{timestamp}` | ISO timestamp | `20250115_020000` |
+| `{env}` | Environment mode | `production` |
+
+---
+
+## BackupStorageConfig
+
+Configures where backups are stored.
+
+### Local Storage
+
+```python
+storage=BackupStorageConfig(
+    backend="local",
+    local_path="backups/",  # Relative to BASE_DIR or absolute
+)
+```
+
+### S3-Compatible Storage
+
+```python
+storage=BackupStorageConfig(
+    backend="s3",
+    s3_bucket="my-backups",
+    s3_endpoint_url="https://xxx.r2.cloudflarestorage.com",  # For R2/MinIO
+    s3_access_key="${AWS_ACCESS_KEY_ID}",
+    s3_secret_key="${AWS_SECRET_ACCESS_KEY}",
+    s3_region="auto",  # "auto" for R2, or specific region
+    s3_prefix="db-backups/",  # Key prefix in bucket
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `backend` | `str` | `"local"` | Storage type: `local` or `s3` |
+| `local_path` | `str` | `"backups/"` | Local directory path |
+| `s3_bucket` | `str \| None` | `None` | S3 bucket name |
+| `s3_endpoint_url` | `str \| None` | `None` | Custom endpoint (R2, MinIO) |
+| `s3_access_key` | `str \| None` | `None` | AWS access key ID |
+| `s3_secret_key` | `str \| None` | `None` | AWS secret access key |
+| `s3_region` | `str` | `"auto"` | AWS region |
+| `s3_prefix` | `str` | `"db-backups/"` | S3 key prefix |
+
+---
+
+## BackupScheduleConfig
+
+Configures when backups run automatically.
+
+### Cron Expression (Recommended)
+
+```python
+schedule=BackupScheduleConfig(
+    enabled=True,
+    cron="0 2 * * *",  # Daily at 2 AM
+    queue="default",   # RQ queue name
+)
+```
+
+### Common Cron Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| `0 2 * * *` | Daily at 2:00 AM |
+| `0 */6 * * *` | Every 6 hours |
+| `0 2 * * 0` | Weekly on Sunday at 2 AM |
+| `0 2 1 * *` | Monthly on 1st at 2 AM |
+| `*/30 * * * *` | Every 30 minutes |
+
+### Simple Interval
+
+```python
+schedule=BackupScheduleConfig(
+    enabled=True,
+    interval_hours=6,  # Every 6 hours
+)
+```
+
+### Daily Time
+
+```python
+from datetime import time
+
+schedule=BackupScheduleConfig(
+    enabled=True,
+    daily_time=time(2, 0),  # Daily at 02:00
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable scheduled backups |
+| `cron` | `str \| None` | `None` | Cron expression |
+| `interval_hours` | `int \| None` | `None` | Interval in hours (1-168) |
+| `daily_time` | `time \| None` | `None` | Daily backup time |
+| `queue` | `str` | `"default"` | RQ queue for backup jobs |
+
+
+<Callout>
+Specify only one of: `cron`, `interval_hours`, or `daily_time`. If none specified, defaults to `"0 2 * * *"` (daily at 2 AM).
+
+</Callout>
+
+---
+
+## BackupRetentionConfig
+
+Configures automatic cleanup of old backups.
+
+```python
+retention=BackupRetentionConfig(
+    enabled=True,
+    keep_daily=7,       # Keep 7 daily backups
+    keep_weekly=4,      # Keep 4 weekly backups
+    keep_monthly=3,     # Keep 3 monthly backups
+    max_total_size_mb=None,  # Optional size limit
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable auto-cleanup |
+| `keep_daily` | `int` | `7` | Daily backups to keep (1-365) |
+| `keep_weekly` | `int` | `4` | Weekly backups to keep (0-52) |
+| `keep_monthly` | `int` | `3` | Monthly backups to keep (0-24) |
+| `max_total_size_mb` | `int \| None` | `None` | Max total size in MB |
+
+### Retention Strategy
+
+The cleanup process follows a grandfather-father-son rotation:
+
+1. **Daily**: Keep last N days of backups
+2. **Weekly**: Keep one backup per week for N weeks
+3. **Monthly**: Keep one backup per month for N months
+
+```mermaid
+graph LR
+    subgraph "Daily (7)"
+        D1[Day 1] --> D2[Day 2] --> D3[...] --> D7[Day 7]
+    end
+    subgraph "Weekly (4)"
+        W1[Week 1] --> W2[Week 2] --> W3[Week 3] --> W4[Week 4]
+    end
+    subgraph "Monthly (3)"
+        M1[Month 1] --> M2[Month 2] --> M3[Month 3]
+    end
+```
+
+---
+
+## BackupDatabaseConfig
+
+Override settings for specific databases.
+
+```python
+from django_cfg import BackupDatabaseConfig
+
+backup=BackupConfig(
+    enabled=True,
+    databases=[
+        # Default database with table exclusions
+        BackupDatabaseConfig(
+            alias="default",
+            enabled=True,
+            exclude_tables=["django_session", "django_cache"],
+        ),
+        # Analytics database with custom schedule
+        BackupDatabaseConfig(
+            alias="analytics",
+            enabled=True,
+            schedule_override=BackupScheduleConfig(
+                cron="0 4 * * *",  # Different time
+            ),
+        ),
+        # Logs database - skip backup
+        BackupDatabaseConfig(
+            alias="logs",
+            enabled=False,
+        ),
+    ],
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `alias` | `str` | Required | Database alias from Django settings |
+| `enabled` | `bool` | `True` | Enable backup for this database |
+| `exclude_tables` | `List[str]` | `[]` | Tables to exclude |
+| `include_tables` | `List[str]` | `[]` | Tables to include (empty = all) |
+| `extra_options` | `List[str]` | `[]` | Extra CLI options for dump tool |
+| `schedule_override` | `BackupScheduleConfig \| None` | `None` | Custom schedule |
+
+---
+
+## Complete Examples
+
+### Development Configuration
+
+```python
+backup=BackupConfig(
+    enabled=True,
+    storage=BackupStorageConfig(
+        backend="local",
+        local_path="backups/",
+    ),
+    schedule=BackupScheduleConfig(
+        enabled=False,  # Manual only in development
+    ),
+    retention=BackupRetentionConfig(
+        keep_daily=3,
+        keep_weekly=0,
+        keep_monthly=0,
+    ),
+    notify_on_failure=False,
+)
+```
+
+### Production Configuration
+
+```python
+backup=BackupConfig(
+    enabled=True,
+    storage=BackupStorageConfig(
+        backend="s3",
+        s3_bucket="company-db-backups",
+        s3_endpoint_url="https://xxx.r2.cloudflarestorage.com",
+        s3_access_key="${R2_ACCESS_KEY}",
+        s3_secret_key="${R2_SECRET_KEY}",
+        s3_region="auto",
+        s3_prefix="production/",
+    ),
+    schedule=BackupScheduleConfig(
+        cron="0 */4 * * *",  # Every 4 hours
+        queue="backups",
+    ),
+    retention=BackupRetentionConfig(
+        keep_daily=14,
+        keep_weekly=8,
+        keep_monthly=12,
+        max_total_size_mb=50000,  # 50 GB limit
+    ),
+    compression="xz",  # Best compression
+    notify_on_success=True,
+    notify_on_failure=True,
+)
+```
+
+### Multi-Database Configuration
+
+```python
+backup=BackupConfig(
+    enabled=True,
+    storage=BackupStorageConfig(backend="s3", ...),
+    schedule=BackupScheduleConfig(cron="0 2 * * *"),
+    databases=[
+        BackupDatabaseConfig(
+            alias="default",
+            exclude_tables=["django_session"],
+        ),
+        BackupDatabaseConfig(
+            alias="analytics",
+            schedule_override=BackupScheduleConfig(
+                cron="0 6 * * *",  # Later time (less critical)
+            ),
+        ),
+        BackupDatabaseConfig(
+            alias="cache_db",
+            enabled=False,  # Don't backup cache database
+        ),
+    ],
+)
+```
+
+---
+
+## Environment Variables
+
+Use environment variable substitution for sensitive values:
+
+```python
+storage=BackupStorageConfig(
+    backend="s3",
+    s3_bucket="${BACKUP_S3_BUCKET}",
+    s3_access_key="${BACKUP_S3_ACCESS_KEY}",
+    s3_secret_key="${BACKUP_S3_SECRET_KEY}",
+)
+```
+
+```bash filename=".env"
+BACKUP_S3_BUCKET=my-backups
+BACKUP_S3_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
+BACKUP_S3_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+---
+
+## Validation
+
+BackupConfig validates configuration at startup:
+
+- S3 backend requires `s3_bucket`, `s3_access_key`, and `s3_secret_key`
+- Only one schedule type can be specified (cron, interval_hours, or daily_time)
+- Filename template must include `{database}` and `{timestamp}`
+
+Invalid configuration will raise `ValidationError` with helpful messages.
+
+---
+
+## See Also
+
+- [Storage Backends](../storage-backends) - Detailed storage configuration
+- [Overview](../overview) - Architecture and concepts
+- [Django-RQ](../../django-rq/overview) - Task scheduling

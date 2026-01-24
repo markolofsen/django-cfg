@@ -1,0 +1,505 @@
+---
+title: Telegram Module
+description: Django-CFG Telegram notification service - auto-configuring Telegram bot for sending messages, photos, and documents with custom credentials support.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg telegram
+  - django telegram
+  - telegram notifications
+  - telegram bot
+---
+
+# Telegram Module
+
+Django-CFG's **Telegram Module** provides an auto-configuring notification service for sending messages, photos, and documents to Telegram chats. All messages are queued with rate limiting to avoid hitting Telegram API limits.
+
+## Features
+
+- **Auto-Configuration** - Reads Telegram settings from DjangoConfig
+- **Custom Credentials** - Override bot_token and chat_id per-call
+- **Rate Limiting** - Global queue with 20 msg/sec limit
+- **Priority System** - CRITICAL, HIGH, NORMAL, LOW priority levels
+- **Queue Protection** - Auto-drops low priority messages when queue is full
+- **Multiple Formats** - Text, HTML, Markdown, MarkdownV2
+- **Media Support** - Photos and documents with captions
+
+## Module Structure
+
+```
+django_telegram/
+├── __init__.py       # Public exports
+├── exceptions.py     # TelegramError, TelegramConfigError, TelegramSendError
+├── types.py          # TelegramParseMode enum
+├── queue.py          # TelegramMessageQueue, MessagePriority
+├── formatters.py     # EMOJI_MAP, format_to_yaml, format_message_with_context
+├── shortcuts.py      # send_error, send_success, send_warning, etc.
+├── service.py        # DjangoTelegram class
+└── utils.py          # send_telegram_message, send_telegram_photo, etc.
+```
+
+## Public API
+
+### Convenience Functions
+
+```python
+from django_cfg import send_telegram_message, send_telegram_photo, send_telegram_document
+```
+
+| Function | Description |
+|----------|-------------|
+| `send_telegram_message()` | Send a text message |
+| `send_telegram_photo()` | Send a photo with caption |
+| `send_telegram_document()` | Send a document with caption |
+
+### DjangoTelegram Class
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram
+
+# Using config defaults
+telegram = DjangoTelegram()
+
+# Using custom credentials (override config)
+telegram = DjangoTelegram(
+    bot_token="YOUR_CUSTOM_BOT_TOKEN",
+    chat_id="YOUR_CUSTOM_CHAT_ID"
+)
+```
+
+**Instance Methods:**
+- `send_message()` - Send text message
+- `send_photo()` - Send photo
+- `send_document()` - Send document
+- `get_me()` - Get bot information
+- `get_updates()` - Get recent bot updates (for discovering chat_id)
+- `get_chats()` - Get unique chats from updates
+- `is_configured` - Check if Telegram is configured
+
+**Shortcut Functions (standalone):**
+
+```python
+from django_cfg.modules.django_telegram import (
+    send_error,    # Error notification (HIGH priority)
+    send_success,  # Success notification
+    send_warning,  # Warning notification (HIGH priority)
+    send_info,     # Info notification
+    send_stats,    # Statistics (LOW priority)
+    send_alert,    # Critical alert (CRITICAL priority)
+)
+```
+
+**Class Methods (for backward compatibility):**
+- `DjangoTelegram.send_error()` - Delegates to `send_error()`
+- `DjangoTelegram.send_success()` - Delegates to `send_success()`
+- `DjangoTelegram.send_warning()` - Delegates to `send_warning()`
+- `DjangoTelegram.send_info()` - Delegates to `send_info()`
+- `DjangoTelegram.send_stats()` - Delegates to `send_stats()`
+
+### Priority Levels
+
+```python
+from django_cfg.modules.django_telegram import MessagePriority
+
+MessagePriority.CRITICAL  # 1 - Security alerts, critical errors
+MessagePriority.HIGH      # 2 - Errors, important warnings
+MessagePriority.NORMAL    # 3 - Info, success messages
+MessagePriority.LOW       # 4 - Debug, non-urgent notifications
+```
+
+### Parse Modes
+
+```python
+from django_cfg.modules.django_telegram import TelegramParseMode
+
+TelegramParseMode.MARKDOWN     # Markdown formatting
+TelegramParseMode.MARKDOWN_V2  # MarkdownV2 formatting
+TelegramParseMode.HTML         # HTML formatting
+```
+
+## Quick Start
+
+### Simple Message
+
+```python
+from django_cfg import send_telegram_message
+
+send_telegram_message("Hello from Django-CFG!")
+```
+
+### Formatted Message
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram, TelegramParseMode
+
+telegram = DjangoTelegram()
+telegram.send_message(
+    "*Bold text* and _italic text_",
+    parse_mode=TelegramParseMode.MARKDOWN
+)
+```
+
+### Send Photo
+
+```python
+from django_cfg import send_telegram_photo
+
+send_telegram_photo(
+    photo="https://example.com/image.jpg",
+    caption="Check out this image!"
+)
+```
+
+### Send Document
+
+```python
+from django_cfg import send_telegram_document
+
+with open("/path/to/report.pdf", "rb") as f:
+    send_telegram_document(
+        document=f,
+        caption="Monthly report attached"
+    )
+```
+
+### Custom Credentials
+
+Override the default bot/chat for specific use cases:
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram
+
+# Instance-level custom credentials
+telegram = DjangoTelegram(
+    bot_token="ALERT_BOT_TOKEN",
+    chat_id="-100123456789"  # Alerts channel
+)
+telegram.send_message("Alert sent to custom channel!")
+
+# Per-call override (highest priority)
+telegram.send_message(
+    "This goes to another chat",
+    chat_id="-100987654321",
+    bot_token="ANOTHER_BOT_TOKEN"
+)
+```
+
+**Credential Resolution Order:**
+1. Per-call parameter (`chat_id=`, `bot_token=`)
+2. Instance custom (`DjangoTelegram(chat_id=, bot_token=)`)
+3. Config default (`DjangoConfig.telegram`)
+
+### Utility Functions with Custom Credentials
+
+```python
+from django_cfg import send_telegram_message, send_telegram_photo
+
+# Send to a different bot/chat
+send_telegram_message(
+    "Notification for support team",
+    bot_token="SUPPORT_BOT_TOKEN",
+    chat_id="-100111222333"
+)
+
+send_telegram_photo(
+    photo="https://example.com/chart.png",
+    caption="Daily metrics",
+    bot_token="METRICS_BOT_TOKEN",
+    chat_id="-100444555666"
+)
+```
+
+### Quick Notifications (Shortcut Functions)
+
+All shortcuts use default config and fail silently:
+
+```python
+from django_cfg.modules.django_telegram import (
+    send_error,
+    send_success,
+    send_warning,
+    send_info,
+    send_stats,
+    send_alert,
+)
+
+# Error notification (HIGH priority)
+send_error(
+    error="Database connection failed",
+    context={"host": "db.example.com", "error_code": 1045}
+)
+
+# Success notification (NORMAL priority)
+send_success(
+    message="Backup completed successfully",
+    details={"size": "1.2GB", "duration": "5min"}
+)
+
+# Warning notification (HIGH priority)
+send_warning(
+    warning="Disk usage above 80%",
+    context={"disk": "/dev/sda1", "usage": "85%"}
+)
+
+# Info notification (NORMAL priority)
+send_info(
+    message="Server started",
+    data={"version": "1.0.0", "port": 8000}
+)
+
+# Statistics (LOW priority)
+send_stats(
+    title="Daily Stats",
+    stats={"users": 150, "requests": 10000, "errors": 5}
+)
+
+# Critical alert (CRITICAL priority) - never dropped
+send_alert(
+    message="Security breach detected!",
+    context={"ip": "192.168.1.100", "attempts": 50}
+)
+```
+
+## Configuration
+
+Configure Telegram in your `DjangoConfig`:
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.models import TelegramConfig
+
+class MyConfig(DjangoConfig):
+    project_name = "My Project"
+    # ... other config ...
+
+    telegram = TelegramConfig(
+        bot_token="YOUR_BOT_TOKEN",
+        chat_id="YOUR_CHAT_ID",  # Default chat for notifications
+        parse_mode="HTML",  # Default parse mode
+    )
+```
+
+## Rate Limiting & Queue
+
+All messages go through a global singleton queue with rate limiting:
+
+- **Rate limit**: 20 messages/second (Telegram allows 30)
+- **Max queue size**: 1000 messages
+- **Auto-cleanup**: Drops LOW priority at 800+ messages
+- **Emergency cleanup**: Drops NORMAL at 900+ messages
+- **CRITICAL always kept**: Never dropped
+
+```python
+# Check queue status
+from django_cfg.modules.django_telegram import DjangoTelegram
+
+telegram = DjangoTelegram()
+stats = telegram.get_queue_stats()
+# {
+#     "queue_size": 15,
+#     "max_size": 1000,
+#     "usage_percent": 1.5,
+#     "dropped_total": 0,
+#     "status": "OK"  # OK, WARNING, CRITICAL, or FULL
+# }
+```
+
+## Priority Usage Examples
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram, MessagePriority
+
+telegram = DjangoTelegram()
+
+# Critical security alert - never dropped
+telegram.send_message(
+    "SECURITY ALERT: Unauthorized login attempt detected!",
+    priority=MessagePriority.CRITICAL
+)
+
+# Error notification - drops only when queue is full
+telegram.send_message(
+    "Payment processing failed",
+    priority=MessagePriority.HIGH
+)
+
+# Regular info - may be dropped if queue is very full
+telegram.send_message(
+    "User registered successfully",
+    priority=MessagePriority.NORMAL
+)
+
+# Debug/stats - first to be dropped when queue grows
+telegram.send_message(
+    "Cache hit rate: 95%",
+    priority=MessagePriority.LOW
+)
+```
+
+## Integration with Email
+
+Use `send_admin_notification()` to send to both email AND Telegram:
+
+```python
+from django_cfg import send_admin_notification
+
+send_admin_notification(
+    subject="Database Backup Completed",
+    message="Backup 'default_20250115_020000.sql.gz' created successfully",
+    send_email=True,
+    send_telegram=True
+)
+```
+
+## Error Handling
+
+```python
+from django_cfg.modules.django_telegram import (
+    DjangoTelegram,
+    TelegramError,
+    TelegramConfigError,
+    TelegramSendError
+)
+
+telegram = DjangoTelegram()
+
+try:
+    telegram.send_message("Test", fail_silently=False)
+except TelegramConfigError as e:
+    print(f"Not configured: {e}")
+except TelegramSendError as e:
+    print(f"Failed to send: {e}")
+except TelegramError as e:
+    print(f"Telegram error: {e}")
+```
+
+## Formatters
+
+The module includes utilities for message formatting:
+
+```python
+from django_cfg.modules.django_telegram import (
+    EMOJI_MAP,
+    format_to_yaml,
+    format_message_with_context,
+)
+
+# Available emojis
+EMOJI_MAP = {
+    "success": "✅",
+    "error": "❌",
+    "warning": "⚠️",
+    "info": "ℹ️",
+    "start": "🚀",
+    "finish": "🏁",
+    "stats": "📊",
+    "alert": "🚨",
+}
+
+# Format dict as YAML string (for <pre> blocks)
+yaml_text = format_to_yaml({"users": 100, "status": "active"})
+
+# Build formatted message with emoji, title, and context
+message = format_message_with_context(
+    emoji_key="success",
+    title="Task Completed",
+    message="All items processed",
+    context={"processed": 50, "skipped": 3}
+)
+# Returns: "✅ <b>Task Completed</b>\n\nAll items processed\n\n<pre>processed: 50\nskipped: 3</pre>"
+```
+
+## Discovering Chat ID
+
+Use `get_chats()` to find the chat_id for your bot:
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram
+
+# Initialize with your bot token
+telegram = DjangoTelegram(bot_token="YOUR_BOT_TOKEN")
+
+# Get bot info
+print(telegram.get_me())
+# {'id': 123456789, 'username': 'MyBot', ...}
+
+# Get chats where bot received messages
+# Note: Send a message to the bot first!
+chats = telegram.get_chats()
+for chat in chats:
+    print(f"ID: {chat['id']}, Title: {chat.get('title')}, Type: {chat['type']}")
+# ID: -1001234567890, Title: My Group, Type: supergroup
+```
+
+## Management Commands
+
+### telegram_bot
+
+Bot management command for discovering chats and sending messages:
+
+```bash
+# Show bot info
+python manage.py telegram_bot info
+
+# List chats (send a message to the bot first!)
+python manage.py telegram_bot chats
+
+# Send message to specific chat
+python manage.py telegram_bot send "Hello!" --chat_id=-1001234567890
+
+# Interactive test (select chat from list)
+python manage.py telegram_bot test
+
+# Use custom bot token
+python manage.py telegram_bot --bot_token="YOUR_TOKEN" chats
+```
+
+### test_telegram
+
+Test module functionality with configured settings:
+
+```bash
+# Send test message using config defaults
+python manage.py test_telegram
+
+# Custom message
+python manage.py test_telegram --message="Custom test message"
+```
+
+## Queue Flushing
+
+The message queue runs in a daemon thread. For long-running Django apps this works fine,
+but for short-lived scripts (management commands) you need to flush the queue before exit:
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram, telegram_queue
+
+telegram = DjangoTelegram(bot_token="...", chat_id="...")
+telegram.send_message("Hello!")
+
+# Wait for queue to process all messages (max 10 seconds)
+telegram_queue.flush(timeout=10)
+```
+
+**Why is this needed?**
+
+The queue worker is a daemon thread (`daemon=True`), which means Python kills it
+immediately when the main program exits. Without `flush()`, messages may be queued
+but never sent.
+
+```python
+# Queue stats
+stats = telegram_queue.get_stats()
+# {
+#     "queue_size": 0,
+#     "max_size": 1000,
+#     "usage_percent": 0.0,
+#     "dropped_total": 0,
+#     "status": "OK"
+# }
+```
+
+## See Also
+
+- **[Email Module](../email/overview)** - Email notifications
+- **[Configuration Guide](/docs/fundamentals/configuration)** - DjangoConfig setup

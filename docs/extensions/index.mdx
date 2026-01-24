@@ -1,0 +1,490 @@
+---
+title: "Extensions Overview"
+description: "Modular, reusable apps for Django-CFG - Build once, use everywhere"
+---
+
+# Extensions
+
+<Callout type="info">
+**New in Django-CFG 2.0**
+Extensions are self-contained, auto-discovered Django apps that simplify your configuration and enable code reuse across projects.
+</Callout>
+
+## What are Extensions?
+
+Extensions are **modular Django applications** that configure and register themselves automatically. Instead of managing everything in your main `DjangoConfig`, extensions live in their own directories and integrate seamlessly with your project.
+
+### The Problem Extensions Solve
+
+**Before Extensions (Legacy):**
+```python
+# api/config.py - Everything in one massive file ❌
+class MyProjectConfig(DjangoConfig):
+    # Payment processing config
+    payments: PaymentsConfig = PaymentsConfig(
+        nowpayments_api_key="...",
+        nowpayments_ipn_secret="...",
+        enabled=True
+    )
+
+    # Lead management config
+    leads: LeadsConfig = LeadsConfig(
+        telegram_enabled=True,
+        email_enabled=True
+    )
+
+    # Support system config
+    support: SupportConfig = SupportConfig(
+        ticket_auto_assign=True,
+        sla_hours=24
+    )
+
+    # Manual app registration
+    project_apps: list[str] = [
+        "extensions.apps.payments",
+        "extensions.apps.leads",
+        "extensions.apps.support",
+    ]
+
+    # Manual middleware
+    custom_middleware: list[str] = [
+        "extensions.apps.payments.middleware.PaymentMiddleware",
+    ]
+```
+
+**After Extensions (Modern):**
+```python
+# api/config.py - Clean and focused ✅
+class MyProjectConfig(DjangoConfig):
+    # Only core Django configuration
+    project_name: str = "My SaaS Platform"
+    secret_key: str = env.secret_key
+    databases: Dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig.from_url(url=env.database.url)
+    }
+
+    # Your custom project apps (not extensions)
+    project_apps: list[str] = ["core", "apps.profiles"]
+
+    # Extensions are auto-discovered! ✨
+```
+
+```python
+# extensions/apps/payments/__cfg__.py - Self-contained ✅
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    enabled: bool = True
+    nowpayments_api_key: str = env.payments.api_key
+
+settings = PaymentsSettings()  # This line enables the extension!
+```
+
+---
+
+## Key Benefits
+
+### 1. **Separation of Concerns**
+Each extension manages its own configuration, keeping your main `DjangoConfig` small and focused.
+
+### 2. **Auto-Discovery**
+Extensions automatically register themselves - no manual `INSTALLED_APPS` or URL pattern configuration needed.
+
+### 3. **Reusability**
+Create an extension once, use it across multiple projects. Share extensions with your team or the community.
+
+### 4. **Type Safety**
+Full Pydantic validation for all extension settings, catching configuration errors before runtime.
+
+### 5. **Easy Customization**
+Override base extension settings in your project without modifying the extension code.
+
+---
+
+## Extension Types
+
+Django-CFG supports two types of extensions:
+
+### App Extensions
+Full Django applications with models, views, and database migrations.
+
+**Examples:**
+- `payments` - Payment processing (NowPayments, Stripe)
+- `leads` - Lead management and contact forms
+- `support` - Support ticket system
+- `newsletter` - Email campaign management
+- `knowbase` - Knowledge base articles
+
+**Location:** `extensions/apps/{name}/`
+
+### Module Extensions
+Utility modules without database models, providing reusable functionality.
+
+**Examples:**
+- `currency` - Currency conversion utilities
+- `analytics` - Analytics helpers
+- `telegram` - Telegram bot utilities
+
+**Location:** `extensions/modules/{name}/`
+
+---
+
+## Backend vs Frontend Extensions
+
+Django-CFG features a **dual-layer extension architecture**:
+
+### Backend Extensions (Django)
+Python-based Django apps that provide REST APIs, database models, and business logic.
+
+**Created with:** `__cfg__.py` configuration file
+**Learn more:** [Backend Extensions Guide](/docs/extensions/backend-extensions)
+
+### Frontend Extensions (TypeScript/React)
+npm packages that provide React components, TypeScript API clients, and UI widgets.
+
+**Created with:** `@djangocfg/ext-base` CLI
+**Learn more:** [Frontend Extensions Guide](/docs/extensions/frontend-extensions)
+
+---
+
+## Extension Lifecycle
+
+### 1. Create
+Generate a new extension with the CLI or manually create the directory structure.
+
+```bash
+# Backend extension
+mkdir -p extensions/apps/my-extension
+```
+
+```bash
+# Frontend extension
+pnpm dlx @djangocfg/ext-base create
+```
+
+### 2. Configure
+Add a `__cfg__.py` file to enable and configure the extension.
+
+```python
+# extensions/apps/my-extension/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
+
+class MyExtensionSettings(BaseExtensionSettings):
+    name = "my-extension"
+    version = "1.0.0"
+    description = "My awesome extension"
+
+settings = MyExtensionSettings()  # Enable it!
+```
+
+### 3. Develop
+Add models, views, admin, URLs, and other Django components.
+
+```
+extensions/apps/my-extension/
+├── __cfg__.py          # Configuration (required)
+├── apps.py             # Django AppConfig
+├── models.py           # Database models
+├── admin.py            # Admin interface
+├── urls.py             # Routes → /cfg/my-extension/
+├── views.py            # ViewSets and views
+└── migrations/         # Database migrations
+```
+
+### 4. Use
+The extension auto-registers and is immediately available in your project.
+
+```bash
+# URLs automatically available
+curl http://localhost:8000/cfg/my-extension/api/
+
+# Admin navigation appears automatically
+# Middleware registers automatically
+# Background tasks schedule automatically
+```
+
+---
+
+## When to Use Extensions
+
+### ✅ Use Extensions For:
+
+- **Reusable functionality** that could be shared across projects
+- **Self-contained features** with their own models and APIs
+- **Third-party integrations** (payments, CRM, support)
+- **Optional features** that can be enabled/disabled
+- **Marketplace-ready packages** for distribution
+
+### ❌ Use Project Apps For:
+
+- **Core business logic** specific to your project
+- **One-off features** that won't be reused
+- **Tightly coupled** components that depend on project structure
+- **Prototype features** still in heavy development
+
+---
+
+## Quick Start Example
+
+Let's create a simple "Analytics" extension:
+
+### Step 1: Create Directory
+
+```bash
+mkdir -p extensions/apps/analytics
+touch extensions/apps/analytics/__cfg__.py
+```
+
+### Step 2: Configure Extension
+
+```python
+# extensions/apps/analytics/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
+from django_cfg.modules.django_unfold.icons import Icons
+from django_cfg.modules.django_unfold.navigation import NavigationSection, NavigationItem
+
+class AnalyticsSettings(BaseExtensionSettings):
+    # Manifest
+    name: str = "analytics"
+    version: str = "1.0.0"
+    description: str = "Analytics tracking and dashboards"
+    author: str = "My Team"
+
+    # Django integration
+    django_app_label: str = "analytics"  # Becomes "cfg_analytics"
+    url_prefix: str = "analytics"        # URLs at /cfg/analytics/
+
+    # Features
+    admin_enabled: bool = True
+    has_migrations: bool = True
+
+    # Google Analytics config
+    ga_tracking_id: str = "UA-XXXXX-Y"
+
+    # Admin navigation
+    navigation = NavigationSection(
+        title="Analytics",
+        icon=Icons.ANALYTICS,
+        items=[
+            NavigationItem(
+                title="Dashboard",
+                app="analytics",
+                model="pageview",
+            ),
+        ],
+    )
+
+settings = AnalyticsSettings()
+```
+
+### Step 3: Add Django App Files
+
+```python
+# extensions/apps/analytics/apps.py
+from django.apps import AppConfig
+from .__cfg__ import settings
+
+class AnalyticsConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "extensions.apps.analytics"
+    label = settings.full_app_label  # "cfg_analytics"
+    verbose_name = "Analytics"
+```
+
+```python
+# extensions/apps/analytics/models.py
+from django.db import models
+
+class PageView(models.Model):
+    url = models.CharField(max_length=500)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user_agent = models.TextField()
+
+    class Meta:
+        ordering = ["-timestamp"]
+```
+
+### Step 4: Run Migrations
+
+```bash
+python manage.py makemigrations cfg_analytics
+python manage.py migrate
+```
+
+### Step 5: It Just Works! ✨
+
+- ✅ App added to `INSTALLED_APPS` automatically
+- ✅ URLs available at `/cfg/analytics/`
+- ✅ Admin navigation appears in sidebar
+- ✅ Models ready to use
+- ✅ No manual configuration needed!
+
+---
+
+## Extension Auto-Discovery
+
+Extensions are discovered automatically by scanning:
+
+1. `extensions/apps/` - App extensions (with models)
+2. `extensions/modules/` - Module extensions (utilities)
+
+**Requirements:**
+- Directory must contain `__cfg__.py` file
+- File must have a `settings` variable
+- `settings` must be an instance of `BaseExtensionSettings` or `BaseModuleSettings`
+
+**Discovery happens at Django startup**, so new extensions are available immediately after creating `__cfg__.py`.
+
+---
+
+## Extension Features
+
+Extensions can include:
+
+### 🎨 Admin UI
+- Custom admin navigation with icons
+- Admin views and actions
+- Custom admin templates
+
+### 🔗 URL Routing
+- Automatic URL registration
+- Convention-based patterns:
+  - `urls.py` → `/cfg/{prefix}/`
+  - `urls_admin.py` → `/cfg/{prefix}/admin/`
+  - `urls_system.py` → `/cfg/{prefix}/system/`
+
+### ⚙️ Dynamic Settings
+- Runtime configuration with Constance
+- Settings editable in admin
+- Type-safe field definitions
+
+### 📅 Scheduled Tasks
+- Background job scheduling with Django-RQ
+- Cron and interval schedules
+- Task monitoring in admin
+
+### 🔌 Middleware
+- Custom middleware auto-inserted
+- Correct ordering guaranteed
+- Per-extension middleware isolation
+
+### 📦 Dependencies
+- Declare required extensions
+- Specify pip package requirements
+- Automatic dependency checking
+
+---
+
+## Next Steps
+
+<Cards>
+  <Cards.Card title="Backend Extensions" href="/docs/extensions/backend-extensions" />
+  <Cards.Card title="Frontend Extensions" href="/docs/extensions/frontend-extensions" />
+  <Cards.Card title="Migration Guide" href="/docs/extensions/migration-guide" />
+  <Cards.Card title="API Reference" href="/docs/extensions/api-reference" />
+</Cards>
+
+---
+
+## Examples
+
+### Simple Extension (No Database)
+
+```python
+# extensions/modules/currency/__cfg__.py
+from django_cfg.extensions.configs.modules.base import BaseModuleSettings
+
+class CurrencySettings(BaseModuleSettings):
+    name = "currency"
+    version = "1.0.0"
+
+    # Exchange rate API
+    api_key: str = env.currency.api_key
+
+settings = CurrencySettings()
+```
+
+### Extension with Dependencies
+
+```python
+# extensions/apps/crm/__cfg__.py
+class CRMSettings(BaseExtensionSettings):
+    name = "crm"
+
+    # Requires other extensions
+    requires = ["leads", "support"]
+
+    # Requires pip packages
+    pip_requires = ["salesforce-api>=2.0"]
+
+settings = CRMSettings()
+```
+
+### Extension with Scheduled Tasks
+
+```python
+# extensions/apps/backup/__cfg__.py
+from django_cfg.extensions.configs.apps.backup import BaseBackupSettings
+from django_cfg.extensions.types import ExtensionScheduleConfig
+
+class BackupSettings(BaseBackupSettings):
+    schedules = [
+        ExtensionScheduleConfig(
+            func="extensions.apps.backup.tasks.daily_backup",
+            schedule_type="interval",
+            interval=86400,  # 24 hours
+            description="Daily database backup",
+        ),
+    ]
+
+settings = BackupSettings()
+```
+
+---
+
+## Community Extensions
+
+<Callout type="success">
+**Coming Soon: Extension Marketplace**
+Discover, install, and share extensions with the Django-CFG community.
+</Callout>
+
+Browse available extensions in the [Hub](/hub) or create your own!
+
+---
+
+## FAQ
+
+### Q: What's the difference between extensions and project apps?
+
+**Extensions** are reusable, self-contained features that could be shared across projects. They use the `cfg_` namespace and auto-register themselves.
+
+**Project apps** are your custom business logic specific to one project. They're listed in `project_apps` and use your own naming.
+
+### Q: Can I have both backend and frontend extensions?
+
+Yes! Most extensions have both:
+- Backend extension provides the API
+- Frontend extension provides the UI components
+- They work together seamlessly
+
+### Q: Do I need to register extensions in INSTALLED_APPS?
+
+No! Extensions auto-register themselves when you add `settings = ExtensionSettings()` to `__cfg__.py`.
+
+### Q: Can I disable an extension temporarily?
+
+Yes, either:
+1. Remove/comment out the `settings = ...` line in `__cfg__.py`
+2. Set `enabled: bool = False` in extension settings
+
+### Q: Can extensions depend on each other?
+
+Yes! Use the `requires: list[str]` field in extension settings to declare dependencies.
+
+---
+
+<Callout type="info">
+**Ready to build your first extension?**
+Check out the [Backend Extensions Guide](/docs/extensions/backend-extensions) for a step-by-step tutorial!
+</Callout>

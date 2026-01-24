@@ -1,0 +1,212 @@
+---
+title: Django Setup
+description: Configure Django-CFG for Next.js admin panel integration
+---
+
+import { Callout, Tabs } from 'nextra/components'
+
+# Django Setup
+
+Configure your Django project to support the Next.js admin panel.
+
+## Configuration File
+
+Edit your `config.py` to enable Next.js admin integration:
+
+```python filename="solution/projects/django/api/config.py"
+from django_cfg import DjangoCfg
+from django_cfg.modules.nextjs_admin import NextJsAdminConfig
+from django_cfg.modules.django_client import OpenAPIConfig, OpenAPIGroupConfig
+
+config = DjangoCfg(
+    # === Next.js Admin Integration ===
+    nextjs_admin=NextJsAdminConfig(
+        # Path to Next.js project (relative to manage.py)
+        project_path="../frontend/apps/admin",
+
+        # Where to copy TypeScript clients
+        api_output_path="app/_lib/api/generated",
+
+        # URL for static files (default: /cfg/nextjs-admin/)
+        # static_url="/cfg/nextjs-admin/",
+
+        # Next.js dev server URL (default: http://localhost:3000)
+        # dev_url="http://localhost:3000",
+
+        # Default iframe route
+        # iframe_route="/admin",
+
+        # Tab title in Django Admin
+        # tab_title="Dashboard",
+    ),
+
+    # === OpenAPI Client Generation ===
+    openapi=OpenAPIConfig(
+        enabled=True,
+        groups=[
+            OpenAPIGroupConfig(
+                name="custom",
+                apps=["myapp", "api"],  # Your Django apps
+                title="Custom API",
+                version="v1",
+            ),
+        ],
+        generate_python=True,
+        generate_typescript=True,
+        generate_zod_schemas=True,
+        generate_fetchers=True,
+        generate_swr_hooks=True,
+    ),
+)
+```
+
+## NextJsAdminConfig Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `project_path` | `str` | Required | Path to Next.js project relative to `manage.py` |
+| `api_output_path` | `str` | `"app/_lib/api/generated"` | Where to copy generated TypeScript clients |
+| `static_url` | `str` | `"/cfg/nextjs-admin/"` | URL prefix for serving static files |
+| `dev_url` | `str` | `"http://localhost:3000"` | Next.js dev server URL |
+| `iframe_route` | `str` | `"/admin"` | Default route to load in iframe |
+| `tab_title` | `str` | `"Dashboard"` | Tab title shown in Django Admin |
+
+## OpenAPIConfig Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable OpenAPI generation |
+| `groups` | `list` | `[]` | List of `OpenAPIGroupConfig` |
+| `generate_python` | `bool` | `True` | Generate Python client |
+| `generate_typescript` | `bool` | `True` | Generate TypeScript client |
+| `generate_zod_schemas` | `bool` | `True` | Generate Zod validation schemas |
+| `generate_fetchers` | `bool` | `True` | Generate fetcher functions |
+| `generate_swr_hooks` | `bool` | `True` | Generate SWR React hooks |
+
+## Django App Structure
+
+Create or organize your Django apps to expose API endpoints:
+
+```
+solution/projects/django/apps/
+└── myapp/
+    ├── __init__.py
+    ├── models.py          # Django models
+    ├── serializers.py     # DRF serializers
+    ├── views.py           # API ViewSets
+    ├── urls.py            # URL routes
+    └── admin.py           # Django Admin (optional)
+```
+
+### Example Model
+
+```python filename="apps/myapp/models.py"
+from django.db import models
+
+class Item(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+```
+
+### Example Serializer
+
+```python filename="apps/myapp/serializers.py"
+from rest_framework import serializers
+from .models import Item
+
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = ['id', 'name', 'description', 'price', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at']
+```
+
+### Example ViewSet
+
+```python filename="apps/myapp/views.py"
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .models import Item
+from .serializers import ItemSerializer
+
+class ItemViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing items.
+
+    list: Get all items
+    create: Create a new item
+    retrieve: Get a specific item
+    update: Update an item
+    destroy: Delete an item
+    stats: Get item statistics
+    """
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Get item statistics."""
+        return Response({
+            'total': self.queryset.count(),
+            'active': self.queryset.filter(is_active=True).count(),
+        })
+```
+
+### Example URLs
+
+```python filename="apps/myapp/urls.py"
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ItemViewSet
+
+router = DefaultRouter()
+router.register('items', ItemViewSet)
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
+```
+
+### Register in Main URLs
+
+```python filename="api/urls.py"
+from django.urls import path, include
+
+urlpatterns = [
+    # ... other urls
+    path('api/myapp/', include('apps.myapp.urls')),
+]
+```
+
+## JWT Authentication
+
+<Callout type="info">
+Django-CFG automatically configures JWT authentication when `nextjs_admin` is enabled. Tokens are injected into the iframe HTML for authenticated users.
+</Callout>
+
+The system uses `djangorestframework-simplejwt` for token generation:
+
+```python
+# Tokens are automatically injected:
+localStorage.setItem('auth_token', '<access_token>');
+localStorage.setItem('refresh_token', '<refresh_token>');
+```
+
+## Verify Configuration
+
+After setting up, verify your configuration:
+
+```bash
+# Check OpenAPI schema generation
+python manage.py spectacular --validate
+
+# Generate clients (dry run)
+python manage.py generate_client --dry-run
+```

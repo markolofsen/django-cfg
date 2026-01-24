@@ -1,0 +1,566 @@
+---
+title: Formatting Field Types
+description: Learn about CurrencyField, DecimalField, DateTimeField, and ShortUUIDField for formatting values in Django Admin lists.
+sidebar_label: Formatting Fields
+sidebar_position: 4
+keywords:
+  - CurrencyField
+  - DecimalField
+  - DateTimeField
+  - ShortUUIDField
+  - django admin formatting
+  - currency display
+  - decimal formatting
+  - datetime formatting
+  - uuid shortening
+---
+
+
+# Formatting Field Types
+
+Learn about specialized field types that format and display values in Django Admin.
+
+## CurrencyField
+
+Format numbers as currency with symbols and precision. Supports both fixed and dynamic currency codes.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `currency` | `str \| None` | `None` | Fixed currency code (USD, EUR, etc.) |
+| `currency_field` | `str \| None` | `None` | Model field containing currency code |
+| `secondary_field` | `str \| None` | `None` | Field with secondary currency value (e.g., USD equivalent) |
+| `secondary_currency` | `str` | `"USD"` | Secondary currency code |
+| `precision` | `int` | `2` | Decimal places |
+| `show_sign` | `bool` | `False` | Show +/- sign |
+| `thousand_separator` | `bool` | `True` | Use thousand separator |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import CurrencyField
+
+# Fixed currency - USD with 2 decimals
+CurrencyField(
+    name="price",
+    title="Price",
+    currency="USD",
+    precision=2,
+)
+
+# Dynamic currency from model field
+CurrencyField(
+    name="price",
+    title="Price",
+    currency_field="currency",  # Reads currency from model.currency
+)
+
+# Dynamic currency with USD equivalent
+CurrencyField(
+    name="price",
+    title="Price",
+    currency_field="currency",
+    secondary_field="price_usd",
+    secondary_currency="USD",
+)
+```
+
+### Examples
+
+### Fixed Currency
+
+```python
+display_fields=[
+    CurrencyField(
+        name="price",
+        title="Price",
+        currency="USD",
+        precision=2,
+    ),
+    CurrencyField(
+        name="total",
+        title="Total",
+        currency="EUR",
+        precision=2,
+        ordering="total",
+    ),
+]
+```
+
+**Renders as:** `$1,234.56` or `€1,234.56`
+
+### Dynamic Currency
+
+When your model stores prices in different currencies:
+
+```python
+# Model: Vehicle
+# - price: DecimalField (price in original currency)
+# - currency: CharField (KRW, USD, EUR, etc.)
+# - price_usd: DecimalField (converted to USD)
+
+display_fields=[
+    CurrencyField(
+        name="price",
+        title="Price",
+        currency_field="currency",  # Get currency from model field
+    ),
+]
+```
+
+**Renders as:** `₩50,000,000` or `$15,000` depending on the currency field value.
+
+### Dynamic Currency with USD Equivalent
+
+Show original price with USD conversion:
+
+```python
+display_fields=[
+    CurrencyField(
+        name="price",
+        title="Price",
+        currency_field="currency",
+        secondary_field="price_usd",
+        secondary_currency="USD",
+    ),
+]
+```
+
+**Renders as:**
+```
+₩50,000,000
+$15,000
+```
+
+### Multi-Currency Columns
+
+```python
+display_fields=[
+    CurrencyField(name="price_usd", title="USD", currency="USD", precision=2),
+    CurrencyField(name="price_eur", title="EUR", currency="EUR", precision=2),
+    CurrencyField(name="price_gbp", title="GBP", currency="GBP", precision=2),
+]
+```
+
+### Crypto Prices
+
+```python
+display_fields=[
+    CurrencyField(
+        name="current_price_usd",
+        title="Price",
+        currency="USD",
+        precision=2,
+    ),
+    CurrencyField(
+        name="market_cap_usd",
+        title="Market Cap",
+        currency="USD",
+        precision=0,  # No decimals for large numbers
+    ),
+]
+```
+
+**Renders as:** `$1,234` (no decimals)
+
+
+## DecimalField
+
+Format decimal numbers with custom precision and optional prefix/suffix.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `decimal_places` | `int` | `2` | Decimal places to display |
+| `prefix` | `str \| None` | `None` | Prefix symbol (e.g., `"$"`) |
+| `suffix` | `str \| None` | `None` | Suffix symbol (e.g., `"%"`, `"BTC"`) |
+| `show_sign` | `bool` | `False` | Show +/- sign |
+| `thousand_separator` | `bool` | `True` | Use thousand separator |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import DecimalField
+
+# Basic decimal
+DecimalField(
+    name="price",
+    title="Price",
+    decimal_places=8,
+)
+
+# Percentage
+DecimalField(
+    name="confidence",
+    title="Confidence",
+    decimal_places=2,
+    suffix="%",
+)
+
+# With prefix
+DecimalField(
+    name="amount",
+    title="Amount",
+    decimal_places=2,
+    prefix="$",
+    show_sign=True,
+)
+```
+
+### Examples
+
+### Basic Decimals
+
+```python
+display_fields=[
+    DecimalField(
+        name="price",
+        title="Price",
+        decimal_places=8,
+    ),
+    DecimalField(
+        name="quantity",
+        title="Quantity",
+        decimal_places=4,
+    ),
+]
+```
+
+**Renders as:** `1,234.56789012`, `100.5000`
+
+### Percentages
+
+```python
+display_fields=[
+    DecimalField(
+        name="confidence",
+        title="Confidence",
+        decimal_places=2,
+        suffix="%",
+    ),
+    DecimalField(
+        name="change_24h",
+        title="24h Change",
+        decimal_places=2,
+        suffix="%",
+        show_sign=True,
+    ),
+]
+```
+
+**Renders as:** `95.50%`, `+3.25%`
+
+### Crypto Amounts
+
+```python
+display_fields=[
+    DecimalField(
+        name="btc_amount",
+        title="BTC",
+        decimal_places=8,
+        suffix=" BTC",
+    ),
+    DecimalField(
+        name="eth_amount",
+        title="ETH",
+        decimal_places=18,
+        suffix=" ETH",
+    ),
+]
+```
+
+**Renders as:** `0.12345678 BTC`, `1.500000000000000000 ETH`
+
+
+
+<Callout type="info">
+**When to use DecimalField vs CurrencyField**
+- Use **DecimalField** for generic decimal numbers, percentages, or crypto amounts with custom suffixes
+- Use **CurrencyField** specifically for fiat currency display with currency symbols (USD, EUR, etc.)
+
+</Callout>
+
+## DateTimeField
+
+Format datetime values with timezone support and relative time display.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `datetime_format` | `str \| None` | `None` | Custom format (default: `"%Y-%m-%d %H:%M:%S"`) |
+| `show_relative` | `bool` | `True` | Show relative time ("2 hours ago") |
+| `use_local_tz` | `bool` | `True` | Convert to local timezone |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Timezone Support
+
+DateTimeField automatically converts times to the local timezone:
+
+1. First tries `DjangoConfig.admin_timezone` if configured
+2. Falls back to system timezone via `tzlocal`
+
+Configure in your Django config:
+```python
+class MyConfig(DjangoConfig):
+    admin_timezone = "Asia/Seoul"  # Or None for system timezone
+```
+
+### Display Format
+
+DateTimeField renders in a clean multi-line format:
+
+```
+2025-11-25        ← Date (bold)
+16:06:03 KST      ← Time + timezone (gray)
+2 hours ago       ← Relative time (gray, optional)
+```
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import DateTimeField
+
+# With relative time (default)
+DateTimeField(
+    name="created_at",
+    title="Created",
+    show_relative=True,
+)
+
+# Without relative time
+DateTimeField(
+    name="posted_at",
+    title="Posted",
+    show_relative=False,
+)
+
+# Keep UTC (don't convert to local timezone)
+DateTimeField(
+    name="server_time",
+    title="Server Time",
+    use_local_tz=False,
+)
+```
+
+### Examples
+
+### With Relative Time
+
+```python
+display_fields=[
+    DateTimeField(
+        name="created_at",
+        title="Created",
+        show_relative=True,
+        ordering="created_at",
+    ),
+]
+```
+
+**Renders as:**
+```
+2025-11-25
+16:06:03 KST
+2 hours ago
+```
+
+### Without Relative Time
+
+```python
+display_fields=[
+    DateTimeField(
+        name="posted_at",
+        title="Posted",
+        show_relative=False,
+    ),
+]
+```
+
+**Renders as:**
+```
+2025-11-25
+16:06:03 KST
+```
+
+### Keep UTC
+
+```python
+display_fields=[
+    DateTimeField(
+        name="server_timestamp",
+        title="Server Time",
+        use_local_tz=False,  # Keep original timezone
+        show_relative=False,
+    ),
+]
+```
+
+**Renders as:**
+```
+2025-11-25
+08:06:03 UTC
+```
+
+
+
+<Callout type="info">
+**Timezone Best Practices**
+- Use `use_local_tz=True` (default) for user-facing timestamps
+- Set `use_local_tz=False` for server/system timestamps that should stay in UTC
+- Configure `admin_timezone` in DjangoConfig for consistent display across all admins
+
+</Callout>
+
+## ShortUUIDField
+
+Display shortened UUIDs with hover tooltip showing full value.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `length` | `int` | `8` | Number of characters to display |
+| `copy_on_click` | `bool` | `True` | Enable click-to-copy |
+| `show_full_on_hover` | `bool` | `True` | Show full UUID in tooltip |
+| `is_link` | `bool` | `False` | Style as clickable link (for list_display_links) |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import ShortUUIDField
+
+# Simple shortened UUID
+ShortUUIDField(
+    name="id",
+    title="ID",
+    length=8,
+)
+
+# Styled as clickable link (for list_display_links)
+ShortUUIDField(
+    name="id",
+    title="ID",
+    is_link=True,
+)
+
+# Longer display
+ShortUUIDField(
+    name="uuid",
+    title="UUID",
+    length=12,
+)
+
+# With ordering
+ShortUUIDField(
+    name="id",
+    title="ID",
+    length=8,
+    ordering="id",
+)
+```
+
+### Examples
+
+### Basic UUID
+
+```python
+display_fields=[
+    ShortUUIDField(
+        name="id",
+        title="ID",
+        length=8,
+    ),
+]
+```
+
+**Renders as:** `a1b2c3d4` (with full UUID on hover)
+
+### Custom Length
+
+```python
+display_fields=[
+    ShortUUIDField(
+        name="transaction_id",
+        title="Transaction",
+        length=12,
+        ordering="transaction_id",
+    ),
+]
+```
+
+**Renders as:** `a1b2c3d4e5f6`
+
+### Multiple IDs
+
+```python
+display_fields=[
+    ShortUUIDField(name="id", title="ID", length=8),
+    ShortUUIDField(name="parent_id", title="Parent", length=8),
+    ShortUUIDField(name="reference_id", title="Reference", length=10),
+]
+```
+
+### Clickable Link Style
+
+For use with `list_display_links`:
+
+```python
+config = AdminConfig(
+    model=Vehicle,
+    list_display=['id', 'name', 'status'],
+    list_display_links=['id'],  # ID is clickable
+    display_fields=[
+        ShortUUIDField(
+            name="id",
+            title="ID",
+            is_link=True,  # Styled as link (blue/primary color)
+        ),
+    ],
+)
+```
+
+**Renders as:** `a1b2c3d4` in primary/link color instead of default gray
+
+
+
+<Callout type="info">
+**Perfect for List Views**
+ShortUUIDField is ideal for admin list views where you need to display UUIDs without taking up too much space. Users can hover to see the full UUID or click to copy it.
+
+</Callout>
+
+
+<Callout type="info">
+**Automatic Formatting**
+ShortUUIDField automatically:
+- Removes dashes for cleaner display
+- Shows tooltip with full UUID on hover
+- Enables click-to-copy functionality
+- Styles as inline code block
+
+</Callout>
+
+## Next Steps
+
+- **[Field Types Reference](../)** - Complete field types guide
+- **[Configuration Guide](../)** - AdminConfig options
+- **[Filters](..//basic-fields)** - Complete guide to filters
+- **[Examples](..//display-fields)** - Real-world examples

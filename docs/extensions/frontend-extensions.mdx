@@ -1,0 +1,664 @@
+---
+title: "Frontend Extensions"
+description: "Using TypeScript/React extension packages in your Next.js application"
+---
+
+# Frontend Extensions
+
+Frontend extensions are **npm packages** that provide React components, TypeScript API clients, and UI widgets for your Next.js application. They work seamlessly with backend extensions to create full-stack features.
+
+<Callout type="info">
+**User Guide**
+This guide shows you how to **use** frontend extension packages in your app. You don't need to build them yourself.
+</Callout>
+
+---
+
+## Concept: How Frontend Extensions Work
+
+### What Are Frontend Extensions?
+
+Frontend extensions are **TypeScript/React packages** published to npm that:
+- ✅ Provide ready-to-use React components
+- ✅ Include TypeScript API clients (auto-generated from Django)
+- ✅ Work with Next.js 13+ App Router
+- ✅ Support both Server and Client Components
+
+Think of them like **UI component libraries** (Shadcn, Radix) but specifically for Django-CFG features.
+
+### Available Packages
+
+Your project can use these published packages:
+
+**Business Features:**
+- `@djangocfg/ext-support` - Support ticket UI components
+- `@djangocfg/ext-payments` - Payment processing widgets
+- `@djangocfg/ext-leads` - Lead capture forms
+- `@djangocfg/ext-newsletter` - Email campaign UI
+- `@djangocfg/ext-knowbase` - Knowledge base components
+
+**Foundation:**
+- `@djangocfg/ext-base` - Base hooks, utilities, CLI tools
+
+---
+
+## Quick Start: Install Your First Extension
+
+### Step 1: Install Package
+
+```bash
+pnpm add @djangocfg/ext-support
+# or
+npm install @djangocfg/ext-support
+# or
+yarn add @djangocfg/ext-support
+```
+
+### Step 2: Import Components
+
+Frontend extensions have **two entry points**:
+
+#### Server Components (Safe Everywhere)
+```typescript
+// app/tickets/page.tsx
+import { ExtSupportClient } from '@djangocfg/ext-support';
+
+export default async function TicketsPage() {
+  const client = new ExtSupportClient({ baseUrl: process.env.API_URL });
+  const tickets = await client.support.tickets.list();
+
+  return <div>{tickets.length} tickets</div>;
+}
+```
+
+#### Client Components (Interactive UI)
+```typescript
+// app/tickets/page.tsx
+'use client';
+
+import { TicketList, useTickets } from '@djangocfg/ext-support/hooks';
+
+export default function TicketsPage() {
+  const { data: tickets, isLoading } = useTickets();
+
+  return <TicketList tickets={tickets} loading={isLoading} />;
+}
+```
+
+### Step 3: That's It! 🎉
+
+The components work out of the box with your Django backend.
+
+---
+
+## Installation Guide
+
+### Prerequisites
+
+1. **Backend extension enabled:**
+   ```python
+   # extensions/apps/support/__cfg__.py
+   settings = SupportSettings()
+   ```
+
+2. **API URL configured:**
+   ```bash
+   # .env.local
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
+
+### Install Extension Package
+
+```bash
+pnpm add @djangocfg/ext-{name}
+```
+
+**Example packages:**
+```bash
+# Support system
+pnpm add @djangocfg/ext-support
+
+# Payment processing
+pnpm add @djangocfg/ext-payments
+
+# Lead forms
+pnpm add @djangocfg/ext-leads
+```
+
+---
+
+## Using Extension Components
+
+### Pattern 1: Server Components (Data Fetching)
+
+Use for **SEO-friendly pages** that fetch data on the server:
+
+```typescript
+// app/tickets/page.tsx
+import { ExtSupportClient } from '@djangocfg/ext-support';
+
+export default async function TicketsPage() {
+  const client = new ExtSupportClient({
+    baseUrl: process.env.API_URL!,
+  });
+
+  const tickets = await client.support.tickets.list();
+
+  return (
+    <div>
+      <h1>Support Tickets</h1>
+      <div>
+        {tickets.map((ticket) => (
+          <div key={ticket.id}>
+            <h2>{ticket.subject}</h2>
+            <p>{ticket.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Pattern 2: Client Components (Interactive UI)
+
+Use for **interactive features** with real-time updates:
+
+```typescript
+// app/tickets/client-page.tsx
+'use client';
+
+import { TicketList, useTickets, SupportLayout } from '@djangocfg/ext-support/hooks';
+
+export default function TicketsPageClient() {
+  const { data: tickets, isLoading, error } = useTickets();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading tickets</div>;
+
+  return (
+    <SupportLayout>
+      <TicketList tickets={tickets} />
+    </SupportLayout>
+  );
+}
+```
+
+### Pattern 3: Hybrid (Server + Client)
+
+Use for **best of both worlds** - SEO + interactivity:
+
+```typescript
+// app/tickets/page.tsx - Server Component
+import { ExtSupportClient } from '@djangocfg/ext-support';
+import { TicketListClient } from './ticket-list-client';
+
+export default async function TicketsPage() {
+  const client = new ExtSupportClient({ baseUrl: process.env.API_URL! });
+  const initialTickets = await client.support.tickets.list();
+
+  return (
+    <div>
+      <h1>Support Tickets</h1>
+      {/* Pass server data to client component */}
+      <TicketListClient initialData={initialTickets} />
+    </div>
+  );
+}
+```
+
+```typescript
+// app/tickets/ticket-list-client.tsx - Client Component
+'use client';
+
+import { useTickets } from '@djangocfg/ext-support/hooks';
+
+export function TicketListClient({ initialData }) {
+  // Uses initialData, then fetches updates
+  const { data: tickets } = useTickets({ initialData });
+
+  return (
+    <div>
+      {tickets.map((ticket) => (
+        <TicketCard key={ticket.id} ticket={ticket} />
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## Configuration
+
+### API Base URL
+
+Extensions need to know your Django API URL:
+
+```bash
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Production
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+```
+
+### Client Configuration
+
+Pass config to the API client:
+
+```typescript
+import { ExtSupportClient } from '@djangocfg/ext-support';
+
+const client = new ExtSupportClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+  headers: {
+    'Authorization': `Bearer ${token}`,  // Add auth
+  },
+});
+```
+
+### Provider Setup (Optional)
+
+For shared configuration across components:
+
+```typescript
+// app/layout.tsx
+import { SupportProvider } from '@djangocfg/ext-support/hooks';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <SupportProvider config={{ apiUrl: process.env.NEXT_PUBLIC_API_URL }}>
+          {children}
+        </SupportProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+Then in child components:
+
+```typescript
+'use client';
+
+import { useTickets } from '@djangocfg/ext-support/hooks';
+
+// No need to pass config - uses Provider
+export function TicketList() {
+  const { data } = useTickets();
+  return <div>{data.length} tickets</div>;
+}
+```
+
+---
+
+## Troubleshooting
+
+### Package Not Found
+
+**Problem:** `Module not found: Can't resolve '@djangocfg/ext-support'`
+
+**Solutions:**
+
+1. **Install the package:**
+   ```bash
+   pnpm add @djangocfg/ext-support
+   ```
+
+2. **Check package name:**
+   ```bash
+   # Correct
+   pnpm add @djangocfg/ext-support
+
+   # Wrong
+   pnpm add djangocfg-ext-support
+   ```
+
+3. **Clear cache:**
+   ```bash
+   rm -rf node_modules .next
+   pnpm install
+   ```
+
+---
+
+### API Connection Errors
+
+**Problem:** `Failed to fetch` or `CORS error`
+
+**Solutions:**
+
+1. **Check API URL:**
+   ```bash
+   # .env.local
+   NEXT_PUBLIC_API_URL=http://localhost:8000  # Must match Django
+   ```
+
+2. **Verify Django is running:**
+   ```bash
+   curl http://localhost:8000/cfg/support/api/tickets/
+   ```
+
+3. **Check CORS settings:**
+   ```python
+   # api/config.py
+   class MyConfig(DjangoConfig):
+       security_domains: list[str] = [
+           "localhost:3000",  # Add your Next.js domain
+       ]
+   ```
+
+---
+
+### TypeScript Errors
+
+**Problem:** TypeScript can't find types
+
+**Solutions:**
+
+1. **Check package exports:**
+   ```typescript
+   // ✅ Correct
+   import { ExtClient } from '@djangocfg/ext-support';
+   import { useTickets } from '@djangocfg/ext-support/hooks';
+
+   // ❌ Wrong
+   import { ExtClient } from '@djangocfg/ext-support/dist';
+   ```
+
+2. **Restart TypeScript server:**
+   ```
+   VS Code: Cmd+Shift+P > "TypeScript: Restart TS Server"
+   ```
+
+3. **Check TypeScript version:**
+   ```bash
+   # Upgrade if needed
+   pnpm add -D typescript@latest
+   ```
+
+---
+
+### "use client" Errors
+
+**Problem:** `You're importing a component that needs "use client"`
+
+**Solutions:**
+
+Use the correct entry point:
+
+```typescript
+// ❌ Wrong - importing client hooks in server component
+import { useTickets } from '@djangocfg/ext-support';
+
+// ✅ Correct - use client-safe import
+import { ExtSupportClient } from '@djangocfg/ext-support';  // Server OK
+
+// ✅ Or add 'use client' directive
+'use client';
+import { useTickets } from '@djangocfg/ext-support/hooks';  // Client component
+```
+
+---
+
+### Components Not Rendering
+
+**Problem:** Components render blank or throw errors
+
+**Solutions:**
+
+1. **Check data is loading:**
+   ```typescript
+   const { data, isLoading, error } = useTickets();
+
+   console.log({ data, isLoading, error });  // Debug
+   ```
+
+2. **Verify backend extension is enabled:**
+   ```bash
+   curl http://localhost:8000/cfg/support/api/tickets/
+   # Should return JSON, not 404
+   ```
+
+3. **Check for prop mismatches:**
+   ```typescript
+   // Check component props match data shape
+   <TicketCard ticket={ticket} />  // Make sure 'ticket' has required fields
+   ```
+
+---
+
+## Best Practices
+
+### 1. **Use Server Components by Default**
+
+✅ **Good:**
+```typescript
+// Server Component - Better SEO, faster initial load
+import { ExtSupportClient } from '@djangocfg/ext-support';
+
+export default async function Page() {
+  const client = new ExtSupportClient(...);
+  const data = await client.support.tickets.list();
+  return <div>{JSON.stringify(data)}</div>;
+}
+```
+
+❌ **Avoid unless needed:**
+```typescript
+'use client';  // Only use when you need interactivity
+import { useTickets } from '@djangocfg/ext-support/hooks';
+```
+
+### 2. **Environment Variables for Config**
+
+✅ **Good:**
+```typescript
+const client = new ExtSupportClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+});
+```
+
+❌ **Bad:**
+```typescript
+const client = new ExtSupportClient({
+  baseUrl: "http://localhost:8000",  // Hardcoded!
+});
+```
+
+### 3. **Handle Loading & Error States**
+
+✅ **Good:**
+```typescript
+const { data, isLoading, error } = useTickets();
+
+if (isLoading) return <Skeleton />;
+if (error) return <ErrorMessage error={error} />;
+if (!data) return <EmptyState />;
+
+return <TicketList tickets={data} />;
+```
+
+### 4. **Use TypeScript Types**
+
+```typescript
+import type { Ticket } from '@djangocfg/ext-support';
+
+function TicketCard({ ticket }: { ticket: Ticket }) {
+  // TypeScript knows ticket.subject, ticket.description, etc.
+}
+```
+
+---
+
+## Common Use Cases
+
+### Use Case 1: Support Ticket Widget
+
+Add a support ticket form to your app:
+
+```typescript
+// app/support/page.tsx
+'use client';
+
+import { TicketForm } from '@djangocfg/ext-support/hooks';
+
+export default function SupportPage() {
+  return (
+    <div>
+      <h1>Contact Support</h1>
+      <TicketForm
+        onSuccess={() => alert('Ticket created!')}
+        onError={(err) => console.error(err)}
+      />
+    </div>
+  );
+}
+```
+
+### Use Case 2: Payment Checkout
+
+Add payment processing:
+
+```typescript
+// app/checkout/page.tsx
+'use client';
+
+import { CheckoutForm } from '@djangocfg/ext-payments/hooks';
+
+export default function CheckoutPage() {
+  return (
+    <CheckoutForm
+      amount={1000}  // $10.00
+      currency="USD"
+      onSuccess={(payment) => {
+        console.log('Payment successful!', payment);
+      }}
+    />
+  );
+}
+```
+
+### Use Case 3: Lead Capture
+
+Add a contact form:
+
+```typescript
+// app/contact/page.tsx
+'use client';
+
+import { LeadForm } from '@djangocfg/ext-leads/hooks';
+
+export default function ContactPage() {
+  return (
+    <div>
+      <h1>Get in Touch</h1>
+      <LeadForm
+        fields={['name', 'email', 'message']}
+        onSubmit={async (data) => {
+          console.log('Lead captured:', data);
+        }}
+      />
+    </div>
+  );
+}
+```
+
+---
+
+## FAQ
+
+### Q: Which extensions are available as npm packages?
+
+**A:** Check the [Hub](/hub) for all published packages. Most backend extensions have corresponding frontend packages.
+
+### Q: Can I use extensions without Next.js?
+
+**A:** Yes, but they're optimized for Next.js 13+ App Router. You can use the API clients in any TypeScript/React app:
+
+```typescript
+import { ExtSupportClient } from '@djangocfg/ext-support';
+// Works in any JavaScript environment
+```
+
+### Q: Do I need to install backend and frontend extensions separately?
+
+**A:** Yes:
+- **Backend:** Enable in `extensions/apps/{name}/__cfg__.py`
+- **Frontend:** Install npm package `@djangocfg/ext-{name}`
+
+They work together to provide the full feature.
+
+### Q: Can I customize extension components?
+
+**A:** Yes, several ways:
+
+1. **Pass props:**
+   ```typescript
+   <TicketList theme="dark" compact={true} />
+   ```
+
+2. **Wrap with your styles:**
+   ```typescript
+   <div className="my-custom-styles">
+     <TicketList />
+   </div>
+   ```
+
+3. **Use composition:**
+   ```typescript
+   import { useTickets } from '@djangocfg/ext-support/hooks';
+
+   function MyCustomTicketList() {
+     const { data } = useTickets();
+     return <div>{/* Your custom UI */}</div>;
+   }
+   ```
+
+### Q: How do I authenticate API requests?
+
+**A:** Pass auth headers to the client:
+
+```typescript
+import { ExtSupportClient } from '@djangocfg/ext-support';
+
+const client = new ExtSupportClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+  },
+});
+```
+
+Or use the Provider:
+
+```typescript
+<SupportProvider
+  config={{
+    apiUrl: process.env.NEXT_PUBLIC_API_URL,
+    headers: { 'Authorization': `Bearer ${token}` },
+  }}
+>
+  {children}
+</SupportProvider>
+```
+
+---
+
+## Next Steps
+
+<Cards>
+  <Cards.Card title="Backend Extensions" href="/docs/extensions/backend-extensions" />
+  <Cards.Card title="Browse Extensions" href="/hub" />
+  <Cards.Card title="API Reference" href="/docs/extensions/api-reference" />
+</Cards>
+
+---
+
+<Callout type="success">
+**Need Help?**
+Check the [troubleshooting section](#troubleshooting) or join our Discord community!
+</Callout>

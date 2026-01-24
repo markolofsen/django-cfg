@@ -1,0 +1,236 @@
+---
+title: FastAPI ORM Configuration
+description: Complete configuration reference for FastAPI ORM Generator. All options for output, generation, PostgreSQL types, and naming conventions.
+sidebar_label: Configuration
+sidebar_position: 2
+keywords:
+  - django-cfg config
+  - fastapi orm config
+  - sqlmodel configuration
+---
+
+# Configuration
+
+The FastAPI ORM Generator is configured via `FastAPIConfig` Pydantic model or CLI arguments.
+
+## CLI Arguments
+
+```bash
+python manage.py generate_fastapi [apps...] [options]
+```
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `apps` | Apps to process (positional) | All apps |
+| `--output-dir`, `-o` | Output directory | `fastapi_orm/` |
+| `--format`, `-f` | ORM format | `sqlmodel` |
+| `--dry-run` | Preview without writing | `false` |
+| `--verbose`, `-v` | Verbose output | `false` |
+
+### Generation Options
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--no-crud` | Skip CRUD repositories | `false` |
+| `--no-schemas` | Skip Pydantic schemas | `false` |
+| `--no-database-config` | Skip database.py | `false` |
+| `--include-alembic` | Generate Alembic config | `false` |
+| `--sync-mode` | Generate sync code | `false` |
+
+### Filtering Options
+
+| Argument | Description |
+|----------|-------------|
+| `--exclude-apps` | Apps to exclude |
+| `--exclude-models` | Models to exclude (format: `app.Model`) |
+
+### PostgreSQL Options
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--no-jsonb` | Use JSON instead of JSONB | `false` |
+| `--no-array` | Don't use native ARRAY | `false` |
+
+## Programmatic Configuration
+
+```python
+from django_cfg.modules.django_fastapi import FastAPIConfig
+
+config = FastAPIConfig(
+    # Core
+    enabled=True,
+    output_dir="src/orm/",
+    format="sqlmodel",
+
+    # Generation
+    include_crud=True,
+    include_schemas=True,
+    include_database_config=True,
+    include_alembic=False,
+    async_mode=True,
+
+    # App Selection
+    apps=["users", "products", "orders"],
+    exclude_apps=["admin", "auth"],
+    exclude_models=["users.Session"],
+
+    # PostgreSQL
+    use_jsonb=True,
+    use_array_fields=True,
+    use_uuid_type=True,
+
+    # Naming
+    schema_suffix="Schema",
+    repository_suffix="Repository",
+    add_docstrings=True,
+    add_type_hints=True,
+)
+```
+
+## Configuration Reference
+
+### Core Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable/disable module |
+| `output_dir` | `str` | `"fastapi_orm/"` | Output directory path |
+| `format` | `Literal` | `"sqlmodel"` | ORM format: `sqlmodel`, `pydantic`, `sqlalchemy` |
+
+### Generation Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `include_crud` | `bool` | `True` | Generate async CRUD repositories |
+| `include_schemas` | `bool` | `True` | Generate Pydantic schemas |
+| `include_database_config` | `bool` | `True` | Generate database.py setup |
+| `include_alembic` | `bool` | `False` | Generate Alembic configuration |
+| `async_mode` | `bool` | `True` | Generate async code (vs sync) |
+
+### App Selection
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apps` | `list[str]` | `[]` | Apps to process (empty = all) |
+| `exclude_apps` | `list[str]` | See below | Apps to exclude |
+| `exclude_models` | `list[str]` | `[]` | Models to exclude (`app.Model`) |
+
+**Default excluded apps:**
+```python
+[
+    "admin", "auth", "contenttypes", "sessions",
+    "messages", "staticfiles", "sites",
+    "django_celery_beat", "django_celery_results"
+]
+```
+
+### PostgreSQL Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `use_jsonb` | `bool` | `True` | Use JSONB for JSONField |
+| `use_array_fields` | `bool` | `True` | Use native ARRAY type |
+| `use_uuid_type` | `bool` | `True` | Use native UUID type |
+
+### Naming Conventions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `schema_suffix` | `str` | `"Schema"` | Suffix for Pydantic schemas |
+| `repository_suffix` | `str` | `"Repository"` | Suffix for CRUD classes |
+| `add_docstrings` | `bool` | `True` | Add docstrings to code |
+| `add_type_hints` | `bool` | `True` | Add comprehensive type hints |
+
+## Configuration Examples
+
+### Minimal Setup
+
+```python
+config = FastAPIConfig(
+    output_dir="api/models/",
+    include_crud=False,
+    include_database_config=False,
+)
+```
+
+### Production Setup
+
+```python
+config = FastAPIConfig(
+    output_dir="src/orm/",
+    apps=["core", "users", "products", "orders"],
+    exclude_models=["users.TempSession"],
+    use_jsonb=True,
+    use_array_fields=True,
+    async_mode=True,
+    add_docstrings=True,
+)
+```
+
+### MySQL/SQLite Setup
+
+```python
+# Disable PostgreSQL-specific features
+config = FastAPIConfig(
+    use_jsonb=False,
+    use_array_fields=False,
+    use_uuid_type=False,
+)
+```
+
+### Sync Mode (Legacy)
+
+```python
+config = FastAPIConfig(
+    async_mode=False,  # Generates sync Session instead of AsyncSession
+)
+```
+
+## Environment Variables
+
+The generated `database.py` reads:
+
+```bash
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+```
+
+The generator automatically converts:
+- `postgres://` to `postgresql+asyncpg://` (async mode)
+- `postgres://` to `postgresql://` (sync mode)
+
+## Workflow Integration
+
+### Makefile
+
+```makefile
+orm:
+	python manage.py generate_fastapi
+
+migrate: ## Run migrations and regenerate ORM
+	python manage.py migrate
+	python manage.py generate_fastapi
+```
+
+### CI/CD
+
+```yaml
+# .github/workflows/orm.yml
+on:
+  push:
+    paths:
+      - '**/models.py'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python manage.py generate_fastapi
+      - run: |
+          git add orm/
+          git commit -m "chore: regenerate ORM" || exit 0
+          git push
+```
+
+TAGS: configuration, settings, options, postgresql
+DEPENDS_ON: [overview]

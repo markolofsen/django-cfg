@@ -1,0 +1,248 @@
+---
+title: Operations Extensions
+description: Django-CFG operations extensions - maintenance mode, database backups. Production-ready with type safety and seamless Django integration.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg operations
+  - django maintenance mode
+  - database backup django
+  - cloudflare maintenance
+---
+
+# Operations Extensions
+
+Operations extensions handle site maintenance, database backups, and operational automation for your Django-CFG projects.
+
+<Callout type="info">
+**These are [Extensions](/docs/extensions)**
+Located in `extensions/apps/` folder. Enable/disable via `__cfg__.py` files.
+</Callout>
+
+## Extensions Overview
+
+| Extension | Location | Description |
+|-----------|----------|-------------|
+| **Maintenance** | `extensions/apps/maintenance/` | Cloudflare maintenance mode via Page Rules |
+| **Backup** | `extensions/apps/backup/` | Database backups to S3/cloud storage |
+
+---
+
+## Maintenance Extension
+
+**Simple Cloudflare site maintenance management using Page Rules**
+
+- **🌐 Multi-Site Management** - Manage multiple Cloudflare sites
+- **⚡ Page Rules Integration** - Works with Cloudflare Free plan
+- **🔄 Bulk Operations** - Enable/disable maintenance for multiple sites
+- **📊 Clean Admin Interface** - Unfold styled admin interface
+- **📱 CLI Management** - Command-line automation tools
+
+### Configuration
+
+```python
+# extensions/apps/maintenance/__cfg__.py
+from django_cfg.extensions.configs.apps.maintenance import BaseMaintenanceSettings
+
+class MaintenanceSettings(BaseMaintenanceSettings):
+    cloudflare_api_token: str = env.cloudflare.api_token
+    maintenance_page_url: str = "https://maintenance.example.com"
+
+settings = MaintenanceSettings()
+```
+
+### Usage
+
+```python
+# Simple maintenance control
+from extensions.apps.maintenance.services import MaintenanceService
+
+service = MaintenanceService(site)
+service.enable_maintenance("Database upgrade")
+service.disable_maintenance()
+```
+
+### What's New (Simplified)
+
+- ✅ **Page Rules** instead of complex Workers
+- ✅ **4 Models** instead of 8+ models
+- ✅ **Cloudflare Free** plan compatible
+- ✅ **KISS principle** - Keep It Simple, Stupid
+
+---
+
+## Backup Extension
+
+**Automated database backups with cloud storage**
+
+- **💾 Database Backups** - PostgreSQL, MySQL, SQLite support
+- **☁️ Cloud Storage** - S3, GCS, Azure Blob support
+- **⏰ Scheduled Backups** - Cron-based scheduling
+- **🔄 Retention Policies** - Automatic cleanup of old backups
+- **📊 Backup Monitoring** - Status tracking and alerts
+
+### Configuration
+
+```python
+# extensions/apps/backup/__cfg__.py
+from django_cfg.extensions.configs.apps.backup import BaseBackupSettings
+
+class BackupSettings(BaseBackupSettings):
+    storage_backend: str = "s3"
+    s3_bucket: str = env.backup.s3_bucket
+    s3_access_key: str = env.backup.s3_access_key
+    s3_secret_key: str = env.backup.s3_secret_key
+    retention_days: int = 30
+
+settings = BackupSettings()
+```
+
+### Usage
+
+```python
+# Manual backup
+from extensions.apps.backup.services import BackupService
+
+service = BackupService()
+backup = service.create_backup(database="default")
+
+# Restore backup
+service.restore_backup(backup_id=backup.id)
+
+# List backups
+backups = service.list_backups(limit=10)
+```
+
+### Scheduled Backups
+
+Backups can be scheduled via Django-RQ:
+
+```python
+# extensions/apps/backup/__cfg__.py
+from django_cfg.extensions.configs.apps.backup import BaseBackupSettings
+from django_cfg.extensions import ExtensionScheduleConfig
+
+class BackupSettings(BaseBackupSettings):
+    schedules = [
+        ExtensionScheduleConfig(
+            func="extensions.apps.backup.tasks.daily_backup",
+            schedule_type="cron",
+            cron="0 3 * * *",  # Daily at 3 AM
+            description="Daily database backup",
+        ),
+    ]
+
+settings = BackupSettings()
+```
+
+---
+
+## Enable/Disable Extensions
+
+Each extension is controlled by its `__cfg__.py` file:
+
+```python
+# To ENABLE - define settings
+settings = MaintenanceSettings()
+
+# To DISABLE - comment out settings
+# settings = MaintenanceSettings()
+```
+
+---
+
+## Best Practices
+
+### 1. Use Maintenance for Site Operations
+
+```python
+from extensions.apps.maintenance.services import MaintenanceService
+
+service = MaintenanceService(site)
+
+# Scheduled maintenance
+service.enable_maintenance("Planned database migration - ETA 30min")
+# Perform migration
+service.disable_maintenance()
+```
+
+### 2. Schedule Regular Backups
+
+```python
+# Configure daily backups with 30-day retention
+class BackupSettings(BaseBackupSettings):
+    retention_days: int = 30
+    schedules = [
+        ExtensionScheduleConfig(
+            func="extensions.apps.backup.tasks.daily_backup",
+            schedule_type="cron",
+            cron="0 3 * * *",
+        ),
+    ]
+```
+
+### 3. Monitor Operations
+
+```python
+# Check maintenance logs
+from extensions.apps.maintenance.models import MaintenanceLog
+logs = MaintenanceLog.objects.filter(status='failed')
+
+# Check backup status
+from extensions.apps.backup.models import Backup
+failed_backups = Backup.objects.filter(status='failed')
+```
+
+### 4. Test Backup Restoration
+
+```python
+# Periodically test backup restoration
+from extensions.apps.backup.services import BackupService
+
+service = BackupService()
+
+# Create backup
+backup = service.create_backup(database="default")
+
+# Test restore to temporary database
+service.test_restore(backup_id=backup.id)
+```
+
+---
+
+## Integration with Django-RQ
+
+Operations extensions integrate with Django-RQ for background tasks:
+
+```python
+# Queue maintenance status check
+from extensions.apps.maintenance.tasks import check_all_sites
+check_all_sites.delay()
+
+# Queue backup
+from extensions.apps.backup.tasks import create_backup
+create_backup.delay(database="default")
+```
+
+See [Django-RQ Integration](/docs/features/integrations/django-rq/overview) for more details.
+
+---
+
+## See Also
+
+### Extension Documentation
+
+- **[Maintenance Documentation](../maintenance)** - Complete maintenance extension guide
+- **[Backup Configuration](/docs/features/integrations/database-backup/configuration)** - Backup storage setup
+
+### Related Extensions
+
+- **[User Management](/docs/features/built-in-apps/user-management/overview)** - User notification during maintenance
+- **[Payments](/docs/features/built-in-apps/payments/overview)** - Pause payment processing during maintenance
+
+### Configuration & Setup
+
+- **[Extensions System](/docs/extensions)** - How extensions work
+- **[Backend Extensions](/docs/extensions/backend-extensions)** - Creating custom extensions
+- **[Django-RQ Integration](/docs/features/integrations/django-rq/overview)** - Background tasks framework
+- **[Cache Configuration](/docs/fundamentals/configuration/cache)** - Redis setup for tasks

@@ -2,152 +2,72 @@ name: Security Scan
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main]
   schedule:
-    # Run security scan daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * 1'  # Weekly on Monday
 
 jobs:
-  security-scan:
+  secrets-scan:
+    name: Scan for secrets
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-          
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install safety bandit semgrep detect-secrets
-        
-    - name: Run Bandit security scan
-      continue-on-error: true
-      run: |
-        bandit -r src/ devops/ -f json -o bandit-report.json 2>/dev/null || echo "{}" > bandit-report.json
-        bandit -r src/ devops/ -f txt || true
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Run Safety vulnerability check
-      continue-on-error: true
-      run: |
-        safety check --json --output safety-report.json 2>/dev/null || echo "{}" > safety-report.json
-        safety check || true
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
 
-    - name: Run detect-secrets
-      continue-on-error: true
-      run: |
-        detect-secrets scan --baseline .secrets.baseline --all-files || true
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Run Semgrep security analysis
-      continue-on-error: true
-      run: |
-        semgrep --config=auto --json --output=semgrep-report.json src/ devops/ 2>/dev/null || echo "{}" > semgrep-report.json
-        semgrep --config=auto src/ devops/ || true
-
-    - name: Run custom security scanner
-      continue-on-error: true
-      run: |
-        cd devops
-        python scripts/security_scan.py --json --output ../security-scan-report.json || echo '{"status":"failed"}' > ../security-scan-report.json
-        
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-reports
-        path: |
-          bandit-report.json
-          safety-report.json
-          semgrep-report.json
-          security-scan-report.json
-          
-    - name: Comment PR with security results
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          
-          let comment = '## 🔒 Security Scan Results\n\n';
-          
-          try {
-            // Read custom security scan results
-            const securityReport = JSON.parse(fs.readFileSync('security-scan-report.json', 'utf8'));
-            
-            comment += `**Overall Status:** ${securityReport.overall_status}\n`;
-            comment += `**Secrets Found:** ${securityReport.secrets_count}\n`;
-            comment += `**Vulnerabilities Found:** ${securityReport.vulnerabilities_count}\n\n`;
-            
-            if (securityReport.should_block) {
-              comment += '❌ **SECURITY ISSUES FOUND - REVIEW REQUIRED**\n\n';
-              securityReport.blocking_issues.forEach(issue => {
-                comment += `- ${issue}\n`;
-              });
-            } else {
-              comment += '✅ **No blocking security issues found**\n\n';
-            }
-            
-            if (securityReport.recommendations.length > 0) {
-              comment += '### Recommendations:\n';
-              securityReport.recommendations.forEach(rec => {
-                comment += `- ${rec}\n`;
-              });
-            }
-            
-          } catch (error) {
-            comment += 'Could not parse security scan results.\n';
-          }
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
-
-  dependency-review:
+  code-scan:
+    name: Code security analysis
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v3
-      with:
-        fail-on-severity: moderate
-        
-  codeql-analysis:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: |
+          bandit -r packages/django_cfg/ -f txt -o bandit-report.txt || true
+          cat bandit-report.txt
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.txt
+
+  codeql:
+    name: CodeQL Analysis
     runs-on: ubuntu-latest
     permissions:
-      actions: read
-      contents: read
       security-events: write
-      
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: python
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

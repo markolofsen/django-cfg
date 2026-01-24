@@ -1,0 +1,756 @@
+---
+title: FAQ & Troubleshooting
+description: Frequently asked questions and common issues with Django-CFG gRPC
+sidebar_label: FAQ
+sidebar_position: 6
+keywords:
+  - grpc faq
+  - grpc troubleshooting
+  - grpc issues
+---
+
+# FAQ & Troubleshooting
+
+Common questions and solutions for Django-CFG gRPC integration.
+
+## 🎯 General Questions
+
+### What is gRPC?
+
+gRPC is Google's high-performance RPC framework using Protocol Buffers. It's faster and more efficient than REST for service-to-service communication.
+
+**When to use gRPC:**
+- ✅ Microservices communication
+- ✅ Mobile app backends (efficient binary protocol)
+- ✅ Real-time streaming
+- ✅ High-performance APIs
+
+**When to use REST:**
+- ✅ Public APIs (easier for third-party integration)
+- ✅ Browser-based apps (limited gRPC-web support)
+- ✅ Simple CRUD operations
+
+### Why use Django-CFG gRPC?
+
+- ✅ **Zero configuration** - Auto-discovers services
+- ✅ **Django integration** - Full ORM, auth, admin access
+- ✅ **Production-ready** - Logging, metrics, error handling
+- ✅ **Developer-friendly** - Base classes, helpers, good DX
+
+### Can I run gRPC and Django HTTP together?
+
+Yes! They run on different ports:
+- Django HTTP: `localhost:8000`
+- gRPC: `localhost:50051`
+
+Start both servers:
+```bash
+# Terminal 1: Django HTTP
+python manage.py runserver
+
+# Terminal 2: gRPC
+python manage.py rungrpc
+```
+
+### Do I need proto files?
+
+**For development:** No! Use Dynamic Invocation with reflection.
+
+**For production clients:** Yes, recommended for type safety and performance.
+
+**For testing:** No, use grpcurl or DynamicGRPCClient.
+
+## 🔧 Setup & Configuration
+
+### Server won't start
+
+**Check 1: Port in use**
+```bash
+lsof -ti :50051 | xargs kill -9
+```
+
+**Check 2: Dependencies installed**
+```bash
+pip install 'django-cfg[grpc]'
+```
+
+**Check 3: Migrations run**
+```bash
+python manage.py migrate
+```
+
+**Check 4: Config enabled**
+```python
+grpc: GRPCConfig = GRPCConfig(enabled=True)
+```
+
+### Service not discovered
+
+**Check file name:**
+```
+✅ apps/users/grpc_services.py
+❌ apps/users/grpc_service.py (missing 's')
+❌ apps/users/services.py
+```
+
+**Check app in enabled_apps:**
+```python
+grpc: GRPCConfig = GRPCConfig(
+    enabled_apps=["apps.users"]  # Must include app
+)
+```
+
+**Check class inheritance:**
+```python
+# ✅ Correct
+class UserService(BaseService):
+    pass
+
+# ❌ Wrong
+class UserService:
+    pass
+```
+
+### Import errors
+
+**Wrong path:**
+```python
+# ❌ Old path (doesn't work)
+from django_cfg.apps.grpc.services import BaseService
+
+# ✅ Correct path
+from django_cfg.apps.integrations.grpc.services import BaseService
+```
+
+## 🔐 Authentication
+
+### How to create API key?
+
+**Option 1: Django admin**
+```python
+from django_cfg.apps.integrations.grpc.models import GrpcApiKey
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+user = User.objects.get(username='admin')
+api_key = GrpcApiKey.objects.create_for_user(
+    user=user,
+    name="My Service",
+    key_type="service",
+    expires_in_days=365
+)
+print(f"API Key: {api_key.key}")
+```
+
+**Option 2: Django Admin UI**
+1. Go to `/admin/integrations/grpc/grpcapikey/`
+2. Click "Add gRPC API Key"
+3. Fill in name, user, type, expiration
+4. Save and copy the generated key
+
+### Authentication not working
+
+**Check 1: Auth enabled**
+```python
+auth=GRPCAuthConfig(enabled=True)
+```
+
+**Check 2: API key in metadata**
+```bash
+grpcurl -H "x-api-key: <your_key>" ...
+```
+
+**Check 3: API key is valid**
+```python
+from django_cfg.apps.integrations.grpc.models import GrpcApiKey
+# Check if API key exists and is active
+GrpcApiKey.objects.filter(key='<your_key>', is_active=True).exists()
+```
+
+### Make method public
+
+```python
+# Option 1: In config
+auth=GRPCAuthConfig(
+    enabled=True,
+    public_methods=[
+        "/api.users.UserService/GetUser",
+    ],
+)
+
+# Option 2: In service (use get_user instead of require_user)
+def GetUser(self, request, context):
+    user = self.get_user(context)  # Optional
+    if user:
+        # Authenticated
+        pass
+    else:
+        # Anonymous
+        pass
+```
+
+## Resilience FAQ
+
+### How to disable retry for a specific call?
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import AsyncResilientGRPCClient
+
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    enable_retry=False,  # Disable retry
+) as client:
+    result = await client.call_method(...)
+```
+
+Or use decorator without retry:
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import with_retry
+
+@with_retry(attempts=1)  # Single attempt = no retry
+async def call_once():
+    return await stub.Method(request)
+```
+
+### How to monitor circuit breaker status?
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import GRPCCircuitBreaker
+
+# Get all circuit breaker stats
+stats = GRPCCircuitBreaker.get_all_stats()
+for target_id, stat in stats.items():
+    print(f"{target_id}: {stat['state']} (failures: {stat['failure_count']})")
+
+# In health check endpoint
+def get_health_status():
+    stats = GRPCCircuitBreaker.get_all_stats()
+    open_circuits = [t for t, s in stats.items() if s['state'] == 'open']
+
+    return {
+        "healthy": len(open_circuits) == 0,
+        "open_circuits": open_circuits,
+    }
+```
+
+### What errors are retried automatically?
+
+Retryable gRPC status codes:
+- `UNAVAILABLE` - Service temporarily unavailable
+- `DEADLINE_EXCEEDED` - Request timeout
+- `RESOURCE_EXHAUSTED` - Rate limited
+- `ABORTED` - Operation aborted
+- `INTERNAL` - Internal server error
+
+Network errors (`OSError`, `ConnectionError`, `TimeoutError`) are also retried.
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import is_retryable_error
+
+if is_retryable_error(exception):
+    print("This would be retried")
+```
+
+---
+
+## Connection Pooling FAQ
+
+### How to set pool size?
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    AsyncResilientGRPCClient,
+    PoolConfig,
+)
+
+# Rule of thumb: max_size = peak_concurrent_requests * 1.2
+config = PoolConfig(max_size=50)
+
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    use_pool=True,
+    pool_config=config,
+) as client:
+    result = await client.call_method(...)
+```
+
+### How to check pool statistics?
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import get_channel_pool
+
+pool = get_channel_pool()
+stats = pool.get_stats()
+
+print(f"Total channels: {stats['total_channels']}")
+print(f"In use: {stats['channels_in_use']}")
+print(f"Idle: {stats['channels_idle']}")
+
+# Per-target stats
+for target, target_stats in stats['pools'].items():
+    print(f"  {target}: {target_stats['in_use']}/{target_stats['total']}")
+```
+
+### When to use connection pooling?
+
+**Use pooling when:**
+- Making multiple gRPC calls in sequence
+- High-traffic applications
+- Services with many concurrent users
+
+**Skip pooling when:**
+- Single one-off calls
+- Testing/development
+- Very low traffic
+
+---
+
+## Streaming FAQ
+
+### Stream closes after a few messages
+
+**Symptom:** Server logs "Client stream ended" but client is still sending.
+
+**Cause:** `connection_timeout` is set in streaming config.
+
+**Solution:** Set `connection_timeout=None`:
+
+```python
+BidirectionalStreamingConfig(
+    connection_timeout=None,  # CRITICAL!
+    ping_strategy=PingStrategy.INTERVAL,
+    ping_interval=5.0,
+)
+```
+
+See [Troubleshooting](../troubleshooting#connection-timeout-bug) for full details.
+
+### How to implement bidirectional streaming?
+
+Use `BidirectionalStreamingService`:
+
+```python
+from django_cfg.apps.integrations.grpc.services.streaming import (
+    BidirectionalStreamingService,
+    BidirectionalStreamingConfig,
+)
+
+class BotService(BidirectionalStreamingService):
+    config = BidirectionalStreamingConfig(
+        streaming_mode=StreamingMode.ANEXT,
+        ping_strategy=PingStrategy.INTERVAL,
+        ping_interval=5.0,
+        connection_timeout=None,
+    )
+
+    async def on_message_received(self, client_id, message, context):
+        return {"status": "ok"}
+```
+
+See [Streaming Patterns](../streaming-patterns) for complete guide.
+
+### What is StreamingMode.ANEXT vs ASYNC_FOR?
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `ANEXT` | Uses explicit `anext()` calls | Long-running connections, idle periods |
+| `ASYNC_FOR` | Uses `async for` iteration | High-throughput, short-lived streams |
+
+**Recommendation:** Use `ANEXT` for production.
+
+### How to keep stream alive?
+
+Use ping/keepalive mechanism:
+
+```python
+BidirectionalStreamingConfig(
+    ping_strategy=PingStrategy.INTERVAL,
+    ping_interval=5.0,      # Send PING every 5 seconds
+    ping_timeout=180.0,     # Disconnect if no PONG in 180 seconds
+)
+```
+
+Client must respond to PING with PONG.
+
+---
+
+## Common Errors
+
+### "UNAUTHENTICATED: Authentication required"
+
+**Cause:** Method requires API key but none provided.
+
+**Solution:**
+```bash
+# Add x-api-key header
+grpcurl -H "x-api-key: <your_api_key>" \
+  localhost:50051 api.users.UserService/Method
+```
+
+### "NOT_FOUND: User not found"
+
+**Cause:** Database record doesn't exist.
+
+**Solution:** Check database, verify ID exists:
+```python
+User.objects.filter(id=request.user_id).exists()
+```
+
+### "PERMISSION_DENIED: No access"
+
+**Cause:** User lacks required permission.
+
+**Solution:** Check user permissions:
+```python
+user.has_perm('app.permission_name')
+user.is_staff
+user.is_superuser
+```
+
+### "INVALID_ARGUMENT: Bad request"
+
+**Cause:** Invalid request data (missing required fields, wrong types).
+
+**Solution:** Validate input in service:
+```python
+if not request.field:
+    self.abort_invalid_argument(context, "field is required")
+```
+
+### "INTERNAL: Internal server error"
+
+**Cause:** Unhandled exception in service.
+
+**Solution:** Check logs, add error handling:
+```python
+try:
+    # Your code
+    pass
+except SpecificException as e:
+    self.abort_invalid_argument(context, str(e))
+except Exception as e:
+    logger.exception("Unexpected error")
+    self.abort_internal(context, "Internal error")
+```
+
+## 📊 Performance
+
+### Slow requests
+
+**Check 1: Database queries (N+1)**
+```python
+# ❌ Bad: N+1 queries
+users = User.objects.all()
+for user in users:
+    profile = user.profile  # Extra query per user!
+
+# ✅ Good: Single query
+users = User.objects.select_related('profile').all()
+```
+
+**Check 2: Missing indexes**
+```python
+# Add index to frequently queried fields
+class Meta:
+    indexes = [
+        models.Index(fields=['user_id', 'status']),
+    ]
+```
+
+**Check 3: Connection limits**
+```python
+from django_cfg import GRPCServerConfig, GRPCConnectionLimitsConfig
+
+# Adjust connection limits for high concurrency
+server=GRPCServerConfig(
+    connection_limits=GRPCConnectionLimitsConfig(
+        max_connection_idle_ms=3600000,  # 1 hour
+    )
+)
+```
+
+### Memory usage high
+
+**Check 1: Limit queryset size**
+```python
+# ❌ Bad: Load all
+users = User.objects.all()
+
+# ✅ Good: Limit + pagination
+users = User.objects.all()[:100]
+
+# ✅ Better: Streaming
+for user in User.objects.iterator(chunk_size=100):
+    yield user_pb2.User(...)
+```
+
+**Check 2: Close connections**
+```python
+# Django handles this, but verify:
+CONN_MAX_AGE = 600  # Close after 10 min
+```
+
+### High latency
+
+**Check 1: Network latency**
+```bash
+ping <server-ip>
+```
+
+**Check 2: Database location**
+- Use same region/datacenter for DB and app
+- Consider read replicas for read-heavy workloads
+
+**Check 3: Disable logging (testing only)**
+```python
+# Temporarily disable request logging
+# Not recommended for production
+```
+
+## 🧪 Testing
+
+### How to test without client code?
+
+**Option 1: grpcurl**
+```bash
+grpcurl -plaintext -d '{"user_id": 1}' \
+  localhost:50051 api.users.UserService/GetUser
+```
+
+**Option 2: DynamicGRPCClient**
+```python
+from django_cfg.apps.integrations.grpc.services.client import DynamicGRPCClient
+
+client = DynamicGRPCClient("localhost", 50051)
+response = client.invoke_method(
+    "api.users.UserService",
+    "GetUser",
+    {"user_id": 1}
+)
+```
+
+### How to test with authentication?
+
+```bash
+# Get token first
+TOKEN=$(curl -X POST http://localhost:8000/api/token/ \
+  -d '{"username": "admin", "password": "password"}' \
+  | jq -r '.access_token')
+
+# Use token in gRPC call
+grpcurl -H "Authorization: Bearer $TOKEN" \
+  -plaintext -d '{"user_id": 1}' \
+  localhost:50051 api.users.UserService/UpdateProfile
+```
+
+### Unit testing services
+
+```python
+from django.test import TestCase
+from apps.users.grpc_services import UserService
+
+class UserServiceTest(TestCase):
+    def setUp(self):
+        self.service = UserService()
+        self.user = User.objects.create_user(username='test')
+
+    def test_get_user(self):
+        # Create mock context
+        class MockContext:
+            pass
+
+        context = MockContext()
+        request = type('Request', (), {'user_id': self.user.id})()
+
+        response = self.service.GetUser(request, context)
+
+        self.assertEqual(response.username, 'test')
+```
+
+## Best Practices
+
+### Service organization
+
+```
+apps/users/
+├── models.py           # Django models
+├── serializers.py      # DRF serializers (for REST)
+├── grpc_services.py    # gRPC services
+├── views.py            # Django views (for web)
+└── protos/
+    └── user.proto      # Proto definitions
+```
+
+### Error handling
+
+```python
+class UserService(BaseService):
+    def GetUser(self, request, context):
+        try:
+            user = User.objects.get(id=request.user_id)
+            return user_pb2.User(...)
+
+        except User.DoesNotExist:
+            self.abort_not_found(context, "User not found")
+
+        except ValidationError as e:
+            self.abort_invalid_argument(context, str(e))
+
+        except Exception as e:
+            logger.exception("Unexpected error in GetUser")
+            self.abort_internal(context, "Internal error")
+```
+
+### Logging
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+class UserService(BaseService):
+    def GetUser(self, request, context):
+        logger.info(f"GetUser called for user_id={request.user_id}")
+
+        user = User.objects.get(id=request.user_id)
+
+        logger.debug(f"Found user: {user.username}")
+
+        return user_pb2.User(...)
+```
+
+### Transaction management
+
+```python
+from django.db import transaction
+
+class OrderService(BaseService):
+    @transaction.atomic
+    def CreateOrder(self, request, context):
+        # All or nothing
+        order = Order.objects.create(...)
+        OrderItem.objects.create(...)
+        Payment.objects.create(...)
+        return order_pb2.Order(...)
+```
+
+## 🚀 Deployment
+
+### Production checklist
+
+- [ ] `enable_reflection=False` (security)
+- [ ] `auth.enabled=True` (security)
+- [ ] Use PostgreSQL (not SQLite)
+- [ ] Environment variables for secrets
+- [ ] Monitoring enabled
+- [ ] Health checks configured
+- [ ] Load balancer configured
+- [ ] TLS/SSL enabled
+- [ ] Rate limiting (if needed)
+- [ ] Backups configured
+
+### Docker deployment
+
+```dockerfile
+# Dockerfile
+FROM python:3.11
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+# Expose ports
+EXPOSE 8000 50051
+
+# Start both servers
+CMD ["sh", "-c", "python manage.py runserver 0.0.0.0:8000 & python manage.py rungrpc --host 0.0.0.0"]
+```
+
+### Kubernetes deployment
+
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: django
+        image: myapp:latest
+        ports:
+        - containerPort: 8000  # HTTP
+        - containerPort: 50051 # gRPC
+        env:
+        - name: GRPC_ENABLED
+          value: "true"
+        - name: GRPC_HOST
+          value: "0.0.0.0"
+```
+
+## 🔍 Debugging
+
+### Enable debug logging
+
+```python
+# settings.py
+LOGGING = {
+    'loggers': {
+        'django_cfg.apps.integrations.grpc': {
+            'level': 'DEBUG',
+        },
+    },
+}
+```
+
+### Check request logs
+
+```python
+from django_cfg.apps.integrations.grpc.models import GRPCRequestLog
+
+# Recent errors
+GRPCRequestLog.objects.filter(status='error').order_by('-created_at')[:10]
+
+# Slow requests
+GRPCRequestLog.objects.filter(duration_ms__gt=1000).order_by('-duration_ms')
+```
+
+### Debug with grpcurl
+
+```bash
+# Very verbose output
+grpcurl -v -plaintext localhost:50051 list
+
+# See request/response
+grpcurl -plaintext -v \
+  -d '{"user_id": 1}' \
+  localhost:50051 api.users.UserService/GetUser
+```
+
+## Additional Resources
+
+- **[Getting Started](../getting-started)** - Build your first service
+- **[Resilience Patterns](../resilience)** - Retry, circuit breaker, logging
+- **[Connection Pooling](../connection-pooling)** - Channel reuse
+- **[Betterproto2](../betterproto2)** - Modern Python gRPC
+- **[Streaming Patterns](../streaming-patterns)** - Bidirectional streaming guide
+- **[Troubleshooting](../troubleshooting)** - Detailed troubleshooting
+- **[Configuration](../configuration)** - All config options
+- **[Dynamic Invocation](../dynamic-invocation)** - Testing guide
+
+---
+
+**Still having issues?** Check Django-CFG documentation or create an issue with:
+- Django version
+- Python version
+- grpcio version
+- Full error traceback
+- Configuration (without secrets)

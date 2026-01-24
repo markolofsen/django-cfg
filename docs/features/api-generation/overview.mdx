@@ -1,0 +1,521 @@
+---
+title: API Client Generation Overview
+sidebar_position: 1
+keywords:
+  - django-cfg api generation
+  - django api client
+  - type-safe api clients
+  - typescript client generator
+  - python client generator
+  - go client generator
+  - swift client generator
+  - grpc client generator
+  - protocol buffers generator
+description: Auto-generate type-safe TypeScript, Python, Go, Swift, and Protocol Buffer clients from Django REST Framework. Built for Next.js, React, React Native, iOS, modern Python backends, and gRPC services.
+---
+
+# API Client Generation
+
+Django-CFG includes **integrated API client generation** that automatically creates type-safe **TypeScript**, **Python**, **Go**, **Swift**, and **Protocol Buffer/gRPC** clients from your Django REST Framework API using OpenAPI specifications.
+
+## What is API Client Generation?
+
+The API client generator is a zero-config system built into Django-CFG that eliminates the manual work of creating and maintaining API clients. It uses the **[django_client module](../../modules/django-client/overview)** to generate fully-typed clients with authentication, error handling, and complete type safety.
+
+
+<Callout type="info">
+**Built-in Integration**
+
+API client generation is **pre-configured** in Django-CFG. Simply enable it in your configuration and run the management command to generate clients for your API.
+
+</Callout>
+
+## Key Features
+
+### 🎯 Type-Safe Code Generation
+
+Generate fully typed clients with:
+
+- **TypeScript**: Interfaces, Zod schemas, typed fetch functions, SWR hooks
+- **Python**: Pydantic 2 models, async/await client, type hints
+- **Go**: Structs, interfaces, typed HTTP client
+- **Swift**: Native Swift types via apple/swift-openapi-generator
+- **Protocol Buffers**: Proto3 messages, gRPC service definitions
+
+### 🏗️ Group-Based Organization
+
+Organize your API into logical **groups** based on functionality:
+
+```python
+groups=[
+    OpenAPIGroupConfig(
+        name="core",
+        apps=["users", "accounts", "api_keys"],
+        title="Core API",
+        description="User management and authentication"
+    ),
+    OpenAPIGroupConfig(
+        name="trading",
+        apps=["wallets", "orders", "transactions"],
+        title="Trading API",
+        description="Crypto trading and wallet management"
+    )
+]
+```
+
+Each group gets its own:
+- OpenAPI schema
+- Generated TypeScript client
+- Generated Python client
+- Generated Go client
+- Generated Swift client (optional)
+- Generated Protocol Buffer definitions
+
+### ⚙️ Auto-Generated Clients
+
+For each group, the generator creates:
+
+- ✅ **Auto-generated TypeScript** clients with Zod validation
+- ✅ **Auto-generated Python** clients with type hints
+- ✅ **SWR hooks** for React/Next.js
+- ✅ **Type-safe fetchers** with error handling
+- ✅ **Group-based architecture** for API organization
+
+**TypeScript Client:**
+```typescript
+import { getWallets, getTransactions } from '@/api/generated/_utils/fetchers/wallets'
+import { useWallets } from '@/api/generated/_utils/hooks/wallets'
+
+// Next.js Server Component
+const wallets = await getWallets({ currency: 'BTC' })
+
+// React Client Component
+const { data, error } = useWallets({ currency: 'ETH' })
+```
+
+**Python Client:**
+```python
+from api_client import APIClient
+
+client = APIClient(base_url="https://api.cryptoplatform.com")
+
+# Fully async with Pydantic 2 models
+wallets = await client.wallets.list(currency="BTC")
+orders = await client.orders.list(status="open")
+```
+
+**Swift Client (iOS):**
+```swift
+import OpenAPIClient
+
+let client = Client(serverURL: URL(string: "https://api.cryptoplatform.com")!)
+
+// Async/await with native Swift types
+let wallets = try await client.walletsList(query: .init(currency: "BTC"))
+let order = try await client.ordersCreate(body: .json(.init(
+    symbol: "BTC/USDT",
+    side: .buy,
+    amount: 0.1
+)))
+```
+
+**gRPC Client (Protocol Buffers):**
+```python
+import grpc
+from trading.api__trading import service_pb2, service_pb2_grpc
+
+# Create gRPC channel
+channel = grpc.insecure_channel('localhost:50051')
+stub = service_pb2_grpc.TradingServiceStub(channel)
+
+# Make gRPC call with type-safe proto messages
+request = service_pb2.WalletsListRequest(currency="BTC", page_size=10)
+response = stub.WalletsList(request)
+```
+
+## Why Use API Client Generation?
+
+### ⛔ Without API Client Generation
+
+Manual API client development requires:
+1. Manually writing type definitions
+2. Keeping types in sync with backend
+3. Writing fetch/request logic
+4. Handling errors and validation
+5. Maintaining multiple clients across projects
+6. Repeating this on every API change
+
+**Time investment:** Weeks to months for enterprise setup
+
+### ✅ With Django-CFG API Client Generation
+
+```bash
+# One command to generate everything
+python manage.py generate_client
+```
+
+**Time investment:** Seconds! 🚀
+
+
+<Callout type="info">
+**Performance**
+
+Generation is optimized for large APIs. A typical API with 300 operations generates in ~3 seconds.
+
+</Callout>
+
+## What Gets Generated?
+
+### TypeScript Output
+
+```
+frontend/src/api/generated/
+├── core/                          # Group name
+│   ├── client.ts                  # Main API client
+│   ├── models.ts                  # TypeScript interfaces
+│   ├── enums.ts                   # Enum definitions
+│   └── _utils/
+│       ├── fetchers/              # Typed fetch functions
+│       │   ├── users.ts
+│       │   └── api_keys.ts
+│       ├── hooks/                 # SWR hooks (React)
+│       │   ├── users.ts
+│       │   └── api_keys.ts
+│       └── schemas/               # Zod validation schemas
+│           ├── User.schema.ts
+│           └── APIKey.schema.ts
+│
+├── trading/                       # Another group
+│   └── ...
+│
+└── index.ts                       # Main entry point
+```
+
+### Python Output
+
+```
+backend/api_client/
+├── core/                          # Group name
+│   ├── __init__.py
+│   ├── client.py                  # Main async client
+│   ├── models/                    # Pydantic models
+│   │   ├── users.py
+│   │   └── api_keys.py
+│   └── subclients/                # Sub-clients by tag
+│       ├── users.py
+│       └── api_keys.py
+│
+├── trading/                       # Another group
+│   └── ...
+│
+└── index.py                       # Main entry point
+```
+
+### Protocol Buffers Output
+
+```
+openapi/clients/proto/
+├── core/                          # Group name
+│   ├── users/
+│   │   ├── messages.proto         # Message definitions (models, enums)
+│   │   ├── service.proto          # gRPC service definitions
+│   │   ├── messages_pb2.py        # Compiled Python messages
+│   │   ├── messages_pb2_grpc.py   # gRPC stubs (empty)
+│   │   ├── service_pb2.py         # Request/Response messages
+│   │   └── service_pb2_grpc.py    # gRPC client & server stubs
+│   │
+│   ├── api_keys/
+│   │   └── ...                    # Same structure
+│   │
+│   └── README.md                  # Compilation instructions
+│
+├── trading/                       # Another group
+│   └── ...
+│
+└── README.md                      # Root compilation guide
+```
+
+
+<Callout type="info">
+**Compilation Required**
+
+Proto files must be compiled with `protoc` before use. Each group includes a README.md with language-specific compilation commands for Python, Go, TypeScript, and other languages.
+
+</Callout>
+
+## Generated Features
+
+✅ **Type-safe API calls** - Full TypeScript/Python/Go/Swift/Proto types
+✅ **Authentication** - Bearer tokens, API keys, custom headers
+✅ **Error handling** - Proper error types and validation
+✅ **Async support** - Both sync and async methods
+✅ **Enum generation** - Real Enum classes (not strings)
+✅ **Request/Response split** - Separate UserRequest vs User models
+✅ **File uploads** - Multipart FormData handling
+✅ **Pagination** - Built-in pagination support
+✅ **Validation** - Zod schemas for runtime validation (TypeScript)
+✅ **React integration** - SWR hooks for data fetching
+✅ **Pre-generation validation** - validate_openapi command
+✅ **Archive system** - Version history for rollback
+
+## Quick Start
+
+### 1. Configure Django-CFG
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, OpenAPIConfig, OpenAPIGroupConfig
+
+class CryptoConfig(DjangoConfig):
+    openapi: OpenAPIConfig = OpenAPIConfig(
+        enabled=True,
+        generate_package_files=True,
+        generate_zod_schemas=True,
+        generate_fetchers=True,
+        generate_swr_hooks=True,
+        api_prefix="apix",  # default: "apix"
+        output_dir="openapi",  # default: "openapi"
+        groups=[
+            OpenAPIGroupConfig(
+                name="core",
+                apps=["users", "accounts", "api_keys"],
+                title="Core API",
+                description="User management and API keys",
+            ),
+            OpenAPIGroupConfig(
+                name="trading",
+                apps=["wallets", "orders", "transactions"],
+                title="Trading API",
+                description="Crypto wallets and trading",
+            ),
+        ],
+    )
+```
+
+### 2. Generate Clients
+
+```bash
+# Generate all clients (TypeScript, Python, Go, Proto)
+python manage.py generate_client
+
+# Generate specific languages only
+python manage.py generate_client --typescript
+python manage.py generate_client --python
+python manage.py generate_client --go
+python manage.py generate_client --proto
+python manage.py generate_client --swift
+
+# Generate for specific groups
+python manage.py generate_client --groups core shop
+
+# Validate before generating
+python manage.py validate_openapi
+```
+
+### 3. Use Generated Clients
+
+**TypeScript (Next.js Server Component):**
+```typescript
+import { getWallets } from '@/api/generated/_utils/fetchers/wallets'
+
+export default async function WalletsPage() {
+  const wallets = await getWallets({ currency: 'BTC' })
+  return <div>{wallets.count} wallets</div>
+}
+```
+
+**Python:**
+```python
+from api_client import APIClient
+
+async def main():
+    client = APIClient(base_url="https://api.cryptoplatform.com")
+    wallets = await client.wallets.list(currency="BTC")
+    orders = await client.orders.list(status="open")
+```
+
+## Configuration with Groups
+
+Groups allow you to organize large APIs into logical sections. Each group can include multiple Django apps and generates separate clients:
+
+```python
+openapi: OpenAPIConfig = OpenAPIConfig(
+    enabled=True,
+    # ... other settings ...
+    groups=[
+        # Core functionality
+        OpenAPIGroupConfig(
+            name="core",
+            apps=["users", "accounts", "api_keys"],
+            title="Core API",
+            description="User management and API keys",
+        ),
+
+        # Trading
+        OpenAPIGroupConfig(
+            name="trading",
+            apps=["wallets", "orders", "transactions"],
+            title="Trading API",
+            description="Crypto wallets and trading",
+        ),
+
+        # Market data
+        OpenAPIGroupConfig(
+            name="market",
+            apps=["prices", "charts", "alerts"],
+            title="Market API",
+            description="Real-time market data and alerts",
+        ),
+    ],
+)
+```
+
+Each group generates:
+- `/openapi/core/` - Core API clients
+- `/openapi/trading/` - Trading API clients
+- `/openapi/market/` - Market API clients
+
+## OpenAPIConfig Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **Required** | | | |
+| `enabled` | `bool` | `False` | Enable API client generation |
+| `groups` | `List[OpenAPIGroupConfig]` | `[]` | Application groups (required when enabled) |
+| **Output** | | | |
+| `output_dir` | `str` | `"openapi"` | Base output directory |
+| **Language Generation** | | | |
+| `generate_python` | `bool` | `True` | Generate Python client |
+| `generate_typescript` | `bool` | `True` | Generate TypeScript client |
+| **TypeScript Features** | | | |
+| `generate_package_files` | `bool` | `False` | Generate package.json, tsconfig.json |
+| `generate_zod_schemas` | `bool` | `False` | Generate Zod validation schemas |
+| `generate_fetchers` | `bool` | `False` | Generate typed fetcher functions |
+| `generate_swr_hooks` | `bool` | `False` | Generate SWR hooks for React |
+| **Client Structure** | | | |
+| `client_structure` | `Literal["flat", "namespaced"]` | `"namespaced"` | `flat`: `client.posts_list()`, `namespaced`: `client.posts.list()` |
+| **API Configuration** | | | |
+| `api_prefix` | `str` | `"apix"` | URL prefix for API endpoints |
+| **Archiving** | | | |
+| `enable_archive` | `bool` | `True` | Enable client version archiving |
+| `archive_retention_days` | `int` | `30` | Days to keep archived clients |
+| **Performance** | | | |
+| `max_workers` | `int` | `1` | Parallel workers (1 is usually enough) |
+
+## Integration with Django-CFG
+
+### Automatic URL Integration
+
+Django-CFG automatically integrates API generation URLs:
+
+```python
+# api/urls.py
+from django.urls import path, include
+from django_cfg import add_django_cfg_urls
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+]
+
+# Automatically adds OpenAPI schema endpoints
+urlpatterns = add_django_cfg_urls(urlpatterns)
+```
+
+This adds:
+- `/schema/{group}/schema/` - OpenAPI schema endpoint
+
+### Built-in drf-spectacular Integration
+
+Django-CFG automatically configures `drf-spectacular` with optimized settings for client generation:
+
+```python
+# Automatic configuration from openapi settings
+SPECTACULAR_SETTINGS = {
+    'COMPONENT_SPLIT_REQUEST': True,  # Separate Request/Response models
+    'COMPONENT_SPLIT_PATCH': True,    # Separate Patch models
+    # ... other settings auto-configured
+}
+```
+
+Group-specific title, description, and version are set per-group via `OpenAPIGroupConfig`.
+
+## Supported Frameworks
+
+### TypeScript/JavaScript
+
+- ✅ Next.js 13+ (App Router, Pages Router, Server Components)
+- ✅ React 18+ (with SWR hooks)
+- ✅ React Native (with fetch API)
+- ✅ Node.js (backend services)
+- ✅ Remix, Astro, and other modern frameworks
+
+### Python
+
+- ✅ Django (async views)
+- ✅ FastAPI (as HTTP client)
+- ✅ Flask (async with asyncio)
+- ✅ Celery (background tasks)
+- ✅ pytest (test fixtures)
+
+### Swift/iOS
+
+- ✅ iOS 15+ (async/await)
+- ✅ macOS 12+ (Catalyst, native)
+- ✅ SwiftUI (with Combine/async)
+- ✅ UIKit (completion handlers)
+
+## Best Practices
+
+### 1. Version Control Generated Code
+
+Always commit generated code to version control:
+
+```bash
+git add frontend/src/api/generated
+git add backend/api_client
+git commit -m "Update API clients"
+```
+
+### 2. Use Groups for Large APIs
+
+Organize APIs into logical groups (5-10 apps per group recommended):
+
+```python
+groups=[
+    OpenAPIGroupConfig(name="core", apps=["users", "accounts", "api_keys"], title="Core API"),
+    OpenAPIGroupConfig(name="trading", apps=["wallets", "orders", "transactions"], title="Trading API"),
+    OpenAPIGroupConfig(name="market", apps=["prices", "charts", "alerts"], title="Market API"),
+]
+```
+
+### 3. Follow Naming Conventions
+
+- **Operation IDs**: Use `{tag}_{action}` format
+- **Models**: Use PascalCase
+- **Groups**: Use lowercase, descriptive names
+
+### 4. Enable All Type Safety Features
+
+```python
+OpenAPIConfig(
+    generate_zod_schemas=True,        # Runtime validation
+    generate_package_files=True,      # Proper TypeScript setup
+    generate_fetchers=True,           # Universal fetch functions
+    generate_swr_hooks=True,          # React integration
+)
+```
+
+## Next Steps
+
+- **[Group Configuration](../groups)** - Configure API groups
+- **[CLI Usage](../cli-usage)** - Generation commands
+- **[Generated Clients](../generated-clients)** - Using generated clients
+- **[Django Client Module](../../modules/django-client/overview)** - Deep dive into the generator
+
+
+<Callout type="info">
+**Quick Start**
+
+If you're ready to start generating clients, head to the [Django Client Getting Started Guide](../../modules/django-client/getting-started) for a step-by-step tutorial.
+
+</Callout>

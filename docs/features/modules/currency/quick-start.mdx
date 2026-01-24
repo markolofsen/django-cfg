@@ -1,0 +1,288 @@
+---
+title: Currency Quick Start
+description: Get started with MoneyField and currency conversion in 5 minutes.
+sidebar_label: Quick Start
+sidebar_position: 2
+keywords:
+  - django currency quick start
+  - money field setup
+  - currency conversion django
+---
+
+import { Callout } from 'nextra/components';
+
+# Quick Start
+
+Get up and running with Django-CFG Currency System in 5 minutes.
+
+## Prerequisites
+
+- Django-CFG installed
+- RQ worker configured (for automatic rate updates)
+
+---
+
+## Step 1: Enable Currency in Config
+
+Add `CurrencyConfig` to your Django config:
+
+```python
+from django_cfg import DjangoConfig, CurrencyConfig
+
+class MyConfig(DjangoConfig):
+    currency = CurrencyConfig(
+        enabled=True,
+        update_interval=3600,  # Update rates every hour
+    )
+```
+
+Defaults: `target_currency="USD"`, `auto_update_enabled=True`, `update_on_startup=True`
+
+<Callout type="info">
+**What happens automatically:**
+- `django_cfg.apps.tools.currency` added to `INSTALLED_APPS`
+- `CurrencyRate` admin page registered
+- `update_all_rates` task added to RQ scheduler
+</Callout>
+
+## Step 2: Run Migrations
+
+Apply the currency app migrations:
+
+```bash
+python manage.py migrate cfg_currency
+```
+
+This creates:
+- `cfg_currency_currencyrate` - Exchange rates table (~50 rows)
+- `cfg_currency_currency` - Currency metadata (optional)
+
+## Step 3: Add MoneyField to Your Model
+
+Use `MoneyField` to store prices with currency:
+
+```python
+from django.db import models
+from django_cfg.modules.django_currency import MoneyField
+
+class Vehicle(models.Model):
+    name = models.CharField(max_length=200)
+
+    # MoneyField creates:
+    # - price (DecimalField) - the amount
+    # - price_currency (CharField) - currency code
+    # - price_target (property) - converted to target_currency
+    # - price_display (property) - formatted original (e.g., "₩50M")
+    # - price_target_display (property) - formatted target (e.g., "$33,900")
+    # - price_full_display (property) - combined (e.g., "$33,900 (₩50M)")
+    price = MoneyField(
+        max_digits=15,
+        decimal_places=2,
+        default_currency="KRW",     # Default for new records
+        target_currency="USD",      # Conversion target
+        null=True,
+        blank=True,
+    )
+```
+
+Run migrations for your model:
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+## Step 4: Create Admin with PydanticAdmin
+
+<Callout type="info">
+**No extra mixins needed!** `PydanticAdmin` automatically includes `MoneyFieldAdminMixin`
+which handles currency saving and provides the live conversion widget.
+</Callout>
+
+```python
+from django.contrib import admin
+from django_cfg.modules.django_admin import AdminConfig, MoneyFieldDisplay
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+from .models import Vehicle
+
+config = AdminConfig(
+    model=Vehicle,
+    list_display=["id", "name", "price"],
+
+    display_fields=[
+        # MoneyFieldDisplay auto-detects: price_currency, price_target
+        MoneyFieldDisplay(
+            name="price",
+            title="Price",
+        ),
+    ],
+
+    fieldsets=[
+        {"title": "Info", "fields": ["name"]},
+        {"title": "Pricing", "fields": ["price"]},  # Widget auto-applied
+    ],
+)
+
+@admin.register(Vehicle)
+class VehicleAdmin(PydanticAdmin):
+    """PydanticAdmin includes MoneyFieldAdminMixin automatically."""
+    config = config
+```
+
+## Step 5: Start RQ Worker
+
+Start the RQ worker and scheduler to enable automatic rate updates:
+
+```bash
+# Terminal 1: Start worker
+python manage.py rqworker default
+
+# Terminal 2: Start scheduler
+python manage.py rqscheduler
+```
+
+You should see:
+```text
+Registering 10 scheduled jobs from config...
+✓ Registered interval schedule: django_cfg.apps.tools.currency.tasks.update_all_rates (every 3600s)
+```
+
+---
+
+## Verify It Works
+
+### 1. Check Admin
+
+Go to `/admin/cfg_currency/currencyrate/` - you should see exchange rates.
+
+If empty, click **"Update All Rates"** button in the top-right.
+
+### 2. Create a Record
+
+Create a `Vehicle` in admin:
+- Enter price: `50000000`
+- Select currency: `KRW`
+- You'll see live conversion: `→ $33,900 | 1 KRW = 0.000678 USD`
+
+### 3. Check List Display
+
+The list view shows: `₩50,000,000 → $33,900`
+
+---
+
+## Access Values in Code
+
+```python
+vehicle = Vehicle.objects.first()
+
+# Stored values (database fields)
+vehicle.price           # Decimal("50000000")
+vehicle.price_currency  # "KRW"
+
+# Calculated properties (via CurrencyRate table)
+vehicle.price_target         # Decimal("33900") or None if no rate
+
+# Auto-generated display properties (no custom code needed!)
+vehicle.price_display        # "₩50M"
+vehicle.price_target_display # "$33,900"
+vehicle.price_full_display   # "$33,900 (₩50M)"
+```
+
+---
+
+## Common Patterns
+
+### Using Formatter Directly
+
+For custom formatting with suffix (e.g., rentals):
+
+```python
+from django_cfg.modules.django_currency import format_price, format_price_full
+
+# Basic formatting
+format_price(50_000_000, "KRW")                    # "₩50M"
+format_price(1500, "USD", suffix="/month")          # "$1,500/month"
+
+# Full display with both currencies
+format_price_full(
+    amount=150_000_000,
+    currency="IDR",
+    target_amount=9500,
+    target_currency="USD",
+)  # "$9,500 (Rp 150M)"
+```
+
+### Filter by Converted Price
+
+```python
+from django.db.models import F, Subquery, OuterRef
+from django_cfg.apps.tools.currency.models import CurrencyRate
+
+# Rate subquery
+rate_sq = CurrencyRate.objects.filter(
+    base_currency=OuterRef("price_currency"),
+    quote_currency="USD"
+).values("rate")[:1]
+
+# Vehicles under $10,000 USD
+cheap_vehicles = Vehicle.objects.annotate(
+    price_usd=F("price") * Subquery(rate_sq)
+).filter(price_usd__lte=10000)
+```
+
+### Manual Rate Lookup
+
+```python
+from django_cfg.apps.tools.currency.models import CurrencyRate
+
+# Get rate object
+rate = CurrencyRate.get_rate("KRW", "USD")
+print(rate.rate)        # Decimal("0.000678")
+print(rate.updated_at)  # datetime
+
+# Get rate value only
+rate_value = CurrencyRate.get_rate_value("KRW", "USD")
+print(rate_value)       # Decimal("0.000678")
+```
+
+---
+
+## Troubleshooting
+
+### No Rates in Database
+
+```bash
+# Manual update
+python manage.py shell -c "
+from django_cfg.apps.tools.currency.tasks import update_all_rates
+result = update_all_rates()
+print(result)
+"
+```
+
+### Currency Not Saving in Admin
+
+Make sure you're using `PydanticAdmin` as the base class:
+
+```python
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+@admin.register(Vehicle)
+class VehicleAdmin(PydanticAdmin):  # MoneyFieldAdminMixin auto-included
+    config = config
+```
+
+### price_target Returns None
+
+1. Check rate exists: `CurrencyRate.get_rate("KRW", "USD")`
+2. Update rates: Click "Update All Rates" in admin
+3. Check currency field: `vehicle.price_currency` should have value
+
+---
+
+## Next Steps
+
+- [MoneyField Deep Dive](./money-field) - All parameters and options
+- [Admin Integration](./admin-integration) - MoneyFieldDisplay and widget details
+- [API Reference](./api-reference) - Complete API documentation

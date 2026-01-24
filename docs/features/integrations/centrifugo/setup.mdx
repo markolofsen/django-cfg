@@ -1,0 +1,433 @@
+# Setup and Configuration
+
+Complete guide to setting up Centrifugo WebSocket integration with native RPC proxy in your Django-CFG project.
+
+## Prerequisites
+
+- Django-CFG installed
+- Python 3.11+
+- Redis server (for Centrifugo broker)
+- Docker (recommended) or Centrifugo binary
+
+## Installation Overview
+
+```
+1. Configure Centrifugo server with RPC proxy
+2. Configure Django Centrifugo client
+3. Register RPC handlers in Django app
+4. Start services
+5. Test connection
+```
+
+## Step 1: Centrifugo Server Configuration
+
+### Docker Setup (Recommended)
+
+Create `centrifugo.json`:
+
+```json
+{
+  "client": {
+    "allowed_origins": ["*"],
+    "insecure": false,
+    "token": {
+      "hmac_secret_key": "${CENTRIFUGO_TOKEN_HMAC_SECRET}"
+    }
+  },
+  "http_api": {
+    "key": "${CENTRIFUGO_API_KEY}"
+  },
+  "admin": {
+    "enabled": true,
+    "password": "${CENTRIFUGO_ADMIN_PASSWORD}",
+    "secret": "${CENTRIFUGO_ADMIN_SECRET}"
+  },
+  "rpc": {
+    "proxy": {
+      "endpoint": "${CENTRIFUGO_RPC_PROXY_ENDPOINT}",
+      "timeout": "10s"
+    },
+    "without_namespace": {
+      "proxy_enabled": true
+    }
+  },
+  "channel": {
+    "namespaces": [
+      {
+        "name": "terminal",
+        "presence": true,
+        "join_leave": false,
+        "force_recovery": true,
+        "history_size": 100,
+        "history_ttl": "60s"
+      },
+      {
+        "name": "user",
+        "presence": true,
+        "join_leave": true,
+        "force_recovery": true,
+        "history_size": 100,
+        "history_ttl": "300s"
+      },
+      {
+        "name": "notifications",
+        "presence": false,
+        "join_leave": false,
+        "force_recovery": true,
+        "history_size": 50,
+        "history_ttl": "600s"
+      }
+    ]
+  },
+  "log": {
+    "level": "${CENTRIFUGO_LOG_LEVEL}"
+  },
+  "health": {
+    "enabled": true,
+    "handler_prefix": "/health"
+  }
+}
+```
+
+Add to `docker-compose.yml`:
+
+```yaml
+services:
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: centrifugo
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./centrifugo.json:/centrifugo/config.json:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+```
+
+### Environment Variables
+
+Add to `.env`:
+
+```bash
+# Centrifugo Server
+CENTRIFUGO_API_KEY=your-api-key-min-32-chars
+CENTRIFUGO_TOKEN_HMAC_SECRET=your-hmac-secret-min-32-chars
+CENTRIFUGO_ADMIN_PASSWORD=admin
+CENTRIFUGO_ADMIN_SECRET=admin-secret
+CENTRIFUGO_LOG_LEVEL=info
+
+# RPC Proxy - Django endpoint
+# Use 'django' service name if Django runs in Docker:
+CENTRIFUGO_RPC_PROXY_ENDPOINT=http://django:8000/centrifugo/rpc/
+# Or use host.docker.internal if Django runs on host machine:
+# CENTRIFUGO_RPC_PROXY_ENDPOINT=http://host.docker.internal:8000/centrifugo/rpc/
+```
+
+## Step 2: Django Configuration
+
+### Enable Centrifugo in config.py
+
+```python
+# api/config.py
+from typing import Optional
+from django_cfg import DjangoConfig, DjangoCfgCentrifugoConfig
+
+class MyConfig(DjangoConfig):
+    # ... other configuration ...
+
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = DjangoCfgCentrifugoConfig(
+        enabled=True,
+
+        # Centrifugo server URLs
+        centrifugo_url="ws://localhost:8000/connection/websocket",
+        centrifugo_api_url="http://centrifugo:8000/api",
+        centrifugo_api_key="your-api-key-min-32-chars",
+        centrifugo_token_hmac_secret="your-hmac-secret-min-32-chars",
+
+        # Optional settings
+        default_ack_timeout=30,
+        log_level="INFO",
+        log_all_calls=True,
+    )
+```
+
+### Environment-based Configuration
+
+```python
+# api/config.py
+from api.environment import env
+
+class MyConfig(DjangoConfig):
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = (
+        DjangoCfgCentrifugoConfig(
+            enabled=env.centrifugo.enabled,
+            centrifugo_url=env.centrifugo.centrifugo_url,
+            centrifugo_api_url=env.centrifugo.centrifugo_api_url,
+            centrifugo_api_key=env.centrifugo.centrifugo_api_key,
+            centrifugo_token_hmac_secret=env.centrifugo.centrifugo_token_hmac_secret,
+        )
+        if env.centrifugo.enabled
+        else None
+    )
+```
+
+### Django Environment Variables
+
+```bash
+# Django Centrifugo Client (pydantic-settings format)
+CENTRIFUGO__ENABLED=true
+CENTRIFUGO__CENTRIFUGO_URL=ws://localhost:8000/connection/websocket
+CENTRIFUGO__CENTRIFUGO_API_URL=http://centrifugo:8000/api
+CENTRIFUGO__CENTRIFUGO_API_KEY=your-api-key-min-32-chars
+CENTRIFUGO__CENTRIFUGO_TOKEN_HMAC_SECRET=your-hmac-secret-min-32-chars
+CENTRIFUGO__DEFAULT_ACK_TIMEOUT=30
+CENTRIFUGO__LOG_LEVEL=INFO
+CENTRIFUGO__LOG_ALL_CALLS=true
+```
+
+## Step 3: Register RPC Handlers
+
+### Create Handlers File
+
+```python
+# core/centrifugo_handlers.py
+from pydantic import BaseModel, Field
+from django_cfg.apps.integrations.centrifugo.decorators import websocket_rpc
+
+
+class PingParams(BaseModel):
+    """Ping request parameters."""
+    message: str = Field(..., description="Message to echo")
+
+
+class PingResult(BaseModel):
+    """Ping response."""
+    echo: str = Field(..., description="Echoed message")
+    timestamp: str = Field(..., description="Server timestamp")
+
+
+@websocket_rpc("system.ping")
+async def ping(conn, params: PingParams) -> PingResult:
+    """
+    Simple ping/pong handler for testing.
+
+    Returns the message with server timestamp.
+    """
+    from django.utils import timezone
+
+    return PingResult(
+        echo=f"Pong: {params.message}",
+        timestamp=timezone.now().isoformat()
+    )
+```
+
+### Register in AppConfig
+
+```python
+# core/apps.py
+from django.apps import AppConfig
+
+
+class CoreConfig(AppConfig):
+    name = "core"
+    default_auto_field = "django.db.models.BigAutoField"
+
+    def ready(self):
+        """Import handlers to register them with the router."""
+        # This import triggers @websocket_rpc decorators
+        from . import centrifugo_handlers  # noqa: F401
+```
+
+## Step 4: Start Services
+
+### Docker Compose
+
+```bash
+# Start all services
+docker compose up -d
+
+# Check Centrifugo is healthy
+docker compose ps centrifugo
+
+# View Centrifugo logs
+docker compose logs centrifugo -f
+```
+
+### Verify Endpoints
+
+```bash
+# Check Centrifugo health
+curl http://localhost:8000/health
+
+# Check Django RPC endpoint
+curl -X POST http://localhost:8001/centrifugo/rpc/ \
+  -H "Content-Type: application/json" \
+  -d '{"client":"test","method":"system.ping","data":{"message":"test"}}'
+```
+
+## Step 5: Test Connection
+
+### Python Test
+
+```python
+import asyncio
+from centrifuge import Client
+
+
+async def test_rpc():
+    client = Client(
+        "ws://localhost:8000/connection/websocket",
+        token="your-jwt-token"
+    )
+
+    await client.connect()
+
+    # Call RPC method
+    result = await client.rpc("system.ping", {"message": "Hello"})
+    print(f"Result: {result.data}")  # {'echo': 'Pong: Hello', 'timestamp': '...'}
+
+    await client.disconnect()
+
+
+asyncio.run(test_rpc())
+```
+
+### TypeScript Test
+
+```typescript
+import { Centrifuge } from 'centrifuge';
+
+const client = new Centrifuge('ws://localhost:8000/connection/websocket', {
+  token: 'your-jwt-token'
+});
+
+client.connect();
+
+client.on('connected', async () => {
+  const result = await client.rpc('system.ping', { message: 'Hello' });
+  console.log('Result:', result.data);  // { echo: 'Pong: Hello', timestamp: '...' }
+});
+```
+
+## Configuration Reference
+
+### Centrifugo Settings (v6)
+
+| Setting | Type | Description |
+|---------|------|-------------|
+| `rpc.proxy.endpoint` | `string` | Django RPC endpoint URL |
+| `rpc.proxy.timeout` | `string` | RPC timeout (e.g., "10s") |
+| `rpc.without_namespace.proxy_enabled` | `bool` | Enable RPC proxy for methods without namespace |
+| `client.token.hmac_secret_key` | `string` | JWT signing secret |
+| `http_api.key` | `string` | API key for server-side calls |
+
+### Django Settings
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Enable Centrifugo integration |
+| `centrifugo_url` | `str` | - | WebSocket URL for clients |
+| `centrifugo_api_url` | `str` | - | HTTP API URL for publishing |
+| `centrifugo_api_key` | `str` | - | API key for HTTP API |
+| `centrifugo_token_hmac_secret` | `str` | - | JWT signing secret |
+| `default_ack_timeout` | `int` | `30` | RPC timeout in seconds |
+| `log_level` | `str` | `"INFO"` | Logging level |
+| `log_all_calls` | `bool` | `True` | Log all RPC calls |
+
+## Troubleshooting
+
+### Connection Refused
+
+**Problem**: `WebSocket connection failed`
+
+**Solution**:
+1. Check Centrifugo is running: `curl http://localhost:8000/health`
+2. Verify `centrifugo_url` in configuration
+3. Check Docker network connectivity
+4. Verify allowed_origins in Centrifugo config
+
+### RPC Proxy Failed
+
+**Problem**: `RPC call timed out` or `502 Bad Gateway`
+
+**Solution**:
+1. Check Django is running and accessible from Centrifugo
+2. Verify `CENTRIFUGO_RPC_PROXY_ENDPOINT` uses correct service name
+3. Check Django logs for errors
+4. Test RPC endpoint directly with curl
+
+### Authentication Failed
+
+**Problem**: `401 Unauthorized` or `invalid token`
+
+**Solution**:
+1. Verify `CENTRIFUGO_TOKEN_HMAC_SECRET` matches in both configs
+2. Check JWT token is not expired
+3. Verify token generation uses correct secret
+
+### Handler Not Found
+
+**Problem**: `Method 'foo.bar' not found`
+
+**Solution**:
+1. Verify handler is decorated with `@websocket_rpc`
+2. Check `apps.py` imports handlers in `ready()`
+3. Verify Django app is in `INSTALLED_APPS`
+4. Check handler method name matches
+
+### ATOMIC_REQUESTS Error
+
+**Problem**: `RuntimeError: You cannot use ATOMIC_REQUESTS with async views`
+
+**Solution**: If you have `ATOMIC_REQUESTS=True` in your database settings, RPCProxyView needs `transaction.non_atomic_requests` decorator. Django-CFG handles this automatically, but if you create custom async views:
+
+```python
+from django.db import transaction
+from django.utils.decorators import method_decorator
+
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
+class MyAsyncView(View):
+    async def post(self, request):
+        ...
+```
+
+### Verify Registered Handlers
+
+```python
+# Django shell
+from django_cfg.apps.integrations.centrifugo.router import get_global_router
+
+router = get_global_router()
+print("Registered methods:", router.list_methods())
+```
+
+## Production Checklist
+
+Before deploying to production:
+
+- [ ] Use HTTPS/WSS for all connections
+- [ ] Generate strong random secrets (min 32 chars)
+- [ ] Configure CORS properly (not `["*"]`)
+- [ ] Set up Redis for Centrifugo broker
+- [ ] Configure load balancing for multiple instances
+- [ ] Enable monitoring and logging
+- [ ] Set up health checks
+- [ ] Test failover scenarios
+- [ ] Review security settings
+
+## Next Steps
+
+- **[Backend Guide](../backend-guide)** - Create RPC handlers
+- **[Frontend Guide](../frontend-guide)** - Use clients in your app
+- **[Architecture](../architecture)** - Understand how it works

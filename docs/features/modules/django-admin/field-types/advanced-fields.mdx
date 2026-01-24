@@ -1,0 +1,658 @@
+---
+title: Advanced Field Types
+description: Advanced field types for Django Admin including StackedField for composite columns, StatusBadgesField for multiple conditional badges and CounterBadgeField for counter displays.
+sidebar_label: Advanced Fields
+sidebar_position: 5
+---
+
+
+# Advanced Field Types
+
+Advanced field types for displaying complex status information, composite columns, counters, and conditional badges.
+
+## StackedField (Composite Column)
+
+Combine multiple fields in one compact column. Perfect for reducing admin columns while keeping all important information visible.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Virtual field name (used in list_display) |
+| `title` | `str \| None` | `None` | Column header title |
+| `rows` | `list[RowItem \| list[RowItem]]` | *required* | List of rows to display |
+| `gap` | `str` | `"0.25rem"` | Gap between rows (CSS) |
+| `inline_gap` | `str` | `"0.5rem"` | Gap between inline items (CSS) |
+| `align` | `"left" \| "center" \| "right"` | `"left"` | Text alignment |
+| `min_width` | `str \| None` | `None` | Minimum column width (CSS) |
+| `max_width` | `str` | `"300px"` | Maximum column width (CSS) |
+
+### RowItem
+
+Each row can be a single `RowItem` or a list of `RowItem` for inline (horizontal) display.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `field` | `str` | *required* | Model field name (supports `__` for relations) |
+| `widget` | `str` | `"text"` | Widget type: `text`, `badge`, `datetime_relative`, `money_field` |
+| `bold` | `bool` | `False` | Bold text |
+| `muted` | `bool` | `False` | Muted/secondary text color |
+| `monospace` | `bool` | `False` | Monospace font |
+| `prefix` | `str \| None` | `None` | Text prefix |
+| `suffix` | `str \| None` | `None` | Text suffix (e.g., `" km"`, `" beds"`) |
+| `truncate` | `int \| None` | `None` | Truncate text to N characters |
+| `icon` | `str \| None` | `None` | Material icon name |
+| `label_map` | `dict \| None` | `None` | Badge variant mapping `{value: "success"\|"warning"\|...}` |
+| `true_label` | `str \| None` | `None` | Custom label for `True` boolean badges |
+| `false_label` | `str \| None` | `None` | Custom label for `False` boolean badges |
+| `hide_if_empty` | `bool` | `True` | Hide row if value is empty |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import StackedField, RowItem
+
+# Simple stacked info
+StackedField(
+    name='vehicle_info',
+    title='Vehicle',
+    rows=[
+        RowItem(field='display_name', bold=True, truncate=30),
+        RowItem(field='year'),
+        RowItem(field='mileage', suffix=' km'),
+    ],
+)
+```
+
+### Examples
+
+### Property Listing
+
+```python
+StackedField(
+    name='property_info',
+    title='Property',
+    rows=[
+        RowItem(field='title', bold=True, truncate=35),
+        [  # Inline row (horizontal)
+            RowItem(
+                field='listing_type',
+                widget='badge',
+                label_map={'rent': 'info', 'sale': 'success'},
+            ),
+            RowItem(field='property_type__name', muted=True),
+        ],
+        RowItem(field='location__name', icon='location_on', muted=True),
+    ],
+    max_width='280px',
+)
+```
+
+**Renders as:**
+```
+Beautiful Villa in Seminyak          ← Bold, truncated title
+[Rent] Apartment                     ← Badge + muted type inline
+📍 Seminyak, Bali                    ← Icon + muted location
+```
+
+### Vehicle with Specs
+
+```python
+StackedField(
+    name='vehicle_info',
+    title='Vehicle',
+    rows=[
+        RowItem(field='display_name', bold=True, truncate=30),
+        [  # Specs inline
+            RowItem(field='year'),
+            RowItem(field='mileage', suffix=' km'),
+        ],
+        RowItem(
+            field='fuel_type',
+            widget='badge',
+            label_map={
+                'gasoline': 'info',
+                'diesel': 'warning',
+                'hybrid': 'success',
+                'electric': 'primary',
+            },
+        ),
+    ],
+    max_width='250px',
+)
+```
+
+### Pricing Info
+
+```python
+StackedField(
+    name='pricing_info',
+    title='Price',
+    rows=[
+        RowItem(field='price', widget='money_field', bold=True),
+        [
+            RowItem(field='bedrooms', suffix=' bed'),
+            RowItem(field='bathrooms', suffix=' bath'),
+        ],
+    ],
+)
+```
+
+### Status with AI Badge
+
+```python
+StackedField(
+    name='status_info',
+    title='Status',
+    rows=[
+        [
+            RowItem(
+                field='status',
+                widget='badge',
+                label_map={
+                    'active': 'success',
+                    'inactive': 'secondary',
+                    'sold': 'danger',
+                },
+            ),
+            RowItem(
+                field='is_normalized',
+                widget='badge',
+                label_map={True: 'success'},
+                true_label='AI',  # Shows "AI" instead of "True"
+            ),
+        ],
+    ],
+)
+```
+
+**Renders as:** `[Active] [AI]` when status=active and is_normalized=True
+
+### Source Info
+
+```python
+StackedField(
+    name='source_info',
+    title='Source',
+    rows=[
+        RowItem(field='source__name', bold=True),
+        RowItem(field='listing_id', monospace=True, muted=True, truncate=12),
+    ],
+)
+```
+
+
+
+<Callout type="info">
+**Reduces Columns Dramatically**
+StackedField can reduce admin list from 15+ columns to 5-7 while keeping all information visible. Perfect for compact, scannable admin lists.
+
+</Callout>
+
+
+<Callout type="warning">
+**Virtual Field Name**
+The `name` parameter is a virtual field name used in `list_display`. It doesn't need to exist on the model - the actual data comes from `RowItem.field` values.
+
+</Callout>
+
+## StatusBadgesField
+
+Display multiple conditional badges based on model field values. Perfect for showing multiple status flags like permissions, features, or user attributes.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `badge_rules` | `list[BadgeRule]` | *required* | List of badge rules |
+| `empty_text` | `str \| None` | `None` | Text when no badges match |
+| `empty_variant` | `str` | `"secondary"` | Variant for empty badge |
+| `separator` | `str` | `" "` | Separator between badges |
+
+### BadgeRule
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `condition_field` | `str` | *required* | Field to check (e.g., `"is_bot"`) |
+| `condition_value` | `Any` | `True` | Value that triggers badge |
+| `label` | `str` | *required* | Badge text |
+| `variant` | `Literal["primary", "secondary", "success", "danger", "warning", "info"]` | *required* | Badge color variant |
+| `icon` | `str \| None` | `None` | Material icon name |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import StatusBadgesField, BadgeRule, Icons
+
+# User status badges
+StatusBadgesField(
+    name="status_badges",
+    title="Status",
+    badge_rules=[
+        BadgeRule(
+            condition_field="is_bot",
+            condition_value=True,
+            label="Bot",
+            variant="info",
+            icon=Icons.SMART_TOY
+        ),
+        BadgeRule(
+            condition_field="is_verified",
+            condition_value=True,
+            label="Verified",
+            variant="success",
+            icon=Icons.VERIFIED
+        ),
+        BadgeRule(
+            condition_field="is_premium",
+            condition_value=True,
+            label="Premium",
+            variant="warning",
+            icon=Icons.STAR
+        ),
+    ],
+    empty_text="Regular",
+    empty_variant="secondary"
+)
+```
+
+### Examples
+
+### User Flags
+
+```python
+display_fields=[
+    StatusBadgesField(
+        name="user_flags",
+        title="Flags",
+        badge_rules=[
+            BadgeRule(
+                condition_field="is_bot",
+                condition_value=True,
+                label="Bot",
+                variant="info",
+                icon=Icons.SMART_TOY
+            ),
+            BadgeRule(
+                condition_field="is_verified",
+                condition_value=True,
+                label="Verified",
+                variant="success",
+                icon=Icons.VERIFIED
+            ),
+            BadgeRule(
+                condition_field="is_scam",
+                condition_value=True,
+                label="Scam",
+                variant="danger",
+                icon=Icons.WARNING
+            ),
+        ],
+        empty_text="None",
+    ),
+]
+```
+
+**Renders as:**
+- If `is_bot=True` and `is_verified=True`: `Bot` (blue) `Verified` (green)
+- If all flags are `False`: `None` (gray)
+
+### Permissions
+
+```python
+display_fields=[
+    StatusBadgesField(
+        name="permissions",
+        title="Access",
+        badge_rules=[
+            BadgeRule(
+                condition_field="can_edit",
+                condition_value=True,
+                label="Edit",
+                variant="primary",
+                icon=Icons.EDIT
+            ),
+            BadgeRule(
+                condition_field="can_delete",
+                condition_value=True,
+                label="Delete",
+                variant="danger",
+                icon=Icons.DELETE
+            ),
+            BadgeRule(
+                condition_field="can_publish",
+                condition_value=True,
+                label="Publish",
+                variant="success",
+                icon=Icons.PUBLISH
+            ),
+        ],
+        empty_text="Read Only",
+    ),
+]
+```
+
+### Feature Flags
+
+```python
+display_fields=[
+    StatusBadgesField(
+        name="features",
+        title="Features",
+        badge_rules=[
+            BadgeRule(
+                condition_field="feature_ai",
+                condition_value=True,
+                label="AI",
+                variant="warning",
+                icon=Icons.PSYCHOLOGY
+            ),
+            BadgeRule(
+                condition_field="feature_api",
+                condition_value=True,
+                label="API",
+                variant="info",
+                icon=Icons.API
+            ),
+            BadgeRule(
+                condition_field="feature_analytics",
+                condition_value=True,
+                label="Analytics",
+                variant="success",
+                icon=Icons.ANALYTICS
+            ),
+        ],
+    ),
+]
+```
+
+
+
+<Callout type="info">
+**Replaces @computed_field**
+StatusBadgesField eliminates the need for imperative `@computed_field` methods with conditional badge logic. Everything is declarative!
+
+</Callout>
+
+
+<Callout type="info">
+**Flexible Conditions**
+BadgeRule supports any field value, not just booleans. You can check string values, numbers, or any other type.
+
+</Callout>
+
+## CounterBadgeField
+
+Display a counter value as a badge with optional link. Perfect for showing counts like messages, views, or notifications with clickable links to filtered lists.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `count_field` | `str` | *required* | Field containing the count |
+| `variant` | `Literal["primary", "secondary", "success", "danger", "warning", "info"]` | `"primary"` | Badge color variant |
+| `icon` | `str \| None` | `None` | Material icon name |
+| `link_url_template` | `str \| None` | `None` | URL with `{obj.field}` placeholders |
+| `link_target` | `str` | `"_self"` | Link target |
+| `format_thousands` | `bool` | `True` | Format with thousands separator |
+| `hide_on_zero` | `bool` | `False` | Hide when count is 0 |
+| `empty_display` | `bool` | `False` | Show dash when count is 0 |
+| `empty_text` | `str` | `"-"` | Text for zero count |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import CounterBadgeField, Icons
+
+# Messages count with link
+CounterBadgeField(
+    name="messages_badge",
+    title="Messages",
+    count_field="messages_count",
+    variant="primary",
+    icon=Icons.MESSAGE,
+    link_url_template="/admin/app/message/?user__id={obj.id}",
+    hide_on_zero=True,
+)
+
+# Simple counter without link
+CounterBadgeField(
+    name="views",
+    title="Views",
+    count_field="view_count",
+    variant="info",
+    icon=Icons.VISIBILITY,
+)
+```
+
+### Examples
+
+### Messages with Link
+
+```python
+display_fields=[
+    CounterBadgeField(
+        name="messages_badge",
+        title="Messages",
+        count_field="messages_count",
+        variant="primary",
+        icon=Icons.MESSAGE,
+        link_url_template="/admin/telegram_spy/telegrammessage/?sender__id__exact={obj.id}",
+        hide_on_zero=True,
+        format_thousands=True,
+    ),
+]
+```
+
+**Renders as:**
+- If count is 1,234: Clickable badge showing `1,234` with message icon
+- If count is 0: Nothing (hidden due to `hide_on_zero=True`)
+
+### Likes Counter
+
+```python
+display_fields=[
+    CounterBadgeField(
+        name="likes",
+        title="Likes",
+        count_field="like_count",
+        variant="danger",
+        icon=Icons.FAVORITE,
+        empty_display=True,  # Show "-" instead of hiding
+    ),
+]
+```
+
+**Renders as:**
+- If count is 42: Badge showing `42` with heart icon
+- If count is 0: Badge showing `-`
+
+### Error Counter
+
+```python
+display_fields=[
+    CounterBadgeField(
+        name="errors",
+        title="Errors",
+        count_field="error_count",
+        variant="danger",
+        icon=Icons.ERROR,
+        link_url_template="/admin/app/log/?object_id={obj.id}&level=ERROR",
+        hide_on_zero=True,
+    ),
+]
+```
+
+
+
+<Callout type="info">
+**Automatic Formatting**
+CounterBadgeField automatically:
+- Formats large numbers with thousands separator (1,234)
+- Makes the entire badge clickable if `link_url_template` is provided
+- Supports template variables like `{obj.id}`, `{obj.username}`, etc.
+- Hides or shows empty state based on configuration
+
+</Callout>
+
+
+<Callout type="info">
+**Replaces format_html + Badge**
+Previously you needed `@computed_field` with `format_html()` to wrap a badge in a link. Now it's fully declarative!
+
+</Callout>
+
+## MarkdownField
+
+Render markdown content with beautiful styling and optional collapsible UI.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name (or method name) |
+| `title` | `str \| None` | `None` | Display title |
+| `collapsible` | `bool` | `True` | Wrap in collapsible details/summary |
+| `default_open` | `bool` | `False` | Open by default if collapsible |
+| `max_height` | `str \| None` | `"500px"` | Max height with scrolling |
+| `full_width` | `bool` | `True` | Span full width of fieldset (overrides Unfold max-width) |
+| `source_file` | `str \| None` | `None` | Static file path (e.g., `"docs/api.md"`) |
+| `source_field` | `str \| None` | `None` | Alternative field name for content |
+| `enable_plugins` | `bool` | `True` | Enable mistune plugins (tables, etc.) |
+| `header_icon` | `str \| None` | `Icons.DESCRIPTION` | Material icon for header |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import MarkdownField, Icons
+
+# From model field (markdown string)
+MarkdownField(
+    name="description",
+    title="Documentation",
+    collapsible=True
+)
+
+# From file path field
+MarkdownField(
+    name="docs_path",
+    title="User Guide",
+    collapsible=True,
+    default_open=True
+)
+
+# Static file (same for all objects)
+MarkdownField(
+    name="static_doc",  # method that returns file path
+    title="API Documentation",
+    source_file="docs/api.md",  # relative to app root
+    max_height="500px"
+)
+
+# Dynamic markdown with custom title
+MarkdownField(
+    name="get_help_text",  # method that generates markdown
+    title="Help",
+    collapsible=True,
+    enable_plugins=True
+)
+```
+
+### Examples
+
+### Simple Markdown
+
+```python
+display_fields=[
+    MarkdownField(
+        name="description",
+        title="Documentation",
+        collapsible=True,
+        max_height="400px"
+    ),
+]
+```
+
+**Renders as:** Collapsible markdown content with syntax highlighting and styling
+
+### Static Documentation
+
+```python
+# Add method to admin class
+@computed_field("API Docs")
+def api_documentation(self, obj):
+    return "docs/api.md"  # Returns file path
+
+# In config
+display_fields=[
+    MarkdownField(
+        name="api_documentation",
+        title="API Documentation",
+        source_file="docs/api.md",
+        default_open=True,
+    ),
+]
+```
+
+**Renders as:** Static markdown file shown for all objects
+
+### Dynamic Content
+
+```python
+# Model method that generates markdown
+class MyModel(models.Model):
+    def get_help_text(self):
+        return f"""
+        # Help for {self.name}
+
+        - **Status**: {self.status}
+        - **Created**: {self.created_at}
+
+        ## Actions
+        - Edit settings
+        - View logs
+        """
+
+# In config
+display_fields=[
+    MarkdownField(
+        name="get_help_text",
+        title="Help",
+        collapsible=True,
+        enable_plugins=True
+    ),
+]
+```
+
+**Renders as:** Dynamically generated markdown for each object
+
+
+
+<Callout type="info">
+**Use Cases**
+Perfect for:
+- **Documentation** - API docs, user guides, help text
+- **Rich descriptions** - Product descriptions with formatting
+- **Change logs** - Version history with markdown
+- **Instructions** - Step-by-step guides
+
+</Callout>
+
+
+<Callout type="info">
+**Auto-Detection**
+MarkdownField automatically detects whether the content is:
+- A file path (`.md` extension or exists as file) → loads and renders file
+- A markdown string → renders directly
+
+</Callout>
+
+## Next Steps
+
+- **[Field Types Reference](../)** - Complete field types reference
+- **[Basic Fields](..//basic-fields)** - Basic field types
+- **[Display Fields](..//display-fields)** - Display field types

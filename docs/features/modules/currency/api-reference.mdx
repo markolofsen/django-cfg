@@ -1,0 +1,657 @@
+---
+title: Currency API Reference
+description: Complete API reference for Django-CFG Currency System including CurrencyRate, MoneyField, and MoneyFieldDisplay.
+sidebar_label: API Reference
+sidebar_position: 5
+keywords:
+  - django-cfg currency api
+  - currencyrate model
+  - moneyfield api
+  - currency converter
+---
+
+import { Callout } from 'nextra/components';
+
+# API Reference
+
+Complete API documentation for the Django-CFG Currency System.
+
+---
+
+## CurrencyRate Model
+
+Database model for exchange rates. Located at `django_cfg.apps.tools.currency.models`.
+
+### Import
+
+```python
+from django_cfg.apps.tools.currency.models import CurrencyRate
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `base_currency` | `CharField(10)` | Source currency code (e.g., "KRW") |
+| `quote_currency` | `CharField(10)` | Target currency code (e.g., "USD") |
+| `rate` | `DecimalField` | Exchange rate value |
+| `provider` | `CharField(20)` | Rate source ("hybrid", "coinpaprika", "manual") |
+| `is_stale` | `BooleanField` | Whether rate needs refresh |
+| `updated_at` | `DateTimeField` | Last update timestamp |
+
+### Class Methods
+
+#### `get_rate(base, quote)`
+
+Get rate object for a currency pair.
+
+```python
+rate = CurrencyRate.get_rate("KRW", "USD")
+# Returns: CurrencyRate instance or None
+```
+
+#### `get_rate_value(base, quote)`
+
+Get rate value only.
+
+```python
+value = CurrencyRate.get_rate_value("KRW", "USD")
+# Returns: Decimal("0.000678") or None
+```
+
+#### `set_rate(base, quote, rate, provider="manual")`
+
+Set or update a rate.
+
+```python
+CurrencyRate.set_rate(
+    base="KRW",
+    quote="USD",
+    rate=Decimal("0.000678"),
+    provider="manual"
+)
+```
+
+### Properties
+
+#### `pair`
+
+Currency pair string.
+
+```python
+rate.pair  # "KRW/USD"
+```
+
+#### `age_seconds`
+
+Seconds since last update.
+
+```python
+rate.age_seconds  # 3600 (1 hour)
+```
+
+---
+
+## MoneyField
+
+Composite model field for storing monetary values. Located at `django_cfg.modules.django_currency`.
+
+### Import
+
+```python
+from django_cfg.modules.django_currency import MoneyField
+```
+
+### Parameters
+
+```python
+MoneyField(
+    max_digits=15,           # Total digits
+    decimal_places=2,        # Decimal precision
+    default_currency="USD",  # Currency for new records
+    target_currency="USD",   # Conversion target
+    null=True,               # Allow NULL
+    blank=True,              # Allow empty in forms
+    **kwargs                 # Standard DecimalField kwargs
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `max_digits` | `int` | `15` | Total digits (including decimals) |
+| `decimal_places` | `int` | `2` | Decimal precision |
+| `default_currency` | `str` | `"USD"` | Currency for new records |
+| `target_currency` | `str` | `"USD"` | Conversion target for `_target` property |
+| `null` | `bool` | `True` | Allow NULL in database |
+| `blank` | `bool` | `True` | Allow empty in forms |
+
+### Created Fields
+
+When you add `MoneyField(name="price")`, it creates:
+
+| Attribute | Type | Storage | Description |
+|-----------|------|---------|-------------|
+| `price` | `DecimalField` | Database | The amount |
+| `price_currency` | `CharField` | Database | Currency code |
+| `price_target` | Property | Calculated | Converted amount |
+| `price_display` | Property | Calculated | Formatted original (e.g., "Rp 150M") |
+| `price_target_display` | Property | Calculated | Formatted target (e.g., "$9,500") |
+| `price_full_display` | Property | Calculated | Combined (e.g., "$9,500 (Rp 150M)") |
+
+---
+
+## PriceFormatter
+
+Smart price formatter with currency-specific rules. Located at `django_cfg.modules.django_currency`.
+
+### Import
+
+```python
+from django_cfg.modules.django_currency import (
+    PriceFormatter,
+    price_formatter,  # Singleton instance
+    format_price,
+    format_price_full,
+)
+```
+
+### Functions
+
+#### `format_price(amount, currency, suffix="")`
+
+Format price with currency symbol.
+
+```python
+format_price(150_000_000, "IDR")           # "Rp 150M"
+format_price(9500, "USD")                   # "$9,500"
+format_price(1500, "USD", suffix="/month")  # "$1,500/month"
+```
+
+#### `format_price_full(amount, currency, target_amount, target_currency, suffix="")`
+
+Format with target currency as primary and original in parentheses.
+
+```python
+format_price_full(
+    amount=150_000_000,
+    currency="IDR",
+    target_amount=9500,
+    target_currency="USD",
+    suffix="/month",
+)  # "$9,500 (Rp 150M)/month"
+```
+
+### Supported Currencies
+
+Built-in formatting rules for 30+ currencies:
+
+| Currency | Symbol | Example |
+|----------|--------|---------|
+| USD | $ | $9,500 |
+| EUR | € | €8,500 |
+| IDR | Rp | Rp 150M |
+| KRW | ₩ | ₩50M |
+| JPY | ¥ | ¥1.5M |
+| GBP | £ | £7,500 |
+| BTC | ₿ | ₿0.5 |
+| ETH | Ξ | Ξ2.5 |
+
+Unknown currencies use code as symbol (e.g., "XYZ 1,000").
+
+---
+
+## MoneyFieldDisplay
+
+Admin display field for MoneyField. Located at `django_cfg.modules.django_admin`.
+
+### Import
+
+```python
+from django_cfg.modules.django_admin import MoneyFieldDisplay
+```
+
+### Parameters
+
+```python
+MoneyFieldDisplay(
+    name="price",                  # Base field name
+    title="Price",                 # Column header
+    currency_field=None,           # Auto: {name}_currency
+    target_field=None,             # Auto: {name}_target
+    target_currency="USD",         # Target currency code
+    rate_field=None,               # Auto: {name}_rate
+    rate_at_field=None,            # Auto: {name}_rate_at
+    show_rate=True,                # Show rate info
+    precision=2,                   # Decimal places
+    compact=True,                  # Single-line display
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | Required | Base field name |
+| `title` | `str` | `None` | Column header title |
+| `currency_field` | `str` | `{name}_currency` | Field with currency code |
+| `target_field` | `str` | `{name}_target` | Field with converted amount |
+| `target_currency` | `str` | `"USD"` | Target currency code |
+| `rate_field` | `str` | `{name}_rate` | Field with exchange rate |
+| `rate_at_field` | `str` | `{name}_rate_at` | Field with rate timestamp |
+| `show_rate` | `bool` | `True` | Show rate info line |
+| `precision` | `int` | `2` | Decimal places |
+| `compact` | `bool` | `True` | Single-line display |
+
+### Methods
+
+#### `get_field_names()`
+
+Get all related field names.
+
+```python
+display = MoneyFieldDisplay(name="price")
+display.get_field_names()
+# Returns: {
+#     "amount": "price",
+#     "currency": "price_currency",
+#     "target": "price_target",
+#     "rate": "price_rate",
+#     "rate_at": "price_rate_at",
+# }
+```
+
+#### `get_currency_symbol(currency_code)`
+
+Get symbol for currency code.
+
+```python
+display.get_currency_symbol("USD")  # "$"
+display.get_currency_symbol("KRW")  # "₩"
+```
+
+---
+
+## CurrencyConfig
+
+Configuration model for currency system. Located at `django_cfg.models.django.currency`.
+
+### Import
+
+```python
+from django_cfg import CurrencyConfig
+```
+
+### Parameters
+
+```python
+CurrencyConfig(
+    enabled=True,               # Enable currency app
+    target_currency="USD",      # Default conversion target
+    update_interval=3600,       # Rate update interval (seconds)
+    update_on_startup=True,     # Update stale rates on startup
+    auto_update_enabled=True,   # Enable RQ scheduled task
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable currency app |
+| `target_currency` | `str` | `"USD"` | Default target currency |
+| `update_interval` | `int` | `3600` | Rate refresh interval (seconds) |
+| `update_on_startup` | `bool` | `True` | Refresh stale rates on startup |
+| `auto_update_enabled` | `bool` | `True` | Enable automatic RQ task |
+
+### Methods
+
+#### `get_rq_schedules()`
+
+Get RQ schedule configurations.
+
+```python
+config = CurrencyConfig(enabled=True, auto_update_enabled=True)
+schedules = config.get_rq_schedules()
+# Returns list of RQScheduleConfig for update_all_rates task
+```
+
+---
+
+## CurrencyConverter Service
+
+Rate lookup and conversion service. Located at `django_cfg.apps.tools.currency.services`.
+
+### Import
+
+```python
+from django_cfg.apps.tools.currency.services import get_converter
+```
+
+### Usage
+
+```python
+converter = get_converter()
+
+# Convert amount
+result = converter.convert(50_000_000, "KRW", "USD")
+# result.result: Decimal("33900")
+# result.rate.rate: Decimal("0.000678")
+# result.rate.source: "hybrid"
+
+# Get rate (from DB or fetch if expired)
+rate = converter.get_rate("KRW", "USD")
+
+# Force refresh from provider
+fresh_rate = converter.refresh_rate("KRW", "USD")
+```
+
+---
+
+## Rate Providers
+
+### HybridCurrencyClient (Fiat)
+
+Multi-source fiat currency provider with fallbacks.
+
+```python
+from django_cfg.apps.tools.currency.services.clients import HybridCurrencyClient
+
+client = HybridCurrencyClient()
+rate = await client.get_rate("KRW", "USD")
+```
+
+**Sources (in priority order):**
+
+| Source | Coverage | Notes |
+|--------|----------|-------|
+| Fawaz Currency API | 200+ currencies | Primary, CDN-backed |
+| Frankfurter API | EUR-based pairs | ECB data |
+| ExchangeRate-API | USD-based pairs | Free tier |
+| CBR API | RUB pairs | Russian Central Bank |
+
+### CoinPaprikaClient (Crypto)
+
+Cryptocurrency rates from CoinPaprika.
+
+```python
+from django_cfg.apps.tools.currency.services.clients import CoinPaprikaClient
+
+client = CoinPaprikaClient()
+rate = await client.get_rate("BTC", "USD")
+```
+
+**Features:**
+- No API key required
+- Top 100+ cryptocurrencies
+- Real-time prices
+
+---
+
+## Currency Model
+
+Database model for supported currencies. Located at `django_cfg.apps.tools.currency.models`.
+
+### Import
+
+```python
+from django_cfg.apps.tools.currency.models import Currency
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `code` | `CharField(10)` | Currency code (e.g., "USD", "BTC") |
+| `name` | `CharField(100)` | Full name (e.g., "US Dollar") |
+| `symbol` | `CharField(10)` | Symbol (e.g., "$", "₿") |
+| `currency_type` | `CharField` | "fiat" or "crypto" |
+| `decimals` | `PositiveSmallIntegerField` | Decimal places (2 for fiat, 8 for crypto) |
+| `is_active` | `BooleanField` | Whether currency is active |
+
+---
+
+## Currency Sync Services
+
+Services for syncing currencies and rates. Located at `django_cfg.apps.tools.currency.services`.
+
+### Import
+
+```python
+from django_cfg.apps.tools.currency.services import (
+    sync_currencies,
+    sync_currencies_if_needed,
+    sync_all,
+    get_currency_stats,
+)
+```
+
+### sync_all()
+
+Main function - syncs currencies and updates rates in one call.
+
+```python
+result = sync_all()
+# Returns: {
+#     "currencies": {"created": 5, "skipped": 63, ...} or None,
+#     "rates": {"updated": 66, "failed": 1, ...} or None,
+# }
+
+# Force update even if fresh
+result = sync_all(force_currencies=True, force_rates=True)
+
+# Custom target currency
+result = sync_all(target_currency="EUR")
+```
+
+### sync_currencies()
+
+Sync currency list from predefined data (~68 currencies: fiat + crypto).
+
+```python
+result = sync_currencies()
+# Returns: {
+#     "created": 5,
+#     "updated": 0,
+#     "skipped": 63,
+#     "created_codes": ["HUF", "RON", ...],
+# }
+
+# Update existing currency metadata (name, symbol)
+result = sync_currencies(update_existing=True)
+```
+
+### sync_currencies_if_needed()
+
+Sync only if too few currencies exist (default: < 40).
+
+```python
+result = sync_currencies_if_needed()
+# Returns: sync result or None if skipped
+
+result = sync_currencies_if_needed(min_count=50)
+```
+
+### get_currency_stats()
+
+Get currency and rate statistics.
+
+```python
+stats = get_currency_stats()
+# Returns: {
+#     "total": 68,
+#     "active": 68,
+#     "inactive": 0,
+#     "fiat": 50,
+#     "crypto": 18,
+#     "rates": 66,
+# }
+```
+
+---
+
+## Management Command
+
+CLI command for managing currencies and rates.
+
+### Usage
+
+```bash
+# Update rates only
+python manage.py update_currency_rates
+
+# Sync currencies only
+python manage.py update_currency_rates --sync-currencies
+
+# Sync currencies + update rates
+python manage.py update_currency_rates --all
+
+# Show statistics
+python manage.py update_currency_rates --stats
+
+# Verbose output with sample rates
+python manage.py update_currency_rates --verbose
+
+# Custom target currency
+python manage.py update_currency_rates --target EUR
+
+# Update existing currency metadata
+python manage.py update_currency_rates --sync-currencies --update-existing
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--sync-currencies` | Sync currency list from predefined data |
+| `--all` | Sync currencies + update rates |
+| `--stats` | Show statistics only |
+| `--verbose` | Show detailed output |
+| `--target` | Target currency (default: USD) |
+| `--update-existing` | Update existing currency metadata |
+
+---
+
+## RQ Tasks
+
+Background tasks for rate updates. Located at `django_cfg.apps.tools.currency.tasks`.
+
+### Import
+
+```python
+from django_cfg.apps.tools.currency.tasks import (
+    sync_all,
+    update_all_rates,
+    refresh_rate,
+    mark_stale_rates,
+)
+```
+
+### sync_all()
+
+Main scheduled task. Syncs currencies if needed + updates rates if needed.
+
+```python
+result = sync_all()
+# Force sync/update
+result = sync_all(force_currencies=True, force_rates=True)
+```
+
+### update_all_rates()
+
+Updates all rates from providers (legacy, use `sync_all` instead).
+
+```python
+result = update_all_rates()
+# Returns: {
+#     "status": "success",
+#     "updated": 45,
+#     "failed": 2,
+#     "errors": ["BTC/XYZ: Currency not found"]
+# }
+
+# With options
+result = update_all_rates(
+    currencies=["USD", "EUR", "KRW"],
+    target_currency="USD",
+)
+```
+
+### refresh_rate(base, quote)
+
+Refresh a single currency pair.
+
+```python
+result = refresh_rate("KRW", "USD")
+# Returns: {
+#     "pair": "KRW/USD",
+#     "rate": "0.000678",
+#     "source": "hybrid",
+#     "timestamp": "2025-01-18T12:00:00Z"
+# }
+```
+
+### mark_stale_rates(max_age_hours)
+
+Mark old rates as stale.
+
+```python
+result = mark_stale_rates(max_age_hours=24)
+# Returns: {
+#     "marked_stale": 5,
+#     "cutoff": "2025-01-17T12:00:00Z"
+# }
+```
+
+---
+
+## Exceptions
+
+Located at `django_cfg.apps.tools.currency.services.exceptions`.
+
+### Import
+
+```python
+from django_cfg.apps.tools.currency.services.exceptions import (
+    CurrencyError,           # Base exception
+    CurrencyNotFoundError,   # Pair not supported
+    RateFetchError,          # Provider fetch failed
+    ConversionError,         # Conversion calculation failed
+)
+```
+
+### Usage
+
+```python
+try:
+    result = converter.convert(100, "INVALID", "USD")
+except CurrencyNotFoundError:
+    print("Currency pair not supported")
+except RateFetchError as e:
+    print(f"Failed to fetch rate: {e}")
+except ConversionError as e:
+    print(f"Conversion failed: {e}")
+```
+
+---
+
+## Currency Symbols
+
+Built-in currency symbols in `MoneyFieldDisplay`:
+
+| Code | Symbol |
+|------|--------|
+| USD | $ |
+| EUR | € |
+| GBP | £ |
+| JPY | ¥ |
+| KRW | ₩ |
+| CNY | ¥ |
+| RUB | ₽ |
+| BTC | ₿ |
+| ETH | Ξ |
+
+Unknown currencies display as `"CODE "` (code + space).
+
+---
+
+## See Also
+
+- [Quick Start](./quick-start) - Get started in 5 minutes
+- [MoneyField](./money-field) - Model field deep dive
+- [Admin Integration](./admin-integration) - MoneyFieldDisplay and widget details

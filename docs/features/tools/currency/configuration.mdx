@@ -1,0 +1,183 @@
+---
+title: Currency Configuration
+description: Configure Django-CFG currency tool with CurrencyConfig - target currency, update intervals, auto-updates, and rate providers.
+sidebar_label: Configuration
+sidebar_position: 2
+keywords:
+  - django-cfg currency config
+  - currency configuration
+  - exchange rate settings
+  - rate update interval
+---
+
+# Currency Configuration
+
+Configure the Currency Tool via `CurrencyConfig` in your Django-CFG configuration.
+
+## Basic Configuration
+
+```python
+from django_cfg import DjangoConfig, CurrencyConfig
+
+class MyConfig(DjangoConfig):
+    currency = CurrencyConfig(
+        enabled=True,
+        target_currency="USD",
+        update_interval=3600,
+    )
+```
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | bool | `True` | Enable currency app (auto-adds to INSTALLED_APPS) |
+| `target_currency` | str | `"USD"` | Default target currency for conversions |
+| `update_interval` | int | `3600` | Rate refresh interval in seconds |
+| `update_on_startup` | bool | `True` | Refresh stale rates when Django starts |
+| `auto_update_enabled` | bool | `True` | Enable automatic RQ scheduled task |
+
+## Configuration Flow
+
+```mermaid
+flowchart LR
+    subgraph Config["config.py"]
+        CC["CurrencyConfig<br/>enabled=True<br/>target_currency='USD'"]
+    end
+
+    subgraph Auto["Auto-Configuration"]
+        Apps["INSTALLED_APPS<br/>+ cfg_currency"]
+        RQ["RQ Schedule<br/>+ update_all_rates"]
+        Startup["App Ready<br/>+ rate sync"]
+    end
+
+    subgraph Runtime["Runtime"]
+        Models["CurrencyRate<br/>Currency"]
+        Services["CurrencyConverter<br/>QuerySet Helpers"]
+    end
+
+    CC -->|enabled=True| Apps
+    CC -->|auto_update_enabled| RQ
+    CC -->|update_on_startup| Startup
+    Apps --> Models
+    Models --> Services
+```
+
+## Environment-Specific Settings
+
+### Development
+
+```python
+currency = CurrencyConfig(
+    enabled=True,
+    target_currency="USD",
+    update_interval=3600,      # 1 hour
+    update_on_startup=True,    # Sync rates on startup
+    auto_update_enabled=True,  # Background updates
+)
+```
+
+### Production
+
+```python
+currency = CurrencyConfig(
+    enabled=True,
+    target_currency="USD",
+    update_interval=1800,      # 30 minutes (more frequent)
+    update_on_startup=True,
+    auto_update_enabled=True,
+)
+```
+
+### Testing
+
+```python
+currency = CurrencyConfig(
+    enabled=True,
+    target_currency="USD",
+    update_interval=86400,     # 24 hours (less frequent)
+    update_on_startup=False,   # Don't sync on startup
+    auto_update_enabled=False, # Disable background updates
+)
+```
+
+## Rate Providers
+
+Currency rates are fetched from multiple providers:
+
+### Hybrid Provider (Fiat)
+- Primary source for fiat currencies
+- Multiple fallback APIs
+- Supports 50+ fiat currencies
+
+### CoinPaprika (Crypto)
+- Primary source for cryptocurrencies
+- Real-time crypto rates
+- Supports 18 popular cryptocurrencies
+
+```mermaid
+flowchart TB
+    subgraph Providers["Rate Providers"]
+        Hybrid["Hybrid Provider<br/>USD, EUR, GBP, JPY..."]
+        CoinPaprika["CoinPaprika<br/>BTC, ETH, USDT..."]
+    end
+
+    subgraph Routing["Intelligent Routing"]
+        Router["CurrencyConverter"]
+    end
+
+    subgraph Storage["Storage"]
+        DB["CurrencyRate Table"]
+    end
+
+    Router -->|Fiat pairs| Hybrid
+    Router -->|Crypto pairs| CoinPaprika
+    Hybrid --> DB
+    CoinPaprika --> DB
+```
+
+## Migrations
+
+After enabling currency, run migrations:
+
+```bash
+python manage.py migrate cfg_currency
+```
+
+This creates:
+- `cfg_currency_rate` - Exchange rates table
+- `cfg_currency` - Currency metadata table
+
+## RQ Worker Setup
+
+For automatic rate updates, run RQ worker and scheduler:
+
+```bash
+# Terminal 1: Worker
+python manage.py rqworker default
+
+# Terminal 2: Scheduler
+python manage.py rqscheduler
+```
+
+The `update_all_rates` task runs automatically based on `update_interval`.
+
+## Manual Rate Update
+
+Force update rates manually:
+
+```python
+from django_cfg.apps.tools.currency.services import update_rates
+
+# Update all rates to USD
+update_rates(target_currency="USD")
+
+# Update specific pairs
+update_rates(target_currency="EUR")
+```
+
+## See Also
+
+- **[Overview](./overview)** - Currency tool introduction
+- **[Models](./models)** - CurrencyRate model API
+- **[RQ Integration](/docs/features/integrations/django-rq)** - Background tasks

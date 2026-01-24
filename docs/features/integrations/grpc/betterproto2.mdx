@@ -1,0 +1,425 @@
+---
+title: Betterproto2 Integration
+description: Modern Python gRPC with Pydantic dataclasses and native async support
+sidebar_label: Betterproto2
+keywords: [grpc, betterproto2, protobuf, pydantic, async, grpclib]
+position: 12
+---
+
+import { Callout } from 'nextra/components';
+
+# Betterproto2 Integration
+
+Django-CFG supports betterproto2 for modern Python gRPC development with Pydantic dataclasses, native async support, and cleaner code generation.
+
+## Why Betterproto2?
+
+| Feature | Standard protobuf | Betterproto2 |
+|---------|-------------------|--------------|
+| Message creation | `msg.field = value` | `Request(field=value)` |
+| Type hints | Limited | Full dataclass support |
+| Async support | Wrapper (grpcio) | Native (grpclib) |
+| Serialization | Manual | Automatic |
+| Pydantic integration | None | Built-in |
+| IDE autocomplete | Partial | Full |
+
+---
+
+## Installation
+
+Betterproto2 is included in the `grpc` extras:
+
+```bash
+pip install 'django-cfg[grpc]'
+```
+
+This installs:
+- `betterproto2[all]` - Runtime library with Pydantic support
+- `grpclib` - Native async gRPC library
+
+For proto compilation, install dev dependencies:
+
+```bash
+pip install 'django-cfg[dev]'
+# or
+pip install betterproto2_compiler
+```
+
+---
+
+## Proto Compilation
+
+### Quick Compilation
+
+```python
+from django_cfg.apps.integrations.grpc.utils import (
+    compile_proto,
+    compile_protos_directory,
+)
+
+# Compile single file
+compile_proto("service.proto", "generated/")
+
+# Compile directory
+compile_protos_directory("protos/", "generated/", recursive=True)
+```
+
+### Using BetterprotoCompiler
+
+For more control:
+
+```python
+from django_cfg.apps.integrations.grpc.utils.betterproto_compiler import (
+    BetterprotoCompiler,
+    BetterprotoCompilerConfig,
+)
+
+config = BetterprotoCompilerConfig(
+    pydantic_dataclasses=True,
+    include_google_types=True,
+    generate_init=True,
+)
+
+compiler = BetterprotoCompiler(config)
+compiler.compile_directory("protos/", "generated/")
+```
+
+### Command Line
+
+```bash
+# Using protoc with betterproto2 plugin
+python -m grpc_tools.protoc \
+    -I protos/ \
+    --python_betterproto2_out=generated/ \
+    protos/*.proto
+```
+
+<Callout type="warning">
+Use `--python_betterproto2_out` (with "2"), not `--python_betterproto_out`.
+</Callout>
+
+### Generated Code Structure
+
+```
+generated/
+├── __init__.py
+├── myservice.py      # Messages and stubs
+│   ├── MyRequest     # Pydantic dataclass
+│   ├── MyResponse    # Pydantic dataclass
+│   └── MyServiceStub # Async client stub
+```
+
+---
+
+## Betterproto2Client
+
+The resilient client wrapper for betterproto2:
+
+### Basic Usage
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import Betterproto2Client
+from generated import MyServiceStub, MyRequest
+
+async with Betterproto2Client(host="localhost", port=50051) as client:
+    stub = client.get_stub(MyServiceStub)
+    response = await stub.my_method(MyRequest(field="value"))
+    print(response)
+```
+
+### With Resilience Options
+
+```python
+async with Betterproto2Client(
+    host="localhost",
+    port=50051,
+    enable_retry=True,
+    enable_circuit_breaker=True,
+    retry_attempts=5,
+    circuit_breaker_threshold=5,
+) as client:
+    stub = client.get_stub(MyServiceStub)
+
+    try:
+        response = await stub.my_method(MyRequest(field="value"))
+    except CircuitOpenError as e:
+        print(f"Service unavailable, retry in {e.time_until_retry}s")
+```
+
+### With Connection Pooling
+
+```python
+async with Betterproto2Client(
+    host="localhost",
+    port=50051,
+    use_pool=True,
+) as client:
+    stub = client.get_stub(MyServiceStub)
+
+    # Multiple calls reuse the same channel
+    for i in range(100):
+        response = await stub.my_method(MyRequest(id=i))
+
+    # Check pool stats
+    print(client.pool_stats)
+```
+
+### Using call_method
+
+For resilience-wrapped calls:
+
+```python
+async with Betterproto2Client(host="localhost", port=50051) as client:
+    response = await client.call_method(
+        stub_class=MyServiceStub,
+        method_name="my_method",
+        request=MyRequest(field="value"),
+        request_id="req-001",  # For tracing
+    )
+
+    # Check circuit breaker status
+    print(client.circuit_breaker_status)
+```
+
+---
+
+## Betterproto2ChannelPool
+
+Dedicated channel pool for grpclib:
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    Betterproto2ChannelPool,
+    get_betterproto_pool,
+    close_betterproto_pool,
+)
+
+# Global pool
+pool = get_betterproto_pool()
+
+async with pool.get_channel("localhost", 50051) as channel:
+    stub = MyServiceStub(channel)
+    response = await stub.my_method(request)
+
+# Pool stats
+print(pool.get_stats())
+
+# Cleanup
+await close_betterproto_pool()
+```
+
+---
+
+## ResilientStubWrapper
+
+Add resilience to any existing stub:
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import ResilientStubWrapper
+from grpclib.client import Channel
+from generated import MyServiceStub, MyRequest
+
+# Create channel and stub
+channel = Channel(host="localhost", port=50051)
+stub = MyServiceStub(channel)
+
+# Wrap with resilience
+resilient = ResilientStubWrapper(
+    stub=stub,
+    target_id="localhost:50051",
+    enable_retry=True,
+    enable_circuit_breaker=True,
+)
+
+# All calls now have retry and circuit breaker
+response = await resilient.my_method(MyRequest(field="value"))
+
+# Cleanup
+channel.close()
+```
+
+---
+
+## Message Examples
+
+### Creating Messages
+
+```python
+from generated import MyRequest, NestedData
+
+# Simple message
+request = MyRequest(
+    id="123",
+    name="test",
+    active=True,
+)
+
+# With nested data
+request = MyRequest(
+    id="123",
+    data=NestedData(
+        field1="value1",
+        field2=42,
+    ),
+)
+
+# With repeated fields
+request = MyRequest(
+    id="123",
+    tags=["tag1", "tag2", "tag3"],
+)
+```
+
+### Serialization
+
+```python
+# To bytes
+data = bytes(request)
+
+# From bytes
+request = MyRequest().parse(data)
+
+# To dict
+data = request.to_dict()
+
+# From dict
+request = MyRequest().from_dict(data)
+
+# To JSON
+json_str = request.to_json()
+
+# From JSON
+request = MyRequest().from_json(json_str)
+```
+
+### Pydantic Validation
+
+```python
+from pydantic import ValidationError
+
+try:
+    # Pydantic validates field types
+    request = MyRequest(
+        id=123,  # Error: expected str
+        count="invalid",  # Error: expected int
+    )
+except ValidationError as e:
+    print(e.errors())
+```
+
+---
+
+## Migration from Standard Protobuf
+
+### Step 1: Install Dependencies
+
+```bash
+pip install 'django-cfg[grpc]'
+pip install betterproto2_compiler  # for compilation
+```
+
+### Step 2: Regenerate Protos
+
+```python
+from django_cfg.apps.integrations.grpc.utils import compile_protos_directory
+
+# Generate to new directory
+compile_protos_directory("protos/", "generated_bp2/")
+```
+
+### Step 3: Update Imports
+
+```python
+# Before (standard protobuf)
+from generated.service_pb2 import MyRequest
+from generated.service_pb2_grpc import MyServiceStub
+
+# After (betterproto2)
+from generated_bp2.service import MyRequest, MyServiceStub
+```
+
+### Step 4: Update Message Creation
+
+```python
+# Before
+request = MyRequest()
+request.id = "123"
+request.name = "test"
+request.data.field = "value"
+
+# After
+request = MyRequest(
+    id="123",
+    name="test",
+    data=NestedData(field="value"),
+)
+```
+
+### Step 5: Update Client Code
+
+```python
+# Before (grpcio)
+async with grpc.aio.insecure_channel("localhost:50051") as channel:
+    stub = MyServiceStub(channel)
+    response = await stub.MyMethod(request)
+
+# After (Betterproto2Client)
+async with Betterproto2Client(host="localhost", port=50051) as client:
+    stub = client.get_stub(MyServiceStub)
+    response = await stub.my_method(request)
+```
+
+<Callout type="info">
+Note the method naming: betterproto2 uses `snake_case` (`my_method`) instead of `PascalCase` (`MyMethod`).
+</Callout>
+
+---
+
+## Configuration Reference
+
+### BetterprotoCompilerConfig
+
+```python
+from django_cfg.apps.integrations.grpc.utils.betterproto_compiler import (
+    BetterprotoCompilerConfig,
+)
+
+config = BetterprotoCompilerConfig(
+    pydantic_dataclasses=True,   # Enable Pydantic validation
+    include_google_types=True,    # Include well-known types
+    generate_init=True,           # Generate __init__.py
+    typing_imports=True,          # Add typing imports
+    service_suffix="Stub",        # Suffix for service classes
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `pydantic_dataclasses` | bool | True | Enable Pydantic |
+| `include_google_types` | bool | True | Include google types |
+| `generate_init` | bool | True | Generate __init__.py |
+| `typing_imports` | bool | True | Add typing imports |
+| `service_suffix` | str | "Stub" | Service class suffix |
+
+---
+
+## Checking Availability
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import HAS_GRPCLIB
+
+if HAS_GRPCLIB:
+    from django_cfg.apps.integrations.grpc.services.client import Betterproto2Client
+    # Use betterproto2
+else:
+    from django_cfg.apps.integrations.grpc.services.client import AsyncResilientGRPCClient
+    # Fallback to standard grpcio
+```
+
+---
+
+## See Also
+
+- [Proto Generation](/features/integrations/grpc/proto-generation) - Django model to proto
+- [Resilience Patterns](/features/integrations/grpc/resilience) - Retry and circuit breaker
+- [Connection Pooling](/features/integrations/grpc/connection-pooling) - Channel reuse

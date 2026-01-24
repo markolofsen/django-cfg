@@ -1,0 +1,268 @@
+---
+title: Cost Tracking
+description: Automatic cost calculation and monitoring for LLM API calls.
+sidebar_label: Cost Tracking
+sidebar_position: 5
+keywords:
+  - cost tracking
+  - llm costs
+  - token pricing
+  - usage monitoring
+---
+
+# Cost Tracking
+
+Automatic cost calculation and monitoring for all LLM operations.
+
+## Quick Start
+
+All clients automatically track costs:
+
+```python
+from django_cfg.modules.django_llm.llm.vision import VisionClient
+
+client = VisionClient()
+response = client.analyze(
+    image_source="https://example.com/image.jpg",
+    query="Describe"
+)
+
+print(f"Cost: ${response.cost_usd:.6f}")
+print(f"Input tokens: {response.tokens_input}")
+print(f"Output tokens: {response.tokens_output}")
+```
+
+## Cost Calculation
+
+### Chat Completions
+
+```python
+from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+
+cost = calculate_chat_cost(
+    model="openai/gpt-4o-mini",
+    input_tokens=100,
+    output_tokens=50,
+    models_cache=models_cache
+)
+print(f"Cost: ${cost:.6f}")
+```
+
+### Pre-estimation
+
+Estimate cost before making a request:
+
+```python
+from django_cfg.modules.django_llm.llm.tokenizer import Tokenizer
+
+tokenizer = Tokenizer()
+
+messages = [{"role": "user", "content": "What is AI?"}]
+input_tokens = tokenizer.count_messages_tokens(messages, "gpt-4o-mini")
+
+# Estimate with expected output
+estimated_cost = calculate_chat_cost(
+    model="openai/gpt-4o-mini",
+    input_tokens=input_tokens,
+    output_tokens=100  # Expected
+)
+print(f"Estimated: ${estimated_cost:.6f}")
+```
+
+## Vision Token Costs
+
+Image tokens depend on size and detail mode:
+
+| Detail | Tokens | Formula |
+|--------|--------|---------|
+| `low` | 85 | Fixed |
+| `high` | 85 + 170×tiles | 512×512 tiles |
+
+```python
+from django_cfg.modules.django_llm.llm.vision import estimate_image_tokens
+
+# Low detail - always 85
+tokens = estimate_image_tokens(2000, 2000, "low")  # 85
+
+# High detail - varies by size
+tokens = estimate_image_tokens(1024, 1024, "high")  # 765
+```
+
+### Auto-Resize Savings
+
+Pre-resizing saves 90% on image tokens:
+
+```python
+from django_cfg.modules.django_llm.llm.vision import ImageResizer
+
+savings = ImageResizer.estimate_savings(4000, 3000, "low")
+print(f"Original: {savings['original_tokens']} tokens")
+print(f"Resized: {savings['resized_tokens']} tokens")
+print(f"Saved: {savings['savings_percent']}%")
+# Typical: 88-90% savings
+```
+
+**Cost comparison (15,000 images/day):**
+- Without resize: ~$1.72/day
+- With resize (low): ~$0.19/day
+
+## Model Pricing
+
+Pricing is fetched from OpenRouter API:
+
+```python
+from django_cfg.modules.django_llm.llm.vision import VisionModelsRegistry
+
+registry = VisionModelsRegistry()
+await registry.fetch()
+
+model = registry.get("openai/gpt-4o")
+print(f"Input: ${model.pricing.prompt}/token")
+print(f"Output: ${model.pricing.completion}/token")
+```
+
+### Cheapest Models
+
+```python
+# Get cheapest paid models (excludes free with rate limits)
+cheapest = registry.get_cheapest_paid(limit=5)
+for model in cheapest:
+    print(f"{model.id}: ${model.pricing.prompt}")
+```
+
+## Usage Monitoring
+
+### Basic Tracker
+
+```python
+class CostTracker:
+    def __init__(self):
+        self.total_cost = 0
+        self.usage_log = []
+
+    def track(self, model, input_tokens, output_tokens, cost):
+        self.total_cost += cost
+        self.usage_log.append({
+            'timestamp': datetime.now(),
+            'model': model,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+            'cost': cost
+        })
+
+    def get_daily_report(self, date=None):
+        if date is None:
+            date = datetime.now().date()
+
+        daily = [e for e in self.usage_log
+                 if e['timestamp'].date() == date]
+
+        return {
+            'total_cost': sum(e['cost'] for e in daily),
+            'total_tokens': sum(e['input_tokens'] + e['output_tokens']
+                               for e in daily),
+            'requests': len(daily)
+        }
+```
+
+### Per-Model Analytics
+
+```python
+class TokenAnalytics:
+    def __init__(self):
+        self.stats = {}
+
+    def track(self, model, input_tokens, output_tokens, cost):
+        if model not in self.stats:
+            self.stats[model] = {
+                'input': 0, 'output': 0,
+                'cost': 0, 'count': 0
+            }
+
+        s = self.stats[model]
+        s['input'] += input_tokens
+        s['output'] += output_tokens
+        s['cost'] += cost
+        s['count'] += 1
+
+    def get_efficiency(self, model):
+        s = self.stats.get(model)
+        if not s:
+            return None
+
+        total = s['input'] + s['output']
+        return {
+            'cost_per_token': s['cost'] / total if total else 0,
+            'avg_tokens': total / s['count'],
+            'avg_cost': s['cost'] / s['count']
+        }
+```
+
+## Budget Management
+
+### Token Budget
+
+```python
+def check_budget(messages, max_tokens, model):
+    tokenizer = Tokenizer()
+    current = tokenizer.count_messages_tokens(messages, model)
+
+    if current > max_tokens:
+        # Truncate old messages
+        while current > max_tokens and len(messages) > 1:
+            messages.pop(1)
+            current = tokenizer.count_messages_tokens(messages, model)
+
+    return messages, current
+```
+
+### Cost Budget
+
+```python
+def cost_guard(estimated_cost, max_cost=0.10):
+    """Raise if estimated cost exceeds budget."""
+    if estimated_cost > max_cost:
+        raise ValueError(
+            f"Estimated cost ${estimated_cost:.4f} "
+            f"exceeds budget ${max_cost:.4f}"
+        )
+```
+
+## Best Practices
+
+### Model Selection
+
+| Need | Model | Cost |
+|------|-------|------|
+| Quick tasks | gpt-4o-mini | Cheapest |
+| Quality | gpt-4o | ~20x more |
+| Vision (volume) | + low detail | 90% savings |
+
+### Caching
+
+Enable caching to avoid duplicate costs:
+
+```python
+client = LLMClient(
+    cache_dir=Path("cache/llm"),
+    cache_ttl=3600
+)
+```
+
+### Batch Processing
+
+Batch similar requests to reduce overhead:
+
+```python
+# Instead of 100 individual calls
+texts = [...]
+embeddings = client.generate_embeddings_batch(texts)
+```
+
+## Related
+
+- [Vision & OCR](/docs/features/modules/llm/vision) - Image token optimization
+- [Caching](/docs/features/modules/llm/caching) - Reduce duplicate costs
+- [Balance Monitoring](/docs/features/modules/llm/balance-monitoring)
+
+TAGS: cost-tracking, pricing, tokens, budget

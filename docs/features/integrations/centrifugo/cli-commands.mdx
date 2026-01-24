@@ -1,0 +1,246 @@
+---
+title: CLI Commands
+description: Management commands for testing and debugging Centrifugo integration
+---
+
+import { Callout, Tabs, Steps } from 'nextra/components'
+
+# Centrifugo CLI Commands
+
+Django-CFG provides management commands for testing and debugging Centrifugo integration.
+
+## centrifugo_publish
+
+Publish messages to Centrifugo channels for testing and debugging.
+
+<Callout type="info">
+  This command uses the Direct Centrifugo Client by default, bypassing the wrapper for faster publishing.
+</Callout>
+
+### Basic Usage
+
+<Tabs items={['Simple Message', 'JSON Data', 'AI Chat']}>
+  <Tabs.Tab>
+    ```bash
+    python manage.py centrifugo_publish \
+      --channel "notifications:user:123" \
+      --message "Your order has been shipped!"
+    ```
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+    ```bash
+    python manage.py centrifugo_publish \
+      -c "events:dashboard" \
+      -d '{"event":"user_login","user_id":456,"timestamp":"2025-12-14T14:00:00Z"}'
+    ```
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+    ```bash
+    python manage.py centrifugo_publish \
+      -c "ai_chat:workspace:12f827f2-93d4-4248-9acb-cbd0dfcb5698" \
+      -d '{"type":"message_chunk","message_id":"test","chunk":"Hello!"}'
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+### Arguments
+
+| Argument | Short | Required | Description |
+|----------|-------|----------|-------------|
+| `--channel` | `-c` | Yes | Centrifugo channel name |
+| `--message` | `-m` | No* | Simple text message to publish |
+| `--data` | `-d` | No* | JSON data to publish |
+| `--direct` | - | No | Use direct client (default: True) |
+
+<Callout type="warning">
+  Either `--message` or `--data` is required.
+</Callout>
+
+### Channel Naming
+
+Use `:` for namespace separation (not `#`):
+
+<div className="grid grid-cols-2 gap-4 mt-4">
+  <div className="p-4 border border-green-500 rounded-lg bg-green-50 dark:bg-green-900/10">
+    <div className="font-semibold text-green-700 dark:text-green-400 mb-2">✅ Good</div>
+    <code className="text-sm">ai_chat:workspace:UUID</code><br/>
+    <code className="text-sm">notifications:user:123</code><br/>
+    <code className="text-sm">events:dashboard</code>
+  </div>
+
+  <div className="p-4 border border-red-500 rounded-lg bg-red-50 dark:bg-red-900/10">
+    <div className="font-semibold text-red-700 dark:text-red-400 mb-2">❌ Bad</div>
+    <code className="text-sm">ai_chat#workspace#UUID</code><br/>
+    <code className="text-sm">notifications#user#123</code><br/>
+    <small className="text-gray-600 dark:text-gray-400">Interpreted as user-limited channel</small>
+  </div>
+</div>
+
+### Examples
+
+#### Test AI Chat
+
+```bash
+python manage.py centrifugo_publish \
+  -c "ai_chat:workspace:UUID" \
+  -d '{
+    "type": "message_chunk",
+    "message_id": "test-123",
+    "chunk": "Hello from CLI!",
+    "timestamp": "2025-12-14T14:00:00Z"
+  }'
+```
+
+#### Send Notification
+
+```bash
+python manage.py centrifugo_publish \
+  -c "notifications:user:456" \
+  -m "Your payment was successful!"
+```
+
+#### Trigger Dashboard Event
+
+```bash
+python manage.py centrifugo_publish \
+  -c "dashboard:workspace:UUID" \
+  -d '{
+    "type": "metric_update",
+    "metric": "active_users",
+    "value": 142
+  }'
+```
+
+### Response
+
+On success:
+
+```
+📡 Publishing to channel: ai_chat:workspace:12f827f2-93d4-4248-9acb-cbd0dfcb5698
+📦 Data: {
+  "type": "message",
+  "text": "Hello!",
+  "timestamp": "2025-12-14T14:39:18.749638+00:00"
+}
+✅ Message published successfully!
+   Message ID: dbc4149b-8518-43fd-ba69-33fe02e2031f
+   Published: True
+```
+
+### Error Handling
+
+<Callout type="error">
+  **Unknown channel**
+
+  This means no clients are subscribed to this channel. The message is published but has no recipients.
+</Callout>
+
+```bash
+CommandError: Centrifugo API error: unknown channel (channel: test:channel)
+```
+
+<Callout type="error">
+  **Invalid JSON**
+
+  Check your JSON syntax. Use single quotes around the JSON string in bash.
+</Callout>
+
+```bash
+CommandError: Invalid JSON in --data: Expecting value: line 1 column 1
+```
+
+### Use Cases
+
+<Steps>
+
+### Testing Real-Time Features
+Verify WebSocket connections receive messages correctly.
+
+```bash
+# Terminal 1: Subscribe to channel in browser
+# Terminal 2: Publish test message
+python manage.py centrifugo_publish -c "test:channel" -m "Hello WebSocket!"
+```
+
+### Debugging AI Chat
+Send test messages to AI chat channels without running the full AI pipeline.
+
+```bash
+python manage.py centrifugo_publish \
+  -c "ai_chat:workspace:UUID" \
+  -d '{"type":"message_chunk","chunk":"Debug message"}'
+```
+
+### Load Testing
+Script multiple publishes to test performance.
+
+```bash
+for i in {1..100}; do
+  python manage.py centrifugo_publish \
+    -c "load:test" \
+    -d "{\"index\":$i,\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+done
+```
+
+### Integration Testing
+Automate message publishing in test suites.
+
+```python
+# tests/test_websocket.py
+from django.core.management import call_command
+
+def test_websocket_message():
+    call_command(
+        'centrifugo_publish',
+        channel='test:channel',
+        data='{"type":"test"}'
+    )
+```
+
+</Steps>
+
+---
+
+## generate_centrifugo_clients
+
+Generate type-safe client SDKs for Centrifugo WebSocket RPC.
+
+<Callout>
+  See [Client Generation](/docs/features/integrations/centrifugo/client-generation) for detailed documentation.
+</Callout>
+
+### Quick Start
+
+```bash
+# Generate Python client
+python manage.py generate_centrifugo_clients --output ./clients --python
+
+# Generate TypeScript client
+python manage.py generate_centrifugo_clients -o ./clients --typescript
+
+# Generate all clients
+python manage.py generate_centrifugo_clients -o ./clients --all
+```
+
+### Arguments
+
+| Argument | Short | Description |
+|----------|-------|-------------|
+| `--output` | `-o` | Output directory (default: `./openapi/centrifuge`) |
+| `--python` | - | Generate Python client |
+| `--typescript` | - | Generate TypeScript client |
+| `--go` | - | Generate Go client |
+| `--all` | - | Generate all clients |
+| `--verbose` | - | Verbose output |
+
+---
+
+## See Also
+
+- [Centrifugo Setup](/docs/features/integrations/centrifugo/setup) - Initial configuration
+- [Backend Guide](/docs/features/integrations/centrifugo/backend-guide) - Server-side integration
+- [Frontend Guide](/docs/features/integrations/centrifugo/frontend-guide) - Client-side integration
+- [Architecture](/docs/features/integrations/centrifugo/architecture) - How it works
+- [API Reference](/docs/features/integrations/centrifugo/api-reference) - Complete API docs

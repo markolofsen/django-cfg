@@ -1,0 +1,306 @@
+---
+title: Basic Field Types
+description: Essential field types for common use cases including BadgeField for status indicators, BooleanField for checkmarks, and TextField for text display with truncation.
+sidebar_label: Basic Fields
+sidebar_position: 2
+---
+
+
+# Basic Field Types
+
+Essential field types for common use cases in Django Admin.
+
+## BadgeField
+
+Display values as colored badges with optional icons.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `variant` | `Literal["primary", "secondary", "success", "danger", "warning", "info"]` | `"primary"` | Badge color |
+| `icon` | `str \| None` | `None` | Material icon name |
+| `label_map` | `dict[str, str] \| None` | `None` | Value → variant mapping |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import BadgeField, Icons
+
+# Simple badge
+BadgeField(
+    name="status",
+    title="Status",
+    variant="primary",
+)
+
+# Badge with icon
+BadgeField(
+    name="category",
+    title="Category",
+    variant="info",
+    icon=Icons.CATEGORY,
+)
+
+# Badge with conditional colors
+BadgeField(
+    name="status",
+    title="Status",
+    label_map={
+        "pending": "warning",
+        "approved": "success",
+        "rejected": "danger",
+    },
+    icon=Icons.CHECK_CIRCLE,
+)
+```
+
+### Examples
+
+### Status Badge
+
+```python
+display_fields=[
+    BadgeField(
+        name="status",
+        title="Status",
+        label_map={
+            "draft": "secondary",
+            "pending": "warning",
+            "published": "success",
+            "archived": "info",
+        },
+        icon=Icons.ARTICLE,
+    ),
+]
+```
+
+### Priority Badge
+
+```python
+display_fields=[
+    BadgeField(
+        name="priority",
+        title="Priority",
+        label_map={
+            "low": "info",
+            "medium": "warning",
+            "high": "danger",
+            "critical": "danger",
+        },
+        icon=Icons.PRIORITY_HIGH,
+    ),
+]
+```
+
+### Category Badge
+
+```python
+display_fields=[
+    BadgeField(
+        name="category",
+        title="Category",
+        variant="primary",
+        icon=Icons.CATEGORY,
+    ),
+]
+```
+
+
+
+<Callout type="info">
+**When to Use label_map**
+Use `label_map` when you need different colors for different values. The map translates field values to badge variants.
+
+</Callout>
+
+## BooleanField
+
+Display boolean values with checkmark/cross icons.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import BooleanField
+
+# Simple boolean
+BooleanField(
+    name="is_active",
+    title="Active",
+)
+
+# With ordering
+BooleanField(
+    name="is_published",
+    title="Published",
+    ordering="is_published",
+)
+```
+
+### Examples
+
+```python
+display_fields=[
+    BooleanField(name="is_active", title="Active"),
+    BooleanField(name="is_verified", title="Verified"),
+    BooleanField(name="email_confirmed", title="Email Confirmed"),
+]
+```
+
+
+<Callout type="info">
+**Automatic Rendering**
+BooleanField automatically renders as:
+- ✅ Green checkmark for `True`
+- ❌ Red cross for `False`
+- "—" for `None`
+
+</Callout>
+
+## TextField
+
+Display text with truncation, CSS styling, and tooltip on hover.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Display title |
+| `truncate` | `int \| None` | `None` | Truncate after N characters |
+| `monospace` | `bool` | `False` | Use monospace font (for code, hashes) |
+| `nowrap` | `bool` | `True` | Prevent line wrapping |
+| `max_width` | `str` | `"300px"` | CSS max-width for text cell |
+| `show_tooltip` | `bool` | `True` | Show full text on hover when truncated |
+| `empty_value` | `str` | `"—"` | Value when None |
+| `ordering` | `str \| None` | `None` | Sort field |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import TextField
+
+# Simple text with default settings
+TextField(
+    name="description",
+    title="Description",
+)
+
+# Truncated text (shows "..." and tooltip on hover)
+TextField(
+    name="content",
+    title="Content",
+    truncate=80,
+    max_width="400px",
+)
+
+# Monospace for hashes/code
+TextField(
+    name="hash",
+    title="Hash",
+    truncate=16,
+    monospace=True,
+)
+
+# Allow wrapping (for multi-line content)
+TextField(
+    name="message",
+    title="Message",
+    truncate=200,
+    nowrap=False,
+)
+```
+
+### Examples
+
+### Basic Text
+
+```python
+display_fields=[
+    TextField(
+        name="description",
+        title="Description",
+        truncate=50,
+    ),
+]
+```
+
+**Result:** Text truncated to 50 chars with "..." and full text in tooltip.
+
+### Monospace (Hash/Code)
+
+```python
+display_fields=[
+    TextField(
+        name="transaction_hash",
+        title="TX Hash",
+        truncate=16,
+        monospace=True,
+    ),
+    TextField(
+        name="api_key",
+        title="API Key",
+        truncate=20,
+        monospace=True,
+    ),
+]
+```
+
+**Result:** Monospace font, no line breaks, clean display for technical content.
+
+### Wide Content
+
+```python
+display_fields=[
+    TextField(
+        name="message_text",
+        title="Message",
+        truncate=80,
+        max_width="400px",  # Custom width
+    ),
+]
+```
+
+**Result:** Wider cell with longer visible text before truncation.
+
+
+### Styling Details
+
+TextField renders with smart CSS:
+
+```css
+white-space: nowrap;      /* No line breaks (when nowrap=True) */
+overflow: hidden;         /* Hide overflow */
+text-overflow: ellipsis;  /* Show "..." */
+max-width: 300px;         /* Configurable width */
+```
+
+
+<Callout type="info">
+**Best Practices**
+- Use `truncate` for long text to keep list views compact
+- Set `max_width="400px"` or larger for important content like messages
+- Enable `monospace=True` for technical content (hashes, IDs, code)
+- Set `nowrap=False` only for detail views where multi-line is acceptable
+- Hover over truncated text to see full content in tooltip
+
+</Callout>
+
+## Next Steps
+
+- [Display Fields](../display-fields) - Learn about AvatarField, UserField, and ImageField
+- [Formatting Fields](../formatting-fields) - Explore CurrencyField, DateTimeField, and ShortUUIDField
+- [Advanced Fields](../advanced-fields) - Discover LinkField, StatusBadgesField, and CounterBadgeField

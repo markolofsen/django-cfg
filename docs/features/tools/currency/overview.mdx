@@ -1,0 +1,183 @@
+---
+title: Currency Tool
+description: Django-CFG centralized currency conversion with database-backed exchange rates, automatic updates, MoneyField integration, and QuerySet helpers.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg currency
+  - django currency
+  - exchange rates
+  - money field
+  - currency conversion
+  - queryset filter
+---
+
+# Currency Tool
+
+Django-CFG's **Currency Tool** provides centralized currency conversion with database-backed exchange rates. Supports 68 currencies (fiat + crypto) with automatic rate updates via RQ scheduler.
+
+## Features
+
+- **Database-Backed Rates** - Exchange rates stored in `CurrencyRate` model
+- **Auto Updates** - RQ scheduler keeps rates fresh (configurable interval)
+- **MoneyField** - Auto-converting composite field for Django models
+- **QuerySet Helpers** - Filter/sort by converted prices in database queries
+- **68 Currencies** - Major fiat + popular crypto out of the box
+- **Admin Integration** - Full admin UI with rate management
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Config["Configuration"]
+        CurrencyConfig["CurrencyConfig<br/>enabled, target_currency,<br/>update_interval"]
+    end
+
+    subgraph Models["Django Models"]
+        CurrencyRate["CurrencyRate<br/>Exchange rates storage"]
+        Currency["Currency<br/>Currency metadata"]
+    end
+
+    subgraph Services["Services Layer"]
+        Converter["CurrencyConverter<br/>convert(), get_rate()"]
+        QuerySet["QuerySet Helpers<br/>annotate_converted_price()<br/>filter_by_converted_price()"]
+        Validation["Validation<br/>is_valid_currency()<br/>get_currency_codes()"]
+    end
+
+    subgraph Integration["Integration"]
+        MoneyField["MoneyField<br/>price, price_currency,<br/>price_target"]
+        AdminWidget["MoneyFieldWidget<br/>Admin UI"]
+    end
+
+    subgraph Background["Background Tasks"]
+        RQTask["RQ Scheduler<br/>update_all_rates"]
+        Providers["Rate Providers<br/>Hybrid, CoinPaprika"]
+    end
+
+    CurrencyConfig --> Models
+    CurrencyConfig --> RQTask
+    Converter --> CurrencyRate
+    QuerySet --> CurrencyRate
+    Validation --> Currency
+    MoneyField --> Converter
+    AdminWidget --> MoneyField
+    RQTask --> Providers
+    Providers --> CurrencyRate
+```
+
+## Quick Start
+
+### 1. Enable in Config
+
+```python
+from django_cfg import DjangoConfig, CurrencyConfig
+
+class MyConfig(DjangoConfig):
+    currency = CurrencyConfig(
+        enabled=True,
+        target_currency="USD",
+        update_interval=3600,  # 1 hour
+    )
+```
+
+### 2. Use MoneyField in Models
+
+```python
+from django.db import models
+from django_cfg.modules.django_currency import MoneyField
+
+class Property(models.Model):
+    # Creates: price, price_currency, price_target (USD)
+    price = MoneyField(
+        max_digits=15,
+        decimal_places=2,
+        default_currency="IDR",
+        target_currency="USD",
+    )
+```
+
+### 3. Access Converted Values
+
+```python
+property = Property.objects.get(id=1)
+
+# Original price
+print(property.price)           # 300000000 (IDR)
+print(property.price_currency)  # "IDR"
+
+# Auto-converted to USD
+print(property.price_target)    # 18750.00 (USD)
+
+# Formatted display
+print(property.price_display)        # "Rp 300M"
+print(property.price_target_display) # "$18,750"
+```
+
+### 4. Filter by Converted Price
+
+```python
+from django_cfg.apps.tools.currency.services import annotate_converted_price
+
+# Annotate queryset with USD prices
+qs = annotate_converted_price(
+    Property.objects.all(),
+    price_field="price",
+    currency_field="price_currency",
+    target_currency="USD",
+    annotation_name="price_usd",
+)
+
+# Now filter/sort by converted price
+affordable = qs.filter(price_usd__lte=50000).order_by("price_usd")
+```
+
+## Data Flow
+
+### Rate Update Flow
+
+```mermaid
+sequenceDiagram
+    participant RQ as RQ Scheduler
+    participant Task as update_all_rates
+    participant Providers as Rate Providers
+    participant DB as CurrencyRate Table
+
+    RQ->>Task: Trigger (every update_interval)
+    Task->>Providers: Fetch rates (Hybrid/CoinPaprika)
+    Providers-->>Task: Return rates
+    Task->>DB: Update CurrencyRate records
+    Note over DB: Rates cached until next update
+```
+
+### MoneyField Conversion Flow
+
+```mermaid
+sequenceDiagram
+    participant App as Your App
+    participant Model as Property Model
+    participant MF as MoneyField
+    participant DB as CurrencyRate
+
+    App->>Model: Access property.price_target
+    Model->>MF: Get converted value
+    MF->>DB: Lookup rate (IDR → USD)
+    DB-->>MF: Return rate (0.0000625)
+    MF->>MF: Calculate: 300M × 0.0000625
+    MF-->>App: Return 18750.00 USD
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Overview](./overview) | This page - architecture and quick start |
+| [Configuration](./configuration) | CurrencyConfig options and setup |
+| [MoneyField](./moneyfield) | Composite field for models + admin |
+| [QuerySet Helpers](./queryset-helpers) | Filter/sort by converted prices |
+| [Models](./models) | CurrencyRate, Currency model API |
+
+## See Also
+
+- **[MoneyField Guide](./moneyfield)** - Field integration details
+- **[QuerySet Helpers](./queryset-helpers)** - Database filtering by converted price
+- **[RQ Integration](/docs/features/integrations/django-rq)** - Background tasks

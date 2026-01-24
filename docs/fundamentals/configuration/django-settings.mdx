@@ -1,0 +1,809 @@
+---
+title: DjangoConfig Base Class
+description: Complete reference for DjangoConfig base configuration class
+sidebar_label: DjangoConfig
+sidebar_position: 2
+---
+
+# DjangoConfig Base Class
+
+The `DjangoConfig` base class is the foundation of Django-CFG's type-safe configuration system.
+
+## Overview
+
+`DjangoConfig` extends Pydantic's `BaseModel` to provide:
+
+- ✅ **Type-safe** configuration with Pydantic v2 validation
+- ✅ **Environment detection** (development, production, test)
+- ✅ **Smart defaults** based on environment
+- ✅ **Django settings generation** from configuration models
+- ✅ **Path resolution** for project structure
+- ✅ **Security enforcement** in production mode
+
+## Complete Class Definition
+
+```python
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
+from typing import Dict, List, Any, Optional
+from pathlib import Path
+
+class DjangoConfig(BaseModel):
+    """
+    Base configuration class for Django projects.
+
+    This is a pure data model - all business logic is in separate classes:
+    - Apps list generation → InstalledAppsBuilder
+    - Middleware generation → MiddlewareBuilder
+    - Security settings → SecurityBuilder
+    - Settings generation → SettingsGenerator
+
+    Key Features:
+    - 100% type safety through Pydantic v2
+    - Environment-aware smart defaults
+    - Comprehensive validation
+    - Zero raw dictionary usage
+    """
+
+    model_config = {
+        "validate_assignment": True,
+        "extra": "forbid",  # Forbid arbitrary fields for type safety
+        "env_prefix": "DJANGO_",
+        "populate_by_name": True,
+        "validate_default": True,
+        "str_strip_whitespace": True,
+    }
+
+    # ══════════════════════════════════════════════════════════════
+    #                      PROJECT INFORMATION
+    # ══════════════════════════════════════════════════════════════
+
+    project_name: str = Field(
+        ...,
+        description="Human-readable project name",
+        min_length=1,
+        max_length=100,
+    )
+    project_version: str = Field(
+        default="1.0.0",
+        description="Project version (semver format)",
+        pattern=r"^\d+\.\d+\.\d+.*$",
+    )
+    project_description: str = Field(
+        default="",
+        description="Project description",
+        max_length=500,
+    )
+    project_logo: str = Field(
+        default="",
+        description="Project logo URL",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                      ENVIRONMENT & DEBUG
+    # ══════════════════════════════════════════════════════════════
+
+    env_mode: EnvironmentMode = Field(
+        default=EnvironmentMode.PRODUCTION,
+        description="Environment mode: development, production, or test",
+    )
+    debug: bool = Field(
+        default=False,
+        description="Django DEBUG setting",
+    )
+    debug_warnings: bool = Field(
+        default=False,
+        description="Enable detailed warnings traceback for debugging",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                          SECURITY
+    # ══════════════════════════════════════════════════════════════
+
+    secret_key: str = Field(
+        ...,
+        description="Django SECRET_KEY (min 50 chars)",
+        min_length=50,
+        repr=False,  # Don't show in repr for security
+    )
+    security_domains: List[str] = Field(
+        default_factory=lambda: ["localhost", "127.0.0.1"],
+        description="Domains for ALLOWED_HOSTS, CORS, CSRF (auto-configured)",
+    )
+    ssl_redirect: Optional[bool] = Field(
+        default=None,
+        description="Force SSL redirect. None = disabled (proxy handles SSL)",
+    )
+    cors_allow_headers: List[str] = Field(
+        default_factory=lambda: [
+            "accept", "accept-encoding", "authorization", "content-type",
+            "dnt", "origin", "user-agent", "x-csrftoken", "x-requested-with",
+            "x-api-key", "x-api-token", "x-chunk-index", "x-chunk-checksum",
+            "x-is-last", "x-total-chunks",
+        ],
+        description="CORS allowed headers",
+    )
+    axes: Optional[AxesConfig] = Field(
+        default=None,
+        description="Django-Axes brute-force protection (None = smart defaults)",
+    )
+    crypto_fields: Optional[CryptoFieldsConfig] = Field(
+        default=None,
+        description="Django Crypto Fields encryption for sensitive data",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                            URLS
+    # ══════════════════════════════════════════════════════════════
+
+    site_url: str = Field(
+        default="http://localhost:3000",
+        description="Frontend site URL",
+    )
+    api_url: str = Field(
+        default="http://localhost:8000",
+        description="Backend API URL",
+    )
+    media_url: str = Field(
+        default="/media/",
+        description="Media URL. Use '__auto__' to derive from api_url",
+    )
+    root_urlconf: Optional[str] = Field(
+        default=None,
+        description="Django ROOT_URLCONF (e.g., 'api.urls')",
+    )
+    wsgi_application: Optional[str] = Field(
+        default=None,
+        description="Django WSGI_APPLICATION (e.g., 'api.wsgi.application')",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                          DATABASE
+    # ══════════════════════════════════════════════════════════════
+
+    databases: Dict[str, DatabaseConfig] = Field(
+        default_factory=dict,
+        description="Database connections. 'default' is required",
+    )
+    enable_pool_cleanup: bool = Field(
+        default=False,
+        description="Enable explicit connection pool cleanup middleware",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                           CACHE
+    # ══════════════════════════════════════════════════════════════
+
+    redis_url: Optional[str] = Field(
+        default=None,
+        description="Redis URL (redis://host:port/db). Auto-creates cache backend",
+    )
+    cache_default: Optional[CacheConfig] = Field(
+        default=None,
+        description="Default cache backend (auto-created from redis_url if not set)",
+    )
+    cache_sessions: Optional[CacheConfig] = Field(
+        default=None,
+        description="Sessions cache backend",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                        APPLICATIONS
+    # ══════════════════════════════════════════════════════════════
+
+    project_apps: List[str] = Field(
+        default_factory=list,
+        description="Project-specific Django apps",
+    )
+    custom_middleware: List[str] = Field(
+        default_factory=list,
+        description="Custom middleware classes",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                          SERVICES
+    # ══════════════════════════════════════════════════════════════
+
+    email: Optional[EmailConfig] = Field(
+        default=None,
+        description="Email service (SMTP/console backend)",
+    )
+    telegram: Optional[TelegramConfig] = Field(
+        default=None,
+        description="Telegram bot notifications",
+    )
+    admin_emails: List[str] = Field(
+        default_factory=list,
+        description="Admin email addresses for notifications (email + telegram)",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                   AUTHENTICATION & OAUTH
+    # ══════════════════════════════════════════════════════════════
+
+    github_oauth: Optional[GitHubOAuthConfig] = Field(
+        default=None,
+        description="GitHub OAuth for social authentication",
+    )
+    two_factor: Optional[TwoFactorConfig] = Field(
+        default=None,
+        description="Two-Factor Authentication (TOTP) configuration",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                      ADMIN INTERFACE
+    # ══════════════════════════════════════════════════════════════
+
+    unfold: Optional[UnfoldConfig] = Field(
+        default=None,
+        description="Unfold admin interface configuration",
+    )
+    admin_timezone: Optional[str] = Field(
+        default=None,
+        description="Admin timezone (e.g., 'Asia/Seoul'). None = auto-detect",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                            API
+    # ══════════════════════════════════════════════════════════════
+
+    drf: Optional[DRFConfig] = Field(
+        default=None,
+        description="Django REST Framework configuration",
+    )
+    spectacular: Optional[SpectacularConfig] = Field(
+        default=None,
+        description="DRF Spectacular OpenAPI configuration",
+    )
+    grpc: Optional[GRPCConfig] = Field(
+        default=None,
+        description="gRPC server configuration",
+    )
+    webpush: Optional[WebPushConfig] = Field(
+        default=None,
+        description="Web Push notifications (VAPID protocol)",
+    )
+    api_keys: Optional[ApiKeys] = Field(
+        default=None,
+        description="External API keys (OpenAI, OpenRouter, etc.)",
+    )
+    limits: Optional[LimitsConfig] = Field(
+        default=None,
+        description="Application limits (file uploads, requests, etc.)",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                      BACKGROUND TASKS
+    # ══════════════════════════════════════════════════════════════
+
+    django_rq: Optional[DjangoRQConfig] = Field(
+        default=None,
+        description="Django-RQ task queue and scheduler",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                      CURRENCY & MONEY
+    # ══════════════════════════════════════════════════════════════
+
+    currency: Optional[CurrencyConfig] = Field(
+        default=None,
+        description="Currency conversion and exchange rates",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                       INTEGRATIONS
+    # ══════════════════════════════════════════════════════════════
+
+    centrifugo: Optional[DjangoCfgCentrifugoConfig] = Field(
+        default=None,
+        description="Centrifugo WebSocket pub/sub",
+    )
+    ngrok: Optional[NgrokConfig] = Field(
+        default=None,
+        description="Ngrok tunneling for development/webhooks",
+    )
+    nextjs_admin: Optional[NextJsAdminConfig] = Field(
+        default=None,
+        description="Next.js admin panel integration",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                      STORAGE & FILES
+    # ══════════════════════════════════════════════════════════════
+
+    storage: Optional[StorageConfig] = Field(
+        default_factory=StorageConfig,
+        description="Automatic file cleanup for FileField/ImageField",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                       FRONTEND / UI
+    # ══════════════════════════════════════════════════════════════
+
+    enable_frontend: bool = Field(
+        default=True,
+        description="Enable Next.js admin panel static serving",
+    )
+    tailwind_app_name: str = Field(
+        default="theme",
+        description="Tailwind theme app name",
+        min_length=1,
+        max_length=50,
+    )
+    tailwind_version: int = Field(
+        default=4,
+        description="Tailwind CSS version (3 or 4)",
+        ge=3,
+        le=4,
+    )
+    enable_drf_tailwind: bool = Field(
+        default=True,
+        description="Enable Tailwind CSS theme for DRF Browsable API",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                     DJANGO-CFG SETTINGS
+    # ══════════════════════════════════════════════════════════════
+
+    startup_info_mode: StartupInfoMode = Field(
+        default=StartupInfoMode.FULL,
+        description="Startup info: NONE, SHORT, or FULL",
+    )
+    show_ai_hints: bool = Field(
+        default=True,
+        description="Show AI development hints in startup output",
+    )
+
+    # ══════════════════════════════════════════════════════════════
+    #                      INTERNAL STATE
+    # ══════════════════════════════════════════════════════════════
+
+    _base_dir: Optional[Path] = PrivateAttr(default=None)
+    _django_settings: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    _service: Optional[Any] = PrivateAttr(default=None)
+```
+
+## Validators
+
+DjangoConfig includes comprehensive validators to ensure configuration correctness:
+
+### Field Validators
+
+```python
+@field_validator("project_name")
+@classmethod
+def validate_project_name(cls, v: str) -> str:
+    """Validate project name format."""
+    if not v.replace(" ", "").replace("-", "").replace("_", "").isalnum():
+        raise ValueError(
+            "Project name must contain only alphanumeric characters, "
+            "spaces, hyphens, and underscores"
+        )
+    return v
+
+@field_validator("secret_key")
+@classmethod
+def validate_secret_key(cls, v: str) -> str:
+    """Validate Django SECRET_KEY - minimum 50 characters."""
+    if len(v) < 50:
+        raise ValueError("SECRET_KEY must be at least 50 characters long")
+    return v
+
+@field_validator("project_apps")
+@classmethod
+def validate_project_apps(cls, v: List[str]) -> List[str]:
+    """Validate project apps list format."""
+    for app in v:
+        if not app or not app.replace(".", "").replace("_", "").isalnum():
+            raise ValueError(f"Invalid app name '{app}'")
+    return v
+
+@field_validator("media_url", mode="before")
+@classmethod
+def validate_media_url(cls, v: str, info) -> str:
+    """Handle '__auto__' directive for media_url."""
+    if v == "__auto__":
+        api_url = info.data.get("api_url", "http://localhost:8000")
+        return f"{api_url.rstrip('/')}/media/"
+    return v if v.endswith("/") else f"{v}/"
+```
+
+### Model Validators
+
+```python
+@model_validator(mode="after")
+def validate_configuration_consistency(self) -> "DjangoConfig":
+    """Validate overall configuration consistency."""
+    # In development mode, force media_url to use api_url
+    if self.is_development:
+        dev_media_url = f"{self.api_url.rstrip('/')}/media/"
+        if self.media_url != dev_media_url:
+            object.__setattr__(self, 'media_url', dev_media_url)
+
+    # Ensure 'default' database exists
+    if not self.databases:
+        raise ConfigurationError("At least one database must be configured")
+    if "default" not in self.databases:
+        raise ConfigurationError("'default' database is required")
+
+    # Validate database routing consistency
+    for alias, db_config in self.databases.items():
+        if db_config.migrate_to and db_config.migrate_to not in self.databases:
+            raise ConfigurationError(
+                f"Database '{alias}' references non-existent database '{db_config.migrate_to}'"
+            )
+    return self
+
+@model_validator(mode="after")
+def enforce_production_security(self) -> "DjangoConfig":
+    """
+    SECURITY: Production mode ALWAYS disables debug.
+
+    If DEBUG=True in production, a warning is issued and DEBUG
+    is forcefully set to False to prevent:
+    - Sensitive data exposure in tracebacks
+    - Memory leaks from SQL query logging
+    - Performance degradation
+    """
+    if self.is_production and self.debug:
+        import warnings
+        warnings.warn(
+            "SECURITY: DEBUG=True is not allowed in production! "
+            "Forcing DEBUG=False.",
+            UserWarning
+        )
+        object.__setattr__(self, 'debug', False)
+    return self
+```
+
+## Environment Detection
+
+Environment is auto-detected from environment variables during initialization:
+
+```python
+def model_post_init(self, _context: Any) -> None:
+    """Initialize configuration after Pydantic validation."""
+    # Auto-detect environment from env variables
+    env_vars = ['DJANGO_ENV', 'ENVIRONMENT', 'ENV']
+    for env_var in env_vars:
+        env_value = os.environ.get(env_var)
+        if env_value:
+            env_normalized = env_value.lower().strip()
+            if env_normalized in ('dev', 'devel', 'develop', 'development', 'local'):
+                self.env_mode = EnvironmentMode.DEVELOPMENT
+            elif env_normalized in ('prod', 'production'):
+                self.env_mode = EnvironmentMode.PRODUCTION
+            elif env_normalized in ('test', 'testing'):
+                self.env_mode = EnvironmentMode.TEST
+            break
+```
+
+**Recognized environment values:**
+- Development: `dev`, `devel`, `develop`, `development`, `local`
+- Production: `prod`, `production`
+- Test: `test`, `testing`
+
+## Properties
+
+DjangoConfig provides convenient properties for checking the current environment:
+
+```python
+@property
+def is_development(self) -> bool:
+    """Check if running in development mode."""
+    return self.env_mode == EnvironmentMode.DEVELOPMENT
+
+@property
+def is_production(self) -> bool:
+    """Check if running in production mode."""
+    return self.env_mode == EnvironmentMode.PRODUCTION
+
+@property
+def is_test(self) -> bool:
+    """Check if running in test mode."""
+    return self.env_mode == EnvironmentMode.TEST
+
+@property
+def base_dir(self) -> Path:
+    """
+    Get the base directory of the project.
+    Auto-detected by searching for manage.py in parent directories.
+    """
+    if self._base_dir is None:
+        current_path = Path.cwd().resolve()
+        for path in [current_path] + list(current_path.parents):
+            if (path / "manage.py").exists():
+                self._base_dir = path
+                break
+        if self._base_dir is None:
+            self._base_dir = current_path
+    return self._base_dir
+```
+
+## Settings Generation Methods
+
+### get_all_settings
+
+```python
+def get_all_settings(self) -> Dict[str, Any]:
+    """Generate complete Django settings dictionary."""
+    from django_cfg.core.state.registry import set_current_config
+    set_current_config(self)
+
+    if self._django_settings is None:
+        from django_cfg.core.generation import SettingsGenerator
+        self._django_settings = SettingsGenerator.generate(self)
+
+    return self._django_settings
+```
+
+**Example usage:**
+
+```python
+# config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    project_name = "My Project"
+    secret_key = "your-50-character-minimum-secret-key-here-for-security"
+    databases = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.postgresql",
+            name="mydb",
+        )
+    }
+
+config = MyConfig()
+
+# settings.py
+from config import config
+globals().update(config.get_all_settings())
+```
+
+### get_installed_apps
+
+```python
+def get_installed_apps(self) -> List[str]:
+    """Get complete INSTALLED_APPS list."""
+    return self.service.get_installed_apps()
+```
+
+The method delegates to `ConfigService` which builds the apps list from:
+- Django core apps
+- WhiteNoise, Unfold Admin
+- REST Framework, JWT, CORS
+- Security (Axes), Import/Export
+- Django-CFG core modules
+- Your `project_apps`
+
+### get_middleware
+
+```python
+def get_middleware(self) -> List[str]:
+    """Get complete MIDDLEWARE list."""
+    return self.service.get_middleware()
+```
+
+The method delegates to `ConfigService` which includes:
+- Security, WhiteNoise, CORS
+- Sessions, Authentication, CSRF
+- Messages, ClickJacking protection
+- Django-Axes (brute-force protection)
+- Your `custom_middleware`
+
+### get_allowed_hosts
+
+```python
+def get_allowed_hosts(self) -> List[str]:
+    """Get ALLOWED_HOSTS."""
+    return self.service.get_allowed_hosts()
+```
+
+Auto-generated from `security_domains`, including localhost variants for development.
+
+### Other Methods
+
+```python
+def invalidate_cache(self) -> None:
+    """Invalidate cached Django settings."""
+    self._django_settings = None
+
+def should_enable_rq(self) -> bool:
+    """Determine if Django-RQ should be enabled."""
+    return hasattr(self, 'django_rq') and self.django_rq and self.django_rq.enabled
+```
+
+## Usage Examples
+
+### Basic Configuration
+
+```python
+# config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+from django_cfg.core.types.enums import EnvironmentMode
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+    secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
+    env_mode = EnvironmentMode.DEVELOPMENT
+    debug: bool = True
+    project_apps: list = ["apps.blog", "apps.shop"]
+
+    databases = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.postgresql",
+            name="mydb",
+            user="postgres",
+            password="password",
+            host="localhost",
+            port="5432",
+        )
+    }
+```
+
+### With Environment Properties
+
+```python
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+    secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
+
+    databases = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.postgresql",
+            name="mydb",
+        )
+    }
+
+# Usage - environment is auto-detected from DJANGO_ENV, ENVIRONMENT, or ENV
+config = MyConfig()
+
+if config.is_development:
+    print("Running in development mode")
+elif config.is_production:
+    print("Running in production mode")
+elif config.is_test:
+    print("Running in test mode")
+```
+
+### With Services
+
+```python
+from django_cfg import DjangoConfig, DatabaseConfig
+from django_cfg.models import EmailConfig, TelegramConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+    secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
+
+    databases = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.postgresql",
+            name="mydb",
+        )
+    }
+
+    # Email service
+    email = EmailConfig(
+        backend="smtp",
+        host="smtp.gmail.com",
+        port=587,
+        username="your-email@gmail.com",
+        password="your-app-password",
+    )
+
+    # Telegram notifications
+    telegram = TelegramConfig(
+        bot_token="your-bot-token",
+        chat_id="your-chat-id",
+    )
+
+    # Admin notifications
+    admin_emails = ["admin@example.com"]
+
+    # Redis cache (auto-creates cache backend)
+    redis_url = "redis://localhost:6379/0"
+```
+
+### With Integrations
+
+```python
+from django_cfg import DjangoConfig, DatabaseConfig
+from django_cfg.models.api import DRFConfig, GRPCConfig
+from django_cfg.models import UnfoldConfig
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+    secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
+
+    databases = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.postgresql",
+            name="mydb",
+        )
+    }
+
+    # Django REST Framework
+    drf = DRFConfig(
+        page_size=20,
+        max_page_size=100,
+    )
+
+    # gRPC server
+    grpc = GRPCConfig(
+        port=50051,
+    )
+
+    # Unfold admin interface
+    unfold = UnfoldConfig(
+        site_title="My Admin",
+    )
+```
+
+## Model Configuration
+
+The `model_config` dict controls Pydantic behavior:
+
+```python
+model_config = {
+    "validate_assignment": True,   # Validate on attribute assignment
+    "extra": "forbid",             # Forbid extra fields for type safety
+    "env_prefix": "DJANGO_",       # Environment variable prefix
+    "populate_by_name": True,      # Allow field name or alias
+    "validate_default": True,      # Validate default values
+    "str_strip_whitespace": True,  # Strip whitespace from strings
+}
+```
+
+### Environment Variables
+
+With `env_prefix="DJANGO_"`, you can override fields via environment variables:
+
+```bash
+export DJANGO_SECRET_KEY="your-production-secret-key-at-least-50-chars"
+export DJANGO_DEBUG=false
+export DJANGO_PROJECT_NAME="My App"
+```
+
+### Type Safety
+
+With `extra="forbid"`, unknown fields raise validation errors:
+
+```python
+# ❌ This will raise a validation error
+config = MyConfig(
+    project_name="My Project",
+    secret_key="...",
+    unknown_field="value"  # ValidationError: extra fields not permitted
+)
+
+# ✅ Only defined fields are allowed
+config = MyConfig(
+    project_name="My Project",
+    secret_key="your-50-character-minimum-secret-key-here-for-security",
+    databases={"default": DatabaseConfig(engine="...", name="mydb")},
+)
+```
+
+## See Also
+
+### Core Configuration
+- [**Configuration Overview**](./) - Configuration system overview
+- [**Security Settings**](./security) - Security configuration
+- [**Database Models**](./database) - Database configuration
+- [**Cache Models**](./cache) - Cache configuration
+- [**Email Models**](./email) - Email configuration
+
+### Modules
+- [**File Cleanup**](/docs/features/modules/django-cleanup/overview) - Automatic file cleanup for FileField/ImageField
+- [**Currency**](/docs/features/modules/currency/overview) - Currency conversion and exchange rates
+- [**Telegram**](/docs/features/modules/telegram/overview) - Telegram bot notifications
+- [**Unfold Admin**](/docs/features/modules/unfold/overview) - Modern admin interface
+
+### Integrations
+- [**Django-RQ**](/docs/features/integrations/django-rq/overview) - Background task queue
+- [**Centrifugo**](/docs/features/integrations/centrifugo) - WebSocket pub/sub
+- [**gRPC**](/docs/features/integrations/grpc) - gRPC server configuration
+- [**Ngrok**](/docs/features/integrations/ngrok/overview) - Development tunneling
+- [**OAuth**](/docs/features/integrations/oauth) - Social authentication

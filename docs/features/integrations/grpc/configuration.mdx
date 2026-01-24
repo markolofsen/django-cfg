@@ -1,0 +1,1018 @@
+---
+title: Configuration
+description: Complete configuration reference for Django-CFG gRPC integration
+sidebar_label: Configuration
+sidebar_position: 4
+keywords:
+  - grpc configuration
+  - grpc settings
+  - grpc config
+---
+
+# gRPC Configuration
+
+Complete reference for configuring Django-CFG gRPC integration.
+
+## 📋 Configuration Structure
+
+```python
+# api/config.py
+from typing import Optional
+from django_cfg import (
+    DjangoConfig,
+    GRPCConfig,
+    GRPCServerConfig,
+    GRPCKeepaliveConfig,
+    GRPCConnectionLimitsConfig,
+    GRPCAuthConfig,
+    GRPCProtoConfig,
+)
+
+class MyConfig(DjangoConfig):
+    grpc: Optional[GRPCConfig] = GRPCConfig(
+        enabled=True,
+        server=GRPCServerConfig(...),
+        auth=GRPCAuthConfig(...),
+        proto=GRPCProtoConfig(...),
+        auto_register_apps=True,
+        enabled_apps=[...],
+    )
+```
+
+## ⚙️ GRPCConfig
+
+Main gRPC configuration container.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Enable/disable gRPC server |
+| `server` | `GRPCServerConfig` | - | Server configuration |
+| `auth` | `GRPCAuthConfig` | - | Authentication configuration |
+| `proto` | `GRPCProtoConfig` | - | Protocol Buffer configuration |
+| `tls` | `TLSConfig` | - | TLS/SSL configuration (new!) |
+| `auto_register_apps` | `bool` | `True` | Auto-discover services |
+| `enabled_apps` | `list[str]` | `[]` | Apps to scan for services |
+| **TLS Flatten Fields** | | | |
+| `tls_enabled` | `bool` | `None` | Enable TLS (shortcut) |
+| `tls_cert_path` | `str` | `None` | Server certificate path |
+| `tls_key_path` | `str` | `None` | Server private key path |
+
+### Example
+
+```python
+grpc: GRPCConfig = GRPCConfig(
+    enabled=True,
+    auto_register_apps=True,
+    enabled_apps=["apps.users", "apps.products", "apps.orders"],
+)
+```
+
+## 🎯 Simplified Configuration (Flatten Fields)
+
+For simpler configs, you can use **flatten fields** instead of nested config objects:
+
+### Traditional (Nested):
+```python
+grpc = GRPCConfig(
+    enabled=True,
+    server=GRPCServerConfig(
+        host="[::]",
+        port=50051,
+    ),
+    proto=GRPCProtoConfig(
+        package_prefix="api",
+        output_dir="protos",
+    ),
+    enabled_apps=["apps.crypto"],
+)
+```
+
+### Simplified (Flatten):
+```python
+grpc = GRPCConfig(
+    enabled=True,
+    enabled_apps=["apps.crypto"],
+    # Server fields (flatten)
+    host="[::]",          # Instead of server=GRPCServerConfig(host=...)
+    port=50051,
+    # Proto fields (flatten)
+    package_prefix="api", # Instead of proto=GRPCProtoConfig(package_prefix=...)
+    # Environment integration
+    public_url=env.grpc_url,
+)
+```
+
+**Benefits:**
+- Less boilerplate code
+- No need to import nested config classes
+- Cleaner configuration
+- Same functionality
+
+**When to use nested:** When you need to organize complex configs or reuse config objects.
+**When to use flatten:** For simple configs (recommended for most cases).
+
+## 🖥️ GRPCServerConfig
+
+gRPC server settings.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `host` | `str` | `"[::]"` | Server host address |
+| `port` | `int` | `50051` | Server port |
+| `enable_reflection` | `bool` | `True` | Enable server reflection |
+| `enable_health_check` | `bool` | `True` | Enable health check service |
+| `compression` | `str \| None` | `None` | Compression algorithm (`"gzip"`, `"deflate"`) |
+| `max_send_message_length` | `int` | `4MB` | Max outbound message size |
+| `max_receive_message_length` | `int` | `4MB` | Max inbound message size |
+| `keepalive` | `GRPCKeepaliveConfig` | - | HTTP/2 keepalive settings |
+| `connection_limits` | `GRPCConnectionLimitsConfig` | - | Connection lifecycle limits |
+
+### Host Options
+
+```python
+# All interfaces (IPv6) - Recommended
+host="[::]"
+
+# All interfaces (IPv4)
+host="0.0.0.0"
+
+# Localhost only
+host="127.0.0.1"
+
+# Specific IP
+host="192.168.1.100"
+```
+
+### Reflection
+
+```python
+# Development: Enable for grpcurl testing
+enable_reflection=True
+
+# Production: Disable to hide service schema
+enable_reflection=False
+```
+
+### Health Check
+
+```python
+# Always recommended for production
+enable_health_check=True
+
+# For load balancers
+# GET /grpc.health.v1.Health/Check
+```
+
+### Complete Example
+
+```python
+from django_cfg import GRPCServerConfig, GRPCKeepaliveConfig
+
+server=GRPCServerConfig(
+    host="[::]",              # All interfaces
+    port=50051,               # Standard port
+    enable_reflection=True,   # Enable grpcurl
+    enable_health_check=True, # Enable health checks
+    compression="gzip",       # Enable gzip compression
+    # Nested keepalive config for streaming
+    keepalive=GRPCKeepaliveConfig.for_streaming(),
+)
+```
+
+## 🔄 GRPCKeepaliveConfig
+
+HTTP/2 keepalive configuration for connection health and dead connection detection.
+
+```python
+from django_cfg import GRPCKeepaliveConfig
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `time_ms` | `int` | `10000` | Keepalive ping interval (ms). How often to send HTTP/2 PING. |
+| `timeout_ms` | `int` | `5000` | Keepalive timeout (ms). How long to wait for PING ACK. |
+| `permit_without_calls` | `bool` | `True` | Allow pings even without active RPC calls. |
+| `min_time_between_pings_ms` | `int` | `5000` | Minimum time between successive pings (anti-abuse). |
+| `max_pings_without_data` | `int` | `0` | Max pings without data. 0 = unlimited (streaming). |
+
+### Factory Methods
+
+```python
+# For long-lived bidirectional streaming connections (recommended)
+# Optimized: 10s ping, 5s timeout = 15s dead connection detection
+keepalive = GRPCKeepaliveConfig.for_streaming()
+
+# For short-lived RPC connections
+# Less aggressive: 30s ping, 10s timeout
+keepalive = GRPCKeepaliveConfig.for_short_lived()
+```
+
+### Custom Configuration
+
+```python
+keepalive = GRPCKeepaliveConfig(
+    time_ms=15000,           # Ping every 15 seconds
+    timeout_ms=10000,        # Wait 10 seconds for ACK
+    permit_without_calls=True,
+    max_pings_without_data=0,  # Unlimited for streaming
+)
+```
+
+### Converting to gRPC Options
+
+```python
+# Use to_grpc_options() method for low-level gRPC configuration
+options = keepalive.to_grpc_options()
+# Returns: [("grpc.keepalive_time_ms", 15000), ("grpc.keepalive_timeout_ms", 10000), ...]
+```
+
+## 🔗 GRPCConnectionLimitsConfig
+
+Connection lifecycle limits for server-side connection management.
+
+```python
+from django_cfg import GRPCConnectionLimitsConfig
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_connection_idle_ms` | `int` | `7200000` | Max idle time (ms) before closing. Default: 2 hours. |
+| `max_connection_age_ms` | `int` | `0` | Max connection age (ms). 0 = unlimited (streaming). |
+| `max_connection_age_grace_ms` | `int` | `300000` | Grace period (ms) for in-flight RPCs. Default: 5 min. |
+
+### Example
+
+```python
+from django_cfg import GRPCConnectionLimitsConfig
+
+# Default: optimized for long-lived streaming
+connection_limits = GRPCConnectionLimitsConfig()
+
+# Custom: shorter limits for REST-like RPC
+connection_limits = GRPCConnectionLimitsConfig(
+    max_connection_idle_ms=3600000,   # 1 hour
+    max_connection_age_ms=86400000,   # 24 hours
+    max_connection_age_grace_ms=60000,  # 1 minute
+)
+```
+
+<Callout type="info">
+**Streaming Recommendation:** For bidirectional streaming, use `max_connection_age_ms=0` (unlimited) to prevent premature connection closure during long-running streams.
+</Callout>
+
+## 🔐 GRPCAuthConfig
+
+Authentication configuration (supports API keys).
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Enable authentication |
+| `require_auth` | `bool` | `False` | Require auth for all methods |
+| **API Key Settings** | | | |
+| `api_key_header` | `str` | `"x-api-key"` | Header name for API key |
+| `accept_django_secret_key` | `bool` | `True` | Accept Django SECRET_KEY as valid API key (for dev/internal use) |
+| **General** | | | |
+| `public_methods` | `list[str]` | `[]` | Public methods (no auth required) |
+
+### Authentication Modes
+
+**Mode 1: Disabled (Development)**
+```python
+auth=GRPCAuthConfig(
+    enabled=False,  # No authentication
+)
+```
+
+**Mode 2: Optional Auth (Recommended)**
+```python
+auth=GRPCAuthConfig(
+    enabled=True,
+    require_auth=False,  # Some methods can be public
+    api_key_header="x-api-key",
+    accept_django_secret_key=True,  # Allow SECRET_KEY for dev
+)
+
+# In service:
+# - Use self.get_user(context) for optional auth
+# - Use self.require_user(context) for protected methods
+# - Access context.api_key to check which API key was used
+```
+
+**Mode 3: Required Auth (Strict - Production)**
+```python
+auth=GRPCAuthConfig(
+    enabled=True,
+    require_auth=True,  # All methods require API key
+    api_key_header="x-api-key",
+    accept_django_secret_key=False,  # Production: only DB keys
+    public_methods=[    # Except these
+        "/grpc.health.v1.Health/Check",
+    ],
+)
+```
+
+### Public Methods
+
+```python
+auth=GRPCAuthConfig(
+    enabled=True,
+    require_auth=False,
+    public_methods=[
+        # Health check (always public)
+        "/grpc.health.v1.Health/Check",
+        "/grpc.health.v1.Health/Watch",
+
+        # Your public methods
+        "/api.users.UserService/GetUser",
+        "/api.products.ProductService/ListProducts",
+    ],
+)
+```
+
+### Complete Example
+
+```python
+# Production configuration with API keys
+auth=GRPCAuthConfig(
+    enabled=True,
+    require_auth=True,  # Strict auth in production
+    # API key configuration
+    api_key_header="x-api-key",
+    accept_django_secret_key=False,  # Disable SECRET_KEY in production
+    # Public methods
+    public_methods=[
+        "/grpc.health.v1.Health/Check",
+        "/grpc.health.v1.Health/Watch",
+    ],
+)
+```
+
+### API Key Settings
+
+**Custom Header Name**
+```python
+auth=GRPCAuthConfig(
+    api_key_header="x-custom-api-key",  # Change header name
+)
+```
+
+**Disable SECRET_KEY (Production)**
+```python
+auth=GRPCAuthConfig(
+    accept_django_secret_key=False,  # Only accept keys from database
+)
+```
+
+**Enable SECRET_KEY (Development)**
+```python
+auth=GRPCAuthConfig(
+    accept_django_secret_key=True,  # Allow using settings.SECRET_KEY
+)
+
+# Usage:
+# grpcurl -H "x-api-key: $(python manage.py shell -c 'from django.conf import settings; print(settings.SECRET_KEY)')" ...
+```
+
+## 📄 GRPCProtoConfig
+
+Protocol Buffer generation settings.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `auto_generate` | `bool` | `False` | Auto-generate proto files |
+| `output_dir` | `str` | `"protos"` | Proto output directory |
+| `package_prefix` | `str` | `"api"` | Package prefix |
+
+### Example
+
+```python
+proto=GRPCProtoConfig(
+    auto_generate=True,
+    output_dir="protos",
+    package_prefix="api",
+)
+
+# Generates:
+# protos/api/users.proto
+# protos/api/products.proto
+```
+
+## 🔒 TLSConfig
+
+TLS/SSL configuration for secure gRPC connections. Supports server-side TLS, client TLS, and mutual TLS (mTLS).
+
+```python
+from django_cfg.apps.integrations.grpc.configs import TLSConfig
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Enable TLS/SSL |
+| `cert_path` | `str` | `None` | Server certificate path (.crt/.pem) |
+| `key_path` | `str` | `None` | Server private key path (.key/.pem) |
+| `ca_cert_path` | `str` | `None` | CA certificate for verification |
+| `client_cert_path` | `str` | `None` | Client certificate (mTLS) |
+| `client_key_path` | `str` | `None` | Client private key (mTLS) |
+| `require_client_cert` | `bool` | `False` | Require client certificate (server-side mTLS) |
+| `verify_server` | `bool` | `True` | Verify server certificate (client-side) |
+| `min_version` | `str` | `"TLS1.2"` | Minimum TLS version |
+
+### Server TLS Example
+
+```python
+from django_cfg import GRPCConfig
+from django_cfg.apps.integrations.grpc.configs import TLSConfig
+
+grpc = GRPCConfig(
+    enabled=True,
+    tls=TLSConfig(
+        enabled=True,
+        cert_path="/etc/ssl/server.crt",
+        key_path="/etc/ssl/server.key",
+    ),
+    # Or use flatten fields:
+    # tls_enabled=True,
+    # tls_cert_path="/etc/ssl/server.crt",
+    # tls_key_path="/etc/ssl/server.key",
+)
+```
+
+### Mutual TLS (mTLS) Example
+
+```python
+# Server with client certificate verification
+tls = TLSConfig(
+    enabled=True,
+    cert_path="/etc/ssl/server.crt",
+    key_path="/etc/ssl/server.key",
+    ca_cert_path="/etc/ssl/ca.crt",  # Verify client certs
+    require_client_cert=True,        # Require client auth
+)
+```
+
+## 📡 ClientChannelConfig
+
+Configuration for gRPC client channels. Use this instead of hardcoded values.
+
+```python
+from django_cfg.apps.integrations.grpc.configs import ClientChannelConfig
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `address` | `str` | **required** | Server address (host:port) |
+| `use_tls` | `bool` | `False` | Use TLS connection |
+| `connect_timeout` | `float` | `3.0` | Connection timeout (seconds) |
+| `call_timeout` | `float` | `5.0` | Default RPC timeout (seconds) |
+| `keepalive_time_ms` | `int` | `30000` | Keepalive ping interval |
+| `keepalive_timeout_ms` | `int` | `10000` | Keepalive timeout |
+| `max_retries` | `int` | `3` | Max retry attempts |
+| `enable_retries` | `bool` | `True` | Enable automatic retries |
+| `max_send_message_length` | `int` | `4MB` | Max outbound message size |
+| `max_receive_message_length` | `int` | `4MB` | Max inbound message size |
+
+### Example
+
+```python
+from django_cfg.apps.integrations.grpc.configs import ClientChannelConfig, TLSConfig
+from django_cfg.apps.integrations.grpc.services.client import DynamicGRPCClient
+
+# Create config
+config = ClientChannelConfig(
+    address="grpc.example.com:443",
+    use_tls=True,
+    max_retries=5,
+    call_timeout=30.0,
+)
+
+# Create client with config
+client = DynamicGRPCClient(config=config)
+```
+
+## 🔁 Resilience Configuration
+
+Production-grade retry, circuit breaker, and structured logging for gRPC operations.
+
+### RetryConfig
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import RetryConfig
+
+retry = RetryConfig(
+    enabled=True,
+    attempts=5,
+    timeout=30.0,
+    wait_initial=0.1,
+    wait_max=10.0,
+    wait_jitter=0.1,
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | True | Enable automatic retry |
+| `attempts` | int | 5 | Maximum retry attempts (1-20) |
+| `timeout` | float | 30.0 | Total timeout in seconds (1-300) |
+| `wait_initial` | float | 0.1 | Initial backoff in seconds (0.01-10) |
+| `wait_max` | float | 10.0 | Maximum backoff in seconds (1-60) |
+| `wait_jitter` | float | 0.1 | Jitter factor (0.0-1.0) |
+
+### CircuitBreakerConfig
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import CircuitBreakerConfig
+
+circuit_breaker = CircuitBreakerConfig(
+    enabled=True,
+    fail_max=5,
+    reset_timeout=60.0,
+    success_threshold=2,
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | True | Enable circuit breaker |
+| `fail_max` | int | 5 | Failures before circuit opens (1-100) |
+| `reset_timeout` | float | 60.0 | Seconds before half-open state (1-3600) |
+| `success_threshold` | int | 2 | Successes required to close circuit (1-10) |
+
+### LoggingConfig
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import LoggingConfig
+
+logging_config = LoggingConfig(
+    enabled=True,
+    json_output=True,
+    log_level="INFO",
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | True | Enable structured logging |
+| `json_output` | bool | True | JSON format (False = console) |
+| `log_level` | str | "INFO" | Minimum log level |
+
+### Combined ResilienceConfig
+
+```python
+from django_cfg.apps.integrations.grpc.resilience import ResilienceConfig
+
+config = ResilienceConfig(
+    retry=RetryConfig(attempts=5),
+    circuit_breaker=CircuitBreakerConfig(fail_max=5),
+    logging=LoggingConfig(json_output=True),
+)
+```
+
+Learn more: [Resilience Patterns](../resilience)
+
+---
+
+## 🏊 Connection Pool Configuration
+
+Efficient channel reuse for high-performance gRPC applications.
+
+### PoolConfig
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import PoolConfig
+
+pool_config = PoolConfig(
+    max_size=20,
+    idle_timeout=120.0,
+    min_idle=2,
+    max_age=3600.0,
+    cleanup_interval=60.0,
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_size` | int | 20 | Maximum channels in pool (1-100) |
+| `idle_timeout` | float | 120.0 | Close idle channels after (10-3600s) |
+| `min_idle` | int | 2 | Keep minimum idle channels (0-10) |
+| `max_age` | float | 3600.0 | Maximum channel age (60-86400s) |
+| `cleanup_interval` | float | 60.0 | Cleanup check interval (10-600s) |
+
+### Using Pool with Resilient Client
+
+```python
+from django_cfg.apps.integrations.grpc.services.client import (
+    AsyncResilientGRPCClient,
+    PoolConfig,
+)
+
+async with AsyncResilientGRPCClient(
+    host="localhost",
+    port=50051,
+    use_pool=True,
+    pool_config=PoolConfig(max_size=50),
+) as client:
+    result = await client.call_method(...)
+```
+
+Learn more: [Connection Pooling](../connection-pooling)
+
+---
+
+## 🎯 Environment-Specific Configs
+
+### Development
+
+```python
+from django_cfg import GRPCKeepaliveConfig
+
+class DevelopmentConfig(DjangoConfig):
+    DEBUG = True
+
+    grpc: GRPCConfig = GRPCConfig(
+        enabled=True,
+        server=GRPCServerConfig(
+            host="127.0.0.1",         # Localhost only
+            port=50051,
+            enable_reflection=True,   # Enable for testing
+            enable_health_check=True,
+        ),
+        auth=GRPCAuthConfig(
+            enabled=True,  # Enable auth even in dev
+            require_auth=False,
+            api_key_header="x-api-key",
+            accept_django_secret_key=True,  # Allow SECRET_KEY for convenience
+        ),
+        enabled_apps=["apps.users"],  # Limited apps
+    )
+```
+
+### Production
+
+```python
+from django_cfg import GRPCKeepaliveConfig, GRPCConnectionLimitsConfig
+
+class ProductionConfig(DjangoConfig):
+    DEBUG = False
+
+    grpc: GRPCConfig = GRPCConfig(
+        enabled=True,
+        server=GRPCServerConfig(
+            host="[::]",              # All interfaces
+            port=50051,
+            enable_reflection=False,  # Disable in production
+            enable_health_check=True, # Keep health checks
+            # Optimized keepalive for streaming
+            keepalive=GRPCKeepaliveConfig.for_streaming(),
+            connection_limits=GRPCConnectionLimitsConfig(
+                max_connection_idle_ms=7200000,  # 2 hours
+            ),
+        ),
+        auth=GRPCAuthConfig(
+            enabled=True,             # Enable auth
+            require_auth=True,        # Require by default
+            # API key configuration
+            api_key_header="x-api-key",
+            accept_django_secret_key=False,  # Disable SECRET_KEY in production
+            public_methods=[
+                "/grpc.health.v1.Health/Check",
+            ],
+        ),
+        enabled_apps=[
+            "apps.users",
+            "apps.products",
+            "apps.orders",
+            "apps.payments",
+        ],
+    )
+```
+
+### Testing
+
+```python
+class TestingConfig(DjangoConfig):
+    TESTING = True
+
+    grpc: GRPCConfig = GRPCConfig(
+        enabled=True,
+        server=GRPCServerConfig(
+            host="127.0.0.1",
+            port=50052,              # Different port
+            enable_reflection=True,
+            enable_health_check=False,  # Not needed in tests
+        ),
+        auth=GRPCAuthConfig(
+            enabled=False,  # Simplify testing
+        ),
+    )
+```
+
+## 🌍 Environment Variables
+
+The gRPC configs package supports environment variables out of the box via `configs/constants.py`:
+
+### Core Network Settings
+```bash
+GRPC_HOST=localhost           # Default gRPC host
+GRPC_PORT=50051               # Default gRPC port
+```
+
+### Timeout Settings (seconds)
+```bash
+GRPC_RPC_CALL_TIMEOUT=5.0     # RPC call timeout
+GRPC_CONNECT_TIMEOUT=3.0      # Connection timeout
+GRPC_CHANNEL_READY_TIMEOUT=5.0  # Channel ready timeout
+GRPC_QUEUE_TIMEOUT=10.0       # Queue timeout
+GRPC_ROUTING_TIMEOUT=5.0      # Cross-process routing timeout
+```
+
+### Keepalive Settings (milliseconds)
+```bash
+GRPC_KEEPALIVE_TIME_MS=30000       # Ping interval (30s)
+GRPC_KEEPALIVE_TIMEOUT_MS=10000    # Ping timeout (10s)
+GRPC_MAX_CONNECTION_IDLE_MS=7200000  # Max idle (2h)
+```
+
+### Retry & Limits
+```bash
+GRPC_MAX_RETRIES=3                  # Max retry attempts
+GRPC_MAX_MESSAGE_LENGTH=4194304     # 4MB message limit
+GRPC_QUEUE_SIZE=1000                # Command queue size
+```
+
+### Circuit Breaker
+```bash
+GRPC_CB_THRESHOLD=5           # Error threshold
+GRPC_CB_TIMEOUT=60.0          # Recovery timeout
+```
+
+### Legacy Config Override
+
+You can still override in GRPCConfig:
+
+```python
+import os
+
+grpc: GRPCConfig = GRPCConfig(
+    enabled=os.getenv("GRPC_ENABLED", "true").lower() == "true",
+    server=GRPCServerConfig(
+        host=os.getenv("GRPC_HOST", "[::]"),
+        port=int(os.getenv("GRPC_PORT", "50051")),
+        enable_reflection=os.getenv("GRPC_ENABLE_REFLECTION", "true").lower() == "true",
+    ),
+    auth=GRPCAuthConfig(
+        enabled=os.getenv("GRPC_AUTH_ENABLED", "false").lower() == "true",
+        require_auth=os.getenv("GRPC_REQUIRE_AUTH", "false").lower() == "true",
+        api_key_header=os.getenv("GRPC_API_KEY_HEADER", "x-api-key"),
+        accept_django_secret_key=os.getenv("GRPC_ACCEPT_SECRET_KEY", "true").lower() == "true",
+    ),
+)
+```
+
+## 📊 Service Discovery
+
+### Auto-Discovery Locations
+
+Services are discovered from these locations (in order):
+
+1. `app/grpc_services.py`
+2. `app/grpc_handlers.py`
+3. `app/services/grpc.py`
+4. `app/handlers/grpc.py`
+5. `app/api/grpc.py`
+
+### Enabled Apps
+
+```python
+grpc: GRPCConfig = GRPCConfig(
+    auto_register_apps=True,
+    enabled_apps=[
+        # Full app paths
+        "apps.users",
+        "apps.products",
+
+        # Core Django apps (if they have gRPC services)
+        "django.contrib.auth",
+
+        # Third-party apps
+        "mylib.grpc_app",
+    ],
+)
+```
+
+### Manual Registration
+
+If auto-discovery doesn't work, register manually:
+
+```python
+# api/grpc_handlers.py
+def register_handlers(server):
+    from apps.users.grpc_services import UserService
+    from apps.users import user_pb2_grpc
+
+    user_pb2_grpc.add_UserServiceServicer_to_server(
+        UserService(),
+        server
+    )
+```
+
+Then in config:
+
+```python
+grpc: GRPCConfig = GRPCConfig(
+    handlers_hook="api.grpc_handlers.register_handlers",
+)
+```
+
+## 🚀 Command-Line Options
+
+Override config when starting server:
+
+```bash
+# Custom host and port
+python manage.py rungrpc --host 0.0.0.0 --port 50052
+
+# Verbose output
+python manage.py rungrpc --verbosity 3
+
+# Combined
+python manage.py rungrpc \
+  --host 0.0.0.0 \
+  --port 50052 \
+  --verbosity 2
+```
+
+## Streaming Configuration
+
+For bidirectional streaming services, use `BidirectionalStreamingConfig`:
+
+```python
+from django_cfg.apps.integrations.grpc.services.streaming.config import (
+    BidirectionalStreamingConfig,
+    StreamingMode,
+    PingStrategy,
+)
+
+BotStreamingConfig = BidirectionalStreamingConfig(
+    # Streaming mode
+    streaming_mode=StreamingMode.ANEXT,  # Recommended for long-running streams
+
+    # Ping/keepalive for liveness detection
+    ping_strategy=PingStrategy.INTERVAL,
+    ping_interval=5.0,      # Send PING every 5 seconds
+    ping_timeout=180.0,     # Disconnect if no PONG in 180 seconds
+
+    # CRITICAL: Must be None!
+    connection_timeout=None,  # See warning below
+
+    # Queue configuration
+    max_queue_size=1000,
+
+    # Async optimizations
+    enable_sleep_zero=True,
+
+    # Logging
+    enable_logging=True,
+    logger_name="grpc_streaming",
+
+    # Centrifugo integration (optional)
+    enable_centrifugo=True,
+    centrifugo_channel_prefix="bot",
+    centrifugo_auto_publish_messages=True,
+    centrifugo_auto_publish_commands=True,
+)
+```
+
+### Streaming Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `streaming_mode` | `StreamingMode` | `ANEXT` | How to read from input stream |
+| `ping_strategy` | `PingStrategy` | `INTERVAL` | When to send ping messages |
+| `ping_interval` | `float` | `5.0` | Seconds between pings |
+| `ping_timeout` | `float` | `180.0` | Seconds to wait for pong before disconnect |
+| `connection_timeout` | `float \| None` | `None` | **Must be None!** |
+| `max_queue_size` | `int` | `1000` | Max pending commands in queue |
+| `enable_sleep_zero` | `bool` | `True` | Yield to event loop after messages |
+| `enable_logging` | `bool` | `True` | Enable streaming debug logs |
+| `enable_centrifugo` | `bool` | `False` | Auto-publish to Centrifugo |
+
+<Callout type="error">
+**Critical: Never set connection_timeout!**
+
+Setting `connection_timeout` causes premature `StopAsyncIteration` in grpcio 1.76.0+. Always use `connection_timeout=None` and rely on ping/keepalive for liveness detection.
+
+See [Troubleshooting](../troubleshooting#connection-timeout-bug) for details.
+</Callout>
+
+### Streaming Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `ANEXT` | Uses `await anext()` with explicit control | Long-running clients, idle periods |
+| `ASYNC_FOR` | Uses `async for` iteration | High-throughput short-lived streams |
+
+### Ping Strategies
+
+| Strategy | Behavior |
+|----------|----------|
+| `DISABLED` | No pings (testing only) |
+| `INTERVAL` | Send ping every N seconds |
+| `ON_IDLE` | Send ping only when no messages for N seconds |
+
+Learn more: [Streaming Patterns](../streaming-patterns)
+
+---
+
+## Advanced Configuration
+
+### Custom Interceptors
+
+
+<Callout type="error">
+**Interceptor Order Matters!**
+
+Interceptors execute in the order listed. **Authentication interceptors MUST come first** to set `context.user` and `context.api_key` before logging interceptors use them.
+
+**Correct order:**
+1. `ApiKeyAuthInterceptor` - Sets context.api_key and context.user
+2. `RequestLoggerInterceptor` - Logs request with api_key info
+3. `LoggingInterceptor` (dev mode)
+4. `MetricsInterceptor` (dev mode)
+5. Custom interceptors
+
+**Wrong order causes:** API keys not tracked in logs, user info missing.
+
+</Callout>
+
+```python
+# In your config or settings
+GRPC_INTERCEPTORS = [
+    # 1. Auth FIRST (sets context.api_key and context.user)
+    'django_cfg.apps.integrations.grpc.auth.ApiKeyAuthInterceptor',
+    # 2. Request logger (uses context.api_key from auth)
+    'django_cfg.apps.integrations.grpc.interceptors.RequestLoggerInterceptor',
+    # 3. Your custom interceptors
+    'myapp.interceptors.CustomInterceptor',
+]
+```
+
+### Connection Timeouts
+
+```python
+# Client-side (in proto definition or client config)
+# For long-running operations
+deadline = 300  # 5 minutes
+
+# Server-side (in service)
+context.set_deadline(time.time() + 300)
+```
+
+### Request Size Limits
+
+```python
+# In server options
+options = [
+    ('grpc.max_send_message_length', 50 * 1024 * 1024),    # 50MB
+    ('grpc.max_receive_message_length', 50 * 1024 * 1024), # 50MB
+]
+
+server = grpc.server(
+    futures.ThreadPoolExecutor(max_workers=10),
+    interceptors=interceptors,
+    options=options,
+)
+```
+
+## 📚 Configuration Checklist
+
+### Development ✅
+- [ ] `enabled=True`
+- [ ] `host="127.0.0.1"` (localhost)
+- [ ] `enable_reflection=True` (for grpcurl)
+- [ ] `auth.enabled=False` (easy testing)
+
+### Production ✅
+- [ ] `enabled=True`
+- [ ] `host="[::]"` (all interfaces)
+- [ ] `enable_reflection=False` (security)
+- [ ] `auth.enabled=True` (security)
+- [ ] `auth.require_auth=True` (strict)
+- [ ] `keepalive=GRPCKeepaliveConfig.for_streaming()` (streaming)
+- [ ] Environment variables for secrets
+- [ ] Health check enabled
+- [ ] Monitoring/logging enabled
+
+## Related Documentation
+
+- **[Getting Started](../getting-started)** - Build your first service
+- **[Resilience Patterns](../resilience)** - Retry, circuit breaker, logging
+- **[Connection Pooling](../connection-pooling)** - Channel reuse
+- **[Betterproto2](../betterproto2)** - Modern Python gRPC
+- **[Streaming Patterns](../streaming-patterns)** - Bidirectional streaming configuration
+- **[Troubleshooting](../troubleshooting)** - Common issues and solutions
+- **[Authentication](../authentication)** - API keys authentication
+- **[FAQ](../faq)** - Common questions
+
+---
+
+**Configuration Tip:** Start with defaults, measure performance, then tune based on actual traffic patterns. For streaming, always use `connection_timeout=None`.

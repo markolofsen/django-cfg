@@ -1,0 +1,252 @@
+---
+title: Image Generation
+description: Generate images with DALL-E, FLUX and other models using quality presets.
+sidebar_label: Image Generation
+sidebar_position: 3
+keywords:
+  - image generation
+  - dall-e
+  - flux
+  - ai images
+---
+
+# Image Generation
+
+Generate images using DALL-E, FLUX, and other models with quality presets.
+
+## Quick Start
+
+```python
+from django_cfg.modules.django_llm.llm.image_gen import ImageGenClient
+
+client = ImageGenClient()
+
+response = client.generate(
+    prompt="A sunset over mountains, photorealistic",
+    model_quality="best",
+    size="1024x1024"
+)
+print(response.first_url)
+print(f"Cost: ${response.cost_usd:.4f}")
+```
+
+## ImageGenClient
+
+### Configuration
+
+```python
+client = ImageGenClient(
+    api_key="sk-or-v1-...",  # Optional, auto-detected
+)
+```
+
+### Basic Generation
+
+```python
+response = client.generate(
+    prompt="A futuristic city at night",
+    model_quality="balanced",
+    size="1024x1024",
+    quality="hd",       # standard or hd
+    style="vivid"       # vivid or natural
+)
+
+# Access results
+print(response.first_url)      # First image URL
+print(response.count)          # Number of images
+print(f"Cost: ${response.cost_usd:.4f}")
+```
+
+### Quick Generation
+
+```python
+# Returns URL directly
+url = client.generate_quick("A cute cat wearing a hat")
+```
+
+### Multiple Images
+
+```python
+response = client.generate(
+    prompt="Abstract art",
+    n=4,  # Generate 4 images
+    size="1024x1024"
+)
+
+for img in response.images:
+    print(img.url)
+```
+
+## Quality Presets
+
+| Preset | Model | Best For |
+|--------|-------|----------|
+| `fast` | Auto-select | Quick prototypes |
+| `balanced` | DALL-E 3 | General use |
+| `best` | FLUX Pro | Highest quality |
+
+```python
+# Fast - cheapest
+response = client.generate(
+    prompt="...",
+    model_quality="fast"
+)
+
+# Balanced - good quality/cost ratio
+response = client.generate(
+    prompt="...",
+    model_quality="balanced"
+)
+
+# Best - highest quality
+response = client.generate(
+    prompt="...",
+    model_quality="best"
+)
+```
+
+## Sizes
+
+Supported sizes:
+
+- `256x256` - Small, fast
+- `512x512` - Medium
+- `1024x1024` - Standard (default)
+- `1792x1024` - Wide landscape
+- `1024x1792` - Tall portrait
+
+```python
+# Landscape
+response = client.generate(
+    prompt="Mountain panorama",
+    size="1792x1024"
+)
+
+# Portrait
+response = client.generate(
+    prompt="Standing figure",
+    size="1024x1792"
+)
+```
+
+## Quality Options
+
+### Quality
+
+- `standard` - Default quality
+- `hd` - Higher detail, more expensive
+
+### Style
+
+- `vivid` - More dramatic, vibrant (default)
+- `natural` - More realistic, muted
+
+```python
+response = client.generate(
+    prompt="Product photo",
+    quality="hd",
+    style="natural"
+)
+```
+
+## Async Generation
+
+```python
+response = await client.agenerate(
+    prompt="Abstract art",
+    size="1024x1024"
+)
+```
+
+## Response Model
+
+```python
+from django_cfg.modules.django_llm.llm.image_gen import (
+    ImageGenResponse,
+    GeneratedImage,
+)
+
+# ImageGenResponse properties
+response.first_url      # First image URL
+response.images         # List[GeneratedImage]
+response.count          # Number of images
+response.cost_usd       # Total cost
+response.model          # Model used
+response.prompt         # Original prompt
+
+# GeneratedImage properties
+img = response.images[0]
+img.url                 # Image URL
+img.b64_json           # Base64 data (if requested)
+img.revised_prompt     # Model's revised prompt
+```
+
+## Request Model
+
+```python
+from django_cfg.modules.django_llm.llm.image_gen import ImageGenRequest
+
+request = ImageGenRequest(
+    prompt="A sunset",
+    n=2,
+    size="1024x1024",
+    quality="hd",
+    style="vivid"
+)
+```
+
+## Cost Tracking
+
+Costs are automatically calculated:
+
+```python
+response = client.generate(prompt="...")
+print(f"Cost: ${response.cost_usd:.4f}")
+```
+
+Typical costs (varies by provider):
+- DALL-E 3 Standard 1024x1024: ~$0.04
+- DALL-E 3 HD 1024x1024: ~$0.08
+- FLUX Pro: ~$0.05-0.10
+
+## Best Practices
+
+### Prompt Engineering
+
+```python
+# Be specific
+response = client.generate(
+    prompt="A red sports car on a coastal road at sunset, "
+           "dramatic lighting, photorealistic, 4K quality"
+)
+
+# Include style hints
+response = client.generate(
+    prompt="Portrait in the style of Renaissance painting, "
+           "soft lighting, oil on canvas texture"
+)
+```
+
+### Error Handling
+
+```python
+try:
+    response = client.generate(prompt="...")
+except Exception as e:
+    print(f"Generation failed: {e}")
+```
+
+### Caching Considerations
+
+Generated images have unique URLs. Consider:
+- Downloading and storing locally
+- Using image cache for responses
+- Implementing your own deduplication
+
+## Related
+
+- [Vision & OCR](/docs/features/modules/llm/vision)
+- [Cost Tracking](/docs/features/modules/llm/cost-tracking)
+- [Caching](/docs/features/modules/llm/caching)
+
+TAGS: image-generation, dall-e, flux, ai-images

@@ -1,0 +1,302 @@
+---
+title: Text Client
+description: LLM client for chat completions, embeddings, streaming, and JSON extraction.
+sidebar_label: Text Client
+sidebar_position: 4
+keywords:
+  - llm client
+  - chat completion
+  - embeddings
+  - openai
+---
+
+# Text Client
+
+The LLMClient provides text-based LLM operations including chat completions, embeddings, streaming, and JSON extraction.
+
+## Quick Start
+
+```python
+from django_cfg.modules.django_llm.llm.client import LLMClient
+
+client = LLMClient()
+
+response = client.chat_completion(
+    messages=[{"role": "user", "content": "Explain machine learning"}],
+    model="openai/gpt-4o-mini"
+)
+print(response['content'])
+```
+
+## Configuration
+
+```python
+from pathlib import Path
+
+client = LLMClient(
+    apikey_openrouter="sk-or-v1-...",
+    apikey_openai="sk-proj-...",
+    cache_dir=Path("cache/llm"),
+    cache_ttl=3600,
+    max_cache_size=1000
+)
+```
+
+## Chat Completions
+
+### Basic Chat
+
+```python
+response = client.chat_completion(
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is AI?"}
+    ],
+    model="openai/gpt-4o-mini",
+    temperature=0.7,
+    max_tokens=500
+)
+print(response['content'])
+```
+
+### Streaming
+
+```python
+for chunk in client.chat_completion_stream(
+    messages=[{"role": "user", "content": "Tell me a story"}],
+    model="openai/gpt-4o-mini"
+):
+    print(chunk, end='', flush=True)
+```
+
+### Function Calling
+
+```python
+functions = [
+    {
+        "name": "get_weather",
+        "description": "Get current weather",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string"}
+            }
+        }
+    }
+]
+
+response = client.chat_completion(
+    messages=[{"role": "user", "content": "Weather in Paris?"}],
+    model="openai/gpt-4o-mini",
+    functions=functions,
+    function_call="auto"
+)
+```
+
+## Embeddings
+
+### Single Embedding
+
+```python
+embedding = client.generate_embedding(
+    text="Sample text for embedding",
+    model="text-embedding-ada-002"
+)
+# Returns: List[float]
+```
+
+### Batch Embeddings
+
+```python
+texts = ["Text 1", "Text 2", "Text 3"]
+embeddings = client.generate_embeddings_batch(
+    texts=texts,
+    model="text-embedding-ada-002"
+)
+# Returns: List[List[float]]
+```
+
+### Similarity Search
+
+```python
+def find_similar(query, documents):
+    query_emb = client.generate_embedding(query)
+
+    results = []
+    for doc_id, doc_emb in documents.items():
+        similarity = cosine_similarity(query_emb, doc_emb)
+        results.append((doc_id, similarity))
+
+    return sorted(results, key=lambda x: x[1], reverse=True)
+```
+
+## Token Management
+
+### TOON Format
+
+Token-Optimized Object Notation saves 30-50% tokens vs JSON.
+
+```python
+data = {
+    "users": [
+        {"name": "John", "age": 30},
+        {"name": "Jane", "age": 25}
+    ]
+}
+
+toon_string = client.to_toon(data)
+# Use in prompts for token savings
+```
+
+### Token Counting
+
+```python
+from django_cfg.modules.django_llm.llm.tokenizer import Tokenizer
+
+tokenizer = Tokenizer()
+
+# Count tokens in text
+count = tokenizer.count_tokens("Hello world", "gpt-4o-mini")
+
+# Count tokens in messages
+count = tokenizer.count_messages_tokens(messages, "gpt-4o-mini")
+```
+
+### Token Budget Management
+
+```python
+def manage_budget(messages, max_tokens=4000, model="gpt-4o-mini"):
+    tokenizer = Tokenizer()
+    current = tokenizer.count_messages_tokens(messages, model)
+
+    while current > max_tokens and len(messages) > 1:
+        messages.pop(1)  # Remove oldest, keep system
+        current = tokenizer.count_messages_tokens(messages, model)
+
+    return messages
+```
+
+## JSON Extraction
+
+```python
+from django_cfg.modules.django_llm.llm.extractor import JSONExtractor
+
+extractor = JSONExtractor()
+
+# Extract from response
+json_data = extractor.extract_json_from_response(
+    "Here's the data: {'name': 'John', 'age': 30}"
+)
+```
+
+### Structured Extraction
+
+```python
+text = """
+John Doe is a 30-year-old engineer in San Francisco.
+"""
+
+schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer"},
+        "location": {"type": "string"}
+    }
+}
+
+result = extractor.extract_json(
+    text=text,
+    schema=schema,
+    model="openai/gpt-4o-mini"
+)
+# {'name': 'John Doe', 'age': 30, 'location': 'San Francisco'}
+```
+
+### Batch Extraction
+
+```python
+texts = [
+    "Alice, 25, designer",
+    "Bob, 35, manager"
+]
+
+results = extractor.extract_json_batch(
+    texts=texts,
+    schema=schema,
+    model="openai/gpt-4o-mini"
+)
+```
+
+## Caching
+
+The client includes automatic caching:
+
+```python
+# Caching is automatic based on cache_dir and cache_ttl
+client = LLMClient(
+    cache_dir=Path("cache/llm"),
+    cache_ttl=3600  # 1 hour
+)
+
+# Cache management
+cache_info = client.get_cache_info()
+print(f"Size: {cache_info['size']}")
+print(f"Hit rate: {cache_info['hit_rate']:.2%}")
+```
+
+## Cost Calculation
+
+```python
+from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+
+cost = calculate_chat_cost(
+    model="openai/gpt-4o-mini",
+    input_tokens=100,
+    output_tokens=50,
+    models_cache=models_cache
+)
+print(f"Cost: ${cost:.4f}")
+```
+
+## Client Info
+
+```python
+info = client.get_client_info()
+print(f"Cache dir: {info['cache_directory']}")
+print(f"Models: {len(info['available_models'])}")
+```
+
+## Best Practices
+
+### System Prompts
+
+```python
+messages = [
+    {"role": "system", "content": "You are a helpful assistant. Be concise."},
+    {"role": "user", "content": "Explain quantum computing"}
+]
+```
+
+### Temperature
+
+- `0.0-0.3`: Factual, deterministic
+- `0.5-0.7`: Balanced (default)
+- `0.8-1.0`: Creative, varied
+
+### Model Selection
+
+| Model | Use Case |
+|-------|----------|
+| gpt-4o-mini | Fast, cheap, general |
+| gpt-4o | Complex reasoning |
+| claude-3-haiku | Fast, good quality |
+| claude-3-sonnet | Balanced |
+
+## Related
+
+- [Cost Tracking](/docs/features/modules/llm/cost-tracking)
+- [Caching](/docs/features/modules/llm/caching)
+- [Vision & OCR](/docs/features/modules/llm/vision)
+
+TAGS: llm, chat, embeddings, openai, streaming

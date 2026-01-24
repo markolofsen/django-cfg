@@ -1,0 +1,555 @@
+---
+title: Testing & Monitoring Commands
+description: Django-CFG testing and monitoring commands. Health checks, endpoint validation, and service testing.
+sidebar_label: Testing & Monitoring
+sidebar_position: 4
+keywords:
+  - django-cfg testing
+  - endpoint health check
+  - api monitoring
+  - service testing
+---
+
+# Testing & Monitoring Commands
+
+Comprehensive commands for testing services, monitoring endpoints, and validating integrations.
+
+## Endpoint Health Monitoring
+
+### `check_endpoints`
+
+**Production-ready endpoint health checker** with automatic parameter resolution, JWT authentication, and multi-database awareness.
+
+```bash
+python manage.py check_endpoints [OPTIONS]
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--include-unnamed` | `flag` | `False` | Include unnamed URL patterns |
+| `--timeout` | `INTEGER` | `5` | Request timeout in seconds |
+| `--json` | `flag` | `False` | Output as JSON for automation |
+| `--url` | `TEXT` | - | Check specific endpoint by URL name |
+| `--no-auth` | `flag` | `False` | Disable automatic JWT authentication retry |
+
+**Examples:**
+
+```bash
+# Check all endpoints (auto-resolves parametrized URLs)
+python manage.py check_endpoints
+
+# JSON output for CI/CD
+python manage.py check_endpoints --json
+
+# Custom timeout
+python manage.py check_endpoints --timeout 10
+
+# Disable auto-auth
+python manage.py check_endpoints --no-auth
+
+# Check specific endpoint
+python manage.py check_endpoints --url api_users_list
+```
+
+**Features:**
+
+- ✅ **Automatic URL parameter resolution** - resolves `<int:pk>`, `<uuid:id>`, `(?P<slug>[^/]+)` with test values
+- ✅ **JWT auto-authentication** - creates test user and retries 401/403 endpoints automatically
+- ✅ **Rate limiting bypass** - internal checks don't count towards rate limits
+- ✅ **Multi-database aware** - treats cross-database errors as warnings (expected for SQLite multi-db)
+- ✅ **Context-aware warnings** - 404 for detail views = warning (no data), not error
+- ✅ Response time tracking in milliseconds
+- ✅ Status code visibility
+- ✅ Error type classification (database, general)
+- ✅ Color-coded console output
+
+**Console Output:**
+
+```
+✅ Overall Status: HEALTHY
+
+📊 Summary:
+  Total endpoints: 244
+  ✅ Healthy: 154
+  ⚠️  Warnings: 90
+  ❌ Unhealthy: 0
+  ❌ Errors: 0
+  ⏭️  Skipped: 0
+
+🔗 Endpoints:
+  ✅ token-detail
+     Pattern: /api/crypto/tokens/(?P<symbol>[/.]+)/
+     Resolved: /api/crypto/tokens/BTC/
+     Status: healthy (200)
+     Response time: 12.35ms
+     🔐 Required JWT authentication
+
+  ❌ transaction-list
+     URL: /api/wallet/transactions/
+     Status: warning (404)
+     Response time: 0.24ms
+     ⚠️  Not Found - endpoint works but no data exists
+```
+
+**JSON Response:**
+
+```json
+{
+  "status": "healthy|degraded|unhealthy",
+  "timestamp": "2025-10-06T05:18:09.956705+00:00",
+  "total_endpoints": 244,
+  "healthy": 154,
+  "unhealthy": 0,
+  "warnings": 90,
+  "errors": 0,
+  "skipped": 0,
+  "endpoints": [
+    {
+      "url": "/api/crypto/tokens/BTC/",
+      "url_pattern": "/api/crypto/tokens/(?P<symbol>[^/]+)/",
+      "url_name": "token-detail",
+      "status": "healthy",
+      "status_code": 200,
+      "response_time_ms": 12.35,
+      "has_parameters": true,
+      "required_auth": true,
+      "error": null,
+      "error_type": null,
+      "reason": null
+    }
+  ]
+}
+```
+
+**REST API Endpoints:**
+
+The checker is also available as REST API for monitoring systems:
+
+```bash
+# JSON API
+curl http://localhost:8000/cfg/endpoints/
+
+# DRF Browsable API
+curl http://localhost:8000/cfg/endpoints/drf/
+
+# With query parameters
+curl "http://localhost:8000/cfg/endpoints/?timeout=10&auto_auth=true"
+```
+
+**Query Parameters:**
+- `include_unnamed` (default: false) - Include endpoints without URL names
+- `timeout` (default: 5) - Request timeout in seconds
+- `auto_auth` (default: true) - Auto-retry with JWT on 401/403
+
+**Use Cases:**
+
+**1. CI/CD Integration:**
+```bash
+# GitHub Actions / GitLab CI
+python manage.py check_endpoints --json | jq '.errors'
+# Exit if errors > 0
+test $(python manage.py check_endpoints --json | jq '.errors') -eq 0
+```
+
+**2. Monitoring & Alerting:**
+```python
+import requests
+
+def check_api_health():
+    resp = requests.get('http://localhost/cfg/endpoints/')
+    data = resp.json()
+
+    if data['errors'] > 0 or data['unhealthy'] > 0:
+        alert_team(f"API unhealthy: {data['errors']} errors, {data['unhealthy']} unhealthy")
+
+    return data
+```
+
+**3. Load Balancer Health Check:**
+```nginx
+# Nginx upstream health check
+upstream django_api {
+    server backend1:8000;
+    check interval=30s fall=3 rise=2 timeout=5s type=http;
+    check_http_send "GET /cfg/endpoints/ HTTP/1.0\r\n\r\n";
+    check_http_expect_alive http_2xx;
+}
+```
+
+**4. Performance Tracking:**
+```bash
+# Find slow endpoints
+python manage.py check_endpoints --json | \
+  jq '.endpoints[] | select(.response_time_ms > 1000) | {url, response_time_ms}'
+
+# Track over time
+while true; do
+  python manage.py check_endpoints --json >> health-$(date +%Y%m%d).jsonl
+  sleep 300
+done
+```
+
+**5. Prometheus Metrics:**
+```python
+# Export to Prometheus format
+from prometheus_client import Gauge, generate_latest
+
+healthy_gauge = Gauge('api_endpoints_healthy', 'Number of healthy endpoints')
+unhealthy_gauge = Gauge('api_endpoints_unhealthy', 'Number of unhealthy endpoints')
+
+def update_metrics():
+    data = requests.get('http://localhost/cfg/endpoints/').json()
+    healthy_gauge.set(data['healthy'])
+    unhealthy_gauge.set(data['unhealthy'])
+```
+
+## Test Database Management
+
+### `test_db`
+
+**Manual test database management** for cleanup, inspection, and troubleshooting.
+
+```bash
+python manage.py test_db ACTION [OPTIONS]
+```
+
+| Action | Description |
+|--------|-------------|
+| `cleanup` | Remove old test databases |
+| `info` | Show test database information |
+| `reset` | Drop and recreate test database |
+| `check-extensions` | Verify PostgreSQL extensions |
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--database` | `TEXT` | `default` | Database alias |
+| `--all` | `flag` | `False` | Apply to all databases |
+| `--force` | `flag` | `False` | Force action without confirmation |
+| `--json` | `flag` | `False` | Output as JSON |
+
+**Examples:**
+
+```bash
+# Show test database info
+python manage.py test_db info
+
+# Show info for all databases
+python manage.py test_db info --all
+
+# JSON output for automation
+python manage.py test_db info --json
+
+# Clean up old test databases
+python manage.py test_db cleanup
+
+# Clean up all test databases without confirmation
+python manage.py test_db cleanup --all --force
+
+# Reset specific test database
+python manage.py test_db reset --database default
+
+# Check PostgreSQL extensions
+python manage.py test_db check-extensions
+```
+
+**Info Output:**
+
+```bash
+$ python manage.py test_db info
+
+======================================================================
+         TEST DATABASE INFORMATION
+======================================================================
+
+Database Alias: default
+  Test DB Name:    test_crypto_platform
+  Status:          ✅ EXISTS
+  Size:            12 MB
+  Extensions:      vector, pg_trgm, unaccent
+  Engine:          django.db.backends.postgresql
+
+======================================================================
+```
+
+**Cleanup Output:**
+
+```bash
+$ python manage.py test_db cleanup --all
+
+======================================================================
+         TEST DATABASE CLEANUP
+======================================================================
+
+Found 3 test database(s):
+  • test_crypto_platform (alias: default)
+  • test_trading_db (alias: trading_db)
+  • test_wallet_db (alias: wallet_db)
+
+⚠️  Remove these databases? [y/N]: y
+
+✅ Removed: test_crypto_platform
+✅ Removed: test_trading_db
+✅ Removed: test_wallet_db
+
+======================================================================
+✅ Cleanup complete: 3/3 databases removed
+```
+
+**Check Extensions Output:**
+
+```bash
+$ python manage.py test_db check-extensions
+
+======================================================================
+         TEST DATABASE EXTENSIONS
+======================================================================
+
+Database: test_crypto_platform
+
+Installed Extensions:
+  ✅ vector
+  ✅ pg_trgm
+  ✅ unaccent
+
+Required Extensions:
+  ✅ vector (installed)
+  ✅ pg_trgm (installed)
+  ✅ unaccent (installed)
+
+======================================================================
+```
+
+**Use Cases:**
+
+**1. CI/CD Cleanup:**
+```bash
+# Clean up test databases after CI run
+python manage.py test_db cleanup --all --force
+```
+
+**2. Local Development:**
+```bash
+# Check test database status
+python manage.py test_db info
+
+# Reset if corrupted
+python manage.py test_db reset --force
+```
+
+**3. Troubleshooting:**
+```bash
+# Verify extensions are installed
+python manage.py test_db check-extensions
+
+# If extensions missing, reset database
+python manage.py test_db reset
+```
+
+**4. Monitoring:**
+```bash
+# Export database info as JSON
+python manage.py test_db info --all --json > test-db-status.json
+```
+
+**5. Parallel Testing Cleanup:**
+```bash
+# Clean up all parallel test databases
+python manage.py test_db cleanup --all --force
+
+# Parallel test databases are named: test_crypto_platform_1, test_crypto_platform_2, etc.
+```
+
+**Features:**
+
+- ✅ Automatic detection of test database names
+- ✅ Safe cleanup with confirmation prompts
+- ✅ Extension verification for PostgreSQL
+- ✅ Database size reporting
+- ✅ Multi-database support
+- ✅ JSON output for automation
+- ✅ Force mode for CI/CD
+
+See [Test Database Management](/docs/fundamentals/database/testing) for comprehensive testing documentation.
+
+---
+
+## Email Testing
+
+### `test_email`
+
+Test email configuration and delivery.
+
+```bash
+cli test-email --to admin@example.com [OPTIONS]
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--to` | `TEXT` | *required* | Recipient email |
+| `--subject` | `TEXT` | `"Django-CFG Test Email"` | Email subject |
+| `--backend` | `TEXT` | - | Specific backend to test |
+
+**Examples:**
+
+```bash
+# Basic test
+cli test-email --to admin@example.com
+
+# Custom subject
+cli test-email --to test@test.com --subject "Configuration Test"
+
+# Test specific backend
+cli test-email --to admin@test.com --backend smtp
+```
+
+## Telegram Testing
+
+### `test_telegram`
+
+Test Telegram bot configuration.
+
+```bash
+cli test-telegram --message "Hello!" [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--message` | `TEXT` | Test message to send (required) |
+| `--chat-id` | `TEXT` | Target chat ID (optional) |
+
+**Examples:**
+
+```bash
+# Send test message
+cli test-telegram --message "Hello from Django-CFG!"
+
+# Send to specific chat
+cli test-telegram --message "Deploy successful" --chat-id "-1001234567890"
+```
+
+## Payment Provider Testing
+
+### `test_providers`
+
+Test payment provider integrations.
+
+```bash
+python manage.py test_providers [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--provider` | `TEXT` | Specific provider to test |
+
+**Examples:**
+
+```bash
+# Test all providers
+python manage.py test_providers
+
+# Test specific provider
+python manage.py test_providers --provider nowpayments
+```
+
+## Newsletter Testing
+
+### `test_newsletter`
+
+Test newsletter sending functionality.
+
+```bash
+python manage.py test_newsletter --email test@example.com [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--email` | `TEXT` | Recipient email (required) |
+| `--template` | `TEXT` | Template name to test |
+
+**Examples:**
+
+```bash
+# Send test newsletter
+python manage.py test_newsletter --email test@example.com
+
+# Test specific template
+python manage.py test_newsletter --template welcome --email test@example.com
+```
+
+## Centrifugo / WebSocket Testing
+
+### `centrifugo_publish`
+
+Test Centrifugo real-time messaging by publishing messages to channels.
+
+```bash
+python manage.py centrifugo_publish -c CHANNEL [-m MESSAGE | -d JSON_DATA]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--channel, -c` | `TEXT` | Centrifugo channel name (required) |
+| `--message, -m` | `TEXT` | Simple text message |
+| `--data, -d` | `JSON` | JSON data to publish |
+
+**Examples:**
+
+```bash
+# Test AI chat channel
+python manage.py centrifugo_publish \
+  -c "ai_chat:workspace:UUID" \
+  -m "Test message"
+
+# Test with custom JSON
+python manage.py centrifugo_publish \
+  -c "notifications:user:123" \
+  -d '{"type":"alert","text":"Test notification"}'
+
+# Test dashboard updates
+python manage.py centrifugo_publish \
+  -c "dashboard:workspace:UUID" \
+  -d '{"type":"metric_update","value":142}'
+```
+
+<Callout type="info">
+**Channel Naming**
+
+Use `:` for namespace separation (not `#`):
+- ✅ `ai_chat:workspace:UUID`
+- ❌ `ai_chat#workspace#UUID`
+
+See [Centrifugo CLI Commands](/docs/features/integrations/centrifugo/cli-commands) for details.
+</Callout>
+
+## OTP Authentication Testing
+
+### `test_otp`
+
+Test OTP authentication system.
+
+```bash
+python manage.py test_otp [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--email` | `TEXT` | Email for OTP test |
+
+**Examples:**
+
+```bash
+# Test email OTP
+python manage.py test_otp --email user@example.com
+```
+
+## Cron Setup
+
+```bash
+*/5 * * * * python manage.py check_endpoints --json > /var/log/health-check.json
+```
+
+## See Also
+
+- [Development](../development)
+- [Core Commands](../core-commands)
+- [Payments](../payments)

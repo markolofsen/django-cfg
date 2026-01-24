@@ -1,0 +1,452 @@
+---
+title: Bidirectional Streaming Patterns
+description: Production patterns for gRPC bidirectional streaming with BidirectionalStreamingService
+sidebar_label: Streaming Patterns
+sidebar_position: 8
+keywords:
+  - grpc streaming
+  - bidirectional streaming
+  - grpc python streaming
+  - connection timeout
+  - streaming patterns
+---
+
+# Bidirectional Streaming Patterns
+
+Production-ready patterns for building reliable bidirectional gRPC streams.
+
+<Callout type="warning">
+**Critical: connection_timeout Bug**
+
+Never use `connection_timeout` on `anext()` calls in grpcio async streaming. This causes premature `StopAsyncIteration`. See [Troubleshooting](/docs/features/integrations/grpc/troubleshooting#connection-timeout-bug) for details.
+</Callout>
+
+## BidirectionalStreamingService
+
+Django-CFG provides `BidirectionalStreamingService` - a production-ready abstraction for bidirectional streaming.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  BidirectionalStreamingService                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────┐     ┌──────────────────┐                  │
+│  │  InputProcessor  │     │  OutputProcessor │                  │
+│  │  ───────────────│     │  ───────────────│                  │
+│  │  • anext() loop  │     │  • Ping/PONG     │                  │
+│  │  • Message parse │     │  • Command queue │                  │
+│  │  • Handler route │     │  • Response send │                  │
+│  └────────┬─────────┘     └────────┬─────────┘                  │
+│           │                        │                             │
+│           └────────────┬───────────┘                             │
+│                        │                                         │
+│               ┌────────▼────────┐                               │
+│               │ ConnectionManager│                               │
+│               │  ──────────────│                               │
+│               │  • Client state  │                               │
+│               │  • Last ping     │                               │
+│               │  • Cleanup       │                               │
+│               └─────────────────┘                               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+| Component | Role |
+|-----------|------|
+| `InputProcessor` | Reads messages from client async generator |
+| `OutputProcessor` | Sends commands and ping/pong to client |
+| `ConnectionManager` | Tracks client state and handles cleanup |
+| `ResponseRegistry` | Maps command responses to pending requests |
+
+## Configuration
+
+### BidirectionalStreamingConfig
+
+```python
+from django_cfg.apps.integrations.grpc.services.streaming.config import (
+    BidirectionalStreamingConfig,
+    StreamingMode,
+    PingStrategy,
+)
+
+# Production configuration
+BotStreamingConfig = BidirectionalStreamingConfig(
+    # Streaming mode
+    streaming_mode=StreamingMode.ANEXT,  # Recommended for long-running streams
+
+    # Ping/keepalive for liveness detection
+    ping_strategy=PingStrategy.INTERVAL,
+    ping_interval=5.0,      # Send PING every 5 seconds
+    ping_timeout=180.0,     # Disconnect if no PONG in 180 seconds
+
+    # CRITICAL: Do NOT set connection_timeout!
+    connection_timeout=None,  # Rely on ping/keepalive instead
+
+    # Queue configuration
+    max_queue_size=1000,
+
+    # Async optimizations
+    enable_sleep_zero=True,  # Yield to event loop after each message
+
+    # Logging
+    enable_logging=True,
+    logger_name="grpc_streaming",
+
+    # Centrifugo integration (optional)
+    enable_centrifugo=True,
+    centrifugo_channel_prefix="bot",
+    centrifugo_auto_publish_messages=True,
+    centrifugo_auto_publish_commands=True,
+)
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `streaming_mode` | `StreamingMode` | `ANEXT` | How to read from input stream |
+| `ping_strategy` | `PingStrategy` | `INTERVAL` | When to send ping messages |
+| `ping_interval` | `float` | `5.0` | Seconds between pings |
+| `ping_timeout` | `float` | `180.0` | Seconds to wait for pong |
+| `connection_timeout` | `float \| None` | `None` | **Must be None!** See warning above |
+| `max_queue_size` | `int` | `1000` | Max pending commands in queue |
+| `enable_sleep_zero` | `bool` | `True` | Yield to event loop after messages |
+
+### Streaming Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `ANEXT` | Uses `await anext()` with explicit control | Long-running clients with idle periods |
+| `ASYNC_FOR` | Uses `async for` iteration | High-throughput short-lived streams |
+
+**Recommendation:** Use `ANEXT` for production. It provides better control over stream lifecycle.
+
+## Implementing a Streaming Service
+
+### Server Side
+
+```python
+from django_cfg.apps.integrations.grpc.services.streaming import (
+    BidirectionalStreamingService,
+)
+from .config import BotStreamingConfig
+from .handlers import bot_message_handlers
+
+class BotService(BidirectionalStreamingService):
+    """Bidirectional streaming service for trading bots."""
+
+    config = BotStreamingConfig
+    message_handlers = bot_message_handlers
+
+    async def on_client_connected(self, client_id: str, context):
+        """Called when a new client connects."""
+        logger.info(f"Bot {client_id} connected")
+
+    async def on_client_disconnected(self, client_id: str, context):
+        """Called when client disconnects."""
+        logger.info(f"Bot {client_id} disconnected")
+
+    async def on_message_received(self, client_id: str, message, context):
+        """Called for each message received."""
+        # Route to appropriate handler based on message type
+        handler = self.message_handlers.get(message.type)
+        if handler:
+            return await handler(self, client_id, message, context)
+```
+
+### Message Handlers
+
+```python
+# handlers.py
+from django_cfg.apps.integrations.grpc.services.streaming.handlers import (
+    MessageHandler,
+    handler_registry,
+)
+
+@handler_registry.register("register")
+async def handle_register(service, client_id: str, message, context):
+    """Handle bot registration."""
+    bot = await Bot.objects.aget(uuid=message.bot_uuid)
+    await service.register_client(client_id, bot_id=bot.id)
+    return {"status": "registered", "bot_id": str(bot.id)}
+
+@handler_registry.register("heartbeat")
+async def handle_heartbeat(service, client_id: str, message, context):
+    """Handle heartbeat message."""
+    bot = await service.get_client_bot(client_id)
+    bot.last_heartbeat = timezone.now()
+    await bot.asave(update_fields=["last_heartbeat"])
+    return {"status": "ok"}
+
+@handler_registry.register("command_ack")
+async def handle_command_ack(service, client_id: str, message, context):
+    """Handle command acknowledgment."""
+    # Resolve pending command response
+    await service.resolve_command_response(
+        command_id=message.command_id,
+        response=message.response,
+    )
+    return None  # No response needed
+
+bot_message_handlers = handler_registry.handlers
+```
+
+### Client Side (Pure Async Generator Pattern)
+
+```python
+import asyncio
+from typing import AsyncGenerator
+
+class BotGRPCClient:
+    """gRPC client for trading bot."""
+
+    def __init__(self, host: str, port: int):
+        self._channel = grpc.aio.insecure_channel(f"{host}:{port}")
+        self._stub = BotServiceStub(self._channel)
+        self._send_queue: asyncio.Queue = asyncio.Queue()
+        self._running = False
+
+    async def connect(self) -> None:
+        """Start bidirectional stream."""
+        self._running = True
+
+        # Start stream with pure async generator
+        response_stream = self._stub.Stream(self._request_generator())
+
+        # Process responses
+        async for response in response_stream:
+            await self._handle_response(response)
+
+    async def _request_generator(self) -> AsyncGenerator:
+        """
+        Pure async generator for sending messages.
+
+        IMPORTANT: Use pure generator pattern, not stream.write() mixing.
+        """
+        # Initial registration
+        yield self._create_register_message()
+        yield self._create_config_schema_message()
+
+        # Message loop
+        while self._running:
+            try:
+                # Wait for message with local timeout
+                message = await asyncio.wait_for(
+                    self._send_queue.get(),
+                    timeout=5.0  # Local timeout, OK here
+                )
+                yield message
+            except asyncio.TimeoutError:
+                # Send heartbeat to keep stream active
+                yield self._create_heartbeat_message()
+
+    async def send_message(self, message) -> None:
+        """Queue message for sending."""
+        await self._send_queue.put(message)
+```
+
+## Ping/Keepalive Mechanism
+
+### How It Works
+
+```
+Timeline:
+────────────────────────────────────────────────────────────────────
+0.0s   Client connects
+5.0s   Server sends PING #1
+5.1s   Client responds with PONG #1
+10.0s  Server sends PING #2
+10.1s  Client responds with PONG #2
+...
+────────────────────────────────────────────────────────────────────
+```
+
+### Ping Strategies
+
+| Strategy | Behavior |
+|----------|----------|
+| `DISABLED` | No pings (testing only) |
+| `INTERVAL` | Send ping every N seconds |
+| `ON_IDLE` | Send ping only when no messages for N seconds |
+
+### Server-Side Ping Configuration
+
+```python
+BidirectionalStreamingConfig(
+    ping_strategy=PingStrategy.INTERVAL,
+    ping_interval=5.0,      # Send PING every 5 seconds
+    ping_timeout=180.0,     # Disconnect if no PONG in 180 seconds
+)
+```
+
+### Client-Side Pong Response
+
+Client must respond to PING messages:
+
+```python
+async def _handle_response(self, response):
+    if response.type == "PING":
+        # Respond with PONG immediately
+        await self.send_message(self._create_pong_message(
+            ping_id=response.ping_id
+        ))
+    elif response.type == "COMMAND":
+        await self._handle_command(response)
+```
+
+## Command-Response Pattern
+
+### Sending Commands to Clients
+
+```python
+# Server sends command and waits for response
+result = await service.send_command_and_wait(
+    client_id="bot-123",
+    command_type="get_positions",
+    payload={"symbol": "BTCUSDT"},
+    timeout=30.0,  # Wait up to 30 seconds for response
+)
+
+if result.success:
+    positions = result.response["positions"]
+else:
+    logger.error(f"Command failed: {result.error}")
+```
+
+### Client-Side Command Handling
+
+```python
+async def _handle_command(self, command):
+    """Handle command from server."""
+    try:
+        # Execute command
+        result = await self._execute_command(command)
+
+        # Send acknowledgment with result
+        await self.send_message(self._create_command_ack(
+            command_id=command.id,
+            status="success",
+            response=result,
+        ))
+    except Exception as e:
+        # Send error acknowledgment
+        await self.send_message(self._create_command_ack(
+            command_id=command.id,
+            status="error",
+            error=str(e),
+        ))
+```
+
+### ResponseRegistry
+
+The `ResponseRegistry` tracks pending command responses:
+
+```python
+class ResponseRegistry:
+    """Registry for pending command responses."""
+
+    async def register_pending(self, command_id: str, timeout: float):
+        """Register a pending command response."""
+        future = asyncio.get_event_loop().create_future()
+        self._pending[command_id] = PendingResponse(
+            future=future,
+            timeout=timeout,
+            created_at=time.time(),
+        )
+        return future
+
+    async def resolve(self, command_id: str, response: dict):
+        """Resolve a pending command with response."""
+        if command_id in self._pending:
+            pending = self._pending.pop(command_id)
+            pending.future.set_result(response)
+```
+
+## Centrifugo Integration
+
+Auto-publish messages to Centrifugo for real-time UI updates:
+
+```python
+BidirectionalStreamingConfig(
+    enable_centrifugo=True,
+    centrifugo_channel_prefix="bot",
+
+    # Publish all incoming bot messages (Bot → Django)
+    centrifugo_auto_publish_messages=True,
+
+    # Publish all outgoing commands (Django → Bot)
+    centrifugo_auto_publish_commands=True,
+)
+```
+
+### Channel Naming
+
+| Event Type | Channel Pattern |
+|------------|-----------------|
+| Bot messages | `bot:{client_id}:messages` |
+| Commands | `bot:{client_id}:commands` |
+| Status updates | `bot:{client_id}:status` |
+
+## Best Practices
+
+### Do's
+
+1. **Use `connection_timeout=None`** - Rely on ping/keepalive for liveness
+2. **Use pure async generator pattern** - Don't mix `stream.write()` with generator
+3. **Send heartbeats from client** - Keep stream alive during idle periods
+4. **Handle ping/pong properly** - Respond to server pings immediately
+5. **Use `enable_sleep_zero=True`** - Yield to event loop for better concurrency
+
+### Don'ts
+
+1. **Don't set `connection_timeout`** - Causes premature StopAsyncIteration
+2. **Don't block in handlers** - Use `asyncio.to_thread()` for sync operations
+3. **Don't ignore PING messages** - Causes connection timeout
+4. **Don't use `ASYNC_FOR` for long-running streams** - Less control over lifecycle
+
+## Testing Streaming
+
+### Integration Test
+
+```python
+import asyncio
+import pytest
+from django_cfg.apps.integrations.grpc.testing import StreamingTestClient
+
+@pytest.mark.asyncio
+async def test_bidirectional_stream():
+    async with StreamingTestClient() as client:
+        # Send registration
+        await client.send({"type": "register", "bot_uuid": "test-bot"})
+
+        # Receive registration response
+        response = await client.receive(timeout=5.0)
+        assert response["status"] == "registered"
+
+        # Send heartbeat
+        await client.send({"type": "heartbeat"})
+
+        # Receive heartbeat ack
+        response = await client.receive(timeout=5.0)
+        assert response["status"] == "ok"
+```
+
+### Load Testing
+
+```bash
+# Run multiple concurrent clients
+poetry run python -m pytest tests/grpc/test_streaming.py \
+    --num-clients=100 \
+    --duration=60s
+```
+
+## Related Documentation
+
+- **[Troubleshooting](../troubleshooting)** - Common issues and solutions
+- **[Async Support](../async-support)** - Async gRPC overview
+- **[Architecture](../architecture)** - System architecture
+- **[Configuration](../configuration)** - Full configuration reference

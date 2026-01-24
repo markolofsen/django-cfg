@@ -1,0 +1,1008 @@
+---
+title: Django-RQ Deployment Guide
+description: Production deployment guide for Django-RQ with docker, kubernetes, and cloud platforms
+sidebar_position: 6
+tags:
+  - deployment
+  - django-rq
+  - docker
+  - production
+  - devops
+---
+
+# Django-RQ Deployment Guide
+
+Complete guide for deploying Django-RQ to production environments using Docker, Docker Compose, Kubernetes, or cloud platforms.
+
+---
+
+## Quick Navigation
+
+
+### Docker Compose
+
+Jump to [Docker Compose Deployment](#docker-compose-deployment)
+
+### Kubernetes
+
+Jump to [Kubernetes Deployment](#kubernetes-deployment)
+
+### Cloud Platforms
+
+Jump to [Cloud Platforms](#cloud-platforms)
+
+### Local Development
+
+Jump to [Local Development](#local-development)
+
+
+---
+
+## Architecture Overview
+
+Django-RQ requires three main components for production:
+
+```mermaid
+graph TB
+    subgraph "Application Server"
+        Django[Django API<br/>Gunicorn/uWSGI]
+    end
+
+    subgraph "Worker Processes"
+        W1[RQ Worker 1<br/>default, high]
+        W2[RQ Worker 2<br/>low, knowledge]
+        W3[RQ Worker 3<br/>...</]
+    end
+
+    subgraph "Scheduler Process"
+        Scheduler[RQ Scheduler<br/>Cron Jobs]
+    end
+
+    subgraph "Redis"
+        Redis[(Redis Server<br/>Job Queue)]
+    end
+
+    subgraph "Monitoring"
+        Dashboard[Django Admin<br/>RQ Dashboard]
+    end
+
+    Django -->|enqueue jobs| Redis
+    Scheduler -->|schedule jobs| Redis
+
+    Redis -->|provide jobs| W1
+    Redis -->|provide jobs| W2
+    Redis -->|provide jobs| W3
+
+    W1 -->|store results| Redis
+    W2 -->|store results| Redis
+    W3 -->|store results| Redis
+
+    Dashboard -->|monitor| Redis
+    Dashboard -->|view| Django
+
+    style Django fill:#10b981
+    style W1 fill:#8b5cf6
+    style W2 fill:#8b5cf6
+    style W3 fill:#8b5cf6
+    style Scheduler fill:#f59e0b
+    style Redis fill:#ef4444
+```
+
+
+<Callout type="info">
+**Key Components**
+1. **Django API**: Web server (1+ processes)
+2. **RQ Workers**: Background job processors (1+ per queue)
+3. **RQ Scheduler**: Cron-like scheduler (1 process)
+4. **Redis**: Message broker and result backend
+
+</Callout>
+
+---
+
+## Docker Compose Deployment
+
+### Production Setup
+
+Complete docker-compose configuration for production:
+
+```yaml filename="docker-compose-production.yaml"
+version: '3.8'
+
+services:
+  # Django API Server
+  django:
+    image: your-registry/django-app:latest
+    container_name: django-api
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    command: gunicorn api.wsgi:application --bind 0.0.0.0:8000 --workers 4
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RQ Worker - High Priority
+  rq-worker-high:
+    image: your-registry/django-app:latest
+    container_name: rq-worker-high
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    command: python manage.py rqworker high default
+    depends_on:
+      - redis
+      - django
+    deploy:
+      replicas: 2  # Scale as needed
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
+      interval: 30s
+
+  # RQ Worker - Low Priority
+  rq-worker-low:
+    image: your-registry/django-app:latest
+    container_name: rq-worker-low
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    command: python manage.py rqworker low knowledge
+    depends_on:
+      - redis
+      - django
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # RQ Scheduler
+  rq-scheduler:
+    image: your-registry/django-app:latest
+    container_name: rq-scheduler
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: api.settings
+    command: python manage.py rqscheduler
+    depends_on:
+      - redis
+      - django
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+
+volumes:
+  redis_data:
+```
+
+### Start Production Services
+
+### All Services
+
+```bash
+# Start all services
+docker compose -f docker-compose-production.yaml up -d
+
+# Check status
+docker compose -f docker-compose-production.yaml ps
+```
+
+### Scale Workers
+
+```bash
+# Scale workers
+docker compose -f docker-compose-production.yaml up -d --scale rq-worker-high=4
+
+# Verify
+docker ps | grep rq-worker
+```
+
+### View Logs
+
+```bash
+# Worker logs
+docker logs rq-worker-high -f
+
+# Scheduler logs
+docker logs rq-scheduler -f
+
+# All logs
+docker compose -f docker-compose-production.yaml logs -f
+```
+
+
+---
+
+## Local Development
+
+### Option 1: Docker Services
+
+Use separate services for development:
+
+```yaml filename="docker-compose-local-services.yml"
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb
+
+  rq-worker:
+    build: .
+    command: python manage.py rqworker default high low knowledge
+    env_file: .env.local
+    depends_on:
+      - redis
+    volumes:
+      - ./:/app
+
+  rq-scheduler:
+    build: .
+    command: python manage.py rqscheduler
+    env_file: .env.local
+    depends_on:
+      - redis
+    volumes:
+      - ./:/app
+```
+
+```bash
+# Start services
+docker compose -f docker-compose-local-services.yml up -d
+
+# Run Django locally
+python manage.py runserver
+```
+
+### Option 2: Python Processes
+
+Run everything locally for active development:
+
+### Manual
+
+```bash
+# Terminal 1: Django server
+python manage.py runserver
+
+# Terminal 2: RQ Worker
+python manage.py rqworker default high low knowledge
+
+# Terminal 3: RQ Scheduler (optional)
+python manage.py rqscheduler
+```
+
+### Using Makefile
+
+```bash
+# If django-cfg includes Makefile
+
+# Start services
+make rq
+
+# View worker logs
+make rq-worker
+
+# View scheduler logs
+make rq-scheduler
+
+# Check queue stats
+make rq-stats
+```
+
+### Using Honcho/Foreman
+
+Create `Procfile`:
+
+```procfile filename="Procfile.dev"
+web: python manage.py runserver 0.0.0.0:8000
+worker: python manage.py rqworker default high low knowledge
+scheduler: python manage.py rqscheduler
+```
+
+```bash
+# Start all processes
+honcho start -f Procfile.dev
+```
+
+
+
+<Callout type="info">
+**Hot Reload in Development**
+Workers automatically reload on code changes when using `--with-scheduler` flag:
+
+```bash
+python manage.py rqworker default --with-scheduler
+```
+
+</Callout>
+
+---
+
+## Kubernetes Deployment
+
+### Complete K8s Manifests
+
+### Deployments
+
+```yaml filename="k8s/django-rq.yaml"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: django-api
+  template:
+    metadata:
+      labels:
+        app: django-api
+    spec:
+      containers:
+      - name: django
+        image: your-registry/django-app:latest
+        command: ["gunicorn"]
+        args: ["api.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4"]
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /cfg/health/
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rq-worker
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: rq-worker
+  template:
+    metadata:
+      labels:
+        app: rq-worker
+    spec:
+      containers:
+      - name: worker
+        image: your-registry/django-app:latest
+        command: ["python", "manage.py", "rqworker"]
+        args: ["default", "high", "low", "knowledge"]
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rq-scheduler
+spec:
+  replicas: 1  # Only 1 scheduler needed
+  selector:
+    matchLabels:
+      app: rq-scheduler
+  template:
+    metadata:
+      labels:
+        app: rq-scheduler
+    spec:
+      containers:
+      - name: scheduler
+        image: your-registry/django-app:latest
+        command: ["python", "manage.py", "rqscheduler"]
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+```
+
+### Services
+
+```yaml filename="k8s/services.yaml"
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-api
+spec:
+  selector:
+    app: django-api
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+```
+
+### ConfigMap
+
+```yaml filename="k8s/configmap.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+data:
+  DJANGO_SETTINGS_MODULE: "api.settings"
+  REDIS_URL: "redis://redis:6379/0"
+```
+
+
+### Deploy to Kubernetes
+
+```bash
+# Apply all manifests
+kubectl apply -f k8s/
+
+# Check status
+kubectl get pods
+kubectl get svc
+
+# View logs
+kubectl logs -f deployment/rq-worker
+
+# Scale workers
+kubectl scale deployment/rq-worker --replicas=8
+```
+
+
+<Callout type="warning">
+**Scheduler Replicas**
+Always keep `rq-scheduler` replicas at **1** to avoid duplicate scheduled jobs.
+
+</Callout>
+
+---
+
+## Cloud Platforms
+
+### AWS (ECS/Fargate)
+
+### ECS Task Definition
+
+```json filename="ecs-task-definition.json"
+{
+  "family": "django-rq",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "django-api",
+      "image": "your-ecr-repo/django-app:latest",
+      "command": ["gunicorn", "api.wsgi:application"],
+      "portMappings": [{
+        "containerPort": 8000,
+        "protocol": "tcp"
+      }],
+      "environment": [
+        {"name": "DJANGO_SETTINGS_MODULE", "value": "api.settings"},
+        {"name": "REDIS_URL", "value": "redis://redis.cache.amazonaws.com:6379/0"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/django-rq",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "django"
+        }
+      }
+    },
+    {
+      "name": "rq-worker",
+      "image": "your-ecr-repo/django-app:latest",
+      "command": ["python", "manage.py", "rqworker", "default", "high", "low"],
+      "environment": [
+        {"name": "DJANGO_SETTINGS_MODULE", "value": "api.settings"},
+        {"name": "REDIS_URL", "value": "redis://redis.cache.amazonaws.com:6379/0"}
+      ]
+    }
+  ]
+}
+```
+
+### ElastiCache Setup
+
+```bash
+# Create Redis cluster
+aws elasticache create-cache-cluster \
+  --cache-cluster-id django-rq-redis \
+  --cache-node-type cache.t3.medium \
+  --engine redis \
+  --num-cache-nodes 1 \
+  --security-group-ids sg-xxxxx
+
+# Get endpoint
+aws elasticache describe-cache-clusters \
+  --cache-cluster-id django-rq-redis \
+  --show-cache-node-info
+```
+
+
+### Google Cloud (Cloud Run + Cloud Tasks)
+
+```yaml filename="cloudrun-worker.yaml"
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: django-rq-worker
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      containers:
+      - image: gcr.io/your-project/django-app:latest
+        command: ["python", "manage.py", "rqworker"]
+        args: ["default", "high", "low"]
+        env:
+        - name: REDIS_URL
+          value: "redis://10.0.0.3:6379/0"  # MemoryStore IP
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+```
+
+### Heroku
+
+```yaml filename="Procfile"
+web: gunicorn api.wsgi:application --bind 0.0.0.0:$PORT
+worker: python manage.py rqworker default high low knowledge
+scheduler: python manage.py rqscheduler
+```
+
+```bash
+# Scale dynos
+heroku ps:scale web=2 worker=4 scheduler=1
+
+# Add Redis addon
+heroku addons:create heroku-redis:premium-0
+```
+
+---
+
+## Configuration Examples
+
+### Environment Variables
+
+### Production (.env.prod)
+
+```bash filename=".env.prod"
+# Django Settings
+DJANGO_SETTINGS_MODULE=api.settings
+SECRET_KEY=your-secret-key-min-50-chars
+DEBUG=False
+
+# Redis Configuration
+REDIS_URL=redis://redis:6379/0
+
+# Database
+DATABASE_URL=postgresql://user:pass@postgres:5432/dbname
+
+# Security
+ALLOWED_HOSTS=api.example.com,*.example.com
+CSRF_TRUSTED_ORIGINS=https://api.example.com
+
+# RQ Settings (optional - auto-configured by django-cfg)
+# RQ_SHOW_ADMIN_LINK=True
+# RQ_PROMETHEUS_ENABLED=True
+```
+
+### Local (.env.local)
+
+```bash filename=".env.local"
+# Django Settings
+DJANGO_SETTINGS_MODULE=api.settings
+SECRET_KEY=local-dev-secret-key
+DEBUG=True
+
+# Redis Configuration
+REDIS_URL=redis://localhost:6379/0
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/django_dev
+
+# Development
+ALLOWED_HOSTS=*
+```
+
+
+### Django-CFG Configuration
+
+```python filename="api/config.py"
+from django_cfg import DjangoConfig, DjangoRQConfig, RQQueueConfig, RQScheduleConfig
+
+class ProductionConfig(DjangoConfig):
+    debug: bool = False
+    redis_url: str = "redis://redis:6379/0"
+
+    django_rq: DjangoRQConfig = DjangoRQConfig(
+        enabled=True,
+        queues=[
+            RQQueueConfig(queue="default", default_timeout=360),
+            RQQueueConfig(queue="high", default_timeout=180),
+            RQQueueConfig(queue="low", default_timeout=600),
+            RQQueueConfig(queue="knowledge", default_timeout=1800),
+        ],
+        schedules=[
+            RQScheduleConfig(
+                func="apps.crypto.tasks.update_coin_prices",
+                interval=300,  # Every 5 minutes
+                queue="default",
+            ),
+        ],
+        show_admin_link=True,
+        prometheus_enabled=True,
+    )
+```
+
+---
+
+## Monitoring in Production
+
+### Health Checks
+
+### Django API
+
+```bash
+# HTTP health check
+curl http://localhost:8000/cfg/health/
+
+# Expected response
+{"status": "healthy", "checks": {"database": "ok", "redis": "ok"}}
+```
+
+### RQ Worker
+
+```bash
+# Process check
+pgrep -f rqworker > /dev/null && echo "Running" || echo "Down"
+
+# Docker health check
+docker exec rq-worker pgrep -f rqworker
+```
+
+### Redis
+
+```bash
+# Ping test
+redis-cli ping
+# PONG
+
+# Check memory
+redis-cli info memory | grep used_memory_human
+```
+
+
+### Logging
+
+```python filename="settings.py"
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'loggers': {
+        'rq.worker': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'rq.scheduler': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
+```
+
+### Metrics Collection
+
+Access Prometheus metrics at `/django-rq/metrics/`:
+
+```bash
+# Scrape metrics
+curl http://localhost:8000/django-rq/metrics/
+
+# Example metrics
+rq_jobs_total{queue="default",status="finished"} 12450
+rq_queue_length{queue="default"} 42
+rq_workers_count{queue="default"} 4
+```
+
+---
+
+## Scaling Strategies
+
+### Horizontal Scaling
+
+### Docker Compose
+
+```bash
+# Scale workers
+docker compose up -d --scale rq-worker=8
+
+# Verify
+docker ps | grep rq-worker
+```
+
+### Kubernetes
+
+```bash
+# Scale deployment
+kubectl scale deployment/rq-worker --replicas=10
+
+# Auto-scaling (HPA)
+kubectl autoscale deployment/rq-worker \
+  --min=2 --max=20 \
+  --cpu-percent=70
+```
+
+### Manual
+
+```bash
+# Start multiple workers on different servers
+# Server 1
+python manage.py rqworker default high &
+python manage.py rqworker default low &
+
+# Server 2
+python manage.py rqworker default high &
+python manage.py rqworker default low &
+```
+
+
+### Vertical Scaling
+
+```yaml
+# Increase resources per worker
+deploy:
+  resources:
+    limits:
+      cpus: '2.0'      # Double CPU
+      memory: 2G       # Double memory
+```
+
+### Queue-Based Scaling
+
+```python
+# Different workers for different queues
+# High-priority workers (more resources)
+python manage.py rqworker high --num-workers 4
+
+# Low-priority workers (fewer resources)
+python manage.py rqworker low knowledge --num-workers 2
+```
+
+---
+
+## Best Practices
+
+### Security
+
+
+<Callout type="warning">
+**Production Security Checklist**
+- ✅ Use strong Redis password (`requirepass` in redis.conf)
+- ✅ Restrict Redis network access (firewall rules)
+- ✅ Enable TLS for Redis connections
+- ✅ Use secrets management (not .env files)
+- ✅ Limit worker permissions (non-root user)
+- ✅ Enable authentication on RQ dashboard
+- ✅ Use read-only Redis for monitoring
+
+</Callout>
+
+### Performance
+
+
+<Callout type="info">
+**Performance Optimization**
+1. **Worker Count**: 1 worker per CPU core recommended
+2. **Queue Separation**: Separate queues for different priorities
+3. **Result TTL**: Set short TTL (300s) for frequent jobs
+4. **Connection Pooling**: Use Redis connection pool (auto-enabled)
+5. **Job Timeout**: Set appropriate timeouts per queue
+6. **Batch Processing**: Group similar tasks together
+
+</Callout>
+
+### Reliability
+
+
+<Callout type="info">
+**High Availability**
+- **Redis**: Use Redis Sentinel or Cluster for HA
+- **Workers**: Run at least 2 workers per queue
+- **Scheduler**: Run 1 scheduler with restart policy
+- **Monitoring**: Set up alerts for queue depth
+- **Health Checks**: Monitor worker processes
+
+</Callout>
+
+---
+
+## Troubleshooting
+
+### Workers Not Processing Jobs
+
+### Check Redis
+
+```bash
+# Test Redis connection
+python manage.py shell
+>>> import django_rq
+>>> conn = django_rq.get_connection()
+>>> conn.ping()
+True
+```
+
+### Check Queue
+
+```bash
+# View queue statistics
+python manage.py rqstats
+
+# Check queue contents
+python manage.py shell
+>>> from django_rq import get_queue
+>>> queue = get_queue('default')
+>>> print(f"Jobs in queue: {len(queue)}")
+```
+
+### Check Logs
+
+```bash
+# Docker logs
+docker logs rq-worker --tail 100 -f
+
+# Process logs (if using systemd)
+journalctl -u rq-worker -f
+```
+
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Jobs stuck in queue | No workers running | Start workers: `python manage.py rqworker` |
+| Jobs failing silently | Exceptions not logged | Check failed registry in admin |
+| High memory usage | Result TTL too long | Reduce `default_result_ttl` in config |
+| Slow job processing | Too few workers | Scale workers horizontally |
+| Scheduler not running | Process crashed | Check logs, restart scheduler |
+
+---
+
+## Migration Checklist
+
+Migrating from ReArq or Celery? Use this checklist:
+
+<details>
+  <summary>Migration from ReArq</summary>
+
+### ReArq → Django-RQ Migration
+
+- [ ] Update docker-compose (remove rearq services)
+- [ ] Update config.py (DjangoRQConfig)
+- [ ] Convert async tasks to sync (if needed)
+- [ ] Update enqueue calls (`django_rq.enqueue()`)
+- [ ] Start RQ workers (`python manage.py rqworker`)
+- [ ] Test scheduled jobs
+- [ ] Update monitoring dashboards
+- [ ] Remove ReArq dependencies
+
+</details>
+
+<details>
+  <summary>Migration from Celery</summary>
+
+### Celery → Django-RQ Migration
+
+- [ ] Update config (remove Celery config)
+- [ ] Convert `@task` to plain functions
+- [ ] Replace `task.delay()` with `queue.enqueue()`
+- [ ] Replace periodic tasks with RQ schedules
+- [ ] Update monitoring (Flower → RQ Admin)
+- [ ] Test job execution
+- [ ] Migrate cron schedules
+- [ ] Remove Celery dependencies
+
+</details>
+
+---
+
+## Next Steps
+
+- **Production Ready?** Review [monitoring guide](../monitoring)
+- **Need Examples?** Check [examples guide](../examples)
+- **Advanced Config?** See [configuration reference](../configuration)
+- **Architecture?** Read [architecture guide](../architecture)
