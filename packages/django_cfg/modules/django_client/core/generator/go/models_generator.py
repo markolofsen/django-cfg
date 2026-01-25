@@ -257,17 +257,22 @@ class ModelsGenerator:
         """
         imports = set()
 
-        # Check if time import is needed
         for struct in structs:
+            # Check if time import is needed
             if struct.get("needs_time_import"):
                 imports.add("time")
 
-            # Check if types package is used (for enums)
             for field in struct.get("fields", []):
-                if "types." in field.get("type", ""):
+                field_type = field.get("type", "")
+
+                # Check if types package is used (for enums)
+                if "types." in field_type:
                     module_name = self.generator.package_config.get("module_name", "apiclient")
                     imports.add(f"{module_name}/types")
-                    break
+
+                # Check if io import is needed (for file uploads)
+                if "io.Reader" in field_type:
+                    imports.add("io")
 
         return sorted(imports)
 

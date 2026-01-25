@@ -52,6 +52,7 @@ class BaseParser(ABC):
         self.spec = spec
         self._schema_cache: dict[str, IRSchemaObject] = {}
         self._inline_schemas: dict[str, IRSchemaObject] = {}  # For inline request/response schemas
+        self._enum_id_to_name: dict[str, str] = {}  # x-spec-enum-id → canonical name (for dedup)
 
     # ===== Main Parse Method =====
 
@@ -488,9 +489,17 @@ class BaseParser(ABC):
                 type="any",
             )
 
+        # Deduplicate inline enums by x-spec-enum-id
+        name_to_use = name
+        if schema.x_spec_enum_id and schema.enum:
+            if schema.x_spec_enum_id in self._enum_id_to_name:
+                name_to_use = self._enum_id_to_name[schema.x_spec_enum_id]
+            else:
+                self._enum_id_to_name[schema.x_spec_enum_id] = name
+
         # Create IR schema
         ir_schema = IRSchemaObject(
-            name=name,
+            name=name_to_use,
             type=normalized_type,
             format=schema.format,
             description=schema.description,
@@ -501,6 +510,7 @@ class BaseParser(ABC):
             items=items,
             enum=[v for v in schema.enum if v is not None] if schema.enum else None,
             enum_var_names=schema.x_enum_varnames,
+            enum_id=schema.x_spec_enum_id,
             const=schema.const,
             is_request_model=is_request,
             is_response_model=is_response,

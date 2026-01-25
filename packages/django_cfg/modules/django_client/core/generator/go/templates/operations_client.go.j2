@@ -11,6 +11,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+{% if has_multipart %}
+	"mime/multipart"
+{% endif %}
 	"net/http"
 {% if has_query_params %}
 	"net/url"
@@ -75,15 +78,115 @@ func (c *Client) {{ operation.name }}(ctx context.Context{% for param in operati
 
 	u := c.BaseURL + path
 
-	// Prepare request body
+{% if operation.is_multipart and operation.multipart_fields %}
+	// Build multipart form data
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+{% for field in operation.multipart_fields.file_fields %}
+	// Add file field: {{ field.name }}
+	if body.{{ field.go_name }} != nil {
+		part, err := writer.CreateFormFile("{{ field.name }}", "{{ field.name }}")
+		if err != nil {
+			return result, fmt.Errorf("failed to create form file for {{ field.name }}: %w", err)
+		}
+		if _, err := io.Copy(part, body.{{ field.go_name }}); err != nil {
+			return result, fmt.Errorf("failed to write file {{ field.name }}: %w", err)
+		}
+	}
+{% endfor %}
+
+{% for field in operation.multipart_fields.data_fields %}
+	// Add form field: {{ field.name }}
+{% if field.type == "map[string]interface{}" %}
+	if body.{{ field.go_name }} != nil {
+		metaBytes, err := json.Marshal(body.{{ field.go_name }})
+		if err == nil {
+			if err := writer.WriteField("{{ field.name }}", string(metaBytes)); err != nil {
+				return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+			}
+		}
+	}
+{% elif field.is_array %}
+	if len(body.{{ field.go_name }}) > 0 {
+		arrBytes, err := json.Marshal(body.{{ field.go_name }})
+		if err == nil {
+			if err := writer.WriteField("{{ field.name }}", string(arrBytes)); err != nil {
+				return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+			}
+		}
+	}
+{% elif field.is_enum %}
+	if body.{{ field.go_name }} != nil {
+		if err := writer.WriteField("{{ field.name }}", string(*body.{{ field.go_name }})); err != nil {
+			return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+		}
+	}
+{% elif not field.required %}
+{% if field.type == "*string" %}
+	if body.{{ field.go_name }} != nil && *body.{{ field.go_name }} != "" {
+		if err := writer.WriteField("{{ field.name }}", *body.{{ field.go_name }}); err != nil {
+			return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+		}
+	}
+{% elif field.type == "*bool" %}
+	if body.{{ field.go_name }} != nil {
+		if err := writer.WriteField("{{ field.name }}", fmt.Sprintf("%t", *body.{{ field.go_name }})); err != nil {
+			return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+		}
+	}
+{% elif field.type == "*int64" or field.type == "*float64" %}
+	if body.{{ field.go_name }} != nil {
+		if err := writer.WriteField("{{ field.name }}", fmt.Sprintf("%v", *body.{{ field.go_name }})); err != nil {
+			return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+		}
+	}
+{% else %}
+	if body.{{ field.go_name }} != nil {
+		if err := writer.WriteField("{{ field.name }}", fmt.Sprintf("%v", body.{{ field.go_name }})); err != nil {
+			return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+		}
+	}
+{% endif %}
+{% else %}
+{% if field.type == "string" %}
+	if body.{{ field.go_name }} != "" {
+		if err := writer.WriteField("{{ field.name }}", body.{{ field.go_name }}); err != nil {
+			return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+		}
+	}
+{% elif field.type == "bool" %}
+	if err := writer.WriteField("{{ field.name }}", fmt.Sprintf("%t", body.{{ field.go_name }})); err != nil {
+		return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+	}
+{% else %}
+	if err := writer.WriteField("{{ field.name }}", fmt.Sprintf("%v", body.{{ field.go_name }})); err != nil {
+		return result, fmt.Errorf("failed to write field {{ field.name }}: %w", err)
+	}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+	if err := writer.Close(); err != nil {
+		return result, fmt.Errorf("failed to close multipart writer: %w", err)
+	}
+
+	// Create request with multipart body
+	req, err := http.NewRequestWithContext(ctx, "{{ operation.http_method }}", u, &buf)
+	if err != nil {
+		return result, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set multipart content type with boundary
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+{% elif operation.request_type %}
+	// Prepare JSON request body
 	var reqBody io.Reader
-{% if operation.request_type %}
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
 		return result, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 	reqBody = bytes.NewReader(bodyBytes)
-{% endif %}
 
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "{{ operation.http_method }}", u, reqBody)
@@ -91,10 +194,17 @@ func (c *Client) {{ operation.name }}(ctx context.Context{% for param in operati
 		return result, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Set headers
-{% if operation.request_type %}
+	// Set JSON content type
 	req.Header.Set("Content-Type", "application/json")
+{% else %}
+	// Create request without body
+	req, err := http.NewRequestWithContext(ctx, "{{ operation.http_method }}", u, nil)
+	if err != nil {
+		return result, fmt.Errorf("failed to create request: %w", err)
+	}
 {% endif %}
+
+	// Set authorization header
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
 	}

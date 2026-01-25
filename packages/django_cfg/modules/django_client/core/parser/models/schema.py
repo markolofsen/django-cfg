@@ -162,6 +162,11 @@ class SchemaObject(BaseModel):
         alias="x-enum-varnames",
         description="Enum variable names from drf-spectacular",
     )
+    x_spec_enum_id: str | None = Field(
+        None,
+        alias="x-spec-enum-id",
+        description="Unique enum identifier from drf-spectacular (same ID = same enum)",
+    )
     x_choices: list[dict[str, Any]] | None = Field(
         None,
         alias="x-choices",

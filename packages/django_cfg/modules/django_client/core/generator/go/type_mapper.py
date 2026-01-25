@@ -51,7 +51,7 @@ class GoTypeMapper:
         "date-time": "time.Time",
         "date": "string",  # YYYY-MM-DD format
         "uuid": "string",  # Or use google/uuid package
-        "binary": "[]byte",
+        "binary": "io.Reader",  # For file uploads in multipart forms
         "byte": "[]byte",
         "email": "string",
         "uri": "string",
@@ -142,9 +142,15 @@ class GoTypeMapper:
             # Track imports
             if go_type == "time.Time":
                 self._imports_needed.add("time")
+            elif go_type == "io.Reader":
+                self._imports_needed.add("io")
 
+            # io.Reader is an interface - don't use pointer for interfaces
             # time.Time is a struct, so we use pointer for optionals
             if not required:
+                # Interfaces in Go are already reference types, no pointer needed
+                if go_type == "io.Reader":
+                    return go_type
                 return f"*{go_type}"
             return go_type
 

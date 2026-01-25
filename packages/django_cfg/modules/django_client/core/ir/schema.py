@@ -123,6 +123,10 @@ class IRSchemaObject(BaseModel):
         None,
         description="Enum variable names from x-enum-varnames (e.g., ['STATUS_NEW', 'STATUS_IN_PROGRESS'])",
     )
+    enum_id: str | None = Field(
+        None,
+        description="Unique enum identifier from x-spec-enum-id (for deduplication)",
+    )
     choices: list[dict[str, Any]] | None = Field(
         None,
         description="Django choices from x-choices (e.g., [{'value': 1, 'display_name': 'Active'}])",

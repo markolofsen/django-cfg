@@ -93,6 +93,7 @@ class ClientGenerator:
         has_request_body = False
         has_query_params = False
         has_path_params = False
+        has_multipart = False
 
         for operation in sorted(operations, key=lambda op: op.operation_id):
             op_method = self.operations_gen.generate_operation_method(operation, remove_tag_prefix=True)
@@ -101,6 +102,8 @@ class ClientGenerator:
             # Check what imports we need
             if op_method.get("request_type"):
                 has_request_body = True
+            if op_method.get("is_multipart"):
+                has_multipart = True
             if any(p.get("location") == "query" for p in op_method.get("parameters", [])):
                 has_query_params = True
             if any(p.get("location") == "path" for p in op_method.get("parameters", [])):
@@ -114,6 +117,7 @@ class ClientGenerator:
             has_request_body=has_request_body,
             has_query_params=has_query_params,
             has_path_params=has_path_params,
+            has_multipart=has_multipart,
             generated_at=datetime.now().isoformat(),
         )
 

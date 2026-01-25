@@ -1,7 +1,8 @@
 """
 Operations Generator - Generates Go client methods from IR operations.
 
-Handles generation of type-safe client methods for each API operation.
+Handles generation of type-safe client methods for each API operation,
+including multipart/form-data file uploads.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from .naming import to_pascal_case
 if TYPE_CHECKING:
     from jinja2 import Environment
 
-    from ...ir import IRContext, IROperationObject
+    from ...ir import IRContext, IROperationObject, IRSchemaObject
     from .generator import GoGenerator
 
 
@@ -59,6 +60,9 @@ class OperationsGenerator:
             op_id = self.generator.remove_tag_prefix(op_id, operation.tags[0])
 
         method_name = to_pascal_case(op_id)
+
+        # Check if multipart operation
+        is_multipart = self._is_multipart_operation(operation)
 
         # Get request/response types
         request_type = None
@@ -111,6 +115,11 @@ class OperationsGenerator:
                 ]
             }
 
+        # Get multipart field info if applicable
+        multipart_fields = None
+        if is_multipart:
+            multipart_fields = self._get_multipart_fields(operation)
+
         return {
             "name": method_name,
             "http_method": operation.http_method.upper(),
@@ -121,7 +130,112 @@ class OperationsGenerator:
             "description": operation.summary or operation.description or f"{method_name} operation",
             "operation_id": operation.operation_id,
             "query_params_struct": query_params_struct,
+            "is_multipart": is_multipart,
+            "multipart_fields": multipart_fields,
         }
+
+    def _is_multipart_operation(self, operation: IROperationObject) -> bool:
+        """Check if operation uses multipart/form-data content type."""
+        return (
+            operation.request_body is not None
+            and operation.request_body.content_type == "multipart/form-data"
+        )
+
+    def _get_schema_for_operation(self, operation: IROperationObject) -> "IRSchemaObject | None":
+        """Get the request body schema for an operation."""
+        if not operation.request_body or not operation.request_body.schema_name:
+            return None
+        schema_name = operation.request_body.schema_name
+        if schema_name in self.context.schemas:
+            return self.context.schemas[schema_name]
+        return None
+
+    def _get_multipart_fields(self, operation: IROperationObject) -> dict:
+        """
+        Get field information for multipart request.
+
+        Returns:
+            Dictionary with:
+            - file_fields: list of file field names (format: binary)
+            - data_fields: list of regular data field names
+        """
+        schema = self._get_schema_for_operation(operation)
+        if not schema:
+            # Fallback - assume 'file' is file field
+            return {
+                "file_fields": [{"name": "file", "go_name": "File", "type": "io.Reader", "required": False}],
+                "data_fields": [],
+            }
+
+        file_fields = []
+        data_fields = []
+
+        for prop_name, prop_schema in schema.properties.items():
+            go_name = to_pascal_case(prop_name)
+            is_required = prop_name in schema.required
+            go_type = self._get_field_go_type(prop_schema, is_required)
+
+            # Detect special field types
+            is_array = prop_schema.type == "array"
+            is_enum = bool(prop_schema.enum) or (
+                prop_schema.ref and "types." in go_type
+            )
+
+            field_info = {
+                "name": prop_name,
+                "go_name": go_name,
+                "type": go_type,
+                "required": is_required,
+                "is_array": is_array,
+                "is_enum": is_enum,
+            }
+
+            if prop_schema.is_binary:
+                file_fields.append(field_info)
+            else:
+                data_fields.append(field_info)
+
+        return {
+            "file_fields": file_fields,
+            "data_fields": data_fields,
+        }
+
+    def _get_field_go_type(self, prop_schema, required: bool = True) -> str:
+        """Get Go type for a schema property."""
+        if prop_schema.is_binary:
+            # io.Reader is an interface, no pointer needed
+            return "io.Reader"
+
+        # Handle object type (maps)
+        if prop_schema.type == "object":
+            return "map[string]interface{}"
+
+        # Handle array type
+        if prop_schema.type == "array":
+            # Arrays in Go are slices, no pointer needed
+            item_type = "string"  # default
+            if prop_schema.items:
+                item_type = self._get_field_go_type(prop_schema.items, required=True)
+            return f"[]{item_type}"
+
+        # Handle enum (ref to types package)
+        if prop_schema.enum or prop_schema.ref:
+            # This will be handled by type mapper, just return a placeholder
+            # The actual type comes from the model
+            return "enum"
+
+        type_map = {
+            "string": "string",
+            "integer": "int64",
+            "number": "float64",
+            "boolean": "bool",
+        }
+        base_type = type_map.get(prop_schema.type, "string")
+
+        # Add pointer for optional fields (except maps/interfaces/arrays)
+        if not required and base_type not in ["interface{}", "map[string]interface{}"]:
+            return f"*{base_type}"
+        return base_type
 
     def _get_param_go_type(self, schema_type: str) -> str:
         """Get Go type for parameter schema type."""
