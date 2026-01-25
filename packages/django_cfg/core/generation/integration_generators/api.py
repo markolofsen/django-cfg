@@ -114,6 +114,13 @@ class APIFrameworksGenerator:
             from django_cfg.utils.smart_defaults import SmartDefaults
             drf_defaults = SmartDefaults.get_rest_framework_defaults()
 
+            # Build authentication classes: extra (project-specific) + smart defaults
+            auth_classes = list(drf_defaults["DEFAULT_AUTHENTICATION_CLASSES"])
+            extra_auth = getattr(self.config, "extra_authentication_classes", None)
+            if extra_auth:
+                # Prepend extra classes (checked before defaults)
+                auth_classes = list(extra_auth) + auth_classes
+
             # Build REST_FRAMEWORK settings with smart defaults
             rest_framework = {
                 "DEFAULT_SCHEMA_CLASS": "django_cfg.modules.django_client.spectacular.schema.PathBasedAutoSchema",
@@ -123,8 +130,14 @@ class APIFrameworksGenerator:
                     "rest_framework.renderers.JSONRenderer",
                     "django_cfg.modules.django_drf_theme.renderers.TailwindBrowsableAPIRenderer",
                 ],
-                # Add authentication classes from smart defaults
-                "DEFAULT_AUTHENTICATION_CLASSES": drf_defaults["DEFAULT_AUTHENTICATION_CLASSES"],
+                # Add authentication classes (extra + smart defaults)
+                "DEFAULT_AUTHENTICATION_CLASSES": auth_classes,
+                # Filter backends for django-filters, ordering, search
+                "DEFAULT_FILTER_BACKENDS": [
+                    "django_filters.rest_framework.DjangoFilterBackend",
+                    "rest_framework.filters.OrderingFilter",
+                    "rest_framework.filters.SearchFilter",
+                ],
                 # Force ISO 8601 datetime format with Z suffix for all datetime fields
                 "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%SZ",
             }

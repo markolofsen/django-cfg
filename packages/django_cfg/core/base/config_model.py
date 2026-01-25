@@ -319,6 +319,11 @@ class DjangoConfig(BaseModel):
     # ║                               API                                         ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
+    extra_authentication_classes: List[str] = Field(
+        default_factory=list,
+        description="Extra DRF authentication classes prepended before defaults (e.g., custom API key auth)",
+    )
+
     drf: Optional[DRFConfig] = Field(
         default=None,
         description="Django REST Framework configuration",

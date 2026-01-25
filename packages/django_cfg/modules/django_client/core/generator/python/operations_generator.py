@@ -434,15 +434,24 @@ class OperationsGenerator:
         schema = self._get_schema_for_operation(operation)
 
         if not schema:
-            # Fallback: assume 'file' is a file field and rest are data
-            lines.append("# Multipart upload (schema not available)")
+            # Fallback: runtime type detection when schema is not available
+            lines.append("# Multipart upload (schema not available, using runtime detection)")
+            lines.append("import json as _json")
             lines.append("_files = {}")
             lines.append("_form_data = {}")
             lines.append("_raw_data = data.model_dump(exclude_unset=True)")
             lines.append("for key, value in _raw_data.items():")
             lines.append("    if hasattr(value, 'read'):  # File-like object")
             lines.append("        _files[key] = value")
-            lines.append("    elif value is not None:")
+            lines.append("    elif value is None:")
+            lines.append("        pass")
+            lines.append("    elif hasattr(value, 'value'):  # Enum")
+            lines.append("        _form_data[key] = value.value")
+            lines.append("    elif isinstance(value, (dict, list)):  # JSON-serializable")
+            lines.append("        _form_data[key] = _json.dumps(value)")
+            lines.append("    elif isinstance(value, bool):  # Boolean before int check")
+            lines.append("        _form_data[key] = str(value).lower()")
+            lines.append("    else:")
             lines.append("        _form_data[key] = value")
             return lines
 
@@ -467,9 +476,32 @@ class OperationsGenerator:
             lines.append(f"if '{field}' in _raw_data and _raw_data['{field}'] is not None:")
             lines.append(f"    _files['{field}'] = _raw_data['{field}']")
 
-        # Handle data fields
+        # Check if we need json import for object/array serialization
+        needs_json = any(
+            schema.properties[f].is_object or schema.properties[f].is_array
+            for f in data_fields
+        )
+        if needs_json:
+            lines.append("import json as _json")
+
+        # Handle data fields with type-aware serialization
         for field in data_fields:
+            prop_schema = schema.properties[field]
             lines.append(f"if '{field}' in _raw_data and _raw_data['{field}'] is not None:")
-            lines.append(f"    _form_data['{field}'] = _raw_data['{field}']")
+
+            if prop_schema.enum is not None:
+                # Enum fields: extract .value for StrEnum/IntEnum
+                lines.append(f"    _val = _raw_data['{field}']")
+                lines.append(f"    _form_data['{field}'] = _val.value if hasattr(_val, 'value') else _val")
+            elif prop_schema.is_object or prop_schema.is_array:
+                # Object/array fields: serialize to JSON string
+                lines.append(f"    _form_data['{field}'] = _json.dumps(_raw_data['{field}'])")
+            elif prop_schema.type == "boolean":
+                # Boolean fields: httpx sends Python repr "True"/"False",
+                # but Django expects lowercase "true"/"false"
+                lines.append(f"    _form_data['{field}'] = str(_raw_data['{field}']).lower()")
+            else:
+                # Primitive fields (str, int, float): pass through
+                lines.append(f"    _form_data['{field}'] = _raw_data['{field}']")
 
         return lines

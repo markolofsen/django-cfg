@@ -384,9 +384,8 @@ class ClientGenerationOrchestrator:
 
     def _check_swift_codable_duplicates(self) -> None:
         """
-        Check for duplicate type definitions across Swift Codable groups.
-
-        Raises DuplicateTypeError if duplicates are found.
+        Check for duplicate type definitions across Swift Codable groups
+        and auto-resolve them by prefixing with the group name.
         """
         import re
 
@@ -430,45 +429,52 @@ class ClientGenerationOrchestrator:
             if len(locs) > 1
         }
 
-        if duplicates:
-            self.log_error("\n" + "=" * 60)
-            self.log_error("❌ DUPLICATE TYPE DEFINITIONS DETECTED")
-            self.log_error("=" * 60)
-            self.log_error(
-                "\nThe following types are defined in multiple API groups."
-            )
-            self.log_error(
-                "This will cause Swift compilation errors.\n"
-            )
+        if not duplicates:
+            return
 
-            for type_name, locations in sorted(duplicates.items()):
-                self.log_error(f"\n  {type_name}:")
-                for group, file_path, line_num in locations:
-                    self.log_error(f"    → {group}/{file_path.name}:{line_num}")
+        # Auto-resolve duplicates by prefixing with group name
+        self.log_warning("\n" + "-" * 60)
+        self.log_warning("⚠️  DUPLICATE SWIFT TYPES DETECTED — AUTO-RESOLVING")
+        self.log_warning("-" * 60)
 
-            self.log_error("\n" + "-" * 60)
-            self.log_error("HOW TO FIX:")
-            self.log_error("-" * 60)
-            self.log_error(
-                "\nRename serializers to have unique names across apps."
-            )
-            self.log_error(
-                "Swift types are generated from serializer class names."
-            )
-            self.log_error(
-                "\nExample: Rename 'UserProfileUpdateRequest' to"
-            )
-            self.log_error(
-                "  'ProfilesUserProfileUpdateRequest' or"
-            )
-            self.log_error(
-                "  'AccountsUserProfileUpdateRequest'"
-            )
-            self.log_error("\n" + "=" * 60)
+        def to_pascal(name: str) -> str:
+            """Convert group name to PascalCase prefix."""
+            parts = name.replace("-", "_").split("_")
+            return "".join(part.capitalize() for part in parts)
 
-            raise RuntimeError(
-                f"Duplicate Swift types found: {', '.join(sorted(duplicates.keys()))}"
-            )
+        # Build per-file rename map: {file_path: {old_name: new_name}}
+        file_renames: dict[Path, dict[str, str]] = {}
+
+        for type_name, locations in sorted(duplicates.items()):
+            self.log_warning(f"\n  {type_name} (defined in {len(locations)} groups):")
+
+            for group, file_path, line_num in locations:
+                prefix = to_pascal(group)
+                new_name = f"{prefix}{type_name}"
+                self.log_warning(f"    → {group}/{file_path.name}:{line_num}  ⟹  {new_name}")
+
+                if file_path not in file_renames:
+                    file_renames[file_path] = {}
+                file_renames[file_path][type_name] = new_name
+
+        # Apply renames to each affected file using whole-word replacement
+        for file_path, renames in file_renames.items():
+            content = file_path.read_text()
+            for old_name, new_name in renames.items():
+                # Replace all occurrences as whole words (type definitions,
+                # property types, initializers, typealias targets, etc.)
+                content = re.sub(
+                    rf'\b{re.escape(old_name)}\b',
+                    new_name,
+                    content,
+                )
+            file_path.write_text(content)
+
+        self.log_warning(
+            f"\n  ✅ Resolved {len(duplicates)} duplicate type(s) "
+            f"across {len(file_renames)} file(s)"
+        )
+        self.log_warning("-" * 60)
 
     def _run_post_generation(self, results: list[GenerationResult]) -> None:
         """Run post-generation steps."""
