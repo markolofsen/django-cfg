@@ -162,6 +162,9 @@ class GoGenerator(BaseGenerator):
             for status_code, response in operation.responses.items():
                 if response.schema_name:
                     schemas_to_process.add(response.schema_name)
+                # Also collect array item schemas (for array responses)
+                if response.is_array and response.items_schema_name:
+                    schemas_to_process.add(response.items_schema_name)
 
         # Recursively collect all dependencies
         processed = set()

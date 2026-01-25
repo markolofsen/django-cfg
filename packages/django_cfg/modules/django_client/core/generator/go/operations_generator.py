@@ -72,8 +72,31 @@ class OperationsGenerator:
             if request_type == "InlineRequestBody":
                 request_type = "map[string]interface{}"
 
+        # Get response type - handle array responses
         response_type = "interface{}"
-        if operation.responses.get("200") and operation.responses["200"].schema_name:
+        is_array_response = False
+        primary_response = operation.primary_success_response
+
+        if primary_response:
+            # Check if response is a simple array (not paginated)
+            if primary_response.is_array and primary_response.items_schema_name:
+                # Array response: return []ItemType
+                response_type = f"[]{primary_response.items_schema_name}"
+                is_array_response = True
+            elif primary_response.schema_name:
+                response_type = primary_response.schema_name
+                # For POST/PUT 201 responses: if schema ends with "Create", use "Detail" instead
+                # This handles drf-spectacular's COMPONENT_SPLIT_REQUEST_RESPONSE pattern
+                # where Create schema only has input fields but API returns full object
+                if (
+                    operation.http_method.upper() in ("POST", "PUT")
+                    and operation.primary_success_status == 201
+                    and response_type.endswith("Create")
+                ):
+                    detail_type = response_type[:-6] + "Detail"  # Replace "Create" with "Detail"
+                    if detail_type in self.context.schemas:
+                        response_type = detail_type
+        elif operation.responses.get("200") and operation.responses["200"].schema_name:
             response_type = operation.responses["200"].schema_name
         elif operation.responses.get("201") and operation.responses["201"].schema_name:
             response_type = operation.responses["201"].schema_name
@@ -132,6 +155,7 @@ class OperationsGenerator:
             "query_params_struct": query_params_struct,
             "is_multipart": is_multipart,
             "multipart_fields": multipart_fields,
+            "is_array_response": is_array_response,
         }
 
     def _is_multipart_operation(self, operation: IROperationObject) -> bool:
