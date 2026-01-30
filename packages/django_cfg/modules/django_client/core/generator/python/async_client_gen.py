@@ -126,6 +126,9 @@ class AsyncClientGenerator:
         """Generate client.py for a specific app."""
         class_name = self.base.tag_to_class_name(tag)
 
+        # Collect model names used in operations
+        model_names = self.base.get_model_names_for_operations(operations)
+
         # Generate methods
         method_codes = []
         for operation in operations:
@@ -135,7 +138,8 @@ class AsyncClientGenerator:
         content = template.render(
             tag=self.base.tag_to_display_name(tag),
             class_name=class_name,
-            operations=method_codes
+            operations=method_codes,
+            model_names=sorted(model_names),
         )
 
         folder_name = self.base.tag_and_app_to_folder_name(tag, operations)

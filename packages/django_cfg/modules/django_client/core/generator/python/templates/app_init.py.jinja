@@ -1,8 +1,19 @@
 {% include '_header.jinja' %}
 
 from .client import {{ class_name }}
-from .models import *
+{% if model_names %}
+from .models import (
+{% for name in model_names %}
+    {{ name }},
+{% endfor %}
+)
+{% endif %}
+from .sync_client import Sync{{ class_name }}
 
 __all__ = [
     "{{ class_name }}",
+    "Sync{{ class_name }}",
+{% for name in model_names %}
+    "{{ name }}",
+{% endfor %}
 ]

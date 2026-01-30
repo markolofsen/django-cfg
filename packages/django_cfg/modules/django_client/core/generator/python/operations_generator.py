@@ -112,17 +112,28 @@ class OperationsGenerator:
         # Build request
         request_kwargs = []
 
-        # Query params
+        # Query params - build multiline dict if needed
         if operation.query_parameters:
-            query_items = []
-            for param in operation.query_parameters:
-                if param.required:
-                    query_items.append(f'"{param.name}": {param.name}')
-                else:
-                    query_items.append(f'"{param.name}": {param.name} if {param.name} is not None else None')
-
-            query_dict = "{" + ", ".join(query_items) + "}"
-            request_kwargs.append(f"params={query_dict}")
+            if len(operation.query_parameters) <= 2:
+                # Inline for few params
+                query_items = []
+                for param in operation.query_parameters:
+                    if param.required:
+                        query_items.append(f'"{param.name}": {param.name}')
+                    else:
+                        query_items.append(f'"{param.name}": {param.name} if {param.name} is not None else None')
+                query_dict = "{" + ", ".join(query_items) + "}"
+                request_kwargs.append(f"params={query_dict}")
+            else:
+                # Multiline for many params
+                body_lines.append("_params = {")
+                for param in operation.query_parameters:
+                    if param.required:
+                        body_lines.append(f'    "{param.name}": {param.name},')
+                    else:
+                        body_lines.append(f'    "{param.name}": {param.name} if {param.name} is not None else None,')
+                body_lines.append("}")
+                request_kwargs.append("params=_params")
 
         # Check if multipart
         is_multipart = self._is_multipart_operation(operation)
@@ -138,8 +149,9 @@ class OperationsGenerator:
                 # JSON body
                 request_kwargs.append("json=data.model_dump(exclude_unset=True)")
         elif operation.patch_request_body:
-            # Optional PATCH body - check for None
-            request_kwargs.append("json=data.model_dump(exclude_unset=True) if data is not None else None")
+            # Optional PATCH body - build json separately to avoid long lines
+            body_lines.append("_json = data.model_dump(exclude_unset=True) if data else None")
+            request_kwargs.append("json=_json")
 
         # Make request
         method_lower = operation.http_method.lower()
@@ -156,7 +168,10 @@ class OperationsGenerator:
         body_lines.append("        error_body = response.json()")
         body_lines.append("    except Exception:")
         body_lines.append("        error_body = response.text")
-        body_lines.append('    raise httpx.HTTPStatusError(f"{response.status_code}: {error_body}", request=response.request, response=response)')
+        body_lines.append('    msg = f"{response.status_code}: {error_body}"')
+        body_lines.append("    raise httpx.HTTPStatusError(")
+        body_lines.append("        msg, request=response.request, response=response"  )
+        body_lines.append("    )")
 
         if return_type != "None":
             if has_multiple_responses and response_schemas:
@@ -268,17 +283,28 @@ class OperationsGenerator:
         # Build request
         request_kwargs = []
 
-        # Query params
+        # Query params - build multiline dict if needed
         if operation.query_parameters:
-            query_items = []
-            for param in operation.query_parameters:
-                if param.required:
-                    query_items.append(f'"{param.name}": {param.name}')
-                else:
-                    query_items.append(f'"{param.name}": {param.name} if {param.name} is not None else None')
-
-            query_dict = "{" + ", ".join(query_items) + "}"
-            request_kwargs.append(f"params={query_dict}")
+            if len(operation.query_parameters) <= 2:
+                # Inline for few params
+                query_items = []
+                for param in operation.query_parameters:
+                    if param.required:
+                        query_items.append(f'"{param.name}": {param.name}')
+                    else:
+                        query_items.append(f'"{param.name}": {param.name} if {param.name} is not None else None')
+                query_dict = "{" + ", ".join(query_items) + "}"
+                request_kwargs.append(f"params={query_dict}")
+            else:
+                # Multiline for many params
+                body_lines.append("_params = {")
+                for param in operation.query_parameters:
+                    if param.required:
+                        body_lines.append(f'    "{param.name}": {param.name},')
+                    else:
+                        body_lines.append(f'    "{param.name}": {param.name} if {param.name} is not None else None,')
+                body_lines.append("}")
+                request_kwargs.append("params=_params")
 
         # Check if multipart
         is_multipart = self._is_multipart_operation(operation)
@@ -294,8 +320,9 @@ class OperationsGenerator:
                 # JSON body
                 request_kwargs.append("json=data.model_dump(exclude_unset=True)")
         elif operation.patch_request_body:
-            # Optional PATCH body - check for None
-            request_kwargs.append("json=data.model_dump(exclude_unset=True) if data is not None else None")
+            # Optional PATCH body - build json separately to avoid long lines
+            body_lines.append("_json = data.model_dump(exclude_unset=True) if data else None")
+            request_kwargs.append("json=_json")
 
         # HTTP method
         method_lower = operation.http_method.lower()
@@ -314,7 +341,10 @@ class OperationsGenerator:
         body_lines.append("        error_body = response.json()")
         body_lines.append("    except Exception:")
         body_lines.append("        error_body = response.text")
-        body_lines.append('    raise httpx.HTTPStatusError(f"{response.status_code}: {error_body}", request=response.request, response=response)')
+        body_lines.append('    msg = f"{response.status_code}: {error_body}"')
+        body_lines.append("    raise httpx.HTTPStatusError(")
+        body_lines.append("        msg, request=response.request, response=response"  )
+        body_lines.append("    )")
 
         # Parse response
         if return_type != "None":

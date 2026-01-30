@@ -9,18 +9,20 @@ Retries only on network errors and server errors (5xx), not client errors (4xx).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable, Any
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
 import httpx
 from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception,
     RetryCallState,
     before_sleep_log,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
 )
-import logging
 
 
 @dataclass
@@ -75,14 +77,15 @@ def should_retry(exception: BaseException) -> bool:
         True if should retry, False otherwise
     """
     # Always retry network errors
-    if isinstance(exception, (
-        httpx.NetworkError,
-        httpx.TimeoutException,
-        httpx.ConnectError,
-        httpx.ReadError,
-        httpx.WriteError,
-        httpx.PoolTimeout,
-    )):
+    if isinstance(
+        exception,
+        httpx.NetworkError
+        | httpx.TimeoutException
+        | httpx.ConnectError
+        | httpx.ReadError
+        | httpx.WriteError
+        | httpx.PoolTimeout,
+    ):
         return True
 
     # For HTTP errors, check status code
@@ -196,8 +199,9 @@ class RetryAsyncClient:
     Transparently retries on network errors, 5xx status codes, and 429 rate limits.
 
     Example:
-        >>> async with RetryAsyncClient('https://api.example.com', retry_config=RetryConfig(max_attempts=5)) as client:
-        ...     response = await client.get('/users')
+        >>> cfg = RetryConfig(max_attempts=5)
+        >>> async with RetryAsyncClient('https://api.example.com', retry_config=cfg) as c:
+        ...     response = await c.get('/users')
         ...     response.raise_for_status()
     """
 
@@ -219,7 +223,7 @@ class RetryAsyncClient:
         self.retry_config = retry_config
         self._retry_decorator = create_retry_decorator(retry_config) if retry_config else None
 
-    async def __aenter__(self) -> 'RetryAsyncClient':
+    async def __aenter__(self) -> RetryAsyncClient:
         await self._client.__aenter__()
         return self
 

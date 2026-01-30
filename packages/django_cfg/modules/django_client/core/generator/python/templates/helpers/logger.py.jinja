@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -26,8 +26,8 @@ class RequestLog:
 
     method: str
     url: str
-    headers: Optional[Dict[str, str]] = None
-    body: Optional[Any] = None
+    headers: dict[str, str] | None = None
+    body: Any | None = None
     timestamp: float = field(default_factory=time.time)
 
 
@@ -37,7 +37,7 @@ class ResponseLog:
 
     status: int
     status_text: str
-    data: Optional[Any] = None
+    data: Any | None = None
     duration: float = 0.0
     timestamp: float = field(default_factory=time.time)
 
@@ -47,8 +47,8 @@ class ErrorLog:
     """Error log data."""
 
     message: str
-    status_code: Optional[int] = None
-    field_errors: Optional[Dict[str, list[str]]] = None
+    status_code: int | None = None
+    field_errors: dict[str, list[str]] | None = None
     duration: float = 0.0
     timestamp: float = field(default_factory=time.time)
 
@@ -63,7 +63,7 @@ class LoggerConfig:
     log_errors: bool = True
     log_bodies: bool = True
     log_headers: bool = False
-    console: Optional[Console] = None
+    console: Console | None = None
 
 
 # Sensitive header names to filter out
@@ -79,7 +79,7 @@ SENSITIVE_HEADERS = [
 class APILogger:
     """API Logger class."""
 
-    def __init__(self, config: Optional[LoggerConfig] = None):
+    def __init__(self, config: LoggerConfig | None = None):
         """Initialize logger."""
         self.config = config or LoggerConfig()
         self.console = self.config.console or Console()
@@ -98,7 +98,7 @@ class APILogger:
             if hasattr(self.config, key):
                 setattr(self.config, key, value)
 
-    def _filter_headers(self, headers: Optional[Dict[str, str]]) -> Dict[str, str]:
+    def _filter_headers(self, headers: dict[str, str] | None) -> dict[str, str]:
         """Filter sensitive headers."""
         if not headers:
             return {}
@@ -237,7 +237,7 @@ class APILogger:
         self,
         headers: list[str],
         rows: list[list[Any]],
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> None:
         """Log data in a table."""
         if not self.config.enabled:

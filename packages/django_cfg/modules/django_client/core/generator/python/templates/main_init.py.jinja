@@ -29,19 +29,18 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-import httpx
-
 from .client import APIClient
-from .logger import LoggerConfig
-from .retry import RetryConfig
+{% if has_enums %}
+from .enums import (
+{% for name in enum_names %}
+    {{ name }},
+{% endfor %}
+)
+{% endif %}
+from .helpers import LoggerConfig, RetryConfig
 {% for tag in tags %}
 from .{{ tag.slug }} import {{ tag.class_name }}
 {% endfor %}
-{% if has_enums %}
-from . import enums
-# NOTE: Individual enum imports commented out due to invalid Python syntax with dotted names
-# from .enums import {{ enum_names | join(', ') }}
-{% endif %}
 
 TOKEN_KEY = "auth_token"
 REFRESH_TOKEN_KEY = "refresh_token"
@@ -51,4 +50,7 @@ REFRESH_TOKEN_KEY = "refresh_token"
 __all__ = [
     "API",
     "APIClient",
+{% for name in enum_names %}
+    "{{ name }}",
+{% endfor %}
 ]

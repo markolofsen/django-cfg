@@ -52,8 +52,14 @@ class FilesGenerator:
         """Generate __init__.py for a specific app."""
         class_name = self.base.tag_to_class_name(tag)
 
+        # Collect model names used in operations
+        model_names = self.base.get_model_names_for_operations(operations)
+
         template = self.jinja_env.get_template('app_init.py.jinja')
-        content = template.render(class_name=class_name)
+        content = template.render(
+            class_name=class_name,
+            model_names=sorted(model_names),
+        )
 
         folder_name = self.base.tag_and_app_to_folder_name(tag, operations)
         return GeneratedFile(
@@ -80,6 +86,11 @@ class FilesGenerator:
         all_schemas = self.context.schemas
         all_enums = self.base._collect_enums_from_schemas(all_schemas)
 
+        # Sanitize enum names (convert dotted names to PascalCase)
+        sanitized_enum_names = [
+            self.base.sanitize_enum_name(name) for name in all_enums.keys()
+        ] if all_enums else []
+
         # API class
         api_class = self.generate_api_wrapper_class_python(tags)
 
@@ -88,7 +99,7 @@ class FilesGenerator:
             api_title=self.context.openapi_info.title,
             tags=tags_data,
             has_enums=bool(all_enums),
-            enum_names=sorted(all_enums.keys()) if all_enums else [],
+            enum_names=sorted(sanitized_enum_names),
             api_class=api_class
         )
 
@@ -112,24 +123,35 @@ class FilesGenerator:
         template = self.jinja_env.get_template('api_wrapper.py.jinja')
         return template.render(properties=properties_data)
 
-    def generate_logger_file(self) -> GeneratedFile:
-        """Generate logger.py with Rich integration."""
-        template = self.jinja_env.get_template('utils/logger.py.jinja')
+    def generate_helpers_init_file(self) -> GeneratedFile:
+        """Generate helpers/__init__.py with exports."""
+        template = self.jinja_env.get_template('helpers/__init__.py.jinja')
         content = template.render()
 
         return GeneratedFile(
-            path="logger.py",
+            path="helpers/__init__.py",
+            content=content,
+            description="Helpers package exports",
+        )
+
+    def generate_logger_file(self) -> GeneratedFile:
+        """Generate helpers/logger.py with Rich integration."""
+        template = self.jinja_env.get_template('helpers/logger.py.jinja')
+        content = template.render()
+
+        return GeneratedFile(
+            path="helpers/logger.py",
             content=content,
             description="API Logger with Rich",
         )
 
     def generate_retry_file(self) -> GeneratedFile:
-        """Generate retry.py with tenacity integration."""
-        template = self.jinja_env.get_template('utils/retry.py.jinja')
+        """Generate helpers/retry.py with tenacity integration."""
+        template = self.jinja_env.get_template('helpers/retry.py.jinja')
         content = template.render()
 
         return GeneratedFile(
-            path="retry.py",
+            path="helpers/retry.py",
             content=content,
             description="Retry utilities with tenacity",
         )

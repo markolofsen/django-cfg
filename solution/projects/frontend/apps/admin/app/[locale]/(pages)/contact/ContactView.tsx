@@ -1,7 +1,7 @@
 'use client';
 
 import { ContactPage } from '@djangocfg/ext-leads';
-import { Section } from '@djangocfg/ui-nextjs';
+import { Section } from '@djangocfg/ui-core';
 
 export function ContactView() {
   return (

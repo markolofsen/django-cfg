@@ -837,3 +837,40 @@ class BaseGenerator(ABC):
             else:
                 result.append(word[0].upper() + word[1:] if len(word) > 1 else word.upper())
         return ''.join(result)
+
+    def get_model_names_for_operations(self, operations: list[IROperationObject]) -> set[str]:
+        """
+        Get all model names used in given operations.
+
+        Collects model names from:
+        - Request body schemas
+        - Patch request body schemas
+        - Response schemas
+        - Array response item schemas
+
+        Args:
+            operations: List of operations to analyze
+
+        Returns:
+            Set of model names used in these operations
+        """
+        model_names: set[str] = set()
+
+        for operation in operations:
+            # Request body schema
+            if operation.request_body and operation.request_body.schema_name:
+                model_names.add(operation.request_body.schema_name)
+
+            # Patch request body schema
+            if operation.patch_request_body and operation.patch_request_body.schema_name:
+                model_names.add(operation.patch_request_body.schema_name)
+
+            # Response schemas
+            for response in operation.responses.values():
+                if response.schema_name:
+                    model_names.add(response.schema_name)
+                # Array response items
+                if response.is_array and response.items_schema_name:
+                    model_names.add(response.items_schema_name)
+
+        return model_names

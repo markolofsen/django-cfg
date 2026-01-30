@@ -1,8 +1,9 @@
 {% include '_header.jinja' %}
 
 from __future__ import annotations
-
+{% if has_datetime %}
 from datetime import datetime
+{% endif %}
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field

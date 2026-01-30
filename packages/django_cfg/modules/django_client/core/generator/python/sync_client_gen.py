@@ -35,6 +35,9 @@ class SyncClientGenerator:
         """Generate sync_client.py for a specific app."""
         class_name = self.base.tag_to_class_name(tag)
 
+        # Collect model names used in operations
+        model_names = self.base.get_model_names_for_operations(operations)
+
         # Generate sync methods
         method_codes = []
         for operation in operations:
@@ -44,7 +47,8 @@ class SyncClientGenerator:
         content = template.render(
             tag=self.base.tag_to_display_name(tag),
             class_name=class_name,
-            operations=method_codes
+            operations=method_codes,
+            model_names=sorted(model_names),
         )
 
         folder_name = self.base.tag_and_app_to_folder_name(tag, operations)
@@ -70,7 +74,7 @@ class SyncClientGenerator:
         # Generate sync APIClient class
         sync_client_code = self._generate_sync_main_client_class(ops_by_tag)
 
-        template = self.jinja_env.get_template('client/main_client_file.py.jinja')
+        template = self.jinja_env.get_template('client/sync_main_client_file.py.jinja')
         content = template.render(
             tags=tags_data,
             client_code=sync_client_code

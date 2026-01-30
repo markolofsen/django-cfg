@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 
-from .helpers import APILogger, LoggerConfig, RetryAsyncClient, RetryConfig
+from .helpers import APILogger, LoggerConfig
 {% for tag in tags %}
 from .{{ tag.slug }} import {{ tag.class_name }}
 {% endfor %}

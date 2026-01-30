@@ -255,6 +255,12 @@ class TypeMapper:
             self._imports.add(("sqlalchemy.dialects.postgresql", "INET"))
             return "Column(INET)"
 
+        # DateTimeField - use TIMESTAMP with timezone for Django's USE_TZ=True
+        # This ensures timezone-aware datetimes work correctly with asyncpg
+        if django_type == "DateTimeField":
+            self._imports.add(("sqlalchemy", "DateTime"))
+            return "Column(DateTime(timezone=True))"
+
         return None
 
     def _get_sa_type_for_array(self, base_type: Optional[str]) -> str:

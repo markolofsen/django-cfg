@@ -11,7 +11,7 @@ class SyncAPIClient:
     def __init__(
         self,
         base_url: str,
-        logger_config: Optional[LoggerConfig] = None,
+        logger_config: LoggerConfig | None = None,
         **kwargs: Any,
     ):
         """
@@ -29,7 +29,7 @@ class SyncAPIClient:
         )
 
         # Initialize logger
-        self.logger: Optional[APILogger] = None
+        self.logger: APILogger | None = None
         if logger_config is not None:
             self.logger = APILogger(logger_config)
 
@@ -38,7 +38,7 @@ class SyncAPIClient:
         self.{{ tag.property }} = Sync{{ tag.class_name }}(self._client)
 {% endfor %}
 
-    def __enter__(self) -> 'SyncAPIClient':
+    def __enter__(self) -> SyncAPIClient:
         return self
 
     def __exit__(self, *args: Any) -> None:

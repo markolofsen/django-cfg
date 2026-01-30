@@ -150,7 +150,7 @@ class API:
         """
         return './schema.json'
 
-    async def __aenter__(self) -> 'API':
+    async def __aenter__(self) -> API:
         """Async context manager entry."""
         if self._client:
             await self._client.__aenter__()

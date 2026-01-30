@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import httpx
+{% if model_names %}
 
-from .models import *
+from .models import (
+{% for name in model_names %}
+    {{ name }},
+{% endfor %}
+)
+{% endif %}
 
 
 class Sync{{ class_name }}:

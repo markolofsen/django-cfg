@@ -83,10 +83,9 @@ class PythonGenerator(BaseGenerator):
             # Generate main __init__.py
             files.append(self.files_gen.generate_main_init_file())
 
-            # Generate logger.py with Rich
+            # Generate helpers/ package
+            files.append(self.files_gen.generate_helpers_init_file())
             files.append(self.files_gen.generate_logger_file())
-
-            # Generate retry.py with tenacity
             files.append(self.files_gen.generate_retry_file())
 
             # Generate schema.py with OpenAPI schema
@@ -103,10 +102,9 @@ class PythonGenerator(BaseGenerator):
             files.append(self.async_client_gen.generate_client_file())
             files.append(self.files_gen.generate_init_file())
 
-            # Generate logger.py with Rich
+            # Generate helpers/ package
+            files.append(self.files_gen.generate_helpers_init_file())
             files.append(self.files_gen.generate_logger_file())
-
-            # Generate retry.py with tenacity
             files.append(self.files_gen.generate_retry_file())
 
             # Generate schema.py with OpenAPI schema

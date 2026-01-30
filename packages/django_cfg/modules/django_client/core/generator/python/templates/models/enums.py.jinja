@@ -1,12 +1,11 @@
 {% include '_header.jinja' %}
 
-from enum import IntEnum, Enum
+from enum import Enum{% if has_int_enum %}, IntEnum{% endif %}
 
-# Python 3.10 compatibility: StrEnum was added in Python 3.11
-# Use str + Enum instead for backward compatibility
+
+
 class StrEnum(str, Enum):
-    """String Enum for Python 3.10+ compatibility"""
-    pass
+    """String Enum for Python 3.10+ compatibility."""
 
 
 {% for enum in enums %}

@@ -48,9 +48,13 @@ class ModelsGenerator:
         for name, schema in self.base.get_patch_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
+        # Check if any generated schema code uses datetime
+        has_datetime = any(": datetime" in code for code in schema_codes)
+
         template = self.jinja_env.get_template('models/models.py.jinja')
         content = template.render(
             has_enums=bool(self.base.get_enum_schemas()),
+            has_datetime=has_datetime,
             schemas=schema_codes
         )
 
@@ -60,15 +64,30 @@ class ModelsGenerator:
             description="Pydantic 2 models (Request/Response/Patch)",
         )
 
+    def _schema_uses_datetime(self, schema) -> bool:
+        """Check if schema uses datetime type."""
+        if not schema.properties:
+            return False
+        for prop in schema.properties.values():
+            if prop.format in ("date-time", "date"):
+                return True
+        return False
+
     def generate_enums_file(self) -> GeneratedFile:
         """Generate enums.py with all Enum classes (flat structure)."""
+        # Check if any IntEnum is used
+        has_int_enum = any(
+            schema.type == "integer"
+            for schema in self.base.get_enum_schemas().values()
+        )
+
         # Generate all enums
         enum_codes = []
         for name, schema in self.base.get_enum_schemas().items():
             enum_codes.append(self.generate_enum(schema))
 
         template = self.jinja_env.get_template('models/enums.py.jinja')
-        content = template.render(enums=enum_codes)
+        content = template.render(enums=enum_codes, has_int_enum=has_int_enum)
 
         return GeneratedFile(
             path="enums.py",
@@ -78,13 +97,19 @@ class ModelsGenerator:
 
     def generate_shared_enums_file(self, enums: dict[str, IRSchemaObject]) -> GeneratedFile:
         """Generate shared enums.py for namespaced structure (Variant 2)."""
+        # Check if any IntEnum is used
+        has_int_enum = any(
+            schema.type == "integer"
+            for schema in enums.values()
+        )
+
         # Generate all enums
         enum_codes = []
         for name, schema in enums.items():
             enum_codes.append(self.generate_enum(schema))
 
         template = self.jinja_env.get_template('models/enums.py.jinja')
-        content = template.render(enums=enum_codes)
+        content = template.render(enums=enum_codes, has_int_enum=has_int_enum)
 
         return GeneratedFile(
             path="enums.py",
@@ -177,7 +202,11 @@ class ModelsGenerator:
         field_kwargs = []
 
         if schema.description:
-            field_kwargs.append(f"description={schema.description!r}")
+            # Truncate long descriptions to avoid line length issues (max 35 chars)
+            desc = schema.description.replace('\n', ' ')
+            if len(desc) > 35:
+                desc = desc[:32] + "..."
+            field_kwargs.append(f"description={desc!r}")
 
         # Validation constraints
         if schema.min_length is not None:
@@ -213,7 +242,21 @@ class ModelsGenerator:
             else:
                 default = "None"
 
-        return f"{name}: {python_type} = {default}"
+        # Check line length and format multiline if needed
+        line = f"{name}: {python_type} = {default}"
+        if len(line) > 95 and field_kwargs and len(field_kwargs) > 1:
+            # Format Field() on multiple lines
+            if is_required and not schema.nullable:
+                field_parts = ["Field("]
+            else:
+                field_parts = ["Field(", "    None,"]
+            for kwarg in field_kwargs:
+                field_parts.append(f"    {kwarg},")
+            field_parts.append(")")
+            default = "\n".join(field_parts)
+            return f"{name}: {python_type} = {default}"
+
+        return line
 
     def generate_enum(self, schema: IRSchemaObject) -> str:
         """Generate Enum class from x-enum-varnames."""
@@ -331,9 +374,13 @@ class ModelsGenerator:
             schema_codes.append(self.generate_schema(schema))
             collect_enums_from_schema(schema)
 
+        # Check if any generated schema code uses datetime
+        has_datetime = any(": datetime" in code for code in schema_codes)
+
         template = self.jinja_env.get_template('models/app_models.py.jinja')
         content = template.render(
             has_enums=len(enum_names) > 0,
+            has_datetime=has_datetime,
             enum_names=sorted(enum_names),  # Sort for consistent output
             schemas=schema_codes
         )
