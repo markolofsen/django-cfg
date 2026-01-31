@@ -244,7 +244,7 @@ class ModelsGenerator:
 
         # Check line length and format multiline if needed
         line = f"{name}: {python_type} = {default}"
-        if len(line) > 95 and field_kwargs and len(field_kwargs) > 1:
+        if len(line) > 95 and field_kwargs:
             # Format Field() on multiple lines
             if is_required and not schema.nullable:
                 field_parts = ["Field("]
