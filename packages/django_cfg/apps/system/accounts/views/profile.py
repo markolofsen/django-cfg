@@ -127,10 +127,16 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request, *args, **kwargs):  # noqa: ARG002
         """Update user profile and return updated data."""
-        kwargs['partial'] = True
-        return super().update(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        # Return full user data (same as UserProfileUpdateView)
+        user_serializer = UserSerializer(instance, context={'request': request})
+        return Response(user_serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema(
