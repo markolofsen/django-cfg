@@ -1,16 +1,42 @@
 /**
- * Global styles for @djangocfg/cloud app
+ * Global styles for @djangocfg/market app
  * Single entry point for all styles
+ *
+ * CRITICAL: Import order matters for Tailwind CSS v4!
+ * Theme variables MUST come BEFORE @import "tailwindcss"
  */
 
-/* 1. Import Tailwind CSS v4 */
+/* 1. Import UI package styles FIRST (contains theme variables) */
+@import "@djangocfg/ui-nextjs/styles";
+
+/* 2. Import layouts styles (may contain additional tokens) */
+@import "@djangocfg/layouts/styles";
+
+/* 3. Import ui-tools styles (for Tailwind class detection) */
+@import "@djangocfg/ui-tools/styles";
+
+/*
+ * 3. CUSTOM THEME OVERRIDE (optional)
+ *
+ * To customize the theme, create a custom-theme.css file with your
+ * theme overrides and import it here:
+ *
+ * @import "./custom-theme.css";
+ *
+ * You can generate custom theme CSS using the Tailwind Theme Configurator
+ * in the playground: /tools/tailwind-theme-configurator
+ *
+ * Example custom-theme.css:
+ *
+ * :root {
+ *   --primary: 265 89% 78%;
+ *   --primary-foreground: 0 0% 100%;
+ *   // ... other color overrides
+ * }
+ */
+
+/* 4. Import Tailwind CSS v4 (AFTER theme variables) */
 @import "tailwindcss";
 
-/* 2. Load tailwindcss-animate plugin */
+/* 5. Load tailwindcss-animate plugin */
 @plugin "tailwindcss-animate";
-
-/* 3. Import UI package styles (theme, base, utilities) */
-@import "@djangocfg/ui-core/styles";
-
-/* 4. Import layouts styles */
-@import "@djangocfg/layouts/styles";
