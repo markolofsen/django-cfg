@@ -206,11 +206,12 @@ def register_schedules_from_config():
     """
     Register scheduled jobs from django-cfg config in rq-scheduler.
 
-    This function should be called on Django startup (from AppConfig.ready()).
-    It reads schedules from config.django_rq.schedules and registers them
-    in rq-scheduler.
+    This function should ONLY be called from the rqscheduler management command,
+    NOT from AppConfig.ready() or other places. This prevents race conditions
+    when multiple containers start simultaneously.
 
     Features:
+    - Uses distributed lock to prevent race conditions
     - Generates deterministic job IDs to prevent duplicates
     - Cleans up old versions of jobs before registering new ones
     - Prevents accumulation of orphaned scheduled jobs
@@ -237,39 +238,85 @@ def register_schedules_from_config():
         # Get scheduler for default queue
         queue = django_rq.get_queue('default')
         scheduler = Scheduler(queue=queue, connection=queue.connection)
+        connection = queue.connection
 
-        logger.info(f"Registering {len(schedules)} scheduled jobs from config...")
+        # Use distributed lock to prevent race conditions
+        # Lock expires after 60 seconds in case of crash
+        lock_key = "django_cfg:schedule_registration_lock"
+        lock_timeout = 60
 
-        for schedule_config in schedules:
-            try:
-                # Import function
-                func_path = schedule_config.func
-                module_path, func_name = func_path.rsplit('.', 1)
+        # Try to acquire lock using SETNX (atomic operation)
+        lock_acquired = connection.set(lock_key, "1", nx=True, ex=lock_timeout)
+        if not lock_acquired:
+            logger.info("Another process is registering schedules, skipping...")
+            return
 
+        try:
+            logger.info(f"Registering {len(schedules)} scheduled jobs from config...")
+
+            for schedule_config in schedules:
                 try:
-                    import importlib
-                    module = importlib.import_module(module_path)
-                    func = getattr(module, func_name)
-                except (ImportError, AttributeError) as e:
-                    logger.warning(f"Failed to import function {func_path}: {e}")
-                    continue
+                    # Import function
+                    func_path = schedule_config.func
+                    module_path, func_name = func_path.rsplit('.', 1)
 
-                # Generate deterministic job ID if not provided
-                job_id = schedule_config.job_id
-                if not job_id:
-                    job_id = _generate_deterministic_job_id(schedule_config)
+                    try:
+                        import importlib
+                        module = importlib.import_module(module_path)
+                        func = getattr(module, func_name)
+                    except (ImportError, AttributeError) as e:
+                        logger.warning(f"Failed to import function {func_path}: {e}")
+                        continue
 
-                # Clean up old version of this schedule
-                _cleanup_old_schedules(scheduler, job_id)
+                    # Generate deterministic job ID if not provided
+                    job_id = schedule_config.job_id
+                    if not job_id:
+                        job_id = _generate_deterministic_job_id(schedule_config)
 
-                # Get schedule type and register
-                if schedule_config.cron:
-                    # Suppress FutureWarning from crontab library (rq-scheduler dependency)
-                    import warnings
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings('ignore', category=FutureWarning)
-                        scheduler.cron(
-                            schedule_config.cron,
+                    # Clean up old version of this schedule
+                    _cleanup_old_schedules(scheduler, job_id)
+
+                    # Get schedule type and register
+                    if schedule_config.cron:
+                        # Suppress FutureWarning from crontab library (rq-scheduler dependency)
+                        import warnings
+                        with warnings.catch_warnings():
+                            warnings.filterwarnings('ignore', category=FutureWarning)
+                            scheduler.cron(
+                                schedule_config.cron,
+                                func=func,
+                                args=schedule_config.args,
+                                kwargs=schedule_config.kwargs,
+                                queue_name=schedule_config.queue,
+                                timeout=schedule_config.timeout,
+                                result_ttl=schedule_config.result_ttl,
+                                id=job_id,
+                                repeat=schedule_config.repeat,
+                            )
+                        logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron})")
+
+                    elif schedule_config.interval:
+                        from datetime import datetime
+                        scheduler.schedule(
+                            scheduled_time=datetime.utcnow(),  # Start immediately
+                            func=func,
+                            args=schedule_config.args,
+                            kwargs=schedule_config.kwargs,
+                            interval=schedule_config.interval,
+                            queue_name=schedule_config.queue,
+                            timeout=schedule_config.timeout,
+                            result_ttl=schedule_config.result_ttl,
+                            id=job_id,
+                            repeat=schedule_config.repeat,
+                        )
+                        logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s)")
+
+                    elif schedule_config.scheduled_time:
+                        from datetime import datetime
+                        scheduled_dt = datetime.fromisoformat(schedule_config.scheduled_time)
+
+                        scheduler.schedule(
+                            scheduled_time=scheduled_dt,
                             func=func,
                             args=schedule_config.args,
                             kwargs=schedule_config.kwargs,
@@ -277,47 +324,19 @@ def register_schedules_from_config():
                             timeout=schedule_config.timeout,
                             result_ttl=schedule_config.result_ttl,
                             id=job_id,
-                            repeat=schedule_config.repeat,
                         )
-                    logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron})")
+                        logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time})")
 
-                elif schedule_config.interval:
-                    from datetime import datetime
-                    scheduler.schedule(
-                        scheduled_time=datetime.utcnow(),  # Start immediately
-                        func=func,
-                        args=schedule_config.args,
-                        kwargs=schedule_config.kwargs,
-                        interval=schedule_config.interval,
-                        queue_name=schedule_config.queue,
-                        timeout=schedule_config.timeout,
-                        result_ttl=schedule_config.result_ttl,
-                        id=job_id,
-                        repeat=schedule_config.repeat,
-                    )
-                    logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s)")
+                except Exception as e:
+                    logger.error(f"Failed to register schedule {schedule_config.func}: {e}")
+                    continue
 
-                elif schedule_config.scheduled_time:
-                    from datetime import datetime
-                    scheduled_dt = datetime.fromisoformat(schedule_config.scheduled_time)
+            logger.info("Schedule registration completed")
 
-                    scheduler.schedule(
-                        scheduled_time=scheduled_dt,
-                        func=func,
-                        args=schedule_config.args,
-                        kwargs=schedule_config.kwargs,
-                        queue_name=schedule_config.queue,
-                        timeout=schedule_config.timeout,
-                        result_ttl=schedule_config.result_ttl,
-                        id=job_id,
-                    )
-                    logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time})")
-
-            except Exception as e:
-                logger.error(f"Failed to register schedule {schedule_config.func}: {e}")
-                continue
-
-        logger.info("Schedule registration completed")
+        finally:
+            # Always release the lock
+            connection.delete(lock_key)
+            logger.debug("Released schedule registration lock")
 
     except Exception as e:
         logger.error(f"Failed to register schedules: {e}", exc_info=True)
