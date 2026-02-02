@@ -79,14 +79,9 @@ class RQAppConfig(AppConfig):
         except ImportError:
             pass
 
-        # Register scheduled jobs from config (runs once on startup)
-        try:
-            from .services import register_schedules_from_config
-            register_schedules_from_config()
-        except Exception as e:
-            from django_cfg.utils import get_logger
-            logger = get_logger("rq.apps")
-            logger.warning(f"Failed to register schedules: {e}")
+        # Note: Schedule registration moved to rqscheduler command
+        # to prevent race conditions when multiple containers start simultaneously.
+        # See management/commands/rqscheduler.py
 
     def _check_dependencies_if_needed(self):
         """

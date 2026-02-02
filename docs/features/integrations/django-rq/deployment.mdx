@@ -984,6 +984,23 @@ journalctl -u rq-worker -f
 | Slow job processing | Too few workers | Scale workers horizontally |
 | Scheduler not running | Process crashed | Check logs, restart scheduler |
 | **Scheduled jobs not executing** | **Queue mismatch** | **Ensure `rqscheduler --queue X` matches `RQScheduleConfig(queue="X")`** |
+| **Scheduler hangs on startup** | **Stale locks in Redis** | **Automatic cleanup built-in, or run `python manage.py rq_cleanup_locks`** |
+
+### Stale Scheduler Locks
+
+If the scheduler container crashes without proper cleanup, stale lock keys (`rq:scheduler_instance:*`) may remain in Redis and prevent new schedulers from starting.
+
+**Django-CFG handles this automatically** - the `rqscheduler` command cleans up stale locks before starting.
+
+For manual cleanup:
+
+```bash
+# Check for stale locks (dry run)
+python manage.py rq_cleanup_locks --dry-run
+
+# Clean up stale locks
+python manage.py rq_cleanup_locks
+```
 
 ---
 
