@@ -220,6 +220,16 @@ def register_schedules_from_config():
         >>> from django_cfg.apps.integrations.rq.services import register_schedules_from_config
         >>> register_schedules_from_config()
     """
+    # DEBUG: Print call stack to identify who is calling this function
+    import traceback
+    import sys
+    logger.warning("=== register_schedules_from_config CALLED ===")
+    logger.warning(f"Command: {' '.join(sys.argv)}")
+    for line in traceback.format_stack()[-10:-1]:  # Last 10 frames except current
+        for l in line.strip().split('\n'):
+            logger.warning(l)
+    logger.warning("=== END TRACEBACK ===")
+
     try:
         import django_rq
         from rq_scheduler import Scheduler
