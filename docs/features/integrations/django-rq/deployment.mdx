@@ -98,6 +98,20 @@ graph TB
 
 </Callout>
 
+<Callout type="error">
+**Critical: RQ Scheduler Queue Configuration**
+
+The `rqscheduler` command only processes jobs for **ONE queue** (default: `default`).
+
+If your scheduled tasks use `queue="high"` in `RQScheduleConfig`, you **MUST** run:
+```bash
+python manage.py rqscheduler --queue high
+```
+
+**Best practice:** Put ALL scheduled tasks (`RQScheduleConfig`) on the same queue (recommended: `high`) and run the scheduler with that queue. Workers listen to all queues, so they will execute the jobs regardless of which queue they're on.
+
+</Callout>
+
 ---
 
 ## Docker Compose Deployment
@@ -170,6 +184,8 @@ services:
           memory: 512M
 
   # RQ Scheduler
+  # IMPORTANT: --queue must match the queue used in RQScheduleConfig (api/config.py)
+  # rqscheduler only processes ONE queue. All scheduled tasks should use the same queue.
   rq-scheduler:
     image: your-registry/django-app:latest
     container_name: rq-scheduler
@@ -177,7 +193,7 @@ services:
     env_file: .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: api.settings
-    command: python manage.py rqscheduler
+    command: python manage.py rqscheduler --queue high
     depends_on:
       - redis
       - django
@@ -268,9 +284,11 @@ services:
     volumes:
       - ./:/app
 
+  # IMPORTANT: --queue must match the queue used in RQScheduleConfig
+  # rqscheduler only processes ONE queue
   rq-scheduler:
     build: .
-    command: python manage.py rqscheduler
+    command: python manage.py rqscheduler --queue high
     env_file: .env.local
     depends_on:
       - redis
@@ -300,7 +318,8 @@ python manage.py runserver
 python manage.py rqworker default high low knowledge
 
 # Terminal 3: RQ Scheduler (optional)
-python manage.py rqscheduler
+# IMPORTANT: --queue must match the queue used in RQScheduleConfig
+python manage.py rqscheduler --queue high
 ```
 
 ### Using Makefile
@@ -328,7 +347,8 @@ Create `Procfile`:
 ```procfile filename="Procfile.dev"
 web: python manage.py runserver 0.0.0.0:8000
 worker: python manage.py rqworker default high low knowledge
-scheduler: python manage.py rqscheduler
+# IMPORTANT: --queue must match the queue used in RQScheduleConfig
+scheduler: python manage.py rqscheduler --queue high
 ```
 
 ```bash
@@ -448,7 +468,8 @@ spec:
       containers:
       - name: scheduler
         image: your-registry/django-app:latest
-        command: ["python", "manage.py", "rqscheduler"]
+        # IMPORTANT: --queue must match the queue used in RQScheduleConfig
+        command: ["python", "manage.py", "rqscheduler", "--queue", "high"]
         envFrom:
         - configMapRef:
             name: django-config
@@ -629,7 +650,8 @@ spec:
 ```yaml filename="Procfile"
 web: gunicorn api.wsgi:application --bind 0.0.0.0:$PORT
 worker: python manage.py rqworker default high low knowledge
-scheduler: python manage.py rqscheduler
+# IMPORTANT: --queue must match the queue used in RQScheduleConfig
+scheduler: python manage.py rqscheduler --queue high
 ```
 
 ```bash
@@ -705,11 +727,13 @@ class ProductionConfig(DjangoConfig):
             RQQueueConfig(queue="low", default_timeout=600),
             RQQueueConfig(queue="knowledge", default_timeout=1800),
         ],
+        # IMPORTANT: All schedules must use the same queue!
+        # rqscheduler only processes ONE queue (specified with --queue flag)
         schedules=[
             RQScheduleConfig(
                 func="apps.crypto.tasks.update_coin_prices",
                 interval=300,  # Every 5 minutes
-                queue="default",
+                queue="high",  # Must match rqscheduler --queue
             ),
         ],
         show_admin_link=True,
@@ -959,6 +983,7 @@ journalctl -u rq-worker -f
 | High memory usage | Result TTL too long | Reduce `default_result_ttl` in config |
 | Slow job processing | Too few workers | Scale workers horizontally |
 | Scheduler not running | Process crashed | Check logs, restart scheduler |
+| **Scheduled jobs not executing** | **Queue mismatch** | **Ensure `rqscheduler --queue X` matches `RQScheduleConfig(queue="X")`** |
 
 ---
 
