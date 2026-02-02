@@ -97,7 +97,7 @@ class Command(DjangoRQSchedulerCommand):
         with deterministic job IDs to prevent duplicates.
         """
         try:
-            from ..services import register_schedules_from_config
+            from django_cfg.apps.integrations.rq.services import register_schedules_from_config
             register_schedules_from_config()
         except Exception as e:
             self.stdout.write(
