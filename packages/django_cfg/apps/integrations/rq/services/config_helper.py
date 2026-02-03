@@ -220,17 +220,8 @@ def register_schedules_from_config():
         >>> from django_cfg.apps.integrations.rq.services import register_schedules_from_config
         >>> register_schedules_from_config()
     """
-    # DEBUG: Print call stack to identify who is calling this function
-    import traceback
-    import sys
-    logger.warning("=== register_schedules_from_config CALLED ===")
-    logger.warning(f"Command: {' '.join(sys.argv)}")
-    for line in traceback.format_stack()[-10:-1]:  # Last 10 frames except current
-        for l in line.strip().split('\n'):
-            logger.warning(l)
-    logger.warning("=== END TRACEBACK ===")
-
     try:
+        import sys
         import django_rq
         from rq_scheduler import Scheduler
 
@@ -245,10 +236,27 @@ def register_schedules_from_config():
             logger.debug("No schedules configured")
             return
 
-        # Get scheduler for default queue
-        queue = django_rq.get_queue('default')
+        # Determine which queue the rqscheduler daemon is running for
+        # by checking --queue argument. This is important because
+        # rq-scheduler daemon only processes jobs registered with
+        # a Scheduler instance for the SAME queue.
+        scheduler_queue = 'default'
+        if '--queue' in sys.argv:
+            try:
+                queue_idx = sys.argv.index('--queue')
+                if queue_idx + 1 < len(sys.argv):
+                    scheduler_queue = sys.argv[queue_idx + 1]
+            except (ValueError, IndexError):
+                pass
+
+        # Create Scheduler for the daemon's queue
+        # All schedules will be registered here, and queue_name parameter
+        # determines where the job gets pushed when it runs
+        queue = django_rq.get_queue(scheduler_queue)
         scheduler = Scheduler(queue=queue, connection=queue.connection)
         connection = queue.connection
+
+        logger.info(f"Using scheduler for queue: {scheduler_queue}")
 
         # Use distributed lock to prevent race conditions
         # Lock expires after 60 seconds in case of crash
@@ -283,6 +291,9 @@ def register_schedules_from_config():
                     if not job_id:
                         job_id = _generate_deterministic_job_id(schedule_config)
 
+                    # Target queue for job execution (can differ from scheduler's queue)
+                    target_queue = schedule_config.queue or 'default'
+
                     # Clean up old version of this schedule
                     _cleanup_old_schedules(scheduler, job_id)
 
@@ -292,34 +303,46 @@ def register_schedules_from_config():
                         import warnings
                         with warnings.catch_warnings():
                             warnings.filterwarnings('ignore', category=FutureWarning)
-                            scheduler.cron(
-                                schedule_config.cron,
-                                func=func,
-                                args=schedule_config.args,
-                                kwargs=schedule_config.kwargs,
-                                queue_name=schedule_config.queue,
-                                timeout=schedule_config.timeout,
-                                result_ttl=schedule_config.result_ttl,
-                                id=job_id,
-                                repeat=schedule_config.repeat,
-                            )
-                        logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron})")
+                            # For cron schedules, repeat=None means infinite in rq-scheduler
+                            cron_kwargs = {
+                                "cron_string": schedule_config.cron,
+                                "func": func,
+                                "args": schedule_config.args,
+                                "kwargs": schedule_config.kwargs,
+                                "queue_name": target_queue,
+                                "timeout": schedule_config.timeout,
+                                "result_ttl": schedule_config.result_ttl,
+                                "id": job_id,
+                            }
+                            # Only pass repeat if explicitly set (not None)
+                            if schedule_config.repeat is not None:
+                                cron_kwargs["repeat"] = schedule_config.repeat
+
+                            scheduler.cron(**cron_kwargs)
+                        logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron}) -> queue={target_queue}")
 
                     elif schedule_config.interval:
                         from datetime import datetime
-                        scheduler.schedule(
-                            scheduled_time=datetime.utcnow(),  # Start immediately
-                            func=func,
-                            args=schedule_config.args,
-                            kwargs=schedule_config.kwargs,
-                            interval=schedule_config.interval,
-                            queue_name=schedule_config.queue,
-                            timeout=schedule_config.timeout,
-                            result_ttl=schedule_config.result_ttl,
-                            id=job_id,
-                            repeat=schedule_config.repeat,
-                        )
-                        logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s)")
+                        # For interval schedules, repeat=None means infinite repetition in rq-scheduler
+                        # If schedule_config.repeat is set, use it; otherwise omit for infinite
+                        schedule_kwargs = {
+                            "scheduled_time": datetime.utcnow(),  # Start immediately
+                            "func": func,
+                            "args": schedule_config.args,
+                            "kwargs": schedule_config.kwargs,
+                            "interval": schedule_config.interval,
+                            "queue_name": target_queue,
+                            "timeout": schedule_config.timeout,
+                            "result_ttl": schedule_config.result_ttl,
+                            "id": job_id,
+                        }
+                        # Only pass repeat if explicitly set (not None)
+                        # When repeat is omitted, rq-scheduler defaults to infinite
+                        if schedule_config.repeat is not None:
+                            schedule_kwargs["repeat"] = schedule_config.repeat
+
+                        scheduler.schedule(**schedule_kwargs)
+                        logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s) -> queue={target_queue}")
 
                     elif schedule_config.scheduled_time:
                         from datetime import datetime
@@ -330,12 +353,12 @@ def register_schedules_from_config():
                             func=func,
                             args=schedule_config.args,
                             kwargs=schedule_config.kwargs,
-                            queue_name=schedule_config.queue,
+                            queue_name=target_queue,
                             timeout=schedule_config.timeout,
                             result_ttl=schedule_config.result_ttl,
                             id=job_id,
                         )
-                        logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time})")
+                        logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time}) -> queue={target_queue}")
 
                 except Exception as e:
                     logger.error(f"Failed to register schedule {schedule_config.func}: {e}")
