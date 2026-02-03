@@ -306,6 +306,7 @@ class DjangoCfgConfig(DjangoConfig):
 
     django_rq: Optional[DjangoRQConfig] = DjangoRQConfig(
         enabled=True,
+        redis_db=9,  # djangocfg demo - see deployment/REDIS.md
         queues=[
             RQQueueConfig(queue="default", default_timeout=360, default_result_ttl=500),
             RQQueueConfig(queue="high", default_timeout=180, default_result_ttl=300),

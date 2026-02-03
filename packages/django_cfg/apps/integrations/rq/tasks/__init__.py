@@ -8,6 +8,7 @@ from .demo_tasks import demo_scheduler_heartbeat
 from .maintenance import (
     cleanup_old_jobs,
     cleanup_orphaned_job_keys,
+    diagnose_scheduled_jobs,
     get_rq_stats,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     # Maintenance tasks
     'cleanup_old_jobs',
     'cleanup_orphaned_job_keys',
+    'diagnose_scheduled_jobs',
     'get_rq_stats',
 ]

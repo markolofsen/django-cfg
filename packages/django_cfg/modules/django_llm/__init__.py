@@ -5,7 +5,7 @@ Auto-configuring LLM and translation service that integrates with DjangoConfig.
 """
 
 # from .service import DjangoLLM, LLMError, LLMConfigError  # Removed - using LLMClient directly
-from .llm import LLMCache, LLMClient
+from .llm import LLMCache, LLMClient, LLMProvider
 from .translator import DjangoTranslator, TranslationError
 
 
@@ -66,6 +66,7 @@ __all__ = [
     'DjangoTranslator',
     'LLMClient',
     'LLMCache',
+    'LLMProvider',
     'TranslationError',
     'chat_completion',
     'translate_text',

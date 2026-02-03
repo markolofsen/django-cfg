@@ -5,13 +5,24 @@ Manages initialization and access to LLM provider clients.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from enum import Enum
+from typing import Any, Dict, Literal, Optional, Union
 
 from openai import OpenAI
 
 from .config_builder import ConfigBuilder
 
 logger = logging.getLogger(__name__)
+
+
+class LLMProvider(str, Enum):
+    """Available LLM providers."""
+    OPENAI = "openai"
+    OPENROUTER = "openrouter"
+
+
+# Type alias for provider selection
+LLMProviderType = Union[LLMProvider, Literal["openai", "openrouter"]]
 
 
 class ProviderManager:
@@ -21,7 +32,7 @@ class ProviderManager:
         self,
         apikey_openrouter: Optional[str] = None,
         apikey_openai: Optional[str] = None,
-        preferred_provider: Optional[str] = None,
+        preferred_provider: Optional[LLMProviderType] = None,
         django_config: Optional[Any] = None
     ):
         """
@@ -35,7 +46,11 @@ class ProviderManager:
         """
         self.apikey_openrouter = apikey_openrouter
         self.apikey_openai = apikey_openai
-        self.preferred_provider = preferred_provider
+        # Normalize preferred_provider to string
+        if isinstance(preferred_provider, LLMProvider):
+            self.preferred_provider = preferred_provider.value
+        else:
+            self.preferred_provider = preferred_provider
         self.django_config = django_config
 
         # Initialize clients dictionary

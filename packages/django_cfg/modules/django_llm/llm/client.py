@@ -21,7 +21,7 @@ from .models_api import ModelsQueryAPI
 from .models_cache import ModelInfo, ModelsCache
 
 # Import new components
-from .providers import ProviderManager, ProviderSelector
+from .providers import LLMProvider, LLMProviderType, ProviderManager, ProviderSelector
 from .requests import ChatRequestHandler, EmbeddingRequestHandler, RequestCacheManager
 from .responses import ResponseBuilder
 from .stats import StatsManager
@@ -42,7 +42,7 @@ class LLMClient(BaseCfgModule):
         max_cache_size: int = 1000,
         models_cache_ttl: int = 86400,
         config: Optional[Any] = None,
-        preferred_provider: Optional[str] = None
+        preferred_provider: Optional[LLMProviderType] = None
     ):
         """
         Initialize LLM client.
@@ -55,8 +55,9 @@ class LLMClient(BaseCfgModule):
             max_cache_size: Maximum cache size
             models_cache_ttl: Models cache TTL in seconds (default: 24 hours)
             config: DjangoConfig instance for getting headers and settings
-            preferred_provider: Preferred provider ("openai" or "openrouter").
-                               If None, defaults to "openai" for embeddings, "openrouter" for chat
+            preferred_provider: Preferred provider (LLMProvider.OPENAI or LLMProvider.OPENROUTER).
+                               Also accepts strings "openai" or "openrouter".
+                               If None, auto-detects based on available API keys.
         """
         super().__init__()
 

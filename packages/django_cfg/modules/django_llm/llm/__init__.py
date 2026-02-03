@@ -18,6 +18,7 @@ Image Generation (v2.0):
 from .cache import LLMCache
 from .client import LLMClient
 from .models_cache import ModelsCache
+from .providers import LLMProvider
 from .cache_dirs import (
     CacheDirectoryBuilder,
     get_default_llm_cache_dir,
@@ -78,6 +79,7 @@ __all__ = [
     # Core LLM
     'LLMClient',
     'LLMCache',
+    'LLMProvider',
     'ModelsCache',
     'CacheDirectoryBuilder',
     'get_default_llm_cache_dir',

@@ -101,20 +101,18 @@ def is_prometheus_enabled() -> bool:
 
 def get_redis_url() -> Optional[str]:
     """
-    Get Redis URL from django-cfg DjangoConfig.
+    Get Redis URL with correct database number for RQ isolation.
 
-    This is the global Redis URL that is automatically used for:
-    - RQ queues (if queue.url is not set)
-    - RQ scheduler
-    - Cache backend
-    - Session backend
+    Uses DjangoRQConfig.redis_db to ensure proper project isolation.
+    The base redis_url from DjangoConfig is combined with redis_db
+    from DjangoRQConfig to create the final URL.
 
     Returns:
-        Redis URL string (e.g., "redis://localhost:6379/0") or None
+        Redis URL string with correct DB (e.g., "redis://localhost:6379/1") or None
 
     Example:
         >>> redis_url = get_redis_url()
-        >>> print(redis_url)  # redis://localhost:6379/0
+        >>> print(redis_url)  # redis://localhost:6379/1 (if redis_db=1)
     """
     try:
         from django_cfg.core.config import get_current_config
@@ -123,7 +121,17 @@ def get_redis_url() -> Optional[str]:
         if not config:
             return None
 
-        return getattr(config, 'redis_url', None)
+        base_redis_url = getattr(config, 'redis_url', None)
+        if not base_redis_url:
+            return None
+
+        # Get RQ config and use its redis_db for isolation
+        rq_config = getattr(config, 'django_rq', None)
+        if rq_config and hasattr(rq_config, 'get_redis_url_with_db'):
+            return rq_config.get_redis_url_with_db(base_redis_url)
+
+        # Fallback to base URL if no RQ config
+        return base_redis_url
 
     except Exception as e:
         logger.debug(f"Failed to get redis_url: {e}")
@@ -336,10 +344,10 @@ def register_schedules_from_config():
                             "result_ttl": schedule_config.result_ttl,
                             "id": job_id,
                         }
-                        # Only pass repeat if explicitly set (not None)
-                        # When repeat is omitted, rq-scheduler defaults to infinite
-                        if schedule_config.repeat is not None:
-                            schedule_kwargs["repeat"] = schedule_config.repeat
+                        # IMPORTANT: Always pass repeat parameter explicitly
+                        # rq-scheduler defaults to repeat=1 (run once) if not specified
+                        # We need repeat=None for infinite repetition
+                        schedule_kwargs["repeat"] = schedule_config.repeat  # None = infinite
 
                         scheduler.schedule(**schedule_kwargs)
                         logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s) -> queue={target_queue}")

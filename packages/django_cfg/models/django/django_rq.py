@@ -253,6 +253,10 @@ class DjangoRQConfig(BaseModel):
     Integrates with django-rq for Redis-based task queuing with high performance.
     Automatically adds django_rq to INSTALLED_APPS when enabled.
 
+    IMPORTANT: redis_db is REQUIRED for project isolation!
+    Each project must use a unique Redis database (0-15) to prevent
+    RQ scheduler conflicts. See deployment/REDIS.md for assignments.
+
     Installation:
         ```bash
         pip install django-rq rq-scheduler
@@ -292,6 +296,17 @@ class DjangoRQConfig(BaseModel):
     enabled: bool = Field(
         default=True,
         description="Enable Django-RQ (auto-adds django_rq to INSTALLED_APPS)",
+    )
+
+    redis_db: int = Field(
+        ...,  # Required - no default!
+        ge=0,
+        le=15,
+        description=(
+            "Redis database number (0-15) for RQ isolation. "
+            "REQUIRED: Each project must use unique DB to prevent scheduler conflicts. "
+            "See deployment/REDIS.md for assignments."
+        ),
     )
 
     queues: List[RQQueueConfig] = Field(
@@ -516,10 +531,11 @@ class DjangoRQConfig(BaseModel):
 
         settings: Dict[str, Any] = {}
 
-        # Get redis_url from parent config if available
+        # Get redis_url from parent config and apply redis_db for isolation
         redis_url = None
-        if parent_config and hasattr(parent_config, 'redis_url'):
-            redis_url = parent_config.redis_url
+        if parent_config and hasattr(parent_config, 'redis_url') and parent_config.redis_url:
+            # IMPORTANT: Replace DB in URL with self.redis_db for project isolation
+            redis_url = self.get_redis_url_with_db(parent_config.redis_url)
 
         # Generate RQ_QUEUES configuration from list
         rq_queues = {}
@@ -536,6 +552,43 @@ class DjangoRQConfig(BaseModel):
             settings["RQ_API_TOKEN"] = self.api_token
 
         return settings
+
+    def get_redis_url_with_db(self, base_redis_url: Optional[str] = None) -> Optional[str]:
+        """
+        Get Redis URL with the configured database number.
+
+        Takes a base Redis URL (from DjangoConfig.redis_url) and replaces
+        the database number with self.redis_db for proper isolation.
+
+        Args:
+            base_redis_url: Base Redis URL (e.g., redis://host:6379/0)
+
+        Returns:
+            Redis URL with correct database number, or None if no base URL
+
+        Example:
+            >>> config = DjangoRQConfig(redis_db=1, ...)
+            >>> config.get_redis_url_with_db("redis://localhost:6379/0")
+            'redis://localhost:6379/1'
+        """
+        if not base_redis_url:
+            return None
+
+        from urllib.parse import urlparse, urlunparse
+
+        parsed = urlparse(base_redis_url)
+
+        # Replace path with /{redis_db}
+        new_path = f"/{self.redis_db}"
+        new_url = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            new_path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment
+        ))
+        return new_url
 
     def get_queue_names(self) -> List[str]:
         """Get list of configured queue names."""
