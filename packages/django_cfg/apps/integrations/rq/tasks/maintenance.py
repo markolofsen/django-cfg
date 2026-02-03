@@ -162,8 +162,12 @@ def cleanup_orphaned_job_keys(
 
         logger.info(f"Scanning for orphaned job keys [dry_run={dry_run}]")
 
-        # Get all job keys
-        all_job_keys = set(redis_conn.keys("rq:job:*"))
+        # Get all job keys (decode bytes to strings for comparison)
+        all_job_keys_raw = redis_conn.keys("rq:job:*")
+        all_job_keys = set(
+            k.decode("utf-8") if isinstance(k, bytes) else k
+            for k in all_job_keys_raw
+        )
 
         # Get all valid job IDs from registries and queues
         valid_job_ids = set()
@@ -177,6 +181,15 @@ def cleanup_orphaned_job_keys(
             registry = registry_class(queue=queue)
             for job_id in registry.get_job_ids():
                 valid_job_ids.add(f"rq:job:{job_id}")
+
+        # Add scheduled jobs from rq-scheduler
+        # Scheduled jobs are stored in rq:scheduler:scheduled_jobs sorted set
+        # and should not be considered orphaned
+        scheduled_job_ids = redis_conn.zrange("rq:scheduler:scheduled_jobs", 0, -1)
+        for job_id in scheduled_job_ids:
+            if isinstance(job_id, bytes):
+                job_id = job_id.decode("utf-8")
+            valid_job_ids.add(f"rq:job:{job_id}")
 
         # Find orphaned keys
         orphaned_keys = all_job_keys - valid_job_ids
