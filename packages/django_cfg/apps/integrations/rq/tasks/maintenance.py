@@ -135,9 +135,12 @@ def cleanup_orphaned_job_keys(
     Orphaned keys can accumulate when jobs are improperly cancelled or
     when RQ crashes. This task finds and removes such keys.
 
+    IMPORTANT: This function checks ALL configured queues, not just the one specified.
+    The queue_name parameter is only used to get the Redis connection.
+
     Args:
         dry_run: If True, only count keys without deleting them
-        queue_name: Queue name to check (default: "default")
+        queue_name: Queue name to get Redis connection (default: "default")
 
     Returns:
         Dictionary with cleanup statistics:
@@ -152,8 +155,9 @@ def cleanup_orphaned_job_keys(
         >>> print(f"Found {stats['orphaned_deleted']} orphaned keys")
     """
     try:
-        queue = django_rq.get_queue(queue_name)
-        redis_conn = queue.connection
+        # Get Redis connection from default queue
+        default_queue = django_rq.get_queue(queue_name)
+        redis_conn = default_queue.connection
 
         stats = {
             "orphaned_deleted": 0,
@@ -169,18 +173,34 @@ def cleanup_orphaned_job_keys(
             for k in all_job_keys_raw
         )
 
-        # Get all valid job IDs from registries and queues
+        # Get all valid job IDs from ALL queues' registries
         valid_job_ids = set()
 
-        # Add queued jobs
-        for job_id in queue.job_ids:
-            valid_job_ids.add(f"rq:job:{job_id}")
+        # Get all configured queue names from Django settings
+        from django.conf import settings
+        queue_names = list(getattr(settings, "RQ_QUEUES", {}).keys())
+        if not queue_names:
+            queue_names = ["default"]
 
-        # Add jobs from registries
-        for registry_class in [FinishedJobRegistry, FailedJobRegistry, StartedJobRegistry]:
-            registry = registry_class(queue=queue)
-            for job_id in registry.get_job_ids():
-                valid_job_ids.add(f"rq:job:{job_id}")
+        logger.debug(f"Checking jobs from queues: {queue_names}")
+
+        # Collect valid jobs from ALL queues
+        for qname in queue_names:
+            try:
+                queue = django_rq.get_queue(qname)
+
+                # Add queued jobs
+                for job_id in queue.job_ids:
+                    valid_job_ids.add(f"rq:job:{job_id}")
+
+                # Add jobs from registries
+                for registry_class in [FinishedJobRegistry, FailedJobRegistry, StartedJobRegistry]:
+                    registry = registry_class(queue=queue)
+                    for job_id in registry.get_job_ids():
+                        valid_job_ids.add(f"rq:job:{job_id}")
+
+            except Exception as e:
+                logger.warning(f"Failed to get jobs from queue {qname}: {e}")
 
         # Add scheduled jobs from rq-scheduler
         # Scheduled jobs are stored in rq:scheduler:scheduled_jobs sorted set
@@ -190,6 +210,8 @@ def cleanup_orphaned_job_keys(
             if isinstance(job_id, bytes):
                 job_id = job_id.decode("utf-8")
             valid_job_ids.add(f"rq:job:{job_id}")
+
+        logger.debug(f"Total valid job IDs from all queues: {len(valid_job_ids)}")
 
         # Find orphaned keys
         orphaned_keys = all_job_keys - valid_job_ids
