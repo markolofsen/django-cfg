@@ -208,21 +208,6 @@ class BaseCfgModule(ABC):
 
         return False
 
-    def is_webpush_enabled(self) -> bool:
-        """
-        Check if django-cfg Web Push is enabled.
-
-        Returns:
-            True if Web Push is enabled, False otherwise
-        """
-        webpush_config = self._get_config_key('webpush', None)
-
-        # Check if webpush config exists and is enabled
-        if webpush_config and hasattr(webpush_config, 'enabled'):
-            return webpush_config.enabled
-
-        return False
-
     def is_currency_enabled(self) -> bool:
         """
         Check if django-cfg Currency is enabled.

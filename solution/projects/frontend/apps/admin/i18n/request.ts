@@ -6,9 +6,10 @@
  */
 
 import { getRequestConfig } from 'next-intl/server';
-import { en as baseEn, ru as baseRu, ko as baseKo, mergeTranslations } from '@djangocfg/i18n';
 
-import { en as adminEn, ru as adminRu, ko as adminKo, type AdminTranslations } from './locales';
+import { en as baseEn, ko as baseKo, mergeTranslations, ru as baseRu } from '@djangocfg/i18n';
+
+import { AdminTranslations, en as adminEn, ko as adminKo, ru as adminRu, type } from './locales';
 
 // Type for admin namespace
 type AdminNamespace = { admin: AdminTranslations };

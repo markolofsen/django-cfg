@@ -126,19 +126,6 @@ class ApiKeysConfig(BaseSettings):
     )
 
 
-class PaymentsApiKeysConfig(BaseSettings):
-    """Payments API keys configuration."""
-
-    nowpayments_api_key: str = Field(default="", description="NOWPayments API key")
-    nowpayments_ipn_secret: str = Field(default="", description="NOWPayments IPN secret")
-    nowpayments_sandbox_mode: bool = Field(default=True, description="Use sandbox mode")
-
-    model_config = SettingsConfigDict(
-        env_prefix="PAYMENTS_API_KEYS__",
-        env_nested_delimiter="__",
-    )
-
-
 class AppConfig(BaseSettings):
     """Application configuration."""
 
@@ -209,20 +196,6 @@ class CentrifugoConfig(BaseSettings):
     )
 
 
-class WebPushEnvConfig(BaseSettings):
-    """Web Push notifications configuration (VAPID protocol)."""
-
-    enabled: bool = Field(default=True, description="Enable Web Push notifications")
-    vapid_private_key: Optional[str] = Field(default=None, description="VAPID private key for authentication")
-    vapid_public_key: Optional[str] = Field(default=None, description="VAPID public key for client subscription")
-    vapid_mailto: str = Field(default="mailto:noreply@djangocfg.com", description="VAPID mailto claim (RFC 8292)")
-
-    model_config = SettingsConfigDict(
-        env_prefix="WEBPUSH__",
-        env_nested_delimiter="__",
-    )
-
-
 class EnvironmentMode(BaseSettings):
     """
     Environment mode detection via ENV variables.
@@ -283,12 +256,10 @@ class EnvironmentConfig(BaseSettings):
     email: EmailConfig = Field(default_factory=EmailConfig)
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
     api_keys: ApiKeysConfig = Field(default_factory=ApiKeysConfig)
-    payments_api_keys: PaymentsApiKeysConfig = Field(default_factory=PaymentsApiKeysConfig)
     app: AppConfig = Field(default_factory=AppConfig)
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
     github_oauth: GitHubOAuthEnvConfig = Field(default_factory=GitHubOAuthEnvConfig)
-    webpush: WebPushEnvConfig = Field(default_factory=WebPushEnvConfig)
 
     # gRPC Configuration
     grpc_url: Optional[str] = Field(

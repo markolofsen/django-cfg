@@ -65,10 +65,6 @@ CORE_REGISTRY = {
     # Geo models
     "GeoConfig": ("django_cfg.models.django.geo", "GeoConfig"),
 
-    # Payment system models (BaseCfgAutoModule)
-    "PaymentsConfig": ("django_cfg.models.payments.config", "PaymentsConfig"),
-    "NowPaymentsConfig": ("django_cfg.models.payments.config", "NowPaymentsConfig"),
-
     # Pagination classes
     "DefaultPagination": ("django_cfg.middleware.pagination", "DefaultPagination"),
     "LargePagination": ("django_cfg.middleware.pagination", "LargePagination"),

@@ -33,17 +33,15 @@
  * ```
  */
 
-import { APIClient } from "./client";
+import { APIClient } from './client';
+import { APILogger } from './logger';
+import { ProfilesProfiles } from './profiles__api__profiles/client';
 import {
-  StorageAdapter,
-  LocalStorageAdapter,
-  CookieStorageAdapter,
-  MemoryStorageAdapter
-} from "./storage";
+    CookieStorageAdapter, LocalStorageAdapter, MemoryStorageAdapter, StorageAdapter
+} from './storage';
+
 import type { RetryConfig } from "./retry";
 import type { LoggerConfig } from "./logger";
-import { APILogger } from "./logger";
-import { ProfilesProfiles } from "./profiles__api__profiles/client";
 export * as ProfilesProfilesTypes from "./profiles__api__profiles/models";
 // Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
 // Use namespace exports like CfgAccountsTypes.User or import from specific modules

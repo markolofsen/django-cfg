@@ -224,6 +224,7 @@ class MyConfig(DjangoConfig):
     # Django-RQ configuration
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # REQUIRED: unique per project (0-15) for isolation
         queues=[
             # Default queue for general tasks
             RQQueueConfig(
@@ -334,6 +335,7 @@ Configure scheduled tasks in your config:
 class MyConfig(DjangoConfig):
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # REQUIRED: unique per project (0-15)
         queues=[...],
         schedules=[
             # Update prices every 5 minutes
@@ -556,6 +558,7 @@ Enable metrics in config:
 
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
+    redis_db=0,  # Required
     prometheus_enabled=True,
 )
 ```

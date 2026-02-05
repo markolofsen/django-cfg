@@ -30,7 +30,7 @@
  * ```
  */
 
-import { API, type APIOptions } from './index'
+import { API, APIOptions, type } from './index';
 
 let globalAPI: API | null = null
 

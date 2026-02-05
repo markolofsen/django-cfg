@@ -16,11 +16,6 @@ MODULES_REGISTRY = {
     # Centrifugo module
     "DjangoCfgCentrifugoConfig": ("django_cfg.apps.integrations.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
-    # Web Push module
-    "send_push": ("django_cfg.apps.integrations.webpush", "send_push"),
-    "send_push_to_many": ("django_cfg.apps.integrations.webpush", "send_push_to_many"),
-    "WebPushConfig": ("django_cfg.models.api.webpush", "WebPushConfig"),
-
     # gRPC module (uses flat API - no nested config imports needed)
     "GRPCConfig": ("django_cfg.models.api.grpc", "GRPCConfig"),
     "GRPCServerConfig": ("django_cfg.models.api.grpc", "GRPCServerConfig"),

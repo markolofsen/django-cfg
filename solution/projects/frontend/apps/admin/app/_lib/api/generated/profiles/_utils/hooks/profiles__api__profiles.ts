@@ -17,9 +17,10 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
-import * as Fetchers from '../fetchers/profiles__api__profiles'
+import useSWR, { useSWRConfig } from 'swr';
+
+import * as Fetchers from '../fetchers/profiles__api__profiles';
+
 import type { API } from '../../index'
 import type { PaginatedUserProfileList } from '../schemas/PaginatedUserProfileList.schema'
 import type { PatchedUserProfileRequest } from '../schemas/PatchedUserProfileRequest.schema'

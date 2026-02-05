@@ -34,11 +34,17 @@ class MyConfig(DjangoConfig):
     # Django-RQ configuration
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # REQUIRED: Redis database for project isolation (0-15)
         queues=[
             RQQueueConfig(queue="default"),
         ],
     )
 ```
+
+:::warning Required Field
+`redis_db` is **required** and must be unique per project to prevent RQ scheduler conflicts.
+See [Redis Isolation](#redis-isolation) for details.
+:::
 
 That's it! Django-RQ will automatically:
 - Use `redis_url` for all queues
@@ -68,6 +74,7 @@ class MyConfig(DjangoConfig):
     # === Django-RQ Configuration ===
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # REQUIRED: Unique per project (0-15)
 
         # Queue configurations
         queues=[
@@ -139,6 +146,7 @@ Main configuration model for Django-RQ:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | `bool` | `True` | Enable Django-RQ integration |
+| `redis_db` | `int` | **required** | Redis database number (0-15) for project isolation |
 | `queues` | `List[RQQueueConfig]` | `[RQQueueConfig(queue="default")]` | Queue configurations |
 | `schedules` | `List[RQScheduleConfig]` | `[]` | Scheduled job configurations |
 | `show_admin_link` | `bool` | `True` | Show Django-RQ link in admin |
@@ -268,6 +276,7 @@ RQScheduleConfig(
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
+    redis_db=0,  # Required: unique per project
     queues=[
         # Single queue with defaults
         RQQueueConfig(queue="default"),
@@ -280,6 +289,7 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
+    redis_db=0,  # Required: unique per project
     queues=[
         # High priority (short timeout, short TTL)
         RQQueueConfig(
@@ -310,11 +320,12 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
+    redis_db=0,  # Required: unique per project
     queues=[
-        # Queue 1: Use default redis_url
+        # Queue 1: Use default redis_url with redis_db
         RQQueueConfig(queue="default"),
 
-        # Queue 2: Use specific Redis URL
+        # Queue 2: Use specific Redis URL (overrides redis_db)
         RQQueueConfig(
             queue="slow",
             url="redis://redis-slow:6379/0",
@@ -1042,6 +1053,101 @@ for job in scheduler.get_jobs():
     if 'cleanup' in job.func_name:
         print(f'{job.func_name}: {job.meta}')
 "
+```
+
+---
+
+## Redis Isolation
+
+### Why It's Required
+
+When multiple Django projects share a single Redis instance, RQ schedulers can conflict:
+
+1. **Shared Keys**: All schedulers read from the same `rq:scheduler:scheduled_jobs` set
+2. **Job Theft**: Workers from one project try to execute jobs from another
+3. **Missing Functions**: Jobs fail because task functions don't exist in other projects
+4. **Duplicate Execution**: Same job runs multiple times across projects
+
+### Solution: Separate Redis Databases
+
+Redis supports 16 databases (0-15). Each project uses a unique database number via the **required** `redis_db` field:
+
+```python
+# Project A: carapis
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    redis_db=0,  # carapis uses DB 0
+    queues=[...],
+)
+
+# Project B: unrealon
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    redis_db=1,  # unrealon uses DB 1
+    queues=[...],
+)
+
+# Project C: myproject
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    redis_db=10,  # myproject uses DB 10
+    queues=[...],
+)
+```
+
+### How It Works
+
+1. `DjangoConfig.redis_url` provides the base Redis connection (e.g., `redis://localhost:6379/0`)
+2. `DjangoRQConfig.redis_db` **replaces** the database number in the URL
+3. All queues, workers, and schedulers use the isolated database
+
+```python
+# Parent config
+redis_url: str = "redis://shared-redis:6379/0"
+
+# RQ config
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    redis_db=5,  # Replaces /0 with /5
+    ...
+)
+
+# Resulting URL: redis://shared-redis:6379/5
+```
+
+### Database Assignments
+
+Maintain a central registry of database assignments. Example:
+
+| Project | Redis DB | Purpose |
+|---------|----------|---------|
+| carapis | 0 | Vehicle catalog |
+| unrealon | 1 | Remote parser management |
+| sdkrouter | 2 | SDK routing |
+| cmdop | 3 | AI-powered machine management |
+| listingapis | 4 | Listing aggregation |
+| propapis | 5 | Property APIs |
+| reforms | 6 | Reforms platform |
+| stockapis | 7 | Stock APIs |
+| telegram | 8 | Telegram bots |
+| djangocfg | 9 | Django-CFG demo |
+| *available* | 10-15 | Future projects |
+
+### Validation
+
+The `redis_db` field is:
+- **Required**: No default value - must be explicitly set
+- **Validated**: Must be 0-15 (Pydantic validates range)
+- **Documented**: Field description explains purpose
+
+```python
+# ✅ Valid
+DjangoRQConfig(redis_db=5, ...)
+
+# ❌ Invalid - missing required field
+DjangoRQConfig(queues=[...])  # Error: redis_db field required
+
+# ❌ Invalid - out of range
+DjangoRQConfig(redis_db=16, ...)  # Error: must be <= 15
 ```
 
 ---

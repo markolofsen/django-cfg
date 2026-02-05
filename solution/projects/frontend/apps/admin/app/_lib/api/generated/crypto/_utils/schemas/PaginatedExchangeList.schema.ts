@@ -3,8 +3,9 @@
  *
  * This schema provides runtime validation and type inference.
  *  */
-import { z } from 'zod'
-import { ExchangeSchema } from './Exchange.schema'
+import { z } from 'zod';
+
+import { ExchangeSchema } from './Exchange.schema';
 
 export const PaginatedExchangeListSchema = z.object({
   count: z.int(),

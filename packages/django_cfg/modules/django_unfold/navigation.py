@@ -123,7 +123,18 @@ class NavigationManager(BaseCfgModule):
                     # Load navigation from __cfg__.py
                     try:
                         config_mod = importlib.import_module(f"extensions.apps.{ext.name}.__cfg__")
-                        nav = getattr(config_mod.settings, "navigation", None)
+                        settings_obj = getattr(config_mod, "settings", None)
+                        if not settings_obj:
+                            logger.debug(f"Extension '{ext.name}' has no settings object")
+                            continue
+
+                        # Check if extension is enabled (default to True if not specified)
+                        is_enabled = getattr(settings_obj, "enabled", True)
+                        if not is_enabled:
+                            logger.debug(f"Extension '{ext.name}' is disabled (enabled=False)")
+                            continue
+
+                        nav = getattr(settings_obj, "navigation", None)
                     except Exception as e:
                         logger.warning(
                             f"Failed to load navigation for extension '{ext.name}': {e}\n"
@@ -241,19 +252,6 @@ class NavigationManager(BaseCfgModule):
                         NavigationItem(title="Agent Connections", icon=Icons.WIFI, link=str(reverse_lazy("admin:grpc_grpcagentconnectionstate_changelist"))),
                         NavigationItem(title="Connection Events", icon=Icons.TIMELINE, link=str(reverse_lazy("admin:grpc_grpcagentconnectionevent_changelist"))),
                         NavigationItem(title="Connection Metrics", icon=Icons.ANALYTICS, link=str(reverse_lazy("admin:grpc_grpcagentconnectionmetric_changelist"))),
-                    ]
-                )
-            )
-
-        # Web Push (if enabled)
-        if self.is_webpush_enabled():
-            navigation_sections.append(
-                NavigationSection(
-                    title="Web Push",
-                    separator=True,
-                    collapsible=True,
-                    items=[
-                        NavigationItem(title="Subscriptions", icon=Icons.NOTIFICATIONS, link=str(reverse_lazy("admin:django_cfg_webpush_pushsubscription_changelist"))),
                     ]
                 )
             )

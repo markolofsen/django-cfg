@@ -67,6 +67,7 @@ Enable admin link in config:
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
+    redis_db=0,  # Required: unique per project
     show_admin_link=True,  # Show link in admin
 )
 ```
@@ -188,6 +189,7 @@ curl -X POST http://localhost:8000/api/cfg/rq/jobs/{job-id}/cancel/
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
     enabled=True,
+    redis_db=0,  # Required: unique per project
     prometheus_enabled=True,
 )
 ```

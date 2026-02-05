@@ -15,7 +15,7 @@ def get_enabled_cfg_apps() -> List[str]:
     """
     Get list of enabled django-cfg built-in apps based on configuration.
 
-    Note: Business apps (knowbase, newsletter, agents, payments, support, leads)
+    Note: Business apps (knowbase, newsletter, agents, support, leads)
     are now handled via the extensions system (extensions/apps/).
     Use get_extension_apps() for those.
 
@@ -38,9 +38,6 @@ def get_enabled_cfg_apps() -> List[str]:
 
     if base_module.is_grpc_enabled():
         enabled_apps.append("django_cfg.apps.integrations.grpc")
-
-    if base_module.is_webpush_enabled():
-        enabled_apps.append("django_cfg.apps.integrations.webpush")
 
     return enabled_apps
 
@@ -132,9 +129,6 @@ if base_module.should_enable_rq():
 
 if base_module.is_grpc_enabled():
     urlpatterns.append(path('cfg/grpc/', include('django_cfg.apps.integrations.grpc.urls')))
-
-if base_module.is_webpush_enabled():
-    urlpatterns.append(path('cfg/webpush/', include('django_cfg.apps.integrations.webpush.urls')))
 
 # Geo app (countries, states, cities)
 if base_module.is_geo_enabled():

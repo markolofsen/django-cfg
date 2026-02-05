@@ -21,7 +21,6 @@ def get_url_group(url_pattern: str, depth: int = 3) -> str:
 
     Examples:
         /api/accounts/profile/ → api/accounts
-        /api/payments/webhook/status/ → api/payments/webhook
         /cfg/health/drf/ → cfg/health/drf
         /admin/auth/user/ → admin/auth/user
 

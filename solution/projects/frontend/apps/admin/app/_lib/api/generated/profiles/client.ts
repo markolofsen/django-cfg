@@ -1,9 +1,8 @@
-import { ProfilesProfiles } from "./profiles__api__profiles";
-import { HttpClientAdapter, FetchAdapter } from "./http";
-import { APIError, NetworkError } from "./errors";
-import { APILogger, type LoggerConfig } from "./logger";
-import { withRetry, type RetryConfig } from "./retry";
-
+import { APIError, NetworkError } from './errors';
+import { FetchAdapter, HttpClientAdapter } from './http';
+import { APILogger, LoggerConfig, type } from './logger';
+import { ProfilesProfiles } from './profiles__api__profiles';
+import { RetryConfig, type, withRetry } from './retry';
 
 /**
  * Async API client for Django CFG API.

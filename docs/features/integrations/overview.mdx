@@ -124,6 +124,7 @@ class MyConfig(DjangoConfig):
 
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # Required: unique per project (0-15)
         queues=[
             RQQueueConfig(queue="default"),
         ],
@@ -180,6 +181,7 @@ class MyConfig(DjangoConfig):
     # Django-RQ configuration
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # Required: unique per project (0-15)
         queues=[
             RQQueueConfig(queue="default"),
             RQQueueConfig(queue="high"),
@@ -250,6 +252,7 @@ class ProductionConfig(DjangoConfig):
     # Django-RQ for production background tasks
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # Required: unique per project (0-15)
         queues=[
             RQQueueConfig(queue="high"),
             RQQueueConfig(queue="default"),

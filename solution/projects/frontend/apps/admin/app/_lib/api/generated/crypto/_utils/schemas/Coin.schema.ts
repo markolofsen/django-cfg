@@ -4,7 +4,7 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for coins.
  *  */
-import { z } from 'zod'
+import { z } from 'zod';
 
 /**
  * Serializer for coins.

@@ -10,8 +10,9 @@ Organized by category:
 - api/ - API, authentication, and documentation
 - django/ - Django-specific configurations
 - services/ - External services (email, telegram, ngrok)
-- payments/ - Payment provider configurations
 - tasks/ - Task/worker configurations
+
+Note: Payments configuration is now handled via extensions (extensions/apps/payments/__cfg__.py)
 """
 
 # Base classes
@@ -60,8 +61,6 @@ from .ngrok.auth import NgrokAuthConfig
 from .ngrok.config import NgrokConfig
 from .ngrok.tunnel import NgrokTunnelConfig
 
-# Payments
-from .payments.config import PaymentsConfig, NowPaymentsConfig
 from .services.base import ServiceConfig
 
 # Services
@@ -113,9 +112,6 @@ __all__ = [
     "NgrokConfig",
     "NgrokAuthConfig",
     "NgrokTunnelConfig",
-    # Payments
-    "PaymentsConfig",
-    "NowPaymentsConfig",
     # OAuth
     "GitHubOAuthConfig",
     "OAuthConfig",

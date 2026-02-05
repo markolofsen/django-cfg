@@ -4,8 +4,9 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for orders.
  *  */
-import { z } from 'zod'
-import * as Enums from '../../enums'
+import { z } from 'zod';
+
+import * as Enums from '../../enums';
 
 /**
  * Serializer for orders.

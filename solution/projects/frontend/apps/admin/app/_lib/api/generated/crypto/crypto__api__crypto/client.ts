@@ -1,5 +1,4 @@
-import * as Models from "./models";
-
+import * as Models from './models';
 
 /**
  * API endpoints for Crypto.

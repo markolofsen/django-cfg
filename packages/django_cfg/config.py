@@ -15,7 +15,7 @@ def is_feature_available(feature: str) -> bool:
     Check if a feature is available (dependencies installed).
 
     Args:
-        feature: Feature name (e.g., 'grpc', 'centrifugo', 'webpush', 'dramatiq')
+        feature: Feature name (e.g., 'grpc', 'centrifugo', 'dramatiq')
 
     Returns:
         True if feature dependencies are available
@@ -30,12 +30,6 @@ def is_feature_available(feature: str) -> bool:
     elif feature == "centrifugo":
         try:
             import cent  # noqa
-            return True
-        except ImportError:
-            return False
-    elif feature == "webpush":
-        try:
-            import pywebpush  # noqa
             return True
         except ImportError:
             return False

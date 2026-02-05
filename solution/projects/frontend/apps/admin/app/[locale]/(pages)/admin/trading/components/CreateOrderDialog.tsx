@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 
 import { OrderCreateRequestOrderType, OrderCreateRequestSide } from '@/api/generated/trading/enums';
 import { useTrading } from '@/contexts';
+import { events } from '@djangocfg/ui-core';
 import {
     Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
     Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@djangocfg/ui-nextjs';
-import { events } from '@djangocfg/ui-core';
 
 import { TRADING_DIALOG_EVENTS } from '../events';
 

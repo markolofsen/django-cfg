@@ -258,10 +258,6 @@ class DjangoConfig(BaseModel):
         default=None,
         description="gRPC server configuration",
     )
-    webpush: Optional[WebPushConfig] = Field(
-        default=None,
-        description="Web Push notifications (VAPID protocol)",
-    )
     api_keys: Optional[ApiKeys] = Field(
         default=None,
         description="External API keys (OpenAI, OpenRouter, etc.)",

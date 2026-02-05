@@ -12,7 +12,6 @@ Complete example demonstrating all django_cfg features:
 - Background tasks (Django-RQ)
 - Real-time (Centrifugo, gRPC)
 - Database backups
-- Payments (NowPayments)
 """
 
 from typing import Dict, Optional
@@ -49,7 +48,6 @@ from django_cfg import (
     # API
     OpenAPIClientConfig,
     OpenAPIGroupConfig,
-    WebPushConfig,
     # Background Tasks
     DjangoRQConfig,
     RQQueueConfig,
@@ -59,9 +57,6 @@ from django_cfg import (
     GRPCConfig,
     NgrokConfig,
     NextJsAdminConfig,
-    # Payments
-    PaymentsConfig,
-    NowPaymentsConfig,
     # Dynamic Settings
     ConstanceConfig,
     ConstanceField,
@@ -364,38 +359,11 @@ class DjangoCfgConfig(DjangoConfig):
         else None
     )
 
-    webpush: Optional[WebPushConfig] = (
-        WebPushConfig(
-            enabled=env.webpush.enabled,
-            vapid_private_key=env.webpush.vapid_private_key,
-            vapid_public_key=env.webpush.vapid_public_key,
-            vapid_mailto=env.webpush.vapid_mailto,
-        )
-        if env.webpush.enabled
-        else None
-    )
-
     nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(
         project_path="../frontend/apps/admin",
         api_output_path="app/_lib/api/generated",
     )
-
-    # ╔══════════════════════════════════════════════════════════════════════════╗
-    # ║                            PAYMENTS                                      ║
-    # ╚══════════════════════════════════════════════════════════════════════════╝
-
-    # payments: Optional[PaymentsConfig] = PaymentsConfig(
-    #     enabled=True,
-    #     providers=[
-    #         NowPaymentsConfig(
-    #             enabled=True,
-    #             api_key=env.nowpayments.api_key,
-    #             ipn_secret=env.nowpayments.ipn_secret,
-    #             sandbox=env.debug,
-    #         ),
-    #     ],
-    # )
-
+    
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          CURRENCY & MONEY                                ║
     # ╚══════════════════════════════════════════════════════════════════════════╝

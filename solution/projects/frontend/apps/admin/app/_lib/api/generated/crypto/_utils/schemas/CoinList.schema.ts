@@ -4,7 +4,7 @@
  * This schema provides runtime validation and type inference.
  *  * Lightweight serializer for coin lists.
  *  */
-import { z } from 'zod'
+import { z } from 'zod';
 
 /**
  * Lightweight serializer for coin lists.

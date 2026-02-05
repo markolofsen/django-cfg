@@ -30,15 +30,22 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { consola } from 'consola'
-import { CoinSchema, type Coin } from '../schemas/Coin.schema'
-import { CoinStatsSchema, type CoinStats } from '../schemas/CoinStats.schema'
-import { ExchangeSchema, type Exchange } from '../schemas/Exchange.schema'
-import { PaginatedCoinListListSchema, type PaginatedCoinListList } from '../schemas/PaginatedCoinListList.schema'
-import { PaginatedExchangeListSchema, type PaginatedExchangeList } from '../schemas/PaginatedExchangeList.schema'
-import { PaginatedWalletListSchema, type PaginatedWalletList } from '../schemas/PaginatedWalletList.schema'
-import { WalletSchema, type Wallet } from '../schemas/Wallet.schema'
-import { getAPIInstance } from '../../api-instance'
+import { consola } from 'consola';
+
+import { getAPIInstance } from '../../api-instance';
+import { Coin, CoinSchema, type } from '../schemas/Coin.schema';
+import { CoinStats, CoinStatsSchema, type } from '../schemas/CoinStats.schema';
+import { Exchange, ExchangeSchema, type } from '../schemas/Exchange.schema';
+import {
+    PaginatedCoinListList, PaginatedCoinListListSchema, type
+} from '../schemas/PaginatedCoinListList.schema';
+import {
+    PaginatedExchangeList, PaginatedExchangeListSchema, type
+} from '../schemas/PaginatedExchangeList.schema';
+import {
+    PaginatedWalletList, PaginatedWalletListSchema, type
+} from '../schemas/PaginatedWalletList.schema';
+import { type, Wallet, WalletSchema } from '../schemas/Wallet.schema';
 
 /**
  * List coins

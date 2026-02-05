@@ -3,8 +3,9 @@
  *
  * This schema provides runtime validation and type inference.
  *  */
-import { z } from 'zod'
-import { WalletSchema } from './Wallet.schema'
+import { z } from 'zod';
+
+import { WalletSchema } from './Wallet.schema';
 
 export const PaginatedWalletListSchema = z.object({
   count: z.int(),

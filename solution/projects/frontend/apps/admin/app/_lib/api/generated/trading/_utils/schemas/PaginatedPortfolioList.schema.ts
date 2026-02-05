@@ -3,8 +3,9 @@
  *
  * This schema provides runtime validation and type inference.
  *  */
-import { z } from 'zod'
-import { PortfolioSchema } from './Portfolio.schema'
+import { z } from 'zod';
+
+import { PortfolioSchema } from './Portfolio.schema';
 
 export const PaginatedPortfolioListSchema = z.object({
   count: z.int(),

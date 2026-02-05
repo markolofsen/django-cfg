@@ -16,7 +16,6 @@ from .limits import LimitsConfig
 from .oauth import GitHubOAuthConfig, OAuthConfig
 from .rate_limiting import RateLimitConfig, RateLimitRule
 from .twofactor import TwoFactorConfig
-from .webpush import WebPushConfig
 
 __all__ = [
     "APIConfig",
@@ -33,5 +32,4 @@ __all__ = [
     "GitHubOAuthConfig",
     "OAuthConfig",
     "TwoFactorConfig",
-    "WebPushConfig",
 ]

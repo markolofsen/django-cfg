@@ -35,7 +35,6 @@ from ...models import (
 )
 from ..encryption.config import EncryptionConfig
 from ...models.api.grpc import GRPCConfig
-from ...models.api.webpush import WebPushConfig
 from ...models.ngrok import NgrokConfig
 from ...modules.nextjs_admin import NextJsAdminConfig
 from ..exceptions import ConfigurationError
@@ -337,11 +336,6 @@ class DjangoConfig(BaseModel):
     grpc: Optional[GRPCConfig] = Field(
         default=None,
         description="gRPC server configuration",
-    )
-
-    webpush: Optional["WebPushConfig"] = Field(
-        default=None,
-        description="Web Push notifications (VAPID protocol)",
     )
 
     api_keys: Optional[ApiKeys] = Field(

@@ -285,7 +285,6 @@ class StartupDisplayManager(BaseDisplayManager):
         endpoints_table.add_column("Endpoint", style="bright_green")
 
         endpoints_table.add_row(f"• {self.get_base_url('cfg', 'health')}")
-        endpoints_table.add_row(f"• {self.get_base_url('api', 'payments')}")
 
         # Use new two-column table method for perfect 50/50 layout
         self.print_two_column_table(
@@ -337,29 +336,6 @@ class StartupDisplayManager(BaseDisplayManager):
     def _display_config_panels(self):
         """Display app-specific configuration panels."""
         config_panels = []
-
-        # Payments configuration
-        if (self.config and hasattr(self.config, 'payments') and
-            self.config.payments and self.config.payments.enabled):
-
-            payment_table = self.create_table()
-            payment_table.add_column("Setting", style="cyan", width=20)
-            payment_table.add_column("Value", style="white")
-
-            payment_table.add_row("Enabled", f"[green]{self.config.payments.enabled}[/green]")
-
-            # Show active providers (v2.0)
-            active_providers = self.config.payments.active_providers
-            if active_providers:
-                payment_table.add_row("Providers", f"[green]{', '.join(active_providers)}[/green]")
-            else:
-                payment_table.add_row("Providers", "[yellow]None configured[/yellow]")
-
-            config_panels.append(self.create_panel(
-                payment_table,
-                title="💳 Payments",
-                border_style="yellow"
-            ))
 
         # Tasks configuration - removed from config_panels, will be shown separately
 
@@ -488,44 +464,7 @@ class StartupDisplayManager(BaseDisplayManager):
             # Count fields by source
             user_fields = len(constance_config.fields)
 
-            # Count by app (extensions are now auto-discovered)
-            tasks_count = 0
-            knowbase_count = 0
-            payments_count = 0
-
-            try:
-                from django_cfg.modules.base import BaseCfgModule
-                base_module = BaseCfgModule()
-
-                if base_module.is_extension_enabled("knowbase"):
-                    try:
-                        from extensions.apps.knowbase.config import (
-                            get_django_cfg_knowbase_constance_fields,
-                        )
-                        knowbase_fields = get_django_cfg_knowbase_constance_fields()
-                        knowbase_count = len(knowbase_fields)
-                    except:
-                        pass
-
-                if base_module.is_extension_enabled("payments"):
-                    try:
-                        from extensions.apps.payments.config import (
-                            get_django_cfg_payments_constance_fields,
-                        )
-                        payments_fields = get_django_cfg_payments_constance_fields()
-                        payments_count = len(payments_fields)
-                    except:
-                        pass
-            except:
-                pass
-
             summary_table.add_row("User Defined", f"[blue]{user_fields}[/blue]")
-            if tasks_count > 0:
-                summary_table.add_row("Tasks Module", f"[green]{tasks_count}[/green]")
-            if knowbase_count > 0:
-                summary_table.add_row("Knowbase App", f"[green]{knowbase_count}[/green]")
-            if payments_count > 0:
-                summary_table.add_row("Payments App", f"[green]{payments_count}[/green]")
             summary_table.add_row("Total", f"[yellow]{len(all_fields)}[/yellow]")
 
             main_content.add_row(summary_table)
@@ -640,38 +579,6 @@ class StartupDisplayManager(BaseDisplayManager):
         try:
             # Count fields by source
             user_fields = len(constance_config.fields)  # User-defined fields
-            app_fields = constance_config._get_app_constance_fields()
-
-            # Count by app (extensions are now auto-discovered)
-            tasks_count = 0
-            knowbase_count = 0
-            payments_count = 0
-
-            try:
-                from django_cfg.modules.base import BaseCfgModule
-                base_module = BaseCfgModule()
-
-                if base_module.is_extension_enabled("knowbase"):
-                    try:
-                        from extensions.apps.knowbase.config import (
-                            get_django_cfg_knowbase_constance_fields,
-                        )
-                        knowbase_fields = get_django_cfg_knowbase_constance_fields()
-                        knowbase_count = len(knowbase_fields)
-                    except:
-                        pass
-
-                if base_module.is_extension_enabled("payments"):
-                    try:
-                        from extensions.apps.payments.config import (
-                            get_django_cfg_payments_constance_fields,
-                        )
-                        payments_fields = get_django_cfg_payments_constance_fields()
-                        payments_count = len(payments_fields)
-                    except:
-                        pass
-            except:
-                pass
 
             # Create summary table
             summary_table = self.create_table()
@@ -679,14 +586,6 @@ class StartupDisplayManager(BaseDisplayManager):
             summary_table.add_column("Fields", style="white")
 
             summary_table.add_row("User Defined", f"[blue]{user_fields}[/blue]")
-
-            if tasks_count > 0:
-                summary_table.add_row("Tasks Module", f"[green]{tasks_count}[/green]")
-            if knowbase_count > 0:
-                summary_table.add_row("Knowbase App", f"[green]{knowbase_count}[/green]")
-            if payments_count > 0:
-                summary_table.add_row("Payments App", f"[green]{payments_count}[/green]")
-
             summary_table.add_row("Total", f"[yellow]{len(all_fields)}[/yellow]")
 
             summary_panel = self.create_panel(

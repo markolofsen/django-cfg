@@ -351,6 +351,7 @@ def trigger_price_update(request):
 class MyConfig(DjangoConfig):
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # REQUIRED: unique per project (0-15)
         queues=[...],
         schedules=[
             # Update prices every 5 minutes

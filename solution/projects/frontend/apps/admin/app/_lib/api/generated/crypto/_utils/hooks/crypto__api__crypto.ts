@@ -17,8 +17,10 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr'
-import * as Fetchers from '../fetchers/crypto__api__crypto'
+import useSWR from 'swr';
+
+import * as Fetchers from '../fetchers/crypto__api__crypto';
+
 import type { API } from '../../index'
 import type { Coin } from '../schemas/Coin.schema'
 import type { CoinStats } from '../schemas/CoinStats.schema'

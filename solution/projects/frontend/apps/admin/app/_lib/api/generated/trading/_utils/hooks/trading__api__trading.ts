@@ -17,9 +17,10 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr'
-import { useSWRConfig } from 'swr'
-import * as Fetchers from '../fetchers/trading__api__trading'
+import useSWR, { useSWRConfig } from 'swr';
+
+import * as Fetchers from '../fetchers/trading__api__trading';
+
 import type { API } from '../../index'
 import type { Order } from '../schemas/Order.schema'
 import type { OrderCreate } from '../schemas/OrderCreate.schema'

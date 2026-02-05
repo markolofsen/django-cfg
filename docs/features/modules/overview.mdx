@@ -239,6 +239,7 @@ from django_cfg import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
 # In config.py
 django_rq = DjangoRQConfig(
     enabled=True,
+    redis_db=0,  # Required: unique per project (0-15)
     queues=[
         RQQueueConfig(queue="default"),
         RQQueueConfig(queue="high", default_timeout=3600),

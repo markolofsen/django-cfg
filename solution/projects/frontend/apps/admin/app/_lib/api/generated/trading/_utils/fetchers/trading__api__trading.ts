@@ -30,17 +30,26 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { consola } from 'consola'
-import { OrderSchema, type Order } from '../schemas/Order.schema'
-import { OrderCreateSchema, type OrderCreate } from '../schemas/OrderCreate.schema'
-import { OrderCreateRequestSchema, type OrderCreateRequest } from '../schemas/OrderCreateRequest.schema'
-import { OrderRequestSchema, type OrderRequest } from '../schemas/OrderRequest.schema'
-import { PaginatedOrderListSchema, type PaginatedOrderList } from '../schemas/PaginatedOrderList.schema'
-import { PaginatedPortfolioListSchema, type PaginatedPortfolioList } from '../schemas/PaginatedPortfolioList.schema'
-import { PatchedOrderRequestSchema, type PatchedOrderRequest } from '../schemas/PatchedOrderRequest.schema'
-import { PortfolioSchema, type Portfolio } from '../schemas/Portfolio.schema'
-import { PortfolioStatsSchema, type PortfolioStats } from '../schemas/PortfolioStats.schema'
-import { getAPIInstance } from '../../api-instance'
+import { consola } from 'consola';
+
+import { getAPIInstance } from '../../api-instance';
+import { Order, OrderSchema, type } from '../schemas/Order.schema';
+import { OrderCreate, OrderCreateSchema, type } from '../schemas/OrderCreate.schema';
+import {
+    OrderCreateRequest, OrderCreateRequestSchema, type
+} from '../schemas/OrderCreateRequest.schema';
+import { OrderRequest, OrderRequestSchema, type } from '../schemas/OrderRequest.schema';
+import {
+    PaginatedOrderList, PaginatedOrderListSchema, type
+} from '../schemas/PaginatedOrderList.schema';
+import {
+    PaginatedPortfolioList, PaginatedPortfolioListSchema, type
+} from '../schemas/PaginatedPortfolioList.schema';
+import {
+    PatchedOrderRequest, PatchedOrderRequestSchema, type
+} from '../schemas/PatchedOrderRequest.schema';
+import { Portfolio, PortfolioSchema, type } from '../schemas/Portfolio.schema';
+import { PortfolioStats, PortfolioStatsSchema, type } from '../schemas/PortfolioStats.schema';
 
 /**
  * List orders

@@ -4,8 +4,9 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for coin statistics.
  *  */
-import { z } from 'zod'
-import { CoinListSchema } from './CoinList.schema'
+import { z } from 'zod';
+
+import { CoinListSchema } from './CoinList.schema';
 
 /**
  * Serializer for coin statistics.

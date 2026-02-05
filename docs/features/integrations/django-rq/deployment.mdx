@@ -721,6 +721,7 @@ class ProductionConfig(DjangoConfig):
 
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
+        redis_db=0,  # REQUIRED: unique per project (0-15) for isolation
         queues=[
             RQQueueConfig(queue="default", default_timeout=360),
             RQQueueConfig(queue="high", default_timeout=180),

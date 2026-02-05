@@ -1,12 +1,12 @@
 import '@core/globals.css';
 
+import { getMessages } from 'next-intl/server';
 import { Manrope } from 'next/font/google';
 import { notFound } from 'next/navigation';
-import { getMessages } from 'next-intl/server';
 
 import { generateMetadata } from '@core/metadata';
 import { settings } from '@core/settings';
-import { I18nProvider, routing, generateLocaleParams } from '@djangocfg/nextjs/i18n';
+import { generateLocaleParams, I18nProvider, routing } from '@djangocfg/nextjs/i18n';
 import { AppLayout } from '@layouts/AppLayout';
 
 import type { Messages } from '@djangocfg/nextjs/i18n';
