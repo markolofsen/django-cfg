@@ -152,11 +152,20 @@ class ParamsBuilder:
 
         Returns list sorted by: required first, then optional.
         This ensures TypeScript compatibility.
+
+        Note: Query params that duplicate path param names are skipped
+        to avoid TypeScript duplicate identifier errors.
         """
+        # Get path param names to filter duplicates
+        path_param_names = {p.name for p in operation.path_parameters}
+
         required_params = []
         optional_params = []
 
         for param in operation.query_parameters:
+            # Skip query params that have same name as path params
+            if param.name in path_param_names:
+                continue
             param_info = ParamInfo(
                 name=param.name,
                 type=self.type_mapper(param.schema_type),

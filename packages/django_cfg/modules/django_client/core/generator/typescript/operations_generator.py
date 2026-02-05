@@ -100,11 +100,16 @@ class OperationsGenerator:
 
         # Add query parameters (old style - separate params)
         # TypeScript requires: required params first, then optional params
+        # Skip query params that duplicate path params (same name)
+        path_param_names = {p.name for p in operation.path_parameters}
         query_params_list = []
         required_query_params = []
         optional_query_params = []
 
         for param in operation.query_parameters:
+            # Skip if this query param name already exists as path param
+            if param.name in path_param_names:
+                continue
             param_type = self._map_param_type(param.schema_type)
             query_params_list.append((param.name, param_type, param.required))
 
@@ -371,12 +376,16 @@ class OperationsGenerator:
             param_type = self._map_param_type(param.schema_type)
             params.append(f"{param.name}: {param_type}")
 
-        # Add query parameters
+        # Add query parameters (skip those that duplicate path params)
+        path_param_names = {p.name for p in operation.path_parameters}
         query_params_list = []
         required_query_params = []
         optional_query_params = []
 
         for param in operation.query_parameters:
+            # Skip if this query param name already exists as path param
+            if param.name in path_param_names:
+                continue
             param_type = self._map_param_type(param.schema_type)
             query_params_list.append((param.name, param_type, param.required))
 
