@@ -9,6 +9,7 @@ keywords:
   - smart test runner
   - postgresql test database
   - migration testing
+  - pytest django
 ---
 
 # Test Database Management
@@ -25,6 +26,21 @@ Testing Django applications with multiple databases or PostgreSQL extensions can
 - ✅ **CustomUser out of the box** - AUTH_USER_MODEL pre-configured
 - ✅ **Zero configuration** - Works out of the box, no setup required
 - ✅ **Fast testing** - SQLite in-memory option for unit tests
+- ✅ **pytest support** - Works seamlessly with pytest-django
+
+## Django Test vs Pytest
+
+Django-CFG supports both testing approaches:
+
+| Feature | `python manage.py test` | `pytest` |
+|---------|------------------------|----------|
+| Test Runner | SmartTestRunner | pytest-django |
+| DB Setup | Automatic via SmartTestRunner | Automatic via pytest-django |
+| Extensions | Auto-installed | Auto-installed (first run) |
+| Speed | Fast with `--keepdb` | Fast with `--reuse-db` |
+| Recommended | Integration tests | Unit tests, TDD |
+
+**Important:** SmartTestRunner is used by Django's test command. pytest-django manages its own test database independently.
 
 ## SmartTestRunner
 
@@ -142,6 +158,177 @@ Ran 50 tests in 2.34s
 
 OK
 Destroying test database for alias 'default'...
+```
+
+## Pytest Integration
+
+pytest-django works out of the box with django-cfg projects.
+
+### Setup
+
+Install pytest-django (already included in django-cfg dependencies):
+
+```bash
+pip install pytest-django
+```
+
+Create `pytest.ini` in your project root:
+
+```ini
+[pytest]
+DJANGO_SETTINGS_MODULE = api.settings
+python_files = tests.py test_*.py *_tests.py
+python_classes = Test*
+python_functions = test_*
+
+# Default options
+addopts = -v --tb=short
+
+# Markers
+markers =
+    e2e: marks tests as e2e (deselect with '-m "not e2e"')
+    slow: marks tests as slow (deselect with '-m "not slow"')
+```
+
+### Writing Tests
+
+Use standard pytest-django fixtures:
+
+```python
+# tests/test_models.py
+import pytest
+from myapp.models import Order
+
+# Mark all tests in this file as needing database
+pytestmark = pytest.mark.django_db
+
+
+class TestOrder:
+    def test_create_order(self, db):
+        """Test creating an order."""
+        order = Order.objects.create(
+            amount=100.00,
+            status="pending"
+        )
+        assert order.id is not None
+        assert order.status == "pending"
+
+    def test_order_total(self):
+        """Test order total calculation."""
+        order = Order(amount=100.00, tax=10.00)
+        assert order.total == 110.00
+```
+
+### Common Fixtures
+
+Create reusable fixtures in `conftest.py`:
+
+```python
+# conftest.py
+import pytest
+
+
+@pytest.fixture
+def user_profile(db):
+    """
+    Create a test user with profile.
+
+    Note: If your app has a post_save signal that creates profiles,
+    just return user.profile instead of creating it manually.
+    """
+    from django.contrib.auth import get_user_model
+    import uuid
+
+    User = get_user_model()
+    unique_id = uuid.uuid4().hex[:8]
+    user = User.objects.create_user(
+        username=f"testuser_{unique_id}",
+        email=f"test_{unique_id}@example.com",
+        password="testpass123",
+    )
+    # If profile is auto-created via signal:
+    return user.profile
+
+    # If profile needs manual creation:
+    # from myapp.models import UserProfile
+    # return UserProfile.objects.create(user=user)
+
+
+@pytest.fixture
+def api_client():
+    """Create a DRF APIClient for testing API endpoints."""
+    from rest_framework.test import APIClient
+    return APIClient()
+
+
+@pytest.fixture
+def authenticated_client(api_client, user_profile):
+    """Create an authenticated API client."""
+    api_client.force_authenticate(user=user_profile.user)
+    return api_client
+```
+
+### Mocking External Services
+
+When testing tasks that use external services (like RQ queues), mock them:
+
+```python
+# tests/test_tasks.py
+import pytest
+from unittest.mock import patch, MagicMock
+
+pytestmark = pytest.mark.django_db(transaction=True)
+
+
+@pytest.fixture
+def mock_rq_queue():
+    """Mock django_rq.get_queue to return a mock queue."""
+    mock_queue = MagicMock()
+    mock_job = MagicMock()
+    mock_job.id = "test-job-id"
+    mock_queue.enqueue.return_value = mock_job
+
+    with patch("django_rq.get_queue", return_value=mock_queue):
+        yield mock_queue
+
+
+class TestDownloadTask:
+    def test_process_request(self, user_profile, mock_rq_queue):
+        """Test that task enqueues jobs correctly."""
+        from myapp.models import DownloadRequest
+        from myapp.tasks import process_download_request
+
+        request = DownloadRequest.objects.create(
+            user=user_profile.user,
+            url="https://example.com/data.csv"
+        )
+
+        # Reset mock after signal-triggered enqueue (if any)
+        mock_rq_queue.enqueue.reset_mock()
+
+        result = process_download_request(request.id)
+
+        assert result["status"] == "success"
+        assert mock_rq_queue.enqueue.call_count == 1
+```
+
+### Running Pytest
+
+```bash
+# Run all tests
+pytest
+
+# Run specific file
+pytest tests/test_models.py
+
+# Run with coverage
+pytest --cov=myapp
+
+# Reuse test database (faster)
+pytest --reuse-db
+
+# Run in parallel
+pytest -n 4
 ```
 
 ## FastTestRunner
@@ -293,74 +480,6 @@ python manage.py test_db check-extensions
 
 See [Test Database Command](/docs/cli/commands/testing-monitoring#test_db) for detailed documentation.
 
-## Migration Auto-Fix
-
-SmartTestRunner includes intelligent migration management that automatically fixes common issues.
-
-### Inconsistent Migration History
-
-**Django-CFG Standard:**
-```python
-# Django-CFG automatically configures (in core/generation/core_generators/settings.py):
-AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
-
-# App label in apps.py:
-label = "django_cfg_accounts"
-
-# This is CORE django-cfg functionality - always enabled!
-```
-
-**Solution:**
-
-SmartTestRunner automatically:
-
-1. Detects inconsistent migration history
-2. Identifies problematic migrations (e.g., admin before custom user)
-3. Removes incorrect migration records
-4. Reapplies migrations in correct dependency order
-5. Tests proceed normally
-
-**No manual intervention required!**
-
-### How It Works
-
-```python
-# Automatic bypass during test database setup
-def setup_databases(self, **kwargs):
-    # Step 1: Clean up old test databases
-    self._cleanup_old_test_databases()
-
-    # Step 2: Bypass consistency check with smart handling
-    # Automatically detects and fixes migration order issues
-
-    # Step 3: Install PostgreSQL extensions
-    self._install_extensions()
-
-    return old_config
-```
-
-### Manual Migration Fixes
-
-For production databases, use MigrationManager:
-
-```python
-from django_cfg.management.utils.migration_manager import MigrationManager
-
-manager = MigrationManager()
-
-# Check for migration consistency issues
-has_issues = manager.check_migration_consistency('default')
-
-if has_issues:
-    # Automatically fix inconsistent migrations
-    manager.fix_inconsistent_migrations('default')
-
-    # Migrate with bypass
-    manager.migrate_test_database('default', auto_fix=True)
-```
-
-See [Migrations](/docs/fundamentals/database/migrations#migration-auto-fix) for details.
-
 ## Troubleshooting
 
 ### Test Database Not Cleaned Up
@@ -381,6 +500,31 @@ python manage.py test_db cleanup --force
 
 # Then run tests
 python manage.py test
+```
+
+### IntegrityError with User Profiles
+
+**Problem:**
+```bash
+IntegrityError: duplicate key value violates unique constraint "profiles_userprofile_user_id_key"
+```
+
+**Cause:** Your app has a `post_save` signal that auto-creates profiles, but your test fixture also tries to create one.
+
+**Solution:**
+
+```python
+# Bad - creates duplicate profile
+@pytest.fixture
+def user_profile(db):
+    user = User.objects.create_user(...)
+    return UserProfile.objects.create(user=user)  # Signal already created one!
+
+# Good - use auto-created profile
+@pytest.fixture
+def user_profile(db):
+    user = User.objects.create_user(...)
+    return user.profile  # Return the signal-created profile
 ```
 
 ### Extension Installation Fails
@@ -413,43 +557,6 @@ python manage.py test_db reset
 python manage.py test_db check-extensions
 ```
 
-### Migration Inconsistency Persists
-
-**Problem:**
-```bash
-InconsistentMigrationHistory still occurs despite SmartTestRunner
-```
-
-**Solution:**
-
-1. **Check migration files:**
-```bash
-# Ensure all migration files are committed
-git status apps/*/migrations/
-
-# Verify no conflicting migrations
-python manage.py makemigrations --check
-```
-
-2. **Reset test database:**
-```bash
-# Drop and recreate test database
-python manage.py test_db reset --force
-python manage.py test
-```
-
-3. **Verify django-cfg accounts app:**
-```python
-# Django-CFG automatically includes:
-# INSTALLED_APPS = [
-#     'django_cfg.apps.system.accounts',  # label='django_cfg_accounts'
-#     ...
-# ]
-# AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
-
-# No manual configuration needed!
-```
-
 ### Slow Test Database Creation
 
 **Problem:**
@@ -459,232 +566,99 @@ Test database creation takes too long
 
 **Solutions:**
 
-**1. Use --keepdb flag:**
+**1. Use --keepdb flag (Django) or --reuse-db (pytest):**
 ```bash
-# Keep test database between runs
+# Django
 python manage.py test --keepdb
+
+# pytest
+pytest --reuse-db
 ```
 
 **2. Use FastTestRunner for unit tests:**
 ```bash
-# Switch to SQLite in-memory
 python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
 ```
 
-**3. Reduce test data:**
+**3. Use factories instead of fixtures:**
 ```python
-# Use factories instead of fixtures
-from factory import Factory
+import factory
 
-class UserFactory(Factory):
+class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User
 
     email = factory.Faker('email')
-```
-
-### Parallel Testing Issues
-
-**Problem:**
-```bash
-Tests fail when using --parallel
-```
-
-**Solution:**
-
-1. **Ensure tests are isolated:**
-```python
-from django.test import TestCase, TransactionTestCase
-
-class MyTest(TestCase):  # Not TransactionTestCase
-    def test_something(self):
-        # Use TestCase for better parallel support
-        pass
-```
-
-2. **Check for shared state:**
-```python
-# Bad: Global state
-cache = {}
-
-class MyTest(TestCase):
-    def test_one(self):
-        cache['key'] = 'value'  # Breaks parallel tests
-
-# Good: Test isolation
-class MyTest(TestCase):
-    def setUp(self):
-        self.cache = {}  # Each test gets own cache
-```
-
-3. **Use --parallel-keepdb:**
-```bash
-# Faster parallel testing
-python manage.py test --parallel 4 --parallel-keepdb
+    username = factory.Sequence(lambda n: f'user{n}')
 ```
 
 ## Best Practices
 
-### 1. Use SmartTestRunner by Default
+### 1. Use Appropriate Test Runner
 
-SmartTestRunner is configured automatically - no changes needed:
+- **Django tests** → SmartTestRunner (default)
+- **pytest** → pytest-django (handles DB automatically)
+- **Fast unit tests** → FastTestRunner
 
-```python
-# No manual configuration required
-# Django-CFG sets TEST_RUNNER automatically
-```
-
-### 2. FastTestRunner for CI/CD
-
-Speed up CI pipelines with FastTestRunner for unit tests:
-
-```yaml
-# .github/workflows/test.yml
-- name: Run unit tests
-  run: |
-    python manage.py test \
-      --testrunner=django_cfg.testing.runners.FastTestRunner \
-      --parallel 4
-```
-
-### 3. Keep Test Database Locally
-
-Faster local development with --keepdb:
+### 2. Keep Test Database Between Runs
 
 ```bash
-# First run: creates database
+# Django
 python manage.py test --keepdb
 
-# Subsequent runs: reuses database
-python manage.py test --keepdb  # Much faster!
+# pytest
+pytest --reuse-db
 ```
 
-### 4. Separate Integration Tests
-
-Use tags to separate fast unit tests from slow integration tests:
+### 3. Separate Unit and Integration Tests
 
 ```python
-from django.test import tag, TestCase
+# pytest markers
+@pytest.mark.unit
+def test_calculation():
+    assert calculate(1, 2) == 3
 
-@tag('unit')
-class FastTest(TestCase):
-    def test_logic(self):
-        # Fast unit test
-        pass
-
-@tag('integration')
-class SlowTest(TestCase):
-    def test_database(self):
-        # Slow integration test
-        pass
+@pytest.mark.integration
+def test_api_endpoint(client, db):
+    response = client.get('/api/users/')
+    assert response.status_code == 200
 ```
 
 ```bash
-# Run only fast tests
-python manage.py test --tag=unit
+# Run only unit tests (fast)
+pytest -m unit
 
-# Run only integration tests (use PostgreSQL)
-python manage.py test --tag=integration
+# Run only integration tests
+pytest -m integration
 ```
 
-### 5. Clean Up After CI
+### 4. Mock External Dependencies
 
-Clean test databases after CI runs:
-
-```yaml
-# .github/workflows/test.yml
-- name: Cleanup
-  if: always()
-  run: python manage.py test_db cleanup --all --force
-```
-
-## Advanced Usage
-
-### Custom Test Runner
-
-Extend SmartTestRunner for custom behavior:
+Always mock external services in tests:
 
 ```python
-# apps/testing/runners.py
-from django_cfg.testing.runners import SmartTestRunner
-
-class MyCustomTestRunner(SmartTestRunner):
-    def setup_databases(self, **kwargs):
-        # Custom setup logic
-        print("Setting up custom test environment...")
-
-        # Call parent
-        config = super().setup_databases(**kwargs)
-
-        # Additional setup
-        self._load_test_data()
-
-        return config
-
-    def _load_test_data(self):
-        """Load custom test data."""
-        from apps.wallet.models import Transaction
-
-        Transaction.objects.create(
-            amount=100.00,
-            currency="BTC",
-            status="completed"
-        )
+@pytest.fixture
+def mock_rq_queue():
+    with patch("django_rq.get_queue") as mock:
+        mock_queue = MagicMock()
+        mock.return_value = mock_queue
+        yield mock_queue
 ```
 
-```python
-# settings.py
-TEST_RUNNER = 'apps.testing.runners.MyCustomTestRunner'
-```
+### 5. Use Unique Identifiers
 
-### Programmatic Database Management
-
-Use MigrationManager programmatically:
+Avoid test pollution with unique identifiers:
 
 ```python
-from django_cfg.management.utils.migration_manager import MigrationManager
-import sys
-
-manager = MigrationManager(
-    stdout=sys.stdout,
-    style=None,
-    logger=None
-)
-
-# Migrate test database with auto-fix
-manager.migrate_test_database('default', auto_fix=True)
-
-# Check consistency
-has_issues = manager.check_migration_consistency('default')
-
-if has_issues:
-    manager.fix_inconsistent_migrations('default')
-```
-
-### Environment-Specific Test Settings
-
-```python
-# api/config.py
-import os
-from django_cfg import DjangoConfig, DatabaseConfig
-
-class MyConfig(DjangoConfig):
-    @property
-    def databases(self):
-        # Use SQLite in CI for speed
-        if os.getenv('CI'):
-            return {
-                "default": DatabaseConfig.from_url(
-                    url="sqlite:///:memory:"
-                )
-            }
-
-        # Use PostgreSQL locally for full feature testing
-        return {
-            "default": DatabaseConfig.from_url(
-                url=self.env.database.url
-            )
-        }
+@pytest.fixture
+def user_profile(db):
+    import uuid
+    unique_id = uuid.uuid4().hex[:8]
+    user = User.objects.create_user(
+        username=f"testuser_{unique_id}",
+        email=f"test_{unique_id}@example.com",
+    )
+    return user.profile
 ```
 
 ## See Also
