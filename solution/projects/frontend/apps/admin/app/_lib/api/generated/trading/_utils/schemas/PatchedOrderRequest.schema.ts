@@ -4,9 +4,8 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for orders.
  *  */
-import { z } from 'zod';
-
-import * as Enums from '../../enums';
+import { z } from 'zod'
+import * as Enums from '../../enums'
 
 /**
  * Serializer for orders.
@@ -14,8 +13,8 @@ import * as Enums from '../../enums';
 export const PatchedOrderRequestSchema = z.object({
   portfolio: z.int().optional(),
   symbol: z.string().min(1).max(20).optional(),
-  order_type: z.nativeEnum(Enums.PatchedOrderRequestOrderType).optional(),
-  side: z.nativeEnum(Enums.PatchedOrderRequestSide).optional(),
+  order_type: z.nativeEnum(Enums.OrderOrderType).optional(),
+  side: z.nativeEnum(Enums.OrderSide).optional(),
   quantity: z.string().optional(),
   price: z.string().nullable().optional(),
 })

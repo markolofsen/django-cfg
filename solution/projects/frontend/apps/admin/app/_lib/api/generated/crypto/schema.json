@@ -21,6 +21,15 @@
         "summary": "List coins",
         "parameters": [
           {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -36,6 +45,15 @@
             "description": "Number of results to return per page.",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -139,6 +157,15 @@
         "summary": "List exchanges",
         "parameters": [
           {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -154,6 +181,15 @@
             "description": "Number of results to return per page.",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -227,6 +263,15 @@
         "summary": "List wallets",
         "parameters": [
           {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -242,6 +287,15 @@
             "description": "Number of results to return per page.",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
             }
           }
         ],

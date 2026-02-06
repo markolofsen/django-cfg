@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { OrderCreateRequestOrderType, OrderCreateRequestSide } from '@/api/generated/trading/enums';
+import { OrderOrderType, OrderSide } from '@/api/generated/trading/enums';
 import { useTrading } from '@/contexts';
 import { events } from '@djangocfg/ui-core';
 import {
@@ -17,9 +17,9 @@ export function CreateOrderDialogComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<OrderCreateRequest>({
     symbol: '',
-    side: OrderCreateRequestSide.BUY,
+    side: OrderSide.BUY,
     quantity: '',
-    order_type: OrderCreateRequestOrderType.MARKET,
+    order_type: OrderOrderType.MARKET,
   });
 
   // Subscribe to dialog events
@@ -34,9 +34,9 @@ export function CreateOrderDialogComponent() {
         setIsOpen(false);
         setFormData({
           symbol: '',
-          side: OrderCreateRequestSide.BUY,
+          side: OrderSide.BUY,
           quantity: '',
-          order_type: OrderCreateRequestOrderType.MARKET,
+          order_type: OrderOrderType.MARKET,
         });
       }
     });
@@ -52,9 +52,9 @@ export function CreateOrderDialogComponent() {
       setIsOpen(false);
       setFormData({
         symbol: '',
-        side: OrderCreateRequestSide.BUY,
+        side: OrderSide.BUY,
         quantity: '',
-        order_type: OrderCreateRequestOrderType.MARKET,
+        order_type: OrderOrderType.MARKET,
       });
     } catch (error) {
       console.error('Failed to create order:', error);
@@ -90,14 +90,14 @@ export function CreateOrderDialogComponent() {
               <Label htmlFor="side">Side</Label>
               <Select
                 value={formData.side}
-                onValueChange={(value) => setFormData({ ...formData, side: value as OrderCreateRequestSide })}
+                onValueChange={(value) => setFormData({ ...formData, side: value as OrderSide })}
               >
                 <SelectTrigger id="side">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={OrderCreateRequestSide.BUY}>Buy</SelectItem>
-                  <SelectItem value={OrderCreateRequestSide.SELL}>Sell</SelectItem>
+                  <SelectItem value={OrderSide.BUY}>Buy</SelectItem>
+                  <SelectItem value={OrderSide.SELL}>Sell</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -107,16 +107,16 @@ export function CreateOrderDialogComponent() {
               <Select
                 value={formData.order_type}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, order_type: value as OrderCreateRequestOrderType })
+                  setFormData({ ...formData, order_type: value as OrderOrderType })
                 }
               >
                 <SelectTrigger id="order_type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={OrderCreateRequestOrderType.MARKET}>Market</SelectItem>
-                  <SelectItem value={OrderCreateRequestOrderType.LIMIT}>Limit</SelectItem>
-                  <SelectItem value={OrderCreateRequestOrderType.STOP_LOSS}>Stop Loss</SelectItem>
+                  <SelectItem value={OrderOrderType.MARKET}>Market</SelectItem>
+                  <SelectItem value={OrderOrderType.LIMIT}>Limit</SelectItem>
+                  <SelectItem value={OrderOrderType.STOP_LOSS}>Stop Loss</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -134,7 +134,7 @@ export function CreateOrderDialogComponent() {
               />
             </div>
 
-            {(formData.order_type === OrderCreateRequestOrderType.LIMIT || formData.order_type === OrderCreateRequestOrderType.STOP_LOSS) && (
+            {(formData.order_type === OrderOrderType.LIMIT || formData.order_type === OrderOrderType.STOP_LOSS) && (
               <div className="space-y-2">
                 <Label htmlFor="price">Price</Label>
                 <Input

@@ -20,6 +20,9 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
   const appLayoutProps: AppLayoutProps = {
     children,
 
+    // Fullscreen pages without layout (onboarding wizard)
+    // noLayoutPaths: ['/private/onboarding'],
+
     // Use ready-made layout components instead of passing all props
     publicLayout: {
       component: PublicLayout,
@@ -90,15 +93,6 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
       logo: settings.app.media.logo192,
       delayMs: 5000,
       resetAfterDays: 7,
-    },
-
-    // Push notifications configuration
-    pushNotifications: {
-      enabled: false,
-      vapidPublicKey: settings.push.vapidPublicKey,
-      requirePWA: false,
-      delayMs: 10000,
-      resetAfterDays: 14,
     },
 
     // MCP Chat configuration

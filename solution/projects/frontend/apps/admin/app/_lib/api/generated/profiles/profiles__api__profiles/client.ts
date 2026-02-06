@@ -1,4 +1,5 @@
-import * as Models from './models';
+import * as Models from "./models";
+
 
 /**
  * API endpoints for Profiles.
@@ -10,8 +11,8 @@ export class ProfilesProfiles {
     this.client = client;
   }
 
-  async profilesList(page?: number, page_size?: number): Promise<Models.PaginatedUserProfileList>;
-  async profilesList(params?: { page?: number; page_size?: number }): Promise<Models.PaginatedUserProfileList>;
+  async profilesList(ordering?: string, page?: number, page_size?: number, search?: string): Promise<Models.PaginatedUserProfileList>;
+  async profilesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }): Promise<Models.PaginatedUserProfileList>;
 
   /**
    * List user profiles
@@ -25,7 +26,7 @@ export class ProfilesProfiles {
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { page: args[0], page_size: args[1] };
+      params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
     const response = await this.client.request('GET', "/api/profiles/profiles/", { params });
     return response;

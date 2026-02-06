@@ -17,10 +17,8 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR from 'swr';
-
-import * as Fetchers from '../fetchers/crypto__api__crypto';
-
+import useSWR from 'swr'
+import * as Fetchers from '../fetchers/crypto__api__crypto'
 import type { API } from '../../index'
 import type { Coin } from '../schemas/Coin.schema'
 import type { CoinStats } from '../schemas/CoinStats.schema'
@@ -36,7 +34,7 @@ import type { Wallet } from '../schemas/Wallet.schema'
  * @method GET
  * @path /api/crypto/coins/
  */
-export function useCryptoCoinsList(params?: { page?: number; page_size?: number }, client?: API): ReturnType<typeof useSWR<PaginatedCoinListList>> {
+export function useCryptoCoinsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedCoinListList>> {
   return useSWR<PaginatedCoinListList>(
     params ? ['crypto-coins', params] : 'crypto-coins',
     () => Fetchers.getCryptoCoinsList(params, client)
@@ -78,7 +76,7 @@ export function useCryptoCoinsStatsRetrieve(client?: API): ReturnType<typeof use
  * @method GET
  * @path /api/crypto/exchanges/
  */
-export function useCryptoExchangesList(params?: { page?: number; page_size?: number }, client?: API): ReturnType<typeof useSWR<PaginatedExchangeList>> {
+export function useCryptoExchangesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedExchangeList>> {
   return useSWR<PaginatedExchangeList>(
     params ? ['crypto-exchanges', params] : 'crypto-exchanges',
     () => Fetchers.getCryptoExchangesList(params, client)
@@ -106,7 +104,7 @@ export function useCryptoExchangesRetrieve(slug: string, client?: API): ReturnTy
  * @method GET
  * @path /api/crypto/wallets/
  */
-export function useCryptoWalletsList(params?: { page?: number; page_size?: number }, client?: API): ReturnType<typeof useSWR<PaginatedWalletList>> {
+export function useCryptoWalletsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedWalletList>> {
   return useSWR<PaginatedWalletList>(
     params ? ['crypto-wallets', params] : 'crypto-wallets',
     () => Fetchers.getCryptoWalletsList(params, client)

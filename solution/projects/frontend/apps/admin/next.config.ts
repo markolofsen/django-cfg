@@ -16,6 +16,8 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
+
 // Create config with base settings
 // Add project-specific overrides here if needed
 const config = createBaseNextConfig({
@@ -29,6 +31,15 @@ const config = createBaseNextConfig({
   pwa: {
     swSrc: 'app/sw.ts',
     disable: process.env.NODE_ENV === 'development', // Disable in dev for faster builds
+  },
+  
+  async rewrites() {
+    return [
+      {
+        source: '/media/:path*',
+        destination: `${API_URL}/media/:path*`,
+      },
+    ];
   },
 });
 

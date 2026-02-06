@@ -33,15 +33,17 @@
  * ```
  */
 
-import { APIClient } from './client';
-import { CryptoCrypto } from './crypto__api__crypto/client';
-import { APILogger } from './logger';
+import { APIClient } from "./client";
 import {
-    CookieStorageAdapter, LocalStorageAdapter, MemoryStorageAdapter, StorageAdapter
-} from './storage';
-
+  StorageAdapter,
+  LocalStorageAdapter,
+  CookieStorageAdapter,
+  MemoryStorageAdapter
+} from "./storage";
 import type { RetryConfig } from "./retry";
 import type { LoggerConfig } from "./logger";
+import { APILogger } from "./logger";
+import { CryptoCrypto } from "./crypto__api__crypto/client";
 export * as CryptoCryptoTypes from "./crypto__api__crypto/models";
 // Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
 // Use namespace exports like CfgAccountsTypes.User or import from specific modules
@@ -130,10 +132,11 @@ export class API {
 
     this._loadTokensFromStorage();
 
-    // Initialize APIClient
+    // Initialize APIClient with token getter for URL authentication
     this._client = new APIClient(this.baseUrl, {
       retryConfig: this.options?.retryConfig,
       loggerConfig: this.options?.loggerConfig,
+      tokenGetter: () => this.getToken(),
     });
 
     // Always inject auth header wrapper (reads token dynamically from storage)
@@ -152,6 +155,7 @@ export class API {
     this._client = new APIClient(this.baseUrl, {
       retryConfig: this.options?.retryConfig,
       loggerConfig: this.options?.loggerConfig,
+      tokenGetter: () => this.getToken(),
     });
 
     // Always inject auth header wrapper (reads token dynamically from storage)

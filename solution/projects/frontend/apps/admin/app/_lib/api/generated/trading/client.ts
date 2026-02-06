@@ -1,8 +1,9 @@
-import { APIError, NetworkError } from './errors';
-import { FetchAdapter, HttpClientAdapter } from './http';
-import { APILogger, LoggerConfig, type } from './logger';
-import { RetryConfig, type, withRetry } from './retry';
-import { TradingTrading } from './trading__api__trading';
+import { TradingTrading } from "./trading__api__trading";
+import { HttpClientAdapter, FetchAdapter } from "./http";
+import { APIError, NetworkError } from "./errors";
+import { APILogger, type LoggerConfig } from "./logger";
+import { withRetry, type RetryConfig } from "./retry";
+
 
 /**
  * Async API client for Django CFG API.
@@ -24,6 +25,7 @@ export class APIClient {
   private httpClient: HttpClientAdapter;
   private logger: APILogger | null = null;
   private retryConfig: RetryConfig | null = null;
+  private tokenGetter: (() => string | null) | null = null;
 
   // Sub-clients
   public trading_trading: TradingTrading;
@@ -34,10 +36,12 @@ export class APIClient {
       httpClient?: HttpClientAdapter;
       loggerConfig?: Partial<LoggerConfig>;
       retryConfig?: RetryConfig;
+      tokenGetter?: () => string | null;
     }
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.httpClient = options?.httpClient || new FetchAdapter();
+    this.tokenGetter = options?.tokenGetter || null;
 
     // Initialize logger if config provided
     if (options?.loggerConfig !== undefined) {
@@ -69,6 +73,21 @@ export class APIClient {
   }
 
   /**
+   * Get the base URL for building streaming/download URLs.
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
+   * Get JWT token for URL authentication (used in streaming endpoints).
+   * Returns null if no token getter is configured or no token is available.
+   */
+  getToken(): string | null {
+    return this.tokenGetter ? this.tokenGetter() : null;
+  }
+
+  /**
    * Make HTTP request with Django CSRF and session handling.
    * Automatically retries on network errors and 5xx server errors.
    */
@@ -79,6 +98,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      binaryBody?: Blob | ArrayBuffer;
       headers?: Record<string, string>;
     }
   ): Promise<T> {
@@ -115,6 +135,7 @@ export class APIClient {
       params?: Record<string, any>;
       body?: any;
       formData?: FormData;
+      binaryBody?: Blob | ArrayBuffer;
       headers?: Record<string, string>;
     }
   ): Promise<T> {
@@ -128,8 +149,8 @@ export class APIClient {
       ...(options?.headers || {})
     };
 
-    // Don't set Content-Type for FormData (browser will set it with boundary)
-    if (!options?.formData && !headers['Content-Type']) {
+    // Don't set Content-Type for FormData/binaryBody (browser will set it with boundary)
+    if (!options?.formData && !options?.binaryBody && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 
@@ -156,6 +177,7 @@ export class APIClient {
         params: options?.params,
         body: options?.body,
         formData: options?.formData,
+        binaryBody: options?.binaryBody,
       });
 
       const duration = Date.now() - startTime;

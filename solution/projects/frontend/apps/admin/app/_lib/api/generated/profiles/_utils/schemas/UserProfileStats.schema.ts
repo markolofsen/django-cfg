@@ -4,9 +4,8 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for profile statistics.
  *  */
-import { z } from 'zod';
-
-import { UserProfileSchema } from './UserProfile.schema';
+import { z } from 'zod'
+import { UserProfileSchema } from './UserProfile.schema'
 
 /**
  * Serializer for profile statistics.

@@ -33,15 +33,17 @@
  * ```
  */
 
-import { APIClient } from './client';
-import { APILogger } from './logger';
+import { APIClient } from "./client";
 import {
-    CookieStorageAdapter, LocalStorageAdapter, MemoryStorageAdapter, StorageAdapter
-} from './storage';
-import { TradingTrading } from './trading__api__trading/client';
-
+  StorageAdapter,
+  LocalStorageAdapter,
+  CookieStorageAdapter,
+  MemoryStorageAdapter
+} from "./storage";
 import type { RetryConfig } from "./retry";
 import type { LoggerConfig } from "./logger";
+import { APILogger } from "./logger";
+import { TradingTrading } from "./trading__api__trading/client";
 export * as TradingTradingTypes from "./trading__api__trading/models";
 // Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
 // Use namespace exports like CfgAccountsTypes.User or import from specific modules
@@ -131,10 +133,11 @@ export class API {
 
     this._loadTokensFromStorage();
 
-    // Initialize APIClient
+    // Initialize APIClient with token getter for URL authentication
     this._client = new APIClient(this.baseUrl, {
       retryConfig: this.options?.retryConfig,
       loggerConfig: this.options?.loggerConfig,
+      tokenGetter: () => this.getToken(),
     });
 
     // Always inject auth header wrapper (reads token dynamically from storage)
@@ -153,6 +156,7 @@ export class API {
     this._client = new APIClient(this.baseUrl, {
       retryConfig: this.options?.retryConfig,
       loggerConfig: this.options?.loggerConfig,
+      tokenGetter: () => this.getToken(),
     });
 
     // Always inject auth header wrapper (reads token dynamically from storage)

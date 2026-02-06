@@ -4,9 +4,8 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for wallets.
  *  */
-import { z } from 'zod';
-
-import { CoinListSchema } from './CoinList.schema';
+import { z } from 'zod'
+import { CoinListSchema } from './CoinList.schema'
 
 /**
  * Serializer for wallets.
@@ -21,8 +20,8 @@ export const WalletSchema = z.object({
   total_balance: z.string(),
   value_usd: z.string(),
   address: z.string().max(200).optional(),
-  created_at: z.iso.datetime(),
-  updated_at: z.iso.datetime(),
+  created_at: z.string().datetime({ offset: true }),
+  updated_at: z.string().datetime({ offset: true }),
 })
 
 /**

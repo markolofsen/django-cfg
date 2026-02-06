@@ -17,10 +17,9 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR, { useSWRConfig } from 'swr';
-
-import * as Fetchers from '../fetchers/trading__api__trading';
-
+import useSWR from 'swr'
+import { useSWRConfig } from 'swr'
+import * as Fetchers from '../fetchers/trading__api__trading'
 import type { API } from '../../index'
 import type { Order } from '../schemas/Order.schema'
 import type { OrderCreate } from '../schemas/OrderCreate.schema'
@@ -38,7 +37,7 @@ import type { PortfolioStats } from '../schemas/PortfolioStats.schema'
  * @method GET
  * @path /api/trading/orders/
  */
-export function useTradingOrdersList(params?: { page?: number; page_size?: number }, client?: API): ReturnType<typeof useSWR<PaginatedOrderList>> {
+export function useTradingOrdersList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedOrderList>> {
   return useSWR<PaginatedOrderList>(
     params ? ['trading-orders', params] : 'trading-orders',
     () => Fetchers.getTradingOrdersList(params, client)
@@ -140,7 +139,7 @@ export function useDeleteTradingOrdersDestroy() {
  * @method GET
  * @path /api/trading/portfolios/
  */
-export function useTradingPortfoliosList(params?: { page?: number; page_size?: number }, client?: API): ReturnType<typeof useSWR<PaginatedPortfolioList>> {
+export function useTradingPortfoliosList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedPortfolioList>> {
   return useSWR<PaginatedPortfolioList>(
     params ? ['trading-portfolios', params] : 'trading-portfolios',
     () => Fetchers.getTradingPortfoliosList(params, client)

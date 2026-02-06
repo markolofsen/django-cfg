@@ -1,4 +1,5 @@
-import * as Models from './models';
+import * as Models from "./models";
+
 
 /**
  * API endpoints for Trading.
@@ -10,8 +11,8 @@ export class TradingTrading {
     this.client = client;
   }
 
-  async ordersList(page?: number, page_size?: number): Promise<Models.PaginatedOrderList>;
-  async ordersList(params?: { page?: number; page_size?: number }): Promise<Models.PaginatedOrderList>;
+  async ordersList(ordering?: string, page?: number, page_size?: number, search?: string): Promise<Models.PaginatedOrderList>;
+  async ordersList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }): Promise<Models.PaginatedOrderList>;
 
   /**
    * List orders
@@ -25,7 +26,7 @@ export class TradingTrading {
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { page: args[0], page_size: args[1] };
+      params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
     const response = await this.client.request('GET', "/api/trading/orders/", { params });
     return response;
@@ -75,8 +76,8 @@ export class TradingTrading {
     return;
   }
 
-  async portfoliosList(page?: number, page_size?: number): Promise<Models.PaginatedPortfolioList>;
-  async portfoliosList(params?: { page?: number; page_size?: number }): Promise<Models.PaginatedPortfolioList>;
+  async portfoliosList(ordering?: string, page?: number, page_size?: number, search?: string): Promise<Models.PaginatedPortfolioList>;
+  async portfoliosList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }): Promise<Models.PaginatedPortfolioList>;
 
   /**
    * List portfolios
@@ -90,7 +91,7 @@ export class TradingTrading {
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { page: args[0], page_size: args[1] };
+      params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
     const response = await this.client.request('GET', "/api/trading/portfolios/", { params });
     return response;

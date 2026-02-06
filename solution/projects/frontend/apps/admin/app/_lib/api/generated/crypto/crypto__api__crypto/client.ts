@@ -1,4 +1,5 @@
-import * as Models from './models';
+import * as Models from "./models";
+
 
 /**
  * API endpoints for Crypto.
@@ -10,8 +11,8 @@ export class CryptoCrypto {
     this.client = client;
   }
 
-  async coinsList(page?: number, page_size?: number): Promise<Models.PaginatedCoinListList>;
-  async coinsList(params?: { page?: number; page_size?: number }): Promise<Models.PaginatedCoinListList>;
+  async coinsList(ordering?: string, page?: number, page_size?: number, search?: string): Promise<Models.PaginatedCoinListList>;
+  async coinsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }): Promise<Models.PaginatedCoinListList>;
 
   /**
    * List coins
@@ -25,7 +26,7 @@ export class CryptoCrypto {
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { page: args[0], page_size: args[1] };
+      params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
     const response = await this.client.request('GET', "/api/crypto/coins/", { params });
     return response;
@@ -51,8 +52,8 @@ export class CryptoCrypto {
     return response;
   }
 
-  async exchangesList(page?: number, page_size?: number): Promise<Models.PaginatedExchangeList>;
-  async exchangesList(params?: { page?: number; page_size?: number }): Promise<Models.PaginatedExchangeList>;
+  async exchangesList(ordering?: string, page?: number, page_size?: number, search?: string): Promise<Models.PaginatedExchangeList>;
+  async exchangesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }): Promise<Models.PaginatedExchangeList>;
 
   /**
    * List exchanges
@@ -66,7 +67,7 @@ export class CryptoCrypto {
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { page: args[0], page_size: args[1] };
+      params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
     const response = await this.client.request('GET', "/api/crypto/exchanges/", { params });
     return response;
@@ -82,8 +83,8 @@ export class CryptoCrypto {
     return response;
   }
 
-  async walletsList(page?: number, page_size?: number): Promise<Models.PaginatedWalletList>;
-  async walletsList(params?: { page?: number; page_size?: number }): Promise<Models.PaginatedWalletList>;
+  async walletsList(ordering?: string, page?: number, page_size?: number, search?: string): Promise<Models.PaginatedWalletList>;
+  async walletsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }): Promise<Models.PaginatedWalletList>;
 
   /**
    * List wallets
@@ -97,7 +98,7 @@ export class CryptoCrypto {
     if (isParamsObject) {
       params = args[0];
     } else {
-      params = { page: args[0], page_size: args[1] };
+      params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
     const response = await this.client.request('GET', "/api/crypto/wallets/", { params });
     return response;

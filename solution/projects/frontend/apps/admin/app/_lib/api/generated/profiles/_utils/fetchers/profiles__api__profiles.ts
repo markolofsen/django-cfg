@@ -30,29 +30,16 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { consola } from 'consola';
-
-import { getAPIInstance } from '../../api-instance';
-import {
-    PaginatedUserProfileList, PaginatedUserProfileListSchema, type
-} from '../schemas/PaginatedUserProfileList.schema';
-import {
-    PatchedUserProfileRequest, PatchedUserProfileRequestSchema, type
-} from '../schemas/PatchedUserProfileRequest.schema';
-import {
-    PatchedUserProfileUpdateRequest, PatchedUserProfileUpdateRequestSchema, type
-} from '../schemas/PatchedUserProfileUpdateRequest.schema';
-import { type, UserProfile, UserProfileSchema } from '../schemas/UserProfile.schema';
-import {
-    type, UserProfileRequest, UserProfileRequestSchema
-} from '../schemas/UserProfileRequest.schema';
-import { type, UserProfileStats, UserProfileStatsSchema } from '../schemas/UserProfileStats.schema';
-import {
-    type, UserProfileUpdate, UserProfileUpdateSchema
-} from '../schemas/UserProfileUpdate.schema';
-import {
-    type, UserProfileUpdateRequest, UserProfileUpdateRequestSchema
-} from '../schemas/UserProfileUpdateRequest.schema';
+import { consola } from 'consola'
+import { PaginatedUserProfileListSchema, type PaginatedUserProfileList } from '../schemas/PaginatedUserProfileList.schema'
+import { PatchedUserProfileRequestSchema, type PatchedUserProfileRequest } from '../schemas/PatchedUserProfileRequest.schema'
+import { PatchedUserProfileUpdateRequestSchema, type PatchedUserProfileUpdateRequest } from '../schemas/PatchedUserProfileUpdateRequest.schema'
+import { UserProfileSchema, type UserProfile } from '../schemas/UserProfile.schema'
+import { UserProfileRequestSchema, type UserProfileRequest } from '../schemas/UserProfileRequest.schema'
+import { UserProfileStatsSchema, type UserProfileStats } from '../schemas/UserProfileStats.schema'
+import { UserProfileUpdateSchema, type UserProfileUpdate } from '../schemas/UserProfileUpdate.schema'
+import { UserProfileUpdateRequestSchema, type UserProfileUpdateRequest } from '../schemas/UserProfileUpdateRequest.schema'
+import { getAPIInstance } from '../../api-instance'
 
 /**
  * List user profiles
@@ -60,10 +47,10 @@ import {
  * @method GET
  * @path /api/profiles/profiles/
  */
-export async function getProfilesProfilesList(  params?: { page?: number; page_size?: number },  client?: any
+export async function getProfilesProfilesList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedUserProfileList> {
   const api = client || getAPIInstance()
-  const response = await api.profiles_profiles.profilesList(params?.page, params?.page_size)
+  const response = await api.profiles_profiles.profilesList(params?.ordering, params?.page, params?.page_size, params?.search)
   try {
     return PaginatedUserProfileListSchema.parse(response)
   } catch (error) {

@@ -4,7 +4,7 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for exchanges.
  *  */
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Serializer for exchanges.
@@ -15,8 +15,8 @@ export const ExchangeSchema = z.object({
   slug: z.string().max(100),
   code: z.string().max(20),
   description: z.string().optional(),
-  website: z.url().optional(),
-  logo_url: z.url().optional(),
+  website: z.union([z.url(), z.literal('')]).optional(),
+  logo_url: z.union([z.url(), z.literal('')]).optional(),
   volume_24h_usd: z.string().optional(),
   num_markets: z.int().min(0.0).max(2147483647.0).optional(),
   num_coins: z.int().min(0.0).max(2147483647.0).optional(),
@@ -26,8 +26,8 @@ export const ExchangeSchema = z.object({
   is_verified: z.boolean().optional(),
   supports_api: z.boolean().optional(),
   rank: z.int().min(0.0).max(2147483647.0).optional(),
-  created_at: z.iso.datetime(),
-  updated_at: z.iso.datetime(),
+  created_at: z.string().datetime({ offset: true }),
+  updated_at: z.string().datetime({ offset: true }),
 })
 
 /**

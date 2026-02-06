@@ -4,7 +4,7 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for coins.
  *  */
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Serializer for coins.
@@ -20,16 +20,16 @@ export const CoinSchema = z.object({
   price_change_24h_percent: z.string().optional(),
   price_change_7d_percent: z.string().optional(),
   price_change_30d_percent: z.string().optional(),
-  logo_url: z.url().optional(),
+  logo_url: z.union([z.url(), z.literal('')]).optional(),
   description: z.string().optional(),
-  website: z.url().optional(),
-  whitepaper_url: z.url().optional(),
+  website: z.union([z.url(), z.literal('')]).optional(),
+  whitepaper_url: z.union([z.url(), z.literal('')]).optional(),
   rank: z.int().min(0.0).max(2147483647.0).optional(),
   is_active: z.boolean().optional(),
   is_tradeable: z.boolean().optional(),
   is_price_up_24h: z.boolean(),
-  created_at: z.iso.datetime(),
-  updated_at: z.iso.datetime(),
+  created_at: z.string().datetime({ offset: true }),
+  updated_at: z.string().datetime({ offset: true }),
 })
 
 /**

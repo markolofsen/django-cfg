@@ -3,9 +3,8 @@
  *
  * This schema provides runtime validation and type inference.
  *  */
-import { z } from 'zod';
-
-import { CoinListSchema } from './CoinList.schema';
+import { z } from 'zod'
+import { CoinListSchema } from './CoinList.schema'
 
 export const PaginatedCoinListListSchema = z.object({
   count: z.int(),

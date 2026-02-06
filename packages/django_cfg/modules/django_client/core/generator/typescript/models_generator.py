@@ -234,6 +234,11 @@ class ModelsGenerator:
                 .replace(' ', '_')
                 .upper())
 
+            # TypeScript enum keys cannot start with a digit, prefix with underscore
+            # "58COM" -> "_58COM"
+            if sanitized_var_name and sanitized_var_name[0].isdigit():
+                sanitized_var_name = '_' + sanitized_var_name
+
             if isinstance(value, str):
                 member_lines.append(f'{sanitized_var_name} = "{value}",')
             else:

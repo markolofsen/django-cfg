@@ -14,6 +14,8 @@ export interface HttpRequest {
   params?: Record<string, any>;
   /** FormData for file uploads (multipart/form-data) */
   formData?: FormData;
+  /** Binary data for octet-stream uploads */
+  binaryBody?: Blob | ArrayBuffer;
 }
 
 export interface HttpResponse<T = any> {
@@ -37,7 +39,7 @@ export interface HttpClientAdapter {
  */
 export class FetchAdapter implements HttpClientAdapter {
   async request<T = any>(request: HttpRequest): Promise<HttpResponse<T>> {
-    const { method, url, headers, body, params, formData } = request;
+    const { method, url, headers, body, params, formData, binaryBody } = request;
 
     // Build URL with query params
     let finalUrl = url;
@@ -58,12 +60,16 @@ export class FetchAdapter implements HttpClientAdapter {
     const finalHeaders: Record<string, string> = { ...headers };
 
     // Determine body and content-type
-    let requestBody: string | FormData | undefined;
+    let requestBody: string | FormData | Blob | ArrayBuffer | undefined;
 
     if (formData) {
       // For multipart/form-data, let browser set Content-Type with boundary
       requestBody = formData;
       // Don't set Content-Type - browser will set it with boundary
+    } else if (binaryBody) {
+      // Binary upload (application/octet-stream)
+      finalHeaders['Content-Type'] = 'application/octet-stream';
+      requestBody = binaryBody;
     } else if (body) {
       // JSON request
       finalHeaders['Content-Type'] = 'application/json';

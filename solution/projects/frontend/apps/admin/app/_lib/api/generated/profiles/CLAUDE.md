@@ -67,12 +67,5 @@ openapi_client = OpenAPIClientConfig(
 )
 ```
 
-**Copy to Next.js** (if `nextjs_admin` configured):
-```python
-nextjs_admin = NextJsAdminConfig(
-    project_path="../frontend/apps/...",
-    api_output_path="app/_lib/api/generated",
-)
-```
-
 @see https://djangocfg.com/docs/features/api-generation
+

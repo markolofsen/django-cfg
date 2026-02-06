@@ -30,26 +30,17 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { consola } from 'consola';
-
-import { getAPIInstance } from '../../api-instance';
-import { Order, OrderSchema, type } from '../schemas/Order.schema';
-import { OrderCreate, OrderCreateSchema, type } from '../schemas/OrderCreate.schema';
-import {
-    OrderCreateRequest, OrderCreateRequestSchema, type
-} from '../schemas/OrderCreateRequest.schema';
-import { OrderRequest, OrderRequestSchema, type } from '../schemas/OrderRequest.schema';
-import {
-    PaginatedOrderList, PaginatedOrderListSchema, type
-} from '../schemas/PaginatedOrderList.schema';
-import {
-    PaginatedPortfolioList, PaginatedPortfolioListSchema, type
-} from '../schemas/PaginatedPortfolioList.schema';
-import {
-    PatchedOrderRequest, PatchedOrderRequestSchema, type
-} from '../schemas/PatchedOrderRequest.schema';
-import { Portfolio, PortfolioSchema, type } from '../schemas/Portfolio.schema';
-import { PortfolioStats, PortfolioStatsSchema, type } from '../schemas/PortfolioStats.schema';
+import { consola } from 'consola'
+import { OrderSchema, type Order } from '../schemas/Order.schema'
+import { OrderCreateSchema, type OrderCreate } from '../schemas/OrderCreate.schema'
+import { OrderCreateRequestSchema, type OrderCreateRequest } from '../schemas/OrderCreateRequest.schema'
+import { OrderRequestSchema, type OrderRequest } from '../schemas/OrderRequest.schema'
+import { PaginatedOrderListSchema, type PaginatedOrderList } from '../schemas/PaginatedOrderList.schema'
+import { PaginatedPortfolioListSchema, type PaginatedPortfolioList } from '../schemas/PaginatedPortfolioList.schema'
+import { PatchedOrderRequestSchema, type PatchedOrderRequest } from '../schemas/PatchedOrderRequest.schema'
+import { PortfolioSchema, type Portfolio } from '../schemas/Portfolio.schema'
+import { PortfolioStatsSchema, type PortfolioStats } from '../schemas/PortfolioStats.schema'
+import { getAPIInstance } from '../../api-instance'
 
 /**
  * List orders
@@ -57,10 +48,10 @@ import { PortfolioStats, PortfolioStatsSchema, type } from '../schemas/Portfolio
  * @method GET
  * @path /api/trading/orders/
  */
-export async function getTradingOrdersList(  params?: { page?: number; page_size?: number },  client?: any
+export async function getTradingOrdersList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedOrderList> {
   const api = client || getAPIInstance()
-  const response = await api.trading_trading.ordersList(params?.page, params?.page_size)
+  const response = await api.trading_trading.ordersList(params?.ordering, params?.page, params?.page_size, params?.search)
   try {
     return PaginatedOrderListSchema.parse(response)
   } catch (error) {
@@ -356,10 +347,10 @@ export async function deleteTradingOrdersDestroy(  id: number,  client?: any
  * @method GET
  * @path /api/trading/portfolios/
  */
-export async function getTradingPortfoliosList(  params?: { page?: number; page_size?: number },  client?: any
+export async function getTradingPortfoliosList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedPortfolioList> {
   const api = client || getAPIInstance()
-  const response = await api.trading_trading.portfoliosList(params?.page, params?.page_size)
+  const response = await api.trading_trading.portfoliosList(params?.ordering, params?.page, params?.page_size, params?.search)
   try {
     return PaginatedPortfolioListSchema.parse(response)
   } catch (error) {

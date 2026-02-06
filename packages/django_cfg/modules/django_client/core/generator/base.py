@@ -602,6 +602,9 @@ class BaseGenerator(ABC):
                     else:
                         # For integers: 1 → "VALUE_1"
                         var_name = f"VALUE_{value}"
+                    # Identifiers cannot start with a digit in most languages
+                    if var_name and var_name[0].isdigit():
+                        var_name = '_' + var_name
                     var_names.append(var_name)
 
                 # Create new schema with auto-generated var names

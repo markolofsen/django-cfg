@@ -7,7 +7,7 @@
  *   npm install consola
  */
 
-import { ConsolaInstance, createConsola, type } from 'consola';
+import { type ConsolaInstance, createConsola } from 'consola';
 
 /**
  * Request log data

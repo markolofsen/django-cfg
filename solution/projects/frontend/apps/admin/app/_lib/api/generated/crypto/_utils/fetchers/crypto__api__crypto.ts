@@ -30,22 +30,15 @@
  * const users = await getUsers({ page: 1 }, api)
  * ```
  */
-import { consola } from 'consola';
-
-import { getAPIInstance } from '../../api-instance';
-import { Coin, CoinSchema, type } from '../schemas/Coin.schema';
-import { CoinStats, CoinStatsSchema, type } from '../schemas/CoinStats.schema';
-import { Exchange, ExchangeSchema, type } from '../schemas/Exchange.schema';
-import {
-    PaginatedCoinListList, PaginatedCoinListListSchema, type
-} from '../schemas/PaginatedCoinListList.schema';
-import {
-    PaginatedExchangeList, PaginatedExchangeListSchema, type
-} from '../schemas/PaginatedExchangeList.schema';
-import {
-    PaginatedWalletList, PaginatedWalletListSchema, type
-} from '../schemas/PaginatedWalletList.schema';
-import { type, Wallet, WalletSchema } from '../schemas/Wallet.schema';
+import { consola } from 'consola'
+import { CoinSchema, type Coin } from '../schemas/Coin.schema'
+import { CoinStatsSchema, type CoinStats } from '../schemas/CoinStats.schema'
+import { ExchangeSchema, type Exchange } from '../schemas/Exchange.schema'
+import { PaginatedCoinListListSchema, type PaginatedCoinListList } from '../schemas/PaginatedCoinListList.schema'
+import { PaginatedExchangeListSchema, type PaginatedExchangeList } from '../schemas/PaginatedExchangeList.schema'
+import { PaginatedWalletListSchema, type PaginatedWalletList } from '../schemas/PaginatedWalletList.schema'
+import { WalletSchema, type Wallet } from '../schemas/Wallet.schema'
+import { getAPIInstance } from '../../api-instance'
 
 /**
  * List coins
@@ -53,10 +46,10 @@ import { type, Wallet, WalletSchema } from '../schemas/Wallet.schema';
  * @method GET
  * @path /api/crypto/coins/
  */
-export async function getCryptoCoinsList(  params?: { page?: number; page_size?: number },  client?: any
+export async function getCryptoCoinsList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedCoinListList> {
   const api = client || getAPIInstance()
-  const response = await api.crypto_crypto.coinsList(params?.page, params?.page_size)
+  const response = await api.crypto_crypto.coinsList(params?.ordering, params?.page, params?.page_size, params?.search)
   try {
     return PaginatedCoinListListSchema.parse(response)
   } catch (error) {
@@ -224,10 +217,10 @@ export async function getCryptoCoinsStatsRetrieve(  client?: any
  * @method GET
  * @path /api/crypto/exchanges/
  */
-export async function getCryptoExchangesList(  params?: { page?: number; page_size?: number },  client?: any
+export async function getCryptoExchangesList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedExchangeList> {
   const api = client || getAPIInstance()
-  const response = await api.crypto_crypto.exchangesList(params?.page, params?.page_size)
+  const response = await api.crypto_crypto.exchangesList(params?.ordering, params?.page, params?.page_size, params?.search)
   try {
     return PaginatedExchangeListSchema.parse(response)
   } catch (error) {
@@ -338,10 +331,10 @@ export async function getCryptoExchangesRetrieve(  slug: string,  client?: any
  * @method GET
  * @path /api/crypto/wallets/
  */
-export async function getCryptoWalletsList(  params?: { page?: number; page_size?: number },  client?: any
+export async function getCryptoWalletsList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedWalletList> {
   const api = client || getAPIInstance()
-  const response = await api.crypto_crypto.walletsList(params?.page, params?.page_size)
+  const response = await api.crypto_crypto.walletsList(params?.ordering, params?.page, params?.page_size, params?.search)
   try {
     return PaginatedWalletListSchema.parse(response)
   } catch (error) {

@@ -10,9 +10,4 @@ import { createServiceWorker } from '@djangocfg/nextjs/pwa/worker';
 
 createServiceWorker({
   offlineFallback: '/_offline',
-  enablePushNotifications: true,
-  // notificationIcon: settings.app.icons.logo192,
-  // notificationBadge: settings.app.icons.logo192,
-  notificationIcon: 'https://djangocfg.com/static/logos/192x192.png',
-  notificationBadge: 'https://djangocfg.com/static/logos/192x192.png',
 });

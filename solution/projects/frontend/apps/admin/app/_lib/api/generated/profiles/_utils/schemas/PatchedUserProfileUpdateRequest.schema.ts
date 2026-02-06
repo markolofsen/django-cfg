@@ -4,13 +4,13 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for updating user profiles.
  *  */
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Serializer for updating user profiles.
  */
 export const PatchedUserProfileUpdateRequestSchema = z.object({
-  website: z.url().optional(),
+  website: z.union([z.url(), z.literal('')]).optional(),
   github: z.string().max(100).optional(),
   twitter: z.string().max(100).optional(),
   linkedin: z.string().max(100).optional(),

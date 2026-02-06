@@ -3,9 +3,8 @@
  *
  * This schema provides runtime validation and type inference.
  *  */
-import { z } from 'zod';
-
-import { OrderSchema } from './Order.schema';
+import { z } from 'zod'
+import { OrderSchema } from './Order.schema'
 
 export const PaginatedOrderListSchema = z.object({
   count: z.int(),

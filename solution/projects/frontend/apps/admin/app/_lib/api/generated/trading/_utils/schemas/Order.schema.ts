@@ -4,9 +4,8 @@
  * This schema provides runtime validation and type inference.
  *  * Serializer for orders.
  *  */
-import { z } from 'zod';
-
-import * as Enums from '../../enums';
+import { z } from 'zod'
+import * as Enums from '../../enums'
 
 /**
  * Serializer for orders.
@@ -22,8 +21,8 @@ export const OrderSchema = z.object({
   filled_quantity: z.string(),
   status: z.nativeEnum(Enums.OrderStatus),
   total_usd: z.string(),
-  created_at: z.iso.datetime(),
-  updated_at: z.iso.datetime(),
+  created_at: z.string().datetime({ offset: true }),
+  updated_at: z.string().datetime({ offset: true }),
 })
 
 /**

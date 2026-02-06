@@ -17,10 +17,9 @@
  * await createUser({ name: 'John', email: 'john@example.com' })
  * ```
  */
-import useSWR, { useSWRConfig } from 'swr';
-
-import * as Fetchers from '../fetchers/profiles__api__profiles';
-
+import useSWR from 'swr'
+import { useSWRConfig } from 'swr'
+import * as Fetchers from '../fetchers/profiles__api__profiles'
 import type { API } from '../../index'
 import type { PaginatedUserProfileList } from '../schemas/PaginatedUserProfileList.schema'
 import type { PatchedUserProfileRequest } from '../schemas/PatchedUserProfileRequest.schema'
@@ -37,7 +36,7 @@ import type { UserProfileUpdateRequest } from '../schemas/UserProfileUpdateReque
  * @method GET
  * @path /api/profiles/profiles/
  */
-export function useProfilesProfilesList(params?: { page?: number; page_size?: number }, client?: API): ReturnType<typeof useSWR<PaginatedUserProfileList>> {
+export function useProfilesProfilesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedUserProfileList>> {
   return useSWR<PaginatedUserProfileList>(
     params ? ['profiles-profiles', params] : 'profiles-profiles',
     () => Fetchers.getProfilesProfilesList(params, client)
