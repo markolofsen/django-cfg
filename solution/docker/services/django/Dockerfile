@@ -31,15 +31,15 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.25 && \
 # Set working directory
 WORKDIR /app
 
-# Copy pyproject.toml only
-COPY projects/django/pyproject.toml ./
+# Copy requirements
+COPY projects/django/pyproject.toml projects/django/README.md ./
 
 # Install dependencies (production only)
-# 1. uv pip installs all dependencies from pyproject.toml
+# 1. uv pip install reads dependencies from pyproject.toml
 # 2. Upgrades django-cfg to latest version (ensures fresh security patches)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -r pyproject.toml --no-dev && \
-    uv pip install --upgrade django-cfg[full] uvicorn[standard]
+    uv pip install --system . && \
+    uv pip install --system --upgrade django-cfg[full] uvicorn[standard]
 
 # Copy application code
 COPY projects/django /app
