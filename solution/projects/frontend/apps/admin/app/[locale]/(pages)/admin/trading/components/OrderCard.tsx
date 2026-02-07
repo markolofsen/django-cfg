@@ -14,29 +14,31 @@ export function OrderCardComponent({ order, onCancel }: OrderCardProps) {
   const isCompleted = order.status === 'filled';
   const isPending = order.status === 'pending';
 
+  const sideLabel = order.side.toUpperCase();
+  const sideBadgeVariant = isBuy ? 'default' : 'destructive';
+  const statusBadgeVariant = isCompleted ? 'default' : isPending ? 'secondary' : 'outline';
+  const priceText = order.price ? ` • Price: $${order.price}` : '';
+  const orderDetails = `${order.order_type} • Qty: ${order.quantity}${priceText}`;
+  const createdDate = new Date(order.created_at).toLocaleDateString();
+  const TrendIcon = isBuy ? TrendingUp : TrendingDown;
+  const trendIconClass = isBuy
+    ? 'h-5 w-5 text-green-600 dark:text-green-400'
+    : 'h-5 w-5 text-red-600 dark:text-red-400';
+
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {isBuy ? (
-              <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
-            )}
+            <TrendIcon className={trendIconClass} />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{order.symbol}</span>
-                <Badge variant={isBuy ? 'default' : 'destructive'}>
-                  {order.side.toUpperCase()}
-                </Badge>
-                <Badge variant={isCompleted ? 'default' : isPending ? 'secondary' : 'outline'}>
-                  {order.status}
-                </Badge>
+                <Badge variant={sideBadgeVariant}>{sideLabel}</Badge>
+                <Badge variant={statusBadgeVariant}>{order.status}</Badge>
               </div>
               <div className="text-sm text-muted-foreground mt-1">
-                {order.order_type} • Qty: {order.quantity}
-                {order.price && ` • Price: $${order.price}`}
+                {orderDetails}
               </div>
             </div>
           </div>
@@ -44,9 +46,7 @@ export function OrderCardComponent({ order, onCancel }: OrderCardProps) {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="font-semibold">${order.total_usd}</div>
-              <div className="text-xs text-muted-foreground">
-                {new Date(order.created_at).toLocaleDateString()}
-              </div>
+              <div className="text-xs text-muted-foreground">{createdDate}</div>
             </div>
             {isPending && (
               <Button

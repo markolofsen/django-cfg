@@ -43,6 +43,34 @@ export function CreateOrderDialogComponent() {
     return unsubscribe;
   }, []);
 
+  const showPriceField =
+    formData.order_type === OrderOrderType.LIMIT ||
+    formData.order_type === OrderOrderType.STOP_LOSS;
+
+  const submitButtonText = isLoading ? 'Creating...' : 'Create Order';
+
+  const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, symbol: e.target.value });
+  };
+
+  const handleSideChange = (value: string) => {
+    setFormData({ ...formData, side: value as OrderSide });
+  };
+
+  const handleOrderTypeChange = (value: string) => {
+    setFormData({ ...formData, order_type: value as OrderOrderType });
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, quantity: e.target.value });
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, price: e.target.value || null });
+  };
+
+  const handleClose = () => setIsOpen(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -81,17 +109,14 @@ export function CreateOrderDialogComponent() {
                 id="symbol"
                 placeholder="BTC/USDT"
                 value={formData.symbol}
-                onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
+                onChange={handleSymbolChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="side">Side</Label>
-              <Select
-                value={formData.side}
-                onValueChange={(value) => setFormData({ ...formData, side: value as OrderSide })}
-              >
+              <Select value={formData.side} onValueChange={handleSideChange}>
                 <SelectTrigger id="side">
                   <SelectValue />
                 </SelectTrigger>
@@ -104,12 +129,7 @@ export function CreateOrderDialogComponent() {
 
             <div className="space-y-2">
               <Label htmlFor="order_type">Order Type</Label>
-              <Select
-                value={formData.order_type}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, order_type: value as OrderOrderType })
-                }
-              >
+              <Select value={formData.order_type} onValueChange={handleOrderTypeChange}>
                 <SelectTrigger id="order_type">
                   <SelectValue />
                 </SelectTrigger>
@@ -129,12 +149,12 @@ export function CreateOrderDialogComponent() {
                 step="any"
                 placeholder="0.00"
                 value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                onChange={handleQuantityChange}
                 required
               />
             </div>
 
-            {(formData.order_type === OrderOrderType.LIMIT || formData.order_type === OrderOrderType.STOP_LOSS) && (
+            {showPriceField && (
               <div className="space-y-2">
                 <Label htmlFor="price">Price</Label>
                 <Input
@@ -143,18 +163,18 @@ export function CreateOrderDialogComponent() {
                   step="any"
                   placeholder="0.00"
                   value={formData.price || ''}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value || null })}
+                  onChange={handlePriceChange}
                 />
               </div>
             )}
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Creating...' : 'Create Order'}
+              {submitButtonText}
             </Button>
           </DialogFooter>
         </form>

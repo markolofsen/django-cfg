@@ -20,7 +20,7 @@ api:
 	@echo ""
 	@echo "📦 OpenAPI clients auto-copied to Next.js admin via NextJsAdminConfig"
 	@echo ""
-	cd ../../../django && poetry run python manage.py generate_api
+	cd ../../../django && uv run python manage.py generate_api
 	@echo ""
 	@echo "✅ API generation completed!"
 	@echo ""

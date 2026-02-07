@@ -10,6 +10,8 @@ import {
 
 import { CoinCard, CryptoStats, ExchangeCard, WalletCard } from './components';
 
+const SKELETON_ITEMS = [0, 1, 2];
+
 export function CryptoView() {
   const {
     coins,
@@ -28,6 +30,15 @@ export function CryptoView() {
   } = useCrypto();
 
   const isLoading = coinsLoading || exchangesLoading || walletsLoading;
+  const hasCoins = coins.length > 0;
+  const hasExchanges = exchanges.length > 0;
+  const hasWallets = wallets.length > 0;
+
+  const handleRefresh = () => {
+    refreshCoins();
+    refreshExchanges();
+    refreshWallets();
+  };
 
   if (isLoading) {
     return (
@@ -35,7 +46,7 @@ export function CryptoView() {
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="grid gap-4 md:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
+            {SKELETON_ITEMS.map((i) => (
               <div key={i} className="h-32 bg-muted rounded" />
             ))}
           </div>
@@ -46,7 +57,6 @@ export function CryptoView() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cryptocurrency</h1>
@@ -54,15 +64,7 @@ export function CryptoView() {
             Explore coins, exchanges, and manage your wallets
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            refreshCoins();
-            refreshExchanges();
-            refreshWallets();
-          }}
-        >
+        <Button variant="outline" size="sm" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -83,20 +85,18 @@ export function CryptoView() {
           <Card>
             <CardHeader>
               <CardTitle>Cryptocurrencies</CardTitle>
-              <CardDescription>
-                Browse available cryptocurrencies
-              </CardDescription>
+              <CardDescription>Browse available cryptocurrencies</CardDescription>
             </CardHeader>
             <CardContent>
-              {coins.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No coins found
-                </div>
-              ) : (
+              {hasCoins ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {coins.map((coin) => (
                     <CoinCard key={coin.id} coin={coin} />
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No coins found
                 </div>
               )}
             </CardContent>
@@ -107,20 +107,18 @@ export function CryptoView() {
           <Card>
             <CardHeader>
               <CardTitle>Cryptocurrency Exchanges</CardTitle>
-              <CardDescription>
-                Available trading platforms
-              </CardDescription>
+              <CardDescription>Available trading platforms</CardDescription>
             </CardHeader>
             <CardContent>
-              {exchanges.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No exchanges found
-                </div>
-              ) : (
+              {hasExchanges ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {exchanges.map((exchange) => (
                     <ExchangeCard key={exchange.id} exchange={exchange} />
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No exchanges found
                 </div>
               )}
             </CardContent>
@@ -131,20 +129,18 @@ export function CryptoView() {
           <Card>
             <CardHeader>
               <CardTitle>Your Wallets</CardTitle>
-              <CardDescription>
-                Manage your cryptocurrency wallets
-              </CardDescription>
+              <CardDescription>Manage your cryptocurrency wallets</CardDescription>
             </CardHeader>
             <CardContent>
-              {wallets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No wallets yet. Create your first wallet to get started.
-                </div>
-              ) : (
+              {hasWallets ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {wallets.map((wallet) => (
                     <WalletCard key={wallet.id} wallet={wallet} />
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No wallets yet. Create your first wallet to get started.
                 </div>
               )}
             </CardContent>

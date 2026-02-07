@@ -9,6 +9,19 @@ interface ExchangeCardProps {
 }
 
 export function ExchangeCardComponent({ exchange }: ExchangeCardProps) {
+  const volumeFormatted = exchange.volume_24h_usd
+    ? `$${Number(exchange.volume_24h_usd).toLocaleString()}`
+    : null;
+  const rankLabel = exchange.rank ? `#${exchange.rank}` : null;
+  const hasFees = exchange.maker_fee_percent || exchange.taker_fee_percent;
+  const feesFormatted = hasFees
+    ? `${exchange.maker_fee_percent}% / ${exchange.taker_fee_percent}%`
+    : null;
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = 'none';
+  };
+
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardContent className="p-4">
@@ -19,9 +32,7 @@ export function ExchangeCardComponent({ exchange }: ExchangeCardProps) {
                 src={exchange.logo_url}
                 alt={exchange.name}
                 className="w-10 h-10 rounded-full"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
+                onError={handleImageError}
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -34,9 +45,9 @@ export function ExchangeCardComponent({ exchange }: ExchangeCardProps) {
                 {exchange.is_verified && (
                   <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                 )}
-                {exchange.rank && (
+                {rankLabel && (
                   <Badge variant="secondary" className="text-xs">
-                    #{exchange.rank}
+                    {rankLabel}
                   </Badge>
                 )}
               </div>
@@ -46,10 +57,10 @@ export function ExchangeCardComponent({ exchange }: ExchangeCardProps) {
         </div>
 
         <div className="mt-3 pt-3 border-t space-y-2">
-          {exchange.volume_24h_usd && (
+          {volumeFormatted && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">24h Volume:</span>
-              <span className="font-medium">${Number(exchange.volume_24h_usd).toLocaleString()}</span>
+              <span className="font-medium">{volumeFormatted}</span>
             </div>
           )}
           {exchange.num_markets && (
@@ -58,12 +69,10 @@ export function ExchangeCardComponent({ exchange }: ExchangeCardProps) {
               <span className="font-medium">{exchange.num_markets}</span>
             </div>
           )}
-          {(exchange.maker_fee_percent || exchange.taker_fee_percent) && (
+          {feesFormatted && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Fees:</span>
-              <span className="font-medium">
-                {exchange.maker_fee_percent}% / {exchange.taker_fee_percent}%
-              </span>
+              <span className="font-medium">{feesFormatted}</span>
             </div>
           )}
         </div>

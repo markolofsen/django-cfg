@@ -77,7 +77,7 @@ dropdb: ## Drop democfg database (DESTRUCTIVE!)
 
 migrate: ## Run Django migrations
 	@echo "$(BLUE)Running migrations...$(NC)"
-	@docker exec democfg-api poetry run python manage.py migrate
+	@docker exec democfg-api uv run python manage.py migrate
 
 ##@ Deployment
 
@@ -100,17 +100,17 @@ deploy-reset: createdb build up-reset migrate status ## Full deployment with res
 ##@ Maintenance
 
 shell: ## Open Django shell
-	@docker exec -it democfg-api poetry run python manage.py shell
+	@docker exec -it democfg-api uv run python manage.py shell
 
 bash: ## Open bash in API container
 	@docker exec -it democfg-api bash
 
 reset-db: ## Manually reset demo database
 	@echo "$(YELLOW)Resetting demo database...$(NC)"
-	@docker exec democfg-api poetry run python manage.py flush --no-input
-	@docker exec democfg-api poetry run python manage.py migrate
-	@docker exec democfg-api poetry run python manage.py createsuperuser --noinput || true
+	@docker exec democfg-api uv run python manage.py flush --no-input
+	@docker exec democfg-api uv run python manage.py migrate
+	@docker exec democfg-api uv run python manage.py createsuperuser --noinput || true
 	@echo "$(GREEN)Database reset complete$(NC)"
 
 collectstatic: ## Collect static files
-	@docker exec democfg-api poetry run python manage.py collectstatic --noinput
+	@docker exec democfg-api uv run python manage.py collectstatic --noinput
