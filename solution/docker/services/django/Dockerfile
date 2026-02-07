@@ -4,18 +4,15 @@
 
 FROM python:3.12-slim
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:0.6.0 /uv /uvx /bin/
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    POETRY_VERSION=1.8.3 \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_CREATE=false
-
-# Add poetry to PATH
-ENV PATH="$POETRY_HOME/bin:$PATH"
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_SYSTEM_PYTHON=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -31,9 +28,6 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.25 && \
     curl -L https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 -o /usr/local/bin/grpc_health_probe && \
     chmod +x /usr/local/bin/grpc_health_probe
 
-# Install Poetry via pip (more reliable than curl installer)
-RUN pip install poetry==${POETRY_VERSION} && poetry --version
-
 # Set working directory
 WORKDIR /app
 
@@ -41,12 +35,11 @@ WORKDIR /app
 COPY projects/django/pyproject.toml ./
 
 # Install dependencies (production only)
-# 1. Poetry installs all dependencies from pyproject.toml
-# 2. Pip upgrades django-cfg to latest version (ensures fresh security patches)
-# 3. Install uvicorn separately to ensure it's available
-RUN poetry install --only main --no-root --no-cache && \
-    pip install --upgrade django-cfg[full] uvicorn[standard] && \
-    rm -rf $POETRY_CACHE_DIR
+# 1. uv pip installs all dependencies from pyproject.toml
+# 2. Upgrades django-cfg to latest version (ensures fresh security patches)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install -r pyproject.toml --no-dev && \
+    uv pip install --upgrade django-cfg[full] uvicorn[standard]
 
 # Copy application code
 COPY projects/django /app
