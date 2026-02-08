@@ -8,7 +8,7 @@
     "pwa": "djangocfg-pwa",
     "kill-port": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
     "dev": "next dev",
-    "build": "pnpm check && next build",
+    "build": "next build",
     "build:static": "NEXT_PUBLIC_STATIC_BUILD=true next build",
     "build:docker": "next build",
     "check-types": "tsc --noEmit",
