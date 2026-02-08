@@ -286,6 +286,7 @@ class HooksGenerator:
             GET /products/ -> 'shop-products'
             GET /products/{id}/ -> ['shop-product', id]
             GET /products/?category=5 -> ['shop-products', params]
+            GET /symbols/{exchange}/{market_type}/symbols/ -> ['symbols-symbol', exchange, market_type, params]
         """
         # Get resource name from operation_id
         op_id = operation.operation_id
@@ -308,13 +309,19 @@ class HooksGenerator:
         has_path_params = bool(operation.path_parameters)
         has_query_params = bool(operation.query_parameters)
 
-        if has_path_params:
-            # Single resource: ['shop-product', id]
-            param_name = operation.path_parameters[0].name
-            return f"['{key_base}', {param_name}]"
-        elif has_query_params:
-            # List with params: params ? ['shop-products', params] : 'shop-products'
-            return f"params ? ['{key_base}', params] : '{key_base}'"
+        if has_path_params or has_query_params:
+            # Build array key with all path params and optional query params
+            key_parts = [f"'{key_base}'"]
+
+            # Add all path parameters
+            for param in operation.path_parameters:
+                key_parts.append(param.name)
+
+            # Add query params if present
+            if has_query_params:
+                key_parts.append("params")
+
+            return f"[{', '.join(key_parts)}]"
         else:
             # Simple key: 'shop-products'
             return f"'{key_base}'"
