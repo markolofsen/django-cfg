@@ -253,9 +253,14 @@ class DjangoRQConfig(BaseModel):
     Integrates with django-rq for Redis-based task queuing with high performance.
     Automatically adds django_rq to INSTALLED_APPS when enabled.
 
-    IMPORTANT: redis_db is REQUIRED for project isolation!
-    Each project must use a unique Redis database (0-15) to prevent
-    RQ scheduler conflicts. See deployment/REDIS.md for assignments.
+    CRITICAL: redis_db is REQUIRED for project isolation!
+    Each project MUST use a unique Redis database (0-15) to prevent conflicts.
+
+    WARNING: If multiple projects share the same Redis DB, scheduler jobs will
+    randomly disappear when any project flushes cache or clears Redis keys.
+    This causes scheduled tasks to stop repeating after a few executions.
+
+    See deployment/REDIS.md for DB assignments.
 
     Installation:
         ```bash

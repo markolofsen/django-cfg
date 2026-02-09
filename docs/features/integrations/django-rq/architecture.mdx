@@ -770,6 +770,72 @@ graph TB
 
 ---
 
+## Troubleshooting: Stale Schedule Data
+
+### Problem: Scheduled Tasks Don't Repeat
+
+If your interval-based scheduled tasks run once but don't repeat, the issue is likely **stale job data in Redis**.
+
+**Symptoms:**
+- Scheduler logs show "✓ Registered interval schedule"
+- Task executes once at startup
+- Task disappears from `rq:scheduler:scheduled_jobs` after first run
+- `job.meta` is empty (`{}`) when fetched
+
+**Root Cause:**
+
+When a job with the same ID already exists in Redis with corrupted/empty `meta`, rq-scheduler may not properly update it. The `interval` value in `meta` is required for repeat execution.
+
+**Solution:**
+
+Django-cfg 1.7.3+ includes automatic cleanup of stale job data. For older versions, manually clear scheduler data:
+
+```bash
+# Clear all scheduled job data
+redis-cli KEYS "rq:job:schedule_*" | xargs redis-cli DEL
+redis-cli DEL "rq:scheduler:scheduled_jobs"
+
+# Restart scheduler to re-register
+docker restart your-scheduler-container
+```
+
+**Verification:**
+
+```python
+# Check that meta is saved correctly after registration
+from rq.job import Job
+from django_rq import get_connection
+
+conn = get_connection()
+job = Job.fetch('schedule_your_task_id', connection=conn)
+print(f'meta: {job.meta}')  # Should show {'interval': 60} or similar
+```
+
+**Prevention:**
+
+Django-cfg 1.7.3+ automatically:
+1. Removes stale job data before registering new schedules
+2. Verifies `meta` is saved correctly in Redis
+3. Logs warnings if `meta` appears corrupted
+
+```mermaid
+sequenceDiagram
+    participant Scheduler as RQ Scheduler
+    participant Helper as register_schedules_from_config()
+    participant Redis as Redis
+
+    Note over Helper: Registration starts
+    Helper->>Redis: DELETE rq:job:schedule_xyz (cleanup stale data)
+    Helper->>Scheduler: scheduler.schedule(interval=60)
+    Scheduler->>Redis: HSET rq:job:schedule_xyz meta {interval: 60}
+    Helper->>Redis: HGET rq:job:schedule_xyz meta
+    Helper->>Helper: Verify meta contains interval
+
+    Note over Scheduler: Task runs every 60s
+```
+
+---
+
 ## See Also
 
 ### Configuration

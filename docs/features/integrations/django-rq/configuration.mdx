@@ -1061,12 +1061,19 @@ for job in scheduler.get_jobs():
 
 ### Why It's Required
 
+:::danger Critical Issue
+If multiple projects share the same Redis DB, **scheduled tasks will randomly stop working**.
+When any project flushes cache (`cache.clear()`, `FLUSHDB`), it deletes ALL keys including
+RQ scheduler jobs. Tasks execute 2-3 times then disappear forever.
+:::
+
 When multiple Django projects share a single Redis instance, RQ schedulers can conflict:
 
-1. **Shared Keys**: All schedulers read from the same `rq:scheduler:scheduled_jobs` set
-2. **Job Theft**: Workers from one project try to execute jobs from another
-3. **Missing Functions**: Jobs fail because task functions don't exist in other projects
-4. **Duplicate Execution**: Same job runs multiple times across projects
+1. **Cache Flush Kills Jobs**: Any project clearing cache deletes scheduler job metadata
+2. **Shared Keys**: All schedulers read from the same `rq:scheduler:scheduled_jobs` set
+3. **Job Theft**: Workers from one project try to execute jobs from another
+4. **Missing Functions**: Jobs fail because task functions don't exist in other projects
+5. **Duplicate Execution**: Same job runs multiple times across projects
 
 ### Solution: Separate Redis Databases
 

@@ -188,15 +188,17 @@ def _generate_deterministic_job_id(schedule_config) -> str:
     return f"schedule_{func_name}_{hash_digest}"
 
 
-def _cleanup_old_schedules(scheduler, job_id: str):
+def _cleanup_old_schedules(scheduler, job_id: str, connection=None):
     """
     Remove existing schedule with the given job_id before registering new one.
 
     This prevents duplicate jobs from accumulating on restart.
+    Also removes the job data from Redis to ensure clean state.
 
     Args:
         scheduler: RQ Scheduler instance
         job_id: Job ID to remove
+        connection: Redis connection (optional, for deep cleanup)
 
     Example:
         >>> _cleanup_old_schedules(scheduler, "schedule_sync_accounts_abc123")
@@ -204,10 +206,20 @@ def _cleanup_old_schedules(scheduler, job_id: str):
     try:
         # Cancel existing job if it exists
         scheduler.cancel(job_id)
-        logger.debug(f"Removed old schedule: {job_id}")
+        logger.info(f"Removed old schedule: {job_id}")
     except Exception:
         # Job doesn't exist, ignore
         pass
+
+    # Deep cleanup: remove job data from Redis to prevent stale meta
+    if connection:
+        try:
+            job_key = f"rq:job:{job_id}"
+            if connection.exists(job_key):
+                connection.delete(job_key)
+                logger.debug(f"Removed stale job data: {job_key}")
+        except Exception as e:
+            logger.debug(f"Failed to cleanup job data {job_id}: {e}")
 
 
 def register_schedules_from_config():
@@ -302,8 +314,8 @@ def register_schedules_from_config():
                     # Target queue for job execution (can differ from scheduler's queue)
                     target_queue = schedule_config.queue or 'default'
 
-                    # Clean up old version of this schedule
-                    _cleanup_old_schedules(scheduler, job_id)
+                    # Clean up old version of this schedule (including stale job data)
+                    _cleanup_old_schedules(scheduler, job_id, connection=connection)
 
                     # Get schedule type and register
                     if schedule_config.cron:
@@ -349,21 +361,15 @@ def register_schedules_from_config():
                         # We need repeat=None for infinite repetition
                         schedule_kwargs["repeat"] = schedule_config.repeat  # None = infinite
 
-                        # Debug: log before calling schedule
-                        logger.info(f"DEBUG: Calling scheduler.schedule() for {func_path}")
-                        logger.info(f"DEBUG: func={func}, func.__module__={getattr(func, '__module__', 'N/A')}, func.__name__={getattr(func, '__name__', 'N/A')}")
-                        logger.info(f"DEBUG: schedule_kwargs={schedule_kwargs}")
-
                         job = scheduler.schedule(**schedule_kwargs)
 
-                        # Debug: log after calling schedule
-                        logger.info(f"DEBUG: scheduler.schedule() returned: {job}")
                         if job:
-                            logger.info(f"DEBUG: job.id={job.id}, job.func_name={job.func_name}, job.meta={job.meta}")
-                            # Verify job is in Redis
-                            in_redis = connection.zscore(scheduler.scheduled_jobs_key, job.id)
-                            logger.info(f"DEBUG: job in scheduled_jobs: {in_redis is not None}")
-                            logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s) -> queue={target_queue}, job_id={job.id}")
+                            # Verify job was saved correctly
+                            raw_meta = connection.hget(f"rq:job:{job.id}", "meta")
+                            if raw_meta and len(raw_meta) > 5:  # Valid pickle data
+                                logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s) -> queue={target_queue}")
+                            else:
+                                logger.warning(f"⚠ Job {job.id} created but meta may not be saved correctly")
                         else:
                             logger.error(f"✗ scheduler.schedule() returned None for {func_path}")
 
