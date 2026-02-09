@@ -349,8 +349,23 @@ def register_schedules_from_config():
                         # We need repeat=None for infinite repetition
                         schedule_kwargs["repeat"] = schedule_config.repeat  # None = infinite
 
-                        scheduler.schedule(**schedule_kwargs)
-                        logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s) -> queue={target_queue}")
+                        # Debug: log before calling schedule
+                        logger.info(f"DEBUG: Calling scheduler.schedule() for {func_path}")
+                        logger.info(f"DEBUG: func={func}, func.__module__={getattr(func, '__module__', 'N/A')}, func.__name__={getattr(func, '__name__', 'N/A')}")
+                        logger.info(f"DEBUG: schedule_kwargs={schedule_kwargs}")
+
+                        job = scheduler.schedule(**schedule_kwargs)
+
+                        # Debug: log after calling schedule
+                        logger.info(f"DEBUG: scheduler.schedule() returned: {job}")
+                        if job:
+                            logger.info(f"DEBUG: job.id={job.id}, job.func_name={job.func_name}, job.meta={job.meta}")
+                            # Verify job is in Redis
+                            in_redis = connection.zscore(scheduler.scheduled_jobs_key, job.id)
+                            logger.info(f"DEBUG: job in scheduled_jobs: {in_redis is not None}")
+                            logger.info(f"✓ Registered interval schedule: {func_path} (every {schedule_config.interval}s) -> queue={target_queue}, job_id={job.id}")
+                        else:
+                            logger.error(f"✗ scheduler.schedule() returned None for {func_path}")
 
                     elif schedule_config.scheduled_time:
                         from datetime import datetime
@@ -369,7 +384,8 @@ def register_schedules_from_config():
                         logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time}) -> queue={target_queue}")
 
                 except Exception as e:
-                    logger.error(f"Failed to register schedule {schedule_config.func}: {e}")
+                    import traceback
+                    logger.error(f"Failed to register schedule {schedule_config.func}: {e}\n{traceback.format_exc()}")
                     continue
 
             logger.info("Schedule registration completed")
