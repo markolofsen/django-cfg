@@ -5,7 +5,7 @@
 
 import createMiddleware from 'next-intl/middleware';
 
-import { routing } from '@djangocfg/nextjs/i18n';
+import { routing } from '@djangocfg/nextjs/i18n/routing';
 
 const handleI18nRouting = createMiddleware(routing);
 

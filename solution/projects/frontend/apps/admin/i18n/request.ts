@@ -7,7 +7,8 @@
 
 import { getRequestConfig } from 'next-intl/server';
 
-import { en as baseEn, ko as baseKo, mergeTranslations, ru as baseRu } from '@djangocfg/i18n';
+import { en as baseEn, ko as baseKo, ru as baseRu } from '@djangocfg/i18n/locales';
+import { mergeTranslations } from '@djangocfg/i18n/utils';
 
 import { type AdminTranslations, en as adminEn, ko as adminKo, ru as adminRu } from './locales';
 

@@ -6,7 +6,8 @@ import { notFound } from 'next/navigation';
 
 import { generateMetadata } from '@core/metadata';
 import { settings } from '@core/settings';
-import { generateLocaleParams, I18nProvider, routing } from '@djangocfg/nextjs/i18n';
+import { I18nProvider } from '@djangocfg/nextjs/i18n/client';
+import { generateLocaleParams, routing } from '@djangocfg/nextjs/i18n/routing';
 import { AppLayout } from '@layouts/AppLayout';
 
 import type { Messages } from '@djangocfg/nextjs/i18n';
