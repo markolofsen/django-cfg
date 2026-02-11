@@ -14,7 +14,11 @@
     "check-types": "tsc --noEmit",
     "start": "next start",
     "lint": "next lint",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "i18n:check": "i18n check -d ./i18n/locales",
+    "i18n:list": "i18n list -d ./i18n/locales",
+    "i18n:sync": "i18n sync -d ./i18n/locales",
+    "i18n:translate": "i18n translate -d ./i18n/locales"
   },
   "dependencies": {
     "@djangocfg/api": "latest",
@@ -45,6 +49,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@djangocfg/llm": "latest",
     "@djangocfg/nextjs": "latest",
     "@djangocfg/seo": "latest",
     "@djangocfg/typescript-config": "latest",
