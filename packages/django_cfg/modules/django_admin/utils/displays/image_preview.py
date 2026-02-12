@@ -188,7 +188,12 @@ class ImagePreviewDisplay:
         if condition_field:
             condition_value = config.get('condition_value', True)
             actual_value = getattr(obj, condition_field, None)
-            if actual_value != condition_value:
+            # Support list of values (e.g., ["image", "portrait", "composite"])
+            if isinstance(condition_value, list):
+                condition_met = actual_value in condition_value
+            else:
+                condition_met = actual_value == condition_value
+            if not condition_met:
                 # Condition not met - show fallback
                 fallback_text = config.get('fallback_text')
                 if fallback_text:
