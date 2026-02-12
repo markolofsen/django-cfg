@@ -45,11 +45,10 @@ class CurrencyField(FieldConfig):
     def get_widget_config(self) -> Dict[str, Any]:
         """Extract currency widget configuration."""
         config = super().get_widget_config()
-        config['currency'] = self.currency
-        config['currency_field'] = self.currency_field
-        config['secondary_field'] = self.secondary_field
-        config['secondary_currency'] = self.secondary_currency
+        config['currency'] = self.currency or "USD"
         config['decimal_places'] = self.precision
         config['show_sign'] = self.show_sign
         config['thousand_separator'] = self.thousand_separator
+        # Note: currency_field, secondary_field, secondary_currency are stored
+        # but not yet used in MoneyDisplay - for future dynamic currency support
         return config

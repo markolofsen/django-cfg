@@ -1004,7 +1004,7 @@ Display images with clickable thumbnails that open a fullscreen modal with zoom 
 | `caption_template` | `str \| None` | `None` | Template with `{field}` placeholders |
 | `url_method` | `str \| None` | `None` | Model method that returns URL |
 | `condition_field` | `str \| None` | `None` | Field to check for showing preview |
-| `condition_value` | `Any` | `True` | Expected value for condition |
+| `condition_value` | `Any \| list[Any]` | `True` | Expected value(s) for condition. Can be a single value or list of values. |
 | `fallback_text` | `str \| None` | `None` | Text when condition not met |
 | `empty_value` | `str` | `"—"` | Value when None |
 
@@ -1059,6 +1059,15 @@ ImagePreviewField(
     condition_field="media_type",
     condition_value="photo",         # Only for photos
     fallback_text="No preview",
+)
+
+# Preview for multiple types (list of values)
+ImagePreviewField(
+    name="result_url",
+    title="Result",
+    condition_field="task_type",
+    condition_value=["image", "portrait", "composite"],  # All image-based types
+    fallback_text="—",
 )
 ```
 
