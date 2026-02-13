@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.8"
+version = "1.7.9"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -122,7 +122,6 @@ dependencies = [
     "tiktoken>=0.11.0,<1.0",
     "openai>=1.107.0,<3.0",
     "tenacity>=9.1.2,<10.0.0",
-    "toon-python>=0.1.2,<1.0",  # Token-optimized format for LLM
     
     # Rendering & Formatting
     "jinja2>=3.1.6,<4.0.0",
