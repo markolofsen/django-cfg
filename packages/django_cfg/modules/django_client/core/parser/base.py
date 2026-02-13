@@ -797,12 +797,12 @@ class BaseParser(ABC):
         content_type = "application/json"
 
         if body.content:
-            # Prefer multipart/form-data if available (for file uploads)
-            # Priority: multipart/form-data > application/json > first available
+            # Priority: application/json > multipart/form-data (only if binary fields) > first available
+            # Use multipart only when the schema has actual binary/file fields
             content_types = list(body.content.keys())
-            if "multipart/form-data" in content_types:
-                content_type = "multipart/form-data"
-            elif "application/json" in content_types:
+
+            # Default to JSON if available
+            if "application/json" in content_types:
                 content_type = "application/json"
             elif content_types:
                 content_type = content_types[0]
@@ -811,6 +811,9 @@ class BaseParser(ABC):
             if media_type and media_type.schema_:
                 if isinstance(media_type.schema_, ReferenceObject):
                     schema_name = media_type.schema_.ref_name
+                    # Only use multipart if schema actually has binary fields
+                    if "multipart/form-data" in content_types and self._schema_has_binary_field(schema_name):
+                        content_type = "multipart/form-data"
                 else:
                     # Inline schema - create unique name from operation_id
                     # Convert operation_id to PascalCase and add "Request" suffix
@@ -827,6 +830,33 @@ class BaseParser(ABC):
             required=body.required,
             description=body.description,
         )
+
+    def _schema_has_binary_field(self, schema_name: str) -> bool:
+        """Check if a schema has any binary (file) fields.
+
+        Args:
+            schema_name: Name of the schema to check
+
+        Returns:
+            True if schema has at least one binary field (format: binary)
+        """
+        if not self.spec.components or not self.spec.components.schemas:
+            return False
+
+        schema = self.spec.components.schemas.get(schema_name)
+        if not schema or isinstance(schema, ReferenceObject):
+            return False
+
+        if not schema.properties:
+            return False
+
+        for prop_schema in schema.properties.values():
+            if isinstance(prop_schema, ReferenceObject):
+                continue
+            if prop_schema.format == "binary":
+                return True
+
+        return False
 
     def _to_pascal_case(self, name: str) -> str:
         """Convert snake_case or kebab-case to PascalCase."""
