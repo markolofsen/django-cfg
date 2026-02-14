@@ -1,14 +1,11 @@
 {% include '_header.jinja' %}
 
 from __future__ import annotations
-{% if has_datetime %}
+{% if has_datetime or has_date or has_time %}
+from datetime import {% if has_datetime %}datetime{% endif %}{% if has_datetime and has_date %}, {% endif %}{% if has_date %}date{% endif %}{% if (has_datetime or has_date) and has_time %}, {% endif %}{% if has_time %}time{% endif %}
 
-from datetime import datetime
-from typing import Any
-{% else %}
-
-from typing import Any
 {% endif %}
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 {% if has_enums and enum_names %}

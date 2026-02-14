@@ -304,8 +304,26 @@ class IRSchemaObject(BaseModel):
         if self.is_binary:
             return "Any | None" if self.nullable else "Any"
 
-        # For read-only string fields, use Any since they often return complex objects
-        # from SerializerMethodField in Django (e.g., dicts instead of strings)
+        # Handle string formats BEFORE read_only fallback
+        # These have known types even when read_only
+        if self.type == "string" and self.format:
+            format_map = {
+                "date-time": "datetime",
+                "date": "date",
+                "time": "time",
+                "uuid": "str",  # Could use UUID but str is simpler
+                "email": "str",
+                "uri": "str",
+                "hostname": "str",
+                "ipv4": "str",
+                "ipv6": "str",
+            }
+            if self.format in format_map:
+                base_type = format_map[self.format]
+                return f"{base_type} | None" if self.nullable else base_type
+
+        # For read-only string fields WITHOUT known format, use Any since they
+        # often return complex objects from SerializerMethodField in Django
         if self.read_only and self.type == "string":
             return "Any | None" if self.nullable else "Any"
 

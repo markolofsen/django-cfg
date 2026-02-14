@@ -9,6 +9,8 @@ Handles:
 
 from __future__ import annotations
 
+import re
+
 from jinja2 import Environment
 
 from ...ir import IRSchemaObject
@@ -48,13 +50,19 @@ class ModelsGenerator:
         for name, schema in self.base.get_patch_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
-        # Check if any generated schema code uses datetime
-        has_datetime = any(": datetime" in code for code in schema_codes)
+        # Check if any generated schema code uses datetime/date/time types
+        # Use regex patterns to avoid false positives
+        all_code = "\n".join(schema_codes)
+        has_datetime = bool(re.search(r": datetime\b", all_code))
+        has_date = bool(re.search(r": date\b", all_code))
+        has_time = bool(re.search(r": time\b", all_code))
 
         template = self.jinja_env.get_template('models/models.py.jinja')
         content = template.render(
             has_enums=bool(self.base.get_enum_schemas()),
             has_datetime=has_datetime,
+            has_date=has_date,
+            has_time=has_time,
             schemas=schema_codes
         )
 
@@ -374,13 +382,19 @@ class ModelsGenerator:
             schema_codes.append(self.generate_schema(schema))
             collect_enums_from_schema(schema)
 
-        # Check if any generated schema code uses datetime
-        has_datetime = any(": datetime" in code for code in schema_codes)
+        # Check if any generated schema code uses datetime/date/time types
+        # Use regex patterns to avoid false positives
+        all_code = "\n".join(schema_codes)
+        has_datetime = bool(re.search(r": datetime\b", all_code))
+        has_date = bool(re.search(r": date\b", all_code))
+        has_time = bool(re.search(r": time\b", all_code))
 
         template = self.jinja_env.get_template('models/app_models.py.jinja')
         content = template.render(
             has_enums=len(enum_names) > 0,
             has_datetime=has_datetime,
+            has_date=has_date,
+            has_time=has_time,
             enum_names=sorted(enum_names),  # Sort for consistent output
             schemas=schema_codes
         )
