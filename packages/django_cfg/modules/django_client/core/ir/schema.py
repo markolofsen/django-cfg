@@ -322,9 +322,14 @@ class IRSchemaObject(BaseModel):
                 base_type = format_map[self.format]
                 return f"{base_type} | None" if self.nullable else base_type
 
-        # For read-only string fields WITHOUT known format, use Any since they
-        # often return complex objects from SerializerMethodField in Django
+        # For read-only string fields WITHOUT known format:
+        # - If has maxLength constraint → regular CharField → str
+        # - If no maxLength → likely SerializerMethodField → Any (can return complex objects)
         if self.read_only and self.type == "string":
+            if self.max_length is not None:
+                # Has maxLength - this is a regular CharField, use str
+                return "str | None" if self.nullable else "str"
+            # No maxLength - likely SerializerMethodField, use Any
             return "Any | None" if self.nullable else "Any"
 
         # SMART DETECTION: JSONField(default=list) case
