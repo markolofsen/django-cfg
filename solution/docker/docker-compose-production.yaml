@@ -58,7 +58,7 @@ services:
     depends_on:
       django:
         condition: service_healthy  # Wait for Django to be healthy (migrations complete)
-    command: poetry run python manage.py rqworker high default low knowledge
+    command: python manage.py rqworker high default low knowledge
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
       interval: 30s
@@ -90,7 +90,7 @@ services:
     depends_on:
       django:
         condition: service_healthy  # Wait for Django to be healthy (migrations complete)
-    command: poetry run python manage.py rqscheduler
+    command: python manage.py rqscheduler
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
       interval: 30s
@@ -123,7 +123,7 @@ services:
     depends_on:
       django:
         condition: service_healthy  # Wait for Django to be healthy (migrations complete)
-    command: poetry run python manage.py rungrpc
+    command: python manage.py rungrpc
     ports:
       - "50051:50051"
     healthcheck:

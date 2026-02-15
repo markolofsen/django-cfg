@@ -139,7 +139,7 @@ services:
   #       condition: service_healthy
   #     redis:
   #       condition: service_healthy
-  #   command: poetry run python manage.py rqworker default high low knowledge
+  #   command: python manage.py rqworker default high low knowledge
   #   networks:
   #     - djangocfg-network
   #     - djangocfg_django_network
@@ -162,7 +162,7 @@ services:
   #       condition: service_healthy
   #     redis:
   #       condition: service_healthy
-  #   command: poetry run python manage.py rqscheduler
+  #   command: python manage.py rqscheduler
   #   networks:
   #     - djangocfg-network
   #     - djangocfg_django_network
@@ -189,7 +189,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: poetry run python manage.py rungrpc
+    command: python manage.py rungrpc
     ports:
       - "7351:50051"  # Django-CFG: base 7300 (+51 gRPC)
     healthcheck:

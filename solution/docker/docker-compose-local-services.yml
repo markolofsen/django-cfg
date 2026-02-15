@@ -86,7 +86,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: poetry run python manage.py rqworker default high low knowledge
+    command: python manage.py rqworker default high low knowledge
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
       interval: 30s
@@ -112,7 +112,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: poetry run python manage.py rqscheduler
+    command: python manage.py rqscheduler
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
       interval: 30s
