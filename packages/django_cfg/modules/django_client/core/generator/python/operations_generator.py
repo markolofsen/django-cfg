@@ -147,10 +147,10 @@ class OperationsGenerator:
                 request_kwargs.append("data=_form_data if _form_data else None")
             else:
                 # JSON body
-                request_kwargs.append("json=data.model_dump(exclude_unset=True, exclude_none=True)")
+                request_kwargs.append("json=data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
         elif operation.patch_request_body:
             # Optional PATCH body - build json separately to avoid long lines
-            body_lines.append("_json = data.model_dump(exclude_unset=True, exclude_none=True) if data else None")
+            body_lines.append("_json = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True) if data else None")
             request_kwargs.append("json=_json")
 
         # Make request
@@ -318,10 +318,10 @@ class OperationsGenerator:
                 request_kwargs.append("data=_form_data if _form_data else None")
             else:
                 # JSON body
-                request_kwargs.append("json=data.model_dump(exclude_unset=True, exclude_none=True)")
+                request_kwargs.append("json=data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
         elif operation.patch_request_body:
             # Optional PATCH body - build json separately to avoid long lines
-            body_lines.append("_json = data.model_dump(exclude_unset=True, exclude_none=True) if data else None")
+            body_lines.append("_json = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True) if data else None")
             request_kwargs.append("json=_json")
 
         # HTTP method
@@ -469,7 +469,7 @@ class OperationsGenerator:
             lines.append("import json as _json")
             lines.append("_files = {}")
             lines.append("_form_data = {}")
-            lines.append("_raw_data = data.model_dump(exclude_unset=True, exclude_none=True)")
+            lines.append("_raw_data = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
             lines.append("for key, value in _raw_data.items():")
             lines.append("    if hasattr(value, 'read'):  # File-like object")
             lines.append("        _files[key] = value")
@@ -499,7 +499,7 @@ class OperationsGenerator:
         lines.append("# Build multipart form data")
         lines.append("_files = {}")
         lines.append("_form_data = {}")
-        lines.append("_raw_data = data.model_dump(exclude_unset=True, exclude_none=True)")
+        lines.append("_raw_data = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
 
         # Handle file fields
         for field in file_fields:
