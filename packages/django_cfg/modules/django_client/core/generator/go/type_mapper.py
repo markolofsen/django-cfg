@@ -8,6 +8,8 @@ Handles conversion of IR schemas to Go types with proper handling of:
 - Nested objects (struct references)
 - Enums (custom types)
 - Format-specific types (time.Time, uuid, etc.)
+
+Uses unified TypeMapper for base type lookups.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .naming import sanitize_go_identifier, to_pascal_case
+from ...types import FieldType, FormatType, TypeMapper
 
 if TYPE_CHECKING:
     from ...ir import IRSchemaObject
@@ -24,6 +27,9 @@ class GoTypeMapper:
     """
     Maps OpenAPI/IR types to Go types.
 
+    Uses unified TypeMapper for base type lookups, with Go-specific
+    handling for pointers, enums, and struct references.
+
     Handles:
     - Primitive types (string → string, integer → int64, etc.)
     - Optional fields (User.email? → *string)
@@ -32,34 +38,8 @@ class GoTypeMapper:
     - Enums (custom types with constants)
     """
 
-    # Primitive type mapping
-    PRIMITIVE_TYPES = {
-        "string": "string",
-        "integer": "int64",
-        "number": "float64",
-        "boolean": "bool",
-        "object": "map[string]interface{}",
-        "null": "interface{}",
-    }
-
-    # Format-specific type overrides
-    FORMAT_OVERRIDES = {
-        "int32": "int32",
-        "int64": "int64",
-        "float": "float32",
-        "double": "float64",
-        "date-time": "time.Time",
-        "date": "string",  # YYYY-MM-DD format
-        "uuid": "string",  # Or use google/uuid package
-        "binary": "io.Reader",  # For file uploads in multipart forms
-        "byte": "[]byte",
-        "email": "string",
-        "uri": "string",
-        "url": "string",
-        "hostname": "string",
-        "ipv4": "string",
-        "ipv6": "string",
-    }
+    # Types that don't need pointers (interfaces and maps)
+    NON_POINTER_TYPES = {"interface{}", "map[string]interface{}", "io.Reader"}
 
     def __init__(self, use_types_package: bool = False):
         """Initialize type mapper.
@@ -67,7 +47,7 @@ class GoTypeMapper:
         Args:
             use_types_package: If True, prefix enum types with "types."
         """
-        self._imports_needed = set()
+        self._type_mapper = TypeMapper()
         self.use_types_package = use_types_package
 
     def get_imports(self) -> set[str]:
@@ -77,7 +57,7 @@ class GoTypeMapper:
         Returns:
             Set of import paths (e.g., {"time", "encoding/json"})
         """
-        return self._imports_needed
+        return set(self._type_mapper.get_go_imports())
 
     def ir_schema_to_go_type(
         self,
@@ -135,37 +115,15 @@ class GoTypeMapper:
             # omitempty in JSON tag handles the serialization
             return f"[]{item_type}"
 
-        # Handle format overrides
-        if schema.format and schema.format in self.FORMAT_OVERRIDES:
-            go_type = self.FORMAT_OVERRIDES[schema.format]
-
-            # Track imports
-            if go_type == "time.Time":
-                self._imports_needed.add("time")
-            elif go_type == "io.Reader":
-                self._imports_needed.add("io")
-
-            # io.Reader is an interface - don't use pointer for interfaces
-            # time.Time is a struct, so we use pointer for optionals
-            if not required:
-                # Interfaces in Go are already reference types, no pointer needed
-                if go_type == "io.Reader":
-                    return go_type
-                return f"*{go_type}"
+        # Use unified TypeMapper for base types
+        try:
+            field_type = FieldType(schema.type)
+            fmt = FormatType(schema.format) if schema.format else None
+            go_type = self._type_mapper.to_go(field_type, fmt, optional=not required)
             return go_type
-
-        # Handle primitive types
-        if schema.type in self.PRIMITIVE_TYPES:
-            go_type = self.PRIMITIVE_TYPES[schema.type]
-
-            # Optionals become pointers (except for maps and interfaces)
-            if not required and go_type not in ["interface{}", "map[string]interface{}"]:
-                return f"*{go_type}"
-
-            return go_type
-
-        # Fallback to interface{} for unknown types
-        return "interface{}"
+        except ValueError:
+            # Unknown type, fallback to interface{}
+            return "interface{}"
 
     def ir_schema_to_struct(
         self,
@@ -214,8 +172,8 @@ class GoTypeMapper:
         """
         fields = []
 
-        # Reset imports for this struct
-        self._imports_needed = set()
+        # Reset type mapper imports for this struct
+        self._type_mapper.reset_imports()
 
         # Process properties
         for prop_name, prop_schema in (schema.properties or {}).items():
@@ -245,7 +203,7 @@ class GoTypeMapper:
             "name": schema.name,
             "fields": fields,
             "doc": schema.description or f"{schema.name} model.",
-            "needs_time_import": "time" in self._imports_needed,
+            "needs_time_import": "time" in self._type_mapper.get_go_imports(),
         }
 
     def _get_enum_type_name(self, schema: IRSchemaObject) -> str:

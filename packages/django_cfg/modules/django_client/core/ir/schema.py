@@ -9,6 +9,7 @@ Key Features:
 - x-enum-varnames support for strongly typed enums
 - Nullable normalization (3.0 nullable: true vs 3.1 type: [.., 'null'])
 - 100% Pydantic 2 with strict validation
+- Unified type system via TypeMapper
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from ..types import FieldType, FormatType, TypeMapper
 
 
 class IRSchemaObject(BaseModel):
@@ -270,6 +273,9 @@ class IRSchemaObject(BaseModel):
         """
         Get Python type hint for this schema.
 
+        Uses unified TypeMapper for base type lookups, with additional logic
+        for complex cases ($ref, arrays, objects with additionalProperties).
+
         Returns:
             Python type as string (e.g., "str", "int", "list[str]").
 
@@ -295,6 +301,8 @@ class IRSchemaObject(BaseModel):
             ... ).python_type
             'list[PhotoInputRequest]'
         """
+        mapper = TypeMapper()
+
         # Handle $ref (e.g., User, PhotoInputRequest, etc.)
         if self.ref:
             base_type = self.ref
@@ -307,20 +315,12 @@ class IRSchemaObject(BaseModel):
         # Handle string formats BEFORE read_only fallback
         # These have known types even when read_only
         if self.type == "string" and self.format:
-            format_map = {
-                "date-time": "datetime",
-                "date": "date",
-                "time": "time",
-                "uuid": "str",  # Could use UUID but str is simpler
-                "email": "str",
-                "uri": "str",
-                "hostname": "str",
-                "ipv4": "str",
-                "ipv6": "str",
-            }
-            if self.format in format_map:
-                base_type = format_map[self.format]
+            try:
+                fmt = FormatType(self.format)
+                base_type = mapper.to_python(FieldType.STRING, fmt)
                 return f"{base_type} | None" if self.nullable else base_type
+            except ValueError:
+                pass  # Unknown format, continue to normal handling
 
         # For read-only string fields WITHOUT known format:
         # - If has maxLength constraint → regular CharField → str
@@ -355,25 +355,23 @@ class IRSchemaObject(BaseModel):
                 base_type = "list[Any]"
             return f"{base_type} | None" if self.nullable else base_type
 
-        type_map = {
-            "string": "str",
-            "integer": "int",
-            "number": "float",
-            "boolean": "bool",
-            "object": "dict[str, Any]",
-        }
-
-        base_type = type_map.get(self.type, "Any")
-
-        if self.nullable:
-            return f"{base_type} | None"
-
-        return base_type
+        # Use unified TypeMapper for base types
+        try:
+            field_type = FieldType(self.type)
+            fmt = FormatType(self.format) if self.format else None
+            base_type = mapper.to_python(field_type, fmt, nullable=self.nullable)
+            return base_type
+        except ValueError:
+            # Unknown type, fallback to Any
+            return "Any | None" if self.nullable else "Any"
 
     @property
     def typescript_type(self) -> str:
         """
         Get TypeScript type for this schema.
+
+        Uses unified TypeMapper for base type lookups, with additional logic
+        for complex cases ($ref, arrays, objects with additionalProperties).
 
         Returns:
             TypeScript type as string (e.g., "string", "number", "Array<string>").
@@ -396,6 +394,8 @@ class IRSchemaObject(BaseModel):
             >>> IRSchemaObject(name="file", type="string", format="binary").typescript_type
             'File | Blob'
         """
+        mapper = TypeMapper()
+
         # Handle $ref (e.g., CentrifugoConfig, User, etc.)
         if self.ref:
             base_type = self.ref
@@ -435,15 +435,13 @@ class IRSchemaObject(BaseModel):
             else:
                 base_type = "Record<string, any>"
         else:
-            type_map = {
-                "string": "string",
-                "integer": "number",
-                "number": "number",
-                "boolean": "boolean",
-                "object": "Record<string, any>",
-                "any": "any",
-            }
-            base_type = type_map.get(self.type, "any")
+            # Use unified TypeMapper for base types
+            try:
+                field_type = FieldType(self.type)
+                fmt = FormatType(self.format) if self.format else None
+                base_type = mapper.to_typescript(field_type, fmt)
+            except ValueError:
+                base_type = "any"
 
         if self.nullable:
             return f"{base_type} | null"

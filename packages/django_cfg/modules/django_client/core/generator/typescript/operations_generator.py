@@ -7,6 +7,8 @@ from __future__ import annotations
 from jinja2 import Environment
 
 from ...ir import IROperationObject
+from ...types import FieldType, TypeMapper
+from ...utils import header_to_param_name, to_camel_case
 from .naming import operation_to_method_name
 
 
@@ -17,6 +19,7 @@ class OperationsGenerator:
         self.jinja_env = jinja_env
         self.context = context
         self.base = base
+        self._type_mapper = TypeMapper()
 
     def generate_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False, in_subclient: bool = False) -> str:
         """Generate async method for operation."""
@@ -447,44 +450,21 @@ class OperationsGenerator:
         return "\n".join(lines)
 
     def _map_param_type(self, schema_type: str) -> str:
-        """Map parameter schema type to TypeScript type."""
-        type_map = {
-            "string": "string",
-            "integer": "number",
-            "number": "number",
-            "boolean": "boolean",
-            "array": "any[]",
-        }
-        return type_map.get(schema_type, "any")
+        """Map parameter schema type to TypeScript type using unified TypeMapper."""
+        try:
+            ft = FieldType(schema_type)
+            ts_type = self._type_mapper.to_typescript(ft)
+            # Handle array special case for params (any[] instead of Array<any>)
+            if ft == FieldType.ARRAY:
+                return "any[]"
+            return ts_type
+        except ValueError:
+            return "any"
 
     def _to_camel_case(self, snake_str: str) -> str:
-        """
-        Convert snake_case to camelCase.
-
-        Examples:
-            >>> self._to_camel_case("users_list")
-            'usersList'
-            >>> self._to_camel_case("users_partial_update")
-            'usersPartialUpdate'
-        """
-        components = snake_str.split("_")
-        return components[0] + "".join(x.title() for x in components[1:])
+        """Convert snake_case to camelCase. Delegates to shared utility."""
+        return to_camel_case(snake_str)
 
     def _header_to_param_name(self, header_name: str) -> str:
-        """
-        Convert HTTP header name to camelCase parameter name.
-
-        Examples:
-            >>> self._header_to_param_name("X-Chunk-Index")
-            'xChunkIndex'
-            >>> self._header_to_param_name("Content-Type")
-            'contentType'
-            >>> self._header_to_param_name("X-Is-Last")
-            'xIsLast'
-        """
-        # Remove leading/trailing whitespace and split by hyphen
-        parts = header_name.strip().split("-")
-        if not parts:
-            return header_name.lower()
-        # First part lowercase, rest title case
-        return parts[0].lower() + "".join(p.title() for p in parts[1:])
+        """Convert HTTP header name to camelCase parameter name. Delegates to shared utility."""
+        return header_to_param_name(header_name)

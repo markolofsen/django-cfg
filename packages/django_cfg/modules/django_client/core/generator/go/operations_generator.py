@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ...types import FieldType, TypeMapper
 from .naming import to_pascal_case
 
 if TYPE_CHECKING:
@@ -38,6 +39,7 @@ class OperationsGenerator:
         self.jinja_env = jinja_env
         self.context = context
         self.generator = generator
+        self._type_mapper = TypeMapper()
 
     def generate_operation_method(
         self,
@@ -262,11 +264,9 @@ class OperationsGenerator:
         return base_type
 
     def _get_param_go_type(self, schema_type: str) -> str:
-        """Get Go type for parameter schema type."""
-        type_map = {
-            "string": "string",
-            "integer": "int64",
-            "number": "float64",
-            "boolean": "bool",
-        }
-        return type_map.get(schema_type, "string")
+        """Get Go type for parameter schema type using unified TypeMapper."""
+        try:
+            ft = FieldType(schema_type)
+            return self._type_mapper.to_go(ft)
+        except ValueError:
+            return "string"

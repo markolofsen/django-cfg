@@ -10,6 +10,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from ..context import (
+    FieldContext,
+    SchemaContext,
+    ParamsBuilder,
+    build_field_context,
+    build_schema_context,
+)
 from ..ir import IRContext, IROperationObject, IRSchemaObject
 
 
@@ -530,6 +537,94 @@ class BaseGenerator(ABC):
             >>> # TypeScript: "async usersList(...): Promise<User[]> { ... }"
         """
         pass
+
+    # ===== Context Enrichment =====
+
+    def build_schema_context(self, schema: IRSchemaObject) -> SchemaContext:
+        """
+        Build enriched context for a schema.
+
+        Pre-computes all values needed by templates:
+        - Types for each language (Python, TS, Go, Zod, Proto)
+        - Smart field detection (email, phone, password, etc.)
+        - Validation constraints
+        - Required/optional/nullable flags
+
+        Args:
+            schema: IRSchemaObject to build context for
+
+        Returns:
+            SchemaContext with all fields as FieldContext
+
+        Examples:
+            >>> schema = context.schemas["User"]
+            >>> ctx = generator.build_schema_context(schema)
+            >>> for field in ctx.fields:
+            ...     print(f"{field.name}: {field.python_type}")
+        """
+        return build_schema_context(schema)
+
+    def build_field_context(
+        self, schema: IRSchemaObject, *, required: bool = True
+    ) -> FieldContext:
+        """
+        Build enriched context for a single field.
+
+        Args:
+            schema: IRSchemaObject for the field
+            required: Whether field is required in parent schema
+
+        Returns:
+            FieldContext with pre-computed values
+
+        Examples:
+            >>> field = schema.properties["email"]
+            >>> ctx = generator.build_field_context(field, required=True)
+            >>> ctx.input_type  # InputType.EMAIL
+            >>> ctx.validation  # ValidationRule.EMAIL
+        """
+        return build_field_context(schema, required=required)
+
+    def build_params_context(self, operation: IROperationObject) -> ParamsBuilder:
+        """
+        Build parameter context for an operation.
+
+        Creates ParamsBuilder with pre-computed:
+        - Path, query, header parameters
+        - Request body context
+        - Language-specific signatures (Python, TS, Go)
+
+        Args:
+            operation: IROperationObject to build params for
+
+        Returns:
+            ParamsBuilder instance
+
+        Examples:
+            >>> operation = context.operations["users_create"]
+            >>> params = generator.build_params_context(operation)
+            >>> py_ctx = params.for_python()
+            >>> print(py_ctx["signature"])
+        """
+        return ParamsBuilder(operation)
+
+    def get_all_schema_contexts(self) -> dict[str, SchemaContext]:
+        """
+        Build contexts for all schemas in the IR.
+
+        Returns:
+            Dictionary mapping schema name to SchemaContext
+
+        Examples:
+            >>> contexts = generator.get_all_schema_contexts()
+            >>> user_ctx = contexts["User"]
+            >>> print(f"{user_ctx.field_count} fields")
+        """
+        contexts = {}
+        for name, schema in self.context.schemas.items():
+            if schema.type == "object" and schema.properties:
+                contexts[name] = self.build_schema_context(schema)
+        return contexts
 
     # ===== Helpers =====
 

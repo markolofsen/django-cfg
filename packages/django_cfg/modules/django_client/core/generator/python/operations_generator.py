@@ -15,7 +15,9 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment
 
+from ...context import ParamsBuilder
 from ...ir import IROperationObject
+from ...types import FieldType, TypeMapper
 
 if TYPE_CHECKING:
     from ...ir import IRSchemaObject
@@ -34,6 +36,7 @@ class OperationsGenerator:
         """
         self.jinja_env = jinja_env
         self.base = base_generator
+        self._type_mapper = TypeMapper()
 
     def generate_async_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False) -> str:
         """Generate async method for operation."""
@@ -44,26 +47,10 @@ class OperationsGenerator:
             tag = operation.tags[0]
             method_name = self.base.remove_tag_prefix(method_name, tag)
 
-        # Method signature
-        params = ["self"]
-
-        # Add path parameters
-        for param in operation.path_parameters:
-            param_type = self._map_param_type(param.schema_type)
-            params.append(f"{param.name}: {param_type}")
-
-        # Add request body parameter
-        if operation.request_body:
-            params.append(f"data: {operation.request_body.schema_name}")
-        elif operation.patch_request_body:
-            params.append(f"data: {operation.patch_request_body.schema_name} | None = None")
-
-        # Add query parameters
-        for param in operation.query_parameters:
-            param_type = self._map_param_type(param.schema_type)
-            if not param.required:
-                param_type = f"{param_type} | None = None"
-            params.append(f"{param.name}: {param_type}")
+        # Build method signature using ParamsBuilder
+        params_builder = ParamsBuilder(operation)
+        params_ctx = params_builder.for_python()
+        params = params_ctx["signature_params"]
 
         # Return type - handle multiple response types
         has_multiple_responses = self._has_multiple_response_types(operation)
@@ -217,26 +204,10 @@ class OperationsGenerator:
             tag = operation.tags[0]
             method_name = self.base.remove_tag_prefix(method_name, tag)
 
-        # Method signature
-        params = ["self"]
-
-        # Add path parameters
-        for param in operation.path_parameters:
-            param_type = self._map_param_type(param.schema_type)
-            params.append(f"{param.name}: {param_type}")
-
-        # Add request body parameter
-        if operation.request_body:
-            params.append(f"data: {operation.request_body.schema_name}")
-        elif operation.patch_request_body:
-            params.append(f"data: {operation.patch_request_body.schema_name} | None = None")
-
-        # Add query parameters
-        for param in operation.query_parameters:
-            param_type = self._map_param_type(param.schema_type)
-            if not param.required:
-                param_type = f"{param_type} | None = None"
-            params.append(f"{param.name}: {param_type}")
+        # Build method signature using ParamsBuilder
+        params_builder = ParamsBuilder(operation)
+        params_ctx = params_builder.for_python()
+        params = params_ctx["signature_params"]
 
         # Return type - handle multiple response types
         has_multiple_responses = self._has_multiple_response_types(operation)
@@ -384,16 +355,12 @@ class OperationsGenerator:
         )
 
     def _map_param_type(self, schema_type: str) -> str:
-        """Map parameter schema type to Python type."""
-        type_map = {
-            "string": "str",
-            "integer": "int",
-            "number": "float",
-            "boolean": "bool",
-            "array": "list",
-            "object": "dict",
-        }
-        return type_map.get(schema_type, "str")
+        """Map parameter schema type to Python type using unified TypeMapper."""
+        try:
+            ft = FieldType(schema_type)
+            return self._type_mapper.to_python(ft)
+        except ValueError:
+            return "str"
 
     def _is_multipart_operation(self, operation: IROperationObject) -> bool:
         """Check if operation uses multipart/form-data content type."""

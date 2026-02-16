@@ -2,14 +2,20 @@
 Proto Type Mapper - Maps IR types to Protocol Buffer types.
 
 Handles type conversion from OpenAPI/IR types to proto3 types.
+Uses unified TypeMapper for base type lookups.
 """
 
 from __future__ import annotations
+
+from ...types import FieldType, FormatType, TypeMapper
 
 
 class ProtoTypeMapper:
     """
     Maps IR schema types to Protocol Buffer types.
+
+    Uses unified TypeMapper for base type lookups, with proto-specific
+    handling for imports and field labels.
 
     Supports proto3 with proper handling of:
     - Basic types (string, int32, int64, double, bool)
@@ -18,32 +24,10 @@ class ProtoTypeMapper:
     - Nullable fields (optional in proto3)
     """
 
-    # Core type mappings
-    TYPE_MAP = {
-        "string": "string",
-        "integer": "int64",  # Default to int64 for safety
-        "number": "double",
-        "boolean": "bool",
-    }
-
-    # Format-specific mappings
-    FORMAT_MAP = {
-        "int32": "int32",
-        "int64": "int64",
-        "float": "float",
-        "double": "double",
-        "byte": "bytes",
-        "binary": "bytes",
-        "date": "string",  # ISO 8601 date string
-        "date-time": "google.protobuf.Timestamp",
-        "password": "string",
-        "email": "string",
-        "uri": "string",
-        "uuid": "string",
-    }
-
     def __init__(self):
-        self.imported_types = set()  # Track which google types we need to import
+        self._type_mapper = TypeMapper()
+        # Track imported types for proto imports (used by services_generator)
+        self.imported_types: set[str] = set()
 
     def map_type(self, ir_type: str, ir_format: str | None = None) -> str:
         """
@@ -56,18 +40,13 @@ class ProtoTypeMapper:
         Returns:
             Proto type string (e.g., "string", "int64", "bytes")
         """
-        # Check format first (more specific)
-        if ir_format and ir_format in self.FORMAT_MAP:
-            proto_type = self.FORMAT_MAP[ir_format]
-
-            # Track google imports
-            if proto_type.startswith("google.protobuf."):
-                self.imported_types.add(proto_type)
-
-            return proto_type
-
-        # Fall back to base type
-        return self.TYPE_MAP.get(ir_type, "string")
+        try:
+            field_type = FieldType(ir_type)
+            fmt = FormatType(ir_format) if ir_format else None
+            return self._type_mapper.to_proto(field_type, fmt)
+        except ValueError:
+            # Unknown type, fallback to string
+            return "string"
 
     def get_field_label(self, required: bool, nullable: bool, is_repeated: bool) -> str:
         """
@@ -101,15 +80,7 @@ class ProtoTypeMapper:
         Returns:
             List of import statements (e.g., ["google/protobuf/timestamp.proto"])
         """
-        imports = []
-
-        if "google.protobuf.Timestamp" in self.imported_types:
-            imports.append("google/protobuf/timestamp.proto")
-
-        if "google.protobuf.Empty" in self.imported_types:
-            imports.append("google/protobuf/empty.proto")
-
-        return imports
+        return self._type_mapper.get_proto_imports()
 
     def sanitize_field_name(self, name: str) -> str:
         """
