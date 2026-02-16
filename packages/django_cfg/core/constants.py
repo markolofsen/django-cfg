@@ -25,6 +25,7 @@ DEFAULT_APPS: List[str] = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
+    "django.contrib.postgres",  # PostgreSQL-specific features (ArrayField, indexes, etc.)
     # Third-party
     "corsheaders",
     "rest_framework",
