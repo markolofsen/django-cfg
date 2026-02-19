@@ -88,3 +88,7 @@ line_length = 88
 known_django = "django"
 known_first_party = "apps,config"
 sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.uv.sources]
+django-cfg = { path = "/Users/markinmatrix/djangocfg", editable = true }
+

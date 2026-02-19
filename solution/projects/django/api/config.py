@@ -56,11 +56,11 @@ from django_cfg import (
     DjangoCfgCentrifugoConfig,
     GRPCConfig,
     NgrokConfig,
-    NextJsAdminConfig,
     # Dynamic Settings
     ConstanceConfig,
     ConstanceField,
 )
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
 
 from .environment import env
 
@@ -359,9 +359,10 @@ class DjangoCfgConfig(DjangoConfig):
         else None
     )
 
-    nextjs_admin: Optional[NextJsAdminConfig] = NextJsAdminConfig(
-        project_path="../frontend/apps/admin",
-        api_output_path="app/_lib/api/generated",
+    # Streamlit Admin
+    streamlit_admin: Optional[StreamlitAdminConfig] = StreamlitAdminConfig(
+        app_path="streamlit",
+        auto_start=True,
     )
     
     # ╔══════════════════════════════════════════════════════════════════════════╗

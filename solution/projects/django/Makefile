@@ -9,10 +9,10 @@
 # - [tool.uv.sources] configures local editable path
 # - uv sync automatically uses the local path when available
 
-.PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api claude
+.PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-ws gen gen-ts gen-py gen-admin gen-dry gen-list claude
 
 # Python from virtual environment (uv)
-PYTHON := .venv/bin/python
+PYTHON := uv run python
 # Path to local django-cfg for development
 DJANGO_CFG_LOCAL := $(HOME)/djangocfg
 
@@ -29,7 +29,9 @@ help:
 	@echo "  make migrate   - Run migrations"
 	@echo "  make shell     - Django shell"
 	@echo "  make superuser - Create superuser"
-	@echo "  make api       - Generate API clients"
+	@echo "  make gen       - Generate API clients (all)"
+	@echo "  make gen-ts    - Generate TypeScript clients"
+	@echo "  make gen-admin - Generate admin clients only"
 	@echo ""
 	@echo "RQ:"
 	@echo "  make rq            - Start RQ worker (all queues)"
@@ -49,21 +51,22 @@ install:
 	@echo "To use local django-cfg: make install-local"
 
 install-local:
-	@bash -c ' \
-		set -e; \
-		eval "$$(conda shell.bash hook 2>/dev/null || true)"; \
-		conda deactivate 2>/dev/null || true; \
-		echo "Installing dependencies (production mode)..."; \
-		uv sync; \
-		echo "Switching to local django-cfg..."; \
-		echo "   Path: $(DJANGO_CFG_LOCAL)"; \
-		test -d $(DJANGO_CFG_LOCAL) || (echo "Error: $(DJANGO_CFG_LOCAL) not found" && exit 1); \
-		echo "Installing local django-cfg (editable mode)..."; \
-		uv pip install -e "$(DJANGO_CFG_LOCAL)[full]"; \
-		echo ""; \
-		echo "Local django-cfg installed (editable mode)"; \
-		echo "Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"; \
-	'
+	@echo "Switching to local django-cfg..."
+	@echo "   Path: $(DJANGO_CFG_LOCAL)"
+	@test -d $(DJANGO_CFG_LOCAL) || (echo "Error: $(DJANGO_CFG_LOCAL) not found" && exit 1)
+	@# Remove existing [tool.uv.sources] if present
+	@grep -q '^\[tool\.uv\.sources\]' pyproject.toml && \
+		sed -i '' '/^\[tool\.uv\.sources\]/,/^$$/d' pyproject.toml || true
+	@# Add local source override
+	@echo '' >> pyproject.toml
+	@echo '[tool.uv.sources]' >> pyproject.toml
+	@echo 'django-cfg = { path = "$(DJANGO_CFG_LOCAL)", editable = true }' >> pyproject.toml
+	@echo '' >> pyproject.toml
+	@echo "Installing with local django-cfg..."
+	uv sync
+	@echo ""
+	@echo "Local django-cfg installed (editable mode)"
+	@echo "Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"
 
 env:
 	@uv run python -c "import sys; print(sys.prefix)"
@@ -189,9 +192,29 @@ check:
 superuser:
 	$(PYTHON) manage.py superuser
 
-# API Generation
-api:
-	$(PYTHON) manage.py generate_api
+# API Generation (unified via generation.py config)
+gen:
+	$(PYTHON) manage.py gen
+
+gen-ts:
+	$(PYTHON) manage.py gen --ts
+
+gen-py:
+	$(PYTHON) manage.py gen --py
+
+gen-admin:
+	$(PYTHON) manage.py gen --target admin
+
+gen-dry:
+	$(PYTHON) manage.py gen --dry-run
+
+gen-list:
+	$(PYTHON) manage.py gen --list-targets
+
+# Legacy aliases (deprecated - use gen commands)
+api: gen
+api-ws:
+	$(PYTHON) manage.py generate_centrifugo_clients
 
 # Start Claude Code with dangerously-skip-permissions flag
 claude:
